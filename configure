@@ -674,6 +674,7 @@ WINE
 DOCKER
 CREATEDB
 PSQL
+MYSQL
 SOCAT
 MKFS_REISER4
 MKFS_REISERFS
@@ -685,6 +686,7 @@ SETFATTR
 GETFATTR
 TIME
 ATTR
+CONVERT
 TXT2MAN
 UNOCONV
 KEYTOOL
@@ -699,7 +701,6 @@ JAVA_PATH_SEPARATOR_CHAR
 JAVAC_FLAGS
 JAVA_FLAGS
 JAVA_DATA_MODEL
-MYSQL
 MSGFMT
 MSGMERGE
 XGETTEXT
@@ -2661,7 +2662,6 @@ shift; shift
 host_os=$*
 IFS=$ac_save_IFS
 case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
-
 
 
 
@@ -5318,6 +5318,51 @@ if test -z "$TXT2MAN"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: No 'txt2man' tool found. Cannot create man page. Please check PATH." >&5
 $as_echo "$as_me: WARNING: No 'txt2man' tool found. Cannot create man page. Please check PATH." >&2;}
 fi
+for ac_prog in convert
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_CONVERT+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $CONVERT in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_CONVERT="$CONVERT" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_CONVERT="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+CONVERT=$ac_cv_path_CONVERT
+if test -n "$CONVERT"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CONVERT" >&5
+$as_echo "$CONVERT" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$CONVERT" && break
+done
+
 
 for ac_prog in sudo
 do
@@ -23895,6 +23940,110 @@ $as_echo "$ac_cv_func_pselect" >&6; }
   if test "$ac_cv_func_pselect" != no; then :
 
 $as_echo "#define HAVE_PSELECT 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for signal" >&5
+$as_echo_n "checking for signal... " >&6; }
+if ${ac_cv_func_signal+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_signal="no"
+      echo > conftest.log
+
+      for ac_headers in signal.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void signal();"; fi`
+                                         #ifdef signal
+                                         #else
+                                           return (intptr_t)signal;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_signal=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_signal" >&5
+$as_echo "$ac_cv_func_signal" >&6; }
+  if test "$ac_cv_func_signal" != no; then :
+
+$as_echo "#define HAVE_SIGNAL 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for kill" >&5
+$as_echo_n "checking for kill... " >&6; }
+if ${ac_cv_func_kill+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_kill="no"
+      echo > conftest.log
+
+      for ac_headers in signal.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void kill();"; fi`
+                                         #ifdef kill
+                                         #else
+                                           return (intptr_t)kill;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_kill=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_kill" >&5
+$as_echo "$ac_cv_func_kill" >&6; }
+  if test "$ac_cv_func_kill" != no; then :
+
+$as_echo "#define HAVE_KILL 1" >>confdefs.h
 
 elif :; then :
 

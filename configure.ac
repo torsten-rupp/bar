@@ -4506,6 +4506,8 @@ AC_CHECK_FUNCTION(lgetxattr,           AC_DEFINE(HAVE_LGETXATTR,           1,[lg
 AC_CHECK_FUNCTION(lsetxattr,           AC_DEFINE(HAVE_LSETXATTR,           1,[lsetxattr() available]) ,,sys/xattr.h)
 AC_CHECK_FUNCTION(select,              AC_DEFINE(HAVE_SELECT,              1,[select() available]) ,,sys/select.h winsock2.h)
 AC_CHECK_FUNCTION(pselect,             AC_DEFINE(HAVE_PSELECT,             1,[pselect() available]) ,,sys/select.h winsock2.h)
+AC_CHECK_FUNCTION(signal,              AC_DEFINE(HAVE_SIGNAL,              1,[signal() available]) ,,signal.h)
+AC_CHECK_FUNCTION(kill,                AC_DEFINE(HAVE_KILL,                1,[kill() available]) ,,signal.h)
 AC_CHECK_MKDIR_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of mkdir()]))
 
 AC_CHECK_FUNCTION(u_init,       AC_DEFINE(HAVE_U_INIT,1,[u_init() available])  ,,icu.h)
