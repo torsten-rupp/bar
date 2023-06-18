@@ -1,8 +1,21 @@
-2023-06-01 0.23
+2023-07-01 0.23
   * fixed wrong database entry for special files (type)
   * bar-index: fixed wrong counted lost entries without
     fragments
+  * log crashes into log file
   * BARControl: added option --info
+  * BARControl: fixed list directory entries on insufficient
+    permission
+  * BARControl: fixed option --index-database-add: match
+    pattern
+
+2023-04-16 0.22g
+  * BARControl: fixed update job sate in dry-mode (issue #2,
+    thanks to ChrisTG742)
+  * fixed error handling WebDAV access
+  * fixed test run on Jenkins
+  * BARControl: fixed sort file tree items by type/size/
+    date+time
 
 2023-02-15 0.22f
   * fixed error message: no space left on device

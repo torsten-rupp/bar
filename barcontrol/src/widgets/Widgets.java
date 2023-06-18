@@ -10875,7 +10875,10 @@ private static void printTree(Tree tree)
     {
       for (TreeItem subTreeItem : subTreeItems)
       {
-        sortSubTreeColumn(tree,subTreeItem,subTreeItem.getItems(),sortDirection,comparator);
+        if (subTreeItem.getExpanded())
+        {
+          sortSubTreeColumn(tree,subTreeItem,subTreeItem.getItems(),sortDirection,comparator);
+        }
       }
 
       // sort sub-tree
