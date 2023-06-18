@@ -251,27 +251,37 @@ LOCAL void signalHandler(int signalNumber)
     signalAction.sa_handler = SIG_DFL;
     signalAction.sa_flags   = 0;
     sigaction(SIGTERM,&signalAction,NULL);
-    sigaction(SIGILL,&signalAction,NULL);
-    sigaction(SIGFPE,&signalAction,NULL);
     sigaction(SIGSEGV,&signalAction,NULL);
-    sigaction(SIGBUS,&signalAction,NULL);
+    sigaction(SIGUSR1,&signalAction,NULL);
+    sigaction(SIGFPE,&signalAction,NULL);
+    #ifdef HAVE_SIGBUS
+      sigaction(SIGBUS,&signalAction,NULL);
+    #endif /* HAVE_SIGBUS */
+    sigaction(SIGILL,&signalAction,NULL);
   #else /* not HAVE_SIGACTION */
     signal(SIGTERM,SIG_DFL);
-    signal(SIGILL,SIG_DFL);
-    signal(SIGFPE,SIG_DFL);
     signal(SIGSEGV,SIG_DFL);
+    signal(SIGUSR1,SIG_DFL);
+    signal(SIGFPE,SIG_DFL);
     #ifdef HAVE_SIGBUS
       signal(SIGBUS,SIG_DFL);
     #endif /* HAVE_SIGBUS */
+    signal(SIGILL,SIG_DFL);
   #endif /* HAVE_SIGACTION */
 
   // output error message
   if (signalNumber != SIGTERM)
   {
-    fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
+    static char line[32];
+    size_t      bytesWritten;
+
+    stringFormat(line,sizeof(line),"signal %d\n",signalNumber);
+    bytesWritten = fwrite(line,1,stringLength(line),stderr);
+    fatalLogMessage(line,NULL);
     #ifndef NDEBUG
-      debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1);
+      debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1);
     #endif /* NDEBUG */
+    UNUSED_VARIABLE(bytesWritten);
   }
 
   // delete pid file
@@ -286,6 +296,7 @@ LOCAL void signalHandler(int signalNumber)
   // Note: do not free resources to avoid further errors
 
   // exit with signal number
+fprintf(stderr,"%s:%d: %d_\n",__FILE__,__LINE__,128+signalNumber);
   exit(128+signalNumber);
 }
 
@@ -416,18 +427,20 @@ LOCAL Errors initAll(void)
     sigfillset(&signalAction.sa_mask);
     signalAction.sa_flags     = SA_SIGINFO;
     signalAction.sa_sigaction = signalHandler;
+    sigaction(SIGUSR1,&signalAction,NULL);
     sigaction(SIGSEGV,&signalAction,NULL);
     sigaction(SIGFPE,&signalAction,NULL);
     sigaction(SIGILL,&signalAction,NULL);
     sigaction(SIGTERM,&signalAction,NULL);
-    sigaction(SIGUSR1,&signalAction,NULL);
-    sigaction(SIGBUS,&signalAction,NULL);
+    #ifdef HAVE_SIGBUS
+      sigaction(SIGBUS,&signalAction,NULL);
+    #endif /* HAVE_SIGBUS */
   #else /* not HAVE_SIGACTION */
+    signal(SIGUSR1,signalHandler);
     signal(SIGSEGV,signalHandler);
-    signal(SIGTERM,signalHandler);
-    signal(SIGILL,signalHandler);
     signal(SIGFPE,signalHandler);
-    signal(SIGSEGV,signalHandler);
+    signal(SIGILL,signalHandler);
+    signal(SIGTERM,signalHandler);
     #ifdef HAVE_SIGBUS
       signal(SIGBUS,signalHandler);
     #endif /* HAVE_SIGBUS */
@@ -717,20 +730,23 @@ LOCAL void doneAll(void)
     sigfillset(&signalAction.sa_mask);
     signalAction.sa_handler = SIG_DFL;
     signalAction.sa_flags   = 0;
-    sigaction(SIGUSR1,&signalAction,NULL);
     sigaction(SIGTERM,&signalAction,NULL);
-    sigaction(SIGILL,&signalAction,NULL);
-    sigaction(SIGFPE,&signalAction,NULL);
     sigaction(SIGSEGV,&signalAction,NULL);
-    sigaction(SIGBUS,&signalAction,NULL);
+    sigaction(SIGUSR1,&signalAction,NULL);
+    sigaction(SIGFPE,&signalAction,NULL);
+    #ifdef HAVE_SIGBUS
+      sigaction(SIGBUS,&signalAction,NULL);
+    #endif /* HAVE_SIGBUS */
+    sigaction(SIGILL,&signalAction,NULL);
   #else /* not HAVE_SIGACTION */
     signal(SIGTERM,SIG_DFL);
-    signal(SIGILL,SIG_DFL);
-    signal(SIGFPE,SIG_DFL);
     signal(SIGSEGV,SIG_DFL);
+    signal(SIGUSR1,SIG_DFL);
+    signal(SIGFPE,SIG_DFL);
     #ifdef HAVE_SIGBUS
       signal(SIGBUS,SIG_DFL);
     #endif /* HAVE_SIGBUS */
+    signal(SIGILL,SIG_DFL);
   #endif /* HAVE_SIGACTION */
 
   // deinitialize crash dump handler
@@ -4492,24 +4508,6 @@ LOCAL Errors bar(int argc, const char *argv[])
     return ERROR_NONE;
   }
 
-  // debug options
-  #ifndef NDEBUG
-    if (globalOptions.debug.printConfigurationSHA256)
-    {
-      byte buffer[20];
-      uint i;
-
-      ConfigValue_debugSHA256(CONFIG_VALUES,buffer,sizeof(buffer));
-      for (i = 0; i < sizeof(buffer); i++)
-      {
-        printf("%02x",buffer[i]);
-      }
-      printf("\n");
-
-      return ERROR_NONE;
-    }
-  #endif /* NDEBUG */
-
   // create temporary directory
   error = File_getTmpDirectoryName(tmpDirectory,"bar",globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
@@ -4547,6 +4545,31 @@ LOCAL Errors bar(int argc, const char *argv[])
     printError(_("cannot initialize worker thread pool!"));
     return ERROR_INIT;
   }
+
+  // debug options
+  #ifndef NDEBUG
+    if (globalOptions.debug.printConfigurationSHA256)
+    {
+      byte buffer[20];
+      uint i;
+
+      ConfigValue_debugSHA256(CONFIG_VALUES,buffer,sizeof(buffer));
+      for (i = 0; i < sizeof(buffer); i++)
+      {
+        printf("%02x",buffer[i]);
+      }
+      printf("\n");
+
+      ThreadPool_done(&clientThreadPool);
+      (void)File_delete(tmpDirectory,TRUE);
+      return ERROR_NONE;
+    }
+
+    if (globalOptions.debug.createSignal != 0)
+    {
+      kill(getpid(),globalOptions.debug.createSignal);
+    }
+  #endif /* NDEBUG */
 
   // run
   error = ERROR_NONE;

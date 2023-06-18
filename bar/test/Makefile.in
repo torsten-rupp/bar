@@ -2800,6 +2800,22 @@ ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
 endif
+	@
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
+	@$(call functionCleanTestFiles)
+	$(if $(findstring $(TEST_BAR_DEBUG),$(TEST_BAR)),$(call functionTestCheckExitcode,132,132,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --log=all --log-file=$(INTERMEDIATE_DIR)/test.log --debug-create-signal=4 1>/dev/null 2>/dev/null)))
+	$(GREP) FATAL: $(INTERMEDIATE_DIR)/test.log >/dev/null
+	$(call functionCleanTestFiles)
+	$(if $(findstring $(TEST_BAR_DEBUG),$(TEST_BAR)),$(call functionTestCheckExitcode,135,135,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --log=all --log-file=$(INTERMEDIATE_DIR)/test.log --debug-create-signal=7 1>/dev/null 2>/dev/null)))
+	$(GREP) FATAL: $(INTERMEDIATE_DIR)/test.log >/dev/null
+	$(call functionCleanTestFiles)
+	$(if $(findstring $(TEST_BAR_DEBUG),$(TEST_BAR)),$(call functionTestCheckExitcode,136,136,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --log=all --log-file=$(INTERMEDIATE_DIR)/test.log --debug-create-signal=8 1>/dev/null 2>/dev/null)))
+	$(GREP) FATAL: $(INTERMEDIATE_DIR)/test.log >/dev/null
+	$(call functionCleanTestFiles)
+	$(if $(findstring $(TEST_BAR_DEBUG),$(TEST_BAR)),$(call functionTestCheckExitcode,139,139,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --log=all --log-file=$(INTERMEDIATE_DIR)/test.log --debug-create-signal=11 1>/dev/null 2>/dev/null)))
+	$(GREP) FATAL: $(INTERMEDIATE_DIR)/test.log >/dev/null
+	@$(call functionCleanTestFiles)
+	@$(call functionDoneTestFiles)
 	@$(call functionInfoEnd,OK)
 
 test_misc-debug:
@@ -4434,6 +4450,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 endif
 ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	@
+	# ext2 zero-data, block size 2048 bytes
 	# ext2 zero-data, block size 2048 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
