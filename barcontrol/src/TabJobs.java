@@ -404,7 +404,12 @@ public class TabJobs
       DATETIME
     };
 
-    private SortModes sortMode;
+    final static SortModes[] SORT_MODE_SEQUENCE_NAME     = new SortModes[]{SortModes.NAME, SortModes.TYPE, SortModes.SIZE, SortModes.DATETIME};
+    final static SortModes[] SORT_MODE_SEQUENCE_TYPE     = new SortModes[]{SortModes.TYPE, SortModes.NAME, SortModes.SIZE, SortModes.DATETIME};
+    final static SortModes[] SORT_MODE_SEQUENCE_SIZE     = new SortModes[]{SortModes.SIZE, SortModes.NAME, SortModes.TYPE, SortModes.DATETIME};
+    final static SortModes[] SORT_MODE_SEQUENCE_DATETIME = new SortModes[]{SortModes.DATETIME, SortModes.NAME, SortModes.TYPE, SortModes.SIZE};
+
+    private SortModes[] sortModeSequence;
 
     /** create file data comparator
      * @param tree file tree
@@ -412,11 +417,11 @@ public class TabJobs
      */
     FileTreeDataComparator(Tree tree, TreeColumn sortColumn)
     {
-      if      (tree.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
-      else if (tree.getColumn(1) == sortColumn) sortMode = SortModes.TYPE;
-      else if (tree.getColumn(2) == sortColumn) sortMode = SortModes.SIZE;
-      else if (tree.getColumn(3) == sortColumn) sortMode = SortModes.DATETIME;
-      else                                      sortMode = SortModes.NAME;
+      if      (tree.getColumn(0) == sortColumn) sortModeSequence = SORT_MODE_SEQUENCE_NAME;
+      else if (tree.getColumn(1) == sortColumn) sortModeSequence = SORT_MODE_SEQUENCE_TYPE;
+      else if (tree.getColumn(2) == sortColumn) sortModeSequence = SORT_MODE_SEQUENCE_SIZE;
+      else if (tree.getColumn(3) == sortColumn) sortModeSequence = SORT_MODE_SEQUENCE_DATETIME;
+      else                                      sortModeSequence = SORT_MODE_SEQUENCE_NAME;
     }
 
     /** create file data comparator
@@ -436,37 +441,45 @@ public class TabJobs
     @Override
     public int compare(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
     {
-      if (sortMode == SortModes.NAME)
+      int result = 0;
+
+      int i = 0;
+      while ((i < sortModeSequence.length) && (result == 0))
       {
-        // directories first, then files
-        if (fileTreeData1.fileType == BARServer.FileTypes.DIRECTORY)
+        if (sortModeSequence[i] == SortModes.NAME)
         {
-          if (fileTreeData2.fileType == BARServer.FileTypes.DIRECTORY)
+          // directories first, then files
+          if (fileTreeData1.fileType == BARServer.FileTypes.DIRECTORY)
           {
-            return compareWithoutType(fileTreeData1,fileTreeData2);
+            if (fileTreeData2.fileType == BARServer.FileTypes.DIRECTORY)
+            {
+              result = compareWithoutType(sortModeSequence[i],fileTreeData1,fileTreeData2);
+            }
+            else
+            {
+              result = -1;
+            }
           }
           else
           {
-            return -1;
+            if (fileTreeData2.fileType == BARServer.FileTypes.DIRECTORY)
+            {
+              result = 1;
+            }
+            else
+            {
+              result = compareWithoutType(sortModeSequence[i],fileTreeData1,fileTreeData2);
+            }
           }
         }
         else
         {
-          if (fileTreeData2.fileType == BARServer.FileTypes.DIRECTORY)
-          {
-            return 1;
-          }
-          else
-          {
-            return compareWithoutType(fileTreeData1,fileTreeData2);
-          }
+          // sort directories/files mixed
+          result = compareWithoutType(sortModeSequence[i],fileTreeData1,fileTreeData2);
         }
+        i++;
       }
-      else
-      {
-        // sort directories/files mixed
-        return compareWithoutType(fileTreeData1,fileTreeData2);
-      }
+      return result;
     }
 
     /** convert data to string
@@ -474,16 +487,17 @@ public class TabJobs
      */
     public String toString()
     {
-      return "FileTreeDataComparator {"+sortMode+"}";
+      return "FileTreeDataComparator {"+sortModeSequence+"}";
     }
 
     /** compare file tree data without take care about type
+     * @param sortMode sort mode
      * @param fileTreeData1, fileTreeData2 file tree data to compare
      * @return -1 iff fileTreeData1 < fileTreeData2,
                 0 iff fileTreeData1 = fileTreeData2,
                 1 iff fileTreeData1 > fileTreeData2
      */
-    private int compareWithoutType(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
+    private int compareWithoutType(SortModes sortMode, FileTreeData fileTreeData1, FileTreeData fileTreeData2)
     {
       switch (sortMode)
       {

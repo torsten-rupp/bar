@@ -4,11 +4,14 @@
   * fixed wrong locking on restore
   * bar-index: fixed wrong counted lost entries without
     fragments
+  * log crashes into log file
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission
   * BARControl: fixed option --index-database-add: match
     pattern
+  * BARControl: fixed sort file tree items by type/size/
+    date+time
 
 2023-04-16 0.22g
   * BARControl: fixed update job sate in dry-mode (issue #2,
