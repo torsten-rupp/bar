@@ -8185,7 +8185,8 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   // only for debugging/testing
   #ifndef NDEBUG
   CMD_OPTION_BOOLEAN      ("debug-show-chunks",                 0,  2,0,globalOptions.debug.showChunkIdsFlag,                                                                             "show chunk ids"                                                           ),
-  CMD_OPTION_INCREMENT    ("debug-create-archive-errors",       0,  2,0,globalOptions.debug.createArchiveErrors,             0,MAX_INT,                                                   "number of errors to create in archives"                                   ),
+  CMD_OPTION_INCREMENT    ("debug-create-archive-errors",       0,  2,0,globalOptions.debug.createArchiveErrors,             0,MAX_INT,                                                   "create error in archives"                                                 ),
+  CMD_OPTION_INTEGER      ("debug-create-signal",               0,  2,0,globalOptions.debug.createSignal,                    0,MAX_INT,NULL,                                              "create signal"                                                            ),
 
   CMD_OPTION_INCREMENT    ("debug-server",                      0,  1,0,globalOptions.debug.serverLevel,                     0,2,                                                         "debug level for server"                                                   ),
   CMD_OPTION_BOOLEAN      ("debug-server-fixed-ids",            0,  2,0,globalOptions.debug.serverFixedIdsFlag,                                                                           "fixed server ids"                                                         ),
@@ -8197,7 +8198,6 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("debug-index-add-storage",           0,  2,0,globalOptions.debug.indexAddStorage,                                                                              "add storage to index database","file name"                                ),
   CMD_OPTION_STRING       ("debug-index-remove-storage",        0,  2,0,globalOptions.debug.indexRemoveStorage,                                                                           "remove storage from index database","file name"                           ),
   CMD_OPTION_STRING       ("debug-index-refresh-storage",       0,  2,0,globalOptions.debug.indexRefreshStorage,                                                                          "refresh storage in index database","file name"                            ),
-
 
   CMD_OPTION_BOOLEAN      ("debug-print-configuration-sha256",  0,  2,0,globalOptions.debug.printConfigurationSHA256,                                                                     "fixed server ids"                                                         ),
   #endif
