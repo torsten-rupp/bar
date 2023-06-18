@@ -252,7 +252,9 @@ LOCAL void signalHandler(int signalNumber)
     signalAction.sa_flags   = 0;
     sigaction(SIGTERM,&signalAction,NULL);
     sigaction(SIGSEGV,&signalAction,NULL);
-    sigaction(SIGUSR1,&signalAction,NULL);
+    #ifdef HAVE_SIGUSR1
+      sigaction(SIGUSR1,&signalAction,NULL);
+    #endif
     sigaction(SIGFPE,&signalAction,NULL);
     #ifdef HAVE_SIGBUS
       sigaction(SIGBUS,&signalAction,NULL);
@@ -261,7 +263,9 @@ LOCAL void signalHandler(int signalNumber)
   #else /* not HAVE_SIGACTION */
     signal(SIGTERM,SIG_DFL);
     signal(SIGSEGV,SIG_DFL);
-    signal(SIGUSR1,SIG_DFL);
+    #ifdef HAVE_SIGUSR1
+      signal(SIGUSR1,SIG_DFL);
+    #endif
     signal(SIGFPE,SIG_DFL);
     #ifdef HAVE_SIGBUS
       signal(SIGBUS,SIG_DFL);
@@ -427,7 +431,9 @@ LOCAL Errors initAll(void)
     sigfillset(&signalAction.sa_mask);
     signalAction.sa_flags     = SA_SIGINFO;
     signalAction.sa_sigaction = signalHandler;
-    sigaction(SIGUSR1,&signalAction,NULL);
+    #ifdef HAVE_SIGUSR1
+      sigaction(SIGUSR1,&signalAction,NULL);
+    #endif
     sigaction(SIGSEGV,&signalAction,NULL);
     sigaction(SIGFPE,&signalAction,NULL);
     sigaction(SIGILL,&signalAction,NULL);
@@ -436,7 +442,9 @@ LOCAL Errors initAll(void)
       sigaction(SIGBUS,&signalAction,NULL);
     #endif /* HAVE_SIGBUS */
   #else /* not HAVE_SIGACTION */
-    signal(SIGUSR1,signalHandler);
+    #ifdef HAVE_SIGUSR1
+      signal(SIGUSR1,signalHandler);
+    #endif
     signal(SIGSEGV,signalHandler);
     signal(SIGFPE,signalHandler);
     signal(SIGILL,signalHandler);
@@ -732,7 +740,9 @@ LOCAL void doneAll(void)
     signalAction.sa_flags   = 0;
     sigaction(SIGTERM,&signalAction,NULL);
     sigaction(SIGSEGV,&signalAction,NULL);
-    sigaction(SIGUSR1,&signalAction,NULL);
+    #ifdef HAVE_SIGUSR1
+      sigaction(SIGUSR1,&signalAction,NULL);
+    #endif
     sigaction(SIGFPE,&signalAction,NULL);
     #ifdef HAVE_SIGBUS
       sigaction(SIGBUS,&signalAction,NULL);
@@ -741,7 +751,9 @@ LOCAL void doneAll(void)
   #else /* not HAVE_SIGACTION */
     signal(SIGTERM,SIG_DFL);
     signal(SIGSEGV,SIG_DFL);
-    signal(SIGUSR1,SIG_DFL);
+    #ifdef HAVE_SIGUSR1
+      signal(SIGUSR1,SIG_DFL);
+    #endif
     signal(SIGFPE,SIG_DFL);
     #ifdef HAVE_SIGBUS
       signal(SIGBUS,SIG_DFL);
