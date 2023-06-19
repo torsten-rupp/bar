@@ -492,6 +492,7 @@ COMMON_SOURCES              = common/arrays.c \
                               common/autofree.c \
                               common/cmdoptions.c \
                               common/configvalues.c \
+                              common/cstrings.c \
                               common/database.c \
                               common/devices.c \
                               common/dictionaries.c \
@@ -591,6 +592,7 @@ BAR_INDEX_SOURCES_COMMON    = common/arrays.c \
                               common/cmdoptions.c \
                               common/database.c \
                               common/configvalues.c \
+                              common/cstrings.c \
                               common/devices.c \
                               common/dictionaries.c \
                               common/files.c \

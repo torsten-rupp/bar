@@ -19,6 +19,7 @@
 #include <assert.h>
 
 #include "common/global.h"
+#include "common/cstrings.h"
 #include "common/dictionaries.h"
 #include "common/threads.h"
 #include "common/strings.h"

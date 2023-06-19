@@ -35,6 +35,7 @@
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
+#include "common/cstrings.h"
 #include "common/autofree.h"
 #include "common/cmdoptions.h"
 #include "common/configvalues.h"

@@ -576,6 +576,7 @@ sub writeC()
 #include <errno.h>
 
 #include \"common/global.h\"
+#include \"common/cstrings.h\"
 
 #include \"errors.h\"
 

@@ -25,6 +25,7 @@
 #include <assert.h>
 
 #include "common/global.h"
+#include "common/cstrings.h"
 #include "common/autofree.h"
 #include "common/strings.h"
 #include "common/stringlists.h"

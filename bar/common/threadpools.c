@@ -31,6 +31,7 @@
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
+#include "common/cstrings.h"
 #include "common/lists.h"
 #include "common/msgqueues.h"
 

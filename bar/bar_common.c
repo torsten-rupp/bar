@@ -21,6 +21,7 @@
 #include "forward.h"         // required for JobOptions
 
 #include "common/global.h"
+#include "common/cstrings.h"
 
 #include "configuration.h"
 #include "archive.h"

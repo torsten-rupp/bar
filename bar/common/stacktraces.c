@@ -48,6 +48,7 @@
 #include <assert.h>
 
 #include "common/global.h"
+#include "common/cstrings.h"
 
 #include "stacktraces.h"
 

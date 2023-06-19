@@ -22,6 +22,7 @@
 #include <assert.h>
 
 #include "common/global.h"
+#include "common/cstrings.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -42,8 +43,6 @@
 #define STRING_ESCAPE_CHARACTER_MAP_LENGTH 9
 extern const char STRING_ESCAPE_CHARACTERS_MAP_FROM[STRING_ESCAPE_CHARACTER_MAP_LENGTH];
 extern const char STRING_ESCAPE_CHARACTERS_MAP_TO[STRING_ESCAPE_CHARACTER_MAP_LENGTH];
-
-#define STRING_NO_ASSIGN (void*)(-1)
 
 // empty string
 extern const struct __String* STRING_EMPTY;

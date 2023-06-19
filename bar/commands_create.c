@@ -21,6 +21,7 @@
 #include <assert.h>
 
 #include "common/arrays.h"
+#include "common/cstrings.h"
 #include "common/autofree.h"
 #include "common/database.h"
 #include "common/devices.h"

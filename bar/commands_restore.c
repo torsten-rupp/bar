@@ -24,10 +24,11 @@
 #include <errno.h>
 #include <assert.h>
 
+#include "common/global.h"
+#include "common/cstrings.h"
 #include "common/autofree.h"
 #include "common/dictionaries.h"
 #include "common/fragmentlists.h"
-#include "common/global.h"
 #include "common/misc.h"
 #include "common/msgqueues.h"
 #include "common/patternlists.h"
