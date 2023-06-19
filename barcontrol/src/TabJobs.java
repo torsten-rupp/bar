@@ -281,7 +281,7 @@ public class TabJobs
     Image getImage()
     {
       Image image = null;
-      if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
+      if      (isIncluded(name) && !isExcluded(name))
       {
         switch (fileType)
         {
@@ -292,7 +292,7 @@ public class TabJobs
           case SPECIAL:   image = IMAGE_FILE_INCLUDED;      break;
         }
       }
-      else if (excludeHashSet.contains(name) || noBackup || noDump )
+      else if (isExcluded(name) || noBackup || noDump )
       {
         switch (fileType)
         {
@@ -575,9 +575,9 @@ public class TabJobs
     Image getImage()
     {
       Image image = null;
-      if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
+      if      (isIncluded(name) && !isExcluded(name))
         image = IMAGE_DEVICE_INCLUDED;
-      else if (excludeHashSet.contains(name))
+      else if (isExcluded(name))
         image = IMAGE_DEVICE;
       else
         image = IMAGE_DEVICE;
@@ -3177,7 +3177,7 @@ public class TabJobs
               boolean isExcludedByNoDump   = false;
               boolean isExcludedByNoBackup = false;
               boolean isNone               = false;
-              if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
+              if      (isIncluded(fileTreeData.name) && !isExcluded(fileTreeData.name))
                 isIncluded = true;
               else if (fileTreeData.noBackup)
                 isExcludedByNoBackup = true;
@@ -9599,6 +9599,40 @@ throw new Error("NYI");
     }
   }
 
+  /** check if name is included
+   * @param name
+   * @return true iff included
+  */
+  private boolean isIncluded(String name)
+  {
+    for (String pattern : includeHashMap.keySet())
+    {
+      if (name.matches(StringUtils.globToRegex(pattern)))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /** check if name is excluded
+   * @param name
+   * @return true iff excluded
+  */
+  private boolean isExcluded(String name)
+  {
+    for (String pattern : excludeHashSet)
+    {
+      if (name.matches(StringUtils.globToRegex(pattern)))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /** parse compress algorithm string
    * @return [deltaCompressAlgorithm,byteCompressAlgorithmType,byteCompressAlgorithm]
    */
@@ -9812,7 +9846,7 @@ throw new Error("NYI");
           for (final String rootName : rootNameList)
           {
             final Image image;
-            if      (includeHashMap.containsKey(rootName) && !excludeHashSet.contains(rootName))
+            if      (isIncluded(rootName) && !isExcluded(rootName))
               image = IMAGE_DIRECTORY_INCLUDED;
             else if (excludeHashSet.contains(rootName))
               image = IMAGE_DIRECTORY_EXCLUDED;
@@ -10101,9 +10135,9 @@ throw new Error("NYI");
             case FILE:
               {
                 final Image image;
-                if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
+                if      (isIncluded(fileTreeData.name) && !isExcluded(fileTreeData.name))
                   image = IMAGE_FILE_INCLUDED;
-                else if (excludeHashSet.contains(fileTreeData.name) || fileTreeData.noDump)
+                else if (isExcluded(fileTreeData.name) || fileTreeData.noDump)
                   image = IMAGE_FILE_EXCLUDED;
                 else
                   image = IMAGE_FILE;
@@ -10133,9 +10167,9 @@ throw new Error("NYI");
             case DIRECTORY:
               {
                 final Image image;
-                if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
+                if      (isIncluded(fileTreeData.name) && !isExcluded(fileTreeData.name))
                   image = IMAGE_DIRECTORY_INCLUDED;
-                else if (excludeHashSet.contains(fileTreeData.name) || fileTreeData.noBackup || fileTreeData.noDump)
+                else if (isExcluded(fileTreeData.name) || fileTreeData.noBackup || fileTreeData.noDump)
                   image = IMAGE_DIRECTORY_EXCLUDED;
                 else
                   image = IMAGE_DIRECTORY;
@@ -10166,9 +10200,9 @@ throw new Error("NYI");
             case LINK:
               {
                 final Image image;
-                if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
+                if      (isIncluded(fileTreeData.name) && !isExcluded(fileTreeData.name))
                   image = IMAGE_LINK_INCLUDED;
-                else if (excludeHashSet.contains(fileTreeData.name) || fileTreeData.noDump)
+                else if (isExcluded(fileTreeData.name) || fileTreeData.noDump)
                   image = IMAGE_LINK_EXCLUDED;
                 else
                   image = IMAGE_LINK;
@@ -10197,9 +10231,9 @@ throw new Error("NYI");
             case HARDLINK:
               {
                 final Image image;
-                if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
+                if      (isIncluded(fileTreeData.name) && !isExcluded(fileTreeData.name))
                   image = IMAGE_FILE_INCLUDED;
-                else if (excludeHashSet.contains(fileTreeData.name) || fileTreeData.noDump)
+                else if (isExcluded(fileTreeData.name) || fileTreeData.noDump)
                   image = IMAGE_FILE_EXCLUDED;
                 else
                   image = IMAGE_FILE;
@@ -10228,9 +10262,9 @@ throw new Error("NYI");
             case SPECIAL:
               {
                 final Image image;
-                if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
+                if      (isIncluded(fileTreeData.name) && !isExcluded(fileTreeData.name))
                   image = IMAGE_FILE_INCLUDED;
-                else if (excludeHashSet.contains(fileTreeData.name) || fileTreeData.noDump)
+                else if (isExcluded(fileTreeData.name) || fileTreeData.noDump)
                   image = IMAGE_FILE_EXCLUDED;
                 else
                   image = IMAGE_FILE;
@@ -10361,7 +10395,7 @@ throw new Error("NYI");
     FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
 
     Image image = null;
-    if      (includeHashMap.containsKey(fileTreeData.name) && !excludeHashSet.contains(fileTreeData.name))
+    if      (isIncluded(fileTreeData.name) && !isExcluded(fileTreeData.name))
     {
       switch (fileTreeData.fileType)
       {
@@ -10372,7 +10406,7 @@ throw new Error("NYI");
         case SPECIAL:   image = IMAGE_FILE_INCLUDED;      break;
       }
     }
-    else if (excludeHashSet.contains(fileTreeData.name) || fileTreeData.noBackup || fileTreeData.noDump )
+    else if (isExcluded(fileTreeData.name) || fileTreeData.noBackup || fileTreeData.noDump )
     {
       switch (fileTreeData.fileType)
       {
@@ -10516,11 +10550,11 @@ throw new Error("NYI");
         DeviceData deviceData = (DeviceData)tableItem.getData();
 
         Image image;
-        if      (includeHashMap.containsKey(deviceData.name) && !excludeHashSet.contains(deviceData.name))
+        if      (isIncluded(deviceData.name) && !isExcluded(deviceData.name))
         {
           image = IMAGE_DEVICE_INCLUDED;
         }
-        else if (excludeHashSet.contains(deviceData.name))
+        else if (isExcluded(deviceData.name))
         {
           image = IMAGE_DEVICE;
         }
