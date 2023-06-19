@@ -1,4 +1,4 @@
-2023-06-01 0.23
+2023-06-01 0.22h
   * fixed wrong database entry for special files (type)
   * fixed database patterns: * and empty
   * fixed wrong locking on restore
@@ -12,6 +12,8 @@
     pattern
   * BARControl: fixed sort file tree items by type/size/
     date+time
+  * BARControl: fixed display of included/execluded entries
+    via pattern
 
 2023-04-16 0.22g
   * BARControl: fixed update job sate in dry-mode (issue #2,
