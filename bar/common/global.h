@@ -3745,12 +3745,10 @@ static inline Codepoint stringAtUTF8(const char *string, ulong index, ulong *nex
 
 static inline size_t stringVFormatLengthCodepointsUTF8(const char *format, va_list arguments)
 {
-  int  n;
-  char *s;
+  size_t n;
+  char   *s;
 
-  assert(format != NULL);
-
-  if (vasprintf(&s,format,arguments) != -1)
+  if ((format != NULL) && (vasprintf(&s,format,arguments) != -1))
   {
     n = stringLengthCodepointsUTF8(s);
     free(s);
@@ -3760,18 +3758,23 @@ static inline size_t stringVFormatLengthCodepointsUTF8(const char *format, va_li
     n = 0;
   }
 
-  return (size_t)n;
+  return n;
 }
 static inline size_t stringFormatLengthCodepointsUTF8(const char *format, ...)
 {
   va_list arguments;
   size_t  n;
 
-  assert(format != NULL);
-
-  va_start(arguments,format);
-  n = stringVFormatLengthCodepointsUTF8(format,arguments);
-  va_end(arguments);
+  if (format != NULL)
+  {
+    va_start(arguments,format);
+    n = stringVFormatLengthCodepointsUTF8(format,arguments);
+    va_end(arguments);
+  }
+  else
+  {
+    n = 0;
+  }
 
   return n;
 }
