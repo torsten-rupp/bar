@@ -15853,27 +15853,27 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // create UUID if not exists with given job UUID
           if (INDEX_ID_IS_NONE(uuidId))
           {
-            error = Index_findUUID(indexHandle,
-                                   String_cString(jobUUID),
-                                   NULL,  // findEntityUUID
-                                   &uuidId,
-                                   NULL,  // executionCountNormal,
-                                   NULL,  // executionCountFull,
-                                   NULL,  // executionCountIncremental,
-                                   NULL,  // executionCountDifferential,
-                                   NULL,  // executionCountContinuous,
-                                   NULL,  // averageDurationNormal,
-                                   NULL,  // averageDurationFull,
-                                   NULL,  // averageDurationIncremental,
-                                   NULL,  // averageDurationDifferential,
-                                   NULL,  // averageDurationContinuous,
-                                   NULL,  // totalEntityCount,
-                                   NULL,  // totalStorageCount,
-                                   NULL,  // totalStorageSize,
-                                   NULL,  // totalEntryCount,
-                                   NULL  // totalEntrySize
-                                  );
-            if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+            if (!Index_findUUID(indexHandle,
+                                String_cString(jobUUID),
+                                NULL,  // findEntityUUID
+                                &uuidId,
+                                NULL,  // executionCountNormal,
+                                NULL,  // executionCountFull,
+                                NULL,  // executionCountIncremental,
+                                NULL,  // executionCountDifferential,
+                                NULL,  // executionCountContinuous,
+                                NULL,  // averageDurationNormal,
+                                NULL,  // averageDurationFull,
+                                NULL,  // averageDurationIncremental,
+                                NULL,  // averageDurationDifferential,
+                                NULL,  // averageDurationContinuous,
+                                NULL,  // totalEntityCount,
+                                NULL,  // totalStorageCount,
+                                NULL,  // totalStorageSize,
+                                NULL,  // totalEntryCount,
+                                NULL  // totalEntrySize
+                               )
+               )
             {
               // create new UUID
               error = Index_newUUID(indexHandle,
@@ -15891,26 +15891,25 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // create entity if not exists with given job UUID/entity UUID/host name/archive type
           if (INDEX_ID_IS_NONE(entityId))
           {
-            error = Index_findEntity(indexHandle,
-                                     INDEX_ID_NONE,  // findEntityIndexId
-                                     jobUUID,
-                                     entityUUID,
-                                     hostName,
-                                     archiveType,
-                                     0L,  // findCreatedDate
-                                     0L,  // findCreatedTime
-                                     NULL,  // jobUUID,
-                                     NULL,  // entityUUID,
-                                     NULL,  // uuidIndexId,
-                                     &entityId,
-                                     NULL,  // archiveType,
-                                     NULL,  // createdDateTime,
-                                     NULL,  // lastErrorMessage,
-                                     NULL,  // totalEntryCount,
-                                     NULL  // totalEntrySize
-                                    );
-
-            if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+            if (!Index_findEntity(indexHandle,
+                                  INDEX_ID_NONE,  // findEntityIndexId
+                                  jobUUID,
+                                  entityUUID,
+                                  hostName,
+                                  archiveType,
+                                  0L,  // findCreatedDate
+                                  0L,  // findCreatedTime
+                                  NULL,  // jobUUID,
+                                  NULL,  // entityUUID,
+                                  NULL,  // uuidIndexId,
+                                  &entityId,
+                                  NULL,  // archiveType,
+                                  NULL,  // createdDateTime,
+                                  NULL,  // lastErrorMessage,
+                                  NULL,  // totalEntryCount,
+                                  NULL  // totalEntrySize
+                                 )
+               )
             {
               // create new entity
               error = Index_newEntity(indexHandle,

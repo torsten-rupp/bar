@@ -5072,7 +5072,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                         NULL,  // errorMessage
                                         NULL,  // totalEntryCount
                                         NULL  // totalEntrySize
-                                       ) == ERROR_NONE
+                                       )
                )
            )
         {
@@ -8044,38 +8044,38 @@ Errors Command_create(ServerIO                     *masterIO,
   if (Index_isAvailable())
   {
     // get/create index job UUID
-    error = Index_findUUID(&indexHandle,
-                           jobUUID,
-                           NULL,  // entityUUID
-                           &uuidId,
-                           NULL,  // executionCountNormal,
-                           NULL,  // executionCountFull,
-                           NULL,  // executionCountIncremental,
-                           NULL,  // executionCountDifferential,
-                           NULL,  // executionCountContinuous,
-                           NULL,  // averageDurationNormal,
-                           NULL,  // averageDurationFull,
-                           NULL,  // averageDurationIncremental,
-                           NULL,  // averageDurationDifferential,
-                           NULL,  // averageDurationContinuous,
-                           NULL,  // totalEntityCount,
-                           NULL,  // totalStorageCount,
-                           NULL,  // totalStorageSize,
-                           NULL,  // totalEntryCount,
-                           NULL  // totalEntrySize
-                          );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+    if (!Index_findUUID(&indexHandle,
+                        jobUUID,
+                        NULL,  // entityUUID
+                        &uuidId,
+                        NULL,  // executionCountNormal,
+                        NULL,  // executionCountFull,
+                        NULL,  // executionCountIncremental,
+                        NULL,  // executionCountDifferential,
+                        NULL,  // executionCountContinuous,
+                        NULL,  // averageDurationNormal,
+                        NULL,  // averageDurationFull,
+                        NULL,  // averageDurationIncremental,
+                        NULL,  // averageDurationDifferential,
+                        NULL,  // averageDurationContinuous,
+                        NULL,  // totalEntityCount,
+                        NULL,  // totalStorageCount,
+                        NULL,  // totalStorageSize,
+                        NULL,  // totalEntryCount,
+                        NULL  // totalEntrySize
+                       )
+       )
     {
       error = Index_newUUID(&indexHandle,jobUUID,&uuidId);
-    }
-    if (error != ERROR_NONE)
-    {
-      printError("cannot create index for '%s' (error: %s)!",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
+      if (error != ERROR_NONE)
+      {
+        printError("cannot create index for '%s' (error: %s)!",
+                   String_cString(printableStorageName),
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
     }
 
     // create new index entity

@@ -1108,27 +1108,27 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   if (indexHandle != NULL)
   {
     // find job data
-    error = Index_findUUID(indexHandle,
-                           String_cString(jobUUID),
-                           String_cString(entityUUUID),
-                           &uuidId,
-                           &executionCountNormal,
-                           &executionCountFull,
-                           &executionCountIncremental,
-                           &executionCountDifferential,
-                           &executionCountContinuous,
-                           &averageDurationNormal,
-                           &averageDurationFull,
-                           &averageDurationIncremental,
-                           &averageDurationDifferential,
-                           &averageDurationContinuous,
-                           &totalEntityCount,
-                           &totalStorageCount,
-                           &totalStorageSize,
-                           &totalEntryCount,
-                           &totalEntrySize
-                          );
-    if (error == ERROR_NONE)
+    if (Index_findUUID(indexHandle,
+                       String_cString(jobUUID),
+                       String_cString(entityUUUID),
+                       &uuidId,
+                       &executionCountNormal,
+                       &executionCountFull,
+                       &executionCountIncremental,
+                       &executionCountDifferential,
+                       &executionCountContinuous,
+                       &averageDurationNormal,
+                       &averageDurationFull,
+                       &averageDurationIncremental,
+                       &averageDurationDifferential,
+                       &averageDurationContinuous,
+                       &totalEntityCount,
+                       &totalStorageCount,
+                       &totalStorageSize,
+                       &totalEntryCount,
+                       &totalEntrySize
+                      )
+       )
     {
       sendResult(connectorInfo,
                  id,

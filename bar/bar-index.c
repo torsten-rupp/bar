@@ -906,125 +906,6 @@ LOCAL_INLINE DatabaseCopyPauseCallbackFunction getCopyPauseCallback(void)
   return NULL;
 }
 
-// TODO: use?
-#if 0
-LOCAL Errors initEntity(DatabaseHandle *oldDatabaseHandle,
-                        DatabaseHandle *newDatabaseHandle,
-                        DatabaseId     storageId,
-                        DatabaseId     *entityId
-                       )
-{
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  Errors     error;
-  DatabaseId uuidId;
-
-  assert(oldDatabaseHandle != NULL);
-  assert(newDatabaseHandle != NULL);
-  assert(entityId != NULL);
-
-  if (   (Database_getString(oldDatabaseHandle,
-                             jobUUID,
-                             "storages",
-                             "jobUUID",
-                             "id=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY(storageId)
-                             )
-                            ) != ERROR_NONE
-         )
-      || (Database_getId(oldDatabaseHandle,
-                         entityId,
-                         "entities",
-                         "id",
-                         "jobUUID=?",
-                         DATABASE_FILTERS
-                         (
-                           DATABASE_FILTER_STRING(jobUUID)
-                         )
-                        ) != ERROR_NONE
-         )
-     )
-  {
-    Misc_getUUID(jobUUID);
-    error = Database_insert(newDatabaseHandle,
-                            NULL,  // insertRowId
-                            "uuids",
-                            DATABASE_FLAG_IGNORE,
-                            DATABASE_VALUES
-                            (
-                              DATABASE_VALUE_STRING("jobUUID", jobUUID)
-                            ),
-                            DATABASE_COLUMNS_NONE,
-                            DATABASE_FILTERS_NONE
-                           );
-
-    // get uuid id
-    if (error == ERROR_NONE)
-    {
-      error = Database_getId(newDatabaseHandle,
-                             &uuidId,
-                             "uuids",
-                             "id",
-                             "jobUUID=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_STRING(jobUUID)
-                             )
-                            );
-    }
-
-    // create entity
-    if (error == ERROR_NONE)
-    {
-      error = Database_insert(newDatabaseHandle,
-                              entityId,
-                              "entities",
-                              DATABASE_FLAG_IGNORE,
-                              DATABASE_VALUES
-                              (
-                                DATABASE_VALUE_KEY   ("uuidId",      uuidId),
-                                DATABASE_VALUE_STRING("jobUUID",     jobUUID),
-                                DATABASE_VALUE_UINT  ("type",        ARCHIVE_TYPE_FULL),
-                                DATABASE_VALUE_UINT  ("lockedCount", 1)
-                              ),
-                              DATABASE_COLUMNS_NONE,
-                              DATABASE_FILTERS_NONE
-                             );
-    }
-  }
-  else
-  {
-// TODO: error message UUID not found
-    error = ERROR_DATABASE_INVALID_INDEX;
-  }
-
-  return error;
-}
-
-LOCAL Errors unlockEntity(DatabaseHandle *databaseHandle,
-                          DatabaseId     entityId
-                         )
-{
-  assert(databaseHandle != NULL);
-
-  return Database_update(databaseHandle,
-                         NULL,  // changedRowCount
-                         "entities",
-                         DATABASE_FLAG_NONE,
-                         DATABASE_VALUES
-                         (
-                           DATABASE_VALUE("lockedCount","lockedCount-1")
-                         ),
-                         "id=? AND lockedCount>0",
-                         DATABASE_FILTERS
-                         (
-                           DATABASE_FILTER_KEY(entityId)
-                         )
-                        );
-}
-#endif
-
 /***********************************************************************\
 * Name   : formatSubProgressInfo
 * Purpose: format sub-progress info call back
@@ -2014,7 +1895,6 @@ LOCAL ulong checkDuplicates(DatabaseHandle *databaseHandle)
                        0LL,
                        DATABASE_UNLIMITED
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error == ERROR_NONE)
   {
     printInfo("%u\n",n);
@@ -2893,7 +2773,6 @@ LOCAL Errors createFTSIndizes(DatabaseHandle *databaseHandle)
                                  0LL,
                                  DATABASE_UNLIMITED
                                 );
-            if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
           }
 
           if (error == ERROR_NONE)
@@ -3176,7 +3055,6 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                        0LL,
                        DATABASE_UNLIMITED
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     List_done(&entryList);
@@ -3240,7 +3118,6 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                          1LL
                         );
   }
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     List_done(&entryList);
@@ -3310,7 +3187,6 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
       }
     }
   }
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     List_done(&entryList);
@@ -4203,7 +4079,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -4289,7 +4164,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -4380,7 +4254,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -4459,7 +4332,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -4551,7 +4423,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -4630,7 +4501,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -4728,7 +4598,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -4814,7 +4683,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -4905,7 +4773,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -4984,7 +4851,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -5508,7 +5374,6 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -6245,7 +6110,6 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
                          0LL,
                          DATABASE_UNLIMITED
                         );
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     if (error != ERROR_NONE)
     {
       DATABASE_TRANSACTION_ABORT(databaseHandle);
@@ -6466,7 +6330,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     (void)Database_getIds(databaseHandle,
                           &ids,
                           "imageEntries \
-                             LEFT JOIN entries ON entries.id=fileEntries.entryId \
+                             LEFT JOIN entries ON entries.id=imageEntries.entryId \
                              LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
                           ",
                           "imageEntries.id",
@@ -7458,7 +7322,6 @@ LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
                        0LL,
                        DATABASE_UNLIMITED
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
@@ -7516,9 +7379,10 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
   Array         entryIds;
   ulong         n;
   Errors        error;
-  DatabaseId    storageId;
   ArrayIterator storageArrayIterator,entryArrayIterator;
-  DatabaseId    entityId;
+  DatabaseId    storageId;
+  DatabaseId    databaseId;
+  IndexId       entityId;
   DatabaseId    entryId;
 
   // init variables
@@ -7555,11 +7419,10 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
       printInfo("  %10"PRIi64"...",storageId);
 
       // get entity id
-      entityId = DATABASE_ID_NONE;
       if (error == ERROR_NONE)
       {
         error = Database_getId(databaseHandle,
-                               &entityId,
+                               &databaseId,
                                "storages",
                                "entityId",
                                "id=?",
@@ -7569,6 +7432,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                )
                               );
       }
+      entityId = INDEX_ID_ENTITY(databaseId);
 
       // collect file/image/hardlink entries to purge
       Array_clear(&entryIds);
@@ -7865,8 +7729,8 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
       // prune entity
       if (error == ERROR_NONE)
       {
-        if (    (entityId != DATABASE_ID_NONE)
-             && (entityId != INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID)
+        if (    !INDEX_ID_IS_NONE(entityId)
+             && (INDEX_DATABASE_ID(entityId) != INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID)
              && !Database_existsValue(databaseHandle,
                                       "entries",
                                       DATABASE_FLAG_NONE,
@@ -7874,7 +7738,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                       "entityId=?",
                                       DATABASE_FILTERS
                                       (
-                                        DATABASE_FILTER_KEY(entityId)
+                                        DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                                       )
                                      )
              && !Database_existsValue(databaseHandle,
@@ -7884,7 +7748,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                       "entityId=?",
                                       DATABASE_FILTERS
                                       (
-                                        DATABASE_FILTER_KEY(entityId)
+                                        DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                                       )
                                      )
           )
@@ -7896,7 +7760,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                   "id=?",
                                   DATABASE_FILTERS
                                   (
-                                    DATABASE_FILTER_KEY(entityId)
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                                   ),
                                   DATABASE_UNLIMITED
                                  );
@@ -8297,7 +8161,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        DATABASE_UNLIMITED
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get meta data fail (error: %s)!",Error_getText(error));
@@ -8586,7 +8449,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -8631,7 +8493,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -8676,7 +8537,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -8715,7 +8575,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -8754,7 +8613,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -8799,7 +8657,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -8838,7 +8695,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -8903,7 +8759,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -8948,7 +8803,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -8993,7 +8847,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -9032,7 +8885,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -9071,7 +8923,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -9116,7 +8967,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -9155,7 +9005,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                        0LL,
                        1LL
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entries data fail (error: %s)!",Error_getText(error));
@@ -9403,7 +9252,6 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                        0LL,
                        DATABASE_UNLIMITED
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get UUID data fail (error: %s)!",Error_getText(error));
@@ -9617,7 +9465,6 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                        0LL,
                        DATABASE_UNLIMITED
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get entity data fail (error: %s)!",Error_getText(error));
@@ -9843,7 +9690,6 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                               0LL,
                                               DATABASE_UNLIMITED
                                              );
-                         if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
                          if (error != ERROR_NONE)
                          {
                            return error;
@@ -9881,7 +9727,6 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                        0LL,
                        DATABASE_UNLIMITED
                       );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     printError("get storage data fail (error: %s)!",Error_getText(error));
@@ -10059,7 +9904,6 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                               0LL,
                                               DATABASE_UNLIMITED
                                              );
-                         if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
                          if (error != ERROR_NONE)
                          {
                            return error;
@@ -11977,6 +11821,13 @@ if (xxxId != DATABASE_ID_NONE)
       if (error == ERROR_NONE)
       {
         t0 = Misc_getTimestamp();
+#if 0
+        error = Database_execute(&databaseHandle,
+                                 NULL,  // changedRowCound
+                                 DATABASE_FLAG_NONE,
+                                 String_cString(s)
+                                );
+#else
         error = Database_get(&databaseHandle,
                              CALLBACK_(printRow,&printRowData),
                              NULL,  // changedRowCount
@@ -11992,8 +11843,8 @@ if (xxxId != DATABASE_ID_NONE)
                              0LL,
                              DATABASE_UNLIMITED
                             );
+#endif
         t1 = Misc_getTimestamp();
-        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       }
       freeColumnsWidth(printRowData.widths);
 
@@ -12052,7 +11903,6 @@ if (xxxId != DATABASE_ID_NONE)
                            0LL,
                            DATABASE_UNLIMITED
                           );
-      if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       if (error != ERROR_NONE)
       {
         if (verboseFlag) fprintf(stderr,"Result: %s\n",Error_getText(error));
