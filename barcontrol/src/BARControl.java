@@ -2128,6 +2128,7 @@ public class BARControl
       output.println("  "+stackTraceElement);
     }
     Throwable cause = throwable.getCause();
+Dprintf.printStackTrace();
     while (cause != null)
     {
       System.err.println("Caused by:");

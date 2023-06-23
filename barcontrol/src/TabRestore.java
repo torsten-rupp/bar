@@ -3827,9 +3827,10 @@ Dprintf.dprintf("");
                                                        name,
                                                        newestOnly
                                                       ),
-0,//                                   1,  // debugLevel
+                                   1,  // debugLevel
                                    valueMap
                                   );
+Dprintf.dprintf("valueMap=%s",valueMap);
           totalEntryCount = valueMap.getLong("totalEntryCount");
           totalEntrySize  = valueMap.getLong("totalEntrySize");
           assert(totalEntryCount >= 0);
@@ -3840,6 +3841,7 @@ Dprintf.dprintf("");
           // ignored
           totalEntryCount = 0;
           totalEntrySize  = 0;
+Dprintf.dprintf("exception=%s",exception);
           BARControl.logThrowable(exception);
         }
 
