@@ -357,27 +357,28 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
 
 // ----------------------------------------------------------------------
 
-Errors Index_findUUID(IndexHandle  *indexHandle,
-                      const char   *findJobUUID,
-                      const char   *findEntityUUID,
-                      IndexId      *uuidId,
-                      uint         *executionCountNormal,
-                      uint         *executionCountFull,
-                      uint         *executionCountIncremental,
-                      uint         *executionCountDifferential,
-                      uint         *executionCountContinuous,
-                      uint64       *averageDurationNormal,
-                      uint64       *averageDurationFull,
-                      uint64       *averageDurationIncremental,
-                      uint64       *averageDurationDifferential,
-                      uint64       *averageDurationContinuous,
-                      uint         *totalEntityCount,
-                      uint         *totalStorageCount,
-                      uint64       *totalStorageSize,
-                      uint         *totalEntryCount,
-                      uint64       *totalEntrySize
-                     )
+bool Index_findUUID(IndexHandle  *indexHandle,
+                    const char   *findJobUUID,
+                    const char   *findEntityUUID,
+                    IndexId      *uuidId,
+                    uint         *executionCountNormal,
+                    uint         *executionCountFull,
+                    uint         *executionCountIncremental,
+                    uint         *executionCountDifferential,
+                    uint         *executionCountContinuous,
+                    uint64       *averageDurationNormal,
+                    uint64       *averageDurationFull,
+                    uint64       *averageDurationIncremental,
+                    uint64       *averageDurationDifferential,
+                    uint64       *averageDurationContinuous,
+                    uint         *totalEntityCount,
+                    uint         *totalStorageCount,
+                    uint64       *totalStorageSize,
+                    uint         *totalEntryCount,
+                    uint64       *totalEntrySize
+                   )
 {
+  bool   foundFlag;
   Errors error;
 
   assert(indexHandle != NULL);
@@ -387,6 +388,9 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
   {
     return ERROR_DATABASE_NOT_FOUND;
   }
+
+  // init variables
+  foundFlag   = FALSE;
 
   if (indexHandle->masterIO == NULL)
   {
@@ -418,6 +422,8 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
                             if (totalStorageSize            != NULL) (*totalStorageSize           ) = values[13].u64;
                             if (totalEntryCount             != NULL) (*totalEntryCount            ) = values[14].u;
                             if (totalEntrySize              != NULL) (*totalEntrySize             ) = values[15].u64;
+
+                            foundFlag = TRUE;
 
                             return ERROR_NONE;
                           },NULL),
@@ -506,6 +512,8 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
                                       if (totalEntryCount             != NULL) StringMap_getUInt   (resultMap,"totalEntryCount",            totalEntryCount,            0            );
                                       if (totalEntrySize              != NULL) StringMap_getUInt64 (resultMap,"totalEntrySize",             totalEntrySize,             0LL          );
 
+                                      foundFlag = TRUE;
+
                                       return ERROR_NONE;
                                     },NULL),
                                     "INDEX_FIND_UUID jobUUID=%'s entityUUID=%'s",
@@ -513,9 +521,9 @@ Errors Index_findUUID(IndexHandle  *indexHandle,
                                     (findEntityUUID != NULL) ? findEntityUUID : ""
                                    );
   }
-  assert((error != ERROR_NONE) || (uuidId == NULL) || !INDEX_ID_IS_NONE(*uuidId));
+  assert((error == ERROR_NONE) && (!foundFlag || (uuidId == NULL) || !INDEX_ID_IS_NONE(*uuidId)));
 
-  return error;
+  return foundFlag;
 }
 
 Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
@@ -613,10 +621,6 @@ Errors Index_getUUIDsInfos(IndexHandle *indexHandle,
                         1LL
                        );
   });
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-  {
-    error = ERROR_NONE;
-  }
 
   // free resources
   Database_deleteFilter(filterString);

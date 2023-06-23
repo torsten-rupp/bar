@@ -1567,7 +1567,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                                     NULL,  // errorMessage
                                     NULL,  // totalEntryCount
                                     NULL  // totalEntrySize
-                                   ) == ERROR_NONE
+                                   )
           )
     {
       // get printable name (if possible)
@@ -1682,7 +1682,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
                                       NULL,  // errorMessage
                                       NULL,  // totalEntryCount
                                       NULL  // totalEntrySize
-                                     ) == ERROR_NONE
+                                     )
             )
          && !Array_contains(&storageIds,&storageId)
         )
@@ -2575,13 +2575,7 @@ LOCAL void indexThreadCode(void)
                                );
           });
           if (   (error != ERROR_NONE)
-              && (Error_getCode(error) != ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
-             )
-          {
-            break;
-          }
-          if (   !IndexCommon_isMaintenanceTime(Misc_getCurrentDateTime())
-              || indexQuitFlag
+              || INDEX_ID_IS_NONE(storageId)
              )
           {
             break;
@@ -3656,7 +3650,6 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                NULL  // orderGroup
                               );
       assert(   (error == ERROR_NONE)
-             || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
              || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
             );
     }
@@ -3675,7 +3668,6 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                NULL  // orderGroup
                               );
       assert(   (error == ERROR_NONE)
-             || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
              || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
             );
     }
@@ -3694,7 +3686,6 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                NULL  // orderGroup
                               );
       assert(   (error == ERROR_NONE)
-             || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
              || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
             );
     }
@@ -3819,7 +3810,6 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                            1LL
                           );
       assert(   (error == ERROR_NONE)
-             || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
              || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
             );
     }
@@ -3838,7 +3828,6 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                                NULL  // orderGroup
                               );
       assert(   (error == ERROR_NONE)
-             || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
              || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
             );
     }

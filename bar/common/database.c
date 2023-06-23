@@ -1911,10 +1911,21 @@ LOCAL Errors sqlite3StatementPrepare(DatabaseStatementHandle *databaseStatementH
   if      (sqliteResult == SQLITE_MISUSE)
   {
     HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d: %s",
-                        sqliteResult,sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                        sqliteResult,
+                        sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
                         sqlString
                        );
   }
+#if 0
+  else if (sqliteResult == SQLITE_ERROR)
+  {
+    HALT_INTERNAL_ERROR("SQLite error %d: %s: %s",
+                        sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                        sqlString,
+                        sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
+                       );
+  }
+#endif
   else if (sqliteResult == SQLITE_INTERRUPT)
   {
     error = ERRORX_(INTERRUPTED,
@@ -3265,7 +3276,6 @@ LOCAL Errors mariaDBGetIndexList(StringList     *indexList,
                                               0LL,
                                               DATABASE_UNLIMITED
                                              );
-                           if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
                            return error;
                          },NULL),
@@ -3282,7 +3292,6 @@ LOCAL Errors mariaDBGetIndexList(StringList     *indexList,
                          DATABASE_UNLIMITED
                         );
   }
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
   return error;
 }
@@ -7680,6 +7689,13 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                                 sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
                                );
           }
+          else if (sqliteResult == SQLITE_ERROR)
+          {
+            HALT_INTERNAL_ERROR("SQLite error %d: %s",
+                                sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                                sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
+                               );
+          }
           else if ((sqliteResult == SQLITE_LOCKED) || (sqliteResult == SQLITE_BUSY))
           {
             error = ERROR_DATABASE_BUSY;
@@ -7900,21 +7916,22 @@ struct {
 } PQprintOpt;
 #endif
 
-LOCAL Errors getNextRow(DatabaseStatementHandle *databaseStatementHandle,
-                        uint                    flags,
-                        long                    timeout
-                       )
+LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
+                      uint                    flags,
+                      long                    timeout,
+                      Errors                  *error
+                     )
 {
   #define SLEEP_TIME 500L
 
-  uint   n;
-  Errors error;
+  uint n;
+  bool rowFlag;
 
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
 
-  n     = 0;
-  error = ERROR_UNKNOWN;
+  n       = 0;
+  rowFlag = FALSE;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -7930,6 +7947,13 @@ LOCAL Errors getNextRow(DatabaseStatementHandle *databaseStatementHandle,
             HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
                                 sqliteResult,
                                 sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
+                               );
+          }
+          else if (sqliteResult == SQLITE_ERROR)
+          {
+            HALT_INTERNAL_ERROR("SQLite error %d: %s",
+                                sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                                sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
                                );
           }
           else if (sqliteResult == SQLITE_LOCKED)
@@ -8041,19 +8065,19 @@ LOCAL Errors getNextRow(DatabaseStatementHandle *databaseStatementHandle,
             }
           }
 
-          error = ERROR_NONE;
+          rowFlag = TRUE;
         }
         else if (sqliteResult == SQLITE_DONE)
         {
-          error = ERROR_DATABASE_ENTRY_NOT_FOUND;
+          // no data
         }
         else
         {
-          error = ERRORX_(DATABASE,
-                          sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
-                          "%s",
-                          sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
-                         );
+          if (error != NULL) (*error) = ERRORX_(DATABASE,
+                                                sqlite3_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                                                "%s",
+                                                sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
+                                               );
         }
       }
       break;
@@ -8065,104 +8089,106 @@ LOCAL Errors getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           MYSQL_FIELD *mysqlFields;
           uint i;
 
-          mysqlResult = mysql_stmt_fetch(databaseStatementHandle->mariadb.statementHandle);
-          switch (mysqlResult)
+          // Note: must check number of result columns to avoid error for INSERT/UPDATE commands which do not return a result
+          if (mysql_stmt_field_count(databaseStatementHandle->mariadb.statementHandle) > 0)
           {
-            case 0:
-              if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
-              {
-                mysqlMetaData = mysql_stmt_result_metadata(databaseStatementHandle->mariadb.statementHandle);
-                assert(mysqlMetaData != NULL);
-                assert(mysql_num_fields(mysqlMetaData) == databaseStatementHandle->resultCount);
-
-                mysqlFields   = mysql_fetch_fields(mysqlMetaData);
-                assert(mysqlFields != NULL);
-              }
-              else
-              {
-                mysqlMetaData = NULL;
-                mysqlFields   = NULL;
-              }
-              assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
-              for (i = 0; i < databaseStatementHandle->resultCount; i++)
-              {
-                // get name
+            mysqlResult = mysql_stmt_fetch(databaseStatementHandle->mariadb.statementHandle);
+            switch (mysqlResult)
+            {
+              case 0:
                 if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
                 {
-// TODO: copy name?
-                  databaseStatementHandle->results[i].name = mysqlFields[i].name;
-                }
+                  mysqlMetaData = mysql_stmt_result_metadata(databaseStatementHandle->mariadb.statementHandle);
+                  assert(mysqlMetaData != NULL);
+                  assert(mysql_num_fields(mysqlMetaData) == databaseStatementHandle->resultCount);
 
-                // get value
-                switch (databaseStatementHandle->results[i].type)
+                  mysqlFields   = mysql_fetch_fields(mysqlMetaData);
+                  assert(mysqlFields != NULL);
+                }
+                else
                 {
-                  case DATABASE_DATATYPE_NONE:
-                    break;
-                  case DATABASE_DATATYPE:
-                    break;
-                  case DATABASE_DATATYPE_PRIMARY_KEY:
-                  case DATABASE_DATATYPE_KEY:
-                    break;
-                  case DATABASE_DATATYPE_BOOL:
-                    break;
-                  case DATABASE_DATATYPE_INT:
-                    break;
-                  case DATABASE_DATATYPE_INT64:
-                    break;
-                  case DATABASE_DATATYPE_UINT:
-                    break;
-                  case DATABASE_DATATYPE_UINT64:
-                    break;
-                  case DATABASE_DATATYPE_DOUBLE:
-                    break;
-                  case DATABASE_DATATYPE_ENUM:
-                    break;
-                  case DATABASE_DATATYPE_DATETIME:
-                    // Note: always UNIX_TIMESTAMP
-                    break;
-                  case DATABASE_DATATYPE_STRING:
-                    String_setBuffer(databaseStatementHandle->results[i].string,
-                                     databaseStatementHandle->mariadb.results.bind[i].buffer,
-                                     databaseStatementHandle->mariadb.results.lengths[i]
-                                    );
-                    break;
-                  case DATABASE_DATATYPE_CSTRING:
-                    HALT_INTERNAL_ERROR_NOT_SUPPORTED();
-                    break;
-                  case DATABASE_DATATYPE_BLOB:
-                    HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-                    break;
-                  case DATABASE_DATATYPE_ARRAY:
-                    HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-                    break;
-                  default:
-                    #ifndef NDEBUG
-                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                    #endif /* NDEBUG */
-                    break;
+                  mysqlMetaData = NULL;
+                  mysqlFields   = NULL;
                 }
-              }
-              if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
-              {
-                mysql_free_result(mysqlMetaData);
-              }
+                assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
+                for (i = 0; i < databaseStatementHandle->resultCount; i++)
+                {
+                  // get name
+                  if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
+                  {
+  // TODO: copy name?
+                    databaseStatementHandle->results[i].name = mysqlFields[i].name;
+                  }
 
-              error = ERROR_NONE;
-              break;
-            case 1:
-              // error
-              error = ERRORX_(DATABASE,
-                              mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
-                              "%s",
-                              mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
-                             );
-              break;
-            case MYSQL_NO_DATA:
-              error = ERROR_DATABASE_ENTRY_NOT_FOUND;
-              break;
-            case MYSQL_DATA_TRUNCATED:
-              error = ERROR_DATABASE_ENTRY_NOT_FOUND;
-              break;
+                  // get value
+                  switch (databaseStatementHandle->results[i].type)
+                  {
+                    case DATABASE_DATATYPE_NONE:
+                      break;
+                    case DATABASE_DATATYPE:
+                      break;
+                    case DATABASE_DATATYPE_PRIMARY_KEY:
+                    case DATABASE_DATATYPE_KEY:
+                      break;
+                    case DATABASE_DATATYPE_BOOL:
+                      break;
+                    case DATABASE_DATATYPE_INT:
+                      break;
+                    case DATABASE_DATATYPE_INT64:
+                      break;
+                    case DATABASE_DATATYPE_UINT:
+                      break;
+                    case DATABASE_DATATYPE_UINT64:
+                      break;
+                    case DATABASE_DATATYPE_DOUBLE:
+                      break;
+                    case DATABASE_DATATYPE_ENUM:
+                      break;
+                    case DATABASE_DATATYPE_DATETIME:
+                      // Note: always UNIX_TIMESTAMP
+                      break;
+                    case DATABASE_DATATYPE_STRING:
+                      String_setBuffer(databaseStatementHandle->results[i].string,
+                                       databaseStatementHandle->mariadb.results.bind[i].buffer,
+                                       databaseStatementHandle->mariadb.results.lengths[i]
+                                      );
+                      break;
+                    case DATABASE_DATATYPE_CSTRING:
+                      HALT_INTERNAL_ERROR_NOT_SUPPORTED();
+                      break;
+                    case DATABASE_DATATYPE_BLOB:
+                      HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                      break;
+                    case DATABASE_DATATYPE_ARRAY:
+                      HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                      break;
+                    default:
+                      #ifndef NDEBUG
+                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                      #endif /* NDEBUG */
+                      break;
+                  }
+                }
+                if (IS_SET(flags,DATABASE_FLAG_COLUMN_NAMES))
+                {
+                  mysql_free_result(mysqlMetaData);
+                }
+
+                rowFlag = TRUE;
+                break;
+              case 1:
+                // no data
+                if (error != NULL) (*error) = ERRORX_(DATABASE,
+                                                      mysql_stmt_errno(databaseStatementHandle->mariadb.statementHandle),
+                                                      "%s",
+                                                      mysql_stmt_error(databaseStatementHandle->mariadb.statementHandle)
+                                                     );
+                break;
+              case MYSQL_NO_DATA:
+              case MYSQL_DATA_TRUNCATED:
+                // no data
+                break;
+            }
           }
         }
       #else /* HAVE_MARIADB */
@@ -8274,14 +8300,10 @@ LOCAL Errors getNextRow(DatabaseStatementHandle *databaseStatementHandle,
               }
               UNUSED_VARIABLE(tail);
 
-              error = ERROR_NONE;
+              rowFlag = TRUE;
             }
 
             databaseStatementHandle->postgresql.rowIndex++;
-          }
-          else
-          {
-            error = ERROR_DATABASE_ENTRY_NOT_FOUND;
           }
         }
       #else /* HAVE_POSTGRESQL */
@@ -8290,9 +8312,8 @@ LOCAL Errors getNextRow(DatabaseStatementHandle *databaseStatementHandle,
       #endif /* HAVE_POSTGRESQL */
       break;
   }
-  assert(error != ERROR_UNKNOWN);
 
-  return error;
+  return rowFlag;
 
   #undef SLEEP_TIME
 }
@@ -8454,19 +8475,13 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
           if (databaseRowFunction != NULL)
           {
             // step
-            error = getNextRow(databaseStatementHandle,flags,timeout);
-            if (error == ERROR_NONE)
+            error = ERROR_NONE;
+            while (getNextRow(databaseStatementHandle,flags,timeout,&error))
             {
-              do
-              {
-                error = databaseRowFunction(databaseStatementHandle->results,
-                                            databaseStatementHandle->resultCount,
-                                            databaseRowUserData
-                                           );
-                if (error == ERROR_NONE) error = getNextRow(databaseStatementHandle,flags,timeout);
-              }
-              while (error == ERROR_NONE);
-              if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+              error = databaseRowFunction(databaseStatementHandle->results,
+                                          databaseStatementHandle->resultCount,
+                                          databaseRowUserData
+                                         );
             }
 
             // get number of changes
@@ -8490,19 +8505,13 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             if (databaseRowFunction != NULL)
             {
               // step
-              error = getNextRow(databaseStatementHandle,flags,timeout);
-              if (error == ERROR_NONE)
+              error = ERROR_NONE;
+              while (getNextRow(databaseStatementHandle,flags,timeout,&error))
               {
-                do
-                {
-                  error = databaseRowFunction(databaseStatementHandle->results,
-                                              databaseStatementHandle->resultCount,
-                                              databaseRowUserData
-                                             );
-                  if (error == ERROR_NONE) error = getNextRow(databaseStatementHandle,flags,timeout);
-                }
-                while (error == ERROR_NONE);
-                if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
+                error = databaseRowFunction(databaseStatementHandle->results,
+                                            databaseStatementHandle->resultCount,
+                                            databaseRowUserData
+                                           );
               }
 
               // get number of changes
@@ -8532,20 +8541,14 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             if (databaseRowFunction != NULL)
             {
               // step
-              error = getNextRow(databaseStatementHandle,flags,timeout);
-              if (error == ERROR_NONE)
+              error = ERROR_NONE;
+              while (getNextRow(databaseStatementHandle,flags,timeout,&error))
               {
-                do
-                {
-                  error = databaseRowFunction(databaseStatementHandle->results,
-                                              databaseStatementHandle->resultCount,
-                                              databaseRowUserData
-                                             );
-                  if (error == ERROR_NONE) error = getNextRow(databaseStatementHandle,flags,timeout);
-                }
-                while (error == ERROR_NONE);
-                if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
-            }
+                error = databaseRowFunction(databaseStatementHandle->results,
+                                            databaseStatementHandle->resultCount,
+                                            databaseRowUserData
+                                           );
+              }
 
               // get number of changes
               if (changedRowCount != NULL)
@@ -8916,6 +8919,13 @@ LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
           HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
                               sqliteResult,
                               sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
+                             );
+        }
+        else if (sqliteResult == SQLITE_ERROR)
+        {
+          HALT_INTERNAL_ERROR("SQLite error %d: %s",
+                              sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                              sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
                              );
         }
         else if (sqliteResult != SQLITE_OK)
@@ -9560,6 +9570,13 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
           HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
                               sqliteResult,
                               sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
+                             );
+        }
+        else if (sqliteResult == SQLITE_ERROR)
+        {
+          HALT_INTERNAL_ERROR("SQLite error %d: %s",
+                              sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                              sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
                              );
         }
         else if (sqliteResult != SQLITE_OK)
@@ -10243,6 +10260,13 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
             HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",
                                 sqliteResult,
                                 sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle)
+                               );
+          }
+          else if (sqliteResult == SQLITE_ERROR)
+          {
+            HALT_INTERNAL_ERROR("SQLite error %d: %s",
+                                sqlite3_extended_errcode(databaseStatementHandle->databaseHandle->sqlite.handle),
+                                sqlite3_errmsg(databaseStatementHandle->databaseHandle->sqlite.handle)
                                );
           }
           else if (sqliteResult != SQLITE_OK)
@@ -17369,7 +17393,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                          ...
                         )
 {
-  Errors  error;
+  bool    rowFlag;
   va_list arguments;
   union
   {
@@ -17394,8 +17418,8 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
 
   DATABASE_DEBUG_TIME_START(databaseStatementHandle);
-  error = getNextRow(databaseStatementHandle,DATABASE_FLAG_NONE,NO_WAIT);
-  if (error == ERROR_NONE)
+  rowFlag = getNextRow(databaseStatementHandle,DATABASE_FLAG_NONE,NO_WAIT,NULL);
+  if (rowFlag)
   {
     assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
 
@@ -17504,7 +17528,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   }
   DATABASE_DEBUG_TIME_END(databaseStatementHandle);
 
-  return error == ERROR_NONE;
+  return rowFlag;
 }
 
 #ifdef NDEBUG
@@ -17931,7 +17955,6 @@ Errors Database_getIds(DatabaseHandle       *databaseHandle,
                       0,
                       limit
                      );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
   return error;
 }

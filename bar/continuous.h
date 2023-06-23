@@ -325,6 +325,6 @@ void Continuous_debugPrintStatistics(void);
   }
 #endif
 
-#endif /* __INDEX__ */
+#endif /* __CONTINUOUS__ */
 
 /* end of file */

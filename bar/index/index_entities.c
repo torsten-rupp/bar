@@ -1683,25 +1683,26 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
 
 /*---------------------------------------------------------------------*/
 
-Errors Index_findEntity(IndexHandle  *indexHandle,
-                        IndexId      findEntityId,
-                        ConstString  findJobUUID,
-                        ConstString  findEntityUUID,
-                        ConstString  findHostName,
-                        ArchiveTypes findArchiveType,
-                        uint64       findCreatedDate,
-                        uint64       findCreatedTime,
-                        String       jobUUID,
-                        String       entityUUID,
-                        IndexId      *uuidId,
-                        IndexId      *entityId,
-                        ArchiveTypes *archiveType,
-                        uint64       *createdDateTime,
-                        String       lastErrorMessage,
-                        uint         *totalEntryCount,
-                        uint64       *totalEntrySize
-                       )
+bool Index_findEntity(IndexHandle  *indexHandle,
+                      IndexId      findEntityId,
+                      ConstString  findJobUUID,
+                      ConstString  findEntityUUID,
+                      ConstString  findHostName,
+                      ArchiveTypes findArchiveType,
+                      uint64       findCreatedDate,
+                      uint64       findCreatedTime,
+                      String       jobUUID,
+                      String       entityUUID,
+                      IndexId      *uuidId,
+                      IndexId      *entityId,
+                      ArchiveTypes *archiveType,
+                      uint64       *createdDateTime,
+                      String       lastErrorMessage,
+                      uint         *totalEntryCount,
+                      uint64       *totalEntrySize
+                     )
 {
+  bool   foundFlag;
   String filterString;
   Errors error;
 
@@ -1712,6 +1713,9 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
   {
     return ERROR_DATABASE_NOT_FOUND;
   }
+
+  // init variables
+  foundFlag = FALSE;
 
   // get filters
   filterString = Database_newFilter();
@@ -1747,6 +1751,10 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
                           if (lastErrorMessage != NULL) String_set(lastErrorMessage,values[6].string);
                           if (totalEntryCount  != NULL) (*totalEntryCount) = values[7].u;
                           if (totalEntrySize   != NULL) (*totalEntrySize)  = values[8].u64;
+
+                          assert((entityId == NULL) || !INDEX_ID_IS_NONE(*entityId));
+
+                          foundFlag = TRUE;
 
                           return ERROR_NONE;
                         },NULL),
@@ -1787,14 +1795,13 @@ Errors Index_findEntity(IndexHandle  *indexHandle,
   if (error != ERROR_NONE)
   {
     Database_deleteFilter(filterString);
-    return error;
+    return FALSE;
   }
-  assert((error != ERROR_NONE) || (entityId == NULL) || !INDEX_ID_IS_NONE(*entityId));
 
   // free resources
   Database_deleteFilter(filterString);
 
-  return error;
+  return foundFlag;
 }
 
 Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
@@ -2106,8 +2113,8 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                        IndexId      *entityId
                       )
 {
-  Errors     error;
-  DatabaseId uuidId;
+  Errors  error;
+  IndexId uuidId;
 
   assert(indexHandle != NULL);
   assert(jobUUID != NULL);
@@ -2127,25 +2134,8 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
       DatabaseId databaseId;
 
       // create UUID (if it does not exists)
-      error = Database_insert(&indexHandle->databaseHandle,
-                              NULL,  // insertRowId
-                              "uuids",
-                              DATABASE_FLAG_IGNORE,
-                              DATABASE_VALUES
-                              (
-                                DATABASE_VALUE_CSTRING("jobUUID", jobUUID)
-                              ),
-                              DATABASE_COLUMNS_NONE,
-                              DATABASE_FILTERS_NONE
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // get uuid id
       error = Database_getId(&indexHandle->databaseHandle,
-                             &uuidId,
+                             &databaseId,
                              "uuids",
                              "id",
                              "jobUUID=?",
@@ -2154,10 +2144,25 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                DATABASE_FILTER_CSTRING(jobUUID)
                              )
                             );
+      if ((error == ERROR_NONE) && (databaseId == DATABASE_ID_NONE))
+      {
+        error = Database_insert(&indexHandle->databaseHandle,
+                                &databaseId,
+                                "uuids",
+                                DATABASE_FLAG_IGNORE,
+                                DATABASE_VALUES
+                                (
+                                  DATABASE_VALUE_CSTRING("jobUUID", jobUUID)
+                                ),
+                                DATABASE_COLUMNS_NONE,
+                                DATABASE_FILTERS_NONE
+                               );
+      }
       if (error != ERROR_NONE)
       {
         return error;
       }
+      uuidId = INDEX_ID_UUID(databaseId);
 
       // create entity
       if (createdDateTime == 0LL) createdDateTime = Misc_getCurrentDateTime();
@@ -2168,7 +2173,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY     ("uuidId",       uuidId),
+                                DATABASE_VALUE_KEY     ("uuidId",       INDEX_DATABASE_ID(uuidId)),
                                 DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
                                 DATABASE_VALUE_CSTRING ("scheduleUUID", entityUUID),
                                 DATABASE_VALUE_CSTRING ("hostName",     hostName),

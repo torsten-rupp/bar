@@ -147,7 +147,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
                                     NULL,  // errorMessage
                                     NULL,  // totalEntryCount
                                     NULL  // totalEntrySize
-                                   ) == ERROR_NONE
+                                   )
           )
     {
       // get printable name (if possible)
@@ -295,10 +295,11 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
     {
       if (String_isEmpty(storageName))
       {
-        (void)IndexStorage_purge(indexHandle,
+        error = IndexStorage_purge(indexHandle,
                                  storageId,
                                  NULL  // progressInfo
                                 );
+        assert(error == ERROR_NONE);
         n++;
       }
     }
@@ -566,7 +567,6 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
                       DATABASE_UNLIMITED
                      );
   });
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
   // free resources
   String_delete(name2);
@@ -609,7 +609,6 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
   ulong      n;
   Errors     error;
   DatabaseId databaseId;
-  IndexId    storageId;
 
   assert(indexHandle != NULL);
 
@@ -647,21 +646,19 @@ LOCAL Errors cleanUpStorageInvalidState(IndexHandle *indexHandle)
                                DATABASE_FILTER_UINT(INDEX_STATE_MAX)
                              )
                             );
-      storageId = INDEX_ID_STORAGE(databaseId);
-      if ((error == ERROR_NONE) && !INDEX_ID_IS_NONE(storageId))
+      if ((error == ERROR_NONE) && (databaseId == DATABASE_ID_NONE))
       {
         error = IndexStorage_purge(indexHandle,
-                                   storageId,
+                                   INDEX_ID_STORAGE(databaseId),
                                    NULL  // progressInfo
                                   );
         n++;
       }
     }
-    while ((error == ERROR_NONE) && !INDEX_ID_IS_NONE(storageId));
+    while ((error == ERROR_NONE) && (databaseId != DATABASE_ID_NONE));
 
     return error;
   });
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
   // free resource
 
@@ -851,7 +848,6 @@ LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
                         DATABASE_UNLIMITED
                       );
   });
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
   // free resources
   String_delete(name2);
@@ -1271,7 +1267,6 @@ LOCAL Errors clearStorageAggregates(IndexHandle  *indexHandle,
 {
   Errors     error;
   DatabaseId databaseId;
-  IndexId    entityId;
   #ifdef INDEX_DEBUG_PURGE
     uint64 t0,dt[10];
   #endif
@@ -1341,10 +1336,11 @@ LOCAL Errors clearStorageAggregates(IndexHandle  *indexHandle,
                              DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
                            )
                           );
-    entityId = INDEX_ID_ENTITY(databaseId);
-    if (error == ERROR_NONE)
+    if ((error == ERROR_NONE) && (databaseId != DATABASE_ID_NONE))
     {
-      error = IndexEntity_updateAggregates(indexHandle,entityId);
+      error = IndexEntity_updateAggregates(indexHandle,
+                                           INDEX_ID_ENTITY(databaseId)
+                                          );
     }
   }
   #ifdef INDEX_DEBUG_PURGE
@@ -1645,8 +1641,6 @@ fprintf(stderr,"%s:%d: %lu\n",__FILE__,__LINE__,Array_length(entryIds));
            );
   #endif
 #endif
-
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
 
   // collect file/image/directory/link/hardlink/special entries to delete
   if (error == ERROR_NONE)
@@ -2317,7 +2311,6 @@ UNUSED_VARIABLE(progressInfo);
                            0LL,
                            DATABASE_UNLIMITED
                           );
-      if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       if (error != ERROR_NONE)
       {
         return error;
@@ -2366,7 +2359,6 @@ UNUSED_VARIABLE(progressInfo);
                            0LL,
                            DATABASE_UNLIMITED
                           );
-      if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       if (error != ERROR_NONE)
       {
         return error;
@@ -2415,7 +2407,6 @@ UNUSED_VARIABLE(progressInfo);
                            0LL,
                            DATABASE_UNLIMITED
                           );
-      if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       if (error != ERROR_NONE)
       {
         return error;
@@ -2464,7 +2455,6 @@ UNUSED_VARIABLE(progressInfo);
                            0LL,
                            DATABASE_UNLIMITED
                           );
-      if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       if (error != ERROR_NONE)
       {
         return error;
@@ -3140,7 +3130,6 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                            0LL,
                            DATABASE_UNLIMITED
                           );
-      if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
 
       return error;
     });
@@ -3207,7 +3196,6 @@ Errors IndexStorage_addToNewest(IndexHandle  *indexHandle,
                           1LL
                          );
     });
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     ProgressInfo_step(progressInfo);
   }
 
@@ -4360,11 +4348,12 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                            DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
                          )
                         );
-  if (error != ERROR_NONE)
+  if ((error == ERROR_NONE) && (databaseId != DATABASE_ID_NONE))
   {
-    return error;
+    error = IndexEntity_updateAggregates(indexHandle,
+                                         INDEX_ID_ENTITY(databaseId)
+                                        );
   }
-  error = IndexEntity_updateAggregates(indexHandle,INDEX_ID_ENTITY(databaseId));
   if (error != ERROR_NONE)
   {
     return error;
@@ -4473,23 +4462,23 @@ Errors Index_findStorageById(IndexHandle *indexHandle,
   return error;
 }
 
-Errors Index_findStorageByName(IndexHandle            *indexHandle,
-                               const StorageSpecifier *findStorageSpecifier,
-                               ConstString            findArchiveName,
-                               IndexId                *uuidId,
-                               IndexId                *entityId,
-                               String                 jobUUID,
-                               String                 scheduleUUID,
-                               IndexId                *storageId,
-                               uint64                 *dateTime,
-                               uint64                 *size,
-                               IndexStates            *indexState,
-                               IndexModes             *indexMode,
-                               uint64                 *lastCheckedDateTime,
-                               String                 errorMessage,
-                               uint                   *totalEntryCount,
-                               uint64                 *totalEntrySize
-                              )
+bool Index_findStorageByName(IndexHandle            *indexHandle,
+                             const StorageSpecifier *findStorageSpecifier,
+                             ConstString            findArchiveName,
+                             IndexId                *uuidId,
+                             IndexId                *entityId,
+                             String                 jobUUID,
+                             String                 scheduleUUID,
+                             IndexId                *storageId,
+                             uint64                 *dateTime,
+                             uint64                 *size,
+                             IndexStates            *indexState,
+                             IndexModes             *indexMode,
+                             uint64                 *lastCheckedDateTime,
+                             String                 errorMessage,
+                             uint                   *totalEntryCount,
+                             uint64                 *totalEntrySize
+                            )
 {
   bool             foundFlag;
   Errors           error;
@@ -4560,12 +4549,14 @@ Errors Index_findStorageByName(IndexHandle            *indexHandle,
                               if (totalEntryCount     != NULL) (*totalEntryCount)     = values[12].u;
                               if (totalEntrySize      != NULL) (*totalEntrySize)      = values[13].u64;
 
+                              assert(!foundFlag || (storageId == NULL) || !INDEX_ID_IS_NONE(*storageId));
+
                               foundFlag = TRUE;
                             }
                           }
 
 // TODO: add conditional parameter for get/select
-                          return foundFlag ? ERROR_ABORTED : ERROR_NONE;
+                          return ERROR_NONE;
                         },NULL),
                         NULL,  // changedRowCount
                         DATABASE_TABLES
@@ -4608,36 +4599,36 @@ Errors Index_findStorageByName(IndexHandle            *indexHandle,
     String_delete(filterString);
     String_delete(storageName);
     Storage_doneSpecifier(&storageSpecifier);
-    return error;
+    return FALSE;
   }
-  assert(!foundFlag || (storageId == NULL) || !INDEX_ID_IS_NONE(*storageId));
 
   // free resources
   String_delete(filterString);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
 
-  return foundFlag ? ERROR_NONE : ERROR_DATABASE_ENTRY_NOT_FOUND;
+  return foundFlag;
 }
 
-Errors Index_findStorageByState(IndexHandle   *indexHandle,
-                                IndexStateSet findIndexStateSet,
-                                IndexId       *uuidId,
-                                String        jobUUID,
-                                IndexId       *entityId,
-                                String        scheduleUUID,
-                                IndexId       *storageId,
-                                String        storageName,
-                                uint64        *dateTime,
-                                uint64        *size,
-                                IndexModes    *indexMode,
-                                uint64        *lastCheckedDateTime,
-                                String        errorMessage,
-                                uint          *totalEntryCount,
-                                uint64        *totalEntrySize
-                               )
+bool Index_findStorageByState(IndexHandle   *indexHandle,
+                              IndexStateSet findIndexStateSet,
+                              IndexId       *uuidId,
+                              String        jobUUID,
+                              IndexId       *entityId,
+                              String        scheduleUUID,
+                              IndexId       *storageId,
+                              String        storageName,
+                              uint64        *dateTime,
+                              uint64        *size,
+                              IndexModes    *indexMode,
+                              uint64        *lastCheckedDateTime,
+                              String        errorMessage,
+                              uint          *totalEntryCount,
+                              uint64        *totalEntrySize
+                             )
 {
   String indexStateSetString;
+  bool   foundFlag;
   Errors error;
 
   assert(indexHandle != NULL);
@@ -4646,10 +4637,11 @@ Errors Index_findStorageByState(IndexHandle   *indexHandle,
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
-    return ERROR_DATABASE_NOT_FOUND;
+    return FALSE;
   }
 
   // init variables
+  foundFlag           = FALSE;
   indexStateSetString = String_new();
 
   IndexCommon_getIndexStateSetString(indexStateSetString,findIndexStateSet);
@@ -4681,6 +4673,8 @@ Errors Index_findStorageByState(IndexHandle   *indexHandle,
                           if (errorMessage        != NULL) String_set(errorMessage,values[10].string);
                           if (totalEntryCount     != NULL) (*totalEntryCount)     = values[11].u;
                           if (totalEntrySize      != NULL) (*totalEntrySize)      = values[12].u64;
+
+                          foundFlag = TRUE;
 
                           return ERROR_NONE;
                         },NULL),
@@ -4727,14 +4721,13 @@ Errors Index_findStorageByState(IndexHandle   *indexHandle,
   if (error != ERROR_NONE)
   {
     String_delete(indexStateSetString);
-    return error;
+    return FALSE;
   }
-  assert((storageId == NULL) || !INDEX_ID_IS_NONE(*storageId));
 
   // free resources
   String_delete(indexStateSetString);
 
-  return error;
+  return foundFlag;
 }
 
 Errors Index_getStorageState(IndexHandle *indexHandle,
@@ -5145,7 +5138,6 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                            0LL,
                            1LL
                           );
-      if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       if (error != ERROR_NONE)
       {
         return error;
@@ -5174,7 +5166,6 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                    ),
                                    NULL  // group
                                   );
-        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       }
       else if (   !String_isEmpty(entityIdsString)
                || !INDEX_ID_IS_ANY(uuidId)
@@ -5199,7 +5190,6 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                    ),
                                    NULL  // group
                                   );
-        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       }
       else
       {
@@ -5218,7 +5208,6 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                                    ),
                                    NULL  // group
                                   );
-        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
       }
       if (error != ERROR_NONE)
       {

@@ -612,6 +612,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                                              )
 {
   Errors     error;
+  IndexId    entriesNewestId;
   DatabaseId databaseId;
   String     directoryName;
 
@@ -621,7 +622,6 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   assert(fileName != NULL);
 
   // get newest id
-  databaseId = DATABASE_ID_NONE;
   error = Database_getId(&indexHandle->databaseHandle,
                          &databaseId,
                          "entriesNewest",
@@ -632,11 +632,11 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                            DATABASE_FILTER_KEY(entryId)
                          )
                         );
-  if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
   if (error != ERROR_NONE)
   {
     return error;
   }
+  entriesNewestId = INDEX_ID_ENTRY(databaseId);
 
   directoryName = File_getDirectoryName(String_new(),fileName);
   while (!String_isEmpty(directoryName) && (error == ERROR_NONE))
@@ -665,7 +665,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
       break;
     }
 
-    if (databaseId != DATABASE_ID_NONE)
+    if (!INDEX_ID_IS_NONE(entriesNewestId))
     {
       // update directory entry newest
       error = Database_update(&indexHandle->databaseHandle,
@@ -1490,7 +1490,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                         LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                      "
                                    ),
-                                   DATABASE_FLAG_NONE,
+DATABASE_FLAG_DEBUG|                                   DATABASE_FLAG_NONE,
                                    DATABASE_COLUMNS
                                    (
                                      DATABASE_COLUMN_UINT  ("0"),
@@ -1853,9 +1853,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
       return error;
     });
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     assertx(   (error == ERROR_NONE)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
             "%s",Error_getText(error)
            );
@@ -2026,9 +2024,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
       return ERROR_NONE;
     });
-    if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND) error = ERROR_NONE;
     assertx(   (error == ERROR_NONE)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
             "%s",Error_getText(error)
            );
@@ -2169,7 +2165,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return ERROR_NONE;
     });
     assertx(   (error == ERROR_NONE)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
             "%s",Error_getText(error)
            );
@@ -2292,7 +2287,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return ERROR_NONE;
     });
     assertx(   (error == ERROR_NONE)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
             "%s",Error_getText(error)
            );
@@ -4234,7 +4228,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
                     )
 {
   Errors     error;
-  DatabaseId entryId;
+  DatabaseId databaseId;
+  IndexId    entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
@@ -4257,7 +4252,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
       {
         // get existing entry id
         error = Database_getId(&indexHandle->databaseHandle,
-                               &entryId,
+                               &databaseId,
                                "entries",
                                "id",
                                "    entityId=? \
@@ -4272,11 +4267,11 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                  DATABASE_FILTER_STRING(name)
                                )
                               );
-        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+        if ((error == ERROR_NONE) && (databaseId == DATABASE_ID_NONE))
         {
           // add entry
           error = Database_insert(&indexHandle->databaseHandle,
-                                  &entryId,
+                                  &databaseId,
                                   "entries",
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
@@ -4297,70 +4292,69 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                   DATABASE_COLUMNS_NONE,
                                   DATABASE_FILTERS_NONE
                                  );
+        }
+        entryId = INDEX_ID_ENTRY(databaseId);
 
-          // add FTS entry
+        // add FTS entry
 // TODO: do this with a trigger again?
-          if (error == ERROR_NONE)
+        if (error == ERROR_NONE)
+        {
+          switch (Database_getType(&indexHandle->databaseHandle))
           {
-            assert(entryId != DATABASE_ID_NONE);
+            case DATABASE_TYPE_SQLITE3:
+              error = Database_insert(&indexHandle->databaseHandle,
+                                      NULL,  // insertRowId
+                                      "FTS_entries",
+                                      DATABASE_FLAG_NONE,
+                                      DATABASE_VALUES
+                                      (
+                                        DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                        DATABASE_VALUE_STRING("name",    name)
+                                      ),
+                                      DATABASE_COLUMNS_NONE,
+                                      DATABASE_FILTERS_NONE
+                                     );
+              break;
+            case DATABASE_TYPE_MARIADB:
+              break;
+            case DATABASE_TYPE_POSTGRESQL:
+              {
+                String tokens;
 
-            switch (Database_getType(&indexHandle->databaseHandle))
-            {
-              case DATABASE_TYPE_SQLITE3:
+                tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
                 error = Database_insert(&indexHandle->databaseHandle,
                                         NULL,  // insertRowId
                                         "FTS_entries",
                                         DATABASE_FLAG_NONE,
                                         DATABASE_VALUES
                                         (
-                                          DATABASE_VALUE_KEY   ("entryId", entryId),
-                                          DATABASE_VALUE_STRING("name",    name)
+                                          DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                          DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
                                         ),
                                         DATABASE_COLUMNS_NONE,
                                         DATABASE_FILTERS_NONE
                                        );
-                break;
-              case DATABASE_TYPE_MARIADB:
-                break;
-              case DATABASE_TYPE_POSTGRESQL:
-                {
-                  String tokens;
-
-                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
-                  error = Database_insert(&indexHandle->databaseHandle,
-                                          NULL,  // insertRowId
-                                          "FTS_entries",
-                                          DATABASE_FLAG_NONE,
-                                          DATABASE_VALUES
-                                          (
-                                            DATABASE_VALUE_KEY   ("entryId", entryId),
-                                            DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
-                                          ),
-                                          DATABASE_COLUMNS_NONE,
-                                          DATABASE_FILTERS_NONE
-                                         );
-                  String_delete(tokens);
-                }
-                break;
-            }
+                String_delete(tokens);
+              }
+              break;
           }
+        }
 
-          // add file entry
-          if (error == ERROR_NONE)
-          {
-            error = Database_insert(&indexHandle->databaseHandle,
-                                    NULL,  // insertRowId
-                                    "fileEntries",
-                                    DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES
-                                    (
-                                      DATABASE_VALUE_KEY   ("entryId", entryId),
-                                      DATABASE_VALUE_UINT64("size",    size)
-                                    ),
-                                    DATABASE_COLUMNS_NONE,
-                                    DATABASE_FILTERS_NONE
-                                   );
-          }
+        // add file entry
+        if (error == ERROR_NONE)
+        {
+          error = Database_insert(&indexHandle->databaseHandle,
+                                  NULL,  // insertRowId
+                                  "fileEntries",
+                                  DATABASE_FLAG_NONE,
+                                  DATABASE_VALUES
+                                  (
+                                    DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                    DATABASE_VALUE_UINT64("size",    size)
+                                  ),
+                                  DATABASE_COLUMNS_NONE,
+                                  DATABASE_FILTERS_NONE
+                                 );
         }
       }
       if (error != ERROR_NONE)
@@ -4375,7 +4369,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entryId",   entryId),
+                                DATABASE_VALUE_KEY   ("entryId",   INDEX_DATABASE_ID(entryId)),
                                 DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_UINT64("offset",    fragmentOffset),
                                 DATABASE_VALUE_UINT64("size",      fragmentSize)
@@ -4391,7 +4385,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
                                                INDEX_DATABASE_ID(storageId),
-                                               entryId,
+                                               INDEX_DATABASE_ID(entryId),
                                                name,
                                                size
                                               );
@@ -4452,7 +4446,8 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                      )
 {
   Errors     error;
-  DatabaseId entryId;
+  DatabaseId databaseId;
+  IndexId    entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
@@ -4475,7 +4470,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
       {
         // get existing entry id
         error = Database_getId(&indexHandle->databaseHandle,
-                               &entryId,
+                               &databaseId,
                                "entries",
                                "id",
                                "    entityId=? \
@@ -4490,11 +4485,11 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                  DATABASE_FILTER_STRING(name)
                                )
                               );
-        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+        if ((error == ERROR_NONE) && (databaseId == DATABASE_ID_NONE))
         {
           // add entry
           error = Database_insert(&indexHandle->databaseHandle,
-                                  &entryId,
+                                  &databaseId,
                                   "entries",
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
@@ -4515,71 +4510,70 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                   DATABASE_COLUMNS_NONE,
                                   DATABASE_FILTERS_NONE
                                  );
+        }
+        entryId = INDEX_ID_ENTRY(databaseId);
 
-          // add FTS entry
-          if (error == ERROR_NONE)
+        // add FTS entry
+        if (error == ERROR_NONE)
+        {
+          switch (Database_getType(&indexHandle->databaseHandle))
           {
-            assert(entryId != DATABASE_ID_NONE);
+            case DATABASE_TYPE_SQLITE3:
+              error = Database_insert(&indexHandle->databaseHandle,
+                                      NULL,  // insertRowId
+                                      "FTS_entries",
+                                      DATABASE_FLAG_NONE,
+                                      DATABASE_VALUES
+                                      (
+                                        DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                        DATABASE_VALUE_STRING("name",    name)
+                                      ),
+                                      DATABASE_COLUMNS_NONE,
+                                      DATABASE_FILTERS_NONE
+                                     );
+              break;
+            case DATABASE_TYPE_MARIADB:
+              break;
+            case DATABASE_TYPE_POSTGRESQL:
+              {
+                String tokens;
 
-            switch (Database_getType(&indexHandle->databaseHandle))
-            {
-              case DATABASE_TYPE_SQLITE3:
+                tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
                 error = Database_insert(&indexHandle->databaseHandle,
                                         NULL,  // insertRowId
                                         "FTS_entries",
                                         DATABASE_FLAG_NONE,
                                         DATABASE_VALUES
                                         (
-                                          DATABASE_VALUE_KEY   ("entryId", entryId),
-                                          DATABASE_VALUE_STRING("name",    name)
+                                          DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                          DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
                                         ),
                                         DATABASE_COLUMNS_NONE,
                                         DATABASE_FILTERS_NONE
                                        );
-                break;
-              case DATABASE_TYPE_MARIADB:
-                break;
-              case DATABASE_TYPE_POSTGRESQL:
-                {
-                  String tokens;
-
-                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
-                  error = Database_insert(&indexHandle->databaseHandle,
-                                          NULL,  // insertRowId
-                                          "FTS_entries",
-                                          DATABASE_FLAG_NONE,
-                                          DATABASE_VALUES
-                                          (
-                                            DATABASE_VALUE_KEY   ("entryId", entryId),
-                                            DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
-                                          ),
-                                          DATABASE_COLUMNS_NONE,
-                                          DATABASE_FILTERS_NONE
-                                         );
-                  String_delete(tokens);
-                }
-                break;
-            }
+                String_delete(tokens);
+              }
+              break;
           }
+        }
 
-          // add image entry
-          if (error == ERROR_NONE)
-          {
-            error = Database_insert(&indexHandle->databaseHandle,
-                                    NULL,  // insertRowId
-                                    "imageEntries",
-                                    DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES
-                                    (
-                                      DATABASE_VALUE_KEY   ("entryId",        entryId),
-                                      DATABASE_VALUE_UINT  ("fileSystemType", fileSystemType),
-                                      DATABASE_VALUE_UINT64("size",           size),
-                                      DATABASE_VALUE_UINT  ("blockSize",      blockSize)
-                                    ),
-                                    DATABASE_COLUMNS_NONE,
-                                    DATABASE_FILTERS_NONE
-                                   );
-          }
+        // add image entry
+        if (error == ERROR_NONE)
+        {
+          error = Database_insert(&indexHandle->databaseHandle,
+                                  NULL,  // insertRowId
+                                  "imageEntries",
+                                  DATABASE_FLAG_NONE,
+                                  DATABASE_VALUES
+                                  (
+                                    DATABASE_VALUE_KEY   ("entryId",        INDEX_DATABASE_ID(entryId)),
+                                    DATABASE_VALUE_UINT  ("fileSystemType", fileSystemType),
+                                    DATABASE_VALUE_UINT64("size",           size),
+                                    DATABASE_VALUE_UINT  ("blockSize",      blockSize)
+                                  ),
+                                  DATABASE_COLUMNS_NONE,
+                                  DATABASE_FILTERS_NONE
+                                 );
         }
       }
       if (error != ERROR_NONE)
@@ -4594,7 +4588,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entryId",   entryId),
+                                DATABASE_VALUE_KEY   ("entryId",   INDEX_DATABASE_ID(entryId)),
                                 DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_UINT64("offset",    blockOffset*(uint64)blockSize),
                                 DATABASE_VALUE_UINT64("size",      blockCount*(uint64)blockSize)
@@ -4651,7 +4645,8 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                          )
 {
   Errors     error;
-  DatabaseId entryId;
+  DatabaseId databaseId;
+  IndexId    entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
@@ -4671,7 +4666,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     {
       // add entry
       error = Database_insert(&indexHandle->databaseHandle,
-                              &entryId,
+                              &databaseId,
                               "entries",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -4696,7 +4691,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       {
         return error;
       }
-      assert(entryId != DATABASE_ID_NONE);
+      entryId = INDEX_ID_ENTRY(databaseId);
 
       // add FTS entry
       switch (Database_getType(&indexHandle->databaseHandle))
@@ -4708,7 +4703,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entryId", entryId),
+                                    DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
                                     DATABASE_VALUE_STRING("name",    name)
                                   ),
                                   DATABASE_COLUMNS_NONE,
@@ -4728,7 +4723,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
                                     (
-                                      DATABASE_VALUE_KEY   ("entryId", entryId),
+                                      DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
                                       DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
                                     ),
                                     DATABASE_COLUMNS_NONE,
@@ -4750,7 +4745,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entryId",   entryId),
+                                DATABASE_VALUE_KEY   ("entryId",   INDEX_DATABASE_ID(entryId)),
                                 DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_STRING("name",      name)
                               ),
@@ -4765,7 +4760,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
                                                INDEX_DATABASE_ID(storageId),
-                                               entryId,
+                                               INDEX_DATABASE_ID(entryId),
                                                name,
                                                0LL
                                               );
@@ -4823,7 +4818,8 @@ Errors Index_addLink(IndexHandle *indexHandle,
                     )
 {
   Errors     error;
-  DatabaseId entryId;
+  DatabaseId databaseId;
+  IndexId    entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
@@ -4846,7 +4842,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
     {
       // add entry
       error = Database_insert(&indexHandle->databaseHandle,
-                              &entryId,
+                              &databaseId,
                               "entries",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -4871,7 +4867,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
       {
         return error;
       }
-      assert(entryId != DATABASE_ID_NONE);
+      entryId = INDEX_ID_ENTRY(databaseId);
 
       // add FTS entry
 // TODO: do this in a trigger again?
@@ -4884,7 +4880,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entryId", entryId),
+                                    DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
                                     DATABASE_VALUE_STRING("name",    linkName)
                                   ),
                                   DATABASE_COLUMNS_NONE,
@@ -4904,7 +4900,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
                                     (
-                                      DATABASE_VALUE_KEY   ("entryId", entryId),
+                                      DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
                                       DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
                                     ),
                                     DATABASE_COLUMNS_NONE,
@@ -4926,7 +4922,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entryId",         entryId),
+                                DATABASE_VALUE_KEY   ("entryId",         INDEX_DATABASE_ID(entryId)),
                                 DATABASE_VALUE_KEY   ("storageId",       INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_STRING("destinationName", destinationName)
                               ),
@@ -4941,7 +4937,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
                                                INDEX_DATABASE_ID(storageId),
-                                               entryId,
+                                               INDEX_DATABASE_ID(entryId),
                                                linkName,
                                                0LL
                                               );
@@ -4994,7 +4990,8 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                         )
 {
   Errors     error;
-  DatabaseId entryId;
+  DatabaseId databaseId;
+  IndexId    entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
@@ -5017,7 +5014,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
       {
         // get existing entry id
         error = Database_getId(&indexHandle->databaseHandle,
-                               &entryId,
+                               &databaseId,
                                "entries",
                                "id",
                                "    entityId=? \
@@ -5032,11 +5029,11 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                  DATABASE_FILTER_STRING(name),
                                )
                               );
-        if (Error_getCode(error) == ERROR_CODE_DATABASE_ENTRY_NOT_FOUND)
+        if ((error == ERROR_NONE) && (databaseId == DATABASE_ID_NONE))
         {
           // add entry
           error = Database_insert(&indexHandle->databaseHandle,
-                                  &entryId,
+                                  &databaseId,
                                   "entries",
                                   DATABASE_FLAG_IGNORE,
                                   DATABASE_VALUES
@@ -5057,70 +5054,69 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                   DATABASE_COLUMNS_NONE,
                                   DATABASE_FILTERS_NONE
                                  );
+        }
+        entryId = INDEX_ID_ENTRY(databaseId);
 
-          // add FTS entry
-          if (error == ERROR_NONE)
-          {
-            assert(entryId != DATABASE_ID_NONE);
-
+        // add FTS entry
+        if (error == ERROR_NONE)
+        {
 // TODO: do this in a trigger again?
-            switch (Database_getType(&indexHandle->databaseHandle))
-            {
-              case DATABASE_TYPE_SQLITE3:
+          switch (Database_getType(&indexHandle->databaseHandle))
+          {
+            case DATABASE_TYPE_SQLITE3:
+              error = Database_insert(&indexHandle->databaseHandle,
+                                      NULL,  // insertRowId
+                                      "FTS_entries",
+                                      DATABASE_FLAG_NONE,
+                                      DATABASE_VALUES
+                                      (
+                                        DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                        DATABASE_VALUE_STRING("name",    name)
+                                      ),
+                                      DATABASE_COLUMNS_NONE,
+                                      DATABASE_FILTERS_NONE
+                                     );
+              break;
+            case DATABASE_TYPE_MARIADB:
+              break;
+            case DATABASE_TYPE_POSTGRESQL:
+              {
+                String tokens;
+
+                tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
                 error = Database_insert(&indexHandle->databaseHandle,
                                         NULL,  // insertRowId
                                         "FTS_entries",
                                         DATABASE_FLAG_NONE,
                                         DATABASE_VALUES
                                         (
-                                          DATABASE_VALUE_KEY   ("entryId", entryId),
-                                          DATABASE_VALUE_STRING("name",    name)
+                                          DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                          DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
                                         ),
                                         DATABASE_COLUMNS_NONE,
                                         DATABASE_FILTERS_NONE
                                        );
-                break;
-              case DATABASE_TYPE_MARIADB:
-                break;
-              case DATABASE_TYPE_POSTGRESQL:
-                {
-                  String tokens;
-
-                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
-                  error = Database_insert(&indexHandle->databaseHandle,
-                                          NULL,  // insertRowId
-                                          "FTS_entries",
-                                          DATABASE_FLAG_NONE,
-                                          DATABASE_VALUES
-                                          (
-                                            DATABASE_VALUE_KEY   ("entryId", entryId),
-                                            DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
-                                          ),
-                                          DATABASE_COLUMNS_NONE,
-                                          DATABASE_FILTERS_NONE
-                                         );
-                  String_delete(tokens);
-                }
-                break;
-            }
+                String_delete(tokens);
+              }
+              break;
           }
+        }
 
-          // add hard link entry
-          if (error == ERROR_NONE)
-          {
-            error = Database_insert(&indexHandle->databaseHandle,
-                                    NULL,  // insertRowId
-                                    "hardlinkEntries",
-                                    DATABASE_FLAG_NONE,
-                                    DATABASE_VALUES
-                                    (
-                                      DATABASE_VALUE_KEY   ("entryId", entryId),
-                                      DATABASE_VALUE_UINT64("size",    size)
-                                    ),
-                                    DATABASE_COLUMNS_NONE,
-                                    DATABASE_FILTERS_NONE
-                                   );
-          }
+        // add hard link entry
+        if (error == ERROR_NONE)
+        {
+          error = Database_insert(&indexHandle->databaseHandle,
+                                  NULL,  // insertRowId
+                                  "hardlinkEntries",
+                                  DATABASE_FLAG_NONE,
+                                  DATABASE_VALUES
+                                  (
+                                    DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                    DATABASE_VALUE_UINT64("size",    size)
+                                  ),
+                                  DATABASE_COLUMNS_NONE,
+                                  DATABASE_FILTERS_NONE
+                                 );
         }
       }
       if (error != ERROR_NONE)
@@ -5135,7 +5131,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entryId",   entryId),
+                                DATABASE_VALUE_KEY   ("entryId",   INDEX_DATABASE_ID(entryId)),
                                 DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_UINT64("offset",    fragmentOffset),
                                 DATABASE_VALUE_UINT64("size",      fragmentSize)
@@ -5151,7 +5147,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
                                                INDEX_DATABASE_ID(storageId),
-                                               entryId,
+                                               INDEX_DATABASE_ID(entryId),
                                                name,
                                                size
                                               );
@@ -5216,7 +5212,8 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                        )
 {
   Errors     error;
-  DatabaseId entryId;
+  DatabaseId databaseId;
+  IndexId    entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_NONE(entityId) || (INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY));
@@ -5236,7 +5233,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
     {
       // add entry
       error = Database_insert(&indexHandle->databaseHandle,
-                              &entryId,
+                              &databaseId,
                               "entries",
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
@@ -5261,7 +5258,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
       {
         return error;
       }
-      assert(entryId != DATABASE_ID_NONE);
+      entryId = INDEX_ID_ENTRY(databaseId);
 
       // add FTS entry
       switch (Database_getType(&indexHandle->databaseHandle))
@@ -5273,7 +5270,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_KEY   ("entryId", entryId),
+                                    DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
                                     DATABASE_VALUE_STRING("name",    name)
                                   ),
                                   DATABASE_COLUMNS_NONE,
@@ -5293,7 +5290,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                     DATABASE_FLAG_NONE,
                                     DATABASE_VALUES
                                     (
-                                      DATABASE_VALUE_KEY   ("entryId", entryId),
+                                      DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
                                       DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
                                     ),
                                     DATABASE_COLUMNS_NONE,
@@ -5315,7 +5312,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entryId",     entryId),
+                                DATABASE_VALUE_KEY   ("entryId",     INDEX_DATABASE_ID(entryId)),
                                 DATABASE_VALUE_KEY   ("storageId",   INDEX_DATABASE_ID(storageId)),
                                 DATABASE_VALUE_UINT  ("specialType", specialType),
                                 DATABASE_VALUE_UINT  ("major",       major),
@@ -5332,7 +5329,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
       // update directory content count/size aggregates
       error = updateDirectoryContentAggregates(indexHandle,
                                                INDEX_DATABASE_ID(storageId),
-                                               entryId,
+                                               INDEX_DATABASE_ID(entryId),
                                                name,
                                                0LL
                                               );
