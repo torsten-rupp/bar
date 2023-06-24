@@ -15548,18 +15548,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     String_delete(sqlString);
 
     // debug: store transaction info
-    #ifdef DATABASE_USE_ATOMIC_INCREMENT
-    #else /* not DATABASE_USE_ATOMIC_INCREMENT */
-    #endif /* DATABASE_USE_ATOMIC_INCREMENT */
-    DATABASE_HANDLE_LOCKED_DO(databaseHandle,
-    {
-      assert(databaseHandle->databaseNode->transactionCount == 0);
-      databaseHandle->databaseNode->transactionCount++;
-      #ifdef DATABASE_DEBUG_LOCK
-        databaseHandle->databaseNode->transactionLPWId = Thread_getCurrentLWPId();
-      #endif /* DATABASE_DEBUG_LOCK */
-    });
-
     #ifndef NDEBUG
       pthread_once(&debugDatabaseInitFlag,debugDatabaseInit);
 
@@ -15572,6 +15560,18 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       }
       pthread_mutex_unlock(&debugDatabaseLock);
     #endif /* not NDEBUG */
+
+    #ifdef DATABASE_USE_ATOMIC_INCREMENT
+    #else /* not DATABASE_USE_ATOMIC_INCREMENT */
+    #endif /* DATABASE_USE_ATOMIC_INCREMENT */
+    DATABASE_HANDLE_LOCKED_DO(databaseHandle,
+    {
+      assert(databaseHandle->databaseNode->transactionCount == 0);
+      databaseHandle->databaseNode->transactionCount++;
+      #ifdef DATABASE_DEBUG_LOCK
+        databaseHandle->databaseNode->transactionLPWId = Thread_getCurrentLWPId();
+      #endif /* DATABASE_DEBUG_LOCK */
+    });
 
     #ifdef DATABASE_DEBUG_LOCK_PRINT
       fprintf(stderr,
