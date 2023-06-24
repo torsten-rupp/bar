@@ -1,5 +1,7 @@
 2023-07-01 0.23
   * fixed wrong database entry for special files (type)
+  * fixed database patterns: * and empty
+  * fixed wrong locking on restore
   * bar-index: fixed wrong counted lost entries without
     fragments
   * log crashes into log file
@@ -8,8 +10,13 @@
     permission
   * BARControl: fixed option --index-database-add: match
     pattern
+  * BARControl: fixed sort file tree items by type/size/
+    date+time
+  * BARControl: fixed display of included/execluded entries
+    via pattern
 
 2023-04-16 0.22g
+  * fixed lost resource in debug version
   * BARControl: fixed update job sate in dry-mode (issue #2,
     thanks to ChrisTG742)
   * fixed error handling WebDAV access

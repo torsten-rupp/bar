@@ -31,6 +31,7 @@
 #include <assert.h>
 
 #if   defined(PLATFORM_LINUX)
+#include <sys/utsname.h>
 #elif defined(PLATFORM_WINDOWS)
 #endif /* PLATFORM_... */
 
@@ -277,12 +278,43 @@ LOCAL void signalHandler(int signalNumber)
   // output error message
   if (signalNumber != SIGTERM)
   {
-    static char line[32];
-    size_t      bytesWritten;
+    static char    line[256];
+    size_t         bytesWritten;
+    #if   defined(PLATFORM_LINUX)
+      struct utsname utsname;
+    #elif defined(PLATFORM_WINDOWS)
+    #endif /* PLATFORM_... */
+
+    stringFormat(line,sizeof(line),"version %s%s\n",
+                 VERSION_STRING,
+                 #ifndef NDEBUG
+                   " debug"
+                 #else
+                   ""
+                 #endif
+                );
+    bytesWritten = fwrite(line,1,stringLength(line),stderr);
+    fatalLogMessage(line,NULL);
+
+    fprintf(stderr,"FATAL ERROR:\n");
+    #if   defined(PLATFORM_LINUX)
+      uname(&utsname);
+      stringFormat(line,sizeof(line),
+                   "system %s %s %s %s\n",
+                   utsname.sysname,
+                   utsname.release,
+                   utsname.version,
+                   utsname.machine
+                  );
+    #elif defined(PLATFORM_WINDOWS)
+    #endif /* PLATFORM_... */
+    bytesWritten = fwrite(line,1,stringLength(line),stderr);
+    fatalLogMessage(line,NULL);
 
     stringFormat(line,sizeof(line),"signal %d\n",signalNumber);
     bytesWritten = fwrite(line,1,stringLength(line),stderr);
     fatalLogMessage(line,NULL);
+
     #ifndef NDEBUG
       debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1);
     #endif /* NDEBUG */
@@ -301,7 +333,6 @@ LOCAL void signalHandler(int signalNumber)
   // Note: do not free resources to avoid further errors
 
   // exit with signal number
-fprintf(stderr,"%s:%d: %d_\n",__FILE__,__LINE__,128+signalNumber);
   exit(128+signalNumber);
 }
 
