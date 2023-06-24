@@ -5,6 +5,8 @@
   * bar-index: fixed wrong counted lost entries without
     fragments
   * log crashes into log file
+  * avoid overflow of internal error history which could
+    result in reporting the wrong error information
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission
@@ -14,6 +16,8 @@
     date+time
   * BARControl: fixed display of included/execluded entries
     via pattern
+  * BARCintrol: fixed error handling when slave is in
+    disconnected state
 
 2023-04-16 0.22g
   * fixed lost resource in debug version

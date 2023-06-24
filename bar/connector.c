@@ -1073,7 +1073,6 @@ LOCAL void connectorCommand_storageExists(ConnectorInfo *connectorInfo, IndexHan
 
 LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  Errors       error;
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (entityUUUID,MISC_UUID_STRING_LENGTH);
   IndexId      uuidId;
@@ -1158,7 +1157,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
       sendResult(connectorInfo,
                  id,
                  TRUE,
-                 error,
+                 ERROR_DATABASE_ENTRY_NOT_FOUND,
                  ""
                 );
     }

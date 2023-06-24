@@ -504,6 +504,8 @@ public class Settings
 //TODO: preference dialog
   @SettingValue
   public static Boolean                        showNewVersionInformation       = new Boolean(true);
+  @SettingValue
+  public static Boolean                        showSlaveDisconnected           = new Boolean(true);
 
   // version, help
   public static boolean                        versionFlag                     = false;
