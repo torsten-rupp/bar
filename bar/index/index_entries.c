@@ -4247,7 +4247,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      // atomic add/get entry
+      // atomic add/get entry (Note: file entry may already exists wheren there are multiple fragments)
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get existing entry id
@@ -4292,36 +4292,15 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                   DATABASE_COLUMNS_NONE,
                                   DATABASE_FILTERS_NONE
                                  );
-        }
-        entryId = INDEX_ID_ENTRY(databaseId);
+          entryId = INDEX_ID_ENTRY(databaseId);
 
-        // add FTS entry
+          // add FTS entry
 // TODO: do this with a trigger again?
-        if (error == ERROR_NONE)
-        {
-          switch (Database_getType(&indexHandle->databaseHandle))
+          if (error == ERROR_NONE)
           {
-            case DATABASE_TYPE_SQLITE3:
-              error = Database_insert(&indexHandle->databaseHandle,
-                                      NULL,  // insertRowId
-                                      "FTS_entries",
-                                      DATABASE_FLAG_NONE,
-                                      DATABASE_VALUES
-                                      (
-                                        DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
-                                        DATABASE_VALUE_STRING("name",    name)
-                                      ),
-                                      DATABASE_COLUMNS_NONE,
-                                      DATABASE_FILTERS_NONE
-                                     );
-              break;
-            case DATABASE_TYPE_MARIADB:
-              break;
-            case DATABASE_TYPE_POSTGRESQL:
-              {
-                String tokens;
-
-                tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+            switch (Database_getType(&indexHandle->databaseHandle))
+            {
+              case DATABASE_TYPE_SQLITE3:
                 error = Database_insert(&indexHandle->databaseHandle,
                                         NULL,  // insertRowId
                                         "FTS_entries",
@@ -4329,32 +4308,57 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                         DATABASE_VALUES
                                         (
                                           DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
-                                          DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                          DATABASE_VALUE_STRING("name",    name)
                                         ),
                                         DATABASE_COLUMNS_NONE,
                                         DATABASE_FILTERS_NONE
                                        );
-                String_delete(tokens);
-              }
-              break;
+                break;
+              case DATABASE_TYPE_MARIADB:
+                break;
+              case DATABASE_TYPE_POSTGRESQL:
+                {
+                  String tokens;
+
+                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+                  error = Database_insert(&indexHandle->databaseHandle,
+                                          NULL,  // insertRowId
+                                          "FTS_entries",
+                                          DATABASE_FLAG_NONE,
+                                          DATABASE_VALUES
+                                          (
+                                            DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                            DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                          ),
+                                          DATABASE_COLUMNS_NONE,
+                                          DATABASE_FILTERS_NONE
+                                         );
+                  String_delete(tokens);
+                }
+                break;
+            }
+          }
+
+          // add file entry
+          if (error == ERROR_NONE)
+          {
+            error = Database_insert(&indexHandle->databaseHandle,
+                                    NULL,  // insertRowId
+                                    "fileEntries",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES
+                                    (
+                                      DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                      DATABASE_VALUE_UINT64("size",    size)
+                                    ),
+                                    DATABASE_COLUMNS_NONE,
+                                    DATABASE_FILTERS_NONE
+                                   );
           }
         }
-
-        // add file entry
-        if (error == ERROR_NONE)
+        else
         {
-          error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // insertRowId
-                                  "fileEntries",
-                                  DATABASE_FLAG_NONE,
-                                  DATABASE_VALUES
-                                  (
-                                    DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
-                                    DATABASE_VALUE_UINT64("size",    size)
-                                  ),
-                                  DATABASE_COLUMNS_NONE,
-                                  DATABASE_FILTERS_NONE
-                                 );
+          entryId = INDEX_ID_ENTRY(databaseId);
         }
       }
       if (error != ERROR_NONE)
@@ -4465,7 +4469,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      // atomic add/get entry
+      // atomic add/get entry (Note: image entry may already exists wheren there are multiple fragments)
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get existing entry id
@@ -4510,35 +4514,13 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                   DATABASE_COLUMNS_NONE,
                                   DATABASE_FILTERS_NONE
                                  );
-        }
-        entryId = INDEX_ID_ENTRY(databaseId);
 
-        // add FTS entry
-        if (error == ERROR_NONE)
-        {
-          switch (Database_getType(&indexHandle->databaseHandle))
+          // add FTS entry
+          if (error == ERROR_NONE)
           {
-            case DATABASE_TYPE_SQLITE3:
-              error = Database_insert(&indexHandle->databaseHandle,
-                                      NULL,  // insertRowId
-                                      "FTS_entries",
-                                      DATABASE_FLAG_NONE,
-                                      DATABASE_VALUES
-                                      (
-                                        DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
-                                        DATABASE_VALUE_STRING("name",    name)
-                                      ),
-                                      DATABASE_COLUMNS_NONE,
-                                      DATABASE_FILTERS_NONE
-                                     );
-              break;
-            case DATABASE_TYPE_MARIADB:
-              break;
-            case DATABASE_TYPE_POSTGRESQL:
-              {
-                String tokens;
-
-                tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+            switch (Database_getType(&indexHandle->databaseHandle))
+            {
+              case DATABASE_TYPE_SQLITE3:
                 error = Database_insert(&indexHandle->databaseHandle,
                                         NULL,  // insertRowId
                                         "FTS_entries",
@@ -4546,34 +4528,59 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                         DATABASE_VALUES
                                         (
                                           DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
-                                          DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                          DATABASE_VALUE_STRING("name",    name)
                                         ),
                                         DATABASE_COLUMNS_NONE,
                                         DATABASE_FILTERS_NONE
                                        );
-                String_delete(tokens);
-              }
-              break;
+                break;
+              case DATABASE_TYPE_MARIADB:
+                break;
+              case DATABASE_TYPE_POSTGRESQL:
+                {
+                  String tokens;
+
+                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+                  error = Database_insert(&indexHandle->databaseHandle,
+                                          NULL,  // insertRowId
+                                          "FTS_entries",
+                                          DATABASE_FLAG_NONE,
+                                          DATABASE_VALUES
+                                          (
+                                            DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                            DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                          ),
+                                          DATABASE_COLUMNS_NONE,
+                                          DATABASE_FILTERS_NONE
+                                         );
+                  String_delete(tokens);
+                }
+                break;
+            }
+          }
+
+          // add image entry
+          if (error == ERROR_NONE)
+          {
+            error = Database_insert(&indexHandle->databaseHandle,
+                                    NULL,  // insertRowId
+                                    "imageEntries",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES
+                                    (
+                                      DATABASE_VALUE_KEY   ("entryId",        INDEX_DATABASE_ID(entryId)),
+                                      DATABASE_VALUE_UINT  ("fileSystemType", fileSystemType),
+                                      DATABASE_VALUE_UINT64("size",           size),
+                                      DATABASE_VALUE_UINT  ("blockSize",      blockSize)
+                                    ),
+                                    DATABASE_COLUMNS_NONE,
+                                    DATABASE_FILTERS_NONE
+                                   );
           }
         }
-
-        // add image entry
-        if (error == ERROR_NONE)
+        else
         {
-          error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // insertRowId
-                                  "imageEntries",
-                                  DATABASE_FLAG_NONE,
-                                  DATABASE_VALUES
-                                  (
-                                    DATABASE_VALUE_KEY   ("entryId",        INDEX_DATABASE_ID(entryId)),
-                                    DATABASE_VALUE_UINT  ("fileSystemType", fileSystemType),
-                                    DATABASE_VALUE_UINT64("size",           size),
-                                    DATABASE_VALUE_UINT  ("blockSize",      blockSize)
-                                  ),
-                                  DATABASE_COLUMNS_NONE,
-                                  DATABASE_FILTERS_NONE
-                                 );
+          entryId = INDEX_ID_ENTRY(databaseId);
         }
       }
       if (error != ERROR_NONE)
@@ -5009,7 +5016,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      // atomic add/get entry
+      // atomic add/get entry (Note: hardlink entry may already exists wheren there are multiple fragments)
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get existing entry id
@@ -5054,36 +5061,15 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                   DATABASE_COLUMNS_NONE,
                                   DATABASE_FILTERS_NONE
                                  );
-        }
-        entryId = INDEX_ID_ENTRY(databaseId);
+          entryId = INDEX_ID_ENTRY(databaseId);
 
-        // add FTS entry
-        if (error == ERROR_NONE)
-        {
-// TODO: do this in a trigger again?
-          switch (Database_getType(&indexHandle->databaseHandle))
+          // add FTS entry
+          if (error == ERROR_NONE)
           {
-            case DATABASE_TYPE_SQLITE3:
-              error = Database_insert(&indexHandle->databaseHandle,
-                                      NULL,  // insertRowId
-                                      "FTS_entries",
-                                      DATABASE_FLAG_NONE,
-                                      DATABASE_VALUES
-                                      (
-                                        DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
-                                        DATABASE_VALUE_STRING("name",    name)
-                                      ),
-                                      DATABASE_COLUMNS_NONE,
-                                      DATABASE_FILTERS_NONE
-                                     );
-              break;
-            case DATABASE_TYPE_MARIADB:
-              break;
-            case DATABASE_TYPE_POSTGRESQL:
-              {
-                String tokens;
-
-                tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+  // TODO: do this in a trigger again?
+            switch (Database_getType(&indexHandle->databaseHandle))
+            {
+              case DATABASE_TYPE_SQLITE3:
                 error = Database_insert(&indexHandle->databaseHandle,
                                         NULL,  // insertRowId
                                         "FTS_entries",
@@ -5091,32 +5077,57 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                         DATABASE_VALUES
                                         (
                                           DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
-                                          DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                          DATABASE_VALUE_STRING("name",    name)
                                         ),
                                         DATABASE_COLUMNS_NONE,
                                         DATABASE_FILTERS_NONE
                                        );
-                String_delete(tokens);
-              }
-              break;
+                break;
+              case DATABASE_TYPE_MARIADB:
+                break;
+              case DATABASE_TYPE_POSTGRESQL:
+                {
+                  String tokens;
+
+                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+                  error = Database_insert(&indexHandle->databaseHandle,
+                                          NULL,  // insertRowId
+                                          "FTS_entries",
+                                          DATABASE_FLAG_NONE,
+                                          DATABASE_VALUES
+                                          (
+                                            DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                            DATABASE_VALUE_STRING("name",    "to_tsvector(?)", tokens)
+                                          ),
+                                          DATABASE_COLUMNS_NONE,
+                                          DATABASE_FILTERS_NONE
+                                         );
+                  String_delete(tokens);
+                }
+                break;
+            }
+          }
+
+          // add hard link entry
+          if (error == ERROR_NONE)
+          {
+            error = Database_insert(&indexHandle->databaseHandle,
+                                    NULL,  // insertRowId
+                                    "hardlinkEntries",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES
+                                    (
+                                      DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
+                                      DATABASE_VALUE_UINT64("size",    size)
+                                    ),
+                                    DATABASE_COLUMNS_NONE,
+                                    DATABASE_FILTERS_NONE
+                                   );
           }
         }
-
-        // add hard link entry
-        if (error == ERROR_NONE)
+        else
         {
-          error = Database_insert(&indexHandle->databaseHandle,
-                                  NULL,  // insertRowId
-                                  "hardlinkEntries",
-                                  DATABASE_FLAG_NONE,
-                                  DATABASE_VALUES
-                                  (
-                                    DATABASE_VALUE_KEY   ("entryId", INDEX_DATABASE_ID(entryId)),
-                                    DATABASE_VALUE_UINT64("size",    size)
-                                  ),
-                                  DATABASE_COLUMNS_NONE,
-                                  DATABASE_FILTERS_NONE
-                                 );
+          entryId = INDEX_ID_ENTRY(databaseId);
         }
       }
       if (error != ERROR_NONE)
