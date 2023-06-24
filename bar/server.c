@@ -8798,7 +8798,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       assert(error != ERROR_UNKNOWN);
@@ -8953,7 +8953,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       assert(error != ERROR_UNKNOWN);
@@ -8984,8 +8984,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
         error = File_readRootList(&rootListHandle,name);
         if (error == ERROR_NONE)
         {
-          error = Device_getInfo(&deviceInfo,name,FALSE);
-          if (error == ERROR_NONE)
+          if (Device_getInfo(&deviceInfo,name,FALSE) == ERROR_NONE)
           {
             size = deviceInfo.size;
           }
@@ -9113,7 +9112,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       assert(error != ERROR_UNKNOWN);
@@ -9339,7 +9338,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       assert(error != ERROR_UNKNOWN);
@@ -9598,7 +9597,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       assert(error != ERROR_UNKNOWN);
@@ -9739,7 +9738,7 @@ UNUSED_VARIABLE(value);
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       assert(error != ERROR_UNKNOWN);
@@ -9913,7 +9912,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       assert(error != ERROR_UNKNOWN);
@@ -10074,7 +10073,7 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       assert(error != ERROR_UNKNOWN);
@@ -10191,7 +10190,7 @@ LOCAL void serverCommand_fileDelete(ClientInfo *clientInfo, IndexHandle *indexHa
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
     }
@@ -10309,7 +10308,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       assert(error != ERROR_UNKNOWN);
@@ -10456,7 +10455,7 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       if (error != ERROR_NONE)
@@ -10962,7 +10961,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
         }
         else
         {
-          error = ERROR_DISCONNECTED;
+          error = ERROR_SLAVE_DISCONNECTED;
         }
       }
       assert(error != ERROR_UNKNOWN);
@@ -18276,7 +18275,6 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   }
 
   // send data
-fprintf(stderr,"%s:%d: %llx\n",__FILE__,__LINE__,totalEntrySize);
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                       "totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" totalEntryContentSize=%"PRIu64"",
                       totalStorageCount,

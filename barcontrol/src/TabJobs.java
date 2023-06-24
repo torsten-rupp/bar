@@ -9825,9 +9825,29 @@ throw new Error("NYI");
                                }
                               );
     }
+    catch (BARException exception)
+    {
+      if (!shell.isDisposed())
+      {
+        Dialogs.warning(shell,
+                        (exception.getCode() == BARException.SLAVE_DISCONNECTED)
+                          ? Dialogs.booleanFieldUpdater(Settings.class,"showSlaveDisconnected")
+                          : (BooleanFieldUpdater)null,
+                        BARControl.tr("Cannot get root list (error: {0})",exception.getMessage())
+                       );
+      }
+    }
+    catch (IOException exception)
+    {
+      if (!shell.isDisposed())
+      {
+        Dialogs.warning(shell,BARControl.tr("Cannot get root list (error: {0})",exception.getMessage()));
+      }
+    }
     catch (Exception exception)
     {
-      // ignored
+       Dialogs.error(shell,BARControl.tr("Cannot get root list (error: {0})",exception.getMessage()));
+       BARControl.logThrowable(exception);
     }
 
     if (!widgetFileTree.isDisposed())
@@ -10376,6 +10396,25 @@ throw new Error("NYI");
         Widgets.removeTreeItems(removeTreeItems);
       }
     }
+    catch (BARException exception)
+    {
+      if (!shell.isDisposed())
+      {
+        Dialogs.warning(shell,
+                        (exception.getCode() == BARException.SLAVE_DISCONNECTED)
+                          ? Dialogs.booleanFieldUpdater(Settings.class,"showSlaveDisconnected")
+                          : (BooleanFieldUpdater)null,
+                        BARControl.tr("Cannot get file list (error: {0})",exception.getMessage())
+                       );
+      }
+    }
+    catch (IOException exception)
+    {
+      if (!shell.isDisposed())
+      {
+        Dialogs.warning(shell,BARControl.tr("Cannot get file list (error: {0})",exception.getMessage()));
+      }
+    }
     catch (Exception exception)
     {
        Dialogs.error(shell,BARControl.tr("Cannot get file list (error: {0})",exception.getMessage()));
@@ -10498,15 +10537,25 @@ throw new Error("NYI");
     {
       if (!shell.isDisposed())
       {
-        Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",exception.getMessage()));
+        Dialogs.warning(shell,
+                        (exception.getCode() == BARException.SLAVE_DISCONNECTED)
+                          ? Dialogs.booleanFieldUpdater(Settings.class,"showSlaveDisconnected")
+                          : (BooleanFieldUpdater)null,
+                        BARControl.tr("Cannot get device list (error: {0})",exception.getMessage())
+                       );
       }
     }
     catch (IOException exception)
     {
       if (!shell.isDisposed())
       {
-        Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",exception.getMessage()));
+        Dialogs.warning(shell,BARControl.tr("Cannot get device list (error: {0})",exception.getMessage()));
       }
+    }
+    catch (Exception exception)
+    {
+       Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",exception.getMessage()));
+       BARControl.logThrowable(exception);
     }
 
     // update table
