@@ -7,6 +7,8 @@
   * log crashes into log file
   * avoid overflow of internal error history which could
     result in reporting the wrong error information
+  * fixed race condition in database lock info in debug
+    version
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission

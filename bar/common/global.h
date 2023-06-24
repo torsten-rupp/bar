@@ -3793,6 +3793,8 @@ static inline long stringFind(const char *string, const char *findString)
 {
   const char *t;
 
+  assert(string != NULL);
+
   t = strstr(string,findString);
   return (t != NULL) ? (long)(t-string) : -1L;
 }
@@ -3801,6 +3803,8 @@ static inline long stringFindChar(const char *string, char findChar)
 {
   const char *t;
 
+  assert(string != NULL);
+
   t = strchr(string,findChar);
   return (t != NULL) ? (long)(t-string) : -1L;
 }
@@ -3808,6 +3812,8 @@ static inline long stringFindChar(const char *string, char findChar)
 static inline long stringFindReverseChar(const char *string, char findChar)
 {
   const char *t;
+
+  assert(string != NULL);
 
   t = strrchr(string,findChar);
   return (t != NULL) ? (long)(t-string) : -1L;
