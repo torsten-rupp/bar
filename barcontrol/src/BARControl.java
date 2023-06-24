@@ -2131,8 +2131,9 @@ public class BARControl
     Throwable cause = throwable.getCause();
     while (cause != null)
     {
-      System.err.println("Caused by:");
-      for (StackTraceElement stackTraceElement : cause.getStackTrace())
+      StackTraceElement stackTrace[] = cause.getStackTrace();
+      output.println("Caused by:");
+      for (StackTraceElement stackTraceElement : stackTrace)
       {
         output.println("  "+stackTraceElement);
       }
@@ -5871,17 +5872,17 @@ if (false) {
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long       entryId   = valueMap.getLong("entryId"                   );
+                                         long       entryId   = valueMap.getLong("entryId",0L                );
                                          EntryTypes entryType = valueMap.getEnum("entryType",EntryTypes.class);
 
                                          switch (entryType)
                                          {
                                            case FILE:
                                              {
-                                               String fileName        = valueMap.getString("name"         );
-                                               long   size            = valueMap.getLong  ("size"         );
-                                               long   dateTime        = valueMap.getLong  ("dateTime"     );
-                                               long   fragmentCount   = valueMap.getLong  ("fragmentCount");
+                                               String fileName        = valueMap.getString("name"            );
+                                               long   size            = valueMap.getLong  ("size",0L         );
+                                               long   dateTime        = valueMap.getLong  ("dateTime",0L     );
+                                               long   fragmentCount   = valueMap.getLong  ("fragmentCount",0L);
 
                                                System.out.println(String.format("%8d %-8s %14d %-19s %s",
                                                                                 getDatabaseId(entryId),
@@ -5896,10 +5897,10 @@ if (false) {
                                              break;
                                            case IMAGE:
                                              {
-                                               String imageName       = valueMap.getString("name"       );
-                                               long   size            = valueMap.getLong  ("size"       );
-                                               long   blockOffset     = valueMap.getLong  ("blockOffset");
-                                               long   blockCount      = valueMap.getLong  ("blockCount" );
+                                               String imageName       = valueMap.getString("name"          );
+                                               long   size            = valueMap.getLong  ("size",0L       );
+                                               long   blockOffset     = valueMap.getLong  ("blockOffset",0L);
+                                               long   blockCount      = valueMap.getLong  ("blockCount",0L );
 
                                                System.out.println(String.format("%8d %-8s %14d %-19s %s",
                                                                                 getDatabaseId(entryId),
@@ -5914,8 +5915,8 @@ if (false) {
                                              break;
                                            case DIRECTORY:
                                              {
-                                               String directoryName   = valueMap.getString("name"    );
-                                               long   dateTime        = valueMap.getLong  ("dateTime");
+                                               String directoryName   = valueMap.getString("name"       );
+                                               long   dateTime        = valueMap.getLong  ("dateTime",0L);
 
                                                System.out.println(String.format("%8d %-8s %14s %-19s %s",
                                                                                 getDatabaseId(entryId),
@@ -5932,7 +5933,7 @@ if (false) {
                                              {
                                                String linkName        = valueMap.getString("name"           );
                                                String destinationName = valueMap.getString("destinationName");
-                                               long   dateTime        = valueMap.getLong  ("dateTime"       );
+                                               long   dateTime        = valueMap.getLong  ("dateTime",0L    );
 
                                                System.out.println(String.format("%8d %-8s %14s %-19s %s -> %s",
                                                                                 getDatabaseId(entryId),
@@ -5948,10 +5949,10 @@ if (false) {
                                              break;
                                            case HARDLINK:
                                              {
-                                               String fileName        = valueMap.getString("name"         );
-                                               long   size            = valueMap.getLong  ("size"         );
-                                               long   dateTime        = valueMap.getLong  ("dateTime"     );
-                                               long   fragmentCount   = valueMap.getLong  ("fragmentCount");
+                                               String fileName        = valueMap.getString("name"            );
+                                               long   size            = valueMap.getLong  ("size",0L         );
+                                               long   dateTime        = valueMap.getLong  ("dateTime",0L     );
+                                               long   fragmentCount   = valueMap.getLong  ("fragmentCount",0L);
 
                                                System.out.println(String.format("%8d %-8s %14d %-19s %s",
                                                                                 getDatabaseId(entryId),
@@ -5966,8 +5967,8 @@ if (false) {
                                              break;
                                            case SPECIAL:
                                              {
-                                               String name            = valueMap.getString("name"    );
-                                               long   dateTime        = valueMap.getLong  ("dateTime");
+                                               String name            = valueMap.getString("name"       );
+                                               long   dateTime        = valueMap.getLong  ("dateTime",0L);
 
                                                System.out.println(String.format("%8d %-8s %14s %-19s %s",
                                                                                 getDatabaseId(entryId),

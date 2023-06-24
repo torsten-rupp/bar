@@ -9982,8 +9982,8 @@ throw new Error("NYI");
                                      case FILE:
                                        {
                                          final String  name       = valueMap.getString ("name"         );
-                                         final long    size       = valueMap.getLong   ("size"         );
-                                         final long    dateTime   = valueMap.getLong   ("dateTime"     );
+                                         final long    size       = valueMap.getLong   ("size",0L      );
+                                         final long    dateTime   = valueMap.getLong   ("dateTime",0L  );
                                          final boolean noDumpFlag = valueMap.getBoolean("noDump", false);
 
                                          fileTreeDataList.add(new FileTreeData(name,
@@ -9999,7 +9999,7 @@ throw new Error("NYI");
                                      case DIRECTORY:
                                        {
                                          final String  name         = valueMap.getString ("name"          );
-                                         final long    dateTime     = valueMap.getLong   ("dateTime"      );
+                                         final long    dateTime     = valueMap.getLong   ("dateTime",0L   );
                                          final boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
                                          final boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
 
@@ -10014,9 +10014,9 @@ throw new Error("NYI");
                                        break;
                                      case LINK:
                                        {
-                                         final String  name       = valueMap.getString ("name"    );
-                                         final long    dateTime   = valueMap.getLong   ("dateTime");
-                                         final boolean noDumpFlag = valueMap.getBoolean("noDump", false);
+                                         final String  name       = valueMap.getString ("name"          );
+                                         final long    dateTime   = valueMap.getLong   ("dateTime",0L   );
+                                         final boolean noDumpFlag = valueMap.getBoolean("noDump",  false);
 
                                          fileTreeDataList.add(new FileTreeData(name,
                                                                                BARServer.FileTypes.LINK,
@@ -10030,9 +10030,9 @@ throw new Error("NYI");
                                        break;
                                      case HARDLINK:
                                        {
-                                         final String  name       = valueMap.getString ("name"    );
-                                         final long    size       = valueMap.getLong   ("size"    );
-                                         final long    dateTime   = valueMap.getLong   ("dateTime");
+                                         final String  name       = valueMap.getString ("name"         );
+                                         final long    size       = valueMap.getLong   ("size"         );
+                                         final long    dateTime   = valueMap.getLong   ("dateTime",0L  );
                                          final boolean noDumpFlag = valueMap.getBoolean("noDump", false);
 
                                          fileTreeDataList.add(new FileTreeData(name,
@@ -10049,7 +10049,7 @@ throw new Error("NYI");
                                        {
                                          final String                 name         = valueMap.getString ("name"                                    );
                                          final long                   size         = valueMap.getLong   ("size",       0L                          );
-                                         final long                   dateTime     = valueMap.getLong   ("dateTime"                                );
+                                         final long                   dateTime     = valueMap.getLong   ("dateTime",   0L                          );
                                          final boolean                noBackupFlag = valueMap.getBoolean("noBackup",   false                       );
                                          final boolean                noDumpFlag   = valueMap.getBoolean("noDump",     false                       );
                                          final BARServer.SpecialTypes specialType  = valueMap.getEnum   ("specialType",BARServer.SpecialTypes.class);
@@ -10484,7 +10484,7 @@ throw new Error("NYI");
                                    public void handle(int i, ValueMap valueMap)
                                    {
                                      String  name    = valueMap.getString ("name"   );
-                                     long    size    = valueMap.getLong   ("size"   );
+                                     long    size    = valueMap.getLong   ("size",0L);
 // TODO: use
                                      boolean mounted = valueMap.getBoolean("mounted");
 
@@ -14654,7 +14654,7 @@ throw new Error("NYI");
                                                                     : Age.FOREVER;
                                    String       moveTo          = valueMap.getString ("moveTo",                        ""                  );
                                    long         createdDateTime = valueMap.getLong   ("createdDateTime",               0L                  );
-                                   long         totalSize       = valueMap.getLong   ("size"                                               );
+                                   long         totalSize       = valueMap.getLong   ("size",                          0L                  );
                                    long         totalEntryCount = valueMap.getLong   ("totalEntryCount",               0L                  );
                                    long         totalEntrySize  = valueMap.getLong   ("totalEntrySize",                0L                  );
                                    boolean      inTransit       = valueMap.getBoolean("inTransit",                     false               );

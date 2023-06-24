@@ -2850,8 +2850,8 @@ Dprintf.dprintf("");
                                  2,  // debugLevel
                                  valueMap
                                 );
-        totalStorageCount = valueMap.getInt ("totalStorageCount");
-        totalStorageSize  = valueMap.getLong("totalStorageSize");
+        totalStorageCount = valueMap.getInt ("totalStorageCount",0 );
+        totalStorageSize  = valueMap.getLong("totalStorageSize", 0L);
         assert(totalStorageCount >= 0);
         assert(totalStorageSize >= 0);
       }
@@ -3827,11 +3827,11 @@ Dprintf.dprintf("");
                                                        name,
                                                        newestOnly
                                                       ),
-0,//                                   1,  // debugLevel
+                                   1,  // debugLevel
                                    valueMap
                                   );
-          totalEntryCount = valueMap.getLong("totalEntryCount");
-          totalEntrySize  = valueMap.getLong("totalEntrySize");
+          totalEntryCount = valueMap.getLong("totalEntryCount",0L);
+          totalEntrySize  = valueMap.getLong("totalEntrySize", 0L);
           assert(totalEntryCount >= 0);
           assert(totalEntrySize >= 0);
         }
@@ -7318,7 +7318,7 @@ Dprintf.dprintf("");
                                              @Override
                                              public void handle(int i, ValueMap valueMap)
                                              {
-                                               long storageId = valueMap.getLong("storageId");
+                                               long storageId = valueMap.getLong("storageId",0L);
 
                                                indexIdSet.set(storageId,checked);
 
@@ -7814,7 +7814,7 @@ Dprintf.dprintf("");
                                    0,  // debugLevel
                                    valueMap
                                   );
-          entityId = valueMap.getLong("entityId");
+          entityId = valueMap.getLong("entityId",0L);
 
           busyDialog.updateProgressBar(n);
           n++;
@@ -9264,10 +9264,10 @@ Dprintf.dprintf("");
                                    2,  // debugLevel
                                    valueMap
                                   );
-          totalStorageCount = valueMap.getLong("totalStorageCount");
-          totalStorageSize  = valueMap.getLong("totalStorageSize" );
-          totalEntryCount   = valueMap.getLong("totalEntryCount");
-          totalEntrySize    = valueMap.getLong("totalEntrySize" );
+          totalStorageCount = valueMap.getLong("totalStorageCount",0L);
+          totalStorageSize  = valueMap.getLong("totalStorageSize", 0L);
+          totalEntryCount   = valueMap.getLong("totalEntryCount",  0L);
+          totalEntrySize    = valueMap.getLong("totalEntrySize",   0L);
           assert(totalStorageCount >= 0);
           assert(totalStorageSize >= 0);
           assert(totalEntryCount >= 0);
@@ -9609,7 +9609,7 @@ Dprintf.dprintf("");
                                      @Override
                                      public void handle(int i, ValueMap valueMap)
                                      {
-                                       long entryId = valueMap.getLong("entryId");
+                                       long entryId = valueMap.getLong("entryId",0L);
 
                                        entryIdSet.set(entryId,checked);
 
@@ -9991,11 +9991,11 @@ Dprintf.dprintf("");
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
-                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
-                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
-                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
-                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
-                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount",    0L);
+                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize",     0L);
+                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount",      0L);
+                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize",       0L);
+                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize",0L);
                                            }
                                          }
                                         );
@@ -10071,11 +10071,11 @@ Dprintf.dprintf("");
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
-                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
-                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
-                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount");
-                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize");
-                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount",    0L);
+                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize",     0L);
+                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount",      0L);
+                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize",       0L);
+                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize",0L);
                                            }
                                          }
                                         );
