@@ -3343,7 +3343,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                    {
                      public void handle(int i, ValueMap valueMap)
                      {
-                       result[0] = valueMap.getLong(name);
+                       result[0] = valueMap.getLong(name,0L);
                      }
                    }
                   );
@@ -4488,7 +4488,7 @@ throw new Error("NYI");
         {
           case FILE:
           case HARDLINK:
-            size = valueMap.getLong("size");
+            size = valueMap.getLong("size",0L);
             break;
           case DIRECTORY:
           case LINK:
@@ -4640,7 +4640,7 @@ throw new Error("NYI");
                                          {
                                            case FILE:
                                              {
-                                               long size = valueMap.getLong("size");
+                                               long size = valueMap.getLong("size",0L);
 
                                                file = new RemoteFile(name,FileTypes.FILE,size,dateTime,hiddenFlag);
                                              }
@@ -4661,7 +4661,7 @@ throw new Error("NYI");
                                              break;
                                            case HARDLINK:
                                              {
-                                               long size = valueMap.getLong("size");
+                                               long size = valueMap.getLong("size",0L);
 
                                                file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime,hiddenFlag);
                                              }

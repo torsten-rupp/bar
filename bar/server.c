@@ -8778,7 +8778,6 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
     {
       // remote device list
       error = ERROR_UNKNOWN;
-      assert(error != ERROR_UNKNOWN);
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         if (Connector_isConnected(connectorInfo))

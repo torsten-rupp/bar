@@ -1,4 +1,4 @@
-2023-06-01 0.22h
+2023-07-01 0.22h
   * fixed wrong database entry for special files (type)
   * fixed database patterns: * and empty
   * fixed wrong locking on restore
@@ -16,6 +16,7 @@
     via pattern
 
 2023-04-16 0.22g
+  * fixed lost resource in debug version
   * BARControl: fixed update job sate in dry-mode (issue #2,
     thanks to ChrisTG742)
   * fixed error handling WebDAV access
