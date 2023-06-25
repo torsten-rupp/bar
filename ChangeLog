@@ -9,6 +9,7 @@
     result in reporting the wrong error information
   * fixed race condition in database lock info in debug
     version
+  * fixed possible infinite loop in continuous backup
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission

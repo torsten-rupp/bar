@@ -2430,6 +2430,7 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
 
   AutoFreeList       autoFreeList;
   Dictionary         duplicateNamesDictionary;
+  DatabaseId         databaseId;
   String             name;
   Dictionary         hardLinksDictionary;
   Errors             error;
@@ -2477,28 +2478,33 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       AUTOFREE_ADD(&autoFreeList,&continuousDatabaseHandle,{ Continuous_close(&continuousDatabaseHandle); });
 
       // process entries from continuous database
-      while (   (createInfo->failError == ERROR_NONE)
-             && !isAborted(createInfo)
-             && Continuous_getEntry(&continuousDatabaseHandle,
-                                    createInfo->jobUUID,
-                                    createInfo->scheduleUUID,
-                                    NULL,  // databaseId
-                                    name
-                                   )
-            )
+      databaseId = DATABASE_ID_NONE;
+      do
       {
-        FileInfo fileInfo;
-
         // pause
         pauseCreate(createInfo);
 
+        // get next entry
+        error = Continuous_getEntry(&continuousDatabaseHandle,
+                                    createInfo->jobUUID,
+                                    createInfo->scheduleUUID,
+                                    &databaseId,
+                                    name
+                                   );
+        if (error != ERROR_NONE)
+        {
+          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+          continue;
+        }
+
         // check if file still exists
-        if (!File_exists(name))
+        if ((databaseId == DATABASE_ID_NONE) || !File_exists(name))
         {
           continue;
         }
 
         // read file info
+        FileInfo fileInfo;
         error = File_getInfo(&fileInfo,name);
         if (error != ERROR_NONE)
         {
@@ -2528,6 +2534,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           continue;
         }
 
+        // collect entry for storage
         if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
         {
           switch (fileInfo.type)
@@ -2770,6 +2777,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
         // free resources
       }
+      while (   (createInfo->failError == ERROR_NONE)
+             && !isAborted(createInfo)
+             && (databaseId != DATABASE_ID_NONE)
+            );
 
       // close continuous database
       Continuous_close(&continuousDatabaseHandle);

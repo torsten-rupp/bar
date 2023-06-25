@@ -207,16 +207,16 @@ Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
 *          scheduleUUID   - schedule UUID
 * Output : databaseId - database id (can be NULL)
 *          name       - name of entry (can be NULL)
-* Return : TRUE if entry removed
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-bool Continuous_getEntry(DatabaseHandle *databaseHandle,
-                         const char     *jobUUID,
-                         const char     *scheduleUUID,
-                         DatabaseId     *databaseId,
-                         String         name
-                        );
+Errors Continuous_getEntry(DatabaseHandle *databaseHandle,
+                           const char     *jobUUID,
+                           const char     *scheduleUUID,
+                           DatabaseId     *databaseId,
+                           String         name
+                          );
 
 /***********************************************************************\
 * Name   : Continuous_discardEntry
