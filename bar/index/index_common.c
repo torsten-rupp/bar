@@ -390,13 +390,13 @@ String IndexCommon_getFTSMatchString(String         string,
             firstTokenFlag = FALSE;
           }
           String_doneTokenizer(&stringTokenizer);
-          
+
           if (!String_isEmpty(pattern)) String_appendFormat(string,"%s.%s @@ to_tsquery('%S')",tableName,columnName,pattern);
         }
         break;
     }
   }
-  
+
   // free resources
   String_delete(pattern);
 
@@ -503,6 +503,17 @@ Errors IndexCommon_interruptOperation(IndexHandle *indexHandle, bool *transactio
   if (IndexCommon_isIndexInUse())
   {
     transactionSuspendFlag = (*transactionFlag);
+#if 0
+{
+  fprintf(stderr,"%s:%d: interrupt transactionSuspendFlag=%d\n",__FILE__,__LINE__,transactionSuspendFlag);
+  ArrayIterator arrayIterator;
+  ThreadInfo    threadInfo;
+  ARRAY_ITERATE(&indexUsedBy,arrayIterator,threadInfo)
+  {
+    fprintf(stderr,"%s:%d:   used by %s: %s\n",__FILE__,__LINE__,Thread_getIdString(threadInfo.threadId),Thread_getName(threadInfo.threadId));
+  }
+}
+#endif
 
     if (transactionSuspendFlag)
     {
@@ -521,6 +532,10 @@ Errors IndexCommon_interruptOperation(IndexHandle *indexHandle, bool *transactio
     {
       return ERROR_INTERRUPTED;
     }
+
+#if 0
+fprintf(stderr,"%s:%d: continue transactionSuspendFlag=%d\n",__FILE__,__LINE__,transactionSuspendFlag);
+#endif
 
     if (transactionSuspendFlag)
     {

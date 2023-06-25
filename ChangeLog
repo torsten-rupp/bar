@@ -10,6 +10,8 @@
   * fixed race condition in database lock info in debug
     version
   * fixed possible infinite loop in continuous backup
+  * fixed long SQLite database lock when deleting storage
+  * fixed find storges in database: use database index
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission

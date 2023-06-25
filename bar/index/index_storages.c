@@ -1042,6 +1042,7 @@ LOCAL Errors deleteFTSEntry(IndexHandle  *indexHandle,
   UNUSED_VARIABLE(progressInfo);
 
   // init variables
+
   error = ERROR_UNKNOWN;
   switch (Database_getType(&indexHandle->databaseHandle))
   {
@@ -1050,7 +1051,7 @@ LOCAL Errors deleteFTSEntry(IndexHandle  *indexHandle,
                               NULL,  // changedRowCount,
                               "FTS_entries",
                               DATABASE_FLAG_NONE,
-                              "entryId=?",
+                              "entryId MATCH ?",
                               DATABASE_FILTERS
                               (
                                 DATABASE_FILTER_KEY(entryId)
@@ -1684,24 +1685,10 @@ fprintf(stderr,"%s:%d: %lu\n",__FILE__,__LINE__,Array_length(entryIds));
         // delete FTS entry
         if (error == ERROR_NONE)
         {
-          switch (Database_getType(&indexHandle->databaseHandle))
-          {
-            case DATABASE_TYPE_SQLITE3:
-              error = deleteFTSEntry(indexHandle,
-                                     progressInfo,
-                                     entryId
-                                    );
-              break;
-            case DATABASE_TYPE_MARIADB:
-              // nothing to do (using a view)
-              break;
-            case DATABASE_TYPE_POSTGRESQL:
-              error = deleteFTSEntry(indexHandle,
-                                    progressInfo,
-                                    entryId
-                                   );
-              break;
-          }
+          error = deleteFTSEntry(indexHandle,
+                                 progressInfo,
+                                 entryId
+                                );
         }
 
         // delete file/image/directory/link/hardlink/special entry
@@ -4487,7 +4474,6 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   Errors           error;
   StorageSpecifier storageSpecifier;
   String           storageName;
-  String           filterString;
 
   assert(indexHandle != NULL);
   assert(findStorageSpecifier != NULL);
@@ -4506,14 +4492,6 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 
   // get archive name
   if (findArchiveName == NULL) findArchiveName = findStorageSpecifier->archiveName;
-
-  // get filter string
-  filterString = String_format(String_new(),
-                               "    storages.deletedFlag!=TRUE \
-                                AND storages.name LIKE '%%%S' \
-                               ",
-                               findArchiveName
-                              );
 
   INDEX_DOX(error,
             indexHandle,
@@ -4587,9 +4565,12 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                           DATABASE_COLUMN_UINT    ("storages.totalEntryCount"),
                           DATABASE_COLUMN_UINT64  ("storages.totalEntrySize")
                         ),
-                        String_cString(filterString),
+                        "    storages.deletedFlag!=TRUE \
+                         AND storages.name=? \
+                        ",
                         DATABASE_FILTERS
                         (
+                          DATABASE_FILTER_STRING(findArchiveName)
                         ),
                         NULL,  // groupBy
                         NULL,  // orderBy
@@ -4599,14 +4580,12 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   });
   if ((error != ERROR_NONE) && (error != ERROR_ABORTED))
   {
-    String_delete(filterString);
     String_delete(storageName);
     Storage_doneSpecifier(&storageSpecifier);
     return FALSE;
   }
 
   // free resources
-  String_delete(filterString);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
 

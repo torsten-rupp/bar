@@ -724,7 +724,6 @@ Errors IndexEntry_collectIds(Array        *entryIds,
   #endif
   if (error == ERROR_NONE)
   {
-    // get file/image/hardlink entry ids to check for purge
     INDEX_DOX(error,
               indexHandle,
     {
@@ -745,7 +744,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
     dt[0] = Misc_getTimestamp()-t0;
   #endif
 
-  // collect directory/link/special entries to purge
+  // collect directory entries to purge
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
@@ -771,6 +770,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
     dt[1] = Misc_getTimestamp()-t0;
   #endif
 
+  // collect link entries to purge
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
@@ -796,6 +796,7 @@ Errors IndexEntry_collectIds(Array        *entryIds,
     dt[2] = Misc_getTimestamp()-t0;
   #endif
 
+  // collect special entries to purge
   #ifdef INDEX_DEBUG_PURGE
     t0 = Misc_getTimestamp();
   #endif
