@@ -10893,7 +10893,7 @@ uint xxxShow=0;
     }
     else if (stringEquals(argv[i],"--clean"))
     {
-      cleanOrphanedFlag   = TRUE;
+      cleanOrphanedFlag         = TRUE;
       cleanDuplicateEntriesFlag = TRUE;
       i++;
     }

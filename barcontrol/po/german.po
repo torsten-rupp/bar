@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-06-24 14:57+0200\n"
-"PO-Revision-Date: 2023-01-20 15:51+0100\n"
+"PO-Revision-Date: 2023-06-25 11:36+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
 "Language: de\n"
@@ -1000,44 +1000,36 @@ msgid "invalid response from remote program"
 msgstr "Ungültige Rückmeldung von Programm auf anderem Rechner"
 
 #: src/BARException.java:416
-#, fuzzy
 msgid "initialize (TLS/SSL) failed"
 msgstr "Initialisierung von TLS (SSL) fehlgeschlagen"
 
 #: src/BARException.java:419
-#, fuzzy
 msgid "no (TLS/SSL) certificate authority file"
 msgstr "Keine TLS (SSL) Zertifikats-Authorisierungsdatei"
 
 #: src/BARException.java:422
-#, fuzzy
 msgid "no (TLS/SSL) certificate file"
 msgstr "Kein TLS (SSL) Zertifikatsdatei"
 
 #: src/BARException.java:425
-#, fuzzy
 msgid "no (TLS/SSL) key file"
-msgstr "Kein TLS (SSL) Zertifikatsdatei"
+msgstr "Keine TLS (SSL) Schlüsseldatei"
 
 #: src/BARException.java:428
-#, fuzzy
 msgid "invalid (TLS/SSL) certificate authority"
 msgstr "Ungültige TLS (SSL)-Zertifizierungsstelle"
 
 #: src/BARException.java:431
-#, fuzzy
 msgid "invalid (TLS/SSL) certificate"
 msgstr "Ungültiges TLS (SSL)-Zertifikat"
 
 #: src/BARException.java:434
-#, fuzzy
 msgid "read (TLS/SSL) certificate fail"
-msgstr "Kein TLS (SSL) Zertifikatsdatei"
+msgstr "Lesen des (TLS/SSL) Zertifikats fehlgeschlagen"
 
 #: src/BARException.java:437
-#, fuzzy
 msgid "corrupt (TLS/SSL) certificate"
-msgstr "Kein TLS (SSL) Zertifikatsdatei"
+msgstr "beschädigtes TLS (SSL) Zertifikat"
 
 #: src/BARException.java:440
 msgid "TLS (SSL) certificate expired"
@@ -1282,7 +1274,7 @@ msgstr "Ungültiger Schlüssel"
 
 #: src/BARException.java:744
 msgid "corrupt key"
-msgstr ""
+msgstr "beschädigter Schlüssel"
 
 #: src/BARException.java:751
 msgid "invalid key length"
@@ -1478,9 +1470,8 @@ msgid "no device name given"
 msgstr "Kein Gerätename angegeben"
 
 #: src/BARException.java:998
-#, fuzzy
 msgid "not a device"
-msgstr "Kein Verzeichnis"
+msgstr "Kein Gerät"
 
 #: src/BARException.java:1001
 msgid "open device failed"
@@ -1930,7 +1921,7 @@ msgstr "Verbindung zum Rechner ''{0}:{1}'' fehlgeschlagen (Fehler: {2})"
 #: src/BARServer.java:1908 src/BARServer.java:1919 src/BARServer.java:2057
 #: src/BARServer.java:2068 src/BARServer.java:2229 src/BARServer.java:2240
 #: src/BARServer.java:2375 src/BARServer.java:2386
-#, fuzzy, java-format
+#, java-format
 msgid "TLS/SSL failure: {0}"
 msgstr "TLS (SSL) Fehler: {0}"
 
@@ -4435,9 +4426,9 @@ msgstr ""
 "{1}"
 
 #: src/TabJobs.java:9828 src/TabJobs.java:9836 src/TabJobs.java:9841
-#, fuzzy, java-format
+#, java-format
 msgid "Cannot get root list (error: {0})"
-msgstr "Fehler beim Ermitteln der Auftragsliste (Fehler: {0})"
+msgstr "Fehler beim Ermitteln der Wurzelverzeichnisse (Fehler: {0})"
 
 #: src/TabJobs.java:10399 src/TabJobs.java:10407 src/TabJobs.java:10412
 #, java-format
