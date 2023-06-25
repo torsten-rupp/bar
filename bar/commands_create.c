@@ -2480,26 +2480,32 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       // process entries from continuous database
       while (   (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
-             && Continuous_getEntry(&continuousDatabaseHandle,
+            )
+      {
+        // pause
+        pauseCreate(createInfo);
+
+        // get next entry
+        error = Continuous_getEntry(&continuousDatabaseHandle,
                                     createInfo->jobUUID,
                                     createInfo->scheduleUUID,
                                     NULL,  // databaseId
                                     name
-                                   )
-            )
-      {
-        FileInfo fileInfo;
-
-        // pause
-        pauseCreate(createInfo);
+                                   );
+        if (error != ERROR_NONE)
+        {
+          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+          continue;
+        }
 
         // check if file still exists
-        if (!File_exists(name))
+        if (String_isEmpty(name) || !File_exists(name))
         {
           continue;
         }
 
         // read file info
+        FileInfo fileInfo;
         error = File_getInfo(&fileInfo,name);
         if (error != ERROR_NONE)
         {
@@ -2529,6 +2535,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           continue;
         }
 
+        // collect entry for storage
         if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
         {
           switch (fileInfo.type)
