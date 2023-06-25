@@ -4705,8 +4705,6 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
                      String_cString(Storage_getPrintableName(printableStorageName,&storageSpecifier,baseName))
                     );
           File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
-// TODO: complexity ~ O(n*n) if Index_findStorageByName() require O(n). Use a sorted list or hash table with sotrages and get the storage list from the index only once?
-// TODO:
           (void)Storage_forAll(&storageSpecifier,
                                baseName,
                                String_cString(pattern),
@@ -4721,7 +4719,6 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
                                  UNUSED_VARIABLE(userData);
 
                                  now = Misc_getCurrentDateTime();
-//fprintf(stderr,"%s:%d: %s %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,String_cString(storageName),fileInfo->timeModified,now);
 
                                  // to avoid add/update on currently created archive, wait for min. 30min after creation
                                  if (now > (fileInfo->timeLastChanged+30*60))
@@ -4771,7 +4768,6 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
                                             )
                                          {
                                            // already in index -> check if modified/state
-//fprintf(stderr,"%s:%d: storageId=%"PRIi64" file=%"PRIi64" lastCheckedDateTime=%"PRIi64"\n",__FILE__,__LINE__,storageId,fileInfo->timeModified,lastCheckedDateTime);
                                            if      (fileInfo->timeModified > lastCheckedDateTime)
                                            {
                                              // modified -> request update index
@@ -4839,7 +4835,7 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
                                  }
 
                                  // throddle database access
-                                 Misc_mdelay(500);
+//                                 Misc_mdelay(500);
 
                                  if (!isQuit())
                                  {
