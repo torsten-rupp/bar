@@ -2506,6 +2506,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         }
 
         // read file info
+        FileInfo fileInfo;
         error = File_getInfo(&fileInfo,name);
         if (error != ERROR_NONE)
         {

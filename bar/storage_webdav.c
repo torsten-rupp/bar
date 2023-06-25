@@ -850,7 +850,7 @@ LOCAL Errors initDownload(StorageHandle *storageHandle,
 * Purpose: init WebDAV upload
 * Input  : storageHandle - storage handle
 *          url           - URL
-*          fileSize      - file size
+*          fileSize      - file size [bytes]
 * Output : -
 * Return : -
 * Notes  : -
