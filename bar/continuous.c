@@ -2208,16 +2208,16 @@ Errors Continuous_getEntry(DatabaseHandle *databaseHandle,
                            String         name
                           )
 {
-  Errors     error;
-  DatabaseId databaseId_;
+  Errors error;
 
   assert(initFlag);
   assert(databaseHandle != NULL);
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));
+  assert(databaseId != NULL);
   assert(name != NULL);
 
-  if (databaseId != NULL) (*databaseId) = DATABASE_ID_NONE;
+  (*databaseId) = DATABASE_ID_NONE;
   String_clear(name);
 
 // TODO: lock required?
@@ -2234,7 +2234,7 @@ Errors Continuous_getEntry(DatabaseHandle *databaseHandle,
                          UNUSED_VARIABLE(userData);
                          UNUSED_VARIABLE(valueCount);
 
-                         databaseId_ = values[0].id;
+                         (*databaseId) = values[0].id;
                          String_set(name,values[1].string);
 
                          return ERROR_NONE;
@@ -2271,17 +2271,18 @@ Errors Continuous_getEntry(DatabaseHandle *databaseHandle,
     return error;
   }
 
-  // mark entry as stored
-  error = markEntryStored(databaseHandle,databaseId_);
-  if (error != ERROR_NONE)
+  if ((*databaseId) != DATABASE_ID_NONE)
   {
-    return error;
+    // mark entry as stored
+    error = markEntryStored(databaseHandle,(*databaseId));
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
 
 //    return TRUE;
 //  });
-
-  if (databaseId != NULL) (*databaseId) = databaseId_;
 
   return ERROR_NONE;
 }
