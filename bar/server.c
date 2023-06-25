@@ -19735,22 +19735,13 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  name      = String_new();
-  uuidId    = INDEX_ID_NONE;
-  entityId  = INDEX_ID_NONE;
-  storageId = INDEX_ID_NONE;
+  StringMap_getIndexId(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE);
+  StringMap_getIndexId(argumentMap,"entityId",&entityId,INDEX_ID_NONE);
+  StringMap_getIndexId(argumentMap,"storageId",&storageId,INDEX_ID_NONE);
   String_clear(jobUUID);
-  if (   !StringMap_getIndexId(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
-      && !StringMap_getIndexId(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
-      && !StringMap_getIndexId(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
-      && !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
-      && !StringMap_getString(argumentMap,"name",name,NULL)
-     )
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<id> or entityId=<id> or storageId=<id> or jobUUID=<uuid> or name=<text>");
-    String_delete(name);
-    return;
-  }
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+  name = String_new();
+  StringMap_getString(argumentMap,"name",name,NULL);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -19934,11 +19925,11 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 
   if (!String_isEmpty(jobUUID))
   {
-    // delete all storages of job
+    // delete all storages which match job UUID
 //TODO
   }
 
-  if (!String_isEmpty(jobUUID))
+  if (!String_isEmpty(name))
   {
     // delete all storages which match name
 //TODO
