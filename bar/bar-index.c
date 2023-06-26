@@ -1780,7 +1780,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                "FTS_storages \
                                   LEFT JOIN storages ON storages.id=FTS_storages.storageId \
                                ",
-                               "COUNT(storageId)",
+                               "COUNT(FTS_storages.rowid)",
                                "storages.id IS NULL",
                                DATABASE_FILTERS
                                (
@@ -2733,7 +2733,6 @@ LOCAL Errors createFTSIndizes(DatabaseHandle *databaseHandle)
 
                                    storageId = values[0].id;
                                    name      = values[1].string;
-//fprintf(stderr,"%s:%d: storageId=%"PRIu64"\n",__FILE__,__LINE__,storageId);
 
                                    getPostgreSQLFTSTokens(tokens,name);
                                    error = Database_insert(databaseHandle,
@@ -2791,7 +2790,6 @@ LOCAL Errors createFTSIndizes(DatabaseHandle *databaseHandle)
 
                                    entryId = values[0].id;
                                    name    = values[1].string;
-//fprintf(stderr,"%s:%d: entryId=%"PRIu64"\n",__FILE__,__LINE__,entryId);
 
                                    getPostgreSQLFTSTokens(tokens,name);
                                    error = Database_insert(databaseHandle,
@@ -6177,18 +6175,26 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             ),
                             INCREMENT_SIZE
                            );
-      (void)Database_deleteByIds(databaseHandle,
-                                 &n,
-                                 "entryFragments",
-                                 "id",
-                                 DATABASE_FLAG_NONE,
-                                 Array_cArray(&ids),
-                                 Array_length(&ids)
-                                );
+      error = Database_deleteByIds(databaseHandle,
+                                   &n,
+                                   "entryFragments",
+                                   "id",
+                                   DATABASE_FLAG_NONE,
+                                   Array_cArray(&ids),
+                                   Array_length(&ids)
+                                  );
     }
     (void)Database_flush(databaseHandle);
   }
-  while (!Array_isEmpty(&ids));
+  while (!Array_isEmpty(&ids) && (error == ERROR_NONE));
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
 
   do
   {
@@ -6207,18 +6213,26 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             ),
                             INCREMENT_SIZE
                            );
-      (void)Database_deleteByIds(databaseHandle,
-                                 &n,
-                                 "directoryEntries",
-                                 "id",
-                                 DATABASE_FLAG_NONE,
-                                 Array_cArray(&ids),
-                                 Array_length(&ids)
-                                );
+      error = Database_deleteByIds(databaseHandle,
+                                   &n,
+                                   "directoryEntries",
+                                   "id",
+                                   DATABASE_FLAG_NONE,
+                                   Array_cArray(&ids),
+                                   Array_length(&ids)
+                                  );
     }
     (void)Database_flush(databaseHandle);
   }
-  while (!Array_isEmpty(&ids));
+  while (!Array_isEmpty(&ids) && (error == ERROR_NONE));
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
 
   do
   {
@@ -6237,18 +6251,26 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             ),
                             INCREMENT_SIZE
                            );
-      (void)Database_deleteByIds(databaseHandle,
-                                 &n,
-                                 "linkEntries",
-                                 "id",
-                                 DATABASE_FLAG_NONE,
-                                 Array_cArray(&ids),
-                                 Array_length(&ids)
-                                );
+      error = Database_deleteByIds(databaseHandle,
+                                   &n,
+                                   "linkEntries",
+                                   "id",
+                                   DATABASE_FLAG_NONE,
+                                   Array_cArray(&ids),
+                                   Array_length(&ids)
+                                  );
     }
     (void)Database_flush(databaseHandle);
   }
-  while (!Array_isEmpty(&ids));
+  while (!Array_isEmpty(&ids) && (error == ERROR_NONE));
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
 
   do
   {
@@ -6267,18 +6289,26 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                             ),
                             INCREMENT_SIZE
                            );
-      (void)Database_deleteByIds(databaseHandle,
-                                 &n,
-                                 "specialEntries",
-                                 "id",
-                                 DATABASE_FLAG_NONE,
-                                 Array_cArray(&ids),
-                                 Array_length(&ids)
-                                );
+      error = Database_deleteByIds(databaseHandle,
+                                   &n,
+                                   "specialEntries",
+                                   "id",
+                                   DATABASE_FLAG_NONE,
+                                   Array_cArray(&ids),
+                                   Array_length(&ids)
+                                  );
     }
     (void)Database_flush(databaseHandle);
   }
-  while (!Array_isEmpty(&ids));
+  while (!Array_isEmpty(&ids) && (error == ERROR_NONE));
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
   printInfo("%lu\n",n);
   total += n;
 
@@ -6303,16 +6333,24 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ),
                           DATABASE_UNLIMITED
                          );
-    (void)Database_deleteByIds(databaseHandle,
-                               &n,
-                               "fileEntries",
-                               "id",
-                               DATABASE_FLAG_NONE,
-                               Array_cArray(&ids),
-                               Array_length(&ids)
-                              );
+    error = Database_deleteByIds(databaseHandle,
+                                 &n,
+                                 "fileEntries",
+                                 "id",
+                                 DATABASE_FLAG_NONE,
+                                 Array_cArray(&ids),
+                                 Array_length(&ids)
+                                );
   }
   (void)Database_flush(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
   printInfo("%lu\n",n);
   total += n;
 
@@ -6336,16 +6374,24 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ),
                           DATABASE_UNLIMITED
                          );
-    (void)Database_deleteByIds(databaseHandle,
-                               &n,
-                               "imageEntries",
-                               "id",
-                               DATABASE_FLAG_NONE,
-                               Array_cArray(&ids),
-                               Array_length(&ids)
-                              );
+    error = Database_deleteByIds(databaseHandle,
+                                 &n,
+                                 "imageEntries",
+                                 "id",
+                                 DATABASE_FLAG_NONE,
+                                 Array_cArray(&ids),
+                                 Array_length(&ids)
+                                );
   }
   (void)Database_flush(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
   printInfo("%lu\n",n);
   total += n;
 
@@ -6369,16 +6415,24 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ),
                           DATABASE_UNLIMITED
                          );
-    (void)Database_deleteByIds(databaseHandle,
-                               &n,
-                               "hardlinkEntries",
-                               "id",
-                               DATABASE_FLAG_NONE,
-                               Array_cArray(&ids),
-                               Array_length(&ids)
-                              );
+    error = Database_deleteByIds(databaseHandle,
+                                 &n,
+                                 "hardlinkEntries",
+                                 "id",
+                                 DATABASE_FLAG_NONE,
+                                 Array_cArray(&ids),
+                                 Array_length(&ids)
+                                );
   }
   (void)Database_flush(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
   printInfo("%lu\n",n);
   total += n;
 
@@ -6409,20 +6463,28 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteByIds(databaseHandle,
-                                   &n,
-                                   "entries",
-                                   "id",
-                                   DATABASE_FLAG_NONE,
-                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
-                                   Array_segmentLength(&ids,&arraySegmentIterator)
-                                  );
+        error = Database_deleteByIds(databaseHandle,
+                                     &n,
+                                     "entries",
+                                     "id",
+                                     DATABASE_FLAG_NONE,
+                                     (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                     Array_segmentLength(&ids,&arraySegmentIterator)
+                                    );
       }
       printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
     doneProgress();
 
     (void)Database_flush(databaseHandle);
+  }
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6453,20 +6515,28 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteByIds(databaseHandle,
-                                   &n,
-                                   "entries",
-                                   "id",
-                                   DATABASE_FLAG_NONE,
-                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
-                                   Array_segmentLength(&ids,&arraySegmentIterator)
-                                  );
+        error = Database_deleteByIds(databaseHandle,
+                                     &n,
+                                     "entries",
+                                     "id",
+                                     DATABASE_FLAG_NONE,
+                                     (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                     Array_segmentLength(&ids,&arraySegmentIterator)
+                                    );
       }
       printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
     doneProgress();
 
     (void)Database_flush(databaseHandle);
+  }
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6497,20 +6567,28 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteByIds(databaseHandle,
-                                   &n,
-                                   "entries",
-                                   "id",
-                                   DATABASE_FLAG_NONE,
-                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
-                                   Array_segmentLength(&ids,&arraySegmentIterator)
-                                  );
+        error = Database_deleteByIds(databaseHandle,
+                                     &n,
+                                     "entries",
+                                     "id",
+                                     DATABASE_FLAG_NONE,
+                                     (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                     Array_segmentLength(&ids,&arraySegmentIterator)
+                                    );
       }
       printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
     doneProgress();
 
     (void)Database_flush(databaseHandle);
+  }
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6541,20 +6619,28 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteByIds(databaseHandle,
-                                   &n,
-                                   "entries",
-                                   "id",
-                                   DATABASE_FLAG_NONE,
-                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
-                                   Array_segmentLength(&ids,&arraySegmentIterator)
-                                  );
+        error = Database_deleteByIds(databaseHandle,
+                                     &n,
+                                     "entries",
+                                     "id",
+                                     DATABASE_FLAG_NONE,
+                                     (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                     Array_segmentLength(&ids,&arraySegmentIterator)
+                                    );
       }
       printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
     doneProgress();
 
     (void)Database_flush(databaseHandle);
+  }
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6585,20 +6671,28 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteByIds(databaseHandle,
-                                   &n,
-                                   "entries",
-                                   "id",
-                                   DATABASE_FLAG_NONE,
-                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
-                                   Array_segmentLength(&ids,&arraySegmentIterator)
-                                  );
+        error = Database_deleteByIds(databaseHandle,
+                                     &n,
+                                     "entries",
+                                     "id",
+                                     DATABASE_FLAG_NONE,
+                                     (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                     Array_segmentLength(&ids,&arraySegmentIterator)
+                                    );
       }
       printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
     doneProgress();
 
     (void)Database_flush(databaseHandle);
+  }
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6629,20 +6723,28 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        (void)Database_deleteByIds(databaseHandle,
-                                   &n,
-                                   "entries",
-                                   "id",
-                                   DATABASE_FLAG_NONE,
-                                   (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
-                                   Array_segmentLength(&ids,&arraySegmentIterator)
-                                  );
+        error = Database_deleteByIds(databaseHandle,
+                                     &n,
+                                     "entries",
+                                     "id",
+                                     DATABASE_FLAG_NONE,
+                                     (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                     Array_segmentLength(&ids,&arraySegmentIterator)
+                                    );
       }
       printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
     }
     doneProgress();
 
     (void)Database_flush(databaseHandle);
+  }
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
   }
   printInfo("%lu\n",n);
   total += n;
@@ -6652,7 +6754,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_delete(databaseHandle,
+    error = Database_delete(databaseHandle,
                           &n,
                           "storages",
                           DATABASE_FLAG_NONE,
@@ -6664,6 +6766,14 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          );
   }
   (void)Database_flush(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
   printInfo("%lu\n",n);
   total += n;
 
@@ -6672,20 +6782,28 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_delete(databaseHandle,
-                          &n,
-                          "storages",
-                          DATABASE_FLAG_NONE,
-                          "(state<?) OR (state>?)",
-                          DATABASE_FILTERS
-                          (
-                            DATABASE_FILTER_UINT(INDEX_CONST_STATE_OK),
-                            DATABASE_FILTER_UINT(INDEX_CONST_STATE_ERROR)
-                          ),
-                          DATABASE_UNLIMITED
-                         );
+    error = Database_delete(databaseHandle,
+                            &n,
+                            "storages",
+                            DATABASE_FLAG_NONE,
+                            "(state<?) OR (state>?)",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_UINT(INDEX_CONST_STATE_OK),
+                              DATABASE_FILTER_UINT(INDEX_CONST_STATE_ERROR)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
   (void)Database_flush(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
   printInfo("%lu\n",n);
   total += n;
 
@@ -6714,36 +6832,30 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ),
                           DATABASE_UNLIMITED
                          );
-    (void)Database_deleteByIds(databaseHandle,
-                               &n,
-                               "entities",
-                               "id",
-                               DATABASE_FLAG_NONE,
-                               Array_cArray(&ids),
-                               Array_length(&ids)
-                              );
+    error = Database_deleteByIds(databaseHandle,
+                                 &n,
+                                 "entities",
+                                 "id",
+                                 DATABASE_FLAG_NONE,
+                                 Array_cArray(&ids),
+                                 Array_length(&ids)
+                                );
   }
   (void)Database_flush(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
   printInfo("%lu\n",n);
   total += n;
 
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-#if 0
-      error = Database_getUInt(databaseHandle,
-                               &n,
-                               "FTS_entries \
-                                  LEFT JOIN entries ON entries.id=FTS_entries.entryId \
-                               ",
-                               "COUNT(entryId)",
-                               "entries.id IS NULL",
-                               DATABASE_FILTERS
-                               (
-                               ),
-                               NULL  // group
-                              );
-#endif
       // clean FTS entries without entry
       printInfo("  FTS entries without entry...         ");
       n = 0L;
@@ -6762,20 +6874,20 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               ),
                               DATABASE_UNLIMITED
                              );
-        (void)Database_deleteByIds(databaseHandle,
-                                   &n,
-                                   "FTS_entries",
-                                   "rowid",
-                                   DATABASE_FLAG_NONE,
-                                   Array_cArray(&ids),
-                                   Array_length(&ids)
-                                  );
+        error = Database_deleteByIds(databaseHandle,
+                                     &n,
+                                     "FTS_entries",
+                                     "rowid",
+                                     DATABASE_FLAG_NONE,
+                                     Array_cArray(&ids),
+                                     Array_length(&ids)
+                                    );
       }
       (void)Database_flush(databaseHandle);
       printInfo("%lu\n",n);
       total += n;
 
-      // clean FTS storages without entry
+      // clean FTS storages without storage
       printInfo("  FTS storages without storage...      ");
       n = 0L;
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -6793,17 +6905,24 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               ),
                               DATABASE_UNLIMITED
                              );
-        (void)Database_deleteByIds(databaseHandle,
-                                   &n,
-                                   "FTS_storages",
-                                   "rowid",
-                                   DATABASE_FLAG_NONE,
-                                   Array_cArray(&ids),
-                                   Array_length(&ids)
-                                  );
+        error = Database_deleteByIds(databaseHandle,
+                                     &n,
+                                     "FTS_storages",
+                                     "rowid",
+                                     DATABASE_FLAG_NONE,
+                                     Array_cArray(&ids),
+                                     Array_length(&ids)
+                                    );
       }
       (void)Database_flush(databaseHandle);
-      printInfo("%lu\n",n);
+      if (error == ERROR_NONE)
+      {
+        printInfo("%lu\n",n);
+      }
+      else
+      {
+        printInfo("FAIL (error: %s",Error_getText(error));
+      }
       total += n;
       break;
     case DATABASE_TYPE_MARIADB:
@@ -6828,14 +6947,14 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               ),
                               DATABASE_UNLIMITED
                              );
-        (void)Database_deleteByIds(databaseHandle,
-                                   &n,
-                                   "FTS_entries",
-                                   "id",
-                                   DATABASE_FLAG_NONE,
-                                   Array_cArray(&ids),
-                                   Array_length(&ids)
-                                  );
+        error = Database_deleteByIds(databaseHandle,
+                                     &n,
+                                     "FTS_entries",
+                                     "id",
+                                     DATABASE_FLAG_NONE,
+                                     Array_cArray(&ids),
+                                     Array_length(&ids)
+                                    );
       }
       (void)Database_flush(databaseHandle);
       printInfo("%lu\n",n);
@@ -6859,14 +6978,14 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               ),
                               DATABASE_UNLIMITED
                              );
-        (void)Database_deleteByIds(databaseHandle,
-                                   &n,
-                                   "FTS_storages",
-                                   "id",
-                                   DATABASE_FLAG_NONE,
-                                   Array_cArray(&ids),
-                                   Array_length(&ids)
-                                  );
+        error = Database_deleteByIds(databaseHandle,
+                                     &n,
+                                     "FTS_storages",
+                                     "id",
+                                     DATABASE_FLAG_NONE,
+                                     Array_cArray(&ids),
+                                     Array_length(&ids)
+                                    );
       }
       (void)Database_flush(databaseHandle);
       printInfo("%lu\n",n);
@@ -6891,16 +7010,24 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ),
                           DATABASE_UNLIMITED
                          );
-    (void)Database_deleteByIds(databaseHandle,
-                               &n,
-                               "entriesNewest",
-                               "id",
-                               DATABASE_FLAG_NONE,
-                               Array_cArray(&ids),
-                               Array_length(&ids)
-                              );
+    error = Database_deleteByIds(databaseHandle,
+                                 &n,
+                                 "entriesNewest",
+                                 "id",
+                                 DATABASE_FLAG_NONE,
+                                 Array_cArray(&ids),
+                                 Array_length(&ids)
+                                );
   }
   (void)Database_flush(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
   printInfo("%lu\n",n);
   total += n;
 

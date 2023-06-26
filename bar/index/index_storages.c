@@ -1922,7 +1922,6 @@ bool IndexStorage_isEmpty(IndexHandle *indexHandle,
 }
 
 Errors IndexStorage_delete(IndexHandle  *indexHandle,
-// TODO:
                            IndexId      storageId,
                            ProgressInfo *progressInfo
                           )
@@ -1931,11 +1930,6 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
   String string;
   Errors error;
   uint64 createdDateTime;
-  bool   transactionFlag;
-  bool   doneFlag;
-  #ifndef NDEBUG
-    ulong deletedCounter;
-  #endif
 
   assert(indexHandle != NULL);
   assert(indexHandle->masterIO == NULL);
@@ -1993,84 +1987,50 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
     error = clearStorage(indexHandle,storageId,progressInfo);
   }
 
-  switch (Database_getType(&indexHandle->databaseHandle))
+  // delete FTS storage
+  if (error == ERROR_NONE)
   {
-    case DATABASE_TYPE_SQLITE3:
-      // delete FTS storages
-      if (error == ERROR_NONE)
-      {
-        INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                          indexHandle,
-                                          transactionFlag,
+    switch (Database_getType(&indexHandle->databaseHandle))
+    {
+      case DATABASE_TYPE_SQLITE3:
+        // delete FTS storages
+        INDEX_DOX(error,
+                  indexHandle,
         {
-          do
-          {
-            doneFlag = TRUE;
-// TODO:
-            error = IndexCommon_delete(indexHandle,
-                                       &doneFlag,
-                                       #ifndef NDEBUG
-                                         &deletedCounter,
-                                       #else
-                                         NULL,  // deletedCounter
-                                       #endif
-                                       "FTS_storages",
-                                       "storageId=?",
-                                       DATABASE_FILTERS
-                                       (
-                                         DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
-                                       )
-                                      );
-            if (error == ERROR_NONE)
-            {
-              error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE);
-            }
-          }
-          while ((error == ERROR_NONE) && !doneFlag);
-
-          return error;
+          return Database_delete(&indexHandle->databaseHandle,
+                                 NULL,  // changedRowCount
+                                 "FTS_storages",
+                                 DATABASE_FLAG_NONE,
+                                 "storageId MATCH ?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
+                                 ),
+                                 DATABASE_UNLIMITED
+                                );
         });
-      }
-      break;
-    case DATABASE_TYPE_MARIADB:
-      break;
-    case DATABASE_TYPE_POSTGRESQL:
-      // delete FTS storages
-      if (error == ERROR_NONE)
-      {
-        INDEX_INTERRUPTABLE_OPERATION_DOX(error,
-                                          indexHandle,
-                                          transactionFlag,
+        break;
+      case DATABASE_TYPE_MARIADB:
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        // delete FTS storages
+        INDEX_DOX(error,
+                  indexHandle,
         {
-          do
-          {
-            doneFlag = TRUE;
-// TODO:
-            error = IndexCommon_delete(indexHandle,
-                                       &doneFlag,
-                                       #ifndef NDEBUG
-                                         &deletedCounter,
-                                       #else
-                                         NULL,  // deletedCounter
-                                       #endif
-                                       "FTS_storages",
-                                       "storageId=?",
-                                       DATABASE_FILTERS
-                                       (
-                                         DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
-                                       )
-                                      );
-            if (error == ERROR_NONE)
-            {
-              error = IndexCommon_interruptOperation(indexHandle,&transactionFlag,SLEEP_TIME_PURGE);
-            }
-          }
-          while ((error == ERROR_NONE) && !doneFlag);
-
-          return error;
+          return Database_delete(&indexHandle->databaseHandle,
+                                 NULL,  // changedRowCount
+                                 "FTS_storages",
+                                 DATABASE_FLAG_NONE,
+                                 "storageId=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
+                                 ),
+                                 DATABASE_UNLIMITED
+                                );
         });
-      }
-      break;
+        break;
+    }
   }
 
   // delete storage
@@ -5809,7 +5769,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                                     (
                                       DATABASE_VALUE_STRING("name", storageName),
                                     ),
-                                    "storageId=?",
+                                    "storageId MATCH ?",
                                     DATABASE_FILTERS
                                     (
                                       DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId)),
