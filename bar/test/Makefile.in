@@ -6295,7 +6295,7 @@ test_server_operations_batch: \
             $(call functionServerCommandBatch,ENTRY_LIST); \
             $(call functionServerCommandBatch,ENTRY_LIST_CLEAR); \
             \
-            $(call functionServerCommandBatch,INDEX_STORAGE_ADD pattern=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+            $(call functionServerCommandBatch,INDEX_STORAGE_ADD name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
             $(SLEEP) 2; \
             $(call functionServerCommandBatch,INDEX_INFO); \
             \
@@ -6569,7 +6569,7 @@ ifneq ($(SOCAT),)
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_ENTRY_LIST_CLEAR); \
             \
-            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_STORAGE_ADD name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
             $(SLEEP) 2; \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INDEX_INFO); \
             \
