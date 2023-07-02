@@ -13,6 +13,8 @@
   * fixed long SQLite database lock when deleting storage
   * fixed find storges in database: use database index
   * fixed remove indices by error state
+  * fixed move storages to new location with PostgreSQL:
+    avoid concurrent/long running database operations
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission
@@ -22,6 +24,9 @@
     date+time
   * BARControl: fixed display of included/execluded entries
     via pattern
+  * BARControl: fixed error handling when slave is in
+    disconnected state
+  * BARControl: added tooltip for total entries
 
 2023-04-16 0.22g
   * fixed lost resource in debug version
