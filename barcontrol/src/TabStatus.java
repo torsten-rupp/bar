@@ -2025,9 +2025,19 @@ public class TabStatus
         public void modified(Control control, WidgetVariable widgetVariable)
         {
           final Color COLOR_IN_PROGRESS = display.getSystemColor(SWT.COLOR_DARK_GRAY);
-          control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
+          if (widgetVariable.getBoolean())
+          {
+            control.setForeground(null);
+            control.setToolTipText(null);
+          }
+          else
+          {
+            control.setForeground(COLOR_IN_PROGRESS);
+            control.setToolTipText(BARControl.tr("Found entries - still collecting."));
+          }
         }
       });
+      label.setToolTipText(BARControl.tr("Found entries - still collecting."));
       label = Widgets.newLabel(composite,BARControl.tr("entries"));
       Widgets.layout(label,4,2,TableLayoutData.W);
       label = Widgets.newNumberView(composite);
@@ -2039,7 +2049,16 @@ public class TabStatus
         public void modified(Control control, WidgetVariable widgetVariable)
         {
           final Color COLOR_IN_PROGRESS = display.getSystemColor(SWT.COLOR_DARK_GRAY);
-          control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
+          if (widgetVariable.getBoolean())
+          {
+            control.setForeground(null);
+            control.setToolTipText(null);
+          }
+          else
+          {
+            control.setForeground(COLOR_IN_PROGRESS);
+            control.setToolTipText(BARControl.tr("Size of found entries - still collecting."));
+          }
         }
       });
       label = Widgets.newLabel(composite,BARControl.tr("bytes"));
@@ -2062,7 +2081,16 @@ public class TabStatus
         public void modified(Control control, WidgetVariable widgetVariable)
         {
           final Color COLOR_IN_PROGRESS = display.getSystemColor(SWT.COLOR_DARK_GRAY);
-          control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
+          if (widgetVariable.getBoolean())
+          {
+            control.setForeground(null);
+            control.setToolTipText(null);
+          }
+          else
+          {
+            control.setForeground(COLOR_IN_PROGRESS);
+            control.setToolTipText(BARControl.tr("Size of found entries - still collecting."));
+          }
         }
       });
       label = Widgets.newLabel(composite,BARControl.tr("bytes"));

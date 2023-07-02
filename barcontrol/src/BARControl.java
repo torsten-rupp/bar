@@ -5661,8 +5661,9 @@ if (false) {
           {
             final int n[] = new int[]{0};
 
-            System.out.println(String.format("%-8s %-12s %-14s %-14s %-14s %-19s %s",
+            System.out.println(String.format("%-8s %-8s %-12s %-14s %-14s %-14s %-19s %s",
                                              BARControl.tr("Id"),
+                                             BARControl.tr("Job id"),
                                              BARControl.tr("Type"),
                                              BARControl.tr("Size"),
                                              BARControl.tr("Entry count"),
@@ -5675,24 +5676,26 @@ if (false) {
             BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S sortMode=JOB_UUID ordering=ASCENDING",
                                                          !Settings.indexDatabaseEntitiesListName.isEmpty() ? Settings.indexDatabaseEntitiesListName : ""
                                                         ),
-                                     1,  // debug level
+0,//                                     1,  // debug level
                                      new Command.ResultHandler()
                                      {
                                        @Override
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long         entityId        = valueMap.getLong  ("entityId"                      );
+                                         long         uuid            = valueMap.getLong  ("uuid"                          );
                                          String       jobUUID         = valueMap.getString("jobUUID"                       );
                                          String       jobName         = valueMap.getString("jobName"                       );
+                                         long         entityId        = valueMap.getLong  ("entityId"                      );
                                          ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
                                          long         createdDateTime = valueMap.getLong  ("createdDateTime"               );
                                          long         totalSize       = valueMap.getLong  ("totalSize"                     );
                                          long         totalEntryCount = valueMap.getLong  ("totalEntryCount"               );
                                          long         totalEntrySize  = valueMap.getLong  ("totalEntrySize"                );
 
-                                         System.out.println(String.format("%8d %-12s %-14s %14d %14d %-19s %s",
+                                         System.out.println(String.format("%8d %8d %-12s %-14s %14d %14d %-19s %s",
                                                                           getDatabaseId(entityId),
+                                                                          getDatabaseId(uuid),
                                                                           archiveType.toString(),
                                                                           totalSize,
                                                                           totalEntryCount,
@@ -5726,8 +5729,9 @@ if (false) {
           {
             final int n[] = new int[]{0};
 
-            System.out.println(String.format("%-8s %-14s %-19s %-16s %-6s %s",
+            System.out.println(String.format("%-8s %-8s %-14s %-19s %-16s %-6s %s",
                                              BARControl.tr("Id"),
+                                             BARControl.tr("Entity"),
                                              BARControl.tr("Size"),
                                              BARControl.tr("Date/Time"),
                                              BARControl.tr("State"),
@@ -5747,14 +5751,16 @@ if (false) {
                                          throws BARException
                                        {
                                          long        storageId   = valueMap.getLong  ("storageId"                   );
+                                         long        entityId    = valueMap.getLong  ("entityId"                    );
                                          String      storageName = valueMap.getString("name"                        );
                                          long        dateTime    = valueMap.getLong  ("dateTime"                    );
                                          long        size        = valueMap.getLong  ("size"                        );
                                          IndexStates state       = valueMap.getEnum  ("indexState",IndexStates.class);
                                          IndexModes  mode        = valueMap.getEnum  ("indexMode",IndexModes.class  );
 
-                                         System.out.println(String.format("%8d %14d %-19s %-16s %-6s %s",
+                                         System.out.println(String.format("%8d %8d %-19s %-16s %-6s %-6s %s",
                                                                           getDatabaseId(storageId),
+                                                                          getDatabaseId(entityId),
                                                                           size,
                                                                           DATE_FORMAT.format(new Date(dateTime*1000)),
                                                                           state,
