@@ -4433,6 +4433,8 @@ fi
 
 AC_CHECK_CONSTANT(IN_EXCL_UNLINK,AC_DEFINE(HAVE_IN_EXCL_UNLINK,1,[IN_EXCL_UNLINK available]),,sys/inotify.h)
 
+AC_CHECK_CONSTANT(CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,AC_DEFINE(HAVE_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,1,[CURLINFO_CONTENT_LENGTH_DOWNLOAD_T available]),,curl/curl.h)
+
 # check types
 AC_CHECK_TYPE(struct stat64,  AC_DEFINE(HAVE_STRUCT_STAT64,   1,[defined if struct stat64 is available]),  ,[#include <sys/stat.h>])
 AC_CHECK_TYPE(struct __stat64,AC_DEFINE(HAVE_STRUCT___STAT64, 1,[defined if struct __stat64 is available]),,[#include <sys/stat.h>])

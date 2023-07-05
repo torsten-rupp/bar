@@ -423,8 +423,6 @@ typedef struct
 {
   StorageInfo                  *storageInfo;
   StorageModes                 mode;                         // storage mode: READ, WRITE
-//TODO: use stoageInfo->specifier->name?
-  String                       archiveName;                  // archive name
 
   union
   {
@@ -517,15 +515,14 @@ typedef struct
       {
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
-        String                  url;
         uint64                  index;                       // current read/write index in file [0..n-1]
-        uint64                  size;                        // size of file [bytes]
+        int64                   size;                        // size of file [bytes] or -1 if unknown
         struct                                               // receive buffer
         {
           byte   *data;                                      // data received
           ulong  size;                                       // buffer size [bytes]
-          uint64 offset;                                     // data offset
-          ulong  length;                                     // length of data received
+          uint64 offset;                                     // current offset of buffer in file
+          ulong  length;                                     // length of data in buffer
         } receiveBuffer;
         struct                                               // send buffer
         {
@@ -964,6 +961,7 @@ bool Storage_parseSFTPSpecifier(ConstString sftpSpecifier,
 *          loginName       - login name variable (can be NULL)
 *          loginPassword   - login password variable (can be NULL)
 * Output : hostName      - host name (can be NULL)
+*          hostPort      - host port number (can be NULL)
 *          loginName     - login name (can be NULL)
 *          loginPassword - login password
 * Return : TRUE if WebDAV specifier parsed, FALSE if specifier invalid
@@ -972,6 +970,7 @@ bool Storage_parseSFTPSpecifier(ConstString sftpSpecifier,
 
 bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
                                   String      hostName,
+                                  uint        *hostPort,
                                   String      loginName,
                                   Password    *loginPassword
                                  );

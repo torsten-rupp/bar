@@ -88,18 +88,77 @@ typedef enum
 // i/o functions
 typedef struct
 {
-  // check end of data
+  /***********************************************************************\
+  * Name   : eof
+  * Purpose: check end of data
+  * Input  : userData - userdata
+  * Output : -
+  * Return : TRUE iff end of data
+  * Notes  : -
+  \***********************************************************************/
+
   bool(*eof)(void *userData);
-  // read data
+
+  /***********************************************************************\
+  * Name   : read
+  * Purpose: read data
+  * Input  : length   - buffer length [bytes]
+  *          userData - userdata
+  * Output : buffer    - buffer
+  *          bytesRead - read bytes
+  * Return : ERROR_NONE or error code
+  * Notes  : -
+  \***********************************************************************/
+
   Errors(*read)(void *userData, void *buffer, ulong length, ulong *bytesRead);
-  // write data
+
+  /***********************************************************************\
+  * Name   : write
+  * Purpose: write data
+  * Input  : buffer   - buffer
+  *          length   - length of data [bytes]
+  *          userData - userdata
+  * Output : -
+  * Return : ERROR_NONE or error code
+  * Notes  : -
+  \***********************************************************************/
+
   Errors(*write)(void *userData, const void *buffer, ulong length);
-  // tell position
+
+  /***********************************************************************\
+  * Name   : tell
+  * Purpose: tell position
+  * Input  : userData - userdata
+  * Output : offset - offset [0..n-1]
+  * Return : ERROR_NONE or error code
+  * Notes  : -
+  \***********************************************************************/
+
   Errors(*tell)(void *userData, uint64 *offset);
-  // seek to position
+
+  /***********************************************************************\
+  * Name   : seek
+  * Purpose: seek to position
+  * Input  : offset   - offset [0..n-1]
+  *          userData - userdata
+  * Output : -
+  * Return : ERROR_NONE or error code
+  * Notes  : -
+  \***********************************************************************/
+
   Errors(*seek)(void *userData, uint64 offset);
-  // get size
-  uint64(*getSize)(void *userData);
+//  Errors(*seek)(uint64 offset, void *userData);
+
+  /***********************************************************************\
+  * Name   : getSize
+  * Purpose: get size of transfer
+  * Input  : userData - userdata
+  * Output : -
+  * Return : size or -1 if unknown
+  * Notes  : -
+  \***********************************************************************/
+
+  int64(*getSize)(void *userData);
 } ChunkIO;
 
 // chunk id: 4 characters

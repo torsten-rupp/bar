@@ -550,7 +550,12 @@ ERROR FILE_NOT_FOUND_
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR FILE_ACCESS_DENIED               TR("access denied")
+ERROR FILE_ACCESS_DENIED
+  stringSet(errorText,sizeof(errorText),TR("access denied"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
 
 ERROR NOT_A_DIRECTORY
   stringSet(errorText,sizeof(errorText),TR("not a directory"));

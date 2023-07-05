@@ -163,6 +163,10 @@ enum StorageTypes
     {
       type = StorageTypes.WEBDAV;
     }
+    else if (string.equalsIgnoreCase("webdavs"))
+    {
+      type = StorageTypes.WEBDAVS;
+    }
     else if (string.equalsIgnoreCase("cd"))
     {
       type = StorageTypes.CD;
@@ -201,6 +205,7 @@ enum StorageTypes
       case SCP:        return "scp";
       case SFTP:       return "sftp";
       case WEBDAV:     return "webdav";
+      case WEBDAVS:    return "webdavs";
       case CD:         return "cd";
       case DVD:        return "dvd";
       case BD:         return "bd";
@@ -223,6 +228,7 @@ enum StorageTypes
       case SCP:        return "scp";
       case SFTP:       return "sftp";
       case WEBDAV:     return "webdav";
+      case WEBDAVS:    return "webdavs";
       case CD:         return "cd";
       case DVD:        return "dvd";
       case BD:         return "bd";
@@ -466,7 +472,16 @@ class URIParts implements Cloneable
       type = StorageTypes.WEBDAV;
 
       String specifier = uri.substring(9);
-      if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
+      if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<login name>:<login password>@<host name>:<host port>/<file name>
+        loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        loginPassword = matcher.group(2);
+        hostName      = matcher.group(4);
+        hostPort      = Integer.parseInt(matcher.group(5));
+        fileName      = matcher.group(6);
+      }
+      else if ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
       {
         // webdav://<login name>:<login password>@<host name>/<file name>
         loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
@@ -474,12 +489,85 @@ class URIParts implements Cloneable
         hostName      = matcher.group(4);
         fileName      = matcher.group(5);
       }
+      else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<login name>@<host name>:<host port>/<file name>
+        loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        hostName  = matcher.group(3);
+        hostPort  = Integer.parseInt(matcher.group(4));
+        fileName  = matcher.group(5);
+      }
       else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
       {
         // webdav://<login name>@<host name>/<file name>
         loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
         hostName  = matcher.group(3);
         fileName  = matcher.group(4);
+      }
+      else if ((matcher = Pattern.compile("^([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<host name>:<host port>/<file name>
+        hostName = matcher.group(1);
+        hostPort = Integer.parseInt(matcher.group(2));
+        fileName = matcher.group(3);
+      }
+      else if ((matcher = Pattern.compile("^([^@:/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<host name>/<file name>
+        hostName = matcher.group(1);
+        fileName = matcher.group(2);
+      }
+      else
+      {
+        // webdav://<file name>
+        fileName = specifier;
+      }
+Dprintf.dprintf("fileName=%s",fileName);
+    }
+    else if (uri.startsWith("webdavs://"))
+    {
+      // webdav
+      type = StorageTypes.WEBDAVS;
+
+      String specifier = uri.substring(10);
+      if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<login name>:<login password>@<host name>:<host port>/<file name>
+        loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        loginPassword = matcher.group(2);
+        hostName      = matcher.group(4);
+        hostPort      = Integer.parseInt(matcher.group(5));
+        fileName      = matcher.group(6);
+      }
+      else if ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<login name>:<login password>@<host name>/<file name>
+        loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        loginPassword = matcher.group(2);
+        hostName      = matcher.group(4);
+        fileName      = matcher.group(5);
+      }
+      else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<login name>@<host name>:<host port>/<file name>
+        loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        hostName  = matcher.group(3);
+        hostPort  = Integer.parseInt(matcher.group(4));
+        fileName  = matcher.group(5);
+      }
+      else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<login name>@<host name>/<file name>
+        loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        hostName  = matcher.group(3);
+        fileName  = matcher.group(4);
+      }
+      else if ((matcher = Pattern.compile("^([^@:/]*?):(\\d*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // webdav://<host name>:<host port>/<file name>
+        hostName = matcher.group(1);
+        hostPort = Integer.parseInt(matcher.group(2));
+        fileName = matcher.group(3);
       }
       else if ((matcher = Pattern.compile("^([^@:/]*?)/(.*)$").matcher(specifier)).matches())
       {
@@ -612,65 +700,76 @@ class URIParts implements Cloneable
         break;
       case FTP:
         buffer.append("ftp://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("") || !loginPassword.equals(""))
+          if (!loginName.isEmpty() || !loginPassword.equals(""))
           {
-            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
             if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
             buffer.append('@');
           }
-          if (!hostName.equals("")) { buffer.append(hostName); }
-          buffer.append('/');
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
         }
         break;
       case SCP:
         buffer.append("scp://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("") || !loginPassword.equals(""))
+          if (!loginName.isEmpty() || !loginPassword.isEmpty())
           {
-            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.isEmpty()) { buffer.append(':'); buffer.append(loginPassword); }
             buffer.append('@');
           }
-          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
           if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
-          buffer.append('/');
         }
         break;
       case SFTP:
         buffer.append("sftp://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("") || !loginPassword.equals(""))
+          if (!loginName.isEmpty() || !loginPassword.isEmpty())
           {
-            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.isEmpty()) { buffer.append(':'); buffer.append(loginPassword); }
             buffer.append('@');
           }
-          if (!hostName.equals("")) { buffer.append(hostName); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
           if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
-          buffer.append('/');
         }
         break;
       case WEBDAV:
         buffer.append("webdav://");
-        if (!loginName.equals("") || !hostName.equals(""))
+        if (!loginName.isEmpty() || !hostName.isEmpty())
         {
-          if (!loginName.equals("") || !loginPassword.equals(""))
+          if (!loginName.isEmpty() || !loginPassword.isEmpty())
           {
-            if (!loginName.equals("")) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
-            if (!loginPassword.equals("")) { buffer.append(':'); buffer.append(loginPassword); }
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.isEmpty()) { buffer.append(':'); buffer.append(loginPassword); }
             buffer.append('@');
           }
-          if (!hostName.equals("")) { buffer.append(hostName); }
-          buffer.append('/');
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
+          if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
+        }
+        break;
+      case WEBDAVS:
+        buffer.append("webdavs://");
+        if (!loginName.isEmpty() || !hostName.isEmpty())
+        {
+          if (!loginName.isEmpty() || !loginPassword.isEmpty())
+          {
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.isEmpty()) { buffer.append(':'); buffer.append(loginPassword); }
+            buffer.append('@');
+          }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
+          if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
         }
         break;
       case CD:
         buffer.append("cd://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -678,7 +777,7 @@ class URIParts implements Cloneable
         break;
       case DVD:
         buffer.append("dvd://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -686,7 +785,7 @@ class URIParts implements Cloneable
         break;
       case BD:
         buffer.append("bd://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -694,7 +793,7 @@ class URIParts implements Cloneable
         break;
       case DEVICE:
         buffer.append("device://");
-        if (!deviceName.equals(""))
+        if (!deviceName.isEmpty())
         {
           buffer.append(deviceName);
           buffer.append(':');
@@ -703,6 +802,7 @@ class URIParts implements Cloneable
     }
     if (fileName != null)
     {
+      if ((buffer.length() <= 0) || (buffer.charAt(buffer.length()-1) != '/')) buffer.append('/');
       buffer.append(fileName);
     }
 

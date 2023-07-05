@@ -7849,6 +7849,19 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
                               serverNode->server.id,
                               serverNode->server.name,
                               "WEBDAV",
+                              serverNode->server.webDAV.port,
+                              serverNode->server.webDAV.loginName,
+                              serverNode->server.maxConnectionCount,
+                              serverNode->server.maxStorageSize
+                             );
+          break;
+        case SERVER_TYPE_WEBDAVS:
+          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                              "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
+                              serverNode->server.id,
+                              serverNode->server.name,
+                              "WEBDAVS",
+                              serverNode->server.webDAV.port,
                               serverNode->server.webDAV.loginName,
                               serverNode->server.maxConnectionCount,
                               serverNode->server.maxStorageSize
@@ -7975,6 +7988,8 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       Configuration_setKeyString(&serverNode->server.ssh.privateKey,NULL,privateKey);
       break;
     case SERVER_TYPE_WEBDAV:
+    case SERVER_TYPE_WEBDAVS:
+      serverNode->server.webDAV.port = port;
       String_set(serverNode->server.webDAV.loginName,loginName);
       if (!String_isEmpty(password))
       {
@@ -8144,6 +8159,8 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         Configuration_setKeyString(&serverNode->server.ssh.privateKey,NULL,privateKey);
         break;
       case SERVER_TYPE_WEBDAV:
+      case SERVER_TYPE_WEBDAVS:
+        serverNode->server.webDAV.port = port;
         String_set(serverNode->server.webDAV.loginName,loginName);
         if (!String_isEmpty(password))
         {

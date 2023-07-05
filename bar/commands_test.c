@@ -1653,9 +1653,9 @@ NULL,  //               requestedAbortFlag,
       {
         // test archive content
         error = testArchive(&testInfo,
-                                   &storageSpecifier,
-                                   NULL  // fileName
-                                  );
+                            &storageSpecifier,
+                            NULL  // fileName
+                           );
         someStorageFound = TRUE;
       }
     }

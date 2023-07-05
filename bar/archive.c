@@ -99,6 +99,11 @@ LOCAL const struct
 // max. size of hash value
 #define MAX_HASH_SIZE 1024
 
+static inline Errors ChunkIOFile_seek(uint64 offset, void *userData)
+{
+  return File_seek((FileHandle*)userData,offset);
+}
+
 // i/o via file functions
 const ChunkIO CHUNK_IO_FILE =
 {
@@ -107,10 +112,16 @@ const ChunkIO CHUNK_IO_FILE =
   (Errors(*)(void*,const void*,ulong))File_write,
   (Errors(*)(void*,uint64*))File_tell,
   (Errors(*)(void*,uint64))File_seek,
-  (uint64(*)(void*))File_getSize
+//  ChunkIOFile_seek,
+  (int64(*)(void*))File_getSize
 };
 
 // i/o via storage functions
+static inline Errors ChunkIOStorage_seek(uint64 offset, void *userData)
+{
+  return Storage_seek((StorageHandle*)userData,offset);
+}
+
 const ChunkIO CHUNK_IO_STORAGE =
 {
   (bool(*)(void*))Storage_eof,
@@ -118,7 +129,8 @@ const ChunkIO CHUNK_IO_STORAGE =
   (Errors(*)(void*,const void*,ulong))Storage_write,
   (Errors(*)(void*,uint64*))Storage_tell,
   (Errors(*)(void*,uint64))Storage_seek,
-  (uint64(*)(void*))Storage_getSize
+//  ChunkIOStorage_seek,
+  (int64(*)(void*))Storage_getSize
 };
 
 // max. lenght of index list to write in single transaction

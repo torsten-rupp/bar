@@ -84,13 +84,6 @@
 
 /***************************** Constants *******************************/
 
-#define __VERSION_TO_STRING(z) __VERSION_TO_STRING_TMP(z)
-#define __VERSION_TO_STRING_TMP(z) #z
-#define VERSION_MAJOR_STRING __VERSION_TO_STRING(VERSION_MAJOR)
-#define VERSION_MINOR_STRING __VERSION_TO_STRING(VERSION_MINOR)
-#define VERSION_REPOSITORY_STRING __VERSION_TO_STRING(VERSION_REPOSITORY)
-#define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING VERSION_PATCH " (rev. " VERSION_REPOSITORY_STRING ")"
-
 #define MOUNT_TIMEOUT (1L*60L*MS_PER_SECOND)  // mount timeout [ms]
 
 /***************************** Datatypes *******************************/
@@ -1486,6 +1479,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
             maxConnectionCount = globalOptions.defaultSSHServer.maxConnectionCount;
             break;
           case SERVER_TYPE_WEBDAV:
+          case SERVER_TYPE_WEBDAVS:
             maxConnectionCount = globalOptions.defaultWebDAVServer.maxConnectionCount;
             break;
           default:

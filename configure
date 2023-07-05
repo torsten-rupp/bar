@@ -20819,6 +20819,44 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_IN_EXCL_UNLINK" >&5
 $as_echo "$ac_cv_const_IN_EXCL_UNLINK" >&6; }
 
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant CURLINFO_CONTENT_LENGTH_DOWNLOAD_T is available" >&5
+$as_echo_n "checking if constant CURLINFO_CONTENT_LENGTH_DOWNLOAD_T is available... " >&6; }
+if ${ac_cv_const_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo curl/curl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+int i = (int)CURLINFO_CONTENT_LENGTH_DOWNLOAD_T;
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T=yes;
+$as_echo "#define HAVE_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T 1" >>confdefs.h
+
+else
+  ac_cv_const_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T" >&5
+$as_echo "$ac_cv_const_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T" >&6; }
+
 # check types
 ac_fn_c_check_type "$LINENO" "struct stat64" "ac_cv_type_struct_stat64" "#include <sys/stat.h>
 "

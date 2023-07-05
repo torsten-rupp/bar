@@ -2668,7 +2668,7 @@ NULL, // masterSocketHandle
                     fileCount++;
                   }
 
-                  // close archive file, free resources
+                  // close archive entry, free resources
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
@@ -2781,7 +2781,7 @@ NULL, // masterSocketHandle
                     fileCount++;
                   }
 
-                  // close archive file, free resources
+                  // close archive entry, free resources
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
@@ -2871,7 +2871,7 @@ NULL, // masterSocketHandle
                     fileCount++;
                   }
 
-                  // close archive file, free resources
+                  // close archive entry, free resources
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
@@ -2966,7 +2966,7 @@ NULL, // masterSocketHandle
                     fileCount++;
                   }
 
-                  // close archive file, free resources
+                  // close archive entry, free resources
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
@@ -3090,7 +3090,7 @@ NULL, // masterSocketHandle
                     }
                   }
 
-                  // close archive file, free resources
+                  // close archive entry, free resources
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
@@ -3184,7 +3184,7 @@ NULL, // masterSocketHandle
                     fileCount++;
                   }
 
-                  // close archive file, free resources
+                  // close archive entry, free resources
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
@@ -3260,7 +3260,7 @@ NULL, // masterSocketHandle
                     printedMetaInfoFlag = TRUE;
                   }
 
-                  // close archive file, free resources
+                  // close archive entry, free resources
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
@@ -4581,7 +4581,7 @@ Errors Command_list(StringList              *storageNameList,
         else
         {
           // list archive content of matching files
-          fileName           = String_new();
+          fileName = String_new();
           while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
           {
             // read next directory entry

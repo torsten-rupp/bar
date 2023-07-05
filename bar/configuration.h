@@ -565,7 +565,7 @@ void Configuration_doneSSHServerSettings(SSHServer *sshServer);
 
 /***********************************************************************\
 * Name   : Configuration_initWebDAVServerSettings
-* Purpose: init device settings
+* Purpose: init webDAV server settings
 * Input  : webDAVServer - webDAV server variable
 *          hostName     - host name
 *          jobOptions   - job options
@@ -590,6 +590,34 @@ uint Configuration_initWebDAVServerSettings(WebDAVServer     *webDAVServer,
 \***********************************************************************/
 
 void Configuration_doneWebDAVServerSettings(WebDAVServer *webDAVServer);
+
+/***********************************************************************\
+* Name   : Configuration_initWebDAVSServerSettings
+* Purpose: init webDAVs server settings
+* Input  : webDAVServer - webDAV server variable
+*          hostName     - host name
+*          jobOptions   - job options
+* Output : webDAVServer - webDAV server
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+uint Configuration_initWebDAVSServerSettings(WebDAVServer     *webDAVServer,
+                                             ConstString      hostName,
+                                             const JobOptions *jobOptions
+                                            );
+
+
+/***********************************************************************\
+* Name   : Configuration_doneWebDAVSServerSettings
+* Purpose: done webDAVS server settings
+* Input  : webDAVServer - webDAV server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneWebDAVSServerSettings(WebDAVServer *webDAVServer);
 
 /***********************************************************************\
 * Name   : Configuration_newServerNode
