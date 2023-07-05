@@ -426,6 +426,10 @@ public class Settings
   public static ColumnSizes                    scheduleTableColumns            = new ColumnSizes(120,250,100,100,90);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="persistence-tree-columns")
   public static ColumnSizes                    persistenceTreeColumns          = new ColumnSizes(100,90,90,90,140,90,120);
+  @SettingValue(type=SettingValueAdapterWidthArray.class, name="storage-tree-columns")
+  public static ColumnSizes                    storageTreeColumns              = new ColumnSizes(330,90,170,100,80);
+  @SettingValue(type=SettingValueAdapterWidthArray.class, name="storage-table-columns")
+  public static ColumnSizes                    storageTableColumns             = new ColumnSizes(420,90,90,100,80);
 
   @SettingComment(text={"","Pause default settings"})
   @SettingValue(name="pause-create")

@@ -5231,21 +5231,34 @@ Dprintf.dprintf("");
           }
         }
       };
+      Listener storageTreeColumnResizeListener = new Listener()
+      {
+        public void handleEvent(Event event)
+        {
+          Settings.storageTreeColumns = new Settings.ColumnSizes(Widgets.getTreeColumnWidth(widgetStorageTree));
+        }
+      };
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Name"),    SWT.LEFT, 400,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
+      treeColumn.addListener(SWT.Resize,storageTreeColumnResizeListener);
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Hostname"),SWT.LEFT, 150,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
+      treeColumn.addListener(SWT.Resize,storageTreeColumnResizeListener);
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Created"), SWT.LEFT, 170,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for created date/time."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
+      treeColumn.addListener(SWT.Resize,storageTreeColumnResizeListener);
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Size"),    SWT.RIGHT,100,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for size."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
+      treeColumn.addListener(SWT.Resize,storageTreeColumnResizeListener);
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("State"),   SWT.LEFT,  60,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
+      treeColumn.addListener(SWT.Resize,storageTreeColumnResizeListener);
+      Widgets.setTreeColumnWidth(widgetStorageTree,Settings.storageTreeColumns.width);
 
       // special case for drawing date/time
       widgetStorageTree.addListener(SWT.EraseItem, new Listener()
@@ -5701,21 +5714,34 @@ Dprintf.dprintf("");
           }
         }
       };
+      Listener storageTableColumnResizeListener = new Listener()
+      {
+        public void handleEvent(Event event)
+        {
+          Settings.storageTableColumns = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetStorageTable));
+        }
+      };
       tableColumn = Widgets.addTableColumn(widgetStorageTable,0,BARControl.tr("Name"),    SWT.LEFT, 450,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
+      tableColumn.addListener(SWT.Resize,storageTableColumnResizeListener);
       tableColumn = Widgets.addTableColumn(widgetStorageTable,1,BARControl.tr("Hostname"),SWT.LEFT, 150,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for hostname."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
+      tableColumn.addListener(SWT.Resize,storageTableColumnResizeListener);
       tableColumn = Widgets.addTableColumn(widgetStorageTable,2,BARControl.tr("Size"),    SWT.RIGHT, 60,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for size."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
+      tableColumn.addListener(SWT.Resize,storageTableColumnResizeListener);
       tableColumn = Widgets.addTableColumn(widgetStorageTable,3,BARControl.tr("Modified"),SWT.LEFT, 150,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for modification date/time."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
+      tableColumn.addListener(SWT.Resize,storageTableColumnResizeListener);
       tableColumn = Widgets.addTableColumn(widgetStorageTable,4,BARControl.tr("State"),   SWT.LEFT,  60,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
+      tableColumn.addListener(SWT.Resize,storageTableColumnResizeListener);
+      Widgets.setTableColumnWidth(widgetStorageTable,Settings.storageTableColumns.width);
       Widgets.sortTable(widgetStorageTable,0,SWT.UP);
 
       // special case for drawing date/time
