@@ -522,7 +522,6 @@ class URIParts implements Cloneable
         // webdav://<file name>
         fileName = specifier;
       }
-Dprintf.dprintf("fileName=%s",fileName);
     }
     else if (uri.startsWith("webdavs://"))
     {
@@ -802,7 +801,7 @@ Dprintf.dprintf("fileName=%s",fileName);
     }
     if (fileName != null)
     {
-      if ((buffer.length() <= 0) || (buffer.charAt(buffer.length()-1) != '/')) buffer.append('/');
+      if ((buffer.length() > 0) && (buffer.charAt(buffer.length()-1) != '/')) buffer.append('/');
       buffer.append(fileName);
     }
 

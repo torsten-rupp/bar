@@ -1156,6 +1156,7 @@ LOCAL void StorageWebDAV_getPrintableName(String                 string,
   if (storageSpecifier->hostPort != 0) String_appendFormat(string,":%d",storageSpecifier->hostPort);
   if (!String_isEmpty(storageFileName))
   {
+    String_appendChar(string,'/');
     String_append(string,storageFileName);
   }
 }

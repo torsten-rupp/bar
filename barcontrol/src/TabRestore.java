@@ -9364,6 +9364,10 @@ Dprintf.dprintf("");
                     }
                   }
                 }
+                catch (ConnectionError eonnectionError)
+                {
+                  abortFlag = true;
+                }
 
                 // update progress bar
                 n++;
