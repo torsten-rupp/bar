@@ -2320,6 +2320,9 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+  #ifdef HAVE_CURL
+    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
+  #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
@@ -2352,7 +2355,7 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
     }
     else
     {
-      error = getCurlHTTPResponseError(storageHandle->ftp.curlHandle);
+      error = getCurlHTTPResponseError(storageHandle->ftp.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
     }
 
     storageHandle->ftp.index = offset;

@@ -85,6 +85,9 @@
 /* curl installed */
 #undef HAVE_CURL
 
+/* CURLINFO_CONTENT_LENGTH_DOWNLOAD_T available */
+#undef HAVE_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T
+
 /* Define to 1 if you have the <demangle.h> header file. */
 #undef HAVE_DEMANGLE_H
 

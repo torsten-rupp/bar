@@ -15,6 +15,11 @@
   * fixed remove indices by error state
   * fixed move storages to new location with PostgreSQL:
     avoid concurrent/long running database operations
+  * fixed crash in slave mode (#issue 3, thanks to ChrisTG742)
+  * fixed WebDAV login: support port number, fixed passed path
+  * added option --webdav-port
+  * fixed WebDAV chunked download
+  * fixed WebDAVS
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission

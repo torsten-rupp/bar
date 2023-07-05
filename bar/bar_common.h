@@ -40,6 +40,13 @@
 
 /***************************** Constants *******************************/
 
+#define __VERSION_TO_STRING(z) __VERSION_TO_STRING_TMP(z)
+#define __VERSION_TO_STRING_TMP(z) #z
+#define VERSION_MAJOR_STRING __VERSION_TO_STRING(VERSION_MAJOR)
+#define VERSION_MINOR_STRING __VERSION_TO_STRING(VERSION_MINOR)
+#define VERSION_REPOSITORY_STRING __VERSION_TO_STRING(VERSION_REPOSITORY)
+#define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING VERSION_PATCH " (rev. " VERSION_REPOSITORY_STRING ")"
+
 #define DEFAULT_CONFIG_FILE_NAME                  "bar.cfg"
 #define DEFAULT_LOG_FORMAT                        "%Y-%m-%d %H:%M:%S"
 #define DEFAULT_FRAGMENT_SIZE                     (64LL*MB)
@@ -512,6 +519,7 @@ typedef struct
 // WebDAV server settings
 typedef struct
 {
+  uint             port;                                      // server port
   String           loginName;                                 // login name
   Password         password;                                  // login password
   Key              publicKey;                                 // public key data
@@ -526,7 +534,8 @@ typedef enum
   SERVER_TYPE_FILE,
   SERVER_TYPE_FTP,
   SERVER_TYPE_SSH,
-  SERVER_TYPE_WEBDAV
+  SERVER_TYPE_WEBDAV,
+  SERVER_TYPE_WEBDAVS
 } ServerTypes;
 
 // server
@@ -779,6 +788,7 @@ typedef struct
   Server                      defaultFTPServer;
   Server                      defaultSSHServer;
   Server                      defaultWebDAVServer;
+  Server                      defaultWebDAVSServer;
   Device                      defaultDevice;
 
   const char                  *indexDatabaseURI;

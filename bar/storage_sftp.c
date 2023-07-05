@@ -661,14 +661,44 @@ LOCAL Errors sftpUnlink(SocketHandle *socketHandle,
 
 /*---------------------------------------------------------------------*/
 
+/***********************************************************************\
+* Name   : StorageSFTP_initAll
+* Purpose: initialize SFTP storage
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageSFTP_initAll(void)
 {
   return ERROR_NONE;
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_doneAll
+* Purpose: deinitialize SFTP storage
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void StorageSFTP_doneAll(void)
 {
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_parseSpecifier
+* Purpose: parse SFTP specifier
+* Input  : sftpSpecifier - SFTP specifier
+* Output : hostName      - host name
+*          hostPort      - host port
+*          loginName     - login name
+*          loginPassword - login password
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool StorageSFTP_parseSpecifier(ConstString sftpSpecifier,
                                       String      hostName,
@@ -750,7 +780,8 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sftpSpecifier,
   {
     result = FALSE;
   }
-  String_delete(t);  String_delete(s);
+  String_delete(t);
+  String_delete(s);
 
   return result;
 }

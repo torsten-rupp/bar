@@ -1880,6 +1880,7 @@ LOCAL void initGlobalOptions(void)
   Configuration_initServer(&globalOptions.defaultFTPServer,NULL,SERVER_TYPE_FTP);
   Configuration_initServer(&globalOptions.defaultSSHServer,NULL,SERVER_TYPE_SSH);
   Configuration_initServer(&globalOptions.defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
+  Configuration_initServer(&globalOptions.defaultWebDAVSServer,NULL,SERVER_TYPE_WEBDAVS);
   initDevice(&globalOptions.defaultDevice,NULL);
   globalOptions.fileServer                                      = &globalOptions.defaultFileServer;
   globalOptions.ftpServer                                       = &globalOptions.defaultFTPServer;
@@ -2065,6 +2066,7 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.comment);
 
   doneDevice(&globalOptions.defaultDevice);
+  Configuration_doneServer(&globalOptions.defaultWebDAVSServer);
   Configuration_doneServer(&globalOptions.defaultWebDAVServer);
   Configuration_doneServer(&globalOptions.defaultSSHServer);
   Configuration_doneServer(&globalOptions.defaultFTPServer);
@@ -3583,6 +3585,27 @@ LOCAL void *configValueServerWebDAVSectionDataIterator(ConfigValueSectionDataIte
 }
 
 /***********************************************************************\
+* Name   : configValueServerWebDAVSSectionIteratorNext
+* Purpose: get next WebDAVS server node
+* Input  : sectionDataIterator - section data iterator
+*          operation           - operation code; see ConfigValueOperations
+*          data                - operation data
+*          userData            - user data
+* Output : next section data or NULL
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void *configValueServerWebDAVSSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData)
+{
+  assert(sectionDataIterator != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  return configValueServerSectionIterator(sectionDataIterator,SERVER_TYPE_WEBDAVS,operation,data,userData);
+}
+
+/***********************************************************************\
 * Name   : configValueDeviceSectionDataIterator
 * Purpose: section iterator operation
 * Input  : sectionDataIterator - section data iterator
@@ -4660,7 +4683,7 @@ LOCAL bool configValueDeprecatedRemotePortParse(void *userData, void *variable, 
 
   if (!stringToUInt(value,&n,NULL))
   {
-    stringFormat(errorMessage,errorMessageSize,"expected port number: 0..65535");
+    stringFormat(errorMessage,errorMessageSize,"expected port number: 0..%u",MAX_PORT_NUMBER);
     return FALSE;
   }
   (*(uint*)variable) = n;
@@ -7634,6 +7657,62 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
         Configuration_deleteServerNode(serverNode);
       }
     }
+    else if (String_parse(line,STRING_BEGIN,"[webdavs-server %S]",NULL,name))
+    {
+      uint       i,firstValueIndex,lastValueIndex;
+      ServerNode *serverNode;
+
+      // parse webdavs-server section
+
+      // find section
+      i = ConfigValue_findSection(CONFIG_VALUES,
+                                  "webdavs-server",
+                                  &firstValueIndex,
+                                  &lastValueIndex
+                                 );
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'webdavs-server'");
+      UNUSED_VARIABLE(i);
+
+      // find/allocate server node
+      serverNode = NULL;
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                            serverNode,
+                                               (serverNode->server.type == SERVER_TYPE_WEBDAVS)
+//TODO: port number
+                                            && String_equals(serverNode->server.name,name)
+                                           );
+        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+      }
+      if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_WEBDAVS);
+      assert(serverNode != NULL);
+      assert(serverNode->server.type == SERVER_TYPE_WEBDAVS);
+      StringList_move(&serverNode->server.commentList,&commentList);
+
+      // read config section
+      error = readConfigFileSection(fileName,
+                                    &fileHandle,
+                                    &lineNb,
+                                    "webdavs-server",
+                                    firstValueIndex,
+                                    lastValueIndex,
+                                    printInfoFlag,
+                                    serverNode
+                                   );
+      if (error == ERROR_NONE)
+      {
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&globalOptions.serverList,serverNode);
+        }
+      }
+      else
+      {
+        Configuration_deleteServerNode(serverNode);
+      }
+    }
     else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
     {
       uint       i,firstValueIndex,lastValueIndex;
@@ -7972,14 +8051,14 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
   CMD_OPTION_STRING       ("ssh-login-name",                    0,  0,2,globalOptions.defaultSSHServer.ssh.loginName,                                                                     "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                      0,  0,2,&globalOptions.defaultSSHServer.ssh.password,        cmdOptionParsePassword,NULL,1,                               "ssh password (use with care!)","password"                                 ),
-  CMD_OPTION_INTEGER      ("ssh-port",                          0,  0,2,globalOptions.defaultSSHServer.ssh.port,             0,65535,NULL,                                                "ssh port"                                                                 ),
-  CMD_OPTION_SPECIAL      ("ssh-public-key",                    0,  1,2,&globalOptions.defaultSSHServer.ssh.publicKey,       cmdOptionParseSSHKey,NULL,1,                                    "ssh public key","file name|data"                                       ),
-  CMD_OPTION_SPECIAL      ("ssh-private-key",                   0,  1,2,&globalOptions.defaultSSHServer.ssh.privateKey,      cmdOptionParseSSHKey,NULL,1,                                    "ssh private key","file name|data"                                      ),
+  CMD_OPTION_INTEGER      ("ssh-port",                          0,  0,2,globalOptions.defaultSSHServer.ssh.port,             0,MAX_PORT_NUMBER,NULL,                                      "ssh port"                                                                 ),
+  CMD_OPTION_SPECIAL      ("ssh-public-key",                    0,  1,2,&globalOptions.defaultSSHServer.ssh.publicKey,       cmdOptionParseSSHKey,NULL,1,                                 "ssh public key","file name|data"                                       ),
+  CMD_OPTION_SPECIAL      ("ssh-private-key",                   0,  1,2,&globalOptions.defaultSSHServer.ssh.privateKey,      cmdOptionParseSSHKey,NULL,1,                                 "ssh private key","file name|data"                                      ),
   CMD_OPTION_INTEGER      ("ssh-max-connections",               0,  1,2,globalOptions.defaultSSHServer.maxConnectionCount,   0,MAX_INT,NULL,                                              "max. number of concurrent ssh connections"                                ),
 //TODO
 //  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",              0,  0,2,defaultSSHServer.maxStorageSize,                   0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on ssh server"                              ),
 
-//  CMD_OPTION_INTEGER      ("webdav-port",                       0,  0,2,defaultWebDAVServer.webDAV.port,                   0,65535,NULL,                                                  "WebDAV port"                                                              ),
+  CMD_OPTION_INTEGER      ("webdav-port",                       0,  0,2,globalOptions.defaultWebDAVServer.webDAV.port,       0,MAX_PORT_NUMBER,NULL,                                      "WebDAV port"                                                              ),
   CMD_OPTION_STRING       ("webdav-login-name",                 0,  0,2,globalOptions.defaultWebDAVServer.webDAV.loginName,                                                               "WebDAV login name","name"                                                 ),
   CMD_OPTION_SPECIAL      ("webdav-password",                   0,  0,2,&globalOptions.defaultWebDAVServer.webDAV.password,  cmdOptionParsePassword,NULL,1,                               "WebDAV password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("webdav-max-connections",            0,  0,2,globalOptions.defaultWebDAVServer.maxConnectionCount,0,MAX_INT,NULL,                                              "max. number of concurrent WebDAV connections"                             ),
@@ -7991,8 +8070,8 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("no-detach",                         'D',1,0,globalOptions.noDetachFlag,                                                                                       "do not detach in daemon mode"                                             ),
 //  CMD_OPTION_BOOLEAN      ("pair-master",                       0  ,1,0,pairMasterFlag,                                                                                                 "pair master"                                                              ),
   CMD_OPTION_SELECT       ("server-mode",                       0,  1,1,globalOptions.serverMode,                            COMMAND_LINE_OPTIONS_SERVER_MODES,                           "select server mode","mode"                                                ),
-  CMD_OPTION_INTEGER      ("server-port",                       0,  1,1,globalOptions.serverPort,                            0,65535,NULL,                                                "server port"                                                              ),
-  CMD_OPTION_INTEGER      ("server-tls-port",                   0,  1,1,globalOptions.serverTLSPort,                         0,65535,NULL,                                                "TLS (SSL) server port"                                                    ),
+  CMD_OPTION_INTEGER      ("server-port",                       0,  1,1,globalOptions.serverPort,                            0,MAX_PORT_NUMBER,NULL,                                      "server port"                                                              ),
+  CMD_OPTION_INTEGER      ("server-tls-port",                   0,  1,1,globalOptions.serverTLSPort,                         0,MAX_PORT_NUMBER,NULL,                                      "TLS (SSL) server port"                                                    ),
   CMD_OPTION_SPECIAL      ("server-ca-file",                    0,  1,1,&globalOptions.serverCA,                             cmdOptionReadCertificateFile,NULL,1,                         "TLS (SSL) server certificate authority file (CA file)","file name"        ),
   CMD_OPTION_SPECIAL      ("server-cert-file",                  0,  1,1,&globalOptions.serverCert,                           cmdOptionReadCertificateFile,NULL,1,                         "TLS (SSL) server certificate file","file name"                            ),
   CMD_OPTION_SPECIAL      ("server-key-file",                   0,  1,1,&globalOptions.serverKey,                            cmdOptionReadKeyFile,NULL,1,                                 "TLS (SSL) server key file","file name"                                    ),
@@ -8535,14 +8614,14 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_COMMENT("default values"),
   CONFIG_VALUE_STRING            ("ssh-login-name",                   &globalOptions.defaultSSHServer.ssh.loginName,-1,                            "<name>"),
   CONFIG_VALUE_SPECIAL           ("ssh-password",                     &globalOptions.defaultSSHServer.ssh.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_VALUE_INTEGER           ("ssh-port",                         &globalOptions.defaultSSHServer.ssh.port,-1,                                 0,65535,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER           ("ssh-port",                         &globalOptions.defaultSSHServer.ssh.port,-1,                                 0,MAX_PORT_NUMBER,NULL,"<n>"),
   CONFIG_VALUE_SPECIAL           ("ssh-public-key",                   &globalOptions.defaultSSHServer.ssh.publicKey,-1,                            configValueSSHKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_SPECIAL           ("ssh-private-key",                  &globalOptions.defaultSSHServer.ssh.privateKey,-1,                           configValueSSHKeyParse,configValueKeyFormat,NULL),
   CONFIG_VALUE_INTEGER           ("ssh-max-connections",              &globalOptions.defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
   CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",             &globalOptions.defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SECTION_ARRAY     ("ssh-server",&globalOptions.serverList,-1,configValueServerSSHSectionDataIterator,NULL,
-    CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                         ServerNode,server.ssh.port,                                               0,65535,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                         ServerNode,server.ssh.port,                                               0,MAX_PORT_NUMBER,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",                   ServerNode,server.ssh.loginName,                                          "<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",                     ServerNode,server.ssh.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
     CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",                   ServerNode,server.ssh.publicKey,                                          configValueSSHKeyParse,configValueKeyFormat,NULL),
@@ -8557,13 +8636,14 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SEPARATOR("webDAV settings"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_COMMENT("default values"),
-//  CONFIG_VALUE_INTEGER           ("webdav-port",                      &defaultWebDAVServer.webDAV.port,-1,                           0,65535,NULL,NULL,"<n>),
+  CONFIG_VALUE_INTEGER           ("webdav-port",                      &globalOptions.defaultWebDAVServer.webDAV.port,-1,                           0,MAX_PORT_NUMBER,NULL,"<n>"),
   CONFIG_VALUE_STRING            ("webdav-login-name",                &globalOptions.defaultWebDAVServer.webDAV.loginName,-1,                      "<name>"),
   CONFIG_VALUE_SPECIAL           ("webdav-password",                  &globalOptions.defaultWebDAVServer.webDAV.password,-1,                       configValuePasswordParse,configValuePasswordFormat,NULL),
   CONFIG_VALUE_INTEGER           ("webdav-max-connections",           &globalOptions.defaultWebDAVServer.maxConnectionCount,-1,                    0,MAX_INT,NULL,"<n>"),
   CONFIG_VALUE_INTEGER64         ("webdav-max-storage-size",          &globalOptions.defaultWebDAVServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SECTION_ARRAY     ("webdav-server",&globalOptions.serverList,-1,configValueServerWebDAVSectionDataIterator,NULL,
+    CONFIG_STRUCT_VALUE_INTEGER  ("webdav-port",                      ServerNode,server.webDAV.port,                                            0,MAX_PORT_NUMBER,NULL,"<n>"),
     CONFIG_STRUCT_VALUE_STRING   ("webdav-login-name",                ServerNode,server.webDAV.loginName,                                       "<name>"),
     CONFIG_STRUCT_VALUE_SPECIAL  ("webdav-password",                  ServerNode,server.webDAV.password,                                        configValuePasswordParse,configValuePasswordFormat,NULL),
     CONFIG_STRUCT_VALUE_INTEGER  ("webdav-max-connections",           ServerNode,server.maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
@@ -8601,8 +8681,8 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SEPARATOR("server"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SELECT            ("server-mode",                      &globalOptions.serverMode,-1,                                  CONFIG_VALUE_SERVER_MODES,"<mode>"),
-  CONFIG_VALUE_INTEGER           ("server-port",                      &globalOptions.serverPort,-1,                                  0,65535,NULL,"<n>"),
-  CONFIG_VALUE_INTEGER           ("server-tls-port",                  &globalOptions.serverTLSPort,-1,                               0,65535,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER           ("server-port",                      &globalOptions.serverPort,-1,                                  0,MAX_PORT_NUMBER,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER           ("server-tls-port",                  &globalOptions.serverTLSPort,-1,                               0,MAX_PORT_NUMBER,NULL,"<n>"),
 //TODO: deprecated, use server-ca
   CONFIG_VALUE_SPECIAL           ("server-ca-file",                   &globalOptions.serverCA,-1,                                    configValueCertificateParse,configValueCertificateFormat,NULL),
 //TODO: deprecated, use server-cert
@@ -8673,7 +8753,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_COMMENT            ("slave settings"),
   CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ,"<name>"),
-  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,job.slaveHost.port,                      0,65535,NULL,"<n>"),
+  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,job.slaveHost.port,                      0,MAX_PORT_NUMBER,NULL,"<n>"),
   CONFIG_STRUCT_VALUE_SELECT      ("slave-tls-mode",            JobNode,job.slaveHost.tlsMode,                   CONFIG_VALUE_TLS_MODES,"<mode>"),
 
   CONFIG_VALUE_SPACE(),
@@ -8720,7 +8800,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SPACE(),
 
-  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                  JobNode,job.options.sshServer.port,              0,65535,NULL,"<n>"),
+  CONFIG_STRUCT_VALUE_INTEGER     ("ssh-port",                  JobNode,job.options.sshServer.port,              0,MAX_PORT_NUMBER,NULL,"<n>"),
   CONFIG_STRUCT_VALUE_STRING      ("ssh-login-name",            JobNode,job.options.sshServer.loginName          ,"<name>"),
   CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",              JobNode,job.options.sshServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueSSHKeyParse,configValueKeyFormat,NULL),
@@ -9277,13 +9357,24 @@ void Configuration_initServer(Server *server, ConstString name, ServerTypes serv
       Password_init(&server->ftp.password);
       break;
     case SERVER_TYPE_SSH:
-      server->ssh.port      = 22;
+      server->ssh.port      = NETWORK_PORT_SSH;
       server->ssh.loginName = String_new();
       Password_init(&server->ssh.password);
       Configuration_initKey(&server->ssh.publicKey);
       Configuration_initKey(&server->ssh.privateKey);
       break;
     case SERVER_TYPE_WEBDAV:
+    case SERVER_TYPE_WEBDAVS:
+      switch (serverType)
+      {
+        case SERVER_TYPE_WEBDAV:  server->webDAV.port = NETWORK_PORT_HTTP;  break;
+        case SERVER_TYPE_WEBDAVS: server->webDAV.port = NETWORK_PORT_HTTPS; break;
+        #ifndef NDEBUG
+          default:
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break; // not reached
+        #endif /* NDEBUG */
+      }
       server->webDAV.loginName = String_new();
       Password_init(&server->webDAV.password);
       Configuration_initKey(&server->webDAV.publicKey);
@@ -9323,6 +9414,7 @@ void Configuration_doneServer(Server *server)
       String_delete(server->ssh.loginName);
       break;
     case SERVER_TYPE_WEBDAV:
+    case SERVER_TYPE_WEBDAVS:
       Configuration_doneKey(&server->webDAV.privateKey);
       Configuration_doneKey(&server->webDAV.publicKey);
       Password_done(&server->webDAV.password);
@@ -9530,7 +9622,12 @@ uint Configuration_initWebDAVServerSettings(WebDAVServer     *webDAVServer,
                           );
 
     // get WebDAV server settings
-//    webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0) ? jobOptions->webDAVServer.port : ((serverNode != NULL) ? serverNode->webDAVServer.port : globalOptions.defaultWebDAVServer->port );
+    webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                )
+                              ? jobOptions->webDAVServer.port
+                              : ((serverNode != NULL)
+                                   ? serverNode->server.webDAV.port
+                                   : globalOptions.defaultWebDAVServer.webDAV.port
+                                );
     String_set(webDAVServer->loginName,
                ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName))
                  ? jobOptions->webDAVServer.loginName
@@ -9569,6 +9666,83 @@ uint Configuration_initWebDAVServerSettings(WebDAVServer     *webDAVServer,
 }
 
 void Configuration_doneWebDAVServerSettings(WebDAVServer *webDAVServer)
+{
+  assert(webDAVServer != NULL);
+
+  Configuration_doneKey(&webDAVServer->privateKey);
+  Configuration_doneKey(&webDAVServer->publicKey);
+  Password_done(&webDAVServer->password);
+  String_delete(webDAVServer->loginName);
+}
+
+uint Configuration_initWebDAVSServerSettings(WebDAVServer     *webDAVServer,
+                                             ConstString      hostName,
+                                             const JobOptions *jobOptions
+                                            )
+{
+  const ServerNode *serverNode;
+
+  assert(hostName != NULL);
+  assert(webDAVServer != NULL);
+
+  webDAVServer->loginName = String_new();
+  Password_init(&webDAVServer->password);
+
+  serverNode = NULL;
+  SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  {
+    // find WebDAV server
+    serverNode = LIST_FIND(&globalOptions.serverList,
+                           serverNode,
+                              (serverNode->server.type == SERVER_TYPE_WEBDAVS)
+                           && String_equals(serverNode->server.name,hostName)
+                          );
+
+    // get WebDAV server settings
+    webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                )
+                              ? jobOptions->webDAVServer.port
+                              : ((serverNode != NULL)
+                                   ? serverNode->server.webDAV.port
+                                   : globalOptions.defaultWebDAVSServer.webDAV.port
+                                );
+    String_set(webDAVServer->loginName,
+               ((jobOptions != NULL) && !String_isEmpty(jobOptions->webDAVServer.loginName))
+                 ? jobOptions->webDAVServer.loginName
+                 : ((serverNode != NULL)
+                      ? serverNode->server.webDAV.loginName
+                      : globalOptions.defaultWebDAVSServer.webDAV.loginName
+                   )
+              );
+    Password_set(&webDAVServer->password,
+                 ((jobOptions != NULL) && !Password_isEmpty(&jobOptions->webDAVServer.password))
+                   ? &jobOptions->webDAVServer.password
+                   : ((serverNode != NULL)
+                        ? &serverNode->server.webDAV.password
+                        : &globalOptions.defaultWebDAVSServer.webDAV.password
+                     )
+                );
+    Configuration_duplicateKey(&webDAVServer->publicKey,
+                               ((jobOptions != NULL) && Configuration_isKeyAvailable(&jobOptions->webDAVServer.publicKey))
+                                 ? &jobOptions->webDAVServer.publicKey
+                                 : ((serverNode != NULL)
+                                      ? &serverNode->server.webDAV.publicKey
+                                      : &globalOptions.defaultWebDAVSServer.webDAV.publicKey
+                                   )
+                              );
+    Configuration_duplicateKey(&webDAVServer->privateKey,
+                               ((jobOptions != NULL) && Configuration_isKeyAvailable(&jobOptions->webDAVServer.privateKey))
+                                 ? &jobOptions->webDAVServer.privateKey
+                                 : ((serverNode != NULL)
+                                      ? &serverNode->server.webDAV.privateKey
+                                      : &globalOptions.defaultWebDAVSServer.webDAV.privateKey
+                                   )
+                              );
+  }
+
+  return (serverNode != NULL) ? serverNode->server.id : 0;
+}
+
+void Configuration_doneWebDAVSServerSettings(WebDAVServer *webDAVServer)
 {
   assert(webDAVServer != NULL);
 

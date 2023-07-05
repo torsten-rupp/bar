@@ -287,13 +287,14 @@ LOCAL Errors waitCurlSocketWrite(CURLM *curlMultiHandle)
 /***********************************************************************\
 * Name   : getCurlHTTPResponseError
 * Purpose: get curl HTTP response error
-* Input  : curlHandle - CURL handle
+* Input  : curlHandle  - CURL handle
+*          archiveName - archive name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle)
+LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle, ConstString archiveName)
 {
   CURLcode curlCode;
   long     responseCode;
@@ -319,7 +320,7 @@ LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle)
         break;
       case HTTP_CODE_UNAUTHORIZED:
       case HTTP_CODE_FORBITTEN:
-        error = ERROR_FILE_ACCESS_DENIED;
+        error = ERRORX_(FILE_ACCESS_DENIED,curlCode,"%s",String_cString(archiveName));
         break;
       case HTTP_CODE_NOT_FOUND:
         error = ERROR_FILE_NOT_FOUND_;
@@ -359,9 +360,8 @@ LOCAL void initBandWidthLimiter(StorageBandWidthLimiter *storageBandWidthLimiter
   uint  i;
 
   assert(storageBandWidthLimiter != NULL);
-  assert(maxBandWidthList != NULL);
 
-  maxBandWidth = getBandWidth(maxBandWidthList);
+  maxBandWidth = (maxBandWidthList != NULL) ? getBandWidth(maxBandWidthList) : 0L;
 
   storageBandWidthLimiter->maxBandWidthList     = maxBandWidthList;
   storageBandWidthLimiter->maxBlockSize         = 64*1024;
@@ -1292,6 +1292,7 @@ bool Storage_parseSFTPSpecifier(ConstString sftpSpecifier,
 
 bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
                                   String      hostName,
+                                  uint        *hostPort,
                                   String      loginName,
                                   Password    *loginPassword
                                  )
@@ -1300,7 +1301,7 @@ bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
   assert(hostName != NULL);
   assert(loginName != NULL);
 
-  return StorageWebDAV_parseSpecifier(webdavSpecifier,hostName,loginName,loginPassword);
+  return StorageWebDAV_parseSpecifier(webdavSpecifier,hostName,hostPort,loginName,loginPassword);
 }
 
 bool Storage_parseOpticalSpecifier(ConstString opticalSpecifier,
@@ -1503,16 +1504,16 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"webdav://"))
   {
-    // Note: keep starting / of archive name
-    if (   String_matchCString(storageName,9,"^[^:]+:([^@]|\\@)+?@[^/]+",&nextIndex,NULL,NULL)  // webdav://<login name>:<login password>@<host name>/<file name>
-        || String_matchCString(storageName,9,"^([^@]|\\@)+?@[^/]+",&nextIndex,NULL,NULL)        // webdav://<login name>@<host name>/<file name>
-        || String_matchCString(storageName,9,"^[^/]+",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
+    if (   String_matchCString(storageName,9,"^[^:]+:([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)  // webdav://<login name>:<login password>@<host name>/<file name>
+        || String_matchCString(storageName,9,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // webdav://<login name>@<host name>/<file name>
+        || String_matchCString(storageName,9,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
        )
     {
       String_sub(string,storageName,9,nextIndex-9);
       String_trimEnd(string,"/");
       if (!Storage_parseWebDAVSpecifier(string,
                                         storageSpecifier->hostName,
+                                        &storageSpecifier->hostPort,
                                         storageSpecifier->loginName,
                                         storageSpecifier->loginPassword
                                        )
@@ -1533,16 +1534,16 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"webdavs://"))
   {
-    // Note: keep starting / of archive name
-    if (   String_matchCString(storageName,10,"^[^:]+:([^@]|\\@)+?@[^/]+",&nextIndex,NULL,NULL)  // webdav://<login name>:<login password>@<host name>/<file name>
-        || String_matchCString(storageName,10,"^([^@]|\\@)+?@[^/]+",&nextIndex,NULL,NULL)        // webdav://<login name>@<host name>/<file name>
-        || String_matchCString(storageName,10,"^[^/]+",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
+    if (   String_matchCString(storageName,10,"^[^:]+:([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)  // webdav://<login name>:<login password>@<host name>/<file name>
+        || String_matchCString(storageName,10,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // webdav://<login name>@<host name>/<file name>
+        || String_matchCString(storageName,10,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
        )
     {
       String_sub(string,storageName,10,nextIndex-10);
       String_trimEnd(string,"/");
       if (!Storage_parseWebDAVSpecifier(string,
                                         storageSpecifier->hostName,
+                                        &storageSpecifier->hostPort,
                                         storageSpecifier->loginName,
                                         storageSpecifier->loginPassword
                                        )
@@ -1985,7 +1986,6 @@ uint Storage_getServerSettings(Server                 *server,
                                           (existingServerNode->server.type == SERVER_TYPE_FILE)
                                        && String_startsWith(existingServerNode->server.name,storageSpecifier->archiveName)
                                       );
-
         if (existingServerNode != NULL)
         {
           // get file server settings
@@ -2011,7 +2011,6 @@ uint Storage_getServerSettings(Server                 *server,
                                   (existingServerNode->server.type == SERVER_TYPE_FTP)
                                && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
                               );
-
         if (existingServerNode != NULL)
         {
           // get FTP server settings
@@ -2040,14 +2039,13 @@ uint Storage_getServerSettings(Server                 *server,
                                   (existingServerNode->server.type == SERVER_TYPE_SSH)
                                && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
                               );
-
         if (existingServerNode != NULL)
         {
           // get file server settings
           serverId  = existingServerNode->server.id;
           Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_SSH);
-          server->ssh.loginName = String_duplicate(existingServerNode->server.ssh.loginName);
           server->ssh.port      = existingServerNode->server.ssh.port;
+          server->ssh.loginName = String_duplicate(existingServerNode->server.ssh.loginName);
           Password_set(&server->ssh.password,&existingServerNode->server.ssh.password);
           Configuration_duplicateKey(&server->ssh.publicKey,&existingServerNode->server.ssh.publicKey);
           Configuration_duplicateKey(&server->ssh.privateKey,&existingServerNode->server.ssh.privateKey);
@@ -2071,14 +2069,13 @@ uint Storage_getServerSettings(Server                 *server,
                                   (existingServerNode->server.type == SERVER_TYPE_SSH)
                                && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
                               );
-
         if (existingServerNode != NULL)
         {
           // get file server settings
           serverId  = existingServerNode->server.id;
           Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_SSH);
-          server->ssh.loginName = String_duplicate(existingServerNode->server.ssh.loginName);
           server->ssh.port      = existingServerNode->server.ssh.port;
+          server->ssh.loginName = String_duplicate(existingServerNode->server.ssh.loginName);
           Password_set(&server->ssh.password,&existingServerNode->server.ssh.password);
           Configuration_duplicateKey(&server->ssh.publicKey,&existingServerNode->server.ssh.publicKey);
           Configuration_duplicateKey(&server->ssh.privateKey,&existingServerNode->server.ssh.privateKey);
@@ -2094,21 +2091,50 @@ uint Storage_getServerSettings(Server                 *server,
       }
       break;
     case STORAGE_TYPE_WEBDAV:
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+      {
+        // find file server
+        existingServerNode = LIST_FIND(&globalOptions.serverList,
+                                       existingServerNode,
+                                          (existingServerNode->server.type == SERVER_TYPE_WEBDAV)
+                                       && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
+                                      );
+        if (existingServerNode != NULL)
+        {
+          // get webDAV/webDAVs server settings
+          serverId = existingServerNode->server.id;
+          Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_WEBDAV);
+          server->webDAV.port      = existingServerNode->server.webDAV.port;
+          server->webDAV.loginName = String_duplicate(existingServerNode->server.webDAV.loginName);
+          Password_set(&server->webDAV.password,&existingServerNode->server.webDAV.password);
+          Configuration_duplicateKey(&server->webDAV.publicKey,&existingServerNode->server.webDAV.publicKey);
+          Configuration_duplicateKey(&server->webDAV.privateKey,&existingServerNode->server.webDAV.privateKey);
+          server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->server.writePreProcessCommand )
+                                                               ? existingServerNode->server.writePreProcessCommand
+                                                               : globalOptions.webdav.writePreProcessCommand
+                                                            );
+          server->writePostProcessCommand = String_duplicate(!String_isEmpty(existingServerNode->server.writePostProcessCommand)
+                                                               ? existingServerNode->server.writePostProcessCommand
+                                                               : globalOptions.webdav.writePostProcessCommand
+                                                            );
+        }
+      }
+      break;
     case STORAGE_TYPE_WEBDAVS:
       SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find file server
         existingServerNode = LIST_FIND(&globalOptions.serverList,
-                               existingServerNode,
-                                  (existingServerNode->server.type == SERVER_TYPE_WEBDAV)
-                               && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
-                              );
-
+                                       existingServerNode,
+                                          (existingServerNode->server.type == SERVER_TYPE_WEBDAVS)
+                                       && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
+                                      );
         if (existingServerNode != NULL)
         {
-          // get webDAV server settings
+          // get webDAV/webDAVs server settings
           serverId = existingServerNode->server.id;
-          Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_WEBDAV);
+          Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_WEBDAVS);
+          server->webDAV.port      = existingServerNode->server.webDAV.port;
           server->webDAV.loginName = String_duplicate(existingServerNode->server.webDAV.loginName);
           Password_set(&server->webDAV.password,&existingServerNode->server.webDAV.password);
           Configuration_duplicateKey(&server->webDAV.publicKey,&existingServerNode->server.webDAV.publicKey);
@@ -2252,32 +2278,40 @@ uint Storage_getServerSettings(Server                 *server,
         error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
+// TODO: remove parameter storageSpecifier
         UNUSED_VARIABLE(maxBandWidthList);
         error = StorageFile_init(storageInfo,storageSpecifier,jobOptions);
         break;
       case STORAGE_TYPE_FTP:
+// TODO: remove parameter storageSpecifier
         error = StorageFTP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_SSH:
+// TODO: remove parameter storageSpecifier
         UNUSED_VARIABLE(maxBandWidthList);
         error = ERROR_FUNCTION_NOT_SUPPORTED;
         break;
       case STORAGE_TYPE_SCP:
+// TODO: remove parameter storageSpecifier
         error = StorageSCP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_SFTP:
+// TODO: remove parameter storageSpecifier
         error = StorageSFTP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_WEBDAV:
       case STORAGE_TYPE_WEBDAVS:
+// TODO: remove parameter storageSpecifier
         error = StorageWebDAV_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_CD:
       case STORAGE_TYPE_DVD:
       case STORAGE_TYPE_BD:
+// TODO: remove parameter storageSpecifier
         error = StorageOptical_init(storageInfo,storageSpecifier,jobOptions);
         break;
       case STORAGE_TYPE_DEVICE:
+// TODO: remove parameter storageSpecifier
         error = StorageDevice_init(storageInfo,storageSpecifier,jobOptions);
         break;
       default:

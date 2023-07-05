@@ -47,6 +47,12 @@
 
 /***************************** Constants *******************************/
 
+#define MAX_PORT_NUMBER 65535
+
+#define NETWORK_PORT_SSH    22
+#define NETWORK_PORT_HTTP   80
+#define NETWORK_PORT_HTTPS 443
+
 #define SOCKET_FLAG_NONE         0
 #define SOCKET_FLAG_NON_BLOCKING (1 <<  0)
 #define SOCKET_FLAG_NO_DELAY     (1 <<  1)

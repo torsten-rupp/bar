@@ -2291,7 +2291,7 @@ Errors Chunk_skip(const ChunkIO     *chunkIO,
   assert(chunkHeader != NULL);
 
   size = chunkIO->getSize(chunkIOUserData);
-  if (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size > size)
+  if ((size >= 0) && (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size > size))
   {
     return ERROR_INVALID_CHUNK_SIZE;
   }
@@ -2299,7 +2299,7 @@ Errors Chunk_skip(const ChunkIO     *chunkIO,
   /* Note: fseeko in File_seek() cause an SigSegV if "offset" is
      completely wrong; thus never call it with an invalid offset
   */
-  offset = (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size <= size)
+  offset = ((size < 0LL) || (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size <= size))
              ? chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size
              : size+1;
   error = chunkIO->seek(chunkIOUserData,offset);
@@ -2626,6 +2626,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
 {
   Errors      error;
   uint64      offset;
+  int64       size;
   ChunkHeader chunkHeader;
   ulong       bytesWritten;
 
@@ -2684,7 +2685,8 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       {
         return error;
       }
-      if (chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size > chunkInfo->io->getSize(chunkInfo->ioUserData))
+      size = chunkInfo->io->getSize(chunkInfo->ioUserData);
+      if ((size >= 0LL) && (chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size > size))
       {
         return ERROR_INVALID_CHUNK_SIZE;
       }
