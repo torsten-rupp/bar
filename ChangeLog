@@ -20,6 +20,9 @@
   * added option --webdav-port
   * fixed WebDAV chunked download
   * fixed WebDAVS
+  * fixed possible infinte loop when delete expired entities
+  * fixed store restore tree/table column width
+  * fixed store restore pane sizes
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission

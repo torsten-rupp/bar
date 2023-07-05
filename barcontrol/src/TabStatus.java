@@ -1042,7 +1042,7 @@ public class TabStatus
     {
       public void handleEvent(Event event)
       {
-        Settings.jobTableColumns = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetJobTable));
+        Settings.jobTableColumns = new Settings.ColumnWidth(Widgets.getTableColumnWidth(widgetJobTable));
       }
     };
     tableColumn = Widgets.addTableColumn(widgetJobTable,0,BARControl.tr("Name"),          SWT.LEFT, 110,true );

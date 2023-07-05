@@ -68,16 +68,16 @@ public class Settings
     }
   }
 
-  /** column sizes
+  /** column width
    */
-  static class ColumnSizes
+  static class ColumnWidth
   {
     public final int[] width;
 
     /** create column sizes
      * @param width width (int array)
      */
-    ColumnSizes(int... width)
+    ColumnWidth(int... width)
     {
       int totalWidth = 0;
       this.width = new int[width.length];
@@ -97,14 +97,14 @@ public class Settings
     /** create column sizes
      * @param widthList with list
      */
-    ColumnSizes(ArrayList<Integer> widthList)
+    ColumnWidth(ArrayList<Integer> widthList)
     {
       int totalWidth = 0;
       this.width = new int[widthList.size()];
-      for (int z = 0; z < widthList.size(); z++)
+      for (int i = 0; i < widthList.size(); i++)
       {
-        this.width[z] = widthList.get(z);
-        totalWidth += this.width[z];
+        this.width[i] = widthList.get(i);
+        totalWidth += this.width[i];
       }
 
       // force min. width of at least one element
@@ -123,7 +123,7 @@ public class Settings
       return (columNb < width.length) ? width[columNb] : 0;
     }
 
-    /** convert data to string
+    /** convert to string
      * @return string
      */
     public String toString()
@@ -134,19 +134,19 @@ public class Settings
         if (buffer.length() > 0) buffer.append(',');
         buffer.append(Integer.toString(n));
       }
-      return "ColumnSizes {"+buffer.toString()+"}";
+      return "ColumnWidth {"+buffer.toString()+"}";
     }
   }
 
   /** config value adapter String <-> column width array
    */
-  class SettingValueAdapterWidthArray extends SettingUtils.ValueAdapter<String,ColumnSizes>
+  class SettingValueAdapterWidthArray extends SettingUtils.ValueAdapter<String,ColumnWidth>
   {
     /** convert to value
      * @param string string
      * @return value
      */
-    public ColumnSizes toValue(String string) throws Exception
+    public ColumnWidth toValue(String string) throws Exception
     {
       StringTokenizer tokenizer = new StringTokenizer(string,",");
       ArrayList<Integer> widthList = new ArrayList<Integer>();
@@ -154,20 +154,109 @@ public class Settings
       {
         widthList.add(Integer.parseInt(tokenizer.nextToken()));
       }
-      return new ColumnSizes(widthList);
+      return new ColumnWidth(widthList);
     }
 
     /** convert to string
      * @param value value
      * @return string
      */
-    public String toString(ColumnSizes columnSizes) throws Exception
+    public String toString(ColumnWidth columnSizes) throws Exception
     {
       StringBuilder buffer = new StringBuilder();
       for (int width : columnSizes.width)
       {
         if (buffer.length() > 0) buffer.append(',');
         buffer.append(Integer.toString(width));
+      }
+      return buffer.toString();
+    }
+  }
+
+  /** pane sizes
+   */
+  static class PaneSizes
+  {
+    public final double[] sizes;
+
+    /** create sizes
+     * @param sizes sizes (double array)
+     */
+    PaneSizes(double... sizes)
+    {
+      this.sizes = new double[sizes.length];
+      for (int i = 0; i < sizes.length; i++)
+      {
+        this.sizes[i] = sizes[i];
+      }
+    }
+
+    /** create column sizes
+     * @param widthList with list
+     */
+    PaneSizes(ArrayList<Double> sizeList)
+    {
+      this.sizes = new double[sizeList.size()];
+      for (int i = 0; i < sizeList.size(); i++)
+      {
+        this.sizes[i] = sizeList.get(i);
+      }
+    }
+
+    /** get width
+     * @param index index (0..n-1)
+     * @return size or 0
+     */
+    public double get(int index)
+    {
+      return (index < sizes.length) ? sizes[index] : 0;
+    }
+
+    /** convert to string
+     * @return string
+     */
+    public String toString()
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (double n : sizes)
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(Double.toString(n));
+      }
+      return "PaneSizes {"+buffer.toString()+"}";
+    }
+  }
+
+  /** config value adapter String <-> pane sizes array
+   */
+  class SettingValueAdapterSizesArray extends SettingUtils.ValueAdapter<String,PaneSizes>
+  {
+    /** convert to value
+     * @param string string
+     * @return value
+     */
+    public PaneSizes toValue(String string) throws Exception
+    {
+      StringTokenizer tokenizer = new StringTokenizer(string,",");
+      ArrayList<Double> sizeList = new ArrayList<Double>();
+      while (tokenizer.hasMoreTokens())
+      {
+        sizeList.add(Double.parseDouble(tokenizer.nextToken())/100.0);
+      }
+      return new PaneSizes(sizeList);
+    }
+
+    /** convert to string
+     * @param value value
+     * @return string
+     */
+    public String toString(PaneSizes paneSizes) throws Exception
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (double size : paneSizes.sizes)
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(String.format("%.1f",size*100.0));
       }
       return buffer.toString();
     }
@@ -419,17 +508,19 @@ public class Settings
   @SettingValue(type=SettingUtils.ValueAdapterSimpleStringArray.class, name="job-table-column-order")
   public static SettingUtils.SimpleStringArray jobListColumnOrder              = new SettingUtils.SimpleStringArray();
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="job-table-columns")
-  public static ColumnSizes                    jobTableColumns                 = new ColumnSizes(110,130,90,90,80,80,100,150,120);
+  public static ColumnWidth                    jobTableColumns                 = new ColumnWidth(110,130,90,90,80,80,100,150,120);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="mount-table-columns")
-  public static ColumnSizes                    mountTableColumns               = new ColumnSizes(600,100);
+  public static ColumnWidth                    mountTableColumns               = new ColumnWidth(600,100);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="schedule-table-columns")
-  public static ColumnSizes                    scheduleTableColumns            = new ColumnSizes(120,250,100,100,90);
+  public static ColumnWidth                    scheduleTableColumns            = new ColumnWidth(120,250,100,100,90);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="persistence-tree-columns")
-  public static ColumnSizes                    persistenceTreeColumns          = new ColumnSizes(100,90,90,90,140,90,120);
+  public static ColumnWidth                    persistenceTreeColumns          = new ColumnWidth(100,90,90,90,140,90,120);
+  @SettingValue(type=SettingValueAdapterSizesArray.class, name="restore-pane-sizes")
+  public static PaneSizes                      restorePaneSizes                = new PaneSizes(50.0,50.0);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="storage-tree-columns")
-  public static ColumnSizes                    storageTreeColumns              = new ColumnSizes(330,90,170,100,80);
+  public static ColumnWidth                    storageTreeColumns              = new ColumnWidth(330,90,170,100,80);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="storage-table-columns")
-  public static ColumnSizes                    storageTableColumns             = new ColumnSizes(420,90,90,100,80);
+  public static ColumnWidth                    storageTableColumns             = new ColumnWidth(420,90,90,100,80);
 
   @SettingComment(text={"","Pause default settings"})
   @SettingValue(name="pause-create")

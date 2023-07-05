@@ -99,13 +99,17 @@ public class Pane extends Canvas
     this.COLOR_HIGHLIGHT_SHADOW = getDisplay().getSystemColor(SWT.COLOR_WIDGET_HIGHLIGHT_SHADOW);
 
     // get cursor
-    if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+    if      ((style & SWT.VERTICAL) == SWT.VERTICAL)
     {
       this.CURSOR = new Cursor(getDisplay(),SWT.CURSOR_SIZEWE);
     }
-    else
+    else if ((style & SWT.HORIZONTAL) == SWT.HORIZONTAL)
     {
       this.CURSOR = new Cursor(getDisplay(),SWT.CURSOR_SIZENS);
+    }
+    else
+    {
+      throw new IllegalArgumentException("invalid style");
     }
 
     // initialize variables
@@ -141,7 +145,7 @@ public class Pane extends Canvas
     });
 
     // add resize listeners
-    addListener(SWT.Resize, new Listener()
+    super.addListener(SWT.Resize, new Listener()
     {
       public void handleEvent(Event event)
       {
@@ -225,7 +229,7 @@ public class Pane extends Canvas
           bounds0 = composites[pane.dragIndex+0].getBounds();
           bounds1 = composites[pane.dragIndex+1].getBounds();
 
-          if ((pane.style & SWT.VERTICAL) == SWT.VERTICAL)
+          if      ((pane.style & SWT.VERTICAL) == SWT.VERTICAL)
           {
             dragDelta = mouseEvent.x-pane.dragStart;
 
@@ -251,7 +255,7 @@ public class Pane extends Canvas
               pane.dragStart = mouseEvent.x;
             }
           }
-          else
+          else if ((pane.style & SWT.HORIZONTAL) == SWT.HORIZONTAL)
           {
             dragDelta = mouseEvent.y-pane.dragStart;
 
@@ -304,7 +308,7 @@ public class Pane extends Canvas
 
     // set sizes of sashes
     Rectangle bounds = getBounds();
-    if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+    if      ((style & SWT.VERTICAL) == SWT.VERTICAL)
     {
       int width = bounds.width-(count-1)*SIZE;
 //Dprintf.dprintf("width=%d",width);
@@ -313,11 +317,10 @@ public class Pane extends Canvas
       for (int i = 0; i < count; i++)
       {
         w = offsets[i]-((i > 0) ? offsets[i-1] : 0)-SIZE;
-//Dprintf.dprintf("w=%d",w);
         sizes[i] = (double)w/(double)width;
       }
     }
-    else
+    else if ((style & SWT.HORIZONTAL) == SWT.HORIZONTAL)
     {
       int height = bounds.height-(count-1)*SIZE;
 
@@ -359,9 +362,16 @@ public class Pane extends Canvas
     }
     if (normalizeFactor < 0.0) normalizeFactor = 1.0/(double)(count-1);
 
+    // set weights and mark initialized
+    for (int i = 0; i < count; i++)
+    {
+      weights[i] = sizes[i]/normalizeFactor;
+    }
+    initFlag = true;
+
     // set sizes of sashes
     Rectangle bounds = getBounds();
-    if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+    if      ((style & SWT.VERTICAL) == SWT.VERTICAL)
     {
       int width = bounds.width-(count-1)*SIZE;
 
@@ -379,7 +389,7 @@ public class Pane extends Canvas
         offsets[i] = x;
       }
     }
-    else
+    else if ((style & SWT.HORIZONTAL) == SWT.HORIZONTAL)
     {
       int height = bounds.height-(count-1)*SIZE;
 
@@ -397,7 +407,6 @@ public class Pane extends Canvas
         offsets[i] = y;
       }
     }
-    updateWeights();
   }
 
   /** set layout
@@ -409,20 +418,22 @@ public class Pane extends Canvas
     throw new UnsupportedOperationException("Pane cannot have a layout");
   }
 
-  /** add selection listener
-   * @param selectionListerner listener to add
+  /** add listener
+   * @param listener listener to add
    */
-  public void addResizeListener(Listener listener)
+  public void addListener(int eventType, Listener listener)
   {
-    resizeListenerSet.add(listener);
+    super.addListener(eventType,listener);
+    if (eventType == SWT.Resize) resizeListenerSet.add(listener);
   }
 
-  /** remove selection listener
-   * @param selectionListerner listener to remove
+  /** remove listener
+   * @param listener listener to remove
    */
-  public void removeResizeListener(Listener listener)
+  public void removeListener(int eventType, Listener listener)
   {
-    resizeListenerSet.remove(listener);
+    super.removeListener(eventType,listener);
+    if (eventType == SWT.Resize) resizeListenerSet.remove(listener);
   }
 
   /** get string
@@ -449,14 +460,14 @@ public class Pane extends Canvas
     int height = 0;
     for (int i = 0; i < pane.count; i++)
     {
-      if ((pane.style & SWT.VERTICAL) == SWT.VERTICAL)
+      if      ((pane.style & SWT.VERTICAL) == SWT.VERTICAL)
       {
         dw = initFlag ? (int)((double)bounds.width*weights[i]) : (bounds.width -(pane.count-1)*SIZE)/pane.count;
         pane.composites[i].setBounds(x,0,dw,bounds.height);
         x += dw + SIZE;
         pane.offsets[i] = x;
       }
-      else
+      else if ((pane.style & SWT.HORIZONTAL) == SWT.HORIZONTAL)
       {
         dh = initFlag ? (int)((double)bounds.height*weights[i]) : (bounds.height -(pane.count-1)*SIZE)/pane.count;
         pane.composites[i].setBounds(0,y,bounds.width,dh);
@@ -474,12 +485,12 @@ public class Pane extends Canvas
     Rectangle bounds = getBounds();
     for (int i = 0; i < count; i++)
     {
-      if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+      if      ((style & SWT.VERTICAL) == SWT.VERTICAL)
       {
         int x = offsets[i]-((i > 0) ? offsets[i-1] : 0)-bounds.x;
         weights[i] = (bounds.height > 0) ? (double)x/(double)bounds.width : 1.0;
       }
-      else
+      else if ((style & SWT.HORIZONTAL) == SWT.HORIZONTAL)
       {
         int y = offsets[i]-((i > 0) ? offsets[i-1] : 0)-bounds.y;
         weights[i] = (bounds.width > 0) ? (double)y/(double)bounds.height : 1.0;
@@ -498,12 +509,10 @@ public class Pane extends Canvas
     int       w,h;
     int       x,y;
 
-//Dprintf.dprintf("+++ %s",this);
     if (!isDisposed())
     {
       gc     = paintEvent.gc;
       bounds = getBounds();
-//Dprintf.dprintf("bounds=%s %s",bounds,((style & SWT.VERTICAL) == SWT.VERTICAL)?"ver":"hor");
       x0     = bounds.x;
       y0     = bounds.y;
       w      = bounds.width;
@@ -512,9 +521,8 @@ public class Pane extends Canvas
       for (int i = 0; i < count-1; i++)
       {
         bounds = composites[i].getBounds();
-//Dprintf.dprintf("i=%d bounds=%s w=%d h=%d",i,bounds,w,h);
 
-        if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+        if      ((style & SWT.VERTICAL) == SWT.VERTICAL)
         {
           x = bounds.x+bounds.width+OFFSET_X;
           y = h-OFFSET_Y-SLIDER_OFFSET-SLIDER_SIZE;
@@ -534,7 +542,7 @@ public class Pane extends Canvas
           gc.setForeground(COLOR_NORMAL_SHADOW);
           gc.drawLine(x+SLIDER_SIZE/2  ,1,x+SLIDER_SIZE/2  ,h-1);
         }
-        else
+        else if ((style & SWT.HORIZONTAL) == SWT.HORIZONTAL)
         {
           x = w-OFFSET_X-SLIDER_OFFSET-SLIDER_SIZE;
           y = bounds.y+bounds.height+OFFSET_Y;
@@ -551,6 +559,10 @@ public class Pane extends Canvas
           gc.drawLine(0,y+SLIDER_SIZE/2  ,1  ,y+SLIDER_SIZE/2  );
           gc.setForeground(COLOR_NORMAL_SHADOW);
           gc.drawLine(1,y+SLIDER_SIZE/2  ,w-1,y+SLIDER_SIZE/2  );
+        }
+        else
+        {
+          throw new IllegalArgumentException("invalid style");
         }
 
         /* slider button
@@ -574,7 +586,6 @@ public class Pane extends Canvas
         gc.drawLine(x+1            ,y+SLIDER_SIZE-1,x+SLIDER_SIZE-2,y+SLIDER_SIZE-1);
       }
     }
-//Dprintf.dprintf("--- %s",this);
   }
 
   /** get bounds of sash
@@ -588,19 +599,18 @@ public class Pane extends Canvas
     Rectangle bounds0 = composites[i+0].getBounds();
     Rectangle bounds1 = composites[i+1].getBounds();
 
-    if ((style & SWT.VERTICAL) == SWT.VERTICAL)
+    if      ((style & SWT.VERTICAL) == SWT.VERTICAL)
     {
       bounds.x      = offsets[i]-SIZE; //bounds0.x+bounds0.width;
       bounds.y      = bounds0.y;
       bounds.width  = SIZE; //((i < count-1) ? offsets[i+1] : bounds.width)-offsets[i]; // bounds1.x-(bounds0.x+bounds0.width);
     }
-    else
+    else if ((style & SWT.HORIZONTAL) == SWT.HORIZONTAL)
     {
       bounds.x      = bounds0.x;
       bounds.y      = offsets[i]-SIZE; //bounds0.y+bounds0.height;
       bounds.height = SIZE; // ((i < count-1) ? offsets[i+1] : bounds.height)-offsets[i]; //bounds1.y-(bounds0.y+bounds0.height);
     }
-//Dprintf.dprintf("sash %d bounds: %s",i,bounds);
 
     return bounds;
   }

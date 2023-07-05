@@ -5116,6 +5116,15 @@ Dprintf.dprintf("");
     // create pane
     pane = Widgets.newPane(widgetTab,2,SWT.HORIZONTAL);
     Widgets.layout(pane,0,0,TableLayoutData.NSWE);
+    pane.addListener(SWT.Resize,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        Pane widget = (Pane)event.widget;
+        Settings.restorePaneSizes = new Settings.PaneSizes(widget.getSizes());
+      }
+    });
+    pane.setSizes(Settings.restorePaneSizes.sizes);
 
     // storage tree/list
     composite = pane.getComposite(0);
@@ -5235,7 +5244,7 @@ Dprintf.dprintf("");
       {
         public void handleEvent(Event event)
         {
-          Settings.storageTreeColumns = new Settings.ColumnSizes(Widgets.getTreeColumnWidth(widgetStorageTree));
+          Settings.storageTreeColumns = new Settings.ColumnWidth(Widgets.getTreeColumnWidth(widgetStorageTree));
         }
       };
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Name"),    SWT.LEFT, 400,true);
@@ -5718,7 +5727,7 @@ Dprintf.dprintf("");
       {
         public void handleEvent(Event event)
         {
-          Settings.storageTableColumns = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetStorageTable));
+          Settings.storageTableColumns = new Settings.ColumnWidth(Widgets.getTableColumnWidth(widgetStorageTable));
         }
       };
       tableColumn = Widgets.addTableColumn(widgetStorageTable,0,BARControl.tr("Name"),    SWT.LEFT, 450,true);
