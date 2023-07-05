@@ -4519,7 +4519,7 @@ public class TabJobs
           {
             public void handleEvent(Event event)
             {
-              Settings.mountTableColumns = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetMountTable));
+              Settings.mountTableColumns = new Settings.ColumnWidth(Widgets.getTableColumnWidth(widgetMountTable));
             }
           };
 
@@ -7997,7 +7997,7 @@ public class TabJobs
         {
           public void handleEvent(Event event)
           {
-            Settings.scheduleTableColumns = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetScheduleTable));
+            Settings.scheduleTableColumns = new Settings.ColumnWidth(Widgets.getTableColumnWidth(widgetScheduleTable));
           }
         };
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,0,BARControl.tr("Date"),        SWT.LEFT,120,false);
