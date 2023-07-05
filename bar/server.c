@@ -2118,7 +2118,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
   String           string;
   uint64           createdDateTime;
   const JobNode    *jobNode;
-  StorageSpecifier storageSpecifier;
+  StorageSpecifier storageSpecifier,jobStorageSpecifier;
   StorageInfo      storageInfo;
 
   assert(indexHandle != NULL);
@@ -2158,7 +2158,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
       // find job if possible
       jobNode = Job_findByUUID(jobUUID);
 
-      // delete storage file
       Storage_initSpecifier(&storageSpecifier);
       error = Storage_parseName(&storageSpecifier,storageName);
       if (error == ERROR_NONE)
@@ -2221,6 +2220,74 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                NULL  // logHandle
                               );
         }
+
+        if ((error !=  ERROR_NONE) && (jobNode != NULL))
+        {
+          // init storage with job settings
+          Storage_initSpecifier(&jobStorageSpecifier);
+          error = Storage_parseName(&jobStorageSpecifier,jobNode->job.storageName);
+          if (error == ERROR_NONE)
+          {
+            String_set(jobStorageSpecifier.archiveName,storageSpecifier.archiveName);
+
+            if (jobStorageSpecifier.type == STORAGE_TYPE_SCP)
+            {
+              // try to init scp-storage first with sftp
+              jobStorageSpecifier.type = STORAGE_TYPE_SFTP;
+              error = Storage_init(&storageInfo,
+                                   NULL,  // masterIO
+                                   &jobStorageSpecifier,
+                                   &jobNode->job.options,
+                                   &globalOptions.indexDatabaseMaxBandWidthList,
+                                   SERVER_CONNECTION_PRIORITY_HIGH,
+                                   CALLBACK_(NULL,NULL),  // updateStatusInfo
+                                   CALLBACK_(NULL,NULL),  // getNamePassword
+                                   CALLBACK_(NULL,NULL),  // requestVolume
+                                   CALLBACK_(NULL,NULL),  // isPause
+                                   CALLBACK_(NULL,NULL),  // isAborted
+                                   NULL  // logHandle
+                                  );
+              if (error != ERROR_NONE)
+              {
+                // init scp-storage
+                jobStorageSpecifier.type = STORAGE_TYPE_SCP;
+                error = Storage_init(&storageInfo,
+                                     NULL,  // masterIO
+                                     &jobStorageSpecifier,
+                                     &jobNode->job.options,
+                                     &globalOptions.indexDatabaseMaxBandWidthList,
+                                     SERVER_CONNECTION_PRIORITY_HIGH,
+                                     CALLBACK_(NULL,NULL),  // updateStatusInfo
+                                     CALLBACK_(NULL,NULL),  // getNamePassword
+                                     CALLBACK_(NULL,NULL),  // requestVolume
+                                     CALLBACK_(NULL,NULL),  // isPause
+                                     CALLBACK_(NULL,NULL),  // isAborted
+                                     NULL  // logHandle
+                                    );
+              }
+            }
+            else
+            {
+              // init other storage types
+              error = Storage_init(&storageInfo,
+                                   NULL,  // masterIO
+                                   &jobStorageSpecifier,
+                                   &jobNode->job.options,
+                                   &globalOptions.indexDatabaseMaxBandWidthList,
+                                   SERVER_CONNECTION_PRIORITY_HIGH,
+                                   CALLBACK_(NULL,NULL),  // updateStatusInfo
+                                   CALLBACK_(NULL,NULL),  // getNamePassword
+                                   CALLBACK_(NULL,NULL),  // requestVolume
+                                   CALLBACK_(NULL,NULL),  // isPause
+                                   CALLBACK_(NULL,NULL),  // isAborted
+                                   NULL  // logHandle
+                                  );
+            }
+          }
+          Storage_doneSpecifier(&jobStorageSpecifier);
+        }
+
+        // delete storage file
         if (error == ERROR_NONE)
         {
           if (Storage_exists(&storageInfo,
