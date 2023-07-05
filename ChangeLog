@@ -20,6 +20,7 @@
   * added option --webdav-port
   * fixed WebDAV chunked download
   * fixed WebDAVS
+  * fixed possible infinte loop when delete expired entities
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission
