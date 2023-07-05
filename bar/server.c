@@ -2437,8 +2437,9 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
       error = deleteStorage(indexHandle,deleteStorageId);
     }
   }
-  while (   !isQuit()
-         && !INDEX_ID_IS_NONE(deleteStorageId)
+  while (   !INDEX_ID_IS_NONE(deleteStorageId)
+         && (error == ERROR_NONE)
+         && !isQuit()
         );
   if (isQuit())
   {
@@ -3129,6 +3130,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                          )
                 {
                   // over max-keep limit -> find oldest entry of same type and persistence
+                  Array_append(&entityIdArray,&jobEntityNode->entityId);
                   do
                   {
                     nextJobEntityNode = jobEntityNode->next;
@@ -3145,6 +3147,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     if (nextJobEntityNode != NULL)
                     {
                       jobEntityNode = nextJobEntityNode;
+                      Array_append(&entityIdArray,&jobEntityNode->entityId);
                     }
                   }
                   while (nextJobEntityNode != NULL);
@@ -3165,12 +3168,17 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                             NULL,
                             NULL
                            );
+
+                  // mark expired entity+oldest entity as processed
                 }
                 else if  (   (jobEntityNode->persistenceNode->maxAge != AGE_FOREVER)
                           && (age > (uint)jobEntityNode->persistenceNode->maxAge)
                          )
                 {
                   // older than max-age
+
+                  // mark expired entity as processed
+                  Array_append(&entityIdArray,&jobEntityNode->entityId);
 
                   // get expired entity
                   expiredEntityId        = jobEntityNode->entityId;
@@ -3201,8 +3209,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     // delete expired entity
     if (!INDEX_ID_IS_NONE(expiredEntityId))
     {
-      Array_append(&entityIdArray,&expiredEntityId);
-
       AutoFree_init(&autoFreeList);
       error = ERROR_NONE;
 
