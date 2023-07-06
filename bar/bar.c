@@ -1175,7 +1175,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
     {
       if ((logType == LOG_TYPE_ALWAYS) || ((globalOptions.logTypes & logType) != 0))
       {
-        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),FALSE,globalOptions.logFormat);
+        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,globalOptions.logFormat);
 
         // log to session log file
         if (logHandle != NULL)
@@ -1281,7 +1281,7 @@ void fatalLogMessage(const char *text, void *userData)
 
     if (logFile != NULL)
     {
-      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),FALSE,globalOptions.logFormat);
+      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,globalOptions.logFormat);
 
       // append to log file
       (void)fprintf(logFile,"%s> ",String_cString(dateTime));

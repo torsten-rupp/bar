@@ -8137,7 +8137,7 @@ LOCAL Errors getColumnWidths(const DatabaseValue values[], uint valueCount, void
       case DATABASE_DATATYPE_UINT64:      n = stringFormatLengthCodepointsUTF8("%"PRIu64,values[i].u64); break;
       case DATABASE_DATATYPE_DOUBLE:      n = stringFormatLengthCodepointsUTF8("%lf",values[i].d); break;
       case DATABASE_DATATYPE_ENUM:        n = stringFormatLengthCodepointsUTF8("%u",values[i].u); break;
-      case DATABASE_DATATYPE_DATETIME:    n = stringLengthCodepointsUTF8(Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,FALSE,NULL)); break;
+      case DATABASE_DATATYPE_DATETIME:    n = stringLengthCodepointsUTF8(Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,TIME_TYPE_LOCAL,NULL)); break;
       case DATABASE_DATATYPE_STRING:      n = String_lengthCodepointsUTF8(values[i].string); break;
       case DATABASE_DATATYPE_CSTRING:     n = stringLengthCodepointsUTF8(values[i].s); break;
       case DATABASE_DATATYPE_BLOB:        break;
@@ -8216,7 +8216,7 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
       case DATABASE_DATATYPE_UINT64:      s = stringFormat(buffer,sizeof(buffer),"%"PRIu64,values[i].u64); break;
       case DATABASE_DATATYPE_DOUBLE:      s = stringFormat(buffer,sizeof(buffer),"%lf",values[i].d); break;
       case DATABASE_DATATYPE_ENUM:        s = stringFormat(buffer,sizeof(buffer),"%u",values[i].u); break;
-      case DATABASE_DATATYPE_DATETIME:    s = Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,FALSE,NULL); break;
+      case DATABASE_DATATYPE_DATETIME:    s = Misc_formatDateTimeCString(buffer,sizeof(buffer),values[i].dateTime,TIME_TYPE_LOCAL,NULL); break;
       case DATABASE_DATATYPE_STRING:      s = String_cString(values[i].string); break;
       case DATABASE_DATATYPE_CSTRING:     s = values[i].s; break;
       case DATABASE_DATATYPE_BLOB:        break;
@@ -9471,7 +9471,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                );
                          printf("    Job UUID     : %s\n",String_cString(values[ 2].string));
                          printf("    Entity UUID  : %s\n",String_cString(values[ 3].string));
-                         printf("    Created      : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,FALSE,NULL) : "-");
+                         printf("    Created      : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,TIME_TYPE_LOCAL,NULL) : "-");
                          printf("\n");
                          printf("    Total entries: %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                          printf("\n");
@@ -9716,7 +9716,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 
                                                 printf("  Id             : %"PRIi64"\n",id);
                                                 printf("    Name         : %s\n",String_cString(name));
-                                                printf("    Created      : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,FALSE,NULL) : "-");
+                                                printf("    Created      : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,TIME_TYPE_LOCAL,NULL) : "-");
                                                 printf("    Host name    : %s\n",String_cString(hostname));
                                                 printf("    User name    : %s\n",String_cString(userName));
                                                 printf("    Comment      : %s\n",String_cString(comment));
@@ -9730,7 +9730,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                                          ? MODE_TEXT[mode]
                                                          : stringFormat(buffer,sizeof(buffer),"unknown (%d)",mode)
                                                       );
-                                                printf("    Last checked : %s\n",(lastCheckedDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),lastCheckedDateTime,FALSE,NULL) : "-");
+                                                printf("    Last checked : %s\n",(lastCheckedDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),lastCheckedDateTime,TIME_TYPE_LOCAL,NULL) : "-");
                                                 printf("    Error message: %s\n",String_cString(message));
                                                 printf("\n");
                                                 printf("    Total entries: %lu, %.1lf %s (%"PRIu64" bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);

@@ -68,6 +68,19 @@ typedef enum
   WEEKDAY_SUN = 6,
 } WeekDays;
 
+typedef enum
+{
+  TIME_TYPE_GMT,
+  TIME_TYPE_LOCAL
+} TimeTypes;
+
+typedef enum
+{
+  DAY_LIGHT_SAVING_MODE_AUTO,
+  DAY_LIGHT_SAVING_MODE_OFF,
+  DAY_LIGHT_SAVING_MODE_ON
+} DayLightSavingModes;
+
 // length of UUID string (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 #define MISC_UUID_STRING_LENGTH 36
 #define MISC_UUID_NONE "00000000-0000-0000-0000-000000000000"
@@ -710,7 +723,7 @@ INLINE bool Misc_isTimeout(const TimeoutInfo *timeoutInfo)
 * Purpose: get current date/time
 * Input  : -
 * Output : -
-* Return : date/time (seconds since 1970-01-01 00:00:00)
+* Return : date/time (seconds since 1970-01-01 00:00:00 UTC)
 * Notes  : -
 \***********************************************************************/
 
@@ -742,6 +755,7 @@ uint32 Misc_getCurrentTime(void);
 * Name   : Misc_splitDateTime
 * Purpose: split date/time into parts
 * Input  : dateTime - date/time (seconds since 1970-1-1 00:00:00)
+*          timeType - time type; see TimeTypes
 * Output : year             - year, YYYY (could be NULL)
 *          month            - month, 1..12 (could be NULL)
 *          day              - day, 1..31 (could be NULL)
@@ -755,15 +769,16 @@ uint32 Misc_getCurrentTime(void);
 * Notes  : -
 \***********************************************************************/
 
-void Misc_splitDateTime(uint64   dateTime,
-                        uint     *year,
-                        uint     *month,
-                        uint     *day,
-                        uint     *hour,
-                        uint     *minute,
-                        uint     *second,
-                        WeekDays *weekDay,
-                        bool     *isDayLightSaving
+void Misc_splitDateTime(uint64    dateTime,
+                        TimeTypes timeType,
+                        uint      *year,
+                        uint      *month,
+                        uint      *day,
+                        uint      *hour,
+                        uint      *minute,
+                        uint      *second,
+                        WeekDays  *weekDay,
+                        bool      *isDayLightSaving
                        );
 
 /***********************************************************************\
@@ -856,25 +871,27 @@ INLINE uint32 Misc_extractTime(uint64 dateTime)
 /***********************************************************************\
 * Name   : Misc_makeDateTime
 * Purpose: create date/time from parts
-* Input  : year             - year, YYYY
-*          month            - month, 1..12
-*          day              - day, 1..31
-*          hour             - hour, 0..23
-*          minute           - minute, 0..59
-*          second           - second, 0..59
-*          isDayLightSaving - TRUE iff day light saving is active
-* Return : date/time (seconds since 1970-1-1 00:00:00)
-* Return : -
+* Input  : timeType           - time type; see TimeTypes
+*          year               - year [1970..]
+*          month              - month [1..12]
+*          day                - day [1..31]
+*          hour               - hour [0..23]
+*          minute             - minute [0..59]
+*          second             - second [0..59]
+*          dayLightSavingMode - day light saving mode; see
+*                               DayLightSavingModes
+* Return : date/time (seconds since 1970-1-1 00:00:00) or 0
 * Notes  : -
 \***********************************************************************/
 
-uint64 Misc_makeDateTime(uint year,
-                         uint month,
-                         uint day,
-                         uint hour,
-                         uint minute,
-                         uint second,
-                         bool isDayLightSaving
+uint64 Misc_makeDateTime(TimeTypes           timeType,
+                         uint                year,
+                         uint                month,
+                         uint                day,
+                         uint                hour,
+                         uint                minute,
+                         uint                second,
+                         DayLightSavingModes dayLightSavingMode
                         );
 
 /***********************************************************************\
@@ -894,16 +911,18 @@ uint64 Misc_parseDateTime(const char *string);
 * Input  : string     - string variable
 *          buffer     - buffer
 *          bufferSize - buffer size
-*          dateTime   - date/time (seconds since 1970-1-1 00:00:00)
-*          utcFlag    - TRUE to format date/time in UTC. FALSE otherwise
+*          dateTime   - date/time (seconds since 1970-1-1 00:00:00 UTC)
+*          timeType   - format time type; see TimeTypes
+*                         TIME_TYPE_GMT:   format as UTC date/time
+*                         TIME_TYPE_LOCAL: format as local date/time
 *          format     - format string (see strftime) or NULL for default
 * Output : -
 * Return : date/time string
 * Notes  : -
 \***********************************************************************/
 
-String Misc_formatDateTime(String string, uint64 dateTime, bool utcFlag, const char *format);
-const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, bool utcFlag, const char *format);
+String Misc_formatDateTime(String string, uint64 dateTime, TimeTypes timeType, const char *format);
+const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, TimeTypes timeType, const char *format);
 
 /***********************************************************************\
 * Name   : Misc_udelay

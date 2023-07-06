@@ -381,7 +381,6 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   uint          currentYear,currentMonth,currentDay;
   WeekDays      currentWeekDay;
   uint          currentHour,currentMinute;
-  bool          currentIsDayLightSaving;
   uint          matchingDateTime;
   BandWidthNode *matchingBandWidthNode;
   BandWidthNode *bandWidthNode;
@@ -400,6 +399,7 @@ ulong getBandWidth(BandWidthList *bandWidthList)
   // get current date/time values
   currentDateTime = Misc_getCurrentDateTime();
   Misc_splitDateTime(currentDateTime,
+                     TIME_TYPE_LOCAL,
                      &currentYear,
                      &currentMonth,
                      &currentDay,
@@ -407,7 +407,7 @@ ulong getBandWidth(BandWidthList *bandWidthList)
                      &currentMinute,
                      NULL,  // second
                      &currentWeekDay,
-                     &currentIsDayLightSaving
+                     NULL  // currentIsDayLightSaving
                     );
 
   // find best matching band width node
@@ -421,7 +421,7 @@ ulong getBandWidth(BandWidthList *bandWidthList)
     hour   = (bandWidthNode->hour   != TIME_ANY) ? (uint)bandWidthNode->hour   : currentHour;
     minute = (bandWidthNode->minute != TIME_ANY) ? (uint)bandWidthNode->minute : currentMinute;
 
-    dateTime = Misc_makeDateTime(year,month,day,hour,minute,0,currentIsDayLightSaving);
+    dateTime = Misc_makeDateTime(TIME_TYPE_LOCAL,year,month,day,hour,minute,0,DAY_LIGHT_SAVING_MODE_AUTO);
 
     if (   (currentDateTime >= dateTime)
         && (   (matchingBandWidthNode == NULL)

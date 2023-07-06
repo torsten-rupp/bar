@@ -377,7 +377,7 @@ LOCAL Errors validateCertificate(const void *certData,
     if (time(NULL) < certActivationTime)
     {
       gnutls_x509_crt_deinit(cert);
-      return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,FALSE,DATE_TIME_FORMAT_LOCALE));
+      return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,TIME_TYPE_LOCAL,DATE_TIME_FORMAT_LOCALE));
     }
   }
   certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
@@ -386,7 +386,7 @@ LOCAL Errors validateCertificate(const void *certData,
     if (time(NULL) > certExpireTime)
     {
       gnutls_x509_crt_deinit(cert);
-      return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,FALSE,DATE_TIME_FORMAT_LOCALE));
+      return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,TIME_TYPE_LOCAL,DATE_TIME_FORMAT_LOCALE));
     }
   }
 #if 0
