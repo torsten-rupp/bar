@@ -582,7 +582,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     }
     (*timeModified) = Misc_makeDateTime(year,month,day,
                                         hour,minute,0,
-                                        FALSE
+                                        DAY_LIGHT_SAVING_MODE_AUTO
                                        );
     (*userId)       = 0;
     (*groupId)      = 0;
@@ -648,7 +648,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     }
     (*timeModified) = Misc_makeDateTime(year,month,day,
                                         hour,minute,0,
-                                        FALSE
+                                        DAY_LIGHT_SAVING_MODE_AUTO
                                        );
     (*userId)       = 0;
     (*groupId)      = 0;
@@ -712,7 +712,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     }
     (*timeModified) = Misc_makeDateTime(year,month,day,
                                         0,0,0,
-                                        FALSE
+                                        DAY_LIGHT_SAVING_MODE_AUTO
                                        );
     (*userId)       = 0;
     (*groupId)      = 0;

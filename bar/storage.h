@@ -515,6 +515,7 @@ typedef struct
       {
         CURLM                   *curlMultiHandle;
         CURL                    *curlHandle;
+        struct curl_slist       *additionalHeader;
         uint64                  index;                       // current read/write index in file [0..n-1]
         int64                   size;                        // size of file [bytes] or -1 if unknown
         struct                                               // receive buffer
