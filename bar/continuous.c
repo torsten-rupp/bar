@@ -1530,6 +1530,7 @@ LOCAL void continuousThreadCode(void)
 
     // process inotify events
     Misc_splitDateTime(Misc_getCurrentDateTime(),
+                       TIME_TYPE_LOCAL,
                        &year,
                        &month,
                        &day,
@@ -2167,6 +2168,7 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
   assert(!String_isEmpty(name));
 
   Misc_splitDateTime(Misc_getCurrentDateTime(),
+                     TIME_TYPE_LOCAL,
                      NULL,  // year
                      NULL,  // month
                      NULL,  // day

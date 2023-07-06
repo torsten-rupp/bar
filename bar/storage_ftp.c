@@ -580,7 +580,8 @@ LOCAL bool parseFTPDirectoryLine(String         line,
       case 'd': (*type) = FILE_TYPE_DIRECTORY; break;
       default:  (*type) = FILE_TYPE_FILE;      break;
     }
-    (*timeModified) = Misc_makeDateTime(year,month,day,
+    (*timeModified) = Misc_makeDateTime(TIME_TYPE_LOCAL,
+                                        year,month,day,
                                         hour,minute,0,
                                         DAY_LIGHT_SAVING_MODE_AUTO
                                        );
@@ -617,6 +618,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
 
     // get year, month
     Misc_splitDateTime(Misc_getCurrentDateTime(),
+                       TIME_TYPE_LOCAL,
                        &year,
                        &month,
                        NULL,  // day,
@@ -646,7 +648,8 @@ LOCAL bool parseFTPDirectoryLine(String         line,
       case 'd': (*type) = FILE_TYPE_DIRECTORY; break;
       default:  (*type) = FILE_TYPE_FILE; break;
     }
-    (*timeModified) = Misc_makeDateTime(year,month,day,
+    (*timeModified) = Misc_makeDateTime(TIME_TYPE_LOCAL,
+                                        year,month,day,
                                         hour,minute,0,
                                         DAY_LIGHT_SAVING_MODE_AUTO
                                        );
@@ -682,6 +685,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
 
     // get month
     Misc_splitDateTime(Misc_getCurrentDateTime(),
+                       TIME_TYPE_LOCAL,
                        NULL,  // year
                        &month,
                        NULL,  // day,
@@ -710,7 +714,8 @@ LOCAL bool parseFTPDirectoryLine(String         line,
       case 'd': (*type) = FILE_TYPE_DIRECTORY; break;
       default:  (*type) = FILE_TYPE_FILE; break;
     }
-    (*timeModified) = Misc_makeDateTime(year,month,day,
+    (*timeModified) = Misc_makeDateTime(TIME_TYPE_LOCAL,
+                                        year,month,day,
                                         0,0,0,
                                         DAY_LIGHT_SAVING_MODE_AUTO
                                        );

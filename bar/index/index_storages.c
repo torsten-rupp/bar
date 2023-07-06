@@ -2063,7 +2063,7 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
               storageId,
               String_cString(name),
               (createdDateTime != 0LL)
-                ? String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
+                ? String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,TIME_TYPE_LOCAL,NULL))
                 : "unknown"
              );
 

@@ -321,7 +321,7 @@ LOCAL void printMetaInfo(ConstString          hostName,
   printConsole(stdout,0,"Job UUID   : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
   printConsole(stdout,0,"Entity UUID: %s\n",!String_isEmpty(entityUUID) ? String_cString(entityUUID) : "-");
   printConsole(stdout,0,"Type       : %s\n",Archive_archiveTypeToString(archiveType));
-  printConsole(stdout,0,"Created at : %s\n",Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),createdDateTime,FALSE,NULL));
+  printConsole(stdout,0,"Created at : %s\n",Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),createdDateTime,TIME_TYPE_LOCAL,NULL));
   printConsole(stdout,0,"Signatures : ");
   switch (allCryptSignatureState)
   {
@@ -520,7 +520,7 @@ LOCAL void printFileInfo(uint               prefixWidth,
   line           = String_new();
 
   // format
-  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,FALSE,NULL);
+  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,TIME_TYPE_LOCAL,NULL);
 
   if (globalOptions.humanFormatFlag)
   {
@@ -903,7 +903,7 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   line        = String_new();
 
   // format
-  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,FALSE,NULL);
+  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,TIME_TYPE_LOCAL,NULL);
 
   if (globalOptions.numericUIDGIDFlag)
   {
@@ -1028,7 +1028,7 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   line        = String_new();
 
   // format
-  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,FALSE,NULL);
+  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,TIME_TYPE_LOCAL,NULL);
 
   if (globalOptions.numericUIDGIDFlag)
   {
@@ -1172,7 +1172,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   line           = String_new();
 
   // format
-  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,FALSE,NULL);
+  Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),timeModified,TIME_TYPE_LOCAL,NULL);
 
   if (globalOptions.humanFormatFlag)
   {
@@ -4452,7 +4452,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           #endif /* NDEBUG */
           break;
       }
-      Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),directoryEntryNode->fileInfo.timeModified,FALSE,NULL);
+      Misc_formatDateTimeCString(dateTimeString,sizeof(dateTimeString),directoryEntryNode->fileInfo.timeModified,TIME_TYPE_LOCAL,NULL);
       if (globalOptions.numericUIDGIDFlag)
       {
         stringFormat(userName,sizeof(userName),"%d",directoryEntryNode->fileInfo.userId);

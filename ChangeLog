@@ -23,6 +23,8 @@
   * fixed possible infinte loop when delete expired entities
   * fixed store restore tree/table column width
   * fixed store restore pane sizes
+  * fixed schedule date/time with day light saving: avoid
+    invalid date/time
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission

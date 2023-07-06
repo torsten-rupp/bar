@@ -1744,6 +1744,7 @@ LOCAL void schedulerThreadCode(void)
 
       // check if job have to be executed by regular schedule (check backward in time)
       Misc_splitDateTime(currentDateTime,
+                         TIME_TYPE_LOCAL,
                          &current.year,
                          &current.month,
                          &current.day,
@@ -1751,9 +1752,10 @@ LOCAL void schedulerThreadCode(void)
                          &current.minute,
                          NULL,  // second
                          &current.weekDay,
-                         &current.isDayLightSaving
+                         NULL  // dayLightSavingMode
                         );
       Misc_splitDateTime(jobScheduleNode->lastScheduleCheckDateTime,
+                         TIME_TYPE_LOCAL,
                          &lastScheduleCheckYear,
                          NULL,  // month
                          NULL,  // day
@@ -1761,7 +1763,7 @@ LOCAL void schedulerThreadCode(void)
                          NULL,  // minute
                          NULL,  // second
                          NULL,  // weekDay
-                         NULL  // isDayLightSaving
+                         NULL  // dayLightSavingMode
                         );
 
 //fprintf(stderr,"%s:%d: currentDateTime=%"PRIu64"\n",__FILE__,__LINE__,currentDateTime);
@@ -1808,7 +1810,7 @@ LOCAL void schedulerThreadCode(void)
                             || (jobScheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
                            )
                         {
-                          scheduleDateTime = Misc_makeDateTime(year,month,day,hour,minute,0,current.isDayLightSaving);
+                          scheduleDateTime = Misc_makeDateTime(TIME_TYPE_LOCAL,year,month,day,hour,minute,0,DAY_LIGHT_SAVING_MODE_AUTO);
                           assert(scheduleDateTime <= currentDateTime);
 
                           if (scheduleDateTime > jobScheduleNode->lastExecutedDateTime)
@@ -1911,9 +1913,10 @@ LOCAL void schedulerThreadCode(void)
                        );
             logMessage(NULL,  // logHandle,
                        LOG_TYPE_WARNING,
-                       "Scheduled job '%s' for execution at %s",
+                       "Scheduled job '%s' %s for execution at %s",
                        String_cString(jobNode->name),
-                       Misc_formatDateTimeCString(buffer,sizeof(buffer),executeScheduleDateTime,FALSE,NULL)
+                       Archive_archiveTypeToString(scheduleNode->archiveType),
+                       Misc_formatDateTimeCString(buffer,sizeof(buffer),executeScheduleDateTime,TIME_TYPE_LOCAL,NULL)
                       );
 
             // store last schedule check time
@@ -2045,6 +2048,7 @@ LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
     maintenanceTimeFlag = FALSE;
 
     Misc_splitDateTime(dateTime,
+                       TIME_TYPE_LOCAL,
                        &year,
                        &month,
                        &day,
@@ -2338,7 +2342,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                    "Deleted storage #%"PRIi64": '%s', created at %s",
                    INDEX_DATABASE_ID(storageId),
                    String_cString(storageName),
-                   String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
+                   String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,TIME_TYPE_LOCAL,NULL))
                   );
       }
       else
@@ -2531,7 +2535,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                  "Deleted entity #%"PRIi64": job '%s', created at %s",
                  INDEX_DATABASE_ID(entityId),
                  String_cString(jobName),
-                 String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,FALSE,NULL))
+                 String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,TIME_TYPE_LOCAL,NULL))
                 );
     }
     else
@@ -3312,7 +3316,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,FALSE,NULL),
+                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,TIME_TYPE_LOCAL,NULL),
                     expiredTotalEntryCount,
                     BYTES_SHORT(expiredTotalEntrySize),
                     BYTES_UNIT(expiredTotalEntrySize),
@@ -3353,7 +3357,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,FALSE,NULL),
+                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,TIME_TYPE_LOCAL,NULL),
                     expiredTotalEntryCount,
                     BYTES_SHORT(expiredTotalEntrySize),
                     BYTES_UNIT(expiredTotalEntrySize),
@@ -4075,7 +4079,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                    INDEX_DATABASE_ID(moveToEntityId),
                    String_cString(moveToJobName),
                    Archive_archiveTypeToString(moveToArchiveType),
-                   Misc_formatDateTimeCString(string,sizeof(string),moveToCreatedDateTime,FALSE,NULL),
+                   Misc_formatDateTimeCString(string,sizeof(string),moveToCreatedDateTime,TIME_TYPE_LOCAL,NULL),
                    String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPath))
                    );
       }
@@ -4087,7 +4091,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                    INDEX_DATABASE_ID(moveToEntityId),
                    String_cString(moveToJobName),
                    Archive_archiveTypeToString(moveToArchiveType),
-                   Misc_formatDateTimeCString(string,sizeof(string),moveToCreatedDateTime,FALSE,NULL),
+                   Misc_formatDateTimeCString(string,sizeof(string),moveToCreatedDateTime,TIME_TYPE_LOCAL,NULL),
                    String_cString(Storage_getPrintableName(NULL,&moveToStorageSpecifier,moveToPath)),
                    Error_getText(error)
                    );
@@ -5070,7 +5074,7 @@ LOCAL void autoCleanIndex(IndexHandle *indexHandle)
                   "INDEX",
                   "Auto deleted index for '%s', last checked %s",
                   String_cString(printableStorageName),
-                  Misc_formatDateTimeCString(buffer,sizeof(buffer),lastCheckedDateTime,FALSE,NULL)
+                  Misc_formatDateTimeCString(buffer,sizeof(buffer),lastCheckedDateTime,TIME_TYPE_LOCAL,NULL)
                  );
     }
   }
@@ -15100,6 +15104,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     {
       // get date/time values
       Misc_splitDateTime(dateTime,
+                         TIME_TYPE_LOCAL,
                          &year,
                          &month,
                          &day,

@@ -1023,15 +1023,16 @@ uint32 Misc_getCurrentTime(void)
   return time;
 }
 
-void Misc_splitDateTime(uint64   dateTime,
-                        uint     *year,
-                        uint     *month,
-                        uint     *day,
-                        uint     *hour,
-                        uint     *minute,
-                        uint     *second,
-                        WeekDays *weekDay,
-                        bool     *isDayLightSaving
+void Misc_splitDateTime(uint64    dateTime,
+                        TimeTypes timeType,
+                        uint      *year,
+                        uint      *month,
+                        uint      *day,
+                        uint      *hour,
+                        uint      *minute,
+                        uint      *second,
+                        WeekDays  *weekDay,
+                        bool      *isDayLightSaving
                        )
 {
   time_t    n;
@@ -1042,9 +1043,18 @@ void Misc_splitDateTime(uint64   dateTime,
 
   n = (time_t)dateTime;
   #ifdef HAVE_LOCALTIME_R
-    tm = localtime_r(&n,&tmBuffer);
+    switch (timeType)
+    {
+      case TIME_TYPE_GMT:   tm = gmtime_r(&n,&tmBuffer); break;
+      case TIME_TYPE_LOCAL: tm = localtime_r(&n,&tmBuffer); break;
+    }
   #else /* not HAVE_LOCALTIME_R */
-    tm = localtime(&n);
+    switch (timeType)
+    {
+      case TIME_TYPE_GMT:   tm = gmtime(&n);    break;
+      case TIME_TYPE_LOCAL: tm = localtime(&n); break;
+    }
+
   #endif /* HAVE_LOCALTIME_R */
   assert(tm != NULL);
 
@@ -1109,16 +1119,18 @@ bool Misc_isDayLightSaving(uint64 dateTime)
   return (tm->tm_isdst > 0);;
 }
 
-uint64 Misc_makeDateTime(uint year,
-                         uint month,
-                         uint day,
-                         uint hour,
-                         uint minute,
-                         uint second,
-                         bool isDayLightSaving
+uint64 Misc_makeDateTime(TimeTypes           timeType,
+                         uint                year,
+                         uint                month,
+                         uint                day,
+                         uint                hour,
+                         uint                minute,
+                         uint                second,
+                         DayLightSavingModes dayLightSavingMode
                         )
 {
   struct tm tm;
+  time_t    dateTime;
 
   assert(year >= 1900);
   assert(month >= 1);
@@ -1129,15 +1141,28 @@ uint64 Misc_makeDateTime(uint year,
   assert(minute <= 59);
   assert(second <= 59);
 
-  tm.tm_year  = year - 1900;
-  tm.tm_mon   = month - 1;
-  tm.tm_mday  = day;
-  tm.tm_hour  = hour;
-  tm.tm_min   = minute;
-  tm.tm_sec   = second;
-  tm.tm_isdst = isDayLightSaving ? 1 : 0;
+  tm.tm_year = year - 1900;
+  tm.tm_mon  = month - 1;
+  tm.tm_mday = day;
+  tm.tm_hour = hour;
+  tm.tm_min  = minute;
+  tm.tm_sec  = second;
+  switch (dayLightSavingMode)
+  {
+    case DAY_LIGHT_SAVING_MODE_AUTO: tm.tm_isdst = -1; break;
+    case DAY_LIGHT_SAVING_MODE_OFF : tm.tm_isdst =  0; break;
+    case DAY_LIGHT_SAVING_MODE_ON  : tm.tm_isdst =  1; break;
+  }
 
-  return (uint64)mktime(&tm);
+  switch (timeType)
+  {
+    case TIME_TYPE_GMT  : dateTime = timegm(&tm);    break;
+    case TIME_TYPE_LOCAL: dateTime = timelocal(&tm); break;
+  }
+  assert(dateTime != (time_t)(-1));
+  if (dateTime == (time_t)(-1)) dateTime = 0LL;  // avoid invalid date
+
+  return dateTime;
 }
 
 void Misc_udelay(uint64 time)
@@ -1269,7 +1294,7 @@ UNUSED_VARIABLE(string);
   return dateTime;
 }
 
-String Misc_formatDateTime(String string, uint64 dateTime, bool utcFlag, const char *format)
+String Misc_formatDateTime(String string, uint64 dateTime, TimeTypes timeType, const char *format)
 {
   #define START_BUFFER_SIZE 256
   #define DELTA_BUFFER_SIZE 64
@@ -1286,21 +1311,22 @@ String Misc_formatDateTime(String string, uint64 dateTime, bool utcFlag, const c
   assert(string != NULL);
 
   n = (time_t)dateTime;
-  if (utcFlag)
+  switch (timeType)
   {
-    #ifdef HAVE_LOCALTIME_R
-      tm = gmtime_r(&n,&tmBuffer);
-    #else /* not HAVE_LOCALTIME_R */
-      tm = gmtime(&n);
-    #endif /* HAVE_LOCALTIME_R */
-  }
-  else
-  {
+    case TIME_TYPE_GMT:
+      #ifdef HAVE_GMTIME_R
+        tm = gmtime_r(&n,&tmBuffer);
+      #else /* not HAVE_GMTIME_R */
+        tm = gmtime(&n);
+      #endif /* HAVE_GMTIME_R */
+      break;
+    case TIME_TYPE_LOCAL:
     #ifdef HAVE_LOCALTIME_R
       tm = localtime_r(&n,&tmBuffer);
     #else /* not HAVE_LOCALTIME_R */
       tm = localtime(&n);
     #endif /* HAVE_LOCALTIME_R */
+      break;
   }
   assert(tm != NULL);
 
@@ -1334,7 +1360,7 @@ String Misc_formatDateTime(String string, uint64 dateTime, bool utcFlag, const c
   return string;
 }
 
-const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, bool utcFlag, const char *format)
+const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dateTime, TimeTypes timeType, const char *format)
 {
   time_t    n;
   #if defined(HAVE_LOCALTIME_R) || defined(HAVE_GMTIME_R)
@@ -1347,21 +1373,22 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
   assert(bufferSize > 0);
 
   n = (time_t)dateTime;
-  if (utcFlag)
+  switch (timeType)
   {
-    #ifdef HAVE_GMTIME_R
-      tm = gmtime_r(&n,&tmBuffer);
-    #else /* not HAVE_GMTIME_R */
-      tm = gmtime(&n);
-    #endif /* HAVE_GMTIME_R */
-  }
-  else
-  {
+    case TIME_TYPE_GMT:
+      #ifdef HAVE_GMTIME_R
+        tm = gmtime_r(&n,&tmBuffer);
+      #else /* not HAVE_GMTIME_R */
+        tm = gmtime(&n);
+      #endif /* HAVE_GMTIME_R */
+      break;
+    case TIME_TYPE_LOCAL:
     #ifdef HAVE_LOCALTIME_R
       tm = localtime_r(&n,&tmBuffer);
     #else /* not HAVE_LOCALTIME_R */
       tm = localtime(&n);
     #endif /* HAVE_LOCALTIME_R */
+      break;
   }
   assert(tm != NULL);
 

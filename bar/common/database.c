@@ -1658,7 +1658,7 @@ LOCAL void sqlite3FromUnixTime(sqlite3_context *context, int argc, sqlite3_value
   format    = (argc >= 2) ? (const char *)argv[1] : NULL;
 
   // convert to Unix timestamp
-  Misc_formatDateTimeCString(text,sizeof(text),timestamp,FALSE,format);
+  Misc_formatDateTimeCString(text,sizeof(text),timestamp,TIME_TYPE_GMT,format);
 
   sqlite3_result_text(context,text,stringLength(text),NULL);
 }
@@ -1686,7 +1686,7 @@ LOCAL void sqlite3Now(sqlite3_context *context, int argc, sqlite3_value *argv[])
   UNUSED_VARIABLE(argv);
 
   // convert to Unix timestamp
-  Misc_formatDateTimeCString(text,sizeof(text),Misc_getCurrentDateTime(),FALSE,DATE_TIME_FORMAT_DEFAULT);
+  Misc_formatDateTimeCString(text,sizeof(text),Misc_getCurrentDateTime(),TIME_TYPE_GMT,DATE_TIME_FORMAT_DEFAULT);
 
   sqlite3_result_text(context,text,stringLength(text),NULL);
 }
@@ -7876,7 +7876,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
   {
     Misc_doneTimeout(&timeoutInfo);
     #ifndef NDEBUG
-      return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
+      return ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
     #else
       return ERROR_DATABASE_TIMEOUT;
     #endif
@@ -8609,7 +8609,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
   else if ((timeout != WAIT_FOREVER) && (retryCount > maxRetryCount))
   {
     #ifndef NDEBUG
-      return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
+      return ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
     #else
       return ERROR_DATABASE_TIMEOUT;
     #endif
@@ -9067,6 +9067,7 @@ LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
 
                   // convert to internal MariaDB format
                   Misc_splitDateTime(parameters[i].dateTime,
+                                     TIME_TYPE_LOCAL,
                                      &year,
                                      &month,
                                      &day,
@@ -9313,7 +9314,7 @@ LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[i].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),parameters[i].dateTime,TRUE,POSTGRESQL_DATE_TIME_FORMAT);
+                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),parameters[i].dateTime,TIME_TYPE_GMT,POSTGRESQL_DATE_TIME_FORMAT);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[i].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[i].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -9718,6 +9719,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
 
                   // convert to internal MariaDB format
                   Misc_splitDateTime(values[i].dateTime,
+                                     TIME_TYPE_LOCAL,
                                      &year,
                                      &month,
                                      &day,
@@ -9964,7 +9966,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[i].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),values[i].dateTime,TRUE,POSTGRESQL_DATE_TIME_FORMAT);
+                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[i].data,sizeof(databaseStatementHandle->postgresql.bind[i].data),values[i].dateTime,TIME_TYPE_GMT,POSTGRESQL_DATE_TIME_FORMAT);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[i].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[i].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -10402,6 +10404,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
 
                   // convert to internal MariaDB format
                   Misc_splitDateTime(filters[i].dateTime,
+                                     TIME_TYPE_LOCAL,
                                      &year,
                                      &month,
                                      &day,
@@ -10638,7 +10641,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].dateTime);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 1;
                 #else
-                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),filters[i].dateTime,TRUE,POSTGRESQL_DATE_TIME_FORMAT);
+                  Misc_formatDateTimeCString(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data,sizeof(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data),filters[i].dateTime,TIME_TYPE_GMT,POSTGRESQL_DATE_TIME_FORMAT);
                   databaseStatementHandle->postgresql.parameterValues[databaseStatementHandle->parameterIndex]  = databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data;
                   databaseStatementHandle->postgresql.parameterLengths[databaseStatementHandle->parameterIndex] = stringLength(databaseStatementHandle->postgresql.bind[databaseStatementHandle->parameterIndex].data);
                   databaseStatementHandle->postgresql.parameterFormats[databaseStatementHandle->parameterIndex] = 0;
@@ -11044,7 +11047,7 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
   // execute statement
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
                  ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
@@ -11108,7 +11111,7 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
   i = 0;
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
@@ -12813,7 +12816,7 @@ Errors Database_getTableList(StringList     *tableList,
 
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
@@ -12865,7 +12868,7 @@ Errors Database_getViewList(StringList     *viewList,
 
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
@@ -12917,7 +12920,7 @@ Errors Database_getIndexList(StringList     *indexList,
 
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
@@ -12969,7 +12972,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
 
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
@@ -15228,7 +15231,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     DATABASE_DOX(error,
                  #ifndef NDEBUG
-                   ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle)),
+                   ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseHandle)),
                  #else
                    ERROR_DATABASE_TIMEOUT,
                  #endif
@@ -15495,7 +15498,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     {
       String_delete(sqlString);
       #ifndef NDEBUG
-        return ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",debugGetLockedByInfo(databaseHandle));
+        return ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseHandle));
       #else /* NDEBUG */
         return ERROR_DATABASE_TIMEOUT;
       #endif /* not NDEBUG */
@@ -15902,7 +15905,7 @@ String Database_valueToString(String string, const DatabaseValue *databaseValue)
       String_format(string,"%d",databaseValue->i);
       break;
     case DATABASE_DATATYPE_DATETIME:
-      Misc_formatDateTime(string,databaseValue->dateTime,FALSE,NULL);
+      Misc_formatDateTime(string,databaseValue->dateTime,TIME_TYPE_LOCAL,NULL);
       break;
     case DATABASE_DATATYPE_STRING:
       String_format(string,"%S",databaseValue->string);
@@ -15958,7 +15961,7 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
       stringFormat(buffer,bufferSize,"%u",databaseValue->i);
       break;
     case DATABASE_DATATYPE_DATETIME:
-      Misc_formatDateTimeCString(buffer,bufferSize,databaseValue->dateTime,FALSE,NULL);
+      Misc_formatDateTimeCString(buffer,bufferSize,databaseValue->dateTime,TIME_TYPE_LOCAL,NULL);
       break;
     case DATABASE_DATATYPE_STRING:
       stringFormat(buffer,bufferSize,"%s",String_cString(databaseValue->string));
@@ -16097,7 +16100,7 @@ Errors Database_execute(DatabaseHandle *databaseHandle,
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),sqlString),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s: %s",debugGetLockedByInfo(databaseHandle),sqlString),
                #else
                  ERRORX_(DATABASE_TIMEOUT,0,"%s",sqlString),
                #endif
@@ -16419,7 +16422,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   // execute statement
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
                  ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
@@ -16778,7 +16781,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   // execute statement
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
                  ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
@@ -16901,7 +16904,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   // execute statement
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
                  ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
@@ -17008,7 +17011,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
                  ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
@@ -17129,7 +17132,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
 
     DATABASE_DOX(error,
                  #ifndef NDEBUG
-                   ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
+                   ERRORX_(DATABASE_TIMEOUT,0,"locked %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                  #else
                    ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                  #endif
@@ -17350,7 +17353,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
   #endif /* not NDEBUG */
   {
     #ifndef NDEBUG
-      error = ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString));
+      error = ERRORX_(DATABASE_TIMEOUT,0,"locked %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString));
     #else
       error = ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString));
     #endif
@@ -17818,7 +17821,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   // execute statement
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
                #else
                  ERRORX_(DATABASE_TIMEOUT,0,"%s",String_cString(sqlString)),
                #endif
@@ -18560,7 +18563,7 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
   error = ERROR_UNKNOWN;
   DATABASE_DOX(error,
                #ifndef NDEBUG
-                 ERRORX_(DATABASE_TIMEOUT,0,"locked by %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
+                 ERRORX_(DATABASE_TIMEOUT,0,"locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),
                #else
                  ERROR_DATABASE_TIMEOUT,
                #endif
