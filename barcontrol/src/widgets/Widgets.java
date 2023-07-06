@@ -4809,7 +4809,11 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                     break;
                   }
                 }
-                if (listItem == null)
+                if (listItem != null)
+                {
+                  listItem.data = data;
+                }
+                else
                 {
                   // find index
                   int i = 0;
@@ -4836,7 +4840,11 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                     break;
                   }
                 }
-                if (listItem == null)
+                if (listItem != null)
+                {
+                  listItem.data = data;
+                }
+                else
                 {
                   int i = 0;
                   while (   (i < existingListItems.size())
@@ -5647,6 +5655,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                   if (comparator.compare(data,dataArray.get(i)) == 0)
                   {
                     combo.setItem(i,text);
+                    dataArray.set(i,data);
                     updatedFlag = true;
                     break;
                   }
@@ -5678,6 +5687,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                 {
                   if (combo.getItem(i).equals(text))
                   {
+                    dataArray.set(i,data);
                     updatedFlag = true;
                     break;
                   }
@@ -7769,6 +7779,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                   }
                 }
                 this.tableItem = tableItem;
+                this.tableItem.setData(data);
                 break;
               }
             }
@@ -9537,6 +9548,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
                 }
               }
               treeItem = existingTreeItem;
+              treeItem.setData(data);
               break;
             }
           }
