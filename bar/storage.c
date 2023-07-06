@@ -86,6 +86,7 @@
 #define HTTP_CODE_OK                     200
 #define HTTP_CODE_CREATED                201
 #define HTTP_CODE_ACCEPTED               202
+#define HTTP_CODE_MULTI_STATUS           207
 #define HTTP_CODE_BAD_REQUEST            400
 #define HTTP_CODE_UNAUTHORIZED           401
 #define HTTP_CODE_FORBITTEN              403
@@ -312,6 +313,7 @@ LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle, ConstString archiveName)
       case HTTP_CODE_OK:
       case HTTP_CODE_CREATED:
       case HTTP_CODE_ACCEPTED:
+      case HTTP_CODE_MULTI_STATUS:
         error = ERROR_NONE;
         break;
       case HTTP_CODE_BAD_REQUEST:
