@@ -863,7 +863,7 @@ LOCAL Errors initUpload(StorageHandle *storageHandle,
   }
   if (curlCode == CURLE_OK)
   {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"POST");
+    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"PUT");
   }
   if (curlCode == CURLE_OK)
   {
