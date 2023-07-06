@@ -803,6 +803,10 @@ LOCAL Errors initUpload(StorageHandle *storageHandle,
   }
   if (curlCode == CURLE_OK)
   {
+    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)fileSize);
+  }
+  if (curlCode == CURLE_OK)
+  {
     curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_READFUNCTION,curlWebDAVReadDataCallback);
   }
   if (curlCode == CURLE_OK)
