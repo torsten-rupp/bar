@@ -798,16 +798,11 @@ LOCAL Errors initUpload(StorageHandle *storageHandle,
   }
   if (curlCode == CURLE_OK)
   {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"POST");
+    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"PUT");
   }
   if (curlCode == CURLE_OK)
   {
     curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_UPLOAD,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    storageHandle->webdav.additionalHeader = curl_slist_append(storageHandle->webdav.additionalHeader,"Transfer-Encoding: chunked");
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle, CURLOPT_HTTPHEADER, storageHandle->webdav.additionalHeader);
   }
   if (curlCode == CURLE_OK)
   {
