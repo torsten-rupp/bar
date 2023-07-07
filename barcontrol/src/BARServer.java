@@ -4554,28 +4554,45 @@ throw new Error("NYI");
         shortcutMap.put(name,new RemoteFile(name,FileTypes.DIRECTORY,false));
       }
 
-      // add root shortcuts
+      // add file system roots as shortcuts
+      Command.ResultHandler rootListResultHandler = new Command.ResultHandler()
+                                                    {
+                                                      @Override
+                                                      public void handle(int i, ValueMap valueMap)
+                                                      {
+                                                        String name = valueMap.getString("name");
+
+                                                        shortcutMap.put(name,new RemoteFile(name,false));
+                                                      }
+                                                    };
       try
       {
+        // get roots from job
         BARServer.executeCommand(StringParser.format("ROOT_LIST jobUUID=%s allMounts=yes",
                                                      (jobUUID != null) ? jobUUID : ""
                                                     ),
                                  1,  // debugLevel
-                                 new Command.ResultHandler()
-                                 {
-                                   @Override
-                                   public void handle(int i, ValueMap valueMap)
-                                   {
-                                     String name = valueMap.getString("name");
-
-                                     shortcutMap.put(name,new RemoteFile(name,false));
-                                   }
-                                 }
+                                 rootListResultHandler
                                 );
       }
-      catch (Exception exception)
+      catch (Exception exception1)
       {
-        // ignored
+        // get default roots
+        try
+        {
+          BARServer.executeCommand(StringParser.format("ROOT_LIST allMounts=yes"),
+                                   1,  // debugLevel
+                                   rootListResultHandler
+                                  );
+        }
+        catch (IOException exception2)
+        {
+          // ignored
+        }
+        catch (BARException exception2)
+        {
+          // ignored
+        }
       }
 
       // create sorted list
@@ -4614,6 +4631,74 @@ throw new Error("NYI");
     {
       synchronized(fileList)
       {
+        Command.ResultHandler fileListResultHandler = new Command.ResultHandler()
+                                                      {
+                                                        @Override
+                                                        public void handle(int i, ValueMap valueMap)
+                                                        {
+                                                          RemoteFile file = null;
+
+                                                          try
+                                                          {
+                                                            FileTypes fileType   = valueMap.getEnum   ("fileType",FileTypes.class);
+                                                            String    name       = valueMap.getString ("name"                    );
+                                                            long      dateTime   = valueMap.getLong   ("dateTime", 0L            );
+                                                            boolean   hiddenFlag = valueMap.getBoolean("hidden",   false         );
+                                                            boolean   noDumpFlag = valueMap.getBoolean("noDump",   false         );
+                                                            switch (fileType)
+                                                            {
+                                                              case FILE:
+                                                                {
+                                                                  long size = valueMap.getLong("size",0L);
+
+                                                                  file = new RemoteFile(name,FileTypes.FILE,size,dateTime,hiddenFlag);
+                                                                }
+                                                                break;
+                                                              case DIRECTORY:
+                                                                {
+                                                                  boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
+
+                                                                  file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime,hiddenFlag);
+                                                                }
+                                                                break;
+                                                              case LINK:
+                                                                {
+                                                                  FileTypes destinationFileType = valueMap.getEnum   ("destinationFileType",FileTypes.class);
+
+                                                                  file = new RemoteFile(name,destinationFileType,dateTime,hiddenFlag);
+                                                                }
+                                                                break;
+                                                              case HARDLINK:
+                                                                {
+                                                                  long size = valueMap.getLong("size",0L);
+
+                                                                  file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime,hiddenFlag);
+                                                                }
+                                                                break;
+                                                              case SPECIAL:
+                                                                {
+                                                                  file = new RemoteFile(name,FileTypes.SPECIAL,dateTime,hiddenFlag);
+                                                                }
+                                                                break;
+                                                              case UNKNOWN:
+                                                                {
+                                                                  file = new RemoteFile(name,FileTypes.UNKNOWN);
+                                                                }
+                                                                break;
+                                                            }
+                                                          }
+                                                          catch (IllegalArgumentException exception)
+                                                          {
+                                                            if (Settings.debugLevel > 0)
+                                                            {
+                                                              BARControl.printInternalError(exception);
+                                                            }
+                                                          }
+
+                                                          fileList.add(file);
+                                                        }
+                                                      };
+
         fileList.clear();
         try
         {
@@ -4622,86 +4707,34 @@ throw new Error("NYI");
                                                        path.getAbsolutePath()
                                                       ),
                                    1,  // debugLevel
-                                   new Command.ResultHandler()
-                                   {
-                                     @Override
-                                     public void handle(int i, ValueMap valueMap)
-                                     {
-                                       RemoteFile file = null;
-
-                                       try
-                                       {
-                                         FileTypes fileType   = valueMap.getEnum   ("fileType",FileTypes.class);
-                                         String    name       = valueMap.getString ("name"                    );
-                                         long      dateTime   = valueMap.getLong   ("dateTime", 0L            );
-                                         boolean   hiddenFlag = valueMap.getBoolean("hidden",   false         );
-                                         boolean   noDumpFlag = valueMap.getBoolean("noDump",   false         );
-                                         switch (fileType)
-                                         {
-                                           case FILE:
-                                             {
-                                               long size = valueMap.getLong("size",0L);
-
-                                               file = new RemoteFile(name,FileTypes.FILE,size,dateTime,hiddenFlag);
-                                             }
-                                             break;
-                                           case DIRECTORY:
-                                             {
-                                               boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-
-                                               file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime,hiddenFlag);
-                                             }
-                                             break;
-                                           case LINK:
-                                             {
-                                               FileTypes destinationFileType = valueMap.getEnum   ("destinationFileType",FileTypes.class);
-
-                                               file = new RemoteFile(name,destinationFileType,dateTime,hiddenFlag);
-                                             }
-                                             break;
-                                           case HARDLINK:
-                                             {
-                                               long size = valueMap.getLong("size",0L);
-
-                                               file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime,hiddenFlag);
-                                             }
-                                             break;
-                                           case SPECIAL:
-                                             {
-                                               file = new RemoteFile(name,FileTypes.SPECIAL,dateTime,hiddenFlag);
-                                             }
-                                             break;
-                                           case UNKNOWN:
-                                             {
-                                               file = new RemoteFile(name,FileTypes.UNKNOWN);
-                                             }
-                                             break;
-                                         }
-                                       }
-                                       catch (IllegalArgumentException exception)
-                                       {
-                                         if (Settings.debugLevel > 0)
-                                         {
-                                           BARControl.printInternalError(exception);
-                                         }
-                                       }
-
-                                       fileList.add(file);
-                                     }
-                                   }
+                                   fileListResultHandler
                                   );
           iterator = fileList.listIterator();
           return true;
         }
-        catch (IOException exception)
+        catch (Exception exception1)
         {
-          iterator = null;
-          return false;
-        }
-        catch (BARException exception)
-        {
-          iterator = null;
-          return false;
+          try
+          {
+            BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
+                                                         path.getAbsolutePath()
+                                                        ),
+                                     1,  // debugLevel
+                                     fileListResultHandler
+                                    );
+            iterator = fileList.listIterator();
+            return true;
+          }
+          catch (IOException exception)
+          {
+            iterator = null;
+            return false;
+          }
+          catch (BARException exception)
+          {
+            iterator = null;
+            return false;
+          }
         }
       }
     }
