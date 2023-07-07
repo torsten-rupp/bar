@@ -3185,7 +3185,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     // discard first entry: directory
     storageDirectoryListHandle->webdav.lastNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
                                                                   storageDirectoryListHandle->webdav.rootNode,
-                                                                  "D:href",
+                                                                  "D:response",
                                                                   NULL,
                                                                   NULL,
                                                                   MXML_DESCEND
@@ -3253,7 +3253,7 @@ LOCAL bool StorageWebDAV_endOfDirectoryList(StorageDirectoryListHandle *storageD
     {
       storageDirectoryListHandle->webdav.currentNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
                                                                        storageDirectoryListHandle->webdav.rootNode,
-                                                                       "D:href",
+                                                                       "D:response",
                                                                        NULL,
                                                                        NULL,
                                                                        MXML_DESCEND
@@ -3274,6 +3274,7 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
 {
   Errors error;
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
+    mxml_node_t *propNode;
     mxml_node_t *node;
   #endif /* HAVE_CURL */
 
@@ -3288,7 +3289,7 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
     {
       storageDirectoryListHandle->webdav.currentNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
                                                                        storageDirectoryListHandle->webdav.rootNode,
-                                                                       "D:href",
+                                                                       "D:response",
                                                                        NULL,
                                                                        NULL,
                                                                        MXML_DESCEND
@@ -3302,7 +3303,23 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
        )
     {
       // get file name
-      String_setCString(fileName,mxmlGetOpaque(mxmlGetFirstChild(storageDirectoryListHandle->webdav.currentNode)));
+      node = mxmlFindElement(storageDirectoryListHandle->webdav.currentNode,
+                             storageDirectoryListHandle->webdav.currentNode,
+                             "D:href",
+                             NULL,
+                             NULL,
+                             MXML_DESCEND
+                            );
+      if (   (node != NULL)
+          && (mxmlGetType(node) == MXML_ELEMENT)
+          && (mxmlGetFirstChild(node) != NULL)
+          && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_OPAQUE)
+          && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
+         )
+      {
+        String_setCString(fileName,mxmlGetOpaque(mxmlGetFirstChild(node)));
+        if (String_length(fileName) > 1) String_trimEnd(fileName,"/");
+      }
 
       // get file info
       if (fileInfo != NULL)
@@ -3318,37 +3335,72 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
         fileInfo->major           = 0;
         fileInfo->minor           = 0;
 
-        node = mxmlFindElement(storageDirectoryListHandle->webdav.currentNode,
-                               storageDirectoryListHandle->webdav.rootNode,
-                               "lp1:getcontentlength",
-                               NULL,
-                               NULL,
-                               MXML_DESCEND
-                              );
-        if (   (node != NULL)
-            && (mxmlGetType(node) == MXML_ELEMENT)
-            && (mxmlGetFirstChild(node) != NULL)
-            && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_OPAQUE)
-            && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
+        propNode = mxmlFindElement(storageDirectoryListHandle->webdav.currentNode,
+                                   storageDirectoryListHandle->webdav.currentNode,
+                                   "D:prop",
+                                   NULL,
+                                   NULL,
+                                   MXML_DESCEND
+                                  );
+
+        if (   (propNode != NULL)
+            && (mxmlGetType(propNode) == MXML_ELEMENT)
+            && (mxmlGetFirstChild(propNode) != NULL)
+            && (mxmlGetType(mxmlGetFirstChild(propNode)) == MXML_OPAQUE)
+            && (mxmlGetOpaque(mxmlGetFirstChild(propNode)) != NULL)
            )
         {
-          stringToUInt64(mxmlGetOpaque(mxmlGetFirstChild(node)),&fileInfo->size,NULL);
-        }
-        node = mxmlFindElement(storageDirectoryListHandle->webdav.currentNode,
-                               storageDirectoryListHandle->webdav.rootNode,
-                               "lp1:getlastmodified",
-                               NULL,
-                               NULL,
-                               MXML_DESCEND
-                              );
-        if (   (node != NULL)
-            && (mxmlGetType(node) == MXML_ELEMENT)
-            && (mxmlGetFirstChild(node) != NULL)
-            && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_OPAQUE)
-            && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
-           )
-        {
-          fileInfo->timeModified = Misc_parseDateTime(mxmlGetOpaque(mxmlGetFirstChild(node)));
+          node = mxmlFindElement(propNode,
+                                 propNode,
+                                 "D:getcontenttype",
+                                 NULL,
+                                 NULL,
+                                 MXML_DESCEND
+                                );
+          if (   (node != NULL)
+              && (mxmlGetType(node) == MXML_ELEMENT)
+              && (mxmlGetFirstChild(node) != NULL)
+              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_OPAQUE)
+              && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
+             )
+          {
+            if (stringEndsWith(mxmlGetOpaque(mxmlGetFirstChild(node)),"unix-directory"))
+            {
+              fileInfo->type = FILE_TYPE_DIRECTORY;
+            }
+          }
+          node = mxmlFindElement(propNode,
+                                 propNode,
+                                 "lp1:getcontentlength",
+                                 NULL,
+                                 NULL,
+                                 MXML_DESCEND
+                                );
+          if (   (node != NULL)
+              && (mxmlGetType(node) == MXML_ELEMENT)
+              && (mxmlGetFirstChild(node) != NULL)
+              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_OPAQUE)
+              && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
+             )
+          {
+            stringToUInt64(mxmlGetOpaque(mxmlGetFirstChild(node)),&fileInfo->size,NULL);
+          }
+          node = mxmlFindElement(propNode,
+                                 propNode,
+                                 "lp1:getlastmodified",
+                                 NULL,
+                                 NULL,
+                                 MXML_DESCEND
+                                );
+          if (   (node != NULL)
+              && (mxmlGetType(node) == MXML_ELEMENT)
+              && (mxmlGetFirstChild(node) != NULL)
+              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_OPAQUE)
+              && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
+             )
+          {
+            fileInfo->timeModified = Misc_parseDateTime(mxmlGetOpaque(mxmlGetFirstChild(node)));
+          }
         }
       }
 
