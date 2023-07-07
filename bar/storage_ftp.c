@@ -546,7 +546,7 @@ LOCAL bool parseFTPDirectoryLine(String         line,
   uint       hour,minute;
   char       monthName[32];
   const char *s;
-  uint       z;
+  uint       i;
 
   assert(line != NULL);
   assert(fileName != NULL);
@@ -633,11 +633,11 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     {
       s++;
     }
-    for (z = 0; z < SIZE_OF_ARRAY(MONTH_DEFINITIONS); z++)
+    for (i = 0; i < SIZE_OF_ARRAY(MONTH_DEFINITIONS); i++)
     {
-      if (stringEqualsIgnoreCase(MONTH_DEFINITIONS[z].name,s))
+      if (stringEqualsIgnoreCase(MONTH_DEFINITIONS[i].name,s))
       {
-        month = MONTH_DEFINITIONS[z].month;
+        month = MONTH_DEFINITIONS[i].month;
         break;
       }
     }
@@ -700,11 +700,11 @@ LOCAL bool parseFTPDirectoryLine(String         line,
     {
       s++;
     }
-    for (z = 0; z < SIZE_OF_ARRAY(MONTH_DEFINITIONS); z++)
+    for (i = 0; i < SIZE_OF_ARRAY(MONTH_DEFINITIONS); i++)
     {
-      if (stringEqualsIgnoreCase(MONTH_DEFINITIONS[z].name,s))
+      if (stringEqualsIgnoreCase(MONTH_DEFINITIONS[i].name,s))
       {
-        month = MONTH_DEFINITIONS[z].month;
+        month = MONTH_DEFINITIONS[i].month;
         break;
       }
     }

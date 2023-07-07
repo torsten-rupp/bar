@@ -680,6 +680,339 @@ NYI: how to do certificate verification?
 }
 #endif /* HAVE_GNU_TLS */
 
+/***********************************************************************\
+* Name   : connectDescriptor
+* Purpose: connect to host by descriptor
+* Input  : socketType       - socket type; see SOCKET_TYPE_*
+*          socketDescriptor - socket descriptor
+*          loginName        - login user name
+*          password         - TLS/SSH private key password or NULL
+*          caData           - TLS CA data or NULL
+*          caLength         - TLS CA data length
+*          cert             - TLS cerificate or NULL
+*          certLength       - TLS cerificate data length
+*          publicKeyData    - TLS/SSH public key data or NULL
+*          publickeyLength  - TLS/SSH public key data length
+*          privateKeyData   - TLS/SSH private key data or NULL
+*          privateKeyLength - TLS/SSH private key data length
+*          socketFlags      - socket flags; see SOCKET_FLAG_*
+*          timeout          - timeout [ms] or WAIT_FOREVER/NO_WAIT
+* Output : socketHandle - socket handle
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors connectDescriptor(SocketHandle *socketHandle,
+                         int          socketDescriptor,
+                         SocketTypes  socketType,
+                         ConstString  loginName,
+                         Password     *password,
+                         const void   *caData,
+                         uint         caLength,
+                         const void   *certData,
+                         uint         certLength,
+                         const void   *publicKeyData,
+                         uint         publicKeyLength,
+                         const void   *privateKeyData,
+                         uint         privateKeyLength,
+                         SocketFlags  socketFlags,
+                         long         timeout
+                        )
+{
+  #ifdef HAVE_SSH2
+    int    ssh2Error;
+    char   *ssh2ErrorText;
+    Errors error;
+  #endif /* HAVE_SSH2 */
+
+  assert(socketHandle != NULL);
+  assert(socketDescriptor >= 0);
+
+  // initialize variables
+  socketHandle->type        = socketType;
+  socketHandle->handle      = socketDescriptor;
+  socketHandle->flags       = socketFlags;
+  socketHandle->isConnected = FALSE;
+
+  switch (socketType)
+  {
+    case SOCKET_TYPE_PLAIN:
+      {
+        #if  defined(PLATFORM_LINUX)
+          int n;
+        #elif defined(PLATFORM_WINDOWS)
+          int n;
+        #endif /* PLATFORM_... */
+
+        if (socketFlags != SOCKET_FLAG_NONE)
+        {
+          // enable non-blocking
+          if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
+          {
+            error = setNonBlocking(socketDescriptor,TRUE);
+            if (error != ERROR_NONE)
+            {
+              disconnectDescriptor(socketDescriptor);
+              return error;
+            }
+          }
+          #if   defined(PLATFORM_LINUX)
+            if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(void*)&n,sizeof(int));
+            }
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
+            }
+          #elif defined(PLATFORM_WINDOWS)
+            if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(char*)&n,sizeof(int));
+            }
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
+            }
+          #endif /* PLATFORM_... */
+        }
+      }
+      break;
+    case SOCKET_TYPE_TLS:
+      #ifdef HAVE_GNU_TLS
+      {
+        assert(loginName != NULL);
+
+        // check login name
+        if (String_isEmpty(loginName))
+        {
+          return ERROR_NO_LOGIN_NAME;
+        }
+
+        // check if certificate is valid
+        error = validateCertificate(certData,certLength);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // init SSL
+        error = initTLS(socketHandle,
+// TODO: parameter?
+                        NETWORK_TLS_TYPE_SERVER,
+                        caData,
+                        caLength,
+                        certData,
+                        certLength,
+                        privateKeyData,
+                        privateKeyLength,
+                        timeout
+                       );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+      #else /* not HAVE_GNU_TLS */
+        UNUSED_VARIABLE(loginName);
+        UNUSED_VARIABLE(password);
+        UNUSED_VARIABLE(caData);
+        UNUSED_VARIABLE(caLength);
+        UNUSED_VARIABLE(certData);
+        UNUSED_VARIABLE(certLength);
+        UNUSED_VARIABLE(publicKeyData);
+        UNUSED_VARIABLE(publicKeyLength);
+        UNUSED_VARIABLE(privateKeyData);
+        UNUSED_VARIABLE(privateKeyLength);
+
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_GNU_TLS */
+      break;
+    case SOCKET_TYPE_SSH:
+      #ifdef HAVE_SSH2
+      {
+        #if  defined(PLATFORM_LINUX)
+          int n;
+        #elif defined(PLATFORM_WINDOWS)
+          int n;
+        #endif /* PLATFORM_... */
+        int result;
+
+        assert(loginName != NULL);
+
+// TODO: check CA, cert?
+        UNUSED_VARIABLE(caData);
+        UNUSED_VARIABLE(caLength);
+        UNUSED_VARIABLE(certData);
+        UNUSED_VARIABLE(certLength);
+
+        // check login name
+        if (String_isEmpty(loginName))
+        {
+          return ERROR_NO_LOGIN_NAME;
+        }
+
+        // init SSH session
+        socketHandle->ssh2.session = libssh2_session_init();
+        if (socketHandle->ssh2.session == NULL)
+        {
+          return ERROR_SSH_SESSION_FAIL;
+        }
+        if ((socketFlags & SOCKET_FLAG_VERBOSE_MASK) != 0)
+        {
+          libssh2_trace(socketHandle->ssh2.session,
+                          0
+                        | (((socketFlags & SOCKET_FLAG_VERBOSE2) != 0)
+                             ?   LIBSSH2_TRACE_SOCKET
+                               | LIBSSH2_TRACE_TRANS
+                               | LIBSSH2_TRACE_CONN
+                             : 0
+                          )
+                        | (((socketFlags & SOCKET_FLAG_VERBOSE1) != 0)
+                             ?   LIBSSH2_TRACE_KEX
+                               | LIBSSH2_TRACE_AUTH
+                               | LIBSSH2_TRACE_SCP
+                               | LIBSSH2_TRACE_SFTP
+                               | LIBSSH2_TRACE_ERROR
+                               | LIBSSH2_TRACE_PUBLICKEY
+                             : 0
+                          )
+                       );
+        }
+        if (libssh2_session_startup(socketHandle->ssh2.session,
+                                    socketHandle->handle
+                                   ) != 0
+           )
+        {
+          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+          error = ERRORX_(SSH_SESSION_FAIL,ssh2Error,"%s",ssh2ErrorText);
+          libssh2_session_disconnect(socketHandle->ssh2.session,"");
+          libssh2_session_free(socketHandle->ssh2.session);
+          return error;
+        }
+        #ifdef HAVE_SSH2_KEEPALIVE_CONFIG
+// NYI/???: does not work?
+//          libssh2_keepalive_config(socketHandle->ssh2.session,0,2*60);
+        #endif /* HAVE_SSH2_KEEPALIVE_CONFIG */
+
+        // authorize with key/password
+        result = -1;
+        PASSWORD_DEPLOY_DO(plainPassword,password)
+        {
+          if (result != 0)
+          {
+            // authorize with key
+            if ((publicKeyData != NULL) && (privateKeyData != NULL))
+            {
+              result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
+                                                             String_cString(loginName),
+                                                             String_length(loginName),
+                                                             publicKeyData,
+                                                             publicKeyLength,
+                                                             privateKeyData,
+                                                             privateKeyLength,
+                                                             plainPassword
+                                                            );
+            }
+          }
+
+          if (result != 0)
+          {
+            // authorize with password
+            result = libssh2_userauth_password(socketHandle->ssh2.session,
+                                               String_cString(loginName),
+                                               plainPassword
+                                              );
+          }
+
+// disabled keyboard
+#if 0
+          if (result != 0)
+          {
+            // authorize interactive
+            result = libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,
+                                                           String_cString(loginName),
+                                                           NULL
+                                                          );
+          }
+#endif
+        }
+        if (result != 0)
+        {
+          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+          // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
+          if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
+          {
+            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"Unable to initialize private key from file");
+          }
+          else
+          {
+            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
+          }
+          libssh2_session_disconnect(socketHandle->ssh2.session,"");
+          libssh2_session_free(socketHandle->ssh2.session);
+          return error;
+        }
+        if (socketFlags != SOCKET_FLAG_NONE)
+        {
+          // enable/disable non-blocking
+          if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
+          {
+            error = setNonBlocking(socketHandle->handle,TRUE);
+            if (error != ERROR_NONE)
+            {
+              disconnectDescriptor(socketHandle->handle);
+              return error;
+            }
+          }
+
+          // enable/disable alive
+          #if  defined(PLATFORM_LINUX)
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
+            }
+          #elif defined(PLATFORM_WINDOWS)
+            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
+            {
+              n = 1;
+              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
+            }
+          #endif /* PLATFORM_... */
+        }
+      }
+      #else /* not HAVE_SSH2 */
+        UNUSED_VARIABLE(loginName);
+        UNUSED_VARIABLE(password);
+        UNUSED_VARIABLE(caData);
+        UNUSED_VARIABLE(caLength);
+        UNUSED_VARIABLE(certData);
+        UNUSED_VARIABLE(certLength);
+        UNUSED_VARIABLE(publicKeyData);
+        UNUSED_VARIABLE(publicKeyLength);
+        UNUSED_VARIABLE(privateKeyData);
+        UNUSED_VARIABLE(privateKeyLength);
+
+        return ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif /* HAVE_SSH2 */
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  socketHandle->isConnected = TRUE;
+
+  return ERROR_NONE;
+}
+
 // ----------------------------------------------------------------------
 
 Errors Network_initAll(void)
@@ -849,56 +1182,58 @@ Errors Network_connect(SocketHandle *socketHandle,
   assert(socketHandle != NULL);
   assert(hostName != NULL);
 
+  // init variables
   socketDescriptor = -1;
+
+  // get host IP address
+  #if   defined(HAVE_GETHOSTBYNAME_R)
+    if (gethostbyname_r(String_cString(hostName),
+                        &bufferAddressEntry,
+                        buffer,
+                        sizeof(buffer),
+                        &hostAddressEntry,
+                        &getHostByNameError
+                       ) != 0)
+
+    {
+      hostAddressEntry = NULL;
+    }
+  #elif defined(HAVE_GETHOSTBYNAME)
+    hostAddressEntry = gethostbyname(String_cString(hostName));
+  #else /* not HAVE_GETHOSTBYNAME_R */
+    hostAddressEntry = NULL;
+  #endif /* HAVE_GETHOSTBYNAME_R */
+  if (hostAddressEntry != NULL)
+  {
+    assert(hostAddressEntry->h_length > 0);
+    #ifdef PLATFORM_LINUX
+      ipAddress = (*((in_addr_t*)hostAddressEntry->h_addr_list[0]));
+    #else /* not PLATFORM_LINUX */
+      ipAddress = (*((unsigned long*)hostAddressEntry->h_addr_list[0]));
+    #endif /* PLATFORM_LINUX */
+  }
+  else
+  {
+    ipAddress = inet_addr(String_cString(hostName));
+  }
+  if (ipAddress == INADDR_NONE)
+  {
+    return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(hostName));
+  }
+
+  // create socket
+  socketDescriptor = socket(AF_INET,SOCK_STREAM,0);
+  if (socketDescriptor == -1)
+  {
+    return ERRORX_(CONNECT_FAIL,errno,"%E",errno);
+  }
+
   switch (socketType)
   {
     case SOCKET_TYPE_PLAIN:
     case SOCKET_TYPE_TLS:
       {
-        // get host IP address
-        #if   defined(HAVE_GETHOSTBYNAME_R)
-          if (gethostbyname_r(String_cString(hostName),
-                              &bufferAddressEntry,
-                              buffer,
-                              sizeof(buffer),
-                              &hostAddressEntry,
-                              &getHostByNameError
-                             ) != 0)
-
-          {
-            hostAddressEntry = NULL;
-          }
-        #elif defined(HAVE_GETHOSTBYNAME)
-          hostAddressEntry = gethostbyname(String_cString(hostName));
-        #else /* not HAVE_GETHOSTBYNAME_R */
-          hostAddressEntry = NULL;
-        #endif /* HAVE_GETHOSTBYNAME_R */
-        if (hostAddressEntry != NULL)
-        {
-          assert(hostAddressEntry->h_length > 0);
-          #ifdef PLATFORM_LINUX
-            ipAddress = (*((in_addr_t*)hostAddressEntry->h_addr_list[0]));
-          #else /* not PLATFORM_LINUX */
-            ipAddress = (*((unsigned long*)hostAddressEntry->h_addr_list[0]));
-          #endif /* PLATFORM_LINUX */
-        }
-        else
-        {
-          ipAddress = inet_addr(String_cString(hostName));
-        }
-        if (ipAddress == INADDR_NONE)
-        {
-          return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(hostName));
-        }
-
-        // create socket
-        socketDescriptor = socket(AF_INET,SOCK_STREAM,0);
-        if (socketDescriptor == -1)
-        {
-          return ERRORX_(CONNECT_FAIL,errno,"%E",errno);
-        }
-
-        // connect
+        // asynchronous connect
         error = setNonBlocking(socketDescriptor,TRUE);
         if (error != ERROR_NONE)
         {
@@ -918,7 +1253,7 @@ Errors Network_connect(SocketHandle *socketHandle,
            )
         {
           error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
-          disconnectDescriptor(socketDescriptor);
+          close(socketDescriptor);
           return error;
         }
 
@@ -930,14 +1265,16 @@ Errors Network_connect(SocketHandle *socketHandle,
         if ((events & HANDLE_EVENT_OUTPUT) == 0)
         {
           error = ERROR_CONNECT_TIMEOUT;
-          disconnectDescriptor(socketDescriptor);
+          shutdown(socketDescriptor,SHUTDOWN_FLAGS);
+          close(socketDescriptor);
           return error;
         }
 
         error = setNonBlocking(socketDescriptor,FALSE);
         if (error != ERROR_NONE)
         {
-          disconnectDescriptor(socketDescriptor);
+          shutdown(socketDescriptor,SHUTDOWN_FLAGS);
+          close(socketDescriptor);
           return error;
         }
       }
@@ -947,57 +1284,7 @@ Errors Network_connect(SocketHandle *socketHandle,
       {
         assert(loginName != NULL);
 
-        // initialize variables
-
-        // get host IP address
-        #if   defined(HAVE_GETHOSTBYNAME_R)
-          if (  (gethostbyname_r(String_cString(hostName),
-                                 &bufferAddressEntry,
-                                 buffer,
-                                 sizeof(buffer),
-                                 &hostAddressEntry,
-                                 &getHostByNameError
-                                ) != 0)
-              && (hostAddressEntry != NULL)
-             )
-          {
-            hostAddressEntry = NULL;
-          }
-        #elif defined(HAVE_GETHOSTBYNAME)
-          hostAddressEntry = gethostbyname(String_cString(hostName));
-        #else /* not HAVE_GETHOSTBYNAME_R */
-          hostAddressEntry = NULL;
-        #endif /* HAVE_GETHOSTBYNAME_R */
-        if (hostAddressEntry != NULL)
-        {
-          assert(hostAddressEntry->h_length > 0);
-          #ifdef PLATFORM_LINUX
-            ipAddress = (*((in_addr_t*)hostAddressEntry->h_addr_list[0]));
-          #else /* not PLATFORM_LINUX */
-            ipAddress = (*((unsigned long*)hostAddressEntry->h_addr_list[0]));
-          #endif /* PLATFORM_LINUX */
-        }
-        else
-        {
-          ipAddress = inet_addr(String_cString(hostName));
-        }
-        if (ipAddress == INADDR_NONE)
-        {
-          return ERRORX_(HOST_NOT_FOUND,0,"%s",String_cString(hostName));
-        }
-
-        // check login name
-        if (String_isEmpty(loginName))
-        {
-          return ERROR_NO_LOGIN_NAME;
-        }
-
         // connect
-        socketDescriptor = socket(AF_INET,SOCK_STREAM,0);
-        if (socketDescriptor == -1)
-        {
-          return ERRORX_(CONNECT_FAIL,errno,"%E",errno);
-        }
         socketAddress.sin_family      = AF_INET;
         socketAddress.sin_addr.s_addr = ipAddress;
         socketAddress.sin_port        = htons(hostPort);
@@ -1008,7 +1295,7 @@ Errors Network_connect(SocketHandle *socketHandle,
            )
         {
           error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
-          disconnectDescriptor(socketDescriptor);
+          close(socketDescriptor);
           return error;
         }
       }
@@ -1034,22 +1321,30 @@ Errors Network_connect(SocketHandle *socketHandle,
     #endif /* NDEBUG */
   }
 
-  return Network_connectDescriptor(socketHandle,
-                                   socketDescriptor,
-                                   socketType,
-                                   loginName,
-                                   password,
-                                   caData,
-                                   caLength,
-                                   certData,
-                                   certLength,
-                                   publicKeyData,
-                                   publicKeyLength,
-                                   privateKeyData,
-                                   privateKeyLength,
-                                   socketFlags,
-                                   timeout
-                                  );
+  error = connectDescriptor(socketHandle,
+                            socketDescriptor,
+                            socketType,
+                            loginName,
+                            password,
+                            caData,
+                            caLength,
+                            certData,
+                            certLength,
+                            publicKeyData,
+                            publicKeyLength,
+                            privateKeyData,
+                            privateKeyLength,
+                            socketFlags,
+                            timeout
+                           );
+  if (error != ERROR_NONE)
+  {
+    shutdown(socketDescriptor,SHUTDOWN_FLAGS);
+    close(socketDescriptor);
+    return error;
+  }
+
+  return ERROR_NONE;
 }
 
 Errors Network_connectDescriptor(SocketHandle *socketHandle,
@@ -1069,302 +1364,24 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
                                  long         timeout
                                 )
 {
-  #ifdef HAVE_SSH2
-    int    ssh2Error;
-    char   *ssh2ErrorText;
-    Errors error;
-  #endif /* HAVE_SSH2 */
-
   assert(socketHandle != NULL);
 
-  // initialize variables
-  socketHandle->type        = socketType;
-  socketHandle->handle      = socketDescriptor;
-  socketHandle->flags       = socketFlags;
-  socketHandle->isConnected = FALSE;
-
-  switch (socketType)
-  {
-    case SOCKET_TYPE_PLAIN:
-      {
-        #if  defined(PLATFORM_LINUX)
-          int n;
-        #elif defined(PLATFORM_WINDOWS)
-          int n;
-        #endif /* PLATFORM_... */
-
-        if (socketFlags != SOCKET_FLAG_NONE)
-        {
-          // enable non-blocking
-          if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
-          {
-            error = setNonBlocking(socketDescriptor,TRUE);
-            if (error != ERROR_NONE)
-            {
-              disconnectDescriptor(socketDescriptor);
-              return error;
-            }
-          }
-          #if   defined(PLATFORM_LINUX)
-            if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
-            {
-              n = 1;
-              setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(void*)&n,sizeof(int));
-            }
-            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
-            {
-              n = 1;
-              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
-            }
-          #elif defined(PLATFORM_WINDOWS)
-            if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
-            {
-              n = 1;
-              setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(char*)&n,sizeof(int));
-            }
-            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
-            {
-              n = 1;
-              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
-            }
-          #endif /* PLATFORM_... */
-        }
-      }
-      break;
-    case SOCKET_TYPE_TLS:
-      #ifdef HAVE_GNU_TLS
-      {
-        assert(loginName != NULL);
-
-        // check login name
-        if (String_isEmpty(loginName))
-        {
-          return ERROR_NO_LOGIN_NAME;
-        }
-
-        // check if certificate is valid
-        error = validateCertificate(certData,certLength);
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        // init SSL
-        error = initTLS(socketHandle,
-// TODO: parameter?
-                        NETWORK_TLS_TYPE_SERVER,
-                        caData,
-                        caLength,
-                        certData,
-                        certLength,
-                        privateKeyData,
-                        privateKeyLength,
-                        timeout
-                       );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-      }
-      #else /* not HAVE_GNU_TLS */
-        UNUSED_VARIABLE(loginName);
-        UNUSED_VARIABLE(password);
-        UNUSED_VARIABLE(caData);
-        UNUSED_VARIABLE(caLength);
-        UNUSED_VARIABLE(certData);
-        UNUSED_VARIABLE(certLength);
-        UNUSED_VARIABLE(publicKeyData);
-        UNUSED_VARIABLE(publicKeyLength);
-        UNUSED_VARIABLE(privateKeyData);
-        UNUSED_VARIABLE(privateKeyLength);
-
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_GNU_TLS */
-      break;
-    case SOCKET_TYPE_SSH:
-      #ifdef HAVE_SSH2
-      {
-        #if  defined(PLATFORM_LINUX)
-          int n;
-        #elif defined(PLATFORM_WINDOWS)
-          int n;
-        #endif /* PLATFORM_... */
-        int result;
-
-        assert(loginName != NULL);
-
-        UNUSED_VARIABLE(caData);
-        UNUSED_VARIABLE(caLength);
-        UNUSED_VARIABLE(certData);
-        UNUSED_VARIABLE(certLength);
-
-        // check login name
-        if (String_isEmpty(loginName))
-        {
-          return ERROR_NO_LOGIN_NAME;
-        }
-
-        // init SSH session
-        socketHandle->ssh2.session = libssh2_session_init();
-        if (socketHandle->ssh2.session == NULL)
-        {
-          return ERROR_SSH_SESSION_FAIL;
-        }
-        if ((socketFlags & SOCKET_FLAG_VERBOSE_MASK) != 0)
-        {
-          libssh2_trace(socketHandle->ssh2.session,
-                          0
-                        | (((socketFlags & SOCKET_FLAG_VERBOSE2) != 0)
-                             ?   LIBSSH2_TRACE_SOCKET
-                               | LIBSSH2_TRACE_TRANS
-                               | LIBSSH2_TRACE_CONN
-                             : 0
-                          )
-                        | (((socketFlags & SOCKET_FLAG_VERBOSE1) != 0)
-                             ?   LIBSSH2_TRACE_KEX
-                               | LIBSSH2_TRACE_AUTH
-                               | LIBSSH2_TRACE_SCP
-                               | LIBSSH2_TRACE_SFTP
-                               | LIBSSH2_TRACE_ERROR
-                               | LIBSSH2_TRACE_PUBLICKEY
-                             : 0
-                          )
-                       );
-        }
-        if (libssh2_session_startup(socketHandle->ssh2.session,
-                                    socketHandle->handle
-                                   ) != 0
-           )
-        {
-          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-          error = ERRORX_(SSH_SESSION_FAIL,ssh2Error,"%s",ssh2ErrorText);
-          libssh2_session_disconnect(socketHandle->ssh2.session,"");
-          libssh2_session_free(socketHandle->ssh2.session);
-          return error;
-        }
-        #ifdef HAVE_SSH2_KEEPALIVE_CONFIG
-// NYI/???: does not work?
-//          libssh2_keepalive_config(socketHandle->ssh2.session,0,2*60);
-        #endif /* HAVE_SSH2_KEEPALIVE_CONFIG */
-
-#if 1
-        // authorize with key/password
-        result = 0;
-        PASSWORD_DEPLOY_DO(plainPassword,password)
-        {
-          if ((publicKeyData != NULL) && (privateKeyData != NULL))
-          {
-            result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
-                                                           String_cString(loginName),
-                                                           String_length(loginName),
-                                                           publicKeyData,
-                                                           publicKeyLength,
-                                                           privateKeyData,
-                                                           privateKeyLength,
-                                                           plainPassword
-                                                          );
-          }
-          else
-          {
-            result = libssh2_userauth_password(socketHandle->ssh2.session,
-                                               String_cString(loginName),
-                                               plainPassword
-                                              );
-          }
-        }
-        if (result != 0)
-        {
-          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-          // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
-          if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
-          {
-            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"Unable to initialize private key from file");
-          }
-          else
-          {
-            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
-          }
-          libssh2_session_disconnect(socketHandle->ssh2.session,"");
-          libssh2_session_free(socketHandle->ssh2.session);
-          return error;
-        }
-#else
-        // authorize interactive
-        if (libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,
-                                                  String_cString(loginName),
-                                                  NULL
-                                                ) != 0
-           )
-        {
-          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-          // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
-          if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
-          {
-            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"Unable to initialize private key");
-          }
-          else
-          {
-            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
-          }
-          libssh2_session_disconnect(socketHandle->ssh2.session,"");
-          libssh2_session_free(socketHandle->ssh2.session);
-          return error;
-        }
-#endif /* 0 */
-        if (socketFlags != SOCKET_FLAG_NONE)
-        {
-          // enable/disable non-blocking
-          if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
-          {
-            error = setNonBlocking(socketHandle->handle,TRUE);
-            if (error != ERROR_NONE)
-            {
-              disconnectDescriptor(socketHandle->handle);
-              return error;
-            }
-          }
-
-          // enable/disable alive
-          #if  defined(PLATFORM_LINUX)
-            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
-            {
-              n = 1;
-              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
-            }
-          #elif defined(PLATFORM_WINDOWS)
-            if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
-            {
-              n = 1;
-              setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
-            }
-          #endif /* PLATFORM_... */
-        }
-      }
-      #else /* not HAVE_SSH2 */
-        UNUSED_VARIABLE(loginName);
-        UNUSED_VARIABLE(password);
-        UNUSED_VARIABLE(caData);
-        UNUSED_VARIABLE(caLength);
-        UNUSED_VARIABLE(certData);
-        UNUSED_VARIABLE(certLength);
-        UNUSED_VARIABLE(publicKeyData);
-        UNUSED_VARIABLE(publicKeyLength);
-        UNUSED_VARIABLE(privateKeyData);
-        UNUSED_VARIABLE(privateKeyLength);
-
-        return ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
-
-  socketHandle->isConnected = TRUE;
-
-  return ERROR_NONE;
+  return connectDescriptor(socketHandle,
+                           socketDescriptor,
+                           socketType,
+                           loginName,
+                           password,
+                           caData,
+                           caLength,
+                           certData,
+                           certLength,
+                           publicKeyData,
+                           publicKeyLength,
+                           privateKeyData,
+                           privateKeyLength,
+                           socketFlags,
+                           timeout
+                          );
 }
 
 void Network_disconnect(SocketHandle *socketHandle)

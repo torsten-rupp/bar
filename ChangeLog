@@ -25,6 +25,7 @@
   * fixed store restore pane sizes
   * fixed schedule date/time with day light saving: avoid
     invalid date/time
+  * fixed ssh login: try key+password
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission
