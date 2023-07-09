@@ -738,6 +738,28 @@ bool File_parseFileSpecialType(const char *name, FileSpecialTypes *fileSpecialTy
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : File_getDefaultFilePermissions
+* Purpose: get default file permissions
+* Input  : -
+* Output : -
+* Return : default file permissions
+* Notes  : -
+\***********************************************************************/
+
+FilePermissions File_getDefaultFilePermissions(void);
+
+/***********************************************************************\
+* Name   : File_getDefaultDirectoryPermissions
+* Purpose: get default directory permissions
+* Input  : -
+* Output : -
+* Return : default directory permissions
+* Notes  : -
+\***********************************************************************/
+
+FilePermissions File_getDefaultDirectoryPermissions(void);
+
+/***********************************************************************\
 * Name   : File_open, File_openCString
 * Purpose: open file
 * Input  : fileHandle - file handle

@@ -1904,6 +1904,48 @@ bool File_parseFileSpecialType(const char *name, FileSpecialTypes *fileSpecialTy
 
 /*---------------------------------------------------------------------*/
 
+FilePermissions File_getDefaultFilePermissions(void)
+{
+  FilePermissions filePermissions;
+
+  #if   defined(PLATFORM_LINUX)
+    mode_t mask;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
+
+  #if   defined(PLATFORM_LINUX)
+    mask = umask(0);
+    umask(mask);
+
+    filePermissions = (FilePermissions)(0666 & ~mask);
+  #elif defined(PLATFORM_WINDOWS)
+    filePermissions = (FilePermissions)0;
+  #endif /* PLATFORM_... */
+
+  return filePermissions;
+}
+
+FilePermissions File_getDefaultDirectoryPermissions(void)
+{
+  FilePermissions filePermissions;
+
+  #if   defined(PLATFORM_LINUX)
+    mode_t mask;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
+
+  #if   defined(PLATFORM_LINUX)
+    mask = umask(0);
+    umask(mask);
+
+    filePermissions = (FilePermissions)(0777 & ~mask);
+  #elif defined(PLATFORM_WINDOWS)
+    filePermissions = (FilePermissions)0;
+  #endif /* PLATFORM_... */
+
+  return filePermissions;
+}
+
 #ifdef NDEBUG
 Errors File_open(FileHandle   *fileHandle,
                  ConstString  fileName,
