@@ -415,6 +415,8 @@ LOCAL Errors checkWebDAVLogin(StorageTypes type,
       // check access via URL
       if (error == ERROR_NONE)
       {
+        curlCode = CURLE_OK;
+
         if (curlCode == CURLE_OK)
         {
           curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
@@ -1273,11 +1275,11 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
         storageInfo->webdav.serverId = Configuration_initWebDAVSServerSettings(&webDAVServer,storageInfo->storageSpecifier.hostName,jobOptions);
         AUTOFREE_ADD(&autoFreeList,&webDAVServer,{ Configuration_doneWebDAVSServerSettings(&webDAVServer); });
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; // not reached
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break; // not reached
     }
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,webDAVServer.loginName);
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
@@ -1415,11 +1417,11 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
       case STORAGE_TYPE_WEBDAVS:
         Configuration_doneWebDAVSServerSettings(&webDAVServer);
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; // not reached
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break; // not reached
     }
     AutoFree_done(&autoFreeList);
 
@@ -3119,11 +3121,11 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
         storageDirectoryListHandle->webdav.serverId = Configuration_initWebDAVSServerSettings(&webDAVServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
         AUTOFREE_ADD(&autoFreeList,&webDAVServer,{ Configuration_doneWebDAVSServerSettings(&webDAVServer); });
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; // not reached
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break; // not reached
     }
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,webDAVServer.loginName);
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
@@ -3349,11 +3351,11 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
       case STORAGE_TYPE_WEBDAVS:
         Configuration_doneWebDAVSServerSettings(&webDAVServer);
         break;
-      #ifndef NDEBUG
-        default:
+      default:
+        #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break; // not reached
-      #endif /* NDEBUG */
+        #endif /* NDEBUG */
+        break; // not reached
     }
     AutoFree_done(&autoFreeList);
 

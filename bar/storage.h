@@ -1052,9 +1052,9 @@ bool Storage_equalNames(ConstString storageName1,
 /***********************************************************************\
 * Name   : Storage_getName
 * Purpose: get storage name
-* Input  : string                 - name variable (can be NULL)
-*          storageSpecifierString - storage specifier string
-*          archiveName            - archive name (can be NULL)
+* Input  : string           - name variable (can be NULL)
+*          storageSpecifier - storage specifier string
+*          archiveName      - archive name (can be NULL)
 * Output : -
 * Return : storage name
 * Notes  : if archiveName is NULL file name from storageSpecifier is used
@@ -1068,9 +1068,9 @@ String Storage_getName(String                 string,
 /***********************************************************************\
 * Name   : Storage_getPrintableName
 * Purpose: get printable storage name (without password)
-* Input  : string                 - name variable (can be NULL)
-*          storageSpecifierString - storage specifier string
-*          archiveName            - archive name (can be NULL)
+* Input  : string           - name variable (can be NULL)
+*          storageSpecifier - storage specifier string
+*          archiveName      - archive name (can be NULL)
 * Output : -
 * Return : printable storage name
 * Notes  : if archiveName is NULL file name from storageSpecifier is used
@@ -1570,6 +1570,17 @@ Errors Storage_transferFromFile(FileHandle                  *fromFileHandle,
                                );
 
 /***********************************************************************\
+* Name   : Storage_getSize
+* Purpose: get storage file size
+* Input  : storageHandle - storage handle
+* Output : -
+* Return : size of storage
+* Notes  : -
+\***********************************************************************/
+
+uint64 Storage_getSize(StorageHandle *storageHandle);
+
+/***********************************************************************\
 * Name   : Storage_tell
 * Purpose: get current position in storage file
 * Input  : storageHandle - storage handle
@@ -1595,17 +1606,6 @@ Errors Storage_tell(StorageHandle *storageHandle,
 Errors Storage_seek(StorageHandle *storageHandle,
                     uint64        offset
                    );
-
-/***********************************************************************\
-* Name   : Storage_getSize
-* Purpose: get storage file size
-* Input  : storageHandle - storage handle
-* Output : -
-* Return : size of storage
-* Notes  : -
-\***********************************************************************/
-
-uint64 Storage_getSize(StorageHandle *storageHandle);
 
 /***********************************************************************\
 * Name   : Storage_copyToLocal
@@ -1685,18 +1685,6 @@ Errors Storage_rename(const StorageInfo *storageInfo,
                      );
 
 /***********************************************************************\
-* Name   : Storage_delete
-* Purpose: delete storage file
-* Input  : storageInfo - storage
-*          archiveName - archive name (can be NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName);
-
-/***********************************************************************\
 * Name   : Storage_makeDirectory
 * Purpose: create directories
 * Input  : storageInfo - storage info
@@ -1719,6 +1707,18 @@ Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName);
 \***********************************************************************/
 
 Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString pathName);
+
+/***********************************************************************\
+* Name   : Storage_delete
+* Purpose: delete storage file/directory
+* Input  : storageInfo - storage
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName);
 
 #if 0
 still not complete
