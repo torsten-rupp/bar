@@ -1149,6 +1149,7 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
   if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
   if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
+//fprintf(stderr,"%s:%d: %d %d\n",__FILE__,__LINE__,storageSpecifier1->type,storageSpecifier2->type);
   if (storageSpecifier1->type == storageSpecifier2->type)
   {
     switch (storageSpecifier1->type)
@@ -4812,7 +4813,7 @@ Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
 
         // check if sub-directory, add to directory list
         if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
-            && (!skipUnreadableFlag || File_isReadable(name))
+//            && (!skipUnreadableFlag || Storage_isReadable(,name))
            )
         {
           StringList_append(&directoryList,name);

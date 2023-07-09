@@ -1193,8 +1193,8 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
 
 LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
-  bool         existsFlag;
-  Errors       error;
+  bool   existsFlag;
+  Errors error;
   #ifdef HAVE_SSH2
     SocketHandle socketHandle;
   #endif /* HAVE_SSH2 */
@@ -1204,7 +1204,6 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
 
   existsFlag = FALSE;
 
-  error = ERROR_UNKNOWN;
   #ifdef HAVE_SSH2
     {
       error = Network_connect(&socketHandle,
@@ -1242,10 +1241,7 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
-
-    error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
-  assert(error != ERROR_UNKNOWN);
 
   return existsFlag;
 }
