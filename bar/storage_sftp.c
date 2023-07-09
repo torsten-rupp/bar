@@ -1,4 +1,13 @@
 /***********************************************************************\
+* Name   : _
+* Purpose:
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+/***********************************************************************\
 *
 * $Revision: 4036 $
 * $Date: 2015-05-30 01:48:57 +0200 (Sat, 30 May 2015) $
@@ -74,6 +83,36 @@
 // ----------------------------------------------------------------------
 
 #ifdef HAVE_SSH2
+/***********************************************************************\
+* Name   : sftpGetPermissions
+* Purpose: get SFTP permissions
+* Input  : filePermissions - file permissions
+* Output : -
+* Return : SFTP permissions
+* Notes  : -
+\***********************************************************************/
+
+LOCAL long sftpGetPermissions(FilePermissions filePermissions)
+{
+  long permissions;
+
+  permissions = 0;
+  if (IS_SET(filePermissions,FILE_PERMISSION_USER_READ    )) permissions |= LIBSSH2_SFTP_S_IRUSR;
+  if (IS_SET(filePermissions,FILE_PERMISSION_USER_WRITE   )) permissions |= LIBSSH2_SFTP_S_IWUSR;
+  if (IS_SET(filePermissions,FILE_PERMISSION_USER_EXECUTE )) permissions |= LIBSSH2_SFTP_S_IXUSR;
+  if (IS_SET(filePermissions,FILE_PERMISSION_USER_ACCESS  )) permissions |= LIBSSH2_SFTP_S_IXUSR;
+  if (IS_SET(filePermissions,FILE_PERMISSION_GROUP_READ   )) permissions |= LIBSSH2_SFTP_S_IRGRP;
+  if (IS_SET(filePermissions,FILE_PERMISSION_GROUP_WRITE  )) permissions |= LIBSSH2_SFTP_S_IWGRP;
+  if (IS_SET(filePermissions,FILE_PERMISSION_GROUP_EXECUTE)) permissions |= LIBSSH2_SFTP_S_IXGRP;
+  if (IS_SET(filePermissions,FILE_PERMISSION_GROUP_ACCESS )) permissions |= LIBSSH2_SFTP_S_IXGRP;
+  if (IS_SET(filePermissions,FILE_PERMISSION_OTHER_READ   )) permissions |= LIBSSH2_SFTP_S_IROTH;
+  if (IS_SET(filePermissions,FILE_PERMISSION_OTHER_WRITE  )) permissions |= LIBSSH2_SFTP_S_IWOTH;
+  if (IS_SET(filePermissions,FILE_PERMISSION_OTHER_EXECUTE)) permissions |= LIBSSH2_SFTP_S_IXOTH;
+  if (IS_SET(filePermissions,FILE_PERMISSION_OTHER_ACCESS )) permissions |= LIBSSH2_SFTP_S_IXOTH;
+
+  return permissions;
+}
+
 /***********************************************************************\
 * Name   : sftpSendCallback
 * Purpose: sftp send callback: count total sent bytes and pass to
@@ -493,9 +532,7 @@ LOCAL Errors sftpMakeDirectory(SocketHandle *socketHandle,
       {
         ssh2ErrorCode = libssh2_sftp_mkdir(sftp,
                                            String_cString(directoryName),
-                                            LIBSSH2_SFTP_S_IRWXU
-                                           |LIBSSH2_SFTP_S_IRGRP|LIBSSH2_SFTP_S_IXGRP
-                                           |LIBSSH2_SFTP_S_IROTH|LIBSSH2_SFTP_S_IXOTH
+                                           sftpGetPermissions(File_getDefaultDirectoryPermissions())
                                           );
         if      (ssh2ErrorCode == 0)
         {
@@ -786,6 +823,17 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sftpSpecifier,
   return result;
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_equalSpecifiers
+* Purpose: compare specifiers if equals
+* Input  : storageSpecifier1,storageSpecifier2 - specifiers
+*          archiveName1,archiveName2           - archive names (can be
+*                                                NULL)
+* Output : -
+* Return : TRUE iff equals
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool StorageSFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
                                        ConstString            archiveName1,
                                        const StorageSpecifier *storageSpecifier2,
@@ -804,6 +852,17 @@ LOCAL bool StorageSFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1
          && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)
          && String_equals(archiveName1,archiveName2);
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_getName
+* Purpose: get storage name
+* Input  : string           - name variable (can be NULL)
+*          storageSpecifier - storage specifier string
+*          archiveName      - archive name (can be NULL)
+* Output : -
+* Return : storage name
+* Notes  : if archiveName is NULL file name from storageSpecifier is used
+\***********************************************************************/
 
 LOCAL String StorageSFTP_getName(String                 string,
                                  const StorageSpecifier *storageSpecifier,
@@ -852,6 +911,17 @@ LOCAL String StorageSFTP_getName(String                 string,
   return string;
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_getPrintableName
+* Purpose: get printable storage name (without password)
+* Input  : string           - name variable (can be NULL)
+*          storageSpecifier - storage specifier string
+*          archiveName      - archive name (can be NULL)
+* Output : -
+* Return : printable storage name
+* Notes  : if archiveName is NULL file name from storageSpecifier is used
+\***********************************************************************/
+
 LOCAL void StorageSFTP_getPrintableName(String                 string,
                                         const StorageSpecifier *storageSpecifier,
                                         ConstString            archiveName
@@ -889,6 +959,20 @@ LOCAL void StorageSFTP_getPrintableName(String                 string,
     String_append(string,storageFileName);
   }
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_init
+* Purpose: init new storage
+* Input  : storageInfo                     - storage info variable
+*          storageSpecifier                - storage specifier structure
+*          jobOptions                      - job options or NULL
+*          maxBandWidthList                - list with max. band width
+*                                            to use [bits/s] or NULL
+*          serverConnectionPriority        - server connection priority
+* Output : storageInfo - initialized storage info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
                               const StorageSpecifier     *storageSpecifier,
@@ -1054,6 +1138,15 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
   #endif /* HAVE_SSH2 */
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_done
+* Purpose: deinit storage
+* Input  : storageInfo - storage info
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageSFTP_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
@@ -1069,6 +1162,15 @@ LOCAL Errors StorageSFTP_done(StorageInfo *storageInfo)
 
   return ERROR_NONE;
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_isServerAllocationPending
+* Purpose: check if server allocation is pending
+* Input  : storageInfo - storage info
+* Output : -
+* Return : TRUE iff server allocation pending
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool StorageSFTP_isServerAllocationPending(const StorageInfo *storageInfo)
 {
@@ -1089,9 +1191,21 @@ LOCAL bool StorageSFTP_isServerAllocationPending(const StorageInfo *storageInfo)
   return serverAllocationPending;
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_preProcess
+* Purpose: pre-process storage
+* Input  : storageInfo - storage info
+*          archiveName - archive name
+*          time        - time
+*          initialFlag - TRUE iff initial call, FALSE otherwise
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
                                     ConstString       archiveName,
-                                    time_t            timestamp,
+                                    time_t            time,
                                     bool              initialFlag
                                    )
 {
@@ -1120,7 +1234,7 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
       {
         printInfo(1,"Write pre-processing...");
         error = executeTemplate(String_cString(globalOptions.sftp.writePreProcessCommand),
-                                timestamp,
+                                time,
                                 textMacros.data,
                                 textMacros.count,
                                 CALLBACK_(executeIOOutput,NULL)
@@ -1131,7 +1245,7 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
-    UNUSED_VARIABLE(timestamp);
+    UNUSED_VARIABLE(time);
     UNUSED_VARIABLE(initialFlag);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1140,9 +1254,21 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
   return error;
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_postProcess
+* Purpose: post-process storage
+* Input  : storageInfo - storage info
+*          archiveName - archive name
+*          time        - time
+*          finalFlag   - TRUE iff final call, FALSE otherwise
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
                                      ConstString       archiveName,
-                                     time_t            timestamp,
+                                     time_t            time,
                                      bool              finalFlag
                                     )
 {
@@ -1171,7 +1297,7 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
       {
         printInfo(1,"Write post-processing...");
         error = executeTemplate(String_cString(globalOptions.sftp.writePostProcessCommand),
-                                timestamp,
+                                time,
                                 textMacros.data,
                                 textMacros.count,
                                 CALLBACK_(executeIOOutput,NULL)
@@ -1182,7 +1308,7 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
-    UNUSED_VARIABLE(timestamp);
+    UNUSED_VARIABLE(time);
     UNUSED_VARIABLE(finalFlag);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1190,6 +1316,16 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
 
   return error;
 }
+
+/***********************************************************************\
+* Name   : Storage_exists
+* Purpose: check if storage file exists
+* Input  : storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : TRUE iff storage file exists
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
@@ -1245,6 +1381,16 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
 
   return existsFlag;
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_isFile
+* Purpose: check if storage file
+* Input  : storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : TRUE if storage file, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
 {
@@ -1308,6 +1454,16 @@ LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiv
   return isFileFlag;
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_isDirectory
+* Purpose: check if storage directory
+* Input  : storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : TRUE if storage directory, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool StorageSFTP_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
 {
   bool         isDirectoryFlag;
@@ -1370,6 +1526,17 @@ LOCAL bool StorageSFTP_isDirectory(const StorageInfo *storageInfo, ConstString a
   return isDirectoryFlag;
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_isReadable
+* Purpose: check if storage file exists and is readable
+* Input  : storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : TRUE if storage file/directory exists and is readable, FALSE
+*          otherweise
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool StorageSFTP_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
@@ -1379,8 +1546,19 @@ LOCAL bool StorageSFTP_isReadable(const StorageInfo *storageInfo, ConstString ar
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-  return ERROR_STILL_NOT_IMPLEMENTED;
+return ERROR_STILL_NOT_IMPLEMENTED;
 }
+
+/***********************************************************************\
+* Name   : Storage_isWritable
+* Purpose: check if storage file exists and is writable
+* Input  : storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : TRUE if storage file/directory exists and is writable, FALSE
+*          otherweise
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool StorageSFTP_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
 {
@@ -1396,6 +1574,16 @@ return ERROR_STILL_NOT_IMPLEMENTED;
   return File_exists(archiveName);
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_getTmpName
+* Purpose: get temporary archive name
+* Input  : archiveName - archive name variable
+*          storageInfo - storage info
+* Output : archiveName - temporary archive name
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageSFTP_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);
@@ -1408,6 +1596,18 @@ LOCAL Errors StorageSFTP_getTmpName(String archiveName, const StorageInfo *stora
 //TODO
   return ERROR_STILL_NOT_IMPLEMENTED;
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_create
+* Purpose: create new/append to storage
+* Input  : storageHandle - storage handle variable
+*          archiveName   - archive name (can be NULL)
+*          archiveSize   - archive size [bytes]
+*          forceFlag     - TRUE to force overwrite existing storage
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                                 ConstString   fileName,
@@ -1525,9 +1725,7 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
       // create directory
       if (libssh2_sftp_mkdir(storageHandle->sftp.sftp,
                              String_cString(directoryName),
-                              LIBSSH2_SFTP_S_IRWXU
-                             |LIBSSH2_SFTP_S_IRGRP|LIBSSH2_SFTP_S_IXGRP
-                             |LIBSSH2_SFTP_S_IROTH|LIBSSH2_SFTP_S_IXOTH
+                             sftpGetPermissions(File_getDefaultDirectoryPermissions())
                             ) != 0
          )
       {
@@ -1555,8 +1753,7 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                                                        (storageHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
                                                          ? LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_APPEND
                                                          : LIBSSH2_FXF_CREAT|LIBSSH2_FXF_WRITE|LIBSSH2_FXF_TRUNC,
-// TODO: which?
-LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
+                                                       sftpGetPermissions(File_getDefaultFilePermissions())
                                                       );
     if (storageHandle->sftp.sftpHandle == NULL)
     {
@@ -1583,6 +1780,16 @@ LIBSSH2_SFTP_S_IRUSR|LIBSSH2_SFTP_S_IWUSR
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_open
+* Purpose: open storage for reading
+* Input  : storageHandle - storage handle variable
+*          archiveName   - archive name (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                               ConstString   archiveName
@@ -1735,6 +1942,15 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_close
+* Purpose: close storage file
+* Input  : storageHandle - storage handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
@@ -1769,6 +1985,15 @@ LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
   #endif /* HAVE_SSH2 */
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_eof
+* Purpose: check if end-of-file in storage
+* Input  : storageHandle - storage handle
+* Output : -
+* Return : TRUE if end-of-file, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
 LOCAL bool StorageSFTP_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
@@ -1787,6 +2012,18 @@ LOCAL bool StorageSFTP_eof(StorageHandle *storageHandle)
     return TRUE;
   #endif /* HAVE_SSH2 */
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_read
+* Purpose: read from storage file
+* Input  : storageHandle - storage handle
+*          buffer        - buffer with data to write
+*          size          - data size
+*          bytesRead     - number of bytes read or NULL
+* Output : bytesRead - number of bytes read
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
                               void          *buffer,
@@ -1950,6 +2187,17 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
   return error;
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_write
+* Purpose: write into storage file
+* Input  : storageHandle - storage handle
+*          buffer        - buffer with data to write
+*          size          - data size
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
                                const void    *buffer,
                                ulong         bufferLength
@@ -2044,6 +2292,15 @@ LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
   return error;
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_getSize
+* Purpose: get storage file size
+* Input  : storageHandle - storage handle
+* Output : -
+* Return : size of storage
+* Notes  : -
+\***********************************************************************/
+
 LOCAL uint64 StorageSFTP_getSize(StorageHandle *storageHandle)
 {
   uint64 size;
@@ -2064,6 +2321,15 @@ LOCAL uint64 StorageSFTP_getSize(StorageHandle *storageHandle)
 
   return size;
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_tell
+* Purpose: get current position in storage file
+* Input  : storageHandle - storage handle
+* Output : offset - offset (0..n-1)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors StorageSFTP_tell(StorageHandle *storageHandle,
                               uint64        *offset
@@ -2095,6 +2361,16 @@ LOCAL Errors StorageSFTP_tell(StorageHandle *storageHandle,
 
   return error;
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_seek
+* Purpose: seek in storage file
+* Input  : storageHandle - storage handle
+*          offset        - offset (0..n-1)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
                               uint64        offset
@@ -2163,6 +2439,17 @@ LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
   return error;
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_rename
+* Purpose: rename storage file
+* Input  : storageInfo    - storage
+*          oldArchiveName - archive names (can be NULL)
+*          newArchiveName - new archive name (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageSFTP_rename(const StorageInfo *storageInfo,
                                 ConstString       fromArchiveName,
                                 ConstString       toArchiveName
@@ -2180,6 +2467,16 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_makeDirectory
+* Purpose: create directories
+* Input  : storageInfo - storage info
+*          pathName    - path name (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors StorageSFTP_makeDirectory(const StorageInfo *storageInfo,
                                        ConstString       directoryName
@@ -2236,6 +2533,16 @@ LOCAL Errors StorageSFTP_makeDirectory(const StorageInfo *storageInfo,
 
   return error;
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_delete
+* Purpose: delete storage file/directory
+* Input  : storageInfo - storage
+*          archiveName - archive name (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
                                 ConstString       archiveName
@@ -2357,6 +2664,21 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
 #endif
 
 /*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : StorageSFTP_openDirectoryList
+* Purpose: open storage directory list for reading directory entries
+* Input  : storageDirectoryListHandle - storage directory list handle
+*                                       variable
+*          storageSpecifier           - storage specifier
+*          pathName                   - path name
+*          jobOptions                 - job options
+*          serverConnectionPriority   - server connection priority
+* Output : storageDirectoryListHandle - initialized storage directory
+*                                       list handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                            const StorageSpecifier     *storageSpecifier,
@@ -2588,6 +2910,15 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
   #endif /* HAVE_SSH2 */
 }
 
+/***********************************************************************\
+* Name   : StorageSFTP_closeDirectoryList
+* Purpose: close storage directory list
+* Input  : storageDirectoryListHandle - storage directory list handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void StorageSFTP_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
   assert(storageDirectoryListHandle != NULL);
@@ -2604,6 +2935,15 @@ LOCAL void StorageSFTP_closeDirectoryList(StorageDirectoryListHandle *storageDir
     UNUSED_VARIABLE(storageDirectoryListHandle);
   #endif /* HAVE_SSH2 */
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_endOfDirectoryList
+* Purpose: check if end of storage directory list reached
+* Input  : storageDirectoryListHandle - storage directory list handle
+* Output : -
+* Return : TRUE if not more diretory entries to read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
 
 LOCAL bool StorageSFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
@@ -2650,6 +2990,18 @@ LOCAL bool StorageSFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDir
 
   return endOfDirectoryFlag;
 }
+
+/***********************************************************************\
+* Name   : StorageSFTP_readDirectoryList
+* Purpose: read next storage directory list entry in storage
+* Input  : storageDirectoryListHandle - storage directory list handle
+*          fileName                   - file name variable
+*          fileInfo                   - file info (can be NULL)
+* Output : fileName - next file name (including path)
+*          fileInfo - next file info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 LOCAL Errors StorageSFTP_readDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
                                            String                     fileName,

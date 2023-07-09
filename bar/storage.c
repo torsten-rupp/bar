@@ -3696,6 +3696,71 @@ Errors Storage_transferFromFile(FileHandle                  *fromFileHandle,
   return error;
 }
 
+uint64 Storage_getSize(StorageHandle *storageHandle)
+{
+  uint64 size;
+
+  assert(storageHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
+  assert(storageHandle->storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
+
+  size = 0LL;
+  if (   (   (storageHandle->storageInfo->jobOptions == NULL)
+          || storageHandle->storageInfo->jobOptions->storageOnMasterFlag
+         )
+      && (storageHandle->storageInfo->masterIO != NULL)
+     )
+  {
+    size = StorageMaster_getSize(storageHandle);
+  }
+  else
+  {
+    switch (storageHandle->storageInfo->storageSpecifier.type)
+    {
+      case STORAGE_TYPE_NONE:
+        break;
+      case STORAGE_TYPE_FILESYSTEM:
+        size = StorageFile_getSize(storageHandle);
+        break;
+      case STORAGE_TYPE_FTP:
+        size = StorageFTP_getSize(storageHandle);
+        break;
+      case STORAGE_TYPE_SSH:
+        #ifdef HAVE_SSH2
+  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+        #else /* not HAVE_SSH2 */
+        #endif /* HAVE_SSH2 */
+        break;
+      case STORAGE_TYPE_SCP:
+        size = StorageSCP_getSize(storageHandle);
+        break;
+      case STORAGE_TYPE_SFTP:
+        size = StorageSFTP_getSize(storageHandle);
+        break;
+      case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
+        size = StorageWebDAV_getSize(storageHandle);
+        break;
+      case STORAGE_TYPE_CD:
+      case STORAGE_TYPE_DVD:
+      case STORAGE_TYPE_BD:
+        size = StorageOptical_getSize(storageHandle);
+        break;
+      case STORAGE_TYPE_DEVICE:
+        size = StorageDevice_getSize(storageHandle);
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
+  }
+
+  return size;
+}
+
 Errors Storage_tell(StorageHandle *storageHandle,
                     uint64        *offset
                    )
@@ -3838,71 +3903,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   assert(error != ERROR_UNKNOWN);
 
   return error;
-}
-
-uint64 Storage_getSize(StorageHandle *storageHandle)
-{
-  uint64 size;
-
-  assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  assert(storageHandle->storageInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
-
-  size = 0LL;
-  if (   (   (storageHandle->storageInfo->jobOptions == NULL)
-          || storageHandle->storageInfo->jobOptions->storageOnMasterFlag
-         )
-      && (storageHandle->storageInfo->masterIO != NULL)
-     )
-  {
-    size = StorageMaster_getSize(storageHandle);
-  }
-  else
-  {
-    switch (storageHandle->storageInfo->storageSpecifier.type)
-    {
-      case STORAGE_TYPE_NONE:
-        break;
-      case STORAGE_TYPE_FILESYSTEM:
-        size = StorageFile_getSize(storageHandle);
-        break;
-      case STORAGE_TYPE_FTP:
-        size = StorageFTP_getSize(storageHandle);
-        break;
-      case STORAGE_TYPE_SSH:
-        #ifdef HAVE_SSH2
-  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        #else /* not HAVE_SSH2 */
-        #endif /* HAVE_SSH2 */
-        break;
-      case STORAGE_TYPE_SCP:
-        size = StorageSCP_getSize(storageHandle);
-        break;
-      case STORAGE_TYPE_SFTP:
-        size = StorageSFTP_getSize(storageHandle);
-        break;
-      case STORAGE_TYPE_WEBDAV:
-      case STORAGE_TYPE_WEBDAVS:
-        size = StorageWebDAV_getSize(storageHandle);
-        break;
-      case STORAGE_TYPE_CD:
-      case STORAGE_TYPE_DVD:
-      case STORAGE_TYPE_BD:
-        size = StorageOptical_getSize(storageHandle);
-        break;
-      case STORAGE_TYPE_DEVICE:
-        size = StorageDevice_getSize(storageHandle);
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-  }
-
-  return size;
 }
 
 Errors Storage_copyToLocal(const StorageSpecifier          *storageSpecifier,
@@ -4144,78 +4144,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return error;
 }
 
-Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName)
-{
-  Errors error;
-
-  assert(storageInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-
-  // get archive name
-  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
-  if (String_isEmpty(archiveName))
-  {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
-  }
-
-  error = ERROR_UNKNOWN;
-  if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMasterFlag
-         )
-      && (storageInfo->masterIO != NULL)
-     )
-  {
-error = ERROR_STILL_NOT_IMPLEMENTED;
-  }
-  else
-  {
-    switch (storageInfo->storageSpecifier.type)
-    {
-      case STORAGE_TYPE_NONE:
-        error = ERROR_NONE;
-        break;
-      case STORAGE_TYPE_FILESYSTEM:
-        error = StorageFile_delete(storageInfo,archiveName);
-        break;
-      case STORAGE_TYPE_FTP:
-        error = StorageFTP_delete(storageInfo,archiveName);
-        break;
-      case STORAGE_TYPE_SSH:
-        #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        #else /* not HAVE_SSH2 */
-        #endif /* HAVE_SSH2 */
-        break;
-      case STORAGE_TYPE_SCP:
-        error = StorageSCP_delete(storageInfo,archiveName);
-        break;
-      case STORAGE_TYPE_SFTP:
-        error = StorageSFTP_delete(storageInfo,archiveName);
-        break;
-      case STORAGE_TYPE_WEBDAV:
-      case STORAGE_TYPE_WEBDAVS:
-        error = StorageWebDAV_delete(storageInfo,archiveName);
-        break;
-      case STORAGE_TYPE_CD:
-      case STORAGE_TYPE_DVD:
-      case STORAGE_TYPE_BD:
-        error = StorageOptical_delete(storageInfo,archiveName);
-        break;
-      case STORAGE_TYPE_DEVICE:
-        error = StorageDevice_delete(storageInfo,archiveName);
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-  }
-  assert(error != ERROR_UNKNOWN);
-
-  return error;
-}
-
 Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName)
 {
   String          directoryName;
@@ -4397,6 +4325,78 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         );
   Job_doneOptions(&jobOptions);
   String_delete(directoryName);
+
+  return error;
+}
+
+Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName)
+{
+  Errors error;
+
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+
+  // get archive name
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
+
+  error = ERROR_UNKNOWN;
+  if (   (   (storageInfo->jobOptions == NULL)
+          || storageInfo->jobOptions->storageOnMasterFlag
+         )
+      && (storageInfo->masterIO != NULL)
+     )
+  {
+error = ERROR_STILL_NOT_IMPLEMENTED;
+  }
+  else
+  {
+    switch (storageInfo->storageSpecifier.type)
+    {
+      case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
+        break;
+      case STORAGE_TYPE_FILESYSTEM:
+        error = StorageFile_delete(storageInfo,archiveName);
+        break;
+      case STORAGE_TYPE_FTP:
+        error = StorageFTP_delete(storageInfo,archiveName);
+        break;
+      case STORAGE_TYPE_SSH:
+        #ifdef HAVE_SSH2
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+        #else /* not HAVE_SSH2 */
+        #endif /* HAVE_SSH2 */
+        break;
+      case STORAGE_TYPE_SCP:
+        error = StorageSCP_delete(storageInfo,archiveName);
+        break;
+      case STORAGE_TYPE_SFTP:
+        error = StorageSFTP_delete(storageInfo,archiveName);
+        break;
+      case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
+        error = StorageWebDAV_delete(storageInfo,archiveName);
+        break;
+      case STORAGE_TYPE_CD:
+      case STORAGE_TYPE_DVD:
+      case STORAGE_TYPE_BD:
+        error = StorageOptical_delete(storageInfo,archiveName);
+        break;
+      case STORAGE_TYPE_DEVICE:
+        error = StorageDevice_delete(storageInfo,archiveName);
+        break;
+      default:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
+  }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
