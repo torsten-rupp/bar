@@ -4431,6 +4431,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                             )
 {
   bool             foundFlag;
+  String           printableName;
   Errors           error;
   StorageSpecifier storageSpecifier;
   String           storageName;
@@ -4453,6 +4454,9 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   // get archive name
   if (findArchiveName == NULL) findArchiveName = findStorageSpecifier->archiveName;
 
+  // get printable name for filter
+  printableName = Storage_getPrintableName(String_new(),findStorageSpecifier,findArchiveName);
+
   INDEX_DOX(error,
             indexHandle,
   {
@@ -4472,7 +4476,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                             if (Storage_equalSpecifiers(findStorageSpecifier,
                                                         findArchiveName,
                                                         &storageSpecifier,
-                                                        NULL
+                                                        NULL  // archiveName2
                                                        )
                                )
                             {
@@ -4528,9 +4532,10 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                         "    storages.deletedFlag!=TRUE \
                          AND storages.name=? \
                         ",
+
                         DATABASE_FILTERS
                         (
-                          DATABASE_FILTER_STRING(findArchiveName)
+                          DATABASE_FILTER_STRING(printableName)
                         ),
                         NULL,  // groupBy
                         NULL,  // orderBy
@@ -4542,12 +4547,14 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   {
     String_delete(storageName);
     Storage_doneSpecifier(&storageSpecifier);
+    String_delete(printableName);
     return FALSE;
   }
 
   // free resources
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
+  String_delete(printableName);
 
   return foundFlag;
 }

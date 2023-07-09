@@ -1706,7 +1706,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
 
 LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
-  bool           existsFlag;
+  bool existsFlag;
   #ifdef HAVE_ISO9660
     String         pathName,fileName;
     iso9660_t      *iso9660Handle;
