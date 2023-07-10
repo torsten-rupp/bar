@@ -492,7 +492,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
     {
       error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of file entry '%S'!",fileName);
+      printError("unexpected data at end of file entry '%s'!",String_cString(fileName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       return error;
@@ -862,7 +862,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     {
       error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(deviceName));
       printInfo(1,"FAIL!\n");
-      printWarning("unexpected data at end of image entry '%S'",deviceName);
+      printWarning("unexpected data at end of image entry '%s'",String_cString(deviceName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(deviceName);
       return error;
@@ -1019,7 +1019,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of directory entry '%S'",directoryName);
+      printWarning("unexpected data at end of directory entry '%s'",String_cString(directoryName));
     }
 
     // free resources
@@ -1184,7 +1184,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of link entry '%S'",linkName);
+      printWarning("unexpected data at end of link entry '%s'",String_cString(linkName));
     }
 
     // free resources
@@ -1505,7 +1505,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         {
           error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
           printInfo(1,"FAIL!\n");
-          printError("unexpected data at end of file entry '%S'!",fileName);
+          printError("unexpected data at end of file entry '%s'!",String_cString(fileName));
           (void)Archive_closeEntry(&archiveEntryInfo);
           String_delete(fileName);
           return error;
@@ -1722,7 +1722,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of special entry '%S'",fileName);
+      printWarning("unexpected data at end of special entry '%s'",String_cString(fileName));
     }
 
     // free resources

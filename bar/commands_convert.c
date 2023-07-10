@@ -898,7 +898,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
       && !Compress_isCompressed(byteCompressAlgorithm)
       && !Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of file entry '%S'",fileName);
+    printWarning("unexpected data at end of file entry '%s'",String_cString(fileName));
   }
 
   // close source archive entry
@@ -1129,7 +1129,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
       && !Compress_isCompressed(byteCompressAlgorithm)
       && !Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of image entry '%S'",deviceName);
+    printWarning("unexpected data at end of image entry '%s'",String_cString(deviceName));
   }
 
   // close source archive entry
@@ -1249,7 +1249,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   // check if all data read
   if (!Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of directory entry '%S'",directoryName);
+    printWarning("unexpected data at end of directory entry '%s'",String_cString(directoryName));
   }
 
   // close source archive entry
@@ -1377,7 +1377,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   // check if all data read
   if (!Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of link entry '%S'",linkName);
+    printWarning("unexpected data at end of link entry '%s'",String_cString(linkName));
   }
 
   // close source archive entry
@@ -1600,7 +1600,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
       && !Compress_isCompressed(byteCompressAlgorithm)
       && !Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of hard link entry '%S'",StringList_first(&fileNameList,NULL));
+    printWarning("unexpected data at end of hard link entry '%s'",String_cString(StringList_first(&fileNameList,NULL)));
   }
 
   // close source archive entry
@@ -1721,7 +1721,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   // check if all data read
   if (!Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of special entry '%S'",fileName);
+    printWarning("unexpected data at end of special entry '%s'",String_cString(fileName));
   }
 
   // close source archive entry

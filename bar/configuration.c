@@ -7232,7 +7232,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
       else
       {
         if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-        printError(_("unknown value '%S' in %S, line %ld"),name,fileName,*lineNb);
+        printError(_("unknown value '%s' in %s, line %ld"),String_cString(name),String_cString(fileName),*lineNb);
         error = ERROR_CONFIG;
       }
     }
@@ -7882,7 +7882,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       else
       {
         if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-        printError(_("unknown value '%S' in %S, line %ld"),name,fileName,lineNb);
+        printError(_("unknown value '%s' in %s, line %ld"),String_cString(name),String_cString(fileName),lineNb);
         error = ERROR_CONFIG;
       }
     }
