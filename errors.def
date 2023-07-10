@@ -153,7 +153,7 @@ ERROR SSH_AUTHENTICATION
   stringSet(errorText,sizeof(errorText),TR("SSH authentication failed"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
+    stringFormatAppend(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
   }
 
 ERROR SSH

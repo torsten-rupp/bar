@@ -186,20 +186,6 @@ typedef struct
   LIST_HEADER(DirectoryInfoNode);
 } DirectoryInfoList;
 
-typedef struct IndexCryptPasswordNode
-{
-  LIST_NODE_HEADER(struct IndexCryptPasswordNode);
-
-  Password *cryptPassword;
-  Key      cryptPrivateKey;
-} IndexCryptPasswordNode;
-
-// list with index decrypt passwords
-typedef struct
-{
-  LIST_HEADER(IndexCryptPasswordNode);
-} IndexCryptPasswordList;
-
 // authorization states
 typedef enum
 {
@@ -4214,68 +4200,6 @@ LOCAL void persistenceThreadCode(void)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : addIndexCryptPasswordNode
-* Purpose: add crypt password to index crypt password list
-* Input  : indexCryptPasswordList  - index crypt password list
-*          cryptPassword           - crypt password
-*          cryptPrivateKeyFileName - crypt private key file name
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordList, const Password *cryptPassword, const Key *cryptPrivateKey)
-{
-  IndexCryptPasswordNode *indexCryptPasswordNode;
-
-  if (!LIST_CONTAINS(indexCryptPasswordList,
-                     indexCryptPasswordNode,
-                        Password_equals(indexCryptPasswordNode->cryptPassword,cryptPassword)
-                     && Configuration_keyEquals(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey)
-                    )
-     )
-  {
-    indexCryptPasswordNode = LIST_NEW_NODE(IndexCryptPasswordNode);
-    if (indexCryptPasswordNode == NULL)
-    {
-      return;
-    }
-
-    indexCryptPasswordNode->cryptPassword = Password_duplicate(cryptPassword);
-    if (cryptPrivateKey != NULL)
-    {
-      Configuration_duplicateKey(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey);
-    }
-    else
-    {
-      Configuration_initKey(&indexCryptPasswordNode->cryptPrivateKey);
-    }
-
-    List_append(indexCryptPasswordList,indexCryptPasswordNode);
-  }
-}
-
-/***********************************************************************\
-* Name   : freeIndexCryptPasswordNode
-* Purpose: free index crypt password
-* Input  : indexCryptPasswordNode - crypt password node
-*          userData               - user data (ignored)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeIndexCryptPasswordNode(IndexCryptPasswordNode *indexCryptPasswordNode, void *userData)
-{
-  assert(indexCryptPasswordNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  Configuration_doneKey(&indexCryptPasswordNode->cryptPrivateKey);
-  if (indexCryptPasswordNode->cryptPassword != NULL) Password_delete(indexCryptPasswordNode->cryptPassword);
-}
-
-/***********************************************************************\
 * Name   : indexPauseCallback
 * Purpose: check if pause
 * Input  : userData - not used
@@ -4337,25 +4261,191 @@ LOCAL void pauseIndexUpdate(void)
 
 LOCAL void updateIndexThreadCode(void)
 {
-  IndexHandle            indexHandle;
-  IndexId                uuidId,entityId,storageId;
-  StorageSpecifier       storageSpecifier;
-  String                 storageName,printableStorageName;
-  StorageInfo            storageInfo;
-  IndexCryptPasswordList indexCryptPasswordList;
-  JobOptions             jobOptions;
-  uint64                 startTimestamp,endTimestamp;
-  Errors                 error;
-  const JobNode          *jobNode;
-  IndexCryptPasswordNode *indexCryptPasswordNode;
-  ulong                  totalEntryCount;
-  uint64                 totalEntrySize;
+  typedef struct CryptPasswordNode
+  {
+    LIST_NODE_HEADER(struct CryptPasswordNode);
+
+    Password *cryptPassword;
+    Key      cryptPrivateKey;
+  } CryptPasswordNode;
+
+  // list with index decrypt passwords
+  typedef struct
+  {
+    LIST_HEADER(CryptPasswordNode);
+  } CryptPasswordList;
+
+  /***********************************************************************\
+  * Name   : addCryptPassword
+  * Purpose: add crypt password to index crypt password list
+  * Input  : cryptPasswordList  - index crypt password list
+  *          cryptPassword           - crypt password
+  *          cryptPrivateKeyFileName - crypt private key file name
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void addCryptPassword(CryptPasswordList *cryptPasswordList, const Password *cryptPassword, const Key *cryptPrivateKey);
+  auto void addCryptPassword(CryptPasswordList *cryptPasswordList, const Password *cryptPassword, const Key *cryptPrivateKey)
+  {
+    CryptPasswordNode *cryptPasswordNode;
+
+    if (!LIST_CONTAINS(cryptPasswordList,
+                       cryptPasswordNode,
+                          Password_equals(cryptPasswordNode->cryptPassword,cryptPassword)
+                       && Configuration_keyEquals(&cryptPasswordNode->cryptPrivateKey,cryptPrivateKey)
+                      )
+       )
+    {
+      cryptPasswordNode = LIST_NEW_NODE(CryptPasswordNode);
+      if (cryptPasswordNode == NULL)
+      {
+        return;
+      }
+
+      cryptPasswordNode->cryptPassword = Password_duplicate(cryptPassword);
+      if (cryptPrivateKey != NULL)
+      {
+        Configuration_duplicateKey(&cryptPasswordNode->cryptPrivateKey,cryptPrivateKey);
+      }
+      else
+      {
+        Configuration_initKey(&cryptPasswordNode->cryptPrivateKey);
+      }
+
+      List_append(cryptPasswordList,cryptPasswordNode);
+    }
+  }
+
+  /***********************************************************************\
+  * Name   : freeCryptPasswordNode
+  * Purpose: free index crypt password
+  * Input  : cryptPasswordNode - crypt password node
+  *          userData               - user data (ignored)
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeCryptPasswordNode(CryptPasswordNode *cryptPasswordNode, void *userData);
+  auto void freeCryptPasswordNode(CryptPasswordNode *cryptPasswordNode, void *userData)
+  {
+    assert(cryptPasswordNode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    Configuration_doneKey(&cryptPasswordNode->cryptPrivateKey);
+    if (cryptPasswordNode->cryptPassword != NULL) Password_delete(cryptPasswordNode->cryptPassword);
+  }
+
+  // login list
+  typedef struct
+  {
+    String   name;
+    Password *password;
+  } Login;
+
+  typedef struct LoginNode
+  {
+    LIST_NODE_HEADER(struct LoginNode);
+
+    String   name;
+    Password *password;
+  } LoginNode;
+
+  typedef struct
+  {
+    LIST_HEADER(LoginNode);
+  } LoginList;
+
+  /***********************************************************************\
+  * Name   : addLogin
+  * Purpose: add login to login list
+  * Input  : name     - login name
+  *          password - login password
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void addLogin(LoginList *loginList, ConstString name, const Password *password);
+  auto void addLogin(LoginList *loginList, ConstString name, const Password *password)
+  {
+    LoginNode *loginNode = LIST_NEW_NODE(LoginNode);
+    assert(loginNode != NULL);
+
+    loginNode->name     = String_duplicate(name);
+    loginNode->password = Password_duplicate(password);
+    List_append(loginList,loginNode);
+  }
+
+  /***********************************************************************\
+  * Name   : freeLoginNode
+  * Purpose: free login node
+  * Input  : loginNode - login node
+  *          userData  - user data (not used)
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeLoginNode(LoginNode *loginNode, void *userData);
+  auto void freeLoginNode(LoginNode *loginNode, void *userData)
+  {
+    assert(loginNode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    Password_delete(loginNode->password);
+    String_delete(loginNode->name);
+  }
+
+  /***********************************************************************\
+  * Name   : loginEquals
+  * Purpose:
+  * Input  : -
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool loginEquals(const LoginNode *loginNode, const void *userData);
+  auto bool loginEquals(const LoginNode *loginNode, const void *userData)
+  {
+    const Login *login = (const Login*)userData;
+
+    assert(loginNode != NULL);
+    assert(login != NULL);
+
+    return    String_equals(loginNode->name,login->name)
+           && Password_equals(loginNode->password,login->password);
+  }
+
+  IndexHandle       indexHandle;
+  IndexId           uuidId,entityId,storageId;
+  StorageSpecifier  addStorageSpecifier,storageSpecifier;
+  String            storageName,printableStorageName;
+  Login             login;
+  LoginList         loginList;
+  LoginNode         *loginNode;
+  StorageInfo       storageInfo;
+  CryptPasswordList cryptPasswordList;
+  JobOptions        jobOptions;
+  uint64            startTimestamp,endTimestamp;
+  Errors            error;
+  const JobNode     *jobNode;
+  CryptPasswordNode *cryptPasswordNode;
+  ulong             totalEntryCount;
+  uint64            totalEntrySize;
 
   // initialize variables
+  List_init(&cryptPasswordList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeCryptPasswordNode,NULL));
+  List_init(&loginList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeLoginNode,NULL));
+  Storage_initSpecifier(&addStorageSpecifier);
   Storage_initSpecifier(&storageSpecifier);
   storageName          = String_new();
   printableStorageName = String_new();
-  List_init(&indexCryptPasswordList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
 
   if (Index_isAvailable())
   {
@@ -4373,10 +4463,12 @@ LOCAL void updateIndexThreadCode(void)
                   "Cannot open index database (error: %s)",
                   Error_getText(error)
                  );
-      List_done(&indexCryptPasswordList);
       String_delete(printableStorageName);
       String_delete(storageName);
       Storage_doneSpecifier(&storageSpecifier);
+      Storage_doneSpecifier(&addStorageSpecifier);
+      List_done(&loginList);
+      List_done(&cryptPasswordList);
       return;
     }
 
@@ -4393,19 +4485,19 @@ LOCAL void updateIndexThreadCode(void)
           && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
          )
       {
-        // get all job crypt passwords and crypt private keys (including no password and default crypt password)
+        // collect all job crypt passwords and crypt private keys (including no password and default crypt password)
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           JOB_LIST_ITERATE(jobNode)
           {
             if (!Password_isEmpty(&jobNode->job.options.cryptPassword))
             {
-              addIndexCryptPasswordNode(&indexCryptPasswordList,&jobNode->job.options.cryptPassword,&jobNode->job.options.cryptPrivateKey);
+              addCryptPassword(&cryptPasswordList,&jobNode->job.options.cryptPassword,&jobNode->job.options.cryptPrivateKey);
             }
           }
         }
-        addIndexCryptPasswordNode(&indexCryptPasswordList,&globalOptions.cryptPassword,NULL);
-        addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);  // no password
+        addCryptPassword(&cryptPasswordList,&globalOptions.cryptPassword,NULL);
+        addCryptPassword(&cryptPasswordList,NULL,NULL);  // no password
 
 // TODO: lock via entityLock?
         // update index entries
@@ -4436,34 +4528,64 @@ LOCAL void updateIndexThreadCode(void)
           }
 
           // parse storage name, get printable name
-          error = Storage_parseName(&storageSpecifier,storageName);
+          error = Storage_parseName(&addStorageSpecifier,storageName);
           if (error == ERROR_NONE)
           {
-            Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+            Storage_getPrintableName(printableStorageName,&addStorageSpecifier,NULL);
           }
           else
           {
+            addStorageSpecifier.type = STORAGE_TYPE_NONE;
+            String_clear(addStorageSpecifier.hostName);
             String_set(printableStorageName,storageName);
+          }
+
+          // collect possible login passwords for server
+          login.name     = storageSpecifier.loginName;
+          login.password = storageSpecifier.loginPassword;
+          List_clear(&loginList);
+          JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+          {
+            JOB_LIST_ITERATE(jobNode)
+            {
+              error = Storage_parseName(&storageSpecifier,jobNode->job.storageName);
+              if (   (error == ERROR_NONE)
+                  && (storageSpecifier.type == addStorageSpecifier.type)
+                  && String_equals(storageSpecifier.hostName,addStorageSpecifier.hostName)
+                  && !Password_isEmpty(storageSpecifier.loginPassword)
+                  && !List_contains(&loginList,NULL,CALLBACK_((ListNodeEqualsFunction)loginEquals,&login))
+                 )
+              {
+                addLogin(&loginList,storageSpecifier.loginName,storageSpecifier.loginPassword);
+              }
+            }
           }
 
           // init storage
           startTimestamp = 0LL;
           endTimestamp   = 0LL;
           Job_initOptions(&jobOptions);
-          error = Storage_init(&storageInfo,
-                               NULL,  // masterIO
-                               &storageSpecifier,
-                               &jobOptions,
-                               &globalOptions.indexDatabaseMaxBandWidthList,
-                               SERVER_CONNECTION_PRIORITY_LOW,
-                               CALLBACK_(NULL,NULL),  // updateStatusInfo
-                               CALLBACK_(NULL,NULL),  // getNamePassword
-                               CALLBACK_(NULL,NULL),  // requestVolume
-                               CALLBACK_(NULL,NULL),  // isPause
-                               CALLBACK_(NULL,NULL),  // isAborted
-                               NULL  // logHandle
-                              );
-          if (error == ERROR_NONE)
+          bool loginFlag = TRUE;
+          LIST_ITERATEX(&loginList,loginNode,loginFlag)
+          {
+            String_set(addStorageSpecifier.loginName,loginNode->name);
+            Password_set(addStorageSpecifier.loginPassword,loginNode->password);
+            error = Storage_init(&storageInfo,
+                                 NULL,  // masterIO
+                                 &addStorageSpecifier,
+                                 &jobOptions,
+                                 &globalOptions.indexDatabaseMaxBandWidthList,
+                                 SERVER_CONNECTION_PRIORITY_LOW,
+                                 CALLBACK_(NULL,NULL),  // updateStatusInfo
+                                 CALLBACK_(NULL,NULL),  // getNamePassword
+                                 CALLBACK_(NULL,NULL),  // requestVolume
+                                 CALLBACK_(NULL,NULL),  // isPause
+                                 CALLBACK_(NULL,NULL),  // isAborted
+                                 NULL  // logHandle
+                                );
+            loginFlag = (error == ERROR_NONE);
+          }
+          if (loginFlag)
           {
             // index archive contents
             printInfo(4,"Start create index for '%s'\n",String_cString(printableStorageName));
@@ -4490,11 +4612,11 @@ LOCAL void updateIndexThreadCode(void)
                                        );
 
             // try to create index
-            LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
+            LIST_ITERATE(&cryptPasswordList,cryptPasswordNode)
             {
               // set password/key
-              Password_set(&jobOptions.cryptPassword,indexCryptPasswordNode->cryptPassword);
-              Configuration_copyKey(&jobOptions.cryptPrivateKey,&indexCryptPasswordNode->cryptPrivateKey);
+              Password_set(&jobOptions.cryptPassword,cryptPasswordNode->cryptPassword);
+              Configuration_copyKey(&jobOptions.cryptPrivateKey,&cryptPasswordNode->cryptPrivateKey);
 
               // index update
               startTimestamp = Misc_getTimestamp();
@@ -4600,7 +4722,7 @@ LOCAL void updateIndexThreadCode(void)
         }
 
         // free resources
-        List_done(&indexCryptPasswordList);
+        List_done(&cryptPasswordList);
       }
       if (isQuit())
       {
@@ -4627,10 +4749,12 @@ LOCAL void updateIndexThreadCode(void)
   }
 
   // free resources
-  List_done(&indexCryptPasswordList);
   String_delete(printableStorageName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
+  Storage_doneSpecifier(&addStorageSpecifier);
+  List_done(&loginList);
+  List_done(&cryptPasswordList);
 }
 
 /***********************************************************************\

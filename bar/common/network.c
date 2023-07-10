@@ -945,9 +945,11 @@ Errors connectDescriptor(SocketHandle *socketHandle,
         {
           ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
           // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
-          if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
+          if (   (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNRECOGNIZED)
+              || (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_PROTOCOL)
+             )
           {
-            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"Unable to initialize private key from file");
+            error = ERRORX_(INVALID_SSH_PRIVATE_KEY,ssh2Error,"Unable to initialize private key from file");
           }
           else
           {
