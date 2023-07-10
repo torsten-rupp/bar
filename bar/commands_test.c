@@ -343,7 +343,7 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
     {
       error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of file entry '%S'!",fileName);
+      printError("unexpected data at end of file entry '%s'!",String_cString(fileName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       return error;
@@ -549,7 +549,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
     {
       error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(deviceName));
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of image entry '%S'!",deviceName);
+      printError("unexpected data at end of image entry '%s'!",String_cString(deviceName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(deviceName);
       return error;
@@ -659,7 +659,7 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
     if (!Archive_eofData(&archiveEntryInfo))
     {
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of directory entry '%S'!",directoryName);
+      printError("unexpected data at end of directory entry '%s'!",String_cString(directoryName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(directoryName);
       return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(directoryName));
@@ -755,7 +755,7 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
     if (!Archive_eofData(&archiveEntryInfo))
     {
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of link entry '%S'!",linkName);
+      printError("unexpected data at end of link entry '%s'!",String_cString(linkName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       String_delete(linkName);
@@ -938,7 +938,7 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
             && !Compress_isCompressed(archiveEntryInfo.hardLink.byteCompressAlgorithm)
             && !Archive_eofData(&archiveEntryInfo))
         {
-          printError("unexpected data at end of hard link entry '%S'!",fileName);
+          printError("unexpected data at end of hard link entry '%s'!",String_cString(fileName));
           error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
           break;
         }
@@ -1086,7 +1086,7 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
     if (!Archive_eofData(&archiveEntryInfo))
     {
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of special entry '%S'!",fileName);
+      printError("unexpected data at end of special entry '%s'!",String_cString(fileName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));

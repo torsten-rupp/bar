@@ -2450,21 +2450,21 @@ LOCAL bool readFromJob(ConstString fileName)
                           {
                             UNUSED_VARIABLE(userData);
 
-                            printError("%s in %S, line %ld",errorMessage,fileName,lineNb);
+                            printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
                             failFlag = TRUE;
                           },NULL),
                           CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                           {
                             UNUSED_VARIABLE(userData);
 
-                            printWarning("%s in %S, line %ld",warningMessage,fileName,lineNb);
+                            printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
                           },NULL),
                           NULL  // variable
                          );
       }
       else
       {
-        printError(_("unknown value '%S' in %S, line %ld"),name,fileName,lineNb);
+        printError(_("unknown value '%s' in %s, line %ld"),String_cString(name),String_cString(fileName),lineNb);
         failFlag = TRUE;
       }
     }

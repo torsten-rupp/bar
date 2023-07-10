@@ -1200,7 +1200,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         && !Compress_isCompressed(archiveEntryInfo.file.byteCompressAlgorithm)
         && !Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of file entry '%S'",fileName);
+      printWarning("unexpected data at end of file entry '%s'",String_cString(fileName));
     }
 
     // free resources
@@ -1708,7 +1708,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         && !Compress_isCompressed(archiveEntryInfo.image.byteCompressAlgorithm)
         && !Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of image entry '%S'",deviceName);
+      printWarning("unexpected data at end of image entry '%s'",String_cString(deviceName));
     }
 
     // free resources
@@ -2008,7 +2008,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of directory entry '%S'",directoryName);
+      printWarning("unexpected data at end of directory entry '%s'",String_cString(directoryName));
     }
 
     // free resources
@@ -2286,7 +2286,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of link entry '%S'",linkName);
+      printWarning("unexpected data at end of link entry '%s'",String_cString(linkName));
     }
 
     // free resources
@@ -2879,7 +2879,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             && !Compress_isCompressed(archiveEntryInfo.hardLink.byteCompressAlgorithm)
             && !Archive_eofData(&archiveEntryInfo))
         {
-          printWarning("unexpected data at end of hard link entry '%S'",fileName);
+          printWarning("unexpected data at end of hard link entry '%s'",String_cString(fileName));
         }
       }
     }
@@ -3151,7 +3151,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of special entry '%S'",fileName);
+      printWarning("unexpected data at end of special entry '%s'",String_cString(fileName));
     }
 
     // free resources
