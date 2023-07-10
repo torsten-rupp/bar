@@ -98,9 +98,17 @@ class ValueMap extends HashMap<String,Object>
     {
       if (object instanceof String)
       {
+        String string = (String)object;
         try
         {
-          return Integer.parseInt((String)object);
+          if (string.startsWith("0x") || string.startsWith("0X"))
+          {
+            return Integer.parseInt(string.substring(2),16);
+          }
+          else
+          {
+            return Integer.parseInt(string);
+          }
         }
         catch (NumberFormatException exception)
         {
@@ -110,7 +118,7 @@ class ValueMap extends HashMap<String,Object>
           }
           else
           {
-            throw new IllegalArgumentException(exception);
+            throw new IllegalArgumentException(string,exception);
           }
         }
       }
@@ -152,9 +160,17 @@ class ValueMap extends HashMap<String,Object>
     {
       if (object instanceof String)
       {
+        String string = (String)object;
         try
         {
-          return Long.parseLong((String)object);
+          if (string.startsWith("0x") || string.startsWith("0X"))
+          {
+            return Long.parseLong(string.substring(2),16);
+          }
+          else
+          {
+            return Long.parseLong(string);
+          }
         }
         catch (NumberFormatException exception)
         {
@@ -164,7 +180,7 @@ class ValueMap extends HashMap<String,Object>
           }
           else
           {
-            throw new IllegalArgumentException(exception);
+            throw new IllegalArgumentException(string,exception);
           }
         }
       }
@@ -185,7 +201,7 @@ class ValueMap extends HashMap<String,Object>
 
   /** get long value
    * @param name name
-   * @return int value
+   * @return long value
    */
   public long getLong(String name)
     throws IllegalArgumentException
@@ -206,9 +222,10 @@ class ValueMap extends HashMap<String,Object>
     {
       if (object instanceof String)
       {
+        String string = (String)object;
         try
         {
-          return NumberFormat.getInstance(Locale.ENGLISH).parse((String)object).doubleValue();
+          return NumberFormat.getInstance(Locale.ENGLISH).parse(string).doubleValue();
         }
         catch (ParseException exception)
         {
@@ -218,7 +235,7 @@ class ValueMap extends HashMap<String,Object>
           }
           else
           {
-            throw new IllegalArgumentException(exception);
+            throw new IllegalArgumentException(string,exception);
           }
         }
       }
@@ -260,12 +277,12 @@ class ValueMap extends HashMap<String,Object>
     {
       if (object instanceof String)
       {
-        String value = (String)object;
+        String string = (String)object;
 
-        return    value.equalsIgnoreCase("yes")
-               || value.equalsIgnoreCase("on")
-               || value.equalsIgnoreCase("true")
-               || value.equals("1");
+        return    string.equalsIgnoreCase("yes")
+               || string.equalsIgnoreCase("on")
+               || string.equalsIgnoreCase("true")
+               || string.equals("1");
       }
       else
       {
@@ -381,7 +398,7 @@ class ValueMap extends HashMap<String,Object>
     {
       if (object instanceof String)
       {
-        String value = (String)object;
+        String string = (String)object;
 
         // use parse method (if available)
         if (EnumParser.class.isAssignableFrom(type))
@@ -390,7 +407,7 @@ class ValueMap extends HashMap<String,Object>
           {
             Method parseEnum = EnumParser.class.getDeclaredMethod("parse",String.class);
             T enumValue0 = type.getEnumConstants()[0];
-            return (T)parseEnum.invoke(enumValue0,value);
+            return (T)parseEnum.invoke(enumValue0,string);
           }
           catch (IllegalAccessException exception)
           {
@@ -411,7 +428,7 @@ class ValueMap extends HashMap<String,Object>
         int n;
         try
         {
-          n = Integer.parseInt(value);
+          n = Integer.parseInt(string);
         }
         catch (NumberFormatException exception)
         {
@@ -420,9 +437,9 @@ class ValueMap extends HashMap<String,Object>
         boolean foundFlag = false;
         for (Enum enumConstant : enumConstants)
         {
-          if (   value.equalsIgnoreCase(enumConstant.name())
+          if (   string.equalsIgnoreCase(enumConstant.name())
               || (enumConstant.ordinal() == n)
-              || value.equalsIgnoreCase(enumConstant.toString())
+              || string.equalsIgnoreCase(enumConstant.toString())
              )
           {
             return (T)enumConstant;
@@ -434,7 +451,7 @@ class ValueMap extends HashMap<String,Object>
         }
         else
         {
-          throw new IllegalArgumentException("unknown enum value '"+value+"' for "+name);
+          throw new IllegalArgumentException("unknown enum value '"+string+"' for "+name);
         }
       }
       else
@@ -1515,7 +1532,7 @@ public class StringParser
             }
             catch (ParseException exception)
             {
-              throw new IllegalArgumentException(exception);
+              throw new IllegalArgumentException(value,exception);
             }
           }
           else if ((type == boolean.class) || (type == Boolean.class))
@@ -1764,6 +1781,62 @@ public class StringParser
   public static String format(String format, Object... arguments)
   {
     return format(format,'"',arguments);
+  }
+
+  /** parse int value
+   * @param name name
+   * @param radix conversion radix
+   * @return int value
+   */
+  public static int parseInt(String string, int radix)
+    throws NumberFormatException
+  {
+    if (string.startsWith("0x") || string.startsWith("0X"))
+    {
+      return Integer.parseInt(string.substring(2),16);
+    }
+    else
+    {
+      return Integer.parseInt(string,radix);
+    }
+  }
+
+  /** parse int value
+   * @param name name
+   * @return int value
+   */
+  public static int parseInt(String string)
+    throws NumberFormatException
+  {
+    return parseInt(string,10);
+  }
+
+  /** parse long value
+   * @param name name
+   * @param radix conversion radix
+   * @return long value
+   */
+  public static long parseLong(String string, int radix)
+    throws NumberFormatException
+  {
+    if (string.startsWith("0x") || string.startsWith("0X"))
+    {
+      return Long.parseLong(string.substring(2),16);
+    }
+    else
+    {
+      return Long.parseLong(string,radix);
+    }
+  }
+
+  /** parse long value
+   * @param name name
+   * @return long value
+   */
+  public static long parseLong(String string)
+    throws NumberFormatException
+  {
+    return parseLong(string,10);
   }
 }
 
