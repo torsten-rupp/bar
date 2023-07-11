@@ -8339,6 +8339,7 @@ Dprintf.dprintf("");
             for (IndexData indexData : indexDataHashSet)
             {
               final String info = indexData.getInfo();
+Dprintf.dprintf("indexData=%s",indexData);
 
               try
               {
@@ -8360,11 +8361,13 @@ Dprintf.dprintf("");
                 }
                 else if (indexData instanceof StorageIndexData)
                 {
+Dprintf.dprintf("_");
                   BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* storageId=%lld",
                                                                indexData.id
                                                               ),
                                            0  // debugLevel
                                           );
+Dprintf.dprintf("_");
                 }
 
                 indexData.setState(IndexStates.UPDATE_REQUESTED);
@@ -8380,6 +8383,7 @@ Dprintf.dprintf("");
           {
             BARControl.resetCursor();
           }
+Dprintf.dprintf("---------");
 
           if (!widgetStorageTabFolder.isDisposed())
           {
@@ -8396,7 +8400,9 @@ Dprintf.dprintf("");
                 // table view
                 for (TableItem tableItem : widgetStorageTable.getSelection())
                 {
+Dprintf.dprintf("_");
                   updateStorageTreeTableThread.triggerUpdate(tableItem);
+Dprintf.dprintf("_");
                 }
                 break;
             }
@@ -8551,131 +8557,59 @@ Dprintf.dprintf("");
    */
   private void addStoragesToIndex()
   {
+    /** dialog data
+     */
+    class Data
+    {
+      StorageTypes storageType;
+      String       hostName;
+      int          hostPort;
+      String       loginName;
+      String       loginPassword;
+      String       deviceName;
+      String       archiveName;
+
+      Data()
+      {
+        this.storageType   = StorageTypes.FILESYSTEM;
+        this.hostName      = "";
+        this.hostPort      = 0;
+        this.loginName     = "";
+        this.loginPassword = "";
+        this.deviceName    = "";
+        this.archiveName   = "";
+      }
+    };
+
     Label     label;
     Composite composite,subComposite;
     Button    button;
+
+    final Data data = new Data();
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Add storage to index database"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
 
     // create widgets
-    final Text   widgetStoragePath;
-    final Button widgetAdd;
+    final Text               widgetArchiveName;
+    final Combo              widgetStorageType;
+    final BARWidgets.File    widgetFile;
+    final BARWidgets.FTP     widgetFTP;
+    final BARWidgets.SFTP    widgetSFTP;
+    final BARWidgets.WebDAV  widgetWebDAV;
+    final BARWidgets.Optical widgetOptical;
+    final BARWidgets.Device  widgetDevice;
+    final Button             widgetAdd;
     composite = Widgets.newComposite(dialog);
-    composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
+    composite.setLayout(new TableLayout(new double[]{0.0,0.0,1.0},new double[]{0.0,1.0}));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
-/* TODO
-      // destination
-      label = Widgets.newLabel(composite,BARControl.tr("Destination")+":");
-      Widgets.layout(label,10,0,TableLayoutData.W);
-      subComposite = Widgets.newComposite(composite);
-      subComposite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
-      Widgets.layout(subComposite,10,1,TableLayoutData.W);
-      {
-        Combo combo = Widgets.newOptionMenu(subComposite);
-        combo.setToolTipText(BARControl.tr("Storage type:\n"+
-                                           "  into file system\n"+
-                                           "  on FTP server\n"+
-                                           "  on SSH server with scp (secure copy)\n"+
-                                           "  on SSH server with sftp (secure FTP)\n"+
-                                           "  on WebDAV server\n"+
-                                           "  on WebDAV secure server\n"+
-                                           "  on CD\n"+
-                                           "  on DVD\n"+
-                                           "  on BD\n"+
-                                           "  on generic device\n"
-                                          )
-                            );
-        Widgets.setComboItems(combo,
-                              new Object[]{BARControl.tr("file system"),StorageTypes.FILESYSTEM,
-                                                         "ftp",         StorageTypes.FTP,
-                                                         "scp",         StorageTypes.SCP,
-                                                         "sftp",        StorageTypes.SFTP,
-                                                         "webdav",      StorageTypes.WEBDAV,
-                                                         "webdavs",     StorageTypes.WEBDAVS,
-                                                         "CD",          StorageTypes.CD,
-                                                         "DVD",         StorageTypes.DVD,
-                                                         "BD",          StorageTypes.BD,
-                                           BARControl.tr("device"),     StorageTypes.DEVICE
-                                          }
-                        );
-        Widgets.layout(combo,0,0,TableLayoutData.W);
-        combo.addSelectionListener(new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            Combo        widget = (Combo)selectionEvent.widget;
-            StorageTypes type   = Widgets.getSelectedComboItem(widget);
-          }
-        });
-//        Widgets.addModifyListener(new WidgetModifyListener(combo,storageType));
-
-        // destination file system
-        BARWidgets.File file = new BARWidgets.File(composite,
-                                                   EnumSet.allOf(BARWidgets.WidgetTypes.class)
-                                                  );
-        Widgets.layout(file,11,1,TableLayoutData.WE|TableLayoutData.N);
-        {
-          Widgets.addModifyListener(new WidgetModifyListener(file.maxStorageSize,maxStorageSize)
-          {
-            @Override
-            public void modified(Control control, WidgetVariable variable)
-            {
-              try
-              {
-                BARServer.setJobOption(selectedJobData.uuid,maxStorageSize);
-              }
-              catch (Exception exception)
-              {
-                // ignored
-              }
-            }
-
-            @Override
-            public String getString(WidgetVariable variable)
-            {
-              return (variable.getLong() > 0) ? Units.formatByteSize(variable.getLong()) : "";
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(file.archiveFileMode,archiveFileMode)
-          {
-            @Override
-            public void modified(Combo combo, WidgetVariable variable)
-            {
-              try
-              {
-                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
-              }
-              catch (Exception exception)
-              {
-                // ignored
-              }
-            }
-          });
-          Widgets.addModifyListener(new WidgetModifyListener(file,storageType)
-          {
-            @Override
-            public void modified(Control control, WidgetVariable variable)
-            {
-              Widgets.setVisible(control,variable.getEnum() == StorageTypes.FILESYSTEM);
-            }
-          });
-        }
-      }
-*/
-
-      label = Widgets.newLabel(composite,BARControl.tr("Storage path")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Archive name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
 
-      widgetStoragePath = Widgets.newText(composite);
-      widgetStoragePath.setToolTipText(BARControl.tr("Enter local or remote storage path."));
-      Widgets.layout(widgetStoragePath,0,1,TableLayoutData.WE);
+      widgetArchiveName = Widgets.newText(composite);
+      widgetArchiveName.setToolTipText(BARControl.tr("Enter local or remote storage path."));
+      Widgets.layout(widgetArchiveName,0,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,IMAGE_DIRECTORY);
       button.setToolTipText(BARControl.tr("Select local storage file."));
@@ -8694,26 +8628,83 @@ Dprintf.dprintf("");
           String pathName = Dialogs.file(shell,
                                          Dialogs.FileDialogTypes.ENTRY,
                                          BARControl.tr("Select storage"),
-                                         widgetStoragePath.getText(),
+                                         widgetArchiveName.getText(),
                                          ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                           ? BARServer.remoteListDirectory(widgetStoragePath.getText())
+                                           ? BARServer.remoteListDirectory(widgetArchiveName.getText())
                                            : BARControl.listDirectory
                                         );
           if (pathName != null)
           {
-            if (!widgetStoragePath.isDisposed())
+            if (!widgetArchiveName.isDisposed())
             {
-              widgetStoragePath.setText(pathName);
+              widgetArchiveName.setText(pathName);
             }
           }
         }
       });
+
+      // destination
+      label = Widgets.newLabel(composite,BARControl.tr("Source")+":");
+      Widgets.layout(label,1,0,TableLayoutData.NW);
+      widgetStorageType = Widgets.newOptionMenu(composite);
+      widgetStorageType.setToolTipText(BARControl.tr("Storage type:\n"+
+                                                     "  into file system\n"+
+                                                     "  on FTP server\n"+
+// TODO:implemente/remove?                                                     "  on SSH server with scp (secure copy)\n"+
+                                                     "  on SSH server with sftp (secure FTP)\n"+
+                                                     "  on WebDAV server\n"+
+                                                     "  on WebDAV secure server\n"+
+                                                     "  on CD\n"+
+                                                     "  on DVD\n"+
+                                                     "  on BD\n"+
+                                                     "  on generic device\n"
+                                                    )
+                                      );
+      Widgets.setComboItems(widgetStorageType,
+                            new Object[]{BARControl.tr("file system"),StorageTypes.FILESYSTEM,
+                                                       "ftp",         StorageTypes.FTP,
+// TODO:implemente/remove?                                                       "scp",         StorageTypes.SCP,
+                                                       "sftp",        StorageTypes.SFTP,
+                                                       "webdav",      StorageTypes.WEBDAV,
+                                                       "webdavs",     StorageTypes.WEBDAVS,
+                                                       "CD",          StorageTypes.CD,
+                                                       "DVD",         StorageTypes.DVD,
+                                                       "BD",          StorageTypes.BD,
+                                         BARControl.tr("device"),     StorageTypes.DEVICE
+                                        }
+                      );
+      Widgets.setSelectedComboItem(widgetStorageType,0);
+      Widgets.layout(widgetStorageType,1,1,TableLayoutData.W,0,2);
+
+      // destination file system
+      widgetFile= new BARWidgets.File(composite);
+      Widgets.layout(widgetFile,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+
+      // destination ftp
+      widgetFTP= new BARWidgets.FTP(composite);
+      Widgets.layout(widgetFTP,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+
+      // destination scp/sftp
+      widgetSFTP= new BARWidgets.SFTP(composite);
+      Widgets.layout(widgetSFTP,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+
+      // destination WebDAV
+      widgetWebDAV= new BARWidgets.WebDAV(composite);
+      Widgets.layout(widgetWebDAV,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+
+      // destination cd/dvd/bd
+      widgetOptical= new BARWidgets.Optical(composite);
+      Widgets.layout(widgetOptical,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+
+      // destination device
+      widgetDevice= new BARWidgets.Device(composite);
+      Widgets.layout(widgetDevice,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
     }
 
     // buttons
     composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
+    Widgets.layout(composite,2,0,TableLayoutData.WE,0,0,2);
     {
       widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
       widgetAdd.setEnabled(false);
@@ -8731,21 +8722,48 @@ Dprintf.dprintf("");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           Button widget = (Button)selectionEvent.widget;
-          Dialogs.close(dialog,null);
+          Dialogs.close(dialog,false);
         }
       });
     }
 
     // add listeners
-    widgetStoragePath.addModifyListener(new ModifyListener()
+    widgetArchiveName.addModifyListener(new ModifyListener()
     {
       @Override
       public void modifyText(ModifyEvent modifyEvent)
       {
         Text   widget      = (Text)modifyEvent.widget;
-        String storagePath = widget.getText().trim();
+        String archiveName = widget.getText().trim();
 
-        widgetAdd.setEnabled(!storagePath.isEmpty());
+        widgetAdd.setEnabled(!archiveName.isEmpty());
+      }
+    });
+    widgetStorageType.addSelectionListener(new SelectionListener()
+    {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
+      public void widgetSelected(SelectionEvent selectionEvent)
+      {
+        Combo        widget = (Combo)selectionEvent.widget;
+        StorageTypes type   = Widgets.getSelectedComboItem(widget);
+
+        Widgets.setVisible(widgetFile,   type == StorageTypes.FILESYSTEM);
+        Widgets.setVisible(widgetFTP,    type == StorageTypes.FTP);
+// TODO:implemente/remove?        Widgets.setVisible(scp,   type == StorageTypes.SCP);
+        Widgets.setVisible(widgetSFTP,   type == StorageTypes.SFTP);
+        Widgets.setVisible(widgetWebDAV,    (type == StorageTypes.WEBDAV)
+                                         || (type == StorageTypes.WEBDAVS)
+                          );
+        Widgets.setVisible(widgetOptical,   (type == StorageTypes.CD )
+                                         || (type == StorageTypes.DVD)
+                                         || (type == StorageTypes.BD )
+                          );
+        Widgets.setVisible(widgetDevice, type == StorageTypes.DEVICE);
+        dialog.pack();
       }
     });
     widgetAdd.addSelectionListener(new SelectionListener()
@@ -8757,22 +8775,60 @@ Dprintf.dprintf("");
       @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
-        Button widget = (Button)selectionEvent.widget;
-        Dialogs.close(dialog,widgetStoragePath.getText());
+        data.storageType = Widgets.getSelectedComboItem(widgetStorageType);
+        switch (data.storageType)
+        {
+          case FILESYSTEM:
+            data.archiveName = widgetArchiveName.getText().trim();
+            break;
+          case FTP:
+            data.hostName      = widgetFTP.hostName.getText().trim();
+            data.loginName     = widgetFTP.loginName.getText();
+            data.loginPassword = widgetFTP.loginPassword.getText();
+            data.archiveName   = widgetArchiveName.getText().trim();
+            break;
+// TODO:implemente/remove?          case StorageTypes.SCP:
+          case SFTP:
+            data.hostName      = widgetSFTP.hostName.getText().trim();
+            data.hostPort      = widgetSFTP.hostPort.getSelection();
+            data.loginName     = widgetSFTP.loginName.getText();
+            data.loginPassword = widgetSFTP.loginPassword.getText();
+            data.archiveName   = widgetArchiveName.getText().trim();
+            break;
+          case WEBDAV:
+          case WEBDAVS:
+            data.hostName      = widgetWebDAV.hostName.getText().trim();
+            data.hostPort      = widgetWebDAV.hostPort.getSelection();
+            data.loginName     = widgetWebDAV.loginName.getText();
+            data.loginPassword = widgetWebDAV.loginPassword.getText();
+            data.archiveName   = widgetArchiveName.getText().trim();
+            break;
+          case CD:
+          case DVD:
+          case BD:
+            data.deviceName  = widgetOptical.deviceName.getText().trim();
+            data.archiveName = widgetArchiveName.getText().trim();
+            break;
+          case DEVICE:
+            data.deviceName  = widgetDevice.deviceName.getText().trim();
+            data.archiveName = widgetArchiveName.getText().trim();
+            break;
+        }
+        Dialogs.close(dialog,true);
       }
     });
 
-    Widgets.setNextFocus(widgetStoragePath,
+    Widgets.setNextFocus(widgetArchiveName,
+                         widgetStorageType,
                          widgetAdd
                         );
 
     // run dialog
-    widgetStoragePath.forceFocus();
-    String storagePath = (String)Dialogs.run(dialog,null);
-
-    // add storage files
-    if ((storagePath != null) && !storagePath.isEmpty())
+    widgetArchiveName.forceFocus();
+    dialog.pack();
+    if ((Boolean)Dialogs.run(dialog,null) && !data.archiveName.isEmpty())
     {
+      // add storage files
       final BusyDialog busyDialog = new BusyDialog(shell,
                                                    BARControl.tr("Add indices"),
                                                    500,200,
@@ -8780,9 +8836,18 @@ Dprintf.dprintf("");
                                                    BusyDialog.PROGRESS_BAR0|BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
                                                   );
 
-      Background.run(new BackgroundRunnable(busyDialog,storagePath)
+      URIParts addURIParts = new URIParts(data.storageType,
+                                          data.hostName,
+                                          data.hostPort,
+                                          data.loginName,
+                                          data.loginPassword,
+                                          data.deviceName,
+                                          data.archiveName
+                                         );
+
+      Background.run(new BackgroundRunnable(busyDialog,addURIParts)
       {
-        public void run(final BusyDialog busyDialog, final String storagePath)
+        public void run(final BusyDialog busyDialog, final URIParts addURIParts)
         {
           final int[] n = new int[]{0};
           busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
@@ -8790,7 +8855,7 @@ Dprintf.dprintf("");
           try
           {
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD name=%'S patternType=GLOB progressSteps=1000",
-                                                         new File(storagePath,"*").getPath()
+                                                         addURIParts.getURI()
                                                         ),
                                      0,  // debugLevel
                                      new Command.ResultHandler()
@@ -8836,7 +8901,12 @@ Dprintf.dprintf("");
                 @Override
                 public void run()
                 {
-                  Dialogs.error(shell,BARControl.tr("Cannot add index to database for storage path\n\n''{0}''\n\n(error: {1})",storagePath,exception.getMessage()));
+                  Dialogs.error(shell,
+                                BARControl.tr("Cannot add index to database for storage path\n\n''{0}''\n\n(error: {1})",
+                                              data.archiveName,
+                                              exception.getMessage()
+                                             )
+                               );
                 }
               });
             }

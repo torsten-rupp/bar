@@ -1780,18 +1780,16 @@ public class BARWidgets
     return newPassword(composite,toolTipText,widgetVariable,(Listener)null);
   }
 
-  enum WidgetTypes
-  {
-    MAX_STORAGE_SIZE,
-    ARCHIVE_FILE_MODE,
-    PUBLIC_KEY,
-    PRIVATE_KEY,
-  };
-
   /** File super widget
    */
   static class File extends Composite
   {
+    static enum WidgetTypes
+    {
+      MAX_STORAGE_SIZE,
+      ARCHIVE_FILE_MODE
+    };
+
     Combo maxStorageSize;
     Combo archiveFileMode;
 
@@ -2061,6 +2059,8 @@ public class BARWidgets
           }
         }
       }
+
+      setVisible(false);
     }
 
     /** create file super widget
@@ -2112,6 +2112,11 @@ public class BARWidgets
    */
   static class FTP extends Composite
   {
+    enum WidgetTypes
+    {
+      ARCHIVE_FILE_MODE
+    };
+
     Text  hostName;
     Text  loginName;
     Text  loginPassword;
@@ -2461,6 +2466,8 @@ public class BARWidgets
         }
         row++;
       }
+
+      setVisible(false);
     }
 
     /** create FTP super widget
@@ -2518,6 +2525,13 @@ public class BARWidgets
    */
   static class SFTP extends Composite
   {
+    enum WidgetTypes
+    {
+      PUBLIC_KEY,
+      PRIVATE_KEY,
+      ARCHIVE_FILE_MODE
+    };
+
     Text    hostName;
     Spinner hostPort;
     Text    loginName;
@@ -3185,6 +3199,8 @@ public class BARWidgets
         }
         row++;
       }
+
+      setVisible(false);
     }
 
     /** create device super widget
@@ -3253,6 +3269,13 @@ public class BARWidgets
    */
   static class WebDAV extends Composite
   {
+    enum WidgetTypes
+    {
+      PUBLIC_KEY,
+      PRIVATE_KEY,
+      ARCHIVE_FILE_MODE
+    };
+
     Text    hostName;
     Spinner hostPort;
     Text    loginName;
@@ -3912,6 +3935,8 @@ public class BARWidgets
         }
         row++;
       }
+
+      setVisible(false);
     }
 
     /** create device super widget
@@ -3981,6 +4006,15 @@ public class BARWidgets
    */
   static class Optical extends Composite
   {
+    static enum WidgetTypes
+    {
+      VOLUME_SIZE,
+      ECC,
+      BLANK,
+      WAIT_FIRST_VOLUME,
+      ARCHIVE_PART_SIZE
+    };
+
     // max. size of medium data with ECC [%]
     private final double MAX_MEDIUM_SIZE_ECC = 0.8;
 
@@ -4146,153 +4180,167 @@ public class BARWidgets
       }
       row++;
 
-      label = Widgets.newLabel(this,BARControl.tr("Size")+":");
-      Widgets.layout(label,row,0,TableLayoutData.W);
-      subComposite = Widgets.newComposite(this,SWT.NONE);
-      Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+      if (widgets.contains(WidgetTypes.VOLUME_SIZE))
       {
-        volumeSize = BARWidgets.newByteSize(subComposite,
-                                            BARControl.tr("Size of medium. You may specify a smaller value than the real physical size to leave some free space for error-correction codes."),
-                                            volumeSizeVariable,
-                                            new Object[]{Units.formatSize(       425*Units.M ),       425*Units.M,
-                                                         Units.formatSize(       430*Units.M ),       430*Units.M,
-                                                         Units.formatSize(       470*Units.M ),       470*Units.M,
-                                                         Units.formatSize(       520*Units.M ),       520*Units.M,
-                                                         Units.formatSize(       560*Units.M ),       560*Units.M,
-                                                         Units.formatSize(       650*Units.M ),       650*Units.M,
-                                                         Units.formatSize(       660*Units.M ),       660*Units.M,
-                                                         Units.formatSize(       720*Units.M ),       720*Units.M,
-                                                         Units.formatSize(       850*Units.M ),       850*Units.M,
-                                                         Units.formatSize(         2*Units.G ),         2*Units.G,
-                                                         Units.formatSize((long)(3.2*Units.G)),(long)(3.2*Units.G),
-                                                         Units.formatSize(         4*Units.G ),         4*Units.G,
-                                                         Units.formatSize((long)(6.4*Units.G)),(long)(6.4*Units.G),
-                                                         Units.formatSize((long)(7.2*Units.G)),(long)(7.2*Units.G),
-                                                         Units.formatSize(         8*Units.G ),         8*Units.G,
-                                                         Units.formatSize(        20*Units.G ),        20*Units.G,
-                                                         Units.formatSize(        25*Units.G ),        25*Units.G,
-                                                         Units.formatSize(        40*Units.G ),        40*Units.G,
-                                                         Units.formatSize(        50*Units.G ),        50*Units.G,
-                                                         Units.formatSize(        80*Units.G ),        80*Units.G,
-                                                         Units.formatSize(       100*Units.G ),       100*Units.G
-                                                        }
-                                           );
-        volumeSize.setData("showedErrorDialog",false);
-        Widgets.layout(volumeSize,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
+        label = Widgets.newLabel(this,BARControl.tr("Size")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subComposite = Widgets.newComposite(this,SWT.NONE);
+        Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+        {
+          volumeSize = BARWidgets.newByteSize(subComposite,
+                                              BARControl.tr("Size of medium. You may specify a smaller value than the real physical size to leave some free space for error-correction codes."),
+                                              volumeSizeVariable,
+                                              new Object[]{Units.formatSize(       425*Units.M ),       425*Units.M,
+                                                           Units.formatSize(       430*Units.M ),       430*Units.M,
+                                                           Units.formatSize(       470*Units.M ),       470*Units.M,
+                                                           Units.formatSize(       520*Units.M ),       520*Units.M,
+                                                           Units.formatSize(       560*Units.M ),       560*Units.M,
+                                                           Units.formatSize(       650*Units.M ),       650*Units.M,
+                                                           Units.formatSize(       660*Units.M ),       660*Units.M,
+                                                           Units.formatSize(       720*Units.M ),       720*Units.M,
+                                                           Units.formatSize(       850*Units.M ),       850*Units.M,
+                                                           Units.formatSize(         2*Units.G ),         2*Units.G,
+                                                           Units.formatSize((long)(3.2*Units.G)),(long)(3.2*Units.G),
+                                                           Units.formatSize(         4*Units.G ),         4*Units.G,
+                                                           Units.formatSize((long)(6.4*Units.G)),(long)(6.4*Units.G),
+                                                           Units.formatSize((long)(7.2*Units.G)),(long)(7.2*Units.G),
+                                                           Units.formatSize(         8*Units.G ),         8*Units.G,
+                                                           Units.formatSize(        20*Units.G ),        20*Units.G,
+                                                           Units.formatSize(        25*Units.G ),        25*Units.G,
+                                                           Units.formatSize(        40*Units.G ),        40*Units.G,
+                                                           Units.formatSize(        50*Units.G ),        50*Units.G,
+                                                           Units.formatSize(        80*Units.G ),        80*Units.G,
+                                                           Units.formatSize(       100*Units.G ),       100*Units.G
+                                                          }
+                                             );
+          volumeSize.setData("showedErrorDialog",false);
+          Widgets.layout(volumeSize,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
+        }
+        row++;
       }
-      row++;
 
-      if (widgets.contains(WidgetTypes.ARCHIVE_FILE_MODE))
+      if (widgets.contains(WidgetTypes.ECC) || widgets.contains(WidgetTypes.BLANK) || widgets.contains(WidgetTypes.WAIT_FIRST_VOLUME))
       {
         label = Widgets.newLabel(this,BARControl.tr("Options")+":");
         Widgets.layout(label,row,0,TableLayoutData.NW);
         subComposite = Widgets.newComposite(this,SWT.NONE);
         Widgets.layout(subComposite,row,1,TableLayoutData.WE);
         {
-          ecc = Widgets.newCheckbox(subComposite,BARControl.tr("add error-correction codes"));
-          ecc.setToolTipText(BARControl.tr("Add error-correction codes to CD/DVD/BD image (require dvdisaster tool)."));
-          Widgets.layout(ecc,0,0,TableLayoutData.W);
-          ecc.addSelectionListener(new SelectionListener()
+          if (widgets.contains(WidgetTypes.ECC))
           {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            ecc = Widgets.newCheckbox(subComposite,BARControl.tr("add error-correction codes"));
+            ecc.setToolTipText(BARControl.tr("Add error-correction codes to CD/DVD/BD image (require dvdisaster tool)."));
+            Widgets.layout(ecc,0,0,TableLayoutData.W);
+            ecc.addSelectionListener(new SelectionListener()
             {
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button  widget      = (Button)selectionEvent.widget;
-              boolean checkedFlag = widget.getSelection();
-
-              if (eccVariable != null)
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                eccVariable.set(checkedFlag);
               }
-
-              try
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
               {
-                long n    = Units.parseByteSize(volumeSize.getText());
-                long size = (long)((double)n*MAX_MEDIUM_SIZE_ECC);
+                Button  widget      = (Button)selectionEvent.widget;
+                boolean checkedFlag = widget.getSelection();
 
-                if (   checkedFlag
-                    && archivePartSizeFlag.getBoolean()
-                    && (archivePartSize.getLong() > 0)
-                    && ((size%archivePartSize.getLong()) > 0)
-                    && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
-                   )
+                if (eccVariable != null)
                 {
-                  Dialogs.warning(composite.getShell(),CD_DVD_BD_INFO);
+                  eccVariable.set(checkedFlag);
+                }
+
+                try
+                {
+                  long n    = Units.parseByteSize(volumeSize.getText());
+                  long size = (long)((double)n*MAX_MEDIUM_SIZE_ECC);
+
+                  if (   checkedFlag
+                      && archivePartSizeFlag.getBoolean()
+                      && (archivePartSize.getLong() > 0)
+                      && ((size%archivePartSize.getLong()) > 0)
+                      && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
+                     )
+                  {
+                    Dialogs.warning(composite.getShell(),CD_DVD_BD_INFO);
+                  }
+                }
+                catch (NumberFormatException exception)
+                {
+                  // ignored
+                }
+                catch (Exception exception)
+                {
+                  // ignored
                 }
               }
-              catch (NumberFormatException exception)
-              {
-                // ignored
-              }
-              catch (Exception exception)
-              {
-                // ignored
-              }
+            });
+            if (eccVariable != null)
+            {
+              Widgets.addModifyListener(new WidgetModifyListener(ecc,eccVariable));
             }
-          });
-          if (eccVariable != null)
-          {
-            Widgets.addModifyListener(new WidgetModifyListener(ecc,eccVariable));
           }
 
-          blank = Widgets.newCheckbox(subComposite,BARControl.tr("blank medium"));
-          blank.setToolTipText(BARControl.tr("Blank medium before writing."));
-          Widgets.layout(blank,0,1,TableLayoutData.W);
-          blank.addSelectionListener(new SelectionListener()
+          if (widgets.contains(WidgetTypes.BLANK))
           {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            blank = Widgets.newCheckbox(subComposite,BARControl.tr("blank medium"));
+            blank.setToolTipText(BARControl.tr("Blank medium before writing."));
+            Widgets.layout(blank,0,1,TableLayoutData.W);
+            blank.addSelectionListener(new SelectionListener()
             {
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button  widget      = (Button)selectionEvent.widget;
-              boolean checkedFlag = widget.getSelection();
-
-              if (blankVariable != null)
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                blankVariable.set(checkedFlag);
               }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button  widget      = (Button)selectionEvent.widget;
+                boolean checkedFlag = widget.getSelection();
+
+                if (blankVariable != null)
+                {
+                  blankVariable.set(checkedFlag);
+                }
+              }
+            });
+            if (blankVariable != null)
+            {
+              Widgets.addModifyListener(new WidgetModifyListener(blank,blankVariable));
             }
-          });
-          if (blankVariable != null)
-          {
-            Widgets.addModifyListener(new WidgetModifyListener(blank,blankVariable));
           }
 
-          waitFirstVolume = Widgets.newCheckbox(subComposite,BARControl.tr("wait for first volume"));
-          waitFirstVolume.setToolTipText(BARControl.tr("Wait until first volume is loaded."));
-          Widgets.layout(waitFirstVolume,1,0,TableLayoutData.W);
-          waitFirstVolume.addSelectionListener(new SelectionListener()
+          if (widgets.contains(WidgetTypes.WAIT_FIRST_VOLUME))
           {
-            @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            waitFirstVolume = Widgets.newCheckbox(subComposite,BARControl.tr("wait for first volume"));
+            waitFirstVolume.setToolTipText(BARControl.tr("Wait until first volume is loaded."));
+            Widgets.layout(waitFirstVolume,1,0,TableLayoutData.W);
+            waitFirstVolume.addSelectionListener(new SelectionListener()
             {
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Button  widget      = (Button)selectionEvent.widget;
-              boolean checkedFlag = widget.getSelection();
-
-              if (waitFirstVolumeVariable != null)
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
               {
-                waitFirstVolumeVariable.set(checkedFlag);
               }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button  widget      = (Button)selectionEvent.widget;
+                boolean checkedFlag = widget.getSelection();
+
+                if (waitFirstVolumeVariable != null)
+                {
+                  waitFirstVolumeVariable.set(checkedFlag);
+                }
+              }
+            });
+            if (waitFirstVolumeVariable != null)
+            {
+              Widgets.addModifyListener(new WidgetModifyListener(waitFirstVolume,waitFirstVolumeVariable));
             }
-          });
-          if (waitFirstVolumeVariable != null)
-          {
-            Widgets.addModifyListener(new WidgetModifyListener(waitFirstVolume,waitFirstVolumeVariable));
           }
         }
         row++;
       }
+
+      setVisible(false);
     }
 
     /** create device super widget
@@ -4362,6 +4410,11 @@ public class BARWidgets
    */
   static class Device extends Composite
   {
+    enum WidgetTypes
+    {
+      VOLUME_SIZE
+    };
+
     Text   deviceName;
     Combo  volumeSize;
 
@@ -4498,7 +4551,7 @@ public class BARWidgets
       }
       row++;
 
-      if (widgets.contains(WidgetTypes.ARCHIVE_FILE_MODE))
+      if (widgets.contains(WidgetTypes.VOLUME_SIZE))
       {
         label = Widgets.newLabel(this,BARControl.tr("Size")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
@@ -4543,6 +4596,8 @@ public class BARWidgets
         }
         row++;
       }
+
+      setVisible(false);
     }
 
     /** create device super widget

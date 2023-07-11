@@ -6784,7 +6784,7 @@ public class TabJobs
           combo.setToolTipText(BARControl.tr("Storage destination type:\n"+
                                              "  into file system\n"+
                                              "  on FTP server\n"+
-                                             "  on SSH server with scp (secure copy)\n"+
+// TODO:implemente/remove?                                             "  on SSH server with scp (secure copy)\n"+
                                              "  on SSH server with sftp (secure FTP)\n"+
                                              "  on WebDAV server\n"+
                                              "  on WebDAV secure server\n"+
@@ -6797,7 +6797,7 @@ public class TabJobs
           Widgets.setComboItems(combo,
                                 new Object[]{BARControl.tr("file system"),StorageTypes.FILESYSTEM,
                                                            "ftp",         StorageTypes.FTP,
-                                                           "scp",         StorageTypes.SCP,
+// TODO:implemente/remove?                                                           "scp",         StorageTypes.SCP,
                                                            "sftp",        StorageTypes.SFTP,
                                                            "webdav",      StorageTypes.WEBDAV,
                                                            "webdavs",     StorageTypes.WEBDAVS,
@@ -6827,13 +6827,13 @@ public class TabJobs
                   case CD:
                 {
                   if (   archivePartSizeFlag.getBoolean()
-                      && (volumeSize.getLong() <= 0)
+                      && (Units.parseByteSize(volumeSize.getString()) <= 0)
                      )
                   {
                     Dialogs.warning(shell,BARControl.tr("When writing to a CD without setting medium size\nthe resulting archive file may not fit on medium."));
                   }
 
-                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
+                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_MEDIUM_SIZE_ECC);
                   if (   ecc.getBoolean()
                       && archivePartSizeFlag.getBoolean()
                       && (archivePartSize.getLong() > 0)
@@ -6857,7 +6857,7 @@ public class TabJobs
                   case DVD:
                 {
                   if (   archivePartSizeFlag.getBoolean()
-                      && (volumeSize.getLong() <= 0)
+                      && (Units.parseByteSize(volumeSize.getString()) <= 0)
                      )
                   {
                     Dialogs.warning(shell,BARControl.tr("When writing to a DVD without setting medium size\n"+
@@ -6866,7 +6866,7 @@ public class TabJobs
                                    );
                   }
 
-                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
+                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_MEDIUM_SIZE_ECC);
                   if (   ecc.getBoolean()
                       && archivePartSizeFlag.getBoolean()
                       && (archivePartSize.getLong() > 0)
@@ -6891,7 +6891,7 @@ public class TabJobs
                   case BD:
                 {
                   if (   archivePartSizeFlag.getBoolean()
-                      && (volumeSize.getLong() <= 0)
+                      && (Units.parseByteSize(volumeSize.getString()) <= 0)
                      )
                   {
                     Dialogs.warning(shell,BARControl.tr("When writing to a BD without setting medium size\n"+
@@ -6900,7 +6900,7 @@ public class TabJobs
                                    );
                   }
 
-                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
+                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_MEDIUM_SIZE_ECC);
                   if (   ecc.getBoolean()
                       && archivePartSizeFlag.getBoolean()
                       && (archivePartSize.getLong() > 0)
@@ -6980,14 +6980,14 @@ public class TabJobs
         }
 
         // destination file system
-        BARWidgets.File file = new BARWidgets.File(tab,
-                                                   EnumSet.allOf(BARWidgets.WidgetTypes.class),
-                                                   maxStorageSize,
-                                                   archiveFileMode
-                                                  );
-        Widgets.layout(file,11,1,TableLayoutData.WE|TableLayoutData.N);
+        BARWidgets.File widgetFile = new BARWidgets.File(tab,
+                                                         EnumSet.allOf(BARWidgets.File.WidgetTypes.class),
+                                                         maxStorageSize,
+                                                         archiveFileMode
+                                                        );
+        Widgets.layout(widgetFile,11,1,TableLayoutData.WE|TableLayoutData.N);
         {
-          Widgets.addModifyListener(new WidgetModifyListener(file.maxStorageSize,maxStorageSize)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetFile.maxStorageSize,maxStorageSize)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7008,7 +7008,7 @@ public class TabJobs
               return (variable.getLong() > 0) ? Units.formatByteSize(variable.getLong()) : "";
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(file.archiveFileMode,archiveFileMode)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetFile.archiveFileMode,archiveFileMode)
           {
             @Override
             public void modified(Combo combo, WidgetVariable variable)
@@ -7023,7 +7023,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(file,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetFile,storageType)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7034,15 +7034,15 @@ public class TabJobs
         }
 
         // destination ftp
-        BARWidgets.FTP ftp = new BARWidgets.FTP(tab,
-                                                storageHostName,
-                                                storageLoginName,
-                                                storageLoginPassword,
-                                                archiveFileMode
-                                               );
-        Widgets.layout(ftp,11,1,TableLayoutData.WE|TableLayoutData.N);
+        BARWidgets.FTP widgetFTP = new BARWidgets.FTP(tab,
+                                                      storageHostName,
+                                                      storageLoginName,
+                                                      storageLoginPassword,
+                                                      archiveFileMode
+                                                     );
+        Widgets.layout(widgetFTP,11,1,TableLayoutData.WE|TableLayoutData.N);
         {
-          Widgets.addModifyListener(new WidgetModifyListener(ftp.hostName,storageHostName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetFTP.hostName,storageHostName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7057,7 +7057,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(ftp.loginName,storageLoginName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetFTP.loginName,storageLoginName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7072,7 +7072,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(ftp.loginPassword,storageLoginPassword)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetFTP.loginPassword,storageLoginPassword)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7087,7 +7087,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(ftp.archiveFileMode,archiveFileMode)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetFTP.archiveFileMode,archiveFileMode)
           {
             @Override
             public void modified(Combo combo, WidgetVariable variable)
@@ -7102,7 +7102,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(ftp,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetFTP,storageType)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7113,18 +7113,18 @@ public class TabJobs
         }
 
         // destination scp/sftp
-        BARWidgets.SFTP sftp = new BARWidgets.SFTP(tab,
-                                                   storageHostName,
-                                                   storageHostPort,
-                                                   storageLoginName,
-                                                   storageLoginPassword,
-                                                   sshPublicKeyFileName,
-                                                   sshPrivateKeyFileName,
-                                                   archiveFileMode
-                                                  );
-        Widgets.layout(sftp,11,1,TableLayoutData.WE|TableLayoutData.N);
+        BARWidgets.SFTP widgetSFTP = new BARWidgets.SFTP(tab,
+                                                         storageHostName,
+                                                         storageHostPort,
+                                                         storageLoginName,
+                                                         storageLoginPassword,
+                                                         sshPublicKeyFileName,
+                                                         sshPrivateKeyFileName,
+                                                         archiveFileMode
+                                                        );
+        Widgets.layout(widgetSFTP,11,1,TableLayoutData.WE|TableLayoutData.N);
         {
-          Widgets.addModifyListener(new WidgetModifyListener(sftp.hostName,storageHostName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSFTP.hostName,storageHostName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7139,7 +7139,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(sftp.hostPort,storageHostPort)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSFTP.hostPort,storageHostPort)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7154,7 +7154,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(sftp.loginName,storageLoginName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSFTP.loginName,storageLoginName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7169,7 +7169,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(sftp.loginPassword,storageLoginPassword)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSFTP.loginPassword,storageLoginPassword)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7184,7 +7184,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(sftp.publicKey,sshPublicKeyFileName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSFTP.publicKey,sshPublicKeyFileName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7199,7 +7199,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(sftp.privateKey,sshPrivateKeyFileName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSFTP.privateKey,sshPrivateKeyFileName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7214,7 +7214,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(sftp.archiveFileMode,archiveFileMode)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSFTP.archiveFileMode,archiveFileMode)
           {
             @Override
             public void modified(Combo combo, WidgetVariable variable)
@@ -7229,7 +7229,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(sftp,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSFTP,storageType)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7243,18 +7243,18 @@ public class TabJobs
         }
 
         // destination WebDAV
-        BARWidgets.WebDAV webdav = new BARWidgets.WebDAV(tab,
-                                                         storageHostName,
-                                                         storageHostPort,
-                                                         storageLoginName,
-                                                         storageLoginPassword,
-                                                         sshPublicKeyFileName,
-                                                         sshPrivateKeyFileName,
-                                                         archiveFileMode
-                                                        );
-        Widgets.layout(webdav,11,1,TableLayoutData.WE|TableLayoutData.N);
+        BARWidgets.WebDAV widgetWebDAV = new BARWidgets.WebDAV(tab,
+                                                               storageHostName,
+                                                               storageHostPort,
+                                                               storageLoginName,
+                                                               storageLoginPassword,
+                                                               sshPublicKeyFileName,
+                                                               sshPrivateKeyFileName,
+                                                               archiveFileMode
+                                                              );
+        Widgets.layout(widgetWebDAV,11,1,TableLayoutData.WE|TableLayoutData.N);
         {
-          Widgets.addModifyListener(new WidgetModifyListener(webdav.hostName,storageHostName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetWebDAV.hostName,storageHostName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7269,7 +7269,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(webdav.hostPort,storageHostPort)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetWebDAV.hostPort,storageHostPort)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7284,7 +7284,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(webdav.loginName,storageLoginName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetWebDAV.loginName,storageLoginName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7299,7 +7299,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(webdav.loginPassword,storageLoginPassword)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetWebDAV.loginPassword,storageLoginPassword)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7314,7 +7314,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(webdav.publicKey,sshPublicKeyFileName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetWebDAV.publicKey,sshPublicKeyFileName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7329,7 +7329,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(webdav.privateKey,sshPrivateKeyFileName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetWebDAV.privateKey,sshPrivateKeyFileName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7344,7 +7344,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(webdav.archiveFileMode,archiveFileMode)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetWebDAV.archiveFileMode,archiveFileMode)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7359,7 +7359,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(webdav,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetWebDAV,storageType)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7373,18 +7373,18 @@ public class TabJobs
         }
 
         // destination cd/dvd/bd
-        BARWidgets.Optical optical = new BARWidgets.Optical(tab,
-                                                            storageDeviceName,
-                                                            volumeSize,
-                                                            ecc,
-                                                            blank,
-                                                            waitFirstVolume,
-                                                            archivePartSizeFlag,
-                                                            archivePartSize
-                                                           );
-        Widgets.layout(optical,11,1,TableLayoutData.WE|TableLayoutData.N);
+        BARWidgets.Optical widgetOptical = new BARWidgets.Optical(tab,
+                                                                  storageDeviceName,
+                                                                  volumeSize,
+                                                                  ecc,
+                                                                  blank,
+                                                                  waitFirstVolume,
+                                                                  archivePartSizeFlag,
+                                                                  archivePartSize
+                                                                 );
+        Widgets.layout(widgetOptical,11,1,TableLayoutData.WE|TableLayoutData.N);
         {
-          Widgets.addModifyListener(new WidgetModifyListener(optical.deviceName,storageDeviceName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetOptical.deviceName,storageDeviceName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7399,7 +7399,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(optical.volumeSize,volumeSize)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetOptical.volumeSize,volumeSize)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7414,7 +7414,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(optical.ecc,ecc)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetOptical.ecc,ecc)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7429,7 +7429,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(optical.blank,blank)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetOptical.blank,blank)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7444,7 +7444,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(optical.waitFirstVolume,waitFirstVolume)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetOptical.waitFirstVolume,waitFirstVolume)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7459,7 +7459,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(optical,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetOptical,storageType)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7473,13 +7473,13 @@ public class TabJobs
         }
 
         // destination device
-        BARWidgets.Device device = new BARWidgets.Device(tab,
-                                                         storageDeviceName,
-                                                         volumeSize
-                                                        );
-        Widgets.layout(device,11,1,TableLayoutData.WE|TableLayoutData.N);
+        BARWidgets.Device widgetDevice = new BARWidgets.Device(tab,
+                                                               storageDeviceName,
+                                                               volumeSize
+                                                              );
+        Widgets.layout(widgetDevice,11,1,TableLayoutData.WE|TableLayoutData.N);
         {
-          Widgets.addModifyListener(new WidgetModifyListener(device.deviceName,storageDeviceName)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetDevice.deviceName,storageDeviceName)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7494,7 +7494,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(device.volumeSize,volumeSize)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetDevice.volumeSize,volumeSize)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)
@@ -7509,7 +7509,7 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(device,storageType)
+          Widgets.addModifyListener(new WidgetModifyListener(widgetDevice,storageType)
           {
             @Override
             public void modified(Control control, WidgetVariable variable)

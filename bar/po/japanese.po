@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-07-09 08:40+0200\n"
+"POT-Creation-Date: 2023-07-11 12:06+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -228,8 +228,7 @@ msgstr ""
 msgid "no SSH password given"
 msgstr ""
 
-#: errors.def:136 errors.def:143 errors.def:150 errors.def:158 errors.def:239
-#: errors.def:663
+#: errors.def:136 errors.def:143 errors.def:150 errors.def:239 errors.def:663
 msgid " for '{0}'"
 msgstr ""
 

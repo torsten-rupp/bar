@@ -43,6 +43,7 @@
   * BARControl: added tooltip for total entries
   * BARControl: fixed clone job and update view
   * BARControl: fixed file requester if job is unknown
+  * BARControl: added source for storage add to index
 
 2023-04-16 0.22g
   * fixed lost resource in debug version
