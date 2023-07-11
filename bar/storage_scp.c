@@ -262,7 +262,6 @@ LOCAL bool StorageSCP_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
   if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
   return    String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
-         && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)
          && String_equals(archiveName1,archiveName2);
 }
 
