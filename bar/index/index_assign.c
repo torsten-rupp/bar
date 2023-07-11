@@ -761,9 +761,9 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
     if (error == ERROR_NONE)
     {
       error = IndexUUID_pruneAll(indexHandle,
-                                   NULL,  // doneFlag
-                                   NULL  // deletedCounter
-                                  );
+                                 NULL,  // doneFlag
+                                 NULL  // deletedCounter
+                                );
     }
   }
 

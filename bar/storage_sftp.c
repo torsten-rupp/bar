@@ -413,13 +413,13 @@ LOCAL Errors sftpStat(SocketHandle *socketHandle,
         {
           if (fileInfo != NULL)
           {
-            if      (LIBSSH2_SFTP_S_ISREG (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_FILE;
-            else if (LIBSSH2_SFTP_S_ISDIR (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_DIRECTORY;
-            else if (LIBSSH2_SFTP_S_ISLNK (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_LINK;
-            else if (LIBSSH2_SFTP_S_ISCHR (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
-            else if (LIBSSH2_SFTP_S_ISBLK (sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
-            else if (LIBSSH2_SFTP_S_ISFIFO(sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
-            else if (LIBSSH2_SFTP_S_ISSOCK(sftpAttributes.flags)) fileInfo->type = FILE_TYPE_SPECIAL;
+            if      (LIBSSH2_SFTP_S_ISREG (sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_FILE;
+            else if (LIBSSH2_SFTP_S_ISDIR (sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_DIRECTORY;
+            else if (LIBSSH2_SFTP_S_ISLNK (sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_LINK;
+            else if (LIBSSH2_SFTP_S_ISCHR (sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_SPECIAL;
+            else if (LIBSSH2_SFTP_S_ISBLK (sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_SPECIAL;
+            else if (LIBSSH2_SFTP_S_ISFIFO(sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_SPECIAL;
+            else if (LIBSSH2_SFTP_S_ISSOCK(sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_SPECIAL;
             else                                                  fileInfo->type = FILE_TYPE_UNKNOWN;
             fileInfo->size            = (uint64)sftpAttributes.filesize;
             fileInfo->timeLastAccess  = (uint64)sftpAttributes.atime;
@@ -450,7 +450,7 @@ LOCAL Errors sftpStat(SocketHandle *socketHandle,
       }
       while (error == ERROR_UNKNOWN);
 
-      libssh2_sftp_shutdown(sftp);
+      (void)libssh2_sftp_shutdown(sftp);
     }
     else
     {
@@ -557,7 +557,7 @@ LOCAL Errors sftpMakeDirectory(SocketHandle *socketHandle,
       }
       while (error == ERROR_UNKNOWN);
 
-      libssh2_sftp_shutdown(sftp);
+      (void)libssh2_sftp_shutdown(sftp);
     }
     else
     {
@@ -849,7 +849,6 @@ LOCAL bool StorageSFTP_equalSpecifiers(const StorageSpecifier *storageSpecifier1
   if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
 
   return    String_equals(storageSpecifier1->hostName,storageSpecifier2->hostName)
-         && String_equals(storageSpecifier1->loginName,storageSpecifier2->loginName)
          && String_equals(archiveName1,archiveName2);
 }
 
@@ -1765,7 +1764,7 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                       "%s",
                       ssh2ErrorText
                      );
-      libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+      (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
       Network_disconnect(&storageHandle->sftp.socketHandle);
       DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
       return error;
@@ -1903,7 +1902,7 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                       "%s",
                       ssh2ErrorText
                      );
-      libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+      (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
       Network_disconnect(&storageHandle->sftp.socketHandle);
       DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
       free(storageHandle->sftp.readAheadBuffer.data);
@@ -1924,8 +1923,8 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                       "%s",
                       ssh2ErrorText
                      );
-      libssh2_sftp_close(storageHandle->sftp.sftpHandle);
-      libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+      (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+      (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
       Network_disconnect(&storageHandle->sftp.socketHandle);
       DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
       free(storageHandle->sftp.readAheadBuffer.data);
@@ -1976,7 +1975,7 @@ LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
           break; /* not reached */
       #endif /* NDEBUG */
     }
-    libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+    (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
     Network_disconnect(&storageHandle->sftp.socketHandle);
 
     DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
@@ -2925,8 +2924,8 @@ LOCAL void StorageSFTP_closeDirectoryList(StorageDirectoryListHandle *storageDir
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   #ifdef HAVE_SSH2
-    libssh2_sftp_closedir(storageDirectoryListHandle->sftp.sftpHandle);
-    libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp);
+    (void)libssh2_sftp_closedir(storageDirectoryListHandle->sftp.sftpHandle);
+    (void)libssh2_sftp_shutdown(storageDirectoryListHandle->sftp.sftp);
     Network_disconnect(&storageDirectoryListHandle->sftp.socketHandle);
     free(storageDirectoryListHandle->sftp.buffer);
     String_delete(storageDirectoryListHandle->sftp.pathName);
@@ -2967,7 +2966,7 @@ LOCAL bool StorageSFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDir
                                 );
         if (n > 0)
         {
-          if (   !S_ISDIR(storageDirectoryListHandle->sftp.attributes.flags)
+          if (   !LIBSSH2_SFTP_S_ISDIR(storageDirectoryListHandle->sftp.attributes.permissions)
               && ((n != 1) || (strncmp(storageDirectoryListHandle->sftp.buffer,".", 1) != 0))
               && ((n != 2) || (strncmp(storageDirectoryListHandle->sftp.buffer,"..",2) != 0))
              )
@@ -3029,7 +3028,7 @@ LOCAL Errors StorageSFTP_readDirectoryList(StorageDirectoryListHandle *storageDi
                                   );
           if      (n > 0)
           {
-            if (   !S_ISDIR(storageDirectoryListHandle->sftp.attributes.flags)
+            if (   !LIBSSH2_SFTP_S_ISDIR(storageDirectoryListHandle->sftp.attributes.permissions)
                 && ((n != 1) || (strncmp(storageDirectoryListHandle->sftp.buffer,".", 1) != 0))
                 && ((n != 2) || (strncmp(storageDirectoryListHandle->sftp.buffer,"..",2) != 0))
                )

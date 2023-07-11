@@ -2632,6 +2632,7 @@ Errors IndexStorage_purgeAllByName(IndexHandle            *indexHandle,
   IndexId          storageId;
   String           storageName;
   IndexId          entityId;
+  IndexId          uuidId;
 
   assert(indexHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -2746,9 +2747,9 @@ UNUSED_VARIABLE(progressInfo);
       }
 
       // prune uuid index
-      ARRAY_ITERATEX(&uuidIds,arrayIterator,entityId,error == ERROR_NONE)
+      ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
       {
-        error = IndexUUID_prune(indexHandle,NULL,NULL,entityId);
+        error = IndexUUID_prune(indexHandle,NULL,NULL,uuidId);
         DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
       }
     }
