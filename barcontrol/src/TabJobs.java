@@ -6835,13 +6835,13 @@ public class TabJobs
                   case CD:
                 {
                   if (   archivePartSizeFlag.getBoolean()
-                      && (volumeSize.getLong() <= 0)
+                      && (Units.parseByteSize(volumeSize.getString()) <= 0)
                      )
                   {
                     Dialogs.warning(shell,BARControl.tr("When writing to a CD without setting medium size\nthe resulting archive file may not fit on medium."));
                   }
 
-                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
+                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_MEDIUM_SIZE_ECC);
                   if (   ecc.getBoolean()
                       && archivePartSizeFlag.getBoolean()
                       && (archivePartSize.getLong() > 0)
@@ -6865,7 +6865,7 @@ public class TabJobs
                   case DVD:
                 {
                   if (   archivePartSizeFlag.getBoolean()
-                      && (volumeSize.getLong() <= 0)
+                      && (Units.parseByteSize(volumeSize.getString()) <= 0)
                      )
                   {
                     Dialogs.warning(shell,BARControl.tr("When writing to a DVD without setting medium size\n"+
@@ -6874,7 +6874,7 @@ public class TabJobs
                                    );
                   }
 
-                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
+                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_MEDIUM_SIZE_ECC);
                   if (   ecc.getBoolean()
                       && archivePartSizeFlag.getBoolean()
                       && (archivePartSize.getLong() > 0)
@@ -6899,7 +6899,7 @@ public class TabJobs
                   case BD:
                 {
                   if (   archivePartSizeFlag.getBoolean()
-                      && (volumeSize.getLong() <= 0)
+                      && (Units.parseByteSize(volumeSize.getString()) <= 0)
                      )
                   {
                     Dialogs.warning(shell,BARControl.tr("When writing to a BD without setting medium size\n"+
@@ -6908,7 +6908,7 @@ public class TabJobs
                                    );
                   }
 
-                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
+                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_MEDIUM_SIZE_ECC);
                   if (   ecc.getBoolean()
                       && archivePartSizeFlag.getBoolean()
                       && (archivePartSize.getLong() > 0)

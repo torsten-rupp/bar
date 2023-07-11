@@ -8609,7 +8609,7 @@ Dprintf.dprintf("_");
 
       widgetArchiveName = Widgets.newText(composite);
       widgetArchiveName.setToolTipText(BARControl.tr("Enter local or remote storage path."));
-      Widgets.layout(widgetArchiveName,0,1,TableLayoutData.WE);
+      Widgets.layout(widgetArchiveName,0,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,IMAGE_DIRECTORY);
       button.setToolTipText(BARControl.tr("Select local storage file."));
@@ -8674,31 +8674,31 @@ Dprintf.dprintf("_");
                                         }
                       );
       Widgets.setSelectedComboItem(widgetStorageType,0);
-      Widgets.layout(widgetStorageType,1,1,TableLayoutData.W,0,0,2);
+      Widgets.layout(widgetStorageType,1,1,TableLayoutData.W,0,2);
 
       // destination file system
       widgetFile= new BARWidgets.File(composite);
-      Widgets.layout(widgetFile,2,1,TableLayoutData.WE|TableLayoutData.N,0,0,3);
+      Widgets.layout(widgetFile,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
 
       // destination ftp
       widgetFTP= new BARWidgets.FTP(composite);
-      Widgets.layout(widgetFTP,2,1,TableLayoutData.WE|TableLayoutData.N,0,0,3);
+      Widgets.layout(widgetFTP,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
 
       // destination scp/sftp
       widgetSFTP= new BARWidgets.SFTP(composite);
-      Widgets.layout(widgetSFTP,2,1,TableLayoutData.WE|TableLayoutData.N,0,0,3);
+      Widgets.layout(widgetSFTP,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
 
       // destination WebDAV
       widgetWebDAV= new BARWidgets.WebDAV(composite);
-      Widgets.layout(widgetWebDAV,2,1,TableLayoutData.WE|TableLayoutData.N,0,0,3);
+      Widgets.layout(widgetWebDAV,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
 
       // destination cd/dvd/bd
       widgetOptical= new BARWidgets.Optical(composite);
-      Widgets.layout(widgetOptical,2,1,TableLayoutData.WE|TableLayoutData.N,0,0,3);
+      Widgets.layout(widgetOptical,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
 
       // destination device
       widgetDevice= new BARWidgets.Device(composite);
-      Widgets.layout(widgetDevice,2,1,TableLayoutData.WE|TableLayoutData.N,0,0,3);
+      Widgets.layout(widgetDevice,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
     }
 
     // buttons
@@ -8825,6 +8825,7 @@ Dprintf.dprintf("_");
 
     // run dialog
     widgetArchiveName.forceFocus();
+    dialog.pack();
     if ((Boolean)Dialogs.run(dialog,null) && !data.archiveName.isEmpty())
     {
       // add storage files
@@ -8843,7 +8844,6 @@ Dprintf.dprintf("_");
                                           data.deviceName,
                                           data.archiveName
                                          );
-Dprintf.dprintf("addURIParts.getURI()=%s",addURIParts.getURI());
 
       Background.run(new BackgroundRunnable(busyDialog,addURIParts)
       {

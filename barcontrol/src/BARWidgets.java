@@ -4180,41 +4180,44 @@ public class BARWidgets
       }
       row++;
 
-      label = Widgets.newLabel(this,BARControl.tr("Size")+":");
-      Widgets.layout(label,row,0,TableLayoutData.W);
-      subComposite = Widgets.newComposite(this,SWT.NONE);
-      Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+      if (widgets.contains(WidgetTypes.VOLUME_SIZE))
       {
-        volumeSize = BARWidgets.newByteSize(subComposite,
-                                            BARControl.tr("Size of medium. You may specify a smaller value than the real physical size to leave some free space for error-correction codes."),
-                                            volumeSizeVariable,
-                                            new Object[]{Units.formatSize(       425*Units.M ),       425*Units.M,
-                                                         Units.formatSize(       430*Units.M ),       430*Units.M,
-                                                         Units.formatSize(       470*Units.M ),       470*Units.M,
-                                                         Units.formatSize(       520*Units.M ),       520*Units.M,
-                                                         Units.formatSize(       560*Units.M ),       560*Units.M,
-                                                         Units.formatSize(       650*Units.M ),       650*Units.M,
-                                                         Units.formatSize(       660*Units.M ),       660*Units.M,
-                                                         Units.formatSize(       720*Units.M ),       720*Units.M,
-                                                         Units.formatSize(       850*Units.M ),       850*Units.M,
-                                                         Units.formatSize(         2*Units.G ),         2*Units.G,
-                                                         Units.formatSize((long)(3.2*Units.G)),(long)(3.2*Units.G),
-                                                         Units.formatSize(         4*Units.G ),         4*Units.G,
-                                                         Units.formatSize((long)(6.4*Units.G)),(long)(6.4*Units.G),
-                                                         Units.formatSize((long)(7.2*Units.G)),(long)(7.2*Units.G),
-                                                         Units.formatSize(         8*Units.G ),         8*Units.G,
-                                                         Units.formatSize(        20*Units.G ),        20*Units.G,
-                                                         Units.formatSize(        25*Units.G ),        25*Units.G,
-                                                         Units.formatSize(        40*Units.G ),        40*Units.G,
-                                                         Units.formatSize(        50*Units.G ),        50*Units.G,
-                                                         Units.formatSize(        80*Units.G ),        80*Units.G,
-                                                         Units.formatSize(       100*Units.G ),       100*Units.G
-                                                        }
-                                           );
-        volumeSize.setData("showedErrorDialog",false);
-        Widgets.layout(volumeSize,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
+        label = Widgets.newLabel(this,BARControl.tr("Size")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subComposite = Widgets.newComposite(this,SWT.NONE);
+        Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+        {
+          volumeSize = BARWidgets.newByteSize(subComposite,
+                                              BARControl.tr("Size of medium. You may specify a smaller value than the real physical size to leave some free space for error-correction codes."),
+                                              volumeSizeVariable,
+                                              new Object[]{Units.formatSize(       425*Units.M ),       425*Units.M,
+                                                           Units.formatSize(       430*Units.M ),       430*Units.M,
+                                                           Units.formatSize(       470*Units.M ),       470*Units.M,
+                                                           Units.formatSize(       520*Units.M ),       520*Units.M,
+                                                           Units.formatSize(       560*Units.M ),       560*Units.M,
+                                                           Units.formatSize(       650*Units.M ),       650*Units.M,
+                                                           Units.formatSize(       660*Units.M ),       660*Units.M,
+                                                           Units.formatSize(       720*Units.M ),       720*Units.M,
+                                                           Units.formatSize(       850*Units.M ),       850*Units.M,
+                                                           Units.formatSize(         2*Units.G ),         2*Units.G,
+                                                           Units.formatSize((long)(3.2*Units.G)),(long)(3.2*Units.G),
+                                                           Units.formatSize(         4*Units.G ),         4*Units.G,
+                                                           Units.formatSize((long)(6.4*Units.G)),(long)(6.4*Units.G),
+                                                           Units.formatSize((long)(7.2*Units.G)),(long)(7.2*Units.G),
+                                                           Units.formatSize(         8*Units.G ),         8*Units.G,
+                                                           Units.formatSize(        20*Units.G ),        20*Units.G,
+                                                           Units.formatSize(        25*Units.G ),        25*Units.G,
+                                                           Units.formatSize(        40*Units.G ),        40*Units.G,
+                                                           Units.formatSize(        50*Units.G ),        50*Units.G,
+                                                           Units.formatSize(        80*Units.G ),        80*Units.G,
+                                                           Units.formatSize(       100*Units.G ),       100*Units.G
+                                                          }
+                                             );
+          volumeSize.setData("showedErrorDialog",false);
+          Widgets.layout(volumeSize,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
+        }
+        row++;
       }
-      row++;
 
       if (widgets.contains(WidgetTypes.ECC) || widgets.contains(WidgetTypes.BLANK) || widgets.contains(WidgetTypes.WAIT_FIRST_VOLUME))
       {
