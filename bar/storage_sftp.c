@@ -2967,8 +2967,9 @@ LOCAL bool StorageSFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDir
         if (n > 0)
         {
           if (   !LIBSSH2_SFTP_S_ISDIR(storageDirectoryListHandle->sftp.attributes.permissions)
-              && ((n != 1) || (strncmp(storageDirectoryListHandle->sftp.buffer,".", 1) != 0))
-              && ((n != 2) || (strncmp(storageDirectoryListHandle->sftp.buffer,"..",2) != 0))
+              || (   ((n != 1) || (strncmp(storageDirectoryListHandle->sftp.buffer,".", 1) != 0))
+                  && ((n != 2) || (strncmp(storageDirectoryListHandle->sftp.buffer,"..",2) != 0))
+                 )
              )
           {
             storageDirectoryListHandle->sftp.bufferLength = n;
@@ -3029,8 +3030,9 @@ LOCAL Errors StorageSFTP_readDirectoryList(StorageDirectoryListHandle *storageDi
           if      (n > 0)
           {
             if (   !LIBSSH2_SFTP_S_ISDIR(storageDirectoryListHandle->sftp.attributes.permissions)
-                && ((n != 1) || (strncmp(storageDirectoryListHandle->sftp.buffer,".", 1) != 0))
-                && ((n != 2) || (strncmp(storageDirectoryListHandle->sftp.buffer,"..",2) != 0))
+                || (   ((n != 1) || (strncmp(storageDirectoryListHandle->sftp.buffer,".", 1) != 0))
+                    && ((n != 2) || (strncmp(storageDirectoryListHandle->sftp.buffer,"..",2) != 0))
+                   )
                )
             {
               storageDirectoryListHandle->sftp.entryReadFlag = TRUE;

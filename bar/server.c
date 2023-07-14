@@ -201,7 +201,7 @@ typedef struct AuthorizationFailNode
 {
   LIST_NODE_HEADER(struct AuthorizationFailNode);
 
-  String clientName;                                    // client name
+  String clientName;                                    // client nam
   uint   count;                                         // number of authentification failures
   uint64 lastTimestamp;                                 // timestamp last failture [us]
 } AuthorizationFailNode;
@@ -4565,8 +4565,8 @@ LOCAL void updateIndexThreadCode(void)
           startTimestamp = 0LL;
           endTimestamp   = 0LL;
           Job_initOptions(&jobOptions);
-          bool loginFlag = TRUE;
-          LIST_ITERATEX(&loginList,loginNode,loginFlag)
+          bool loginFlag = FALSE;
+          LIST_ITERATEX(&loginList,loginNode,!loginFlag)
           {
             String_set(addStorageSpecifier.loginName,loginNode->name);
             Password_set(addStorageSpecifier.loginPassword,loginNode->password);
@@ -4983,6 +4983,7 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
                                             )
                                          {
                                            // already in index -> check if modified/state
+
                                            if      (fileInfo->timeModified > lastCheckedDateTime)
                                            {
                                              // modified -> request update index
@@ -5048,9 +5049,6 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
                                  {
                                    error = ERROR_NONE;
                                  }
-
-                                 // throddle database access
-//                                 Misc_mdelay(500);
 
                                  if (!isQuit())
                                  {
