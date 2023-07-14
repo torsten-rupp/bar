@@ -7447,6 +7447,9 @@ LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL!\n");
     printError("clean duplicates fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(name);
+    return error;
   }
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -7472,6 +7475,14 @@ LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
         n++;
       }
     }
+  }
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL!\n");
+    printError("clean duplicates fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(name);
+    return error;
   }
   printInfo("%lu\n",n);
   totalCount += n;
