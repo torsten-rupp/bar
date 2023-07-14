@@ -592,6 +592,9 @@ public class Settings
   // flags
 //TODO: preference dialog
   @SettingValue
+  public static Boolean                        showNoneTLSWarning              = new Boolean(true);
+//TODO: preference dialog
+  @SettingValue
   public static Boolean                        showEntriesExceededInfo         = new Boolean(true);
 //TODO: preference dialog
   @SettingValue
