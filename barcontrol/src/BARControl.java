@@ -2795,7 +2795,10 @@ if (false) {
     // show warning if no TLS connection established
     if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
     {
-      Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
+      Dialogs.warning(new Shell(),
+                      Dialogs.booleanFieldUpdater(Settings.class,"showNoneTLSWarning"),
+                      BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!")
+                     );
     }
   }
 
@@ -5125,7 +5128,10 @@ if (false) {
       // show warning if no TLS connection established
       if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
       {
-        Dialogs.warning(new Shell(),BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!"));
+        Dialogs.warning(new Shell(),
+                        Dialogs.booleanFieldUpdater(Settings.class,"showNoneTLSWarning"),
+                        BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!")
+                       );
       }
 
       return true;
