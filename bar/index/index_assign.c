@@ -322,7 +322,7 @@ LOCAL Errors assignEntityStoragesToEntity(IndexHandle *indexHandle,
                               DATABASE_VALUE_KEY("uuidId",  INDEX_DATABASE_ID(toUUIDId)),
                               DATABASE_VALUE_KEY("entityId",INDEX_DATABASE_ID(toEntityId))
                             ),
-                            "id=?",
+                            "entityId=?",
                             DATABASE_FILTERS
                             (
                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))

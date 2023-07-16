@@ -29,6 +29,7 @@
   * fixed add storages to index: support ftp/sftp/webDAV.
     fixed name in index
   * fixed SFTP file/directory type+permissions
+  * fixed assign entity to another entity
   * BARControl: added option --info
   * BARControl: fixed list directory entries on insufficient
     permission
