@@ -2376,6 +2376,11 @@ LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
                              )
 {
   Errors error;
+  #ifdef HAVE_SSH2
+    uint64 skip;
+    uint64 i;
+    uint64 n;
+  #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
   #ifdef HAVE_SSH2
@@ -2391,10 +2396,6 @@ LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
 
     if      (offset > storageHandle->sftp.index)
     {
-      uint64 skip;
-      uint64 i;
-      uint64 n;
-
       skip = offset-storageHandle->sftp.index;
       if (skip > 0LL)
       {
@@ -2418,14 +2419,45 @@ LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
           #else /* not HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
             libssh2_sftp_seek(storageHandle->sftp.sftpHandle,(size_t)offset);
           #endif /* HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
+          storageHandle->sftp.readAheadBuffer.offset = offset;
+          storageHandle->sftp.readAheadBuffer.length = 0L;
+
           storageHandle->sftp.index = offset;
         }
       }
     }
     else if (offset < storageHandle->sftp.index)
     {
-// NYI: ??? support seek backward
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
+
+      skip = storageHandle->sftp.index-offset;
+      if (skip > 0LL)
+      {
+        // skip data in read-ahead buffer
+        if (   (storageHandle->sftp.index >= storageHandle->sftp.readAheadBuffer.offset)
+            && (storageHandle->sftp.index < (storageHandle->sftp.readAheadBuffer.offset+storageHandle->sftp.readAheadBuffer.length))
+           )
+        {
+          i = storageHandle->sftp.index-storageHandle->sftp.readAheadBuffer.offset;
+          n = MIN(skip,i);
+          skip -= n;
+          storageHandle->sftp.index -= (uint64)n;
+        }
+
+        if (skip > 0LL)
+        {
+          #if   defined(HAVE_SSH2_SFTP_SEEK64)
+            libssh2_sftp_seek64(storageHandle->sftp.sftpHandle,offset);
+          #elif defined(HAVE_SSH2_SFTP_SEEK2)
+            libssh2_sftp_seek2(storageHandle->sftp.sftpHandle,offset);
+          #else /* not HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
+            libssh2_sftp_seek(storageHandle->sftp.sftpHandle,(size_t)offset);
+          #endif /* HAVE_SSH2_SFTP_SEEK64 || HAVE_SSH2_SFTP_SEEK2 */
+          storageHandle->sftp.readAheadBuffer.offset = offset;
+          storageHandle->sftp.readAheadBuffer.length = 0L;
+
+          storageHandle->sftp.index = offset;
+        }
+      }
     }
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
@@ -2462,6 +2494,7 @@ LOCAL Errors StorageSFTP_rename(const StorageInfo *storageInfo,
 UNUSED_VARIABLE(storageInfo);
 UNUSED_VARIABLE(fromArchiveName);
 UNUSED_VARIABLE(toArchiveName);
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;
