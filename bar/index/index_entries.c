@@ -1855,7 +1855,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return error;
     });
     assertx(   (error == ERROR_NONE)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY),
             "%s",Error_getText(error)
            );
 
@@ -2026,7 +2027,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return ERROR_NONE;
     });
     assertx(   (error == ERROR_NONE)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY),
             "%s",Error_getText(error)
            );
 
@@ -2166,7 +2168,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return ERROR_NONE;
     });
     assertx(   (error == ERROR_NONE)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY),
             "%s",Error_getText(error)
            );
 
@@ -2288,7 +2291,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       return ERROR_NONE;
     });
     assertx(   (error == ERROR_NONE)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT),
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+            || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY),
             "%s",Error_getText(error)
            );
 
