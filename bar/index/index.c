@@ -3652,6 +3652,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                               );
       assert(   (error == ERROR_NONE)
              || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
             );
     }
 
@@ -3670,6 +3671,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                               );
       assert(   (error == ERROR_NONE)
              || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
             );
     }
 
@@ -3688,6 +3690,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                               );
       assert(   (error == ERROR_NONE)
              || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
             );
     }
 
@@ -3812,6 +3815,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                           );
       assert(   (error == ERROR_NONE)
              || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
             );
     }
 
@@ -3830,6 +3834,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                               );
       assert(   (error == ERROR_NONE)
              || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
             );
     }
 
