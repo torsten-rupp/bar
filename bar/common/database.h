@@ -436,7 +436,7 @@ typedef struct DatabaseHandle
   };
   uint                        readLockCount;
   uint                        readWriteLockCount;
-  uint                        transcationCount;
+  uint                        transactionCount;
   long                        timeout;                    // timeout [ms]
   void                        *busyHandlerUserData;
   bool                        enabledSync;
