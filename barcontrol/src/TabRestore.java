@@ -8339,7 +8339,6 @@ Dprintf.dprintf("");
             for (IndexData indexData : indexDataHashSet)
             {
               final String info = indexData.getInfo();
-Dprintf.dprintf("indexData=%s",indexData);
 
               try
               {
@@ -8361,13 +8360,11 @@ Dprintf.dprintf("indexData=%s",indexData);
                 }
                 else if (indexData instanceof StorageIndexData)
                 {
-Dprintf.dprintf("_");
                   BARServer.executeCommand(StringParser.format("INDEX_REFRESH state=* storageId=%lld",
                                                                indexData.id
                                                               ),
                                            0  // debugLevel
                                           );
-Dprintf.dprintf("_");
                 }
 
                 indexData.setState(IndexStates.UPDATE_REQUESTED);
@@ -8383,7 +8380,6 @@ Dprintf.dprintf("_");
           {
             BARControl.resetCursor();
           }
-Dprintf.dprintf("---------");
 
           if (!widgetStorageTabFolder.isDisposed())
           {
