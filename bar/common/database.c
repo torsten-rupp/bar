@@ -4540,7 +4540,14 @@ LOCAL Errors postgresqlGetTriggerList(StringList     *triggerList,
   // init variables
   databaseHandle->readLockCount           = 0;
   databaseHandle->readWriteLockCount      = 0;
+  databaseHandle->transactionCount        = 0;
   databaseHandle->sqlite.handle           = NULL;
+  #if defined(HAVE_MARIADB)
+    databaseHandle->mariadb.handle        = NULL;
+  #endif /* HAVE_MARIADB */
+  #if defined(HAVE_POSTGRESQL)
+    databaseHandle->postgresql.handle     = NULL;
+  #endif /* HAVE_POSTGRESQL */
   databaseHandle->timeout                 = timeout;
   databaseHandle->enabledSync             = FALSE;
   databaseHandle->enabledForeignKeys      = FALSE;
@@ -6310,8 +6317,7 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
                  );
         #endif /* DATABASE_DEBUG_LOCK_PRINT */
 
-//        #ifndef xxxNDEBUG
-#if 0
+        #ifndef NDEBUG
           databaseHandle->debug.locked.threadId = Thread_getCurrentId();
           databaseHandle->debug.locked.fileName = __fileName__;
           databaseHandle->debug.locked.lineNb   = __lineNb__;
@@ -6452,7 +6458,6 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
               DATABASE_DEBUG_LOCK_ASSERT(databaseHandle,isReadWriteLock(databaseHandle));
               if (!waitTriggerReadWrite(databaseHandle,timeout))
               {
-                Misc_doneTimeout(&timeoutInfo);
                 pendingReadWritesDecrement(databaseHandle);
                 return FALSE;
               }
@@ -6495,8 +6500,7 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
                  );
         #endif /* DATABASE_DEBUG_LOCK_PRINT */
 
-//        #ifndef NDEBUG
-#if 0
+        #ifndef NDEBUG
           databaseHandle->debug.locked.threadId = Thread_getCurrentId();
           databaseHandle->debug.locked.fileName = __fileName__;
           databaseHandle->debug.locked.lineNb   = __lineNb__;
@@ -7877,23 +7881,21 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
          && !Misc_isTimeout(&timeoutInfo)
         );
 
+  // free resources
+  Misc_doneTimeout(&timeoutInfo);
+
   if      (error != ERROR_NONE)
   {
-    Misc_doneTimeout(&timeoutInfo);
     return error;
   }
-  else if (Misc_isTimeout(&timeoutInfo))
+  else if (!done)
   {
-    Misc_doneTimeout(&timeoutInfo);
     #ifndef NDEBUG
       return ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseStatementHandle->databaseHandle));
     #else
       return ERROR_DATABASE_TIMEOUT;
     #endif
   }
-
-  // free resources
-  Misc_doneTimeout(&timeoutInfo);
 
   return ERROR_NONE;
 
@@ -15511,7 +15513,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
         #endif /* HAVE_POSTGRESQL */
         break;
     }
-//fprintf(stderr,"%s:%d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
 
     // lock
     #ifndef NDEBUG
@@ -15564,11 +15565,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       pthread_mutex_unlock(&debugDatabaseLock);
     #endif /* not NDEBUG */
 
-    #ifdef DATABASE_USE_ATOMIC_INCREMENT
-    #else /* not DATABASE_USE_ATOMIC_INCREMENT */
-    #endif /* DATABASE_USE_ATOMIC_INCREMENT */
+    // increment transaction count
     DATABASE_HANDLE_LOCKED_DO(databaseHandle,
     {
+      assert(databaseHandle->transactionCount == 0);
+      databaseHandle->transactionCount++;
       assert(databaseHandle->databaseNode->transactionCount == 0);
       databaseHandle->databaseNode->transactionCount++;
       #ifdef DATABASE_DEBUG_LOCK
@@ -15617,15 +15618,19 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   #endif /* not NDEBUG */
 
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
-    // decrement transaction count
     DATABASE_HANDLE_LOCKED_DO(databaseHandle,
     {
+      // decrement transaction count
       assert(databaseHandle->databaseNode->transactionCount > 0);
       #ifdef DATABASE_USE_ATOMIC_INCREMENT
       #else /* not DATABASE_USE_ATOMIC_INCREMENT */
       #endif /* DATABASE_USE_ATOMIC_INCREMENT */
       if (databaseHandle->databaseNode->transactionCount <= 0) HALT_INTERNAL_ERROR("transaction count");
       databaseHandle->databaseNode->transactionCount--;
+      if (databaseHandle->transactionCount <= 0) HALT_INTERNAL_ERROR("transaction count");
+      databaseHandle->transactionCount--;
+
+      // trigger unlock if transaction done
       if (databaseHandle->databaseNode->transactionCount == 0)
       {
         #ifdef DATABASE_DEBUG_LOCK
