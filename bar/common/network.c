@@ -949,7 +949,7 @@ Errors connectDescriptor(SocketHandle *socketHandle,
               || (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_PROTOCOL)
              )
           {
-            error = ERRORX_(INVALID_SSH_PRIVATE_KEY,ssh2Error,"Unable to initialize private key from file");
+            error = ERRORX_(INVALID_SSH_PRIVATE_KEY,ssh2Error,"Unable to initialize private key");
           }
           else
           {
