@@ -15598,9 +15598,6 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     {
       // decrement transaction count
       assert(databaseHandle->databaseNode->transactionCount > 0);
-      #ifdef DATABASE_USE_ATOMIC_INCREMENT
-      #else /* not DATABASE_USE_ATOMIC_INCREMENT */
-      #endif /* DATABASE_USE_ATOMIC_INCREMENT */
       if (databaseHandle->databaseNode->transactionCount <= 0) HALT_INTERNAL_ERROR("transaction count");
       databaseHandle->databaseNode->transactionCount--;
       if (databaseHandle->transactionCount <= 0) HALT_INTERNAL_ERROR("transaction count");
@@ -15763,12 +15760,14 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
     DATABASE_HANDLE_LOCKED_DO(databaseHandle,
     {
+      // decrement transaction count
       assert(databaseHandle->databaseNode->transactionCount > 0);
-      #ifdef DATABASE_USE_ATOMIC_INCREMENT
-      #else /* not DATABASE_USE_ATOMIC_INCREMENT */
-      #endif /* DATABASE_USE_ATOMIC_INCREMENT */
       if (databaseHandle->databaseNode->transactionCount <= 0) HALT_INTERNAL_ERROR("transaction count");
       databaseHandle->databaseNode->transactionCount--;
+      if (databaseHandle->transactionCount <= 0) HALT_INTERNAL_ERROR("transaction count");
+      databaseHandle->transactionCount--;
+
+      // trigger unlock if transaction done
       if (databaseHandle->databaseNode->transactionCount == 0)
       {
         #ifdef DATABASE_DEBUG_LOCK
