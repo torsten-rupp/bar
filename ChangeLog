@@ -45,6 +45,7 @@
   * BARControl: fixed clone job and update view
   * BARControl: fixed file requester if job is unknown
   * BARControl: added source for storage add to index
+  * BARControl: fixed update storage tree view
 
 2023-04-16 0.22g
   * fixed lost resource in debug version

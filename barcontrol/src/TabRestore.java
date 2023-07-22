@@ -471,7 +471,6 @@ public class TabRestore
     // sort modes
     enum SortModes
     {
-      ID,
       NAME,
       HOSTNAME,
       CREATED_DATETIME,
@@ -537,7 +536,7 @@ public class TabRestore
      */
     IndexDataComparator()
     {
-      sortMode = SortModes.ID;
+      sortMode = SortModes.NAME;
     }
 
     /** get index data comparator instance
@@ -599,9 +598,9 @@ public class TabRestore
 
     /** compare index data
      * @param indexData1, indexData2 index data to compare
-     * @return -1 iff indexData1 < indexData2,
-                0 iff indexData1 = indexData2,
-                1 iff indexData1 > indexData2
+     * @return -1 iff indexData1.id != indexData2.id && indexData1 < indexData2,
+                0 iff indexData1.id == indexData2.id || indexData1 = indexData2,
+                1 iff indexData1.id != indexData2.id && indexData1 > indexData2
      */
     @Override
     public int compare(T indexData1, T indexData2)
@@ -623,45 +622,45 @@ public class TabRestore
       }
       else
       {
-        boolean doneFlag = false;
-        do
+        result = new Long(indexData1.id).compareTo(indexData2.id);
+        if (result != 0)
         {
-          switch (nextSortMode)
+          boolean doneFlag = false;
+          do
           {
-            case ID:
-              result = new Long(indexData1.id).compareTo(indexData2.id);
-              doneFlag = true;
-              break;
-            case NAME:
-              String name1 = indexData1.getName();
-              String name2 = indexData2.getName();
-              result = name1.compareTo(name2);
-              nextSortMode = SortModes.SIZE;
-              break;
-            case CREATED_DATETIME:
-              long date1 = indexData1.getDateTime();
-              long date2 = indexData2.getDateTime();
-              result = new Long(date1).compareTo(date2);
-              nextSortMode = SortModes.STATE;
-              break;
-            case SIZE:
-              long size1 = indexData1.getTotalSize();
-              long size2 = indexData2.getTotalSize();
-              result = new Long(size1).compareTo(size2);
-              nextSortMode = SortModes.CREATED_DATETIME;
-              break;
-            case STATE:
-              IndexStates indexState1 = indexData1.getState();
-              IndexStates indexState2 = indexData2.getState();
-              result = indexState1.compareTo(indexState2);
-              nextSortMode = SortModes.ID;
-              break;
-            default:
-              nextSortMode = SortModes.ID;
-              break;
+            switch (nextSortMode)
+            {
+              case NAME:
+                String name1 = indexData1.getName();
+                String name2 = indexData2.getName();
+                result = name1.compareTo(name2);
+                nextSortMode = SortModes.SIZE;
+                break;
+              case CREATED_DATETIME:
+                long date1 = indexData1.getDateTime();
+                long date2 = indexData2.getDateTime();
+                result = new Long(date1).compareTo(date2);
+                nextSortMode = SortModes.STATE;
+                break;
+              case SIZE:
+                long size1 = indexData1.getTotalSize();
+                long size2 = indexData2.getTotalSize();
+                result = new Long(size1).compareTo(size2);
+                nextSortMode = SortModes.CREATED_DATETIME;
+                break;
+              case STATE:
+                IndexStates indexState1 = indexData1.getState();
+                IndexStates indexState2 = indexData2.getState();
+                result = indexState1.compareTo(indexState2);
+                doneFlag = true;
+                break;
+              default:
+                doneFlag = true;
+                break;
+            }
           }
+          while ((result == 0) && !doneFlag);
         }
-        while ((result == 0) && !doneFlag);
       }
 
       return result;
@@ -674,6 +673,43 @@ public class TabRestore
     public String toString()
     {
       return "IndexDataComparator {"+sortMode+"}";
+    }
+  }
+
+  /** index data set
+   */
+  class IndexIdSet extends HashSet<Long>
+  {
+    /** add/remove id
+     * @param indexId index id
+     * @param enabled true to add, false to remove
+     */
+    public void set(long indexId, boolean enabled)
+    {
+      if (enabled)
+      {
+        add(indexId);
+      }
+      else
+      {
+        remove(indexId);
+      }
+    }
+
+    /** convert data to string
+     * @return string
+     */
+    @Override
+    public String toString()
+    {
+      StringBuilder buffer = new StringBuilder();
+      for (Long indexId : this)
+      {
+        if (buffer.length() > 0) buffer.append(',');
+        buffer.append(indexId);
+      }
+
+      return "IndexIdSet {"+buffer.toString()+"}";
     }
   }
 
@@ -796,43 +832,6 @@ public class TabRestore
     {
       return     (object != null)
               && (object instanceof HashSet);
-    }
-  }
-
-  /** index data set
-   */
-  class IndexIdSet extends HashSet<Long>
-  {
-    /** add/remove id
-     * @param indexId index id
-     * @param enabled true to add, false to remove
-     */
-    public void set(long indexId, boolean enabled)
-    {
-      if (enabled)
-      {
-        add(indexId);
-      }
-      else
-      {
-        remove(indexId);
-      }
-    }
-
-    /** convert data to string
-     * @return string
-     */
-    @Override
-    public String toString()
-    {
-      StringBuilder buffer = new StringBuilder();
-      for (Long indexId : this)
-      {
-        if (buffer.length() > 0) buffer.append(',');
-        buffer.append(indexId);
-      }
-
-      return "IndexIdSet {"+buffer.toString()+"}";
     }
   }
 
@@ -2033,11 +2032,11 @@ Dprintf.dprintf("");
             || force
            )
         {
-          this.storageName                   = storageName;
-          this.storageIndexStateSet          = storageIndexStateSet;
-          this.storageEntityState            = storageEntityState;
+          this.storageName               = storageName;
+          this.storageIndexStateSet      = storageIndexStateSet;
+          this.storageEntityState        = storageEntityState;
           this.requestUpdateStorageCount = true;
-          this.requestSetUpdateIndicator     = true;
+          this.requestSetUpdateIndicator = true;
           restart();
         }
       }
@@ -2058,9 +2057,9 @@ Dprintf.dprintf("");
             || (((storageName.length() == 0) || (storageName.length() >= 3)) && !this.storageName.equals(storageName))
            )
         {
-          this.storageName                   = storageName;
+          this.storageName               = storageName;
           this.requestUpdateStorageCount = true;
-          this.requestSetUpdateIndicator     = true;
+          this.requestSetUpdateIndicator = true;
           restart();
         }
       }
@@ -2080,11 +2079,11 @@ Dprintf.dprintf("");
             || (this.storageEntityState != storageEntityState)
            )
         {
-          this.jobUUID                       = jobUUID;
-          this.storageIndexStateSet          = storageIndexStateSet;
-          this.storageEntityState            = storageEntityState;
+          this.jobUUID                   = jobUUID;
+          this.storageIndexStateSet      = storageIndexStateSet;
+          this.storageEntityState        = storageEntityState;
           this.requestUpdateStorageCount = true;
-          this.requestSetUpdateIndicator     = true;
+          this.requestSetUpdateIndicator = true;
           restart();
         }
       }
@@ -3343,107 +3342,6 @@ Dprintf.dprintf("");
       return "Entry {"+id+", jobName="+jobName+", hostName="+hostName+", name="+name+", entryType="+entryType+", dateTime="+dateTime+", size="+size+"}";
     }
   };
-
-  /** entry data comparator
-   */
-//TODO: obsolete
-  static class EntryIndexDataComparator implements Comparator<EntryIndexData>
-  {
-    // sort modes
-    enum SortModes
-    {
-      ID,
-      NAME,
-      TYPE,
-      SIZE,
-      DATE
-    };
-
-    private SortModes sortMode;
-
-    /** create entry data comparator
-     * @param table entry table
-     * @param sortColumn sorting column
-     */
-    EntryIndexDataComparator(Table table, TableColumn sortColumn)
-    {
-      if      (table.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
-      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TYPE;
-      else if (table.getColumn(3) == sortColumn) sortMode = SortModes.SIZE;
-      else if (table.getColumn(4) == sortColumn) sortMode = SortModes.DATE;
-      else                                       sortMode = SortModes.NAME;
-    }
-
-    /** create entry data comparator
-     * @param table entry table
-     */
-    EntryIndexDataComparator(Table table)
-    {
-      this(table,table.getSortColumn());
-    }
-
-    /** compare entry data
-     * @param entryIndexData1, entryIndexData2 entry data to compare
-     * @return -1 iff entryIndexData1 < entryIndexData2,
-                0 iff entryIndexData1 = entryIndexData2,
-                1 iff entryIndexData1 > entryIndexData2
-     */
-    @Override
-    public int compare(EntryIndexData entryIndexData1, EntryIndexData entryIndexData2)
-    {
-      SortModes nextSortMode = sortMode;
-      int       result;
-
-      if ((entryIndexData1 == null) && (entryIndexData2 == null))
-      {
-        return 0;
-      }
-      else if (entryIndexData1 == null)
-      {
-        return 1;
-      }
-      else if (entryIndexData2 == null)
-      {
-        return -1;
-      }
-      else
-      {
-        result = 0;
-        do
-        {
-          switch (sortMode)
-          {
-            case ID:
-              return new Long(entryIndexData1.id).compareTo(entryIndexData2.id);
-            case NAME:
-              result = entryIndexData1.name.compareTo(entryIndexData2.name);
-              nextSortMode = SortModes.TYPE;
-              break;
-            case TYPE:
-              result = entryIndexData1.entryType.compareTo(entryIndexData2.entryType);
-              nextSortMode = SortModes.SIZE;
-              break;
-            case SIZE:
-              if      (entryIndexData1.size < entryIndexData2.size) result = -1;
-              else if (entryIndexData1.size > entryIndexData2.size) result =  1;
-              nextSortMode = SortModes.DATE;
-              break;
-            case DATE:
-              if      (entryIndexData1.dateTime < entryIndexData2.dateTime) result = -1;
-              else if (entryIndexData1.dateTime > entryIndexData2.dateTime) result =  1;
-              nextSortMode = SortModes.ID;
-              break;
-            default:
-              nextSortMode = SortModes.ID;
-              break;
-          }
-        }
-        while (result == 0);
-      }
-
-      return result;
-    }
-  }
 
   /** update entry table thread
    */
