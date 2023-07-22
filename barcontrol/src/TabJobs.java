@@ -3153,8 +3153,12 @@ public class TabJobs
           public void handleEvent(final Event event)
           {
             TreeItem treeItem = (TreeItem)event.item;
-            treeItem.removeAll();
-            new TreeItem(treeItem,SWT.NONE);
+
+            if (!treeItem.isDisposed())
+            {
+              treeItem.removeAll();
+              new TreeItem(treeItem,SWT.NONE);
+            }
           }
         });
         widgetFileTree.addSelectionListener(new SelectionListener()
