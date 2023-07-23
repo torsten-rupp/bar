@@ -52,11 +52,13 @@
 
 #include "global.h"
 
-#include "errors.h"
-
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+// definition of some character names
+#define NUL '\000'
+
 #define STRING_NO_ASSIGN (void*)(-1)
 
 /**************************** Datatypes ********************************/

@@ -96,7 +96,6 @@
 #define ON  TRUE
 
 // definition of some character names
-#define NUL '\000'
 #define BEL '\007'
 #define ESC '\033'
 

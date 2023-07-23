@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-07-10 03:13+0200\n"
+"POT-Creation-Date: 2023-07-23 07:02+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,26 +17,26 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: /home/torsten/projects/bar/bar/archive.c:6381
+#: /home/torsten/projects/bar/bar/archive.c:6382
 msgid "No BAR header found! This may be a broken archive or not an archive"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_compare.c:2399
+#: /home/torsten/projects/bar/bar/commands_compare.c:2400
 #, c-format
 msgid "Compare fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_convert.c:2658
+#: /home/torsten/projects/bar/bar/commands_convert.c:2659
 #, c-format
 msgid "Convert fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_restore.c:3974
+#: /home/torsten/projects/bar/bar/commands_restore.c:3975
 #, c-format
 msgid "Restore fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_test.c:1770
+#: /home/torsten/projects/bar/bar/commands_test.c:1771
 msgid "Test fail: {0}\n"
 msgstr ""
 
@@ -228,8 +228,7 @@ msgstr ""
 msgid "no SSH password given"
 msgstr ""
 
-#: errors.def:136 errors.def:143 errors.def:150 errors.def:158 errors.def:239
-#: errors.def:663
+#: errors.def:136 errors.def:143 errors.def:239 errors.def:663
 msgid " for '{0}'"
 msgstr ""
 
@@ -969,34 +968,38 @@ msgstr ""
 msgid "parse index id failed"
 msgstr ""
 
-#: errors.def:1025
+#: errors.def:1028
+msgid "database is locked"
+msgstr ""
+
+#: errors.def:1032
 msgid "database busy"
 msgstr ""
 
-#: errors.def:1026
+#: errors.def:1033
 msgid "database operation interrupted"
 msgstr ""
 
-#: errors.def:1030
+#: errors.def:1037
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:1034
+#: errors.def:1041
 msgid "database entry not found"
 msgstr ""
 
-#: errors.def:1037
+#: errors.def:1044
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:1038
+#: errors.def:1045
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:1039
+#: errors.def:1046
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:1040
+#: errors.def:1047
 msgid "instance is not a slave"
 msgstr ""
