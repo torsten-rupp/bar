@@ -1156,8 +1156,20 @@ uint64 Misc_makeDateTime(TimeTypes           timeType,
 
   switch (timeType)
   {
-    case TIME_TYPE_GMT  : dateTime = timegm(&tm);    break;
-    case TIME_TYPE_LOCAL: dateTime = timelocal(&tm); break;
+    case TIME_TYPE_GMT  :
+      #if   defined(PLATFORM_LINUX)
+        dateTime = timegm(&tm);
+      #elif defined(PLATFORM_WINDOWS)
+        dateTime = _mkgmtime(&tm);
+      #endif /* PLATFORM_... */
+      break;
+    case TIME_TYPE_LOCAL:
+      #if   defined(PLATFORM_LINUX)
+        dateTime = timelocal(&tm);
+      #elif defined(PLATFORM_WINDOWS)
+        dateTime = mktime(&tm);
+      #endif /* PLATFORM_... */
+      break;
   }
   assert(dateTime != (time_t)(-1));
   if (dateTime == (time_t)(-1)) dateTime = 0LL;  // avoid invalid date
