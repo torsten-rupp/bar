@@ -4603,7 +4603,9 @@ LOCAL Errors bar(int argc, const char *argv[])
 
     if (globalOptions.debug.createSignal != 0)
     {
-      kill(getpid(),globalOptions.debug.createSignal);
+      #ifdef HAVE_KILL
+        kill(getpid(),globalOptions.debug.createSignal);
+      #endif
     }
   #endif /* NDEBUG */
 

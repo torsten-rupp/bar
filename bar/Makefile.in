@@ -302,9 +302,6 @@ LANGUAGES = de jp
 # source search paths
 vpath %.c   $(SOURCE_DIR)
 vpath %.cpp $(SOURCE_DIR)
-ifeq (@HAVE_BREAKPAD@,1)
-vpath %.cc  ../packages/breakpad/src/processor
-endif
 
 # disable implicit rule for *.y -> *.c
 %.c: %.y
@@ -565,24 +562,6 @@ DESTROYER_OBJECTS           = $(foreach z,$(filter %.c,  $(DESTROYER_SOURCES)),$
                               $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
 
 
-BAR_MINIDUMP_SOURCES        = bar-minidump.cpp \
-
-BAR_MINIDUMP_SOURCES_COMMON = common/minidump.cpp \
-
-BAR_MINIDUMP_HEADERS        = \
-
-BAR_MINIDUMP_HEADERS_COMMON = \
-
-BAR_MINIDUMP_OBJECTS        = $(if @HAVE_BREAKPAD@,\
-                                $(addprefix release/,$(foreach z,$(filter %.c,  $(BAR_MINIDUMP_SOURCES)),$(patsubst %.c,  %.o,$z))) \
-                                $(addprefix release/,$(foreach z,$(filter %.cpp,$(BAR_MINIDUMP_SOURCES)),$(patsubst %.cpp,%.o,$z))) \
-                                $(addprefix release/,$(foreach z,$(filter %.cc, $(BAR_MINIDUMP_SOURCES)),$(patsubst %.cc, %.o,$z))) \
-                                $(addprefix release/,$(foreach z,$(filter %.c,  $(BAR_MINIDUMP_SOURCES_COMMON)),$(patsubst %.c,  %.o,$z))) \
-                                $(addprefix release/,$(foreach z,$(filter %.cpp,$(BAR_MINIDUMP_SOURCES_COMMON)),$(patsubst %.cpp,%.o,$z))) \
-                                $(addprefix release/,$(foreach z,$(filter %.cc, $(BAR_MINIDUMP_SOURCES_COMMON)),$(patsubst %.cc, %.o,$z))) \
-                                release/stackwalk_common.o \
-                              )
-
 BAR_INDEX_SOURCES           = bar-index.c \
                               bar_common.c \
 
@@ -673,7 +652,6 @@ TARGETS_INSTALL             = bar@EXEEXT@ bar.sym \
                               bar-keygen@SHELLEXT@ \
                               bar-index@EXEEXT@ \
                               bar-index-debug@EXEEXT@ \
-                              $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
                               $(BAR_MO) \
 
 TARGETS                     = $(TARGETS_INSTALL) \
@@ -911,14 +889,6 @@ bar@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
-ifeq (@HAVE_BREAKPAD@,1)
-	$(MAKE) release/bar.sym.bz2.o
-	$(LD) $(LD_FLAGS) $(LD_FLAGS_RELEASE) -o $@ $^ release/bar.sym.bz2.o $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
-          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
-          $(foreach z,$(LD_LIBRARIES), -l$z) \
-          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
-          $(foreach z,$(LD_LIBRARIES), -l$z)
-endif
 ifeq ($(PLATFORM),WINDOWS)
 	$(INSTALL) $(WINDOWS_DLLS) .
 endif
@@ -934,14 +904,6 @@ bar-debug@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
-ifeq (@HAVE_BREAKPAD@,1)
-	$(MAKE) debug/bar.sym.bz2.o
-	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ debug/bar.sym.bz2.o $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
-          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
-          $(foreach z,$(LD_LIBRARIES), -l$z) \
-          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
-          $(foreach z,$(LD_LIBRARIES), -l$z)
-endif
 ifeq ($(PLATFORM),WINDOWS)
 	$(INSTALL) $(WINDOWS_DLLS) .
 endif
@@ -986,45 +948,6 @@ bar-valgrind@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z)
 ifeq ($(PLATFORM),WINDOWS)
 	$(INSTALL) $(WINDOWS_DLLS) .
-endif
-
-# create breakpad symbol files
-ifeq (@HAVE_BREAKPAD@,1)
-release/bar.sym.bz2.o:
-	$(DUMP_SYMS) ./bar@EXEEXT@ | $(BZIP2) -c >release/bar.sym.bz2
-	(format=$(shell $(OBJDUMP) -a release/bar.o|grep 'file format'|sed 's/.*file format\s*//g'); \
-         name=$(subst .,_,$(subst /,_,release/bar.sym.bz2)); \
-         $(OBJCOPY) \
-           -I binary \
-           -O $$format \
-           -B i386 \
-           --redefine-sym _binary_$${name}_start=_minidump_symbols_start \
-           --redefine-sym _binary_$${name}_end=_minidump_symbols_end \
-           --redefine-sym _binary_$${name}_size=_minidump_symbols_size \
-           release/bar.sym.bz2 $@; \
-        )
-	$(RMF) release/bar.sym.bz2
-else
-	@$(ECHO) "Warning: breakpad not configured - cannot build symbol object file."
-endif
-
-ifeq (@HAVE_BREAKPAD@,1)
-debug/bar.sym.bz2.o:
-	$(DUMP_SYMS) ./bar-debug@EXEEXT@ | $(BZIP2) -c >debug/bar.sym.bz2
-	(format=$(shell $(OBJDUMP) -a debug/bar.o|grep 'file format'|sed 's/.*file format\s*//g'); \
-         name=$(subst .,_,$(subst /,_,debug/bar.sym.bz2)); \
-         $(OBJCOPY) \
-           -I binary \
-           -O $$format \
-           -B i386 \
-           --redefine-sym _binary_$${name}_start=_minidump_symbols_start \
-           --redefine-sym _binary_$${name}_end=_minidump_symbols_end \
-           --redefine-sym _binary_$${name}_size=_minidump_symbols_size \
-           debug/bar.sym.bz2 $@; \
-        )
-	$(RMF) debug/bar.sym.bz2
-else
-	@$(ECHO) "Warning: breakpad not configured - cannot build symbol object file."
 endif
 
 # create bar-keygen script
@@ -1108,20 +1031,6 @@ destroyer@EXEEXT@: \
           $(foreach z,$(LD_LIBRARIES), -l$z)
 ifeq ($(PLATFORM),WINDOWS)
 	$(INSTALL) $(WINDOWS_DLLS) .
-endif
-
-# create bar-minidump
-release/bar-minidump.o: bar-minidump.cc
-
-release/stackwalk_common.o: ../packages/breakpad/src/processor/stackwalk_common.cc
-
-bar-minidump@EXEEXT@: \
-  $(BAR_MINIDUMP_OBJECTS)
-ifeq (@HAVE_BREAKPAD@,1)
-	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
-          -lbreakpad -ldisasm
-else
-	@$(ECHO) "ERROR: breakpad not available - cannot build bar-minidump"
 endif
 
 # create show chunks program
@@ -2154,20 +2063,6 @@ ifneq ($(DIRECTORY),)
 	$(MAKE) -C test dist DIRECTORY=../$(DIRECTORY)
 else
 	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
-endif
-
-# ----------------------------------------------------------------------------
-
-.PHONY: crashdump
-crashdump:
-ifneq ($(MINIDUMP),)
-	../packages/breakpad/src/tools/linux/md2core/minidump-2-core -v $(MINIDUMP) 1>bar.core 2>bar.core.out
-	(a=`grep -w GUID bar.core.ouot |grep bar|sed 's/-.*//g'`; \
-         b=`objdump -h ./bar|grep \.text|awk '{print $$4}'`; \
-         gdb --eval-command="add-symbol-file ./bar@EXEEXT@ `perl -e 'die unless $$ARGV[0] && $$ARGV[1]; printf("%#x\n", hex($$ARGV[0]) + hex($$ARGV[1]))' $$a $$b;`" --core ./bar.core; \
-        )
-else
-	echo "Please specify minidump file with MINIDUMP=<file name>"
 endif
 
 # ----------------------------------------------------------------------------
