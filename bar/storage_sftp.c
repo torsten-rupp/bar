@@ -179,8 +179,6 @@ LOCAL LIBSSH2_RECV_FUNC(sftpReceiveCallback)
 
   return n;
 }
-#endif /* HAVE_SSH2 */
-
 /***********************************************************************\
 * Name   : sftpRead
 * Purpose: sftp read data
@@ -695,6 +693,8 @@ LOCAL Errors sftpUnlink(SocketHandle *socketHandle,
 
   return error;
 }
+
+#endif /* HAVE_SSH2 */
 
 /*---------------------------------------------------------------------*/
 

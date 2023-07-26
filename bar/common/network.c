@@ -719,10 +719,10 @@ Errors connectDescriptor(SocketHandle *socketHandle,
                          long         timeout
                         )
 {
+  Errors error;
   #ifdef HAVE_SSH2
     int    ssh2Error;
     char   *ssh2ErrorText;
-    Errors error;
   #endif /* HAVE_SSH2 */
 
   assert(socketHandle != NULL);

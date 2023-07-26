@@ -901,7 +901,6 @@ void Stacktrace_getSymbols(const char         *executableFileName,
       UNUSED_VARIABLE(addresses);
       UNUSED_VARIABLE(addressCount);
       UNUSED_VARIABLE(symbolInfo);
-      UNUSED_VARIABLE(symbolInfoCount);
     #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
   #elif defined(PLATFORM_WINDOWS)
     UNUSED_VARIABLE(executableFileName);

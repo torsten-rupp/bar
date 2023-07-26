@@ -1578,12 +1578,12 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
     return ERROR_INSUFFICIENT_MEMORY;
   }
   memCopyFast(data,dataLength,fromCryptKey->data,fromCryptKey->dataLength);
-  key = NULL;
 
 // TODO: remove
 #if 0
   // create key
   #ifdef HAVE_GCRYPT
+    key = NULL;
     gcryptError = gcry_sexp_new(&key,
                                 data,
                                 0,  // dataLength,
@@ -1739,7 +1739,6 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
   {
     return ERROR_INSUFFICIENT_MEMORY;
   }
-  key = NULL;
 
   // derive key
   switch (cryptKeyDeriveType)
@@ -1782,6 +1781,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
 //TODO: create key?
 #if 0
         // create key
+        key = NULL;
         gcryptError = gcry_sexp_new(&key,
                                     data,
                                     0,  // dataLength,

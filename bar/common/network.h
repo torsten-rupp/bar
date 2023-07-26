@@ -411,6 +411,8 @@ INLINE bool Network_isInsecureTLS(const SocketHandle *socketHandle)
   #ifdef HAVE_GNU_TLS
     return (socketHandle->type == SOCKET_TYPE_TLS) && !socketHandle->gnuTLS.verifiedCertificate;
   #else
+    UNUSED_VARIABLE(socketHandle);
+
     return FALSE;
   #endif
 }
