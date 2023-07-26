@@ -370,13 +370,16 @@ LOCAL Errors checkWebDAVLogin(StorageTypes type,
                               ConstString  fileName
                              )
 {
-  CURL            *curlHandle;
-  String          url;
-  CURLcode        curlCode;
-  Errors          error;
-  StringTokenizer stringTokenizer;
-  String          pathName;
-  ConstString     token;
+  CURL              *curlHandle;
+  String            url;
+  CURLcode          curlCode;
+  Errors            error;
+  StringTokenizer   stringTokenizer;
+  bool              doneFlag;
+  String            pathName;
+  ConstString       token;
+  struct curl_slist *curlSList;
+
 
   assert(   (type == STORAGE_TYPE_WEBDAV)
          || (type == STORAGE_TYPE_WEBDAVS)
@@ -391,64 +394,80 @@ LOCAL Errors checkWebDAVLogin(StorageTypes type,
   }
 
   File_initSplitFileName(&stringTokenizer,fileName);
-  if (File_getNextSplitFileName(&stringTokenizer,&token))
+  doneFlag  = FALSE;
+  curlSList = curl_slist_append(NULL,"Depth: 1");
+  pathName  = String_new();
+  do
   {
-    pathName = String_new();
-    do
+    // get URL
+    url = getWebDAVURL(type,hostName,hostPort,pathName);
+
+    // init WebDAV login
+    error = setWebDAVLogin(curlHandle,
+                           loginName,
+                           loginPassword,
+                           publicKeyData,
+                           publicKeyLength,
+                           privateKeyData,
+                           privateKeyLength,
+                           WEBDAV_TIMEOUT
+                          );
+
+    // check access via URL
+    if (error == ERROR_NONE)
     {
-      File_appendFileName(pathName,token);
+      curlCode = CURLE_OK;
 
-      // get URL
-      url = getWebDAVURL(type,hostName,hostPort,pathName);
-
-      // init WebDAV login
-      error = setWebDAVLogin(curlHandle,
-                             loginName,
-                             loginPassword,
-                             publicKeyData,
-                             publicKeyLength,
-                             privateKeyData,
-                             privateKeyLength,
-                             WEBDAV_TIMEOUT
-                            );
-
-      // check access via URL
-      if (error == ERROR_NONE)
+      if (curlCode == CURLE_OK)
       {
-        curlCode = CURLE_OK;
-
-        if (curlCode == CURLE_OK)
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+      }
+      if (curlCode == CURLE_OK)
+      {
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
+      }
+      if (curlCode == CURLE_OK)
+      {
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,curlSList);
+      }
+     if (curlCode == CURLE_OK)
+      {
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+      }
+      if (curlCode == CURLE_OK)
+      {
+        curlCode = curl_easy_perform(curlHandle);
+      }
+      if (curlCode != CURLE_OK)
+      {
+        switch (curlCode)
         {
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-        }
-        if (curlCode == CURLE_OK)
-        {
-          curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-        }
-        if (curlCode == CURLE_OK)
-        {
-          curlCode = curl_easy_perform(curlHandle);
-        }
-        if (curlCode != CURLE_OK)
-        {
-          switch (curlCode)
-          {
-            case CURLE_COULDNT_CONNECT: error = ERRORX_(CONNECT_FAIL,0,"%s",curl_easy_strerror(curlCode)); break;
-            default:                    error = ERRORX_(WEBDAV_AUTHENTICATION,0,"%s",curl_easy_strerror(curlCode)); break;
-          }
+          case CURLE_COULDNT_CONNECT: error = ERRORX_(CONNECT_FAIL,0,"%s",curl_easy_strerror(curlCode)); break;
+          default:                    error = ERRORX_(WEBDAV_AUTHENTICATION,0,"%s",curl_easy_strerror(curlCode)); break;
         }
       }
+    }
 
-      String_delete(url);
-    }
-    while ((error != ERROR_NONE) && File_getNextSplitFileName(&stringTokenizer,&token));
-    String_delete(pathName);
-    if (error != ERROR_NONE)
+    String_delete(url);
+
+    // next directory
+    if (File_getNextSplitFileName(&stringTokenizer,&token))
     {
-      File_doneSplitFileName(&stringTokenizer);
-      (void)curl_easy_cleanup(curlHandle);
-      return error;
+      File_appendFileName(pathName,token);
     }
+    else
+    {
+      doneFlag = TRUE;
+    }
+  }
+  while ((error != ERROR_NONE) && !doneFlag);
+  String_delete(pathName);
+  curl_slist_free_all(curlSList);
+  if (error != ERROR_NONE)
+  {
+    File_doneSplitFileName(&stringTokenizer);
+    (void)curl_easy_cleanup(curlHandle);
+    return error;
   }
   File_doneSplitFileName(&stringTokenizer);
 
