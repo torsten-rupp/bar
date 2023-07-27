@@ -23574,6 +23574,110 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for signal" >&5
+$as_echo_n "checking for signal... " >&6; }
+if ${ac_cv_func_signal+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_signal="no"
+      echo > conftest.log
+
+      for ac_headers in signal.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void signal();"; fi`
+                                         #ifdef signal
+                                         #else
+                                           return (intptr_t)signal;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_signal=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_signal" >&5
+$as_echo "$ac_cv_func_signal" >&6; }
+  if test "$ac_cv_func_signal" != no; then :
+
+$as_echo "#define HAVE_SIGNAL 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for kill" >&5
+$as_echo_n "checking for kill... " >&6; }
+if ${ac_cv_func_kill+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_kill="no"
+      echo > conftest.log
+
+      for ac_headers in signal.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void kill();"; fi`
+                                         #ifdef kill
+                                         #else
+                                           return (intptr_t)kill;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_kill=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_kill" >&5
+$as_echo "$ac_cv_func_kill" >&6; }
+  if test "$ac_cv_func_kill" != no; then :
+
+$as_echo "#define HAVE_KILL 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking number of arguments of mkdir()" >&5
 $as_echo_n "checking number of arguments of mkdir()... " >&6; }
 if ${ac_cv_mkdir_arguments_count+:} false; then :

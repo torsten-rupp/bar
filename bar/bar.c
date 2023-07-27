@@ -3802,7 +3802,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
         (Errors(*)(void*,const void*,ulong))File_write,
         (Errors(*)(void*,uint64*))File_tell,
         (Errors(*)(void*,uint64))File_seek,
-        (uint64(*)(void*))File_getSize
+        (int64(*)(void*))File_getSize
       };
 
       int         i;

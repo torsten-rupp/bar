@@ -262,6 +262,9 @@
 /* iso9660_open() available */
 #undef HAVE_ISO9660_OPEN
 
+/* kill() available */
+#undef HAVE_KILL
+
 /* lchmod() available */
 #undef HAVE_LCHMOD
 
@@ -468,6 +471,9 @@
 
 /* defined if siginfo_t is available */
 #undef HAVE_SIGINFO_T
+
+/* signal() available */
+#undef HAVE_SIGNAL
 
 /* SIGPIPE available */
 #undef HAVE_SIGPIPE
