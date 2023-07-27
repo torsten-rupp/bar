@@ -1565,10 +1565,6 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
 {
   uint dataLength;
   void *data;
-  #ifdef HAVE_GCRYPT
-//    gcry_error_t gcryptError;
-    gcry_sexp_t  key;
-  #endif /* HAVE_GCRYPT */
 
   // allocate secure memory
   dataLength = fromCryptKey->dataLength;
@@ -1579,34 +1575,17 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
   }
   memCopyFast(data,dataLength,fromCryptKey->data,fromCryptKey->dataLength);
 
-// TODO: remove
-#if 0
-  // create key
-  #ifdef HAVE_GCRYPT
-    key = NULL;
-    gcryptError = gcry_sexp_new(&key,
-                                data,
-                                0,  // dataLength,
-                                1  // autodetect
-                               );
-    if (gcryptError != 0)
-    {
-      char buffer[128];
-
-      gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
-      freeSecure(data);
-      return ERRORX_(INVALID_KEY,gcryptError,"%s",buffer);
-    }
-    assert(key != NULL);
-  #endif /* HAVE_GCRYPT */
-#endif
-
   // set key
   cryptKey->cryptPaddingType = fromCryptKey->cryptPaddingType;
   cryptKey->data             = data;
   cryptKey->dataLength       = dataLength;
   #ifdef HAVE_GCRYPT
-    cryptKey->key = key;
+    cryptKey->key = NULL;
+    if (fromCryptKey->key != NULL)
+    {
+      if (cryptKey->key == NULL) cryptKey->key = gcry_sexp_find_token(fromCryptKey->key,"public-key",0);
+      if (cryptKey->key == NULL) cryptKey->key = gcry_sexp_find_token(fromCryptKey->key,"private-key",0);
+    }
   #endif /* HAVE_GCRYPT */
 
   #ifdef NDEBUG
@@ -1636,10 +1615,7 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
   #endif /* NDEBUG */
 
   #ifdef HAVE_GCRYPT
-    if (cryptKey->key != NULL)
-    {
-      gcry_sexp_release(cryptKey->key);
-    }
+    if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
   #else /* not HAVE_GCRYPT */
   #endif /* HAVE_GCRYPT */
   if (cryptKey->data != NULL)
@@ -1720,12 +1696,11 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
                        uint                keyLength
                       )
 {
-  void         *data;
-  uint         dataLength;
-  uint         i;
+  void *data;
+  uint dataLength;
+  uint i;
   #ifdef HAVE_GCRYPT
     gcry_error_t gcryptError;
-    gcry_sexp_t  key;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
@@ -1777,26 +1752,6 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
           freeSecure(data);
           return ERRORX_(INIT_KEY,gcryptError,"%s",buffer);
         }
-
-//TODO: create key?
-#if 0
-        // create key
-        key = NULL;
-        gcryptError = gcry_sexp_new(&key,
-                                    data,
-                                    0,  // dataLength,
-                                    1  // autodetect
-                                   );
-        if (gcryptError != 0)
-        {
-          char buffer[128];
-
-          gpg_strerror_r(gcryptError,buffer,sizeof(buffer));
-          freeSecure(data);
-          return ERRORX_(INIT_KEY,gcryptError,"%s",buffer);
-        }
-        assert(cryptKey->key != NULL);
-#endif
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(NO_SALT);
 
@@ -1817,7 +1772,7 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
   cryptKey->dataLength = dataLength;
   #ifdef HAVE_GCRYPT
     if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
-    cryptKey->key = key;
+    cryptKey->key = NULL;
   #endif /* HAVE_GCRYPT */
 
   return ERROR_NONE;
@@ -2130,6 +2085,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
     #endif
 
     // create key
+// TODO: use somethign like this? gcryptError = gcry_sexp_build(&key,NULL,"(private-key (rsa (n %m) (e %m)))",nToken,eToken);
     gcryptError = gcry_sexp_new(&key,
                                 keyData,
                                 0,  //dataLength,
@@ -2519,7 +2475,9 @@ Errors Crypt_createPublicPrivateKeyPair(CryptKey *publicCryptKey,
     gcry_sexp_release(sexpKeyParameters);
     String_delete(description);
 //gcry_sexp_dump(sexpKey);
+    if (publicCryptKey->key != NULL) gcry_sexp_release(publicCryptKey->key);
     publicCryptKey->key  = gcry_sexp_find_token(sexpKey,"public-key",0);
+    if (privateCryptKey->key != NULL) gcry_sexp_release(privateCryptKey->key);
     privateCryptKey->key = gcry_sexp_find_token(sexpKey,"private-key",0);
     gcry_sexp_release(sexpKey);
 

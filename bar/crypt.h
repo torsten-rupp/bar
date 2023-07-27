@@ -175,10 +175,10 @@ typedef struct
 typedef struct
 {
   CryptPaddingTypes cryptPaddingType;
-  void              *data;              // data
-  uint              dataLength;         // data length [bytes]
+  void              *data;              // key data
+  uint              dataLength;         // key data length [bytes]
   #ifdef HAVE_GCRYPT
-    gcry_sexp_t key;                    // public/private key
+    gcry_sexp_t key;                    // gcrypt public/private key or NULL
   #endif /* HAVE_GCRYPT */
 } CryptKey;
 
