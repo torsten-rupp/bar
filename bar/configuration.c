@@ -660,7 +660,7 @@ LOCAL bool cmdOptionParseNewEntiryUUID(void *userData, void *variable, const cha
 
   if (value != NULL)
   {
-    if (!stringMatch(value,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
+    if (!stringMatch(value,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",STRING_NO_ASSIGN,STRING_NO_ASSIGN,NULL))
     {
       stringSet(errorMessage,errorMessageSize,"not an UUID");
       return FALSE;

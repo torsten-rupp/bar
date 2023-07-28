@@ -93,7 +93,8 @@ LOCAL bool vscanString(const char *string,
 *          pattern           - regualar expression pattern
 *          matchedString     - matched string variable (can be NULL)
 *          matchedStringSize - size of matched string
-*          matchedSubStrings - matched sub-string variables (char*,ulong)
+*          matchedSubStrings - matched sub-string variables (char*,ulong);
+*                              last value have to be NULL
 * Output : nextIndex         - index of next not matched character
 *          matchedString     - matched string
 *          matchedSubStrings - matched sub-strings
@@ -138,7 +139,7 @@ LOCAL bool vmatchString(const char *string,
       if (matchedSubString != NULL)
       {
         matchedSubStringSize = va_arg(arguments,size_t*);
-        assert((matchedSubString != NULL) && (matchedSubStringSize != NULL));
+        assert(matchedSubStringSize != NULL);
         subMatchCount++;
       }
     }

@@ -1904,7 +1904,7 @@ static inline int stringScan(const char *string, const char *format, ...)
 *          arguments         - arguments
 *          ...               - optional matching strings of sub-patterns
 *                              (const char**,size_t*), last value have
-*                              to be NULL!
+*                              to be NULL
 * Output : -
 * Return : TRUE iff pattern match with string
 * Notes  : sub-match strings are _not_ copied!
