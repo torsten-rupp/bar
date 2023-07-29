@@ -91,8 +91,9 @@ ERROR NETWORK_RECEIVE                  TR("receiving data failed")
 ERROR NETWORK_EXECUTE_FAIL             TR("execute command failed")
 ERROR NETWORK_TIMEOUT_SEND             TR("timeout send data")
 ERROR NETWORK_TIMEOUT_RECEIVE          TR("timeout receive data")
-ERROR NO_RESPONSE                      TR("no response from remote program")
-ERROR INVALID_RESPONSE                 TR("invalid response from remote program")
+ERROR NO_RESPONSE                      TR("no response from remote")
+ERROR INVALID_RESPONSE                 TR("invalid response from remote")
+ERROR BAD_REQUEST                      TR("bad request")
 
 // --- TLS/SSL ----------------------------------------------------------
 ERROR INIT_TLS                         TR("initialize (TLS/SSL) failed")
@@ -245,7 +246,6 @@ ERROR WEBDAV_AUTHENTICATION
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR WEBDAV_BAD_REQUEST               TR("WebDAV bad request")
 ERROR WEBDAV_GET_SIZE
   stringSet(errorText,sizeof(errorText),TR("get WebDAV file size"));
   if (!stringIsEmpty(ERROR_DATA))

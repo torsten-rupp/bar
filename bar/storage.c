@@ -87,6 +87,7 @@
 #define HTTP_CODE_CREATED                201
 #define HTTP_CODE_ACCEPTED               202
 #define HTTP_CODE_MULTI_STATUS           207
+#define HTTP_CODE_SERVER_READY           220
 #define HTTP_CODE_BAD_REQUEST            400
 #define HTTP_CODE_UNAUTHORIZED           401
 #define HTTP_CODE_FORBITTEN              403
@@ -314,11 +315,12 @@ LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle, ConstString archiveName)
       case HTTP_CODE_CREATED:
       case HTTP_CODE_ACCEPTED:
       case HTTP_CODE_MULTI_STATUS:
+      case HTTP_CODE_SERVER_READY:
         error = ERROR_NONE;
         break;
       case HTTP_CODE_BAD_REQUEST:
       case HTTP_CODE_BAD_METHOD:
-        error = ERROR_WEBDAV_BAD_REQUEST;
+        error = ERRORX_(BAD_REQUEST,responseCode,"bad request");
         break;
       case HTTP_CODE_UNAUTHORIZED:
       case HTTP_CODE_FORBITTEN:
@@ -328,13 +330,13 @@ LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle, ConstString archiveName)
         error = ERROR_FILE_NOT_FOUND_;
         break;
       default:
-        error = ERRORX_(WEBDAV,responseCode,"unhandled HTTP response");
+        error = ERRORX_(INVALID_RESPONSE,responseCode,"unhandled HTTP response");
         break;
     }
   }
   else
   {
-    error = ERRORX_(WEBDAV,curlCode,"%s",curl_easy_strerror(curlCode));
+    error = ERRORX_(INVALID_RESPONSE,curlCode,"%s",curl_easy_strerror(curlCode));
   }
 
   return error;
