@@ -720,12 +720,12 @@ functionExec = \
 # helper function for test files
 functionCleanTestFiles = \
   $(RMRF) $(TEST_FILES_CLEAN); \
-  $(if $(TEST_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_FILE_PATH);) \
-  $(if $(TEST_FTP_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_FTP_FILE_PATH);) \
-  $(if $(TEST_SSH_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_SSH_FILE_PATH);) \
-  $(if $(TEST_SCP_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_SCP_FILE_PATH);) \
-  $(if $(TEST_SFTP_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_SFTP_FILE_PATH);) \
-  $(if $(TEST_WEBDAV_FILE_PATH),$(SUDO) -n $(RMRF) $(TEST_WEBDAV_FILE_PATH);) \
+  $(if $(TEST_FILE_PATH),       $(FIND) $(TEST_FILE_PATH)        -mindepth 1 | $(XARGS) $(SUDO) -n $(RMF);) \
+  $(if $(TEST_FTP_FILE_PATH),   $(FIND) $(TEST_FTP_FILE_PATH)    -mindepth 1 | $(XARGS) $(SUDO) -n $(RMF);) \
+  $(if $(TEST_SSH_FILE_PATH),   $(FIND) $(TEST_SSH_FILE_PATH)    -mindepth 1 | $(XARGS) $(SUDO) -n $(RMF);) \
+  $(if $(TEST_SCP_FILE_PATH),   $(FIND) $(TEST_SCP_FILE_PATH)    -mindepth 1 | $(XARGS) $(SUDO) -n $(RMF);) \
+  $(if $(TEST_SFTP_FILE_PATH),  $(FIND) $(TEST_SFTP_FILE_PATH)   -mindepth 1 | $(XARGS) $(SUDO) -n $(RMF);) \
+  $(if $(TEST_WEBDAV_FILE_PATH),$(FIND) $(TEST_WEBDAV_FILE_PATH) -mindepth 1 | $(XARGS) $(SUDO) -n $(RMF);) \
   $(CHMOD) o+w $(INTERMEDIATE_DIR) 2>/dev/null || true
 
 # helper function for test databases

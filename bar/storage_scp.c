@@ -977,18 +977,15 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     #ifdef HAVE_SSH2_SCP_SEND64
       storageHandle->scp.channel = libssh2_scp_send64(Network_getSSHSession(&storageHandle->scp.socketHandle),
                                                       String_cString(fileName),
-// ???
-0600,
+                                                      (int)File_getDefaultFilePermissions(),
                                                       (libssh2_uint64_t)fileSize,
-// ???
-                                                      0L,
-                                                      0L
+                                                      0L,  // mtime: use remote date/time
+                                                      0L  // atime: use remote date/time
                                                      );
     #else /* not HAVE_SSH2_SCP_SEND64 */
       storageHandle->scp.channel = libssh2_scp_send(Network_getSSHSession(&storageHandle->scp.socketHandle),
                                                     String_cString(archiveName),
-// ???
-0600,
+                                                    (int)File_getDefaultFilePermissions(),
                                                     (size_t)fileSize
                                                    );
     #endif /* HAVE_SSH2_SCP_SEND64 */
