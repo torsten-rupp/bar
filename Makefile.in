@@ -191,7 +191,6 @@ endif
 	$(RMRF) extern
 	$(RMF) Makefile
 	$(RMF) src/Config.java
-	$(RMF) epm.list
 	$(RMF) config.status
 	$(RMF) config.log
 	$(RMRF) build
@@ -534,7 +533,6 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   configure \
   configure.ac \
   Makefile.in \
-  epm.list.in \
   version \
   ToDo \
   ChangeLog \
@@ -578,7 +576,6 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    -t tmp/$(DISTRIBUTION_NAME) \
                    configure.ac \
                    Makefile.in \
-                   epm.list.in \
                    ToDo \
                    ChangeLog
 	( \
@@ -727,11 +724,6 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
             extern/launch4j-*.tgz \
             tmp/$(DISTRIBUTION_NAME).orig/extern; \
         fi
-	if test -n "`ls extern/epm-*-source.tar.bz2 2>/dev/null`"; then \
-          $(INSTALL) \
-            extern/epm-*-source.tar.bz2 \
-            tmp/$(DISTRIBUTION_NAME).orig/extern; \
-        fi
 	# download not existing packages
 	./download-third-party-packages.sh --local-directory extern -d tmp/$(DISTRIBUTION_NAME).orig -n
 	./download-third-party-packages.sh -d tmp/$(DISTRIBUTION_NAME).orig -n
@@ -829,7 +821,7 @@ docker_run build_docker:
           --name=bar-build \
           bar:build \
           /bin/bash -c "echo export PS1=\'$(DOCKER_PROMPT)\' >> ~/.bashrc && /bin/bash"
-          
+
 .PHONY: docker_rpm docker_rpm-x86_64 docker_den docker_den-x86_64 docker_win32 docker_win32-x86_64
 .PHONY: rpm_docker rpm_docker-x86_64 deb_docker deb_docker-x86_64 win32_docker win32_docker-x86_64
 docker_rpm rpm_docker:

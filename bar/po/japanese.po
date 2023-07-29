@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-07-25 14:04+0200\n"
+"POT-Creation-Date: 2023-07-29 05:15+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -161,175 +161,175 @@ msgid "timeout receive data"
 msgstr ""
 
 #: errors.def:94
-msgid "no response from remote program"
+msgid "no response from remote"
 msgstr ""
 
 #: errors.def:95
-msgid "invalid response from remote program"
+msgid "invalid response from remote"
 msgstr ""
 
-#: errors.def:98
-msgid "initialize (TLS/SSL) failed"
+#: errors.def:96
+msgid "bad request"
 msgstr ""
 
 #: errors.def:99
-msgid "no (TLS/SSL) certificate authority file"
+msgid "initialize (TLS/SSL) failed"
 msgstr ""
 
 #: errors.def:100
-msgid "no (TLS/SSL) certificate file"
+msgid "no (TLS/SSL) certificate authority file"
 msgstr ""
 
 #: errors.def:101
-msgid "no (TLS/SSL) key file"
+msgid "no (TLS/SSL) certificate file"
 msgstr ""
 
 #: errors.def:102
-msgid "invalid (TLS/SSL) certificate authority"
+msgid "no (TLS/SSL) key file"
 msgstr ""
 
 #: errors.def:103
-msgid "invalid (TLS/SSL) certificate"
+msgid "invalid (TLS/SSL) certificate authority"
 msgstr ""
 
 #: errors.def:104
-msgid "read (TLS/SSL) certificate fail"
+msgid "invalid (TLS/SSL) certificate"
 msgstr ""
 
 #: errors.def:105
+msgid "read (TLS/SSL) certificate fail"
+msgstr ""
+
+#: errors.def:106
 msgid "corrupt (TLS/SSL) certificate"
 msgstr ""
 
-#: errors.def:109
+#: errors.def:110
 msgid "TLS (SSL) certificate expired"
 msgstr ""
 
-#: errors.def:116
+#: errors.def:117
 msgid "TLS (SSL) certificate is still not active"
 msgstr ""
 
-#: errors.def:123
+#: errors.def:124
 msgid "TLS (SSL) handshake failedure"
 msgstr ""
 
-#: errors.def:127
+#: errors.def:128
 msgid "invalid SSH specifier"
 msgstr ""
 
-#: errors.def:128
+#: errors.def:129
 msgid "no SSH public key"
 msgstr ""
 
-#: errors.def:129
+#: errors.def:130
 msgid "no SSH private key"
 msgstr ""
 
-#: errors.def:133
+#: errors.def:134
 msgid "no SSH password given"
 msgstr ""
 
-#: errors.def:136 errors.def:143 errors.def:239 errors.def:663
+#: errors.def:137 errors.def:144 errors.def:240 errors.def:663
 msgid " for '{0}'"
 msgstr ""
 
-#: errors.def:140
+#: errors.def:141
 msgid "invalid SSH password"
 msgstr ""
 
-#: errors.def:147
+#: errors.def:148
 msgid "invalid SSH private key"
 msgstr ""
 
-#: errors.def:151
+#: errors.def:152
 msgid "initialize SSH session failed"
 msgstr ""
 
-#: errors.def:155
+#: errors.def:156
 msgid "SSH authentication failed"
 msgstr ""
 
-#: errors.def:162
+#: errors.def:163
 msgid "ssh protocol error"
 msgstr ""
 
-#: errors.def:170
+#: errors.def:171
 msgid "job '{0}' already exists"
 msgstr ""
 
-#: errors.def:173
+#: errors.def:174
 msgid "job '{0}' running"
 msgstr ""
 
-#: errors.def:176
+#: errors.def:177
 msgid "create job failed"
 msgstr ""
 
-#: errors.def:183
+#: errors.def:184
 msgid "delete job failed"
 msgstr ""
 
-#: errors.def:190
+#: errors.def:191
 msgid "rename job failed"
 msgstr ""
 
-#: errors.def:199
+#: errors.def:200
 msgid "initialize storage failed"
 msgstr ""
 
-#: errors.def:203
+#: errors.def:204
 msgid "no storage name given"
 msgstr ""
 
-#: errors.def:204
+#: errors.def:205
 msgid "invalid storage"
 msgstr ""
 
-#: errors.def:207
+#: errors.def:208
 msgid "invalid FTP specifier"
 msgstr ""
 
-#: errors.def:211
+#: errors.def:212
 msgid "initialize FTP session failed"
 msgstr ""
 
-#: errors.def:215
+#: errors.def:216
 msgid "no FTP password given"
 msgstr ""
 
-#: errors.def:216
+#: errors.def:217
 msgid "invalid FTP password"
 msgstr ""
 
-#: errors.def:220
+#: errors.def:221
 msgid "invalid FTP user/password"
 msgstr ""
 
-#: errors.def:224
+#: errors.def:225
 msgid "get FTP file size failed"
 msgstr ""
 
-#: errors.def:231
+#: errors.def:232
 msgid "invalid WebDAV specifier"
 msgstr ""
 
-#: errors.def:232
+#: errors.def:233
 msgid "initialize WebDAV session failed"
 msgstr ""
 
-#: errors.def:236
+#: errors.def:237
 msgid "no WebDAV password given"
 msgstr ""
 
-#: errors.def:240
+#: errors.def:241
 msgid "invalid WebDAV password"
 msgstr ""
 
-#: errors.def:244
+#: errors.def:245
 msgid "invalid WebDAV user/password"
-msgstr ""
-
-#: errors.def:248
-msgid "WebDAV bad request"
 msgstr ""
 
 #: errors.def:252
