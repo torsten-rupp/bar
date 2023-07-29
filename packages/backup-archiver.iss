@@ -1,6 +1,6 @@
 [Setup]
-AppName=BAR
-AppVerName=BAR 0.21
+AppName=Backup ARchiver
+AppVerName=BAR @VERSION@
 AppPublisher=Torsten Rupp
 AppPublisherURL=http://www.kigen.de/projects/bar/index.html
 AppSupportURL=http://www.kigen.de/projects/bar/index.html
@@ -29,4 +29,4 @@ Name: "{userdesktop}\BAR"; Filename: "{app}\bar.exe"; Tasks: desktopicon
 
 [Run]
 ; NOTE: The following entry contains an English phrase ("Launch"). You are free to translate it into another language if required.
-Filename: "{app}\bar.exe"; Description: "Launch BAR"; Flags: nowait postinstall skipifsilent
+;Filename: "{app}\bar.exe"; Description: "Launch BAR"; Flags: nowait postinstall skipifsilent

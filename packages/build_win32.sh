@@ -105,9 +105,9 @@ done
 if test $helpFlag -eq 1; then
   echo "Usage: $0 [options] <source path> <distribution name> <version> <user:group> <setup name>"
   echo ""
-  echo "Options:  -t|--test   execute tests"
-  echo "          -d|--debug  enable debug"
-  echo "          -h|--help   print help"
+  echo "Options: -t|--test   execute tests"
+  echo "         -d|--debug  enable debug"
+  echo "         -h|--help   print help"
   exit 0
 fi
 
@@ -151,7 +151,7 @@ wine=`which wine`
 if test -z "$wine"; then
   echo >&2 ERROR: wine not found!
   if test -n "$wineDir"; then
-    rm -rf $wineDir; 
+    rm -rf $wineDir;
   fi
   exit 1
 fi
@@ -159,7 +159,7 @@ wineboot=`which wineboot`
 if test -z "$wineboot"; then
   echo >&2 ERROR: wineboot not found!
   if test -n "$wineDir"; then
-    rm -rf $wineDir; 
+    rm -rf $wineDir;
   fi
   exit 1
 fi
@@ -167,7 +167,7 @@ winepath=`which winepath`
 if test -z "$winepath"; then
   echo >&2 ERROR: winepath not found!
   if test -n "$wineDir"; then
-    rm -rf $wineDir; 
+    rm -rf $wineDir;
   fi
   exit 1
 fi
@@ -184,7 +184,7 @@ else
   echo >&2 "         `dirname $iscc1`"
   echo >&2 "         `dirname $iscc2`"
   if test -n "$wineDir"; then
-    rm -rf $wineDir; 
+    rm -rf $wineDir;
   fi
   exit 1
 fi
@@ -194,12 +194,12 @@ fi
 #set -e
 
 # create temporary directory
-tmpDir=`mktemp -d /tmp/win32-XXXXXX`
+temporaryDirectory=`mktemp -d /tmp/win32-XXXXXX`
 
 (
   set -e
 
-  cd $tmpDir
+  cd $temporaryDirectory
 
 # TODO: out-of-source build, build from source instead of extrac distribution file
   # get sources
@@ -231,6 +231,7 @@ tmpDir=`mktemp -d /tmp/win32-XXXXXX`
 
   # build setup program
   install packages/backup-archiver.iss backup-archiver.iss
+  sed -i "s/@VERSION@/$version/g" backup-archiver.iss
   $wine "$iscc" \
     /O$sourcePath \
     /F$setupName \
@@ -248,15 +249,15 @@ rc=$?
 
 # debug
 if test $debugFlag -eq 1; then
-  (cd $tmpDir;
+  (cd $temporaryDirectory;
    /bin/bash
   )
 fi
 
 # clean-up
-rm -rf $tmpDir
+rm -rf $temporaryDirectory
 if test -n "$wineDir"; then
-  rm -rf $wineDir; 
+  rm -rf $wineDir;
 fi
 
 exit $rc
