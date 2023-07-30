@@ -58,6 +58,7 @@ RUN apt-get -y install \
   libc6 \
   libc6-dev \
   libpq-dev \
+  libsystemd-dev \
   openjdk-8-jdk \
   openjdk-8-jre \
   cmake \
@@ -88,7 +89,7 @@ RUN useradd -m test -p `openssl passwd -crypt test`;
 
 # enable sudo for users
 RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" > /etc/sudoers.d/all
-COPY sudoers /etc/sudoers.d/bar
+COPY bar-sudoers /etc/sudoers.d/bar
 RUN usermod -aG sudo jenkins
 RUN usermod -aG sudo test
 

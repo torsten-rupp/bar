@@ -53,6 +53,7 @@ RUN yum -y install \
   jre \
   cmake \
   make \
+  libsystemd-dev \
   bison \
   flex \
   rpm-build \

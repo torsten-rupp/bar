@@ -52,6 +52,7 @@ RUN yum -y install \
   java-1.6.0-openjdk-devel \
   jre \
   cmake \
+  libsystemd-dev \
   make \
   bison \
   flex \

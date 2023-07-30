@@ -9369,11 +9369,11 @@ void Configuration_initServer(Server *server, ConstString name, ServerTypes serv
       {
         case SERVER_TYPE_WEBDAV:  server->webDAV.port = NETWORK_PORT_HTTP;  break;
         case SERVER_TYPE_WEBDAVS: server->webDAV.port = NETWORK_PORT_HTTPS; break;
-        #ifndef NDEBUG
-          default:
+        default:
+          #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            break; // not reached
-        #endif /* NDEBUG */
+          #endif /* NDEBUG */
+          break; // not reached
       }
       server->webDAV.loginName = String_new();
       Password_init(&server->webDAV.password);

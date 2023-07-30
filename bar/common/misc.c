@@ -1041,7 +1041,8 @@ void Misc_splitDateTime(uint64    dateTime,
   #endif /* HAVE_LOCALTIME_R */
   struct tm *tm;
 
-  n = (time_t)dateTime;
+  n  = (time_t)dateTime;
+  tm = NULL;
   #ifdef HAVE_LOCALTIME_R
     switch (timeType)
     {
@@ -1154,6 +1155,7 @@ uint64 Misc_makeDateTime(TimeTypes           timeType,
     case DAY_LIGHT_SAVING_MODE_ON  : tm.tm_isdst =  1; break;
   }
 
+  dateTime = 0LL;
   switch (timeType)
   {
     case TIME_TYPE_GMT  :
@@ -1322,7 +1324,8 @@ String Misc_formatDateTime(String string, uint64 dateTime, TimeTypes timeType, c
 
   assert(string != NULL);
 
-  n = (time_t)dateTime;
+  n  = (time_t)dateTime;
+  tm = NULL;
   switch (timeType)
   {
     case TIME_TYPE_GMT:
@@ -1333,11 +1336,11 @@ String Misc_formatDateTime(String string, uint64 dateTime, TimeTypes timeType, c
       #endif /* HAVE_GMTIME_R */
       break;
     case TIME_TYPE_LOCAL:
-    #ifdef HAVE_LOCALTIME_R
-      tm = localtime_r(&n,&tmBuffer);
-    #else /* not HAVE_LOCALTIME_R */
-      tm = localtime(&n);
-    #endif /* HAVE_LOCALTIME_R */
+      #ifdef HAVE_LOCALTIME_R
+        tm = localtime_r(&n,&tmBuffer);
+      #else /* not HAVE_LOCALTIME_R */
+        tm = localtime(&n);
+      #endif /* HAVE_LOCALTIME_R */
       break;
   }
   assert(tm != NULL);
@@ -1384,7 +1387,8 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
   assert(buffer != NULL);
   assert(bufferSize > 0);
 
-  n = (time_t)dateTime;
+  n  = (time_t)dateTime;
+  tm = NULL;
   switch (timeType)
   {
     case TIME_TYPE_GMT:

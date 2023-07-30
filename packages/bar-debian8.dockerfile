@@ -59,6 +59,7 @@ RUN apt-get -y install \
   g++ \
   libc6 \
   libc6-dev \
+  libsystemd-dev \
   default-jdk \
   default-jre \
   cmake \

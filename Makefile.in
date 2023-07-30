@@ -284,11 +284,11 @@ help:
 	@$(ECHO) "  install_test_deb_debian9-x86_64"
 	@$(ECHO) "  install_test_deb_debian10"
 	@$(ECHO) "  install_test_deb_debian10-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu16.04-x86_64"
 	@$(ECHO) "  install_test_deb_ubuntu18.04-x86_64"
 	@$(ECHO) "  install_test_deb_ubuntu19.04-x86_64"
 	@$(ECHO) "  install_test_deb_ubuntu19.10-x86_64"
 	@$(ECHO) "  install_test_deb_ubuntu20.04-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu22.04-x86_64"
 	@$(ECHO) ""
 	@$(ECHO) "  gui"
 	@$(ECHO) "  clean_gui"
@@ -766,13 +766,15 @@ docker_update update_docker:
 	$(DOCKER) pull i386/debian:10
 	$(DOCKER) pull debian:10
 	#
-	$(DOCKER) pull ubuntu:16.04
 	$(DOCKER) pull ubuntu:18.04
 	$(DOCKER) pull ubuntu:19.04
 	$(DOCKER) pull ubuntu:19.10
 	$(DOCKER) pull ubuntu:20.04
+	$(DOCKER) pull ubuntu:22.04
 	#
 	# base images
+	$(INSTALL) download-third-party-packages.sh packages
+	#
 #	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile         -t bar-centos:6            .)
 	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile -t bar-centos-x86_64:6     .)
 #	(cd packages; $(DOCKER) build -f bar-debian8.dockerfile         -t bar-debian:8            .)
@@ -787,9 +789,19 @@ docker_update update_docker:
 	#(cd packages; $(DOCKER) build -f bar-fedora29-x86_64.dockerfile    -t bar-fedora-x86_64:29    .)
 	#
 	#(cd packages; $(DOCKER) build -f bar-ubuntu18.04-x86_64.dockerfile -t bar-ubuntu-x86_64:18.04 .)
+	#(cd packages; $(DOCKER) build -f bar-ubuntu20.04-x86_64.dockerfile -t bar-ubuntu-x86_64:20.04 .)
+	#(cd packages; $(DOCKER) build -f bar-ubuntu22.04-x86_64.dockerfile -t bar-ubuntu-x86_64:22.04 .)
+	#
+	$(RMF) packages/download-third-party-packages.sh
 	#
 	# build image
+	$(INSTALL) download-third-party-packages.sh ci
+	$(INSTALL) bar/test/bar-sudoers ci
+	#
 	(cd ci; $(DOCKER) build -f build.dockerfile -t bar:build --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	#
+	$(RMF) ci/bar-sudoers
+	$(RMF) ci/download-third-party-packages.sh
 
 .PHONY: docker_purge purge_docker
 docker_purge purge_docker:
@@ -1177,11 +1189,11 @@ install_test_deb: \
   install_test_deb_debian8-x86_64 \
   install_test_deb_debian9 \
   install_test_deb_debian9-x86_64 \
-  install_test_deb_ubuntu16.04-x86_64 \
   install_test_deb_ubuntu18.04-x86_64 \
   install_test_deb_ubuntu19.04-x86_64 \
   install_test_deb_ubuntu19.10-x86_64 \
   install_test_deb_ubuntu20.04-x86_64 \
+  install_test_deb_ubuntu22.04-x86_64 \
 
 .PHONY: install_test_deb_debian8
 install_test_deb_debian8:
@@ -1214,11 +1226,6 @@ install_test_deb_debian10-x86_64:
 	@$(call functionInstallTestDEB,debian:10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
-.PHONY: install_test_deb_ubuntu16.04-x86_64
-install_test_deb_ubuntu16.04-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 16.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:16.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_ubuntu18.04-x86_64
 install_test_deb_ubuntu18.04-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu 18.10 64bit)
@@ -1238,6 +1245,11 @@ install_test_deb_ubuntu19.10-x86_64:
 install_test_deb_ubuntu20.04-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu 20.04 64bit)
 	@$(call functionInstallTestDEB,ubuntu:20.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_deb_ubuntu22.04-x86_64
+install_test_deb_ubuntu22.04-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu 20.04 64bit)
+	@$(call functionInstallTestDEB,ubuntu:22.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 # GUI

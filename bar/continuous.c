@@ -1386,8 +1386,7 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
   assert(databaseHandle != NULL);
 //  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
-//  return Database_update(databaseHandle,
-  Errors error= Database_update(databaseHandle,
+  return Database_update(databaseHandle,
                          NULL,  // changedRowCount
                          "names",
                          DATABASE_FLAG_NONE,
@@ -1402,8 +1401,6 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
                            DATABASE_FILTER_KEY(databaseId)
                          )
                         );
-assert(Error_getCode(error) != ERROR_CODE_DATABASE_TIMEOUT);
-return error;
 }
 
 /***********************************************************************\
