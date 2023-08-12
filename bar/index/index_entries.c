@@ -4378,10 +4378,10 @@ Errors Index_addFile(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entryId",   INDEX_DATABASE_ID(entryId)),
-                                DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
-                                DATABASE_VALUE_UINT64("offset",    fragmentOffset),
-                                DATABASE_VALUE_UINT64("size",      fragmentSize)
+                                DATABASE_VALUE_KEY   ("entryId",  INDEX_DATABASE_ID(entryId)),
+                                DATABASE_VALUE_KEY   ("storageId",INDEX_DATABASE_ID(storageId)),
+                                DATABASE_VALUE_UINT64("offset",   fragmentOffset),
+                                DATABASE_VALUE_UINT64("size",     fragmentSize)
                               ),
                               DATABASE_COLUMNS_NONE,
                               DATABASE_FILTERS_NONE
@@ -4600,10 +4600,10 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entryId",   INDEX_DATABASE_ID(entryId)),
-                                DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
-                                DATABASE_VALUE_UINT64("offset",    blockOffset*(uint64)blockSize),
-                                DATABASE_VALUE_UINT64("size",      blockCount*(uint64)blockSize)
+                                DATABASE_VALUE_KEY   ("entryId",  INDEX_DATABASE_ID(entryId)),
+                                DATABASE_VALUE_KEY   ("storageId",INDEX_DATABASE_ID(storageId)),
+                                DATABASE_VALUE_UINT64("offset",   blockOffset*(uint64)blockSize),
+                                DATABASE_VALUE_UINT64("size",     blockCount*(uint64)blockSize)
                               ),
                               DATABASE_COLUMNS_NONE,
                               DATABASE_FILTERS_NONE
@@ -5147,10 +5147,10 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                               DATABASE_FLAG_NONE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_KEY   ("entryId",   INDEX_DATABASE_ID(entryId)),
-                                DATABASE_VALUE_KEY   ("storageId", INDEX_DATABASE_ID(storageId)),
-                                DATABASE_VALUE_UINT64("offset",    fragmentOffset),
-                                DATABASE_VALUE_UINT64("size",      fragmentSize)
+                                DATABASE_VALUE_KEY   ("entryId",  INDEX_DATABASE_ID(entryId)),
+                                DATABASE_VALUE_KEY   ("storageId",INDEX_DATABASE_ID(storageId)),
+                                DATABASE_VALUE_UINT64("offset",   fragmentOffset),
+                                DATABASE_VALUE_UINT64("size",     fragmentSize)
                               ),
                               DATABASE_COLUMNS_NONE,
                               DATABASE_FILTERS_NONE

@@ -135,7 +135,7 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
       {
         case INDEX_TYPE_FILE:
           DIMPORT("import file entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
-          error = upgradeFromVersion7_importFileEntry(oldIndexHandle,
+          error = upgradeFromVersion6_importFileEntry(oldIndexHandle,
                                                       newIndexHandle,
                                                       &storageIdDictionary,
                                                       fromEntryId,
@@ -144,7 +144,7 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
           break;
         case INDEX_TYPE_IMAGE:
           DIMPORT("import image entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
-          error = upgradeFromVersion7_importImageEntry(oldIndexHandle,
+          error = upgradeFromVersion6_importImageEntry(oldIndexHandle,
                                                        newIndexHandle,
                                                        &storageIdDictionary,
                                                        fromEntryId,

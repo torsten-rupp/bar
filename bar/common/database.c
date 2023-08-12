@@ -6795,7 +6795,26 @@ LOCAL String appendName(String string, const DatabaseHandle *databaseHandle, con
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
-        String_appendCString(string,name);
+        {
+          const char *RESERVED_KEYWORDS[] =
+          {
+            "offset"
+          };
+
+          if (ARRAY_CONTAINS(RESERVED_KEYWORDS,
+                             SIZE_OF_ARRAY(RESERVED_KEYWORDS),
+                             i,
+                             stringEquals(RESERVED_KEYWORDS[i],name)
+                            )
+             )
+           {
+             String_appendFormat(string,"`%s`",name);
+           }
+           else
+           {
+             String_appendCString(string,name);
+           }
+         }
       #else /* HAVE_MARIADB */
       #endif /* HAVE_MARIADB */
       break;
@@ -8488,7 +8507,9 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
           {
             // step
             error = ERROR_NONE;
-            while (getNextRow(databaseStatementHandle,flags,timeout,&error))
+            while (   getNextRow(databaseStatementHandle,flags,timeout,&error)
+                   && (error == ERROR_NONE)
+                  )
             {
               error = databaseRowFunction(databaseStatementHandle->results,
                                           databaseStatementHandle->resultCount,
@@ -8518,7 +8539,9 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             {
               // step
               error = ERROR_NONE;
-              while (getNextRow(databaseStatementHandle,flags,timeout,&error))
+              while (   getNextRow(databaseStatementHandle,flags,timeout,&error)
+                     && (error == ERROR_NONE)
+                    )
               {
                 error = databaseRowFunction(databaseStatementHandle->results,
                                             databaseStatementHandle->resultCount,
@@ -8554,7 +8577,9 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             {
               // step
               error = ERROR_NONE;
-              while (getNextRow(databaseStatementHandle,flags,timeout,&error))
+              while (   getNextRow(databaseStatementHandle,flags,timeout,&error)
+                     && (error == ERROR_NONE)
+                    )
               {
                 error = databaseRowFunction(databaseStatementHandle->results,
                                             databaseStatementHandle->resultCount,
