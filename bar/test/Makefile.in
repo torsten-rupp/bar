@@ -5692,6 +5692,9 @@ test_index_operations_tool: \
 	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check-duplicates) $(LOG)
 	$(call functionTestCheckExitcode,0,0,$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --check) $(LOG)
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --import $(BAR_STORAGE)/import.db $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q "SELECT * FROM entries" 1>/dev/null $(LOG)
+	($(ECHO) 'SELECT * FROM entities'; $(ECHO) 'SELECT * FROM entries') | $(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) -q --pipe 1>/dev/null $(LOG)
+	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "SELECT * FROM entries"
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "DELETE FROM entryFragments"
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "DELETE FROM fileEntries WHERE id<=1"
 	$(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) "DELETE FROM imageEntries WHERE id<=1"

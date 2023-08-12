@@ -8178,11 +8178,10 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
   uint         i;
 
   assert(values != NULL);
-  assert(printRowData != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  if (printRowData->showHeaderFlag && !printRowData->printedHeaderFlag)
+  if ((printRowData != NULL) && printRowData->showHeaderFlag && !printRowData->printedHeaderFlag)
   {
     uint n;
 
@@ -8237,7 +8236,7 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
     {
       n = stringLengthCodepointsUTF8(s);
       UNUSED_RESULT(fwrite(s,1,n,stdout));
-      if (printRowData->showHeaderFlag)
+      if ((printRowData != NULL) && printRowData->showHeaderFlag)
       {
         assert(printRowData->widths[i] >= n);
         printChars(' ',printRowData->widths[i]-n);
@@ -12032,9 +12031,7 @@ if (xxxId != DATABASE_ID_NONE)
                            CALLBACK_(printRow,NULL),
                            NULL,  // changedRowCount,
                            DATABASE_PLAIN(l),
-                           DATABASE_COLUMNS
-                           (
-                           ),
+                           DATABASE_COLUMNS_NONE,
                            DATABASE_FILTERS_NONE,
                            NULL,  // groupBy
                            NULL,  // orderBy
@@ -12042,10 +12039,6 @@ if (xxxId != DATABASE_ID_NONE)
                            DATABASE_UNLIMITED
                           );
       if (error != ERROR_NONE)
-      {
-        if (verboseFlag) fprintf(stderr,"Result: %s\n",Error_getText(error));
-      }
-      else
       {
         printError("SQL command '%s' fail: %s!",l,Error_getText(error));
         Array_done(&storageIds);
