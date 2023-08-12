@@ -255,7 +255,7 @@ CREATE TABLE IF NOT EXISTS entryFragments(
   id        BIGINT AUTO_INCREMENT PRIMARY KEY,
   entryId   BIGINT NOT NULL,
   storageId BIGINT NOT NULL,
-  offset    BIGINT,
+  `offset`  BIGINT,
   size      BIGINT,
 
   FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE,
