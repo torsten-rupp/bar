@@ -11134,7 +11134,7 @@ uint xxxShow=0;
     }
     else if (stringEquals(argv[i],"--version"))
     {
-      printf("BAR index version %s\n",VERSION_STRING);
+      printf("BAR index version %s\n",VERSION_REVISION_STRING);
       Array_done(&storageIds);
       Array_done(&entityIds);
       Array_done(&uuIds);

@@ -4390,9 +4390,9 @@ LOCAL Errors bar(int argc, const char *argv[])
   if (globalOptions.versionFlag)
   {
     #ifndef NDEBUG
-      printf("BAR version %s (debug)\n",VERSION_STRING);
+      printf("BAR version %s (debug)\n",VERSION_REVISION_STRING);
     #else /* NDEBUG */
-      printf("BAR version %s\n",VERSION_STRING);
+      printf("BAR version %s\n",VERSION_REVISION_STRING);
     #endif /* not NDEBUG */
     printf("\n");
     printf("Components:\n");
