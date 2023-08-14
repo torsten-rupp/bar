@@ -4750,6 +4750,12 @@ Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
   assert(storageSpecifier != NULL);
   assert(storageFunction != NULL);
 
+// TODO:
+#ifndef WERROR
+#warning skipUnreadableFlag
+#endif
+UNUSED_VARIABLE(skipUnreadableFlag);
+
   // init variables
   Job_initOptions(&jobOptions);
   StringList_init(&directoryList);

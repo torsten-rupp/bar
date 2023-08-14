@@ -4433,6 +4433,7 @@ LOCAL void updateIndexThreadCode(void)
   CryptPasswordList cryptPasswordList;
   JobOptions        jobOptions;
   uint64            startTimestamp,endTimestamp;
+  bool              loginFlag;
   Errors            error;
   const JobNode     *jobNode;
   CryptPasswordNode *cryptPasswordNode;
@@ -4565,7 +4566,7 @@ LOCAL void updateIndexThreadCode(void)
           startTimestamp = 0LL;
           endTimestamp   = 0LL;
           Job_initOptions(&jobOptions);
-          bool loginFlag = FALSE;
+          loginFlag      = FALSE;
           LIST_ITERATEX(&loginList,loginNode,!loginFlag)
           {
             String_set(addStorageSpecifier.loginName,loginNode->name);

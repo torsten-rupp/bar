@@ -3922,7 +3922,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                                  )
          )
       {
-        printError("cannot find storage '%s'!",
+        printError("cannot find storage '%S'!",
                    globalOptions.debug.indexRemoveStorage
                   );
         AutoFree_cleanup(&autoFreeList);
@@ -3936,7 +3936,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                                 );
       if (error != ERROR_NONE)
       {
-        printError("cannot delete storage '%s' (error: %s)!",
+        printError("cannot delete storage '%S' (error: %s)!",
                    globalOptions.debug.indexRemoveStorage,
                    Error_getText(error)
                   );
@@ -4228,7 +4228,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                                   )
          )
       {
-        printError("cannot find storage '%s'!",
+        printError("cannot find storage '%S'!",
                    globalOptions.debug.indexRefreshStorage
                   );
         AutoFree_cleanup(&autoFreeList);
@@ -4251,7 +4251,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                           );
       if (error != ERROR_NONE)
       {
-        printError("cannot initialzie storage '%s' (error: %s)!",
+        printError("cannot initialize storage '%S' (error: %s)!",
                    globalOptions.debug.indexRefreshStorage,
                    Error_getText(error)
                   );
@@ -4316,7 +4316,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       }
       if (error != ERROR_NONE)
       {
-        printError("cannot refresh storage '%s' (error: %s)!",
+        printError("cannot refresh storage '%S' (error: %s)!",
                    globalOptions.debug.indexRefreshStorage,
                    Error_getText(error)
                   );
