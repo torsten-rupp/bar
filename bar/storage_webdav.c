@@ -2225,8 +2225,12 @@ LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle)
         );
 
   #ifdef HAVE_CURL
-    return    (curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles) != CURLM_OK)
-           || (runningHandles < 1);
+    return    (   (storageHandle->webdav.index < storageHandle->webdav.receiveBuffer.offset)
+               || (storageHandle->webdav.index >= (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length))
+              )
+           && (   (curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles) != CURLM_OK)
+               || (runningHandles < 1)
+              );
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
     return TRUE;

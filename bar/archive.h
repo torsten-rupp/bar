@@ -329,7 +329,7 @@ typedef struct
   IndexId                  storageId;                                  // storage index id
   ArchiveIndexList         archiveIndexList;
 
-  uint64                   entries;                                    // number of entries
+  uint64                   entries;                                    // number of processed entries
   uint64                   archiveFileSize;                            // size of current archive file part
   uint                     partNumber;                                 // current archive part number
 
