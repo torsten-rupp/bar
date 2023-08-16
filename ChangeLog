@@ -1,8 +1,5 @@
-2023-09-01 23
-  * fixed bar-index --pipe
-  * fixed reserved keyword in MariaDB: offset
-
 2023-09-01 0.22i
+  * fixed WebDAV end-of-file
   * fixed reserved keyword in MariaDB: offset
 
 2023-07-01 0.22h
