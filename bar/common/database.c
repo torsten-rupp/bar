@@ -3238,7 +3238,7 @@ LOCAL Errors mariaDBGetIndexList(StringList     *indexList,
                                                 String indexName;
 
                                                 assert(values != NULL);
-                                                assert(valueCount == 13);
+                                                assert(valueCount >= 13);
 
                                                 UNUSED_VARIABLE(valueCount);
                                                 UNUSED_VARIABLE(userData);
