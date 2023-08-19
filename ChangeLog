@@ -1,6 +1,7 @@
 2023-09-01 23
   * fixed bar-index --pipe
   * fixed reserved keyword in MariaDB: offset
+  * fixed undefined value when update aggregates
 
 2023-07-01 0.22h
   * fixed wrong database entry for special files (type)
