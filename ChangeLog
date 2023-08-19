@@ -1,6 +1,7 @@
 2023-09-01 0.22i
   * fixed WebDAV end-of-file
   * fixed reserved keyword in MariaDB: offset
+  * fixed undefined value when update aggregates
 
 2023-07-01 0.22h
   * fixed wrong database entry for special files (type)

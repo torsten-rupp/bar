@@ -2135,75 +2135,72 @@ UNUSED_VARIABLE(progressInfo);
       entityId = INDEX_ID_ENTITY(databaseId);
 
       // get aggregate data
-      error = Database_get(&indexHandle->databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 11);
+      totalEntryCount     = 0;
+      totalEntrySize      = 0LL;
+      totalFileCount      = 0;
+      totalFileSize       = 0LL;
+      totalImageCount     = 0;
+      totalImageSize      = 0LL;
+      totalDirectoryCount = 0;
+      totalLinkCount      = 0;
+      totalHardlinkCount  = 0;
+      totalHardlinkSize   = 0LL;
+      totalSpecialCount   = 0;
+      (void)Database_get(&indexHandle->databaseHandle,
+                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                         {
+                           assert(values != NULL);
+                           assert(valueCount == 11);
 
-                             UNUSED_VARIABLE(userData);
-                             UNUSED_VARIABLE(valueCount);
+                           UNUSED_VARIABLE(userData);
+                           UNUSED_VARIABLE(valueCount);
 
-                             totalEntryCount     = values[ 0].u;
-                             totalEntrySize      = values[ 1].u64;
-                             totalFileCount      = values[ 2].u;
-                             totalFileSize       = values[ 3].u64;
-                             totalImageCount     = values[ 4].u;
-                             totalImageSize      = values[ 5].u64;
-                             totalDirectoryCount = values[ 6].u;
-                             totalLinkCount      = values[ 7].u;
-                             totalHardlinkCount  = values[ 8].u;
-                             totalHardlinkSize   = values[ 9].u64;
-                             totalSpecialCount   = values[10].u;
+                           totalEntryCount     = values[ 0].u;
+                           totalEntrySize      = values[ 1].u64;
+                           totalFileCount      = values[ 2].u;
+                           totalFileSize       = values[ 3].u64;
+                           totalImageCount     = values[ 4].u;
+                           totalImageSize      = values[ 5].u64;
+                           totalDirectoryCount = values[ 6].u;
+                           totalLinkCount      = values[ 7].u;
+                           totalHardlinkCount  = values[ 8].u;
+                           totalHardlinkSize   = values[ 9].u64;
+                           totalSpecialCount   = values[10].u;
 
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_TABLES
-                           (
-                             "storages"
-                           ),
-                           DATABASE_FLAG_NONE,
-                           DATABASE_COLUMNS
-                           (
-                             DATABASE_COLUMN_UINT  ("totalEntryCount"),
-                             DATABASE_COLUMN_UINT64("totalEntrySize"),
-                             DATABASE_COLUMN_UINT  ("totalFileCount"),
-                             DATABASE_COLUMN_UINT64("totalFileSize"),
-                             DATABASE_COLUMN_UINT  ("totalImageCount"),
-                             DATABASE_COLUMN_UINT64("totalImageSize"),
-                             DATABASE_COLUMN_UINT  ("totalDirectoryCount"),
-                             DATABASE_COLUMN_UINT64("totalLinkCount"),
-                             DATABASE_COLUMN_UINT  ("totalHardlinkCount"),
-                             DATABASE_COLUMN_UINT64("totalHardlinkSize"),
-                             DATABASE_COLUMN_UINT  ("totalSpecialCount")
-                           ),
-                           "    deletedFlag!=TRUE \
-                            AND id=? \
-                           ",
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_KEY (INDEX_DATABASE_ID(storageId))
-                           ),
-                           NULL,  // groupBy
-                           NULL,  // orderBy
-                           0LL,
-                           1LL
-                          );
-      if (error != ERROR_NONE)
-      {
-        totalEntryCount     = 0;
-        totalEntrySize      = 0LL;
-        totalFileCount      = 0;
-        totalFileSize       = 0LL;
-        totalImageCount     = 0;
-        totalImageSize      = 0LL;
-        totalDirectoryCount = 0;
-        totalLinkCount      = 0;
-        totalHardlinkCount  = 0;
-        totalHardlinkSize   = 0LL;
-        totalSpecialCount   = 0;
-      }
+                           return ERROR_NONE;
+                         },NULL),
+                         NULL,  // changedRowCount
+                         DATABASE_TABLES
+                         (
+                           "storages"
+                         ),
+                         DATABASE_FLAG_NONE,
+                         DATABASE_COLUMNS
+                         (
+                           DATABASE_COLUMN_UINT  ("totalEntryCount"),
+                           DATABASE_COLUMN_UINT64("totalEntrySize"),
+                           DATABASE_COLUMN_UINT  ("totalFileCount"),
+                           DATABASE_COLUMN_UINT64("totalFileSize"),
+                           DATABASE_COLUMN_UINT  ("totalImageCount"),
+                           DATABASE_COLUMN_UINT64("totalImageSize"),
+                           DATABASE_COLUMN_UINT  ("totalDirectoryCount"),
+                           DATABASE_COLUMN_UINT64("totalLinkCount"),
+                           DATABASE_COLUMN_UINT  ("totalHardlinkCount"),
+                           DATABASE_COLUMN_UINT64("totalHardlinkSize"),
+                           DATABASE_COLUMN_UINT  ("totalSpecialCount")
+                         ),
+                         "    deletedFlag!=TRUE \
+                          AND id=? \
+                         ",
+                         DATABASE_FILTERS
+                         (
+                           DATABASE_FILTER_KEY (INDEX_DATABASE_ID(storageId))
+                         ),
+                         NULL,  // groupBy
+                         NULL,  // orderBy
+                         0LL,
+                         1LL
+                        );
 
       // get entry ids to purge
       Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
@@ -2418,7 +2415,6 @@ UNUSED_VARIABLE(progressInfo);
           if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
           String_appendFormat(entryIdsString,"%"PRIi64,entryId);
         }
-//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(entryIdsString));
 
         DATABASE_TRANSACTION_DO(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
         {
@@ -2478,6 +2474,7 @@ UNUSED_VARIABLE(progressInfo);
                                 DATABASE_VALUE_UINT  ("totalFileCount",       "totalFileCount-?",      totalFileCount),
                                 DATABASE_VALUE_UINT64("totalFileSize",        "totalFileSize-?",       totalFileSize),
                                 DATABASE_VALUE_UINT  ("totalImageCount",      "totalImageCount-?",     totalImageCount),
+
                                 DATABASE_VALUE_UINT64("totalImageSize",       "totalImageSize-?",      totalImageSize),
                                 DATABASE_VALUE_UINT  ("totalDirectoryCount",  "totalDirectoryCount-?", totalDirectoryCount),
                                 DATABASE_VALUE_UINT  ("totalLinkCount",       "totalLinkCount-?",      totalLinkCount),
