@@ -4192,6 +4192,8 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       // refresh storage in index
       Storage_initSpecifier(&storageSpecifier);
       AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
+      Job_initOptions(&jobOptions);
+      AUTOFREE_ADD(&autoFreeList,&jobOptions,{ Job_doneOptions(&jobOptions); });
 
       // parse storage name, get printable name
       error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexRefreshStorage);
@@ -4325,6 +4327,8 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       AUTOFREE_REMOVE(&autoFreeList,&storageInfo);
       (void)Storage_done(&storageInfo);
 
+      AUTOFREE_REMOVE(&autoFreeList,&jobOptions);
+      Job_doneOptions(&jobOptions);
       AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
       Storage_doneSpecifier(&storageSpecifier);
     }
