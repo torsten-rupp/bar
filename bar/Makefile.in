@@ -1881,7 +1881,13 @@ endif
 gcov%: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	$(MAKE) -C test -j1 $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
+	$(MAKE) \
+	  -C test \
+	  -j1 \
+	  TEST_BAR=$(BASE_DIR)/bar-gcov \
+	  COMPRESS_NAMES="`if test -z "$(COMPRESS_NAMES)"; then $(ECHO) $(COMPRESS_NAMES); else $(ECHO) $(MIN_COMPRESS_NAMES); fi`" \
+	  CRYPT_NAMES="`if test -z "$(CRYPT_NAMES)"; then $(ECHO) $(CRYPT_NAMES); else $(ECHO) $(MIN_CRYPT_NAMES); fi`" \
+	  $(subst gcov,test,$@)
 
 gcov_clean:
 	$(FIND) gcov -type f -name '*.gcda'|$(XARGS) $(RMF)

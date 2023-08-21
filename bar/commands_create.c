@@ -2470,7 +2470,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       error = Continuous_open(&continuousDatabaseHandle);
       if (error != ERROR_NONE)
       {
-        printError("cannot initialise continuous database (error: %s)!",
+        printError("cannot initialize continuous database (error: %s)!",
                    Error_getText(error)
                   );
         AutoFree_freeAll(&autoFreeList);

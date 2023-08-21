@@ -324,8 +324,12 @@ LOCAL void signalHandler(int signalNumber)
 
   // Note: do not free resources to avoid further errors
 
-  // exit with signal number
-  exit(128+signalNumber);
+  // exit with signal number or trigger signal
+  #ifndef NDEBUG
+    exit(128+signalNumber);
+  #else
+    kill(0,signalNumber);
+  #endif
 }
 
 /***********************************************************************\
@@ -4400,6 +4404,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     printf("\n");
     printf("Components:\n");
     printf("  ICU        %s\n",!stringIsEmpty(VERSION_ICU       ) ? VERSION_ICU        : "(not included)");
+    printf("  zip        %s\n",VERSION_Z);
     printf("  bzip2      %s\n",!stringIsEmpty(VERSION_BZ2       ) ? VERSION_BZ2        : "(not included)");
     printf("  lzma       %s\n",!stringIsEmpty(VERSION_LZMA      ) ? VERSION_LZMA       : "(not included)");
     printf("  lzo        %s\n",!stringIsEmpty(VERSION_LZO       ) ? VERSION_LZO        : "(not included)");

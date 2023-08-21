@@ -220,7 +220,7 @@
 #endif /* NDEBUG */
 
 /**************************** Datatypes ********************************/
-#if !defined(__cplusplus) && !defined(HAVE_STDBOOL_H)
+#if !defined(__cplusplus) && !defined(HAVE_STDBOOL_H) && !defined(_STDBOOL_H)
   typedef uint8_t bool;
 #endif
 

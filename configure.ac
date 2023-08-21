@@ -4214,7 +4214,7 @@ if test $ENABLE_BFD = "yes"; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
         LIBRARIES="$LIBRARIES bfd iberty z"
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES bfd sframe iberty z"
       fi
       HAVE_BFD=1
       AC_DEFINE(HAVE_BFD,1,[libbfd installed (local)])
@@ -4224,13 +4224,13 @@ if test $ENABLE_BFD = "yes"; then
   else
     dnl search for installed BFD library
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
+      AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd sframe iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
     else
       if test -z "$HAVE_BFD"; then
-        AC_SEARCH_STATIC_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[static libbfd installed])])
+        AC_SEARCH_STATIC_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd sframe iberty z";AC_DEFINE(HAVE_BFD,1,[static libbfd installed])])
       fi
       if test -z "$HAVE_BFD"; then
-        AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
+        AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd sframe iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
       fi
     fi
   fi

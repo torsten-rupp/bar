@@ -983,7 +983,7 @@ typedef struct
     bool                      showChunkIdsFlag;               // TRUE to show chunk ids only
 
     uint                      createArchiveErrors;            // number of errors in created archive
-    bool                      createSignal;                   // signal to create
+    uint                      createSignal;                   // signal to create
 
     uint                      serverLevel;                    // server debug level (for debug only)
     bool                      serverFixedIdsFlag;             // always generate id=1

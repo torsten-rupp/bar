@@ -841,7 +841,7 @@ bool __Thread_init(const char *__fileName__,
   result = sem_init(&startInfo.started,0,0);
   if (result != 0)
   {
-    HALT_INTERNAL_ERROR("cannot initialise thread start lock");
+    HALT_INTERNAL_ERROR("cannot initialize thread start lock (error: %s)", strerror(errno));
   }
 
   // init thread attributes
