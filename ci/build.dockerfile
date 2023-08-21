@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 ARG uid=0
 ARG gid=0
@@ -83,12 +83,12 @@ RUN apt-get -y install \
 RUN mkdir /.cache;
 
 # add users
-RUN groupadd -g $gid jenkins
-RUN useradd -m jenkins -u $uid -g $gid -p `openssl passwd -crypt jenkins`;
-RUN useradd -m test -p `openssl passwd -crypt test`;
+RUN groupadd -g ${gid} jenkins
+RUN useradd -m -u ${uid} -g ${gid} -p `openssl passwd jenkins` jenkins
+RUN useradd -m -p `openssl passwd test` test
 
-# enable sudo for users
-RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" > /etc/sudoers.d/all
+# enable sudo for jenkins+test
+#RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" > /etc/sudoers.d/all
 COPY bar-sudoers /etc/sudoers.d/bar
 RUN usermod -aG sudo jenkins
 RUN usermod -aG sudo test

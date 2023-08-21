@@ -196,17 +196,16 @@ LOCAL void freeSymbolTable(const asymbol *symbols[],
 /***********************************************************************\
 * Name   : demangleSymbolName
 * Purpose: demangle C++ name
-* Input  : symbolName - symbolname
-*          demangledSymbolName     - variable for demangled symbol name
+* Input  : symbolName              - symbol name to demangle
 *          demangledSymbolNameSize - max. length of demangled symbol name
-* Output : -
+* Output : demangledSymbolName - demangled symbol name
 * Return : TRUE iff name demangled
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool demangleSymbolName(const char *symbolName,
-                              char       *demangledSymbolName,
-                              uint       demangledSymbolNameSize
+LOCAL bool demangleSymbolName(char       *demangledSymbolName,
+                              uint       demangledSymbolNameSize,
+                              const char *symbolName
                              )
 {
 #if defined(HAVE_LIBIBERTY_DEMANGLE_H)
@@ -220,15 +219,13 @@ LOCAL bool demangleSymbolName(const char *symbolName,
   s = bfd_demangle(NULL,symbolName,DMGL_ANSI|DMGL_PARAMS);
   if (s != NULL)
   {
-    strncpy(demangledSymbolName,s,demangledSymbolNameSize);
+    stringSet(demangledSymbolName,demangledSymbolNameSize,s);
     free(s);
 
     return TRUE;
   }
   else
   {
-    strncpy(demangledSymbolName,symbolName,demangledSymbolNameSize);
-
     return FALSE;
   }
 #else
@@ -378,7 +375,7 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
     // get symbol data
     if ((addressInfo.symbolName != NULL) && ((*addressInfo.symbolName) != '\0'))
     {
-      if (demangleSymbolName(addressInfo.symbolName,buffer,sizeof(buffer)))
+      if (demangleSymbolName(buffer,sizeof(buffer),addressInfo.symbolName))
       {
         symbolName = buffer;
       }
@@ -536,7 +533,7 @@ LOCAL bool getSymbolInfoFromFile(const char     *fileName,
     if (n > 0)
     {
       debugSymbolFileName[n] = '\0';
-      strncat(debugSymbolFileName,DEBUG_SYMBOL_FILE_EXTENSION,sizeof(debugSymbolFileName)-n);
+      stringAppend(debugSymbolFileName,sizeof(debugSymbolFileName),DEBUG_SYMBOL_FILE_EXTENSION);
       abfd = openBFD(debugSymbolFileName,&symbols,&symbolCount,errorMessage,errorMessageSize);
     }
   }
@@ -866,7 +863,7 @@ void Stacktrace_getSymbols(const char         *executableFileName,
           {
             if ((info.dli_sname != NULL) && ((*info.dli_sname) != '\0'))
             {
-              if (!demangleSymbolName(info.dli_sname,buffer,sizeof(buffer)))
+              if (demangleSymbolName(buffer,sizeof(buffer),info.dli_sname))
               {
                 symbolName = buffer;
               }
@@ -999,7 +996,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
           {
             if ((info.dli_sname != NULL) && ((*info.dli_sname) != '\0'))
             {
-              if (!demangleSymbolName(info.dli_sname,buffer,sizeof(buffer)))
+              if (demangleSymbolName(buffer,sizeof(buffer),info.dli_sname))
               {
                 symbolName = buffer;
               }

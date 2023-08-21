@@ -4433,6 +4433,7 @@ LOCAL void updateIndexThreadCode(void)
   CryptPasswordList cryptPasswordList;
   JobOptions        jobOptions;
   uint64            startTimestamp,endTimestamp;
+  bool              loginFlag;
   Errors            error;
   const JobNode     *jobNode;
   CryptPasswordNode *cryptPasswordNode;
@@ -4565,7 +4566,7 @@ LOCAL void updateIndexThreadCode(void)
           startTimestamp = 0LL;
           endTimestamp   = 0LL;
           Job_initOptions(&jobOptions);
-          bool loginFlag = FALSE;
+          loginFlag      = FALSE;
           LIST_ITERATEX(&loginList,loginNode,!loginFlag)
           {
             String_set(addStorageSpecifier.loginName,loginNode->name);
@@ -8044,7 +8045,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
           break;
         case SERVER_TYPE_WEBDAV:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                              "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
+                              "id=%u name=%'S serverType=%s serverPort=%u loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
                               serverNode->server.id,
                               serverNode->server.name,
                               "WEBDAV",
@@ -8056,7 +8057,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
           break;
         case SERVER_TYPE_WEBDAVS:
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                              "id=%u name=%'S serverType=%s loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
+                              "id=%u name=%'S serverType=%s serverPort=%u loginName=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
                               serverNode->server.id,
                               serverNode->server.name,
                               "WEBDAVS",

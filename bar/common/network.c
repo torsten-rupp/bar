@@ -702,22 +702,22 @@ NYI: how to do certificate verification?
 * Notes  : -
 \***********************************************************************/
 
-Errors connectDescriptor(SocketHandle *socketHandle,
-                         int          socketDescriptor,
-                         SocketTypes  socketType,
-                         ConstString  loginName,
-                         Password     *password,
-                         const void   *caData,
-                         uint         caLength,
-                         const void   *certData,
-                         uint         certLength,
-                         const void   *publicKeyData,
-                         uint         publicKeyLength,
-                         const void   *privateKeyData,
-                         uint         privateKeyLength,
-                         SocketFlags  socketFlags,
-                         long         timeout
-                        )
+LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
+                               int          socketDescriptor,
+                               SocketTypes  socketType,
+                               ConstString  loginName,
+                               Password     *password,
+                               const void   *caData,
+                               uint         caLength,
+                               const void   *certData,
+                               uint         certLength,
+                               const void   *publicKeyData,
+                               uint         publicKeyLength,
+                               const void   *privateKeyData,
+                               uint         privateKeyLength,
+                               SocketFlags  socketFlags,
+                               long         timeout
+                              )
 {
   Errors error;
   #ifdef HAVE_SSH2

@@ -119,10 +119,17 @@
    fun:writeDefinition
 }
 {
-   slide_hash
+   slide_hash1
    Memcheck:Cond
    fun:deflate_fast
    fun:deflate
+}
+{
+   slide_hash2
+   Memcheck:Cond
+   fun:fill_window
+   fun:deflate_fast
+   fun:deflate.part.0
 }
 
 # --- libc errors -----------------------------------------------------
@@ -305,10 +312,10 @@
    Memcheck:Leak
    match-leak-kinds: reachable
    fun:malloc
-   fun:do_malloc
+   fun:do_malloc.constprop.0.isra.0
    fun:_gcry_malloc
    fun:_gcry_xmalloc
-   fun:_gcry_mpi_alloc_limb_space
+   fun:*
    fun:_gcry_mpi_alloc
    fun:_gcry_mpi_alloc_set_ui
    fun:_gcry_mpi_init
@@ -321,7 +328,7 @@
    Memcheck:Leak
    match-leak-kinds: reachable
    fun:malloc
-   fun:do_malloc
+   fun:do_malloc.constprop.0.isra.0
    fun:_gcry_malloc
    fun:_gcry_xmalloc
    fun:_gcry_mpi_alloc
@@ -337,6 +344,49 @@
    match-leak-kinds: reachable
    fun:malloc
    fun:do_malloc
+   fun:_gcry_malloc
+   fun:_gcry_xmalloc
+   fun:_gcry_mpi_alloc_limb_space
+   fun:_gcry_mpi_alloc
+   fun:_gcry_mpi_alloc_set_ui
+   fun:_gcry_mpi_init
+   fun:global_init.part.0
+   fun:global_init
+   fun:_gcry_check_version
+}
+{
+   libgcrypt4
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:do_malloc
+   fun:_gcry_malloc
+   fun:_gcry_xmalloc
+   fun:_gcry_mpi_alloc
+   fun:_gcry_mpi_alloc_set_ui
+   fun:_gcry_mpi_init
+   fun:global_init.part.0
+   fun:global_init
+   fun:_gcry_check_version
+}
+{
+   libgcrypt5
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:do_malloc
+   fun:_gcry_malloc
+   fun:_gcry_xmalloc
+   fun:_gcry_xcalloc
+   fun:initialize
+   fun:_gcry_create_nonce
+}
+{
+   libgcrypt6
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:*
    fun:_gcry_malloc
    fun:_gcry_xmalloc
    fun:_gcry_xcalloc
@@ -437,22 +487,22 @@
    fun:Index_newStorage
    fun:runDebug
 }
-{                                                                                                                  
+{
    sqlite3_2
-   Memcheck:Cond                                                                                                   
-   fun:sqlite3AtoF                                                                                                 
-   fun:applyNumericAffinity                                                                                        
-   fun:applyAffinity                                                                                               
-   fun:sqlite3VdbeExec                                                                                             
-   fun:sqlite3Step                                                                                                 
-   fun:sqlite3_step                                                                                                
-   fun:executePreparedQuery                                                                                        
-   fun:__closure__.20010                                                                                           
-   fun:Database_insert                                                                                             
-   fun:__closure__.37755                                                                                           
-   fun:Index_newStorage                                                                                            
-   fun:runDebug                                                                                                    
-} 
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
 {
    sqlite3_3
    Memcheck:Cond
@@ -583,22 +633,22 @@
    fun:Index_newStorage
    fun:runDebug
 }
-{                                                                                                                  
+{
    sqlite3_2
-   Memcheck:Cond                                                                                                   
-   fun:sqlite3AtoF                                                                                                 
-   fun:applyNumericAffinity                                                                                        
-   fun:applyAffinity                                                                                               
-   fun:sqlite3VdbeExec                                                                                             
-   fun:sqlite3Step                                                                                                 
-   fun:sqlite3_step                                                                                                
-   fun:executePreparedQuery                                                                                        
-   fun:__closure__.20010                                                                                           
-   fun:Database_insert                                                                                             
-   fun:__closure__.37755                                                                                           
-   fun:Index_newStorage                                                                                            
-   fun:runDebug                                                                                                    
-} 
+   Memcheck:Cond
+   fun:sqlite3AtoF
+   fun:applyNumericAffinity
+   fun:applyAffinity
+   fun:sqlite3VdbeExec
+   fun:sqlite3Step
+   fun:sqlite3_step
+   fun:executePreparedQuery
+   fun:__closure__.20010
+   fun:Database_insert
+   fun:__closure__.37755
+   fun:Index_newStorage
+   fun:runDebug
+}
 {
    sqlite3_3
    Memcheck:Cond

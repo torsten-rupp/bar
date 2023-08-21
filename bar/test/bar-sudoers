@@ -1,4 +1,6 @@
 # allow BAR tests
+Cmnd_Alias BAR_RMF=\
+  /usr/bin/rm -f *
 Cmnd_Alias BAR_CHATTR=\
   /usr/bin/chattr * data/*, \
   /usr/bin/chattr * configure-*
@@ -25,8 +27,26 @@ Cmnd_Alias BAR_MOUNT_TEST_DEV=\
 Cmnd_Alias BAR_UMOUNT_TEST_DEV=\
   /bin/umount *intermediate/dev0
 
+Cmnd_Alias BAR_RSYSLOG=\
+  /etc/init.d/rsyslog start, \
+  /etc/init.d/rsyslog stop
+Cmnd_Alias BAR_APACHE2=\
+  /etc/init.d/apache2 start, \
+  /etc/init.d/apache2 stop
+Cmnd_Alias BAR_SSH=\
+  /etc/init.d/ssh start, \
+  /etc/init.d/ssh stop
+Cmnd_Alias BAR_VSFTPD =\
+  /etc/init.d/vsftpd start, \
+  /etc/init.d/vsftpd stop
+
+Cmnd_Alias BAR_CHOWN_JENKINS =\
+  /bin/chown -R jenkins\:jenkins /home/jenkins
+Cmnd_Alias BAR_CHOWN_TEST =\
+  /bin/chown -R test\:test /var/www
+
 ALL ALL=NOPASSWD:\
-X,\
+  BAR_RMF,\
   BAR_CHATTR,\
   BAR_LOSETUP,\
   BAR_CHMOD,\
@@ -37,4 +57,12 @@ X,\
   BAR_CP, \
   BAR_DIFF, \
   BAR_MOUNT_TEST_DEV, \
-  BAR_UMOUNT_TEST_DEV
+  BAR_UMOUNT_TEST_DEV, \
+  \
+  BAR_RSYSLOG, \
+  BAR_APACHE2, \
+  BAR_SSH, \
+  BAR_VSFTPD, \
+  \
+  BAR_CHOWN_JENKINS, \
+  BAR_CHOWN_TEST
