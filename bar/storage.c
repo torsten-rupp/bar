@@ -1369,7 +1369,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
   assert(storageName != NULL);
 
-  // initialise variables
+  // initialize variables
   AutoFree_init(&autoFreeList);
   string      = String_new();
   archiveName = String_new();

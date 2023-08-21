@@ -443,7 +443,7 @@ fprintf(stderr,"%s:%d: t=%p %d\n",__FILE__,__LINE__,t,t->size); t++; fprintf(std
 
 /***********************************************************************\
 * Name   : initTLS
-* Purpose: initialise TLS/SSL session
+* Purpose: initialize TLS/SSL session
 * Input  : socketHandle - socket handle
 *          tlsType      - TLS type; see NETWORK_TLS_TYPE_...
 *          caData       - TLS CA data or NULL (PEM encoded)

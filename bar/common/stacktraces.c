@@ -333,7 +333,7 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
 
   assert(symbolFunction != NULL);
 
-  // initialise variables
+  // initialize variables
   if (errorMessage != NULL)
   {
     stringClear(errorMessage);
@@ -698,7 +698,7 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
   assert(signalHandlerInfo != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    // initialise signal handler stack
+    // initialize signal handler stack
     stackInfo.ss_sp    = (void*)signalHandlerStack;
     stackInfo.ss_size  = sizeof(signalHandlerStack)/sizeof(signalHandlerStack[0]);
     stackInfo.ss_flags = 0;

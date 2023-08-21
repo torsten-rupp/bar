@@ -473,7 +473,7 @@ DUMP1          = $(INTERMEDIATE_DIR)/dev1.dump
 
 # memory limits for tests
 MEMORY_LIMIT     = $(shell $(ECHO) 10*1024*1024|$(BC))    # 10G
-MEMORY_LIMIT_LOW = $(shell $(ECHO) 70*1024|$(BC))         # 50M
+MEMORY_LIMIT_LOW = $(shell $(ECHO) 70*1024|$(BC))         # 70M
 
 # build types
 BUILD_SUFFIXES = $(subst $() $(),|,-debug -gcov -gprof -valgrind)
@@ -757,7 +757,9 @@ functionDoneTestFiles = \
 # helper function to check valid exitcode
 # call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
 functionTestCheckExitcode = \
-  $3; rc=$$?; if test $$rc -lt $1 -o $$rc -gt $2; then \
+  $3; \
+  rc=$$?; \
+  if test $$rc -lt $1 -o $$rc -gt $2; then \
     $(ECHO) >&2 "ERROR: wrong exit code. Expected $1..$2, got $$rc"; \
     exit 1; \
   fi
@@ -2834,13 +2836,15 @@ test_miscellaneous test_misc:
 	@$(call functionCleanTestFiles)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@#
+	# out of memory
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	$(call functionTestCheckExitcode,1,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --overwrite-archive-files 2>/dev/null $(LOG)))
 else
 	echo xxxxxxxxxx
 endif
-ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	@#
+ifeq ($(TEST_MOUNT_OPERATIONS),yes)
+	# mount
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2)
 	$(INSTALL) -d $(MOUNT_POINT0)
@@ -2858,6 +2862,7 @@ ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	@$(call functionDoneTestFiles)
 endif
 	@
+	# signals
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,132,132,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --log=all --log-file=$(INTERMEDIATE_DIR)/test.log --debug-create-signal=4 1>/dev/null 2>/dev/null))
