@@ -1664,7 +1664,7 @@ LOCAL void schedulerThreadCode(void)
     Errors  error = Continuous_open(&continuousDatabaseHandle);
     if (error != ERROR_NONE)
     {
-      printError("cannot initialise continuous database (error: %s)!",
+      printError("cannot initialize continuous database (error: %s)!",
                  Error_getText(error)
                 );
       return;
@@ -1767,12 +1767,12 @@ LOCAL void schedulerThreadCode(void)
 //fprintf(stderr,"%s:%d: year=%d\n",__FILE__,__LINE__,year);
         if ((jobScheduleNode->date.year == DATE_ANY) || (jobScheduleNode->date.year == (int)year))
         {
-          while (month >= 1)
+          while ((month >= 1) && !isQuit())
           {
 //fprintf(stderr,"%s:%d: month=%d\n",__FILE__,__LINE__,month);
             if ((jobScheduleNode->date.month == DATE_ANY) || (jobScheduleNode->date.month == (int)month))
             {
-              while (day >= 1)
+              while ((day >= 1) && !isQuit())
               {
 //const char *W[7]={"Mo","Di","Mi","Do","Fr","Sa","So"};
                 weekDay = Misc_getWeekDay(year,month,day);
@@ -1782,7 +1782,7 @@ LOCAL void schedulerThreadCode(void)
                     && ((jobScheduleNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(jobScheduleNode->weekDaySet,weekDay))
                    )
                 {
-                  while (hour >= 0)
+                  while ((hour >= 0) && !isQuit())
                   {
 //fprintf(stderr,"%s:%d: hour=%d\n",__FILE__,__LINE__,hour);
                     if (   (jobScheduleNode->time.hour == TIME_ANY)
@@ -1790,7 +1790,7 @@ LOCAL void schedulerThreadCode(void)
                         || (jobScheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
                        )
                     {
-                      while (minute >= 0)
+                      while ((minute >= 0) && !isQuit())
                       {
                         if (   (jobScheduleNode->time.minute == TIME_ANY)
                             || (jobScheduleNode->time.minute == (int)minute)
@@ -4713,7 +4713,7 @@ LOCAL void updateIndexThreadCode(void)
                                         storageId,
                                         INDEX_STATE_ERROR,
                                         0LL,
-                                        "Cannot initialise storage (error: %s)",
+                                        "Cannot initialize storage (error: %s)",
                                         Error_getText(error)
                                        );
           }

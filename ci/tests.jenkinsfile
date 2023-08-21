@@ -60,7 +60,8 @@ def tests()
 
             // make (Note: avoid race condition in depend by not create dependencies in parallel)
             sh "make depend"
-            sh "make -j`nproc --ignore=1`"
+//            sh "make -j`nproc --ignore=1`"
+            sh "make -j1"
           }
         }
       }
@@ -131,7 +132,7 @@ def tests()
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                    sh "bash -o pipefail -c 'make test_smoke-"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'"
+                    sh "bash -o pipefail -c 'ulimit -c unlimited && make test_smoke-"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'"
 
                     // stop services
                     sh "sudo -n /etc/init.d/vsftpd stop || true"
@@ -153,7 +154,7 @@ def tests()
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                    TEST_STEPS.each { step -> sh "bash -o pipefail -c 'make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'" }
+                    TEST_STEPS.each { step -> sh "bash -o pipefail -c 'ulimit -c unlimited && make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'" }
 
                     // stop services
                     sh "sudo -n /etc/init.d/vsftpd stop || true"
@@ -221,7 +222,7 @@ def tests()
                 sh "sudo -n /bin/chown -R test:test /var/www"
 
                 sh "make -C bar gcov_clean"
-                TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS+"" }
+                TEST_STEPS.each { step -> sh "ulimit -c unlimited && make -C bar gcov_${step}"+" "+TEST_SETTINGS+"" }
                 sh "make -C bar gcov_html"
 
                 // stop services
@@ -264,7 +265,7 @@ def tests()
                 sh "sudo -n /bin/chown -R test:test /var/www"
 
                 sh "make -C bar gprof_clean"
-                TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS+"" }
+                TEST_STEPS.each { step -> sh "ulimit -c unlimited && make -C bar gprof_${step}"+" "+TEST_SETTINGS+"" }
 
                 // stop services
                 sh "sudo -n /etc/init.d/vsftpd stop || true"
@@ -284,7 +285,7 @@ def tests()
 //      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log', allowEmptyArchive: true
 //sh "ps auxw"
 //sh "ls -la /var/log"
-      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log, core*', allowEmptyArchive: true
     }
 
     cleanWs notFailBuild: true
