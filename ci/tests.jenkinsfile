@@ -112,10 +112,13 @@ def tests()
                   docker.image(DOCKER_IMAGE_NAME).inside('')
                   {
                     // start services
-                    sh "sudo /etc/init.d/rsyslog start"
                     sh "sudo /etc/init.d/apache2 start"
                     sh "sudo /etc/init.d/ssh start"
                     sh "sudo /etc/init.d/vsftpd start"
+
+                    // work-around docker bug? Cannot create container with non-root files in it?
+                    sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
+                    sh "sudo -n /bin/chown -R test:test /var/www"
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
@@ -125,7 +128,6 @@ def tests()
                     sh "sudo /etc/init.d/vsftpd stop || true"
                     sh "sudo /etc/init.d/ssh stop || true"
                     sh "sudo /etc/init.d/apache2 stop || true"
-                    sh "sudo /etc/init.d/rsyslog stop || true"
                   }
                   break;
                 case "FULL":
@@ -133,10 +135,13 @@ def tests()
                   docker.image(DOCKER_IMAGE_NAME).inside('')
                   {
                     // start services
-                    sh "sudo /etc/init.d/rsyslog start"
                     sh "sudo /etc/init.d/apache2 start"
                     sh "sudo /etc/init.d/ssh start"
                     sh "sudo /etc/init.d/vsftpd start"
+
+                    // work-around docker bug? Cannot create container with non-root files in it?
+                    sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
+                    sh "sudo -n /bin/chown -R test:test /var/www"
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
@@ -146,7 +151,6 @@ def tests()
                     sh "sudo /etc/init.d/vsftpd stop || true"
                     sh "sudo /etc/init.d/ssh stop || true"
                     sh "sudo /etc/init.d/apache2 stop || true"
-                    sh "sudo /etc/init.d/rsyslog stop || true"
                   }
                   break;
               }
@@ -168,10 +172,13 @@ def tests()
               docker.image(DOCKER_IMAGE_NAME).inside('')
               {
                 // start services
-                sh "sudo /etc/init.d/rsyslog start"
                 sh "sudo /etc/init.d/apache2 start"
                 sh "sudo /etc/init.d/ssh start"
                 sh "sudo /etc/init.d/vsftpd start"
+
+                // work-around docker bug? Cannot create container with non-root files in it?
+                sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
+                sh "sudo -n /bin/chown -R test:test /var/www"
 
                 sh "rm -f bar-test-valgrind.log"
                 // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
@@ -181,7 +188,6 @@ def tests()
                 sh "sudo /etc/init.d/vsftpd stop || true"
                 sh "sudo /etc/init.d/ssh stop || true"
                 sh "sudo /etc/init.d/apache2 stop || true"
-                sh "sudo /etc/init.d/rsyslog stop || true"
               }
             }
           }
@@ -200,10 +206,13 @@ def tests()
               docker.image(DOCKER_IMAGE_NAME).inside('')
               {
                 // start services
-                sh "sudo /etc/init.d/rsyslog start"
                 sh "sudo /etc/init.d/apache2 start"
                 sh "sudo /etc/init.d/ssh start"
                 sh "sudo /etc/init.d/vsftpd start"
+
+                // work-around docker bug? Cannot create container with non-root files in it?
+                sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
+                sh "sudo -n /bin/chown -R test:test /var/www"
 
                 sh "make -C bar gcov_clean"
                 TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS+"" }
@@ -213,7 +222,6 @@ def tests()
                 sh "sudo /etc/init.d/vsftpd stop || true"
                 sh "sudo /etc/init.d/ssh stop || true"
                 sh "sudo /etc/init.d/apache2 stop || true"
-                sh "sudo /etc/init.d/rsyslog stop || true"
               }
 
               publishHTML([allowMissing:          false,
@@ -242,10 +250,13 @@ def tests()
               docker.image(DOCKER_IMAGE_NAME).inside('')
               {
                 // start services
-                sh "sudo /etc/init.d/rsyslog start"
                 sh "sudo /etc/init.d/apache2 start"
                 sh "sudo /etc/init.d/ssh start"
                 sh "sudo /etc/init.d/vsftpd start"
+
+                // work-around docker bug? Cannot create container with non-root files in it?
+                sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
+                sh "sudo -n /bin/chown -R test:test /var/www"
 
                 sh "make -C bar gprof_clean"
                 TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS+"" }
@@ -254,7 +265,6 @@ def tests()
                 sh "sudo /etc/init.d/vsftpd stop || true"
                 sh "sudo /etc/init.d/ssh stop || true"
                 sh "sudo /etc/init.d/apache2 stop || true"
-                sh "sudo /etc/init.d/rsyslog stop || true"
               }
             }
           }
