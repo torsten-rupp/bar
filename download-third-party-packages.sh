@@ -2080,7 +2080,7 @@ else
     # binutils
     (
       cd "$destinationDirectory"
-      $RMF binutils-*
+      $RMRF binutils-*
       $RMRF binutils
     )
     $RMF $workingDirectory/binutils
@@ -2090,7 +2090,7 @@ else
     # pthreadW32
     (
       cd "$destinationDirectory"
-      $RMF pthreads-w32-*
+      $RMRF pthreads-w32-*
     )
     $RMF $workingDirectory/pthreads-w32
   fi

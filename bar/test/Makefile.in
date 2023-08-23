@@ -5456,8 +5456,12 @@ test_image_operations_base: \
 	@$(call functionCleanTestFiles)
 	@#
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)    $(BAR_STORAGE)/$(BAR_PATTERN).bar   $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -l '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) --human-format --verbose=0 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) --human-format --verbose=0 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) --human-format --verbose=0 $(LOG))
 #TODO: support archive-part-size
 #	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) --compress-algorithm=zip9 $(LOG))
 	@#

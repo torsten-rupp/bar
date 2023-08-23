@@ -641,7 +641,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     printInfo(1,"  Compare image     '%s'...",String_cString(deviceName));
 
     // check if device/image exists
-    if (!File_exists(deviceName))
+    if (!Device_exists(deviceName))
     {
       printInfo(1,"FAIL!\n");
       printError("device '%s' not found!",String_cString(deviceName));

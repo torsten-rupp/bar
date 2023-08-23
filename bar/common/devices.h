@@ -337,6 +337,18 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : Device_exists, Device_existsCString
+* Purpose: check device exists
+* Input  : deviceName - device name
+* Output : -
+* Return : TRUE iff device exists
+* Notes  : -
+\***********************************************************************/
+
+bool Device_exists(ConstString deviceName);
+bool Device_existsCString(const char *deviceName);
+
+/***********************************************************************\
 * Name   : Device_getInfo, Device_getInfoCString
 * Purpose: get device info
 * Input  : deviceInfo - device info variable to fill

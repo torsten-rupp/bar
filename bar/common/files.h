@@ -1298,7 +1298,7 @@ Errors File_copyCString(const char *sourceFileName,
 * Purpose: check if file/directory/link/device exists
 * Input  : fileName - file name
 * Output : -
-* Return : TRUE if file/directory exists, FALSE otherweise
+* Return : TRUE iff file/directory/link/device exists
 * Notes  : -
 \***********************************************************************/
 

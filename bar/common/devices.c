@@ -863,6 +863,61 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
   return ERROR_NONE;
 }
 
+bool Device_exists(ConstString deviceName)
+{
+  assert(deviceName != NULL);
+
+  return Device_existsCString(String_cString(deviceName));
+}
+
+bool Device_existsCString(const char *deviceName)
+{
+  bool existsFlag;
+  #ifndef NDEBUG
+    const char       *debugEmulateBlockDevice;
+    CStringTokenizer stringTokenizer;
+    const char       *emulateDeviceName,*emulateFileName;
+  #endif /* not NDEBUG */
+
+  assert(deviceName != NULL);
+
+  #ifndef NDEBUG
+    debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
+    {
+      stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+      if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+          && stringEquals(deviceName,emulateDeviceName)
+         )
+      {
+        // emulate block device
+        if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+        {
+          existsFlag = File_existsCString(emulateFileName);
+        }
+        else
+        {
+          existsFlag = File_existsCString(emulateDeviceName);
+        }
+      }
+      else
+      {
+        // use block device
+        existsFlag = File_existsCString(deviceName);
+      }
+      stringTokenizerDone(&stringTokenizer);
+    }
+    else
+    {
+      existsFlag = File_existsCString(deviceName);
+    }
+  #else /* NDEBUG */
+    existsFlag = File_existsCString(deviceName);
+  #endif /* not NDEBUG */
+
+  return existsFlag;
+}
+
 Errors Device_getInfo(DeviceInfo  *deviceInfo,
                       ConstString deviceName,
                       bool        sizesFlag

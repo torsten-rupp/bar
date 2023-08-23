@@ -5,22 +5,15 @@ ToDo
 - support ssh-agent (extend libssh2?)
 - ssl server: check common name?
 - improve password quality checker
-- novice/expert mode in barcontrol.tcl
-- barconfig for creating/edit bar.cfg
 - Windows port
 - re-read configuration when modified
 - configure band-width on run-time
-- send job from server to other server
 - send-only ssh-login (possible?)
-- clear internal performance arrays before next job is started
 - avoid negative bytes/s in performance monitor
 - multiple instances of backup threads
 - check ssl certificates
-- multi-threaded compression? multi-core usage
 - store partitions which are mounted ("on-the-fly-freeze")
 - md5 file check sum?
-- support sparse file when restoring
-- compile-info (what is included, which version)
 - delete temporary image directory when writing dvd
 - support for config reload with SIGHUP
 - support for rmt? (tape control tool)
@@ -28,15 +21,11 @@ ToDo
 - rename archive.? -> archives.?
 - remove "Function" in lists.h types
 - barcontrol: change *gif -> *png
-- option/command to clear cached pass phrases in bar server
-- storage on Samba server directly
 - general handling of strings containing LF, CR..
-- doc: min. password length for 3DES
 - progress bar when writing CDs
-- when writing a DVD do not write more ToDo
-data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
+- when writing a DVD do not write more data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - dvd: eject last disk
-- add debug version to packages
+- storage on Samba server directly
 - support SMB without mounting
 - disable CTS in crypt and fill last block with random data: this avoid that the
   blocks are reordered because of CTS (block n and n-1 are exchanged!) and blocks
@@ -49,9 +38,7 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - combine full-backup and incremental-backup into new full-backup
 - limit used bandwidth when creating index (all data is transmitted?)
 - add allocator of connection (ftp, scp, sftp) and limit number of connections
-- valgrind-test for delta-compression
 - configure check for LIBSSH2_SEND_FUNC, LIBSSH2_RECV_FUNC
-- read corrupted archive files, e. g. scan for next valid entry
 - support for password wallet KWallet, GnomeKeyring
 - support Windows Volume Shadow Copy Service
 - rsync protocol
@@ -65,7 +52,6 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - multiple jobs in parallel
 - clients executing jobs from command server
 - barcontrol: edit schedule ESC key?
-- support create image with multicore: create parts in parallel
 - support bar dvd://*.bar
 - restore image to file instead of a device
 - compression lrzip
@@ -90,6 +76,7 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - NDMP
 - Reed Solomo Codes for file protection and recovery
 - restore with stripping some/all directories
+- skip leading directories on restore
 - decrementell backup
 - store flag for changed files while storing
 - support for caching files standard
@@ -97,7 +84,6 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - barcontrol: add shortcut DEL to delete entries
 - progress on console when storing archives
 - barcontrol: test and compare of archives
-- multi-threaded restore
 - check if crypt password is correct, output error message
 - test archives: CRC? fragments?
 - convert local encoding of names always into UTF8
@@ -105,14 +91,10 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - BARControl: show warning when path does not exists
 - create and error message when /tmp is full
 - bash complete: /etc/bash_completion.d
-- barcontrol: tooltips: timer to hide
 - barcontrol: improve busy animation
 - database entity: store host, run time
 - clean-up: storageName/archiveName, file path/directory/name
 - FQA: open("/share/backup/temp/lanzarote/xxx/svndmz/svndmz.vmxf",
-- O_RDONLY|O_NONBLOCK|O_NOATIME) = 6
-  ioctl(6, FS_IOC32_GETFLAGS or FS_IOC_GETFLAGS, 0x7ffd24be5518) = -1 ENOTTY
-  - (Inappropriate ioctl for device)
 - test with archive with unknown/invalid compression algorithm
 - ERROR: Cannot create process id file 'test/barserver.pid' (error: No such file or directory)
 - support partclone
@@ -121,20 +103,17 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - remove BARServer.fileSeparator
 - support min/max keep for job, max. age for job
 - BARControl restore: filter storages by "will never expire"
-- if connect via SSL fail, show dialog and connect with non-SSL
 - info chunk/BAR header: create time, user, host, user comment
 - pepper for encryption?
 - multi-encryption
 - set job to error if not enough inotify watches
 - server settings: set max. number of inotify watches
 - restore: skip leading directories
-- restore: set different permissions/owner
 - Restore: filter storage by "no expiration date/time"
 - use kwalletcli to store/retrieve passwords
 - use GNOME secret-tool
 - restore entries mode: stop, rename, overwrite
 - BARControl: delete schedule entry -> update context menu in job status
-- write crash stacktrace to log file
 - systemd script: restart
 - logrotate: use signal HUP
 - libmount
@@ -152,9 +131,8 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - restore: only not existing files
 - BARControl: restore dialog: progress bar for processed storages, estimated
 rest time
-- BARControl: file requester create directory
-- hierchical jobs
-- single thread: collector sum+collector
+- hierachical jobs
+- single thread code: collector sum+collector
 - test after create: chunk-read, test, compare
 - sd_notify() for system service startup
 - scheduler to test archives with report
@@ -170,10 +148,8 @@ rest time
 - option --no-auto-pairing
 - slave: send log file mail on master
 - BARControl: list index without header/footer lines
-- Tab Jobs, Job Dropdown: sort entries
 - job option: do not schedule missed job executions
-- schedule log: detail reason for start, e. g. missed, manual, auto
-- bar-sqlite3: verbose by default, option --quiet
+- bar-index: verbose by default, option --quiet
 - check: schedule change work with new time?
 - continuous jobs: option to discard backup changed files in case of an error
 - check if time()/gettimeofday() is 64 bit safe
@@ -189,7 +165,6 @@ rest time
 - scheduler: test jobs
 - BARControl: show installed slave versions
 - BARControl: graphical history of job execution
-- skip leading directories on restore
 - use libmount
 - reload configuration on SIGHUB
 - backup set info file
@@ -215,7 +190,6 @@ rest time
 - verify signatures+list archive does not work with webdav
 - continous jobs for slaves
 - barcontrol: show installed slave versions
-- readlod config on SIGHUB
 - purge backup archives on exhausted free disk space
 - win32: postresql client library
 - run pre/post command in standard mode (not only server)
