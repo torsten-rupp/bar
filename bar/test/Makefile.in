@@ -37,6 +37,7 @@ TEST_SPARSE_FILES       ?= yes
 TEST_SPECIAL_ATTRIBUTES ?= yes
 endif
 
+TEST_SPARSE_FILES=yes
 #--------------------------------- tool chain --------------------------------
 
 # shell in Makefile must be bash with pipe-fail handling
@@ -2284,6 +2285,11 @@ test_arguments: \
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -d $(INTERMEDIATE_DIR)/not-existing-file-test*.bar $(LOG))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -d "$(INTERMEDIATE_DIR)/not-existing-file-test*.bar" $(LOG))
 	@#
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --pattern-type=glob $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --pattern-type=regex $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --pattern-type=extended $(LOG))
+	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --pattern-type=not_existing $(LOG))
+	@#
 	# compress
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --compress-algorithm=none $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -z none $(LOG))
@@ -2371,12 +2377,6 @@ endif
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --transform=regex:[$(COMMA)[ $(TEST_FILES) $(LOG))
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --transform=glob:[$(COMMA)[ $(TEST_FILES) $(LOG))
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --transform=foo $(TEST_FILES) $(LOG))
-	@#
-	# patterns
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --pattern-type=glob $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --pattern-type=regex $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --pattern-type=extended $(LOG))
-	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --pattern-type=not_existing $(LOG))
 	@#
 	# strip/destination
 	@$(call functionCleanTestFiles)
@@ -4180,33 +4180,43 @@ test_convert_operations: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
+	# Note: check MTA0+SLT0 to make sure these chunks are not converted, but recreated
+	#
+	# convert compress files
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) -i none`")
-	@#
-	# convert compress
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --compress-algorithm=zip1 --verbose=1 $(LOG))
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
-	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 0
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
 endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) --compress-algorithm=zip9 --verbose=1 --human-format $(LOG))
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
-	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 0
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
 endif
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) -i zip9`")
 	@#
+	# convert compress images
+	@$(call functionCleanTestFiles)
+	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(LOOP0),$(IMAGE0) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m        $(BAR_STORAGE)/$(BAR_FILE).bar $(LOOP0) $(BAR_OPTIONS) --test-created-archives --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT);                                               $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) -i none`")
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT);                                               $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --compress-algorithm=zip1 --verbose=1 $(LOG))
+ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
+	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
+endif
+	$(RMF) $(IMAGE0)
+	@#
 	# convert job
+	@$(call functionCleanTestFiles)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) -i none`")
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --job=01234567-89ab-0000-0000-000000000000 --verbose=1 $(LOG))
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
-	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 0
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
 endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) --job=01234567-89ab-cdef-0123-456789abcdef --verbose=1 $(LOG))
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
-	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 0
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
 endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --verbose=1 $(LOG))
@@ -4214,16 +4224,14 @@ endif
 	@#
 	# convert entity uuid
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --verbose=1 $(LOG))
-ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --new-entity-uuid --debug-index-uuid=00000001-0000-0000-0000-000000000000 --verbose=1 $(LOG))
-	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 0
+ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) '00000001-0000-0000-0000-000000000000'`")
 endif
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) '00000001-0000-0000-0000-000000000000'`")
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --new-entity-uuid=12345678-1234-1234-1234-1234567890ab --verbose=1 $(LOG))
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
-	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 0
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
 endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) '12345678-1234-1234-1234-1234567890ab'`")
@@ -4234,7 +4242,6 @@ endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) 'Franz Kafka: Das Schloss'`")
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --comment='Franz Kafka: Die Verwandlung' --verbose=1 $(LOG))
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
-	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 0
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
 endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) | $(GREP) 'Franz Kafka: Die Verwandlung'`")
@@ -4243,6 +4250,10 @@ ifeq (@HAVE_GCRYPT@,1)
 	# convert non-encryped -> encrypted AES256
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --crypt-algorithm=none --verbose=1 $(LOG))
+ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
+	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 0
+	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
+endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-new-password='$(TEST_PASSWORD_CRYPT)' --verbose=1 $(LOG))
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 1
@@ -4250,18 +4261,28 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' | $(GREP) -i AES256`")
+	@#
 	# convert encrypted with new algorithm
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --crypt-algorithm=AES128 --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --crypt-algorithm=AES128 --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=1 $(LOG))
+ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
+	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 1
+	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
+endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=1 $(LOG))
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 1
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
 endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=1 </dev/null $(LOG))
+	@#
 	# convert encrypted with new password
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --overwrite-archive-files --crypt-algorithm=AES256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=1 $(LOG))
+ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
+	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 1
+	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
+endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-algorithm=AES256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-new-password='$(TEST_PASSWORD_CRYPT_OTHER)' --verbose=1 $(LOG))
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'SLT0'|$(WC) -l` == 1
@@ -4269,6 +4290,7 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --verbose=1 </dev/null $(LOG)))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT_OTHER)' --verbose=1 $(LOG))
+	@#
 	# convert asymmetric encrypted new key
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --crypt-algorithm=AES256 --crypt-type=asymmetric --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --verbose=1 $(LOG))
@@ -4281,6 +4303,7 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L        $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT_OTHER)' --crypt-private-key=$(TEST_KEY_CRYPT_OTHER_PRIVATE) --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --verbose=1 $(LOG)))
+	@#
 	# convert signature
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --verbose=1 $(LOG))
@@ -4292,6 +4315,13 @@ endif
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info    $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --info    $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --force-verify-signatures --verbose=1) $(LOG))
 endif
+	@#
+	# miscellaneouos options
+	@$(call functionCleanTestFiles)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --compress-algorithm=zip1 --destination $(BAR_STORAGE)/converted/$(BAR_FILE).bar --verbose=1 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L $(BAR_STORAGE)/converted/$(BAR_FILE).bar $(BAR_OPTIONS))
+	$(RMRF) $(BAR_STORAGE)/converted
 	@#
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)

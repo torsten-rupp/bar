@@ -10612,7 +10612,6 @@ NULL//                             password
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_READ);
-  assert(deviceInfo != NULL);
 
   // check for pending error
   if (archiveHandle->pendingError != ERROR_NONE)
