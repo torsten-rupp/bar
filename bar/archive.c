@@ -5660,6 +5660,10 @@ Errors Archive_formatName(String           fileName,
               String_remove(fileName,i,1);
               i += 1L;
               break;
+            default:
+              // keep
+              i += 1L;
+              break;
           }
         }
         else
