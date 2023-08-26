@@ -75,7 +75,7 @@ CC_DEFINES                 = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG
 CC_DEFINES_RELEASE         = @CC_DEFINES_RELEASE@
 CC_DEFINES_DEBUG           = @CC_DEFINES_DEBUG@
 # -D_LONG_LONG
-CC_INCLUDES                = . @CC_INCLUDES@ extern $(SOURCE_DIR)
+CC_INCLUDES                = . @CC_INCLUDES@ $(SOURCE_DIR)
 ifdef WERROR
   CC_FLAGS   += -Werror
   CC_DEFINES += WERROR
@@ -1802,7 +1802,11 @@ gcov_zero:
 
 gcov_html:
 ifneq ($(GENHTML),)
-	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
+	$(LCOV) \
+    --base-directory . \
+    --directory . \
+    --capture \
+    --output-file bar-gcov.info
 	$(INSTALL) -d coverage
 	$(GENHTML) -o coverage bar-gcov.info --legend --ignore-errors source
 	# work-around for bug in genhtml?

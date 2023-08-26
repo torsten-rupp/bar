@@ -2579,11 +2579,15 @@ endif
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --max-band-width="1M foo" $(LOG))
 	@#
 	# file/entry modes
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --archive-file-mode=stop $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --archive-file-mode=append $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --archive-file-mode=overwrite $(LOG))
-	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --archive-file-mode=foo $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --overwrite-archive-files=yes $(LOG))
+	@$(call functionCleanTestFiles)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) $(BAR_OPTIONS) --skip-unreadable --archive-file-mode=stop $(LOG))
+	test -f $(INTERMEDIATE_DIR)/test.bar
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) $(BAR_OPTIONS) --skip-unreadable --archive-file-mode=append $(LOG))
+	test -f $(INTERMEDIATE_DIR)/test.bar
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) $(BAR_OPTIONS) --skip-unreadable --archive-file-mode=overwrite $(LOG))
+	test -f $(INTERMEDIATE_DIR)/test.bar
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) $(BAR_OPTIONS) --skip-unreadable --archive-file-mode=rename $(LOG))
+	test -f $(INTERMEDIATE_DIR)/test-0.bar
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --restore-entry-mode=stop $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --restore-entry-mode=overwrite $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --verbose=2 --restore-entry-mode=rename $(LOG))
@@ -3605,16 +3609,16 @@ endif
 endif
 data/fifo:
 	$(INSTALL) -d $(@D)
-	($(CD) data; $(SUDO) $(MKFIFO) fifo)
+	($(CD) data; $(MKFIFO) fifo)
 data/fifo.ext:
 	$(INSTALL) -d $(@D)
-	($(CD) data; $(SUDO) $(MKNOD) fifo.ext p)
+	($(CD) data; $(MKFIFO) fifo.ext)
 data/character_device:
 	$(INSTALL) -d $(@D)
-	($(CD) data; $(SUDO) $(MKNOD) character_device c 1 2; $(SUDO) $(CHMOD) o+rw character_device)
+	($(CD) data; $(SUDO) -n $(MKNOD) character_device c 1 2; $(SUDO) -n $(CHMOD) o+rw character_device)
 data/block_device:
 	$(INSTALL) -d $(@D)
-	($(CD) data; $(SUDO) $(MKNOD) block_device b 3 4; $(SUDO) $(CHMOD) o+rw block_device)
+	($(CD) data; $(SUDO) -n $(MKNOD) block_device b 3 4; $(SUDO) -n $(CHMOD) o+rw block_device)
 data/name\'.dat:
 	@# Note: work-around for special name, do not use '$@'
 	@if test ! -f data/name\'.dat; then \
