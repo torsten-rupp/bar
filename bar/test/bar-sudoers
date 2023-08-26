@@ -1,6 +1,7 @@
 # allow BAR tests
-Cmnd_Alias BAR_RMF=\
-  /usr/bin/rm -f *
+Cmnd_Alias BAR_MKNOD=\
+  /bin/mknod character_device c *, \
+  /bin/mknod block_device b *
 Cmnd_Alias BAR_CHATTR=\
   /usr/bin/chattr * data/*, \
   /usr/bin/chattr * configure-*
@@ -9,6 +10,8 @@ Cmnd_Alias BAR_LOSETUP=\
   /sbin/losetup /dev/loop[01] *intermediate/dev[01].dat, \
   /sbin/losetup /dev/loop[01] *intermediate/dev0[ab].dat
 Cmnd_Alias BAR_CHMOD=\
+  /bin/chmod o+rw character_device, \
+  /bin/chmod o+rw block_device, \
   /bin/chmod o+rw /dev/loop[01]
 Cmnd_Alias BAR_DD=\
   /bin/dd if=/dev/loop[01] of=-
@@ -47,6 +50,7 @@ Cmnd_Alias BAR_CHOWN_TEST =\
 
 ALL ALL=NOPASSWD:\
   BAR_RMF,\
+  BAR_MKNOD,\
   BAR_CHATTR,\
   BAR_LOSETUP,\
   BAR_CHMOD,\

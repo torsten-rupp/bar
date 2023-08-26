@@ -274,6 +274,20 @@ LOCAL_INLINE char *debugGetEmulateBlockDevice(void)
 {
   return getenv(DEVICE_DEBUG_EMULATE_BLOCK_DEVICE);
 }
+
+/***********************************************************************\
+* Name   : debugGetEmulateMknod
+* Purpose: check if emulated mknod
+* Input  : -
+* Output : -
+* Return : TRUE iff emulated mknod
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool debugIsEmulateMknod(void)
+{
+  return getenv(FILE_DEBUG_EMULATE_MKNOD) != NULL;
+}
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -5251,24 +5265,90 @@ Errors File_makeSpecial(ConstString      name,
                         ulong            minor
                        )
 {
+  #ifdef HAVE_MKNOD
+    Errors error;
+    String directoryName;
+    #ifndef NDEBUG
+      int fileDescriptor;
+    #endif
+  #endif /* HAVE_MKNOD */
+
   assert(name != NULL);
   assert(!String_isEmpty(name));
 
   #ifdef HAVE_MKNOD
+    // create directory if needed
+    directoryName = File_getDirectoryName(File_newFileName(),name);
+    if (!String_isEmpty(directoryName) && !File_exists(directoryName))
+    {
+      error = File_makeDirectory(directoryName,
+                                 FILE_DEFAULT_USER_ID,
+                                 FILE_DEFAULT_GROUP_ID,
+                                 FILE_DEFAULT_PERMISSIONS,
+                                 TRUE
+                                );
+      if (error != ERROR_NONE)
+      {
+        File_deleteFileName(directoryName);
+        return error;
+      }
+    }
+    File_deleteFileName(directoryName);
+
     unlink(String_cString(name));
     switch (type)
     {
       case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
-        if (mknod(String_cString(name),S_IFCHR|0600,makedev(major,minor)) != 0)
-        {
-          return getLastError(ERROR_CODE_IO,String_cString(name));
-        }
+        #ifndef NDEBUG
+          if (debugIsEmulateMknod())
+          {
+            // create simple file
+            fileDescriptor = open(String_cString(name),O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0666);
+            if (fileDescriptor == -1)
+            {
+              return getLastError(ERROR_CODE_IO,String_cString(name));
+            }
+            close(fileDescriptor);
+          }
+          else
+          {
+            if (mknod(String_cString(name),S_IFCHR|0600,makedev(major,minor)) != 0)
+            {
+              return getLastError(ERROR_CODE_IO,String_cString(name));
+            }
+          }
+        #else /* NDEBUG */
+          if (mknod(String_cString(name),S_IFCHR|0600,makedev(major,minor)) != 0)
+          {
+            return getLastError(ERROR_CODE_IO,String_cString(name));
+          }
+        #endif /* not NDEBUG */
         break;
       case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
-        if (mknod(String_cString(name),S_IFBLK|0600,makedev(major,minor)) != 0)
-        {
-          return getLastError(ERROR_CODE_IO,String_cString(name));
-        }
+        #ifndef NDEBUG
+          if (debugIsEmulateMknod())
+          {
+            // create simple file
+            fileDescriptor = open(String_cString(name),O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0666);
+            if (fileDescriptor == -1)
+            {
+              return getLastError(ERROR_CODE_IO,String_cString(name));
+            }
+            close(fileDescriptor);
+          }
+          else
+          {
+            if (mknod(String_cString(name),S_IFBLK|0600,makedev(major,minor)) != 0)
+            {
+              return getLastError(ERROR_CODE_IO,String_cString(name));
+            }
+          }
+        #else /* NDEBUG */
+          if (mknod(String_cString(name),S_IFBLK|0600,makedev(major,minor)) != 0)
+          {
+            return getLastError(ERROR_CODE_IO,String_cString(name));
+          }
+        #endif /* not NDEBUG */
         break;
       case FILE_SPECIAL_TYPE_FIFO:
         if (mknod(String_cString(name),S_IFIFO|0666,0) != 0)

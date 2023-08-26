@@ -945,6 +945,8 @@ AC_SUBST(WINE_C_DRIVE)                       dnl wine c:-drive path
 AC_SUBST(ISCC)                               dnl Inno Setup
 
 AC_SUBST(HAVE_SUDO_COMMANDS,1)               dnl sudo commands
+AC_SUBST(HAVE_SUDO_COMMAND_MKNOD_C,1)        dnl sudo command mkdnod * c *
+AC_SUBST(HAVE_SUDO_COMMAND_MKNOD_B,1)        dnl sudo command mkdnod * b *
 AC_SUBST(HAVE_SUDO_COMMAND_CHATTR,1)         dnl sudo command chattr +-[ia] *
 AC_SUBST(HAVE_SUDO_COMMAND_MOUNT_UMOUNT,1)   dnl sudo command mount /dev/loop[01] test/dev[01], umount test/dev[01]
 AC_SUBST(HAVE_SUDO_COMMAND_LOSETUP,1)        dnl sudo command losetup -d /dev/loop[01], losetup /dev/loop[01] test/dev[01].dat, losetup /dev/loop[01] test/dev0[ab].dat
@@ -1612,6 +1614,8 @@ case $host_os in
 esac
 
 # sudo tests (Note: keep "," immediately after "]"!)
+AC_PROG_SUDO_COMMAND([mknod \* c \*],                                       [mknod \* c \*],                                       ,[HAVE_SUDO_COMMAND_MKNOD_C=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([mknod \* b \*],                                       [mknod \* b \*],                                       ,[HAVE_SUDO_COMMAND_MKNOD_B=0;      HAVE_SUDO_COMMANDS=0])
 AC_PROG_SUDO_COMMAND([chattr \* data/\*],                                   [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0])
 AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                              [chattr \* configure-\*],                              ,[HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0])
 AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] intermediate/dev[[01]]],        [mount /dev/loop[[01]] intermediate/dev[[01]]],        ,[HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0])

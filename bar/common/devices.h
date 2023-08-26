@@ -33,7 +33,9 @@ typedef enum
   DEVICE_OPEN_WRITE
 } DeviceModes;
 
-#define DEVICE_DEBUG_EMULATE_BLOCK_DEVICE "DEBUG_EMULATE_BLOCK_DEVICE"
+#ifndef NDEBUG
+  #define DEVICE_DEBUG_EMULATE_BLOCK_DEVICE "DEBUG_EMULATE_BLOCK_DEVICE"
+#endif
 
 /***************************** Datatypes *******************************/
 

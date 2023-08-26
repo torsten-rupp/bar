@@ -234,6 +234,10 @@ typedef enum
   #define FILE_ATTRIBUTE_NO_DUMP     0LL
 #endif
 
+#ifndef NDEBUG
+  #define FILE_DEBUG_EMULATE_MKNOD "DEBUG_EMULATE_MKNOD"
+#endif
+
 /***************************** Datatypes *******************************/
 
 // file i/o handle

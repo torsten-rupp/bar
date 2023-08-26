@@ -98,6 +98,7 @@
   extern "C" {
 #endif
 
+#ifndef NDEBUG
 /***********************************************************************\
 * Name   : debugGetEmulateBlockDevice
 * Purpose: get emulated block device file name
@@ -111,6 +112,7 @@ LOCAL_INLINE char *debugGetEmulateBlockDevice(void)
 {
   return getenv(DEVICE_DEBUG_EMULATE_BLOCK_DEVICE);
 }
+#endif /* NDEBUG */
 
 #if 0
 //TODO: remove?
