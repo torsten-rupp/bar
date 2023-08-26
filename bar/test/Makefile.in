@@ -903,6 +903,9 @@ TEST_FILE_NAMES_SIMPLE = \
   sub_dir.ext \
   sub_dir/test.dat \
   sub_dir.ext/test.dat \
+  sub_dir/linkdata.dat sub_dir/link.dat \
+  sub_dir/hardlink.dat sub_dir/hardlink1.dat sub_dir/hardlink2.dat \
+  sub_dir/fifo \
   sub_ignore_dir \
   linkdata.dat \
   link.dat \
@@ -3507,6 +3510,17 @@ data/sub_dir/test.dat:
 data/sub_dir.ext/test.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1 count=128 2>/dev/null
+data/sub_dir/linkdata.dat data/sub_dir/link.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=data/sub_dir/linkdata.dat bs=1k count=512 2>/dev/null
+	($(CD) $(@D); $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
+data/sub_dir/hardlink.dat data/sub_dir/hardlink1.dat data/sub_dir/hardlink2.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=data/sub_dir/hardlink.dat bs=1k count=512 2>/dev/null
+	($(CD) $(@D); $(RMF) hardlink1.dat hardlink2.dat; $(LN) hardlink.dat hardlink1.dat; $(LN) hardlink.dat hardlink2.dat)
+data/sub_dir/fifo:
+	$(INSTALL) -d $(@D)
+	($(CD) data/sub_dir; $(MKFIFO) fifo)
 data/sub_ignore_dir:
 	$(INSTALL) -d $(@D)
 	$(RMRF) $@; $(INSTALL) -d $@; $(ECHO) Hello World >$@/test.dat
