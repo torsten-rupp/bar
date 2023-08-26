@@ -2,6 +2,7 @@
   * fixed WebDAV end-of-file
   * fixed reserved keyword in MariaDB: offset
   * fixed undefined value when update aggregates
+  * fixed format .bid filename
 
 2023-07-01 0.22h
   * fixed wrong database entry for special files (type)

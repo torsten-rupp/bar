@@ -1690,8 +1690,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                           if (createInfo->partialFlag && isPrintInfo(2))
                           {
                             printIncrementalInfo(&createInfo->namesDictionary,
-                                                  name,
-                                                  &fileInfo.cast
+                                                 name,
+                                                 &fileInfo.cast
                                                 );
                           }
 
@@ -2060,8 +2060,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                           if (createInfo->partialFlag && isPrintInfo(2))
                                           {
                                             printIncrementalInfo(&createInfo->namesDictionary,
-                                                                  fileName,
-                                                                  &fileInfo.cast
+                                                                 fileName,
+                                                                 &fileInfo.cast
                                                                 );
                                           }
 
@@ -2262,8 +2262,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                               if (createInfo->partialFlag && isPrintInfo(2))
                               {
                                 printIncrementalInfo(&createInfo->namesDictionary,
-                                                      fileName,
-                                                      &fileInfo.cast
+                                                     fileName,
+                                                     &fileInfo.cast
                                                     );
                               }
 
@@ -2683,8 +2683,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       if (createInfo->partialFlag && isPrintInfo(2))
                       {
                         printIncrementalInfo(&createInfo->namesDictionary,
-                                              name,
-                                              &fileInfo.cast
+                                             name,
+                                             &fileInfo.cast
                                             );
                       }
 
@@ -2902,7 +2902,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       case ENTRY_TYPE_FILE:
                         if (   !createInfo->partialFlag
                             || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
-                            )
+                           )
                         {
                           // add to entry list
                           if (createInfo->partialFlag && isPrintInfo(2))
@@ -2955,7 +2955,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       case ENTRY_TYPE_FILE:
                         if (   !createInfo->partialFlag
                             || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
-                          )
+                           )
                         {
                           // add to entry list
                           if (createInfo->partialFlag && isPrintInfo(2))
@@ -3064,7 +3064,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                   case ENTRY_TYPE_FILE:
                                     if (   !createInfo->partialFlag
                                         || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                        )
+                                       )
                                     {
                                       // add to entry list
                                       if (createInfo->partialFlag && isPrintInfo(2))
@@ -3105,7 +3105,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                   case ENTRY_TYPE_FILE:
                                     if (   !createInfo->partialFlag
                                         || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                        )
+                                       )
                                     {
                                       // add to entry list
                                       if (createInfo->partialFlag && isPrintInfo(2))
@@ -3224,8 +3224,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                           if (createInfo->partialFlag && isPrintInfo(2))
                                           {
                                             printIncrementalInfo(&createInfo->namesDictionary,
-                                                                  fileName,
-                                                                  &fileInfo.cast
+                                                                 fileName,
+                                                                 &fileInfo.cast
                                                                 );
                                           }
 
@@ -3402,7 +3402,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       case ENTRY_TYPE_FILE:
                         if (  !createInfo->partialFlag
                             || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
-                          )
+                           )
                         {
                           // add to entry list
                           if (createInfo->partialFlag && isPrintInfo(2))
@@ -3587,7 +3587,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       case ENTRY_TYPE_FILE:
                         if (   !createInfo->partialFlag
                             || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
-                            )
+                           )
                         {
                           // add to entry list
                           if (createInfo->partialFlag && isPrintInfo(2))
