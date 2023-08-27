@@ -727,7 +727,7 @@ functionCleanTestFiles = \
   $(if $(TEST_SSH_FILE_PATH),   $(FIND) $(TEST_SSH_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
   $(if $(TEST_SCP_FILE_PATH),   $(FIND) $(TEST_SCP_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
   $(if $(TEST_SFTP_FILE_PATH),  $(FIND) $(TEST_SFTP_FILE_PATH)   -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
-  $(if $(TEST_WEBDAV_FILE_PATH),$(FIND) $(TEST_WEBDAV_FILE_PATH) -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
+  $(if $(TEST_WEBDAV_FILE_PATH),$(FIND) $(TEST_WEBDAV_FILE_PATH) -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v; $(FIND) $(TEST_WEBDAV_FILE_PATH)) \
   $(CHMOD) o+w $(INTERMEDIATE_DIR) 2>/dev/null || true
 
 # helper function for test databases
@@ -6328,12 +6328,23 @@ test_server_operations_batch: \
             $(call functionServerCommandBatch,EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandBatch,EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandBatch,SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandBatch,SCHEDULE_LIST jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandBatch,SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandBatch,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=no); \
+            $(call functionServerCommandBatch,SCHEDULE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
+            $(call functionServerCommandBatch,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=no); \
+            $(call functionServerCommandBatch,SCHEDULE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(SLEEP) 10; \
+            $(call functionServerCommandBatch,SCHEDULE_OPTION_GET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled); \
+            $(call functionServerCommandBatch,SCHEDULE_OPTION_SET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled value=no); \
+            $(SLEEP) 60; \
+            $(call functionServerCommandBatch,SCHEDULE_TRIGGER jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
             $(call functionServerCommandBatch,SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
             $(call functionServerCommandBatch,PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
             $(call functionServerCommandBatch,PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch,PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
+            $(call functionServerCommandBatch,PERSISTENCE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandBatch,PERSISTENCE_LIST_UPDATE jobUUID=$(TEST_JOB_UUID) id=1 archiveType=full minKeep=4 maxKeep=5 maxAge=6); \
+            $(call functionServerCommandBatch,PERSISTENCE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1 ); \
             $(call functionServerCommandBatch,ARCHIVE_LIST name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
             \
             $(call functionServerCommandBatch,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=0); \
@@ -6589,12 +6600,23 @@ ifneq ($(SOCAT),)
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
-            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=no); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEUDLE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=normal date=*-1-2 weekDays=* time=1:20 interval=300 beginTime=0:30 endTime=*:50 customText="test" testCreatedArchives=yes noStorage=yes enabled=no); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(SLEEP) 10; \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_OPTION_GET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_OPTION_SET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled value=no); \
+            $(SLEEP) 60; \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_TRIGGER jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST jobUUID=$(TEST_JOB_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST_UPDATE jobUUID=$(TEST_JOB_UUID) id=1 archiveType=full minKeep=4 maxKeep=5 maxAge=6); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1 ); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),ARCHIVE_LIST name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
             \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=archive-type); \
@@ -6609,7 +6631,8 @@ ifneq ($(SOCAT),)
             $(SLEEP) 10; \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_OPTION_GET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_OPTION_SET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled value=no); \
-            $(SLEEP) 10; \
+            $(SLEEP) 60; \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_TRIGGER jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SOURCE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \

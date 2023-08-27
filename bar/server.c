@@ -341,6 +341,7 @@ LOCAL AuthorizationFailList authorizationFailList;       // list with failed cli
 LOCAL Semaphore             delayThreadTrigger;
 LOCAL Thread                jobThread;                   // thread executing jobs create/restore
 LOCAL Thread                schedulerThread;             // thread for scheduling jobs
+LOCAL Semaphore             schedulerThreadTrigger;
 LOCAL Thread                pauseThread;
 LOCAL Thread                pairingThread;               // thread for pairing master/slaves
 LOCAL Semaphore             pairingThreadTrigger;
@@ -1912,11 +1913,8 @@ LOCAL void schedulerThreadCode(void)
       }
     }
 
-    if (!isQuit())
-    {
-      // sleep and check quit flag
-      delayThread(SLEEP_TIME_SCHEDULER_THREAD,NULL);
-    }
+    // sleep and check quit flag
+    delayThread(SLEEP_TIME_SCHEDULER_THREAD,&schedulerThreadTrigger);
   }
   List_done(&jobScheduleList);
   Misc_doneTimeout(&rereadJobTimeout);
@@ -13930,6 +13928,60 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 }
 
 /***********************************************************************\
+* Name   : serverCommand_persistenceListClear
+* Purpose: clear job persistence list
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
+    return;
+  }
+
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = Job_findByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+      Job_listUnlock();
+      return;
+    }
+
+    // clear schedule list
+    List_clear(&jobNode->job.options.scheduleList);
+
+    // notify modified schedule list
+    Job_setScheduleModified(jobNode);
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  Semaphore_signalModified(&schedulerThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+}
+
+/***********************************************************************\
 * Name   : serverCommand_scheduleListAdd
 * Purpose: add entry to job schedule list
 * Input  : clientInfo  - client info
@@ -14209,6 +14261,8 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"scheduleUUID=%S",scheduleNode->uuid);
 
+  Semaphore_signalModified(&schedulerThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+
   // free resources
   String_delete(endTime);
   String_delete(beginTime);
@@ -14286,6 +14340,468 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  Semaphore_signalModified(&schedulerThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleOptionGet
+* Purpose: get schedule options
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*            name=<name>
+*          Result:
+*            value=<value>
+\***********************************************************************/
+
+LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String             name;
+  const JobNode      *jobNode;
+  const ScheduleNode *scheduleNode;
+  uint               i;
+  String             s;
+  ConfigValueFormat  configValueFormat;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID, schedule UUID, name
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
+    return;
+  }
+
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = Job_findByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+      Job_listUnlock();
+      return;
+    }
+
+    // find schedule
+    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+    if (scheduleNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
+      Job_listUnlock();
+      String_delete(name);
+      return;
+    }
+
+    // find config value
+#ifndef WERROR
+#warning todo
+#endif
+    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
+    if (i == CONFIG_VALUE_INDEX_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"XXXunknown schedule config '%S'",name);
+      Job_listUnlock();
+      String_delete(name);
+      return;
+    }
+    assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
+
+    if (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
+    {
+      // send value
+      s = String_new();
+      ConfigValue_formatInit(&configValueFormat,
+                             &JOB_CONFIG_VALUES[i],
+                             CONFIG_VALUE_FORMAT_MODE_VALUE,
+                             jobNode
+                            );
+      ConfigValue_format(&configValueFormat,s);
+      ConfigValue_formatDone(&configValueFormat);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",s);
+      String_delete(s);
+    }
+    else
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DEPRECATED_OR_IGNORED_VALUE,"%S",name);
+    }
+  }
+
+  // free resources
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleOptionSet
+* Purpose: set schedule option
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*            name=<name>
+*            value=<name>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String       name,value;
+  JobNode      *jobNode;
+  ScheduleNode *scheduleNode;
+  uint         i;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID, schedule UUID, name, value
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
+    return;
+  }
+  value = String_new();
+  if (!StringMap_getString(argumentMap,"value",value,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"value=<value>");
+    String_delete(value);
+    String_delete(name);
+    return;
+  }
+
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = Job_findByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+      Job_listUnlock();
+      String_delete(value);
+      String_delete(name);
+      return;
+    }
+
+    // find schedule
+    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+    if (scheduleNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
+      Job_listUnlock();
+      String_delete(value);
+      String_delete(name);
+      return;
+    }
+
+    // parse
+    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
+    if (i == CONFIG_VALUE_INDEX_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
+      Job_listUnlock();
+      String_delete(value);
+      String_delete(name);
+      return;
+    }
+
+    if (ConfigValue_parse(JOB_CONFIG_VALUES,
+                          &JOB_CONFIG_VALUES[i],
+                          "schedule",
+                          String_cString(value),
+                          CALLBACK_(NULL,NULL),  // errorFunction
+                          CALLBACK_(NULL,NULL),  // warningFunction
+                          scheduleNode,
+                          NULL // commentLineList
+                         )
+       )
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+    }
+    else
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_VALUE,"invalid schedule config '%S'",name);
+      Job_listUnlock();
+      String_delete(value);
+      String_delete(name);
+      return;
+    }
+
+    // notify modified schedule list
+    Job_setScheduleModified(jobNode);
+  }
+
+  Semaphore_signalModified(&schedulerThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+
+  // free resources
+  String_delete(value);
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleOptionDelete
+* Purpose: delete schedule option
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*            name=<name>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String       name;
+  JobNode      *jobNode;
+  ScheduleNode *scheduleNode;
+  uint         i;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID, schedule UUID, name
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
+    return;
+  }
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
+    return;
+  }
+
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = Job_findByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+      Job_listUnlock();
+      return;
+    }
+
+    // find schedule
+    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+    if (scheduleNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
+      Job_listUnlock();
+      String_delete(name);
+      return;
+    }
+
+    // find config value
+#ifndef WERROR
+#warning todo
+#endif
+    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
+    if (i == CONFIG_VALUE_INDEX_NONE)
+    {
+// TODO:
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
+      Job_listUnlock();
+      String_delete(name);
+      return;
+    }
+
+    // delete value
+#ifndef WERROR
+#warning todo?
+#endif
+//    ConfigValue_reset(&JOB_CONFIG_VALUES[z],jobNode);
+
+    // notify modified schedule list
+    Job_setScheduleModified(jobNode);
+  }
+
+  // free resources
+  String_delete(name);
+}
+
+/***********************************************************************\
+* Name   : serverCommand_scheduleTrigger
+* Purpose: trigger job schedule
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>
+*            scheduleUUID=<uuid>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
+  ScheduleNode *scheduleNode;
+  uint64       executeScheduleDateTime;
+  uint64       dateTime;
+  uint         year,month,day,hour,minute;
+  WeekDays     weekDay;
+  char         s[256];
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID, schedule UUID
+  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
+    return;
+  }
+  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
+    return;
+  }
+
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    jobNode = Job_findByUUID(jobUUID);
+    if (jobNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+      Job_listUnlock();
+      return;
+    }
+
+    // find schedule
+    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+    if (scheduleNode == NULL)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
+      Job_listUnlock();
+      return;
+    }
+
+    // get matching time for schedule
+    executeScheduleDateTime = 0LL;
+    dateTime                = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
+    while (   (executeScheduleDateTime == 0LL)
+           && (dateTime >= 60LL)
+          )
+    {
+      // get date/time values
+      Misc_splitDateTime(dateTime,
+                         TIME_TYPE_LOCAL,
+                         &year,
+                         &month,
+                         &day,
+                         &hour,
+                         &minute,
+                         NULL,  // second
+                         &weekDay,
+                         NULL  // isDayLightSaving
+                        );
+
+      // check if date/time is matching with schedule node
+      if (   ((scheduleNode->date.year   == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ))
+          && ((scheduleNode->date.month  == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ))
+          && ((scheduleNode->date.day    == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ))
+          && ((scheduleNode->weekDaySet  == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)  )
+          && ((scheduleNode->time.hour   == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
+          && ((scheduleNode->time.minute == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
+         )
+      {
+        executeScheduleDateTime = dateTime;
+      }
+
+      // next time
+      dateTime -= 60LL;
+    }
+    if (executeScheduleDateTime == 0LL)
+    {
+      executeScheduleDateTime = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
+    }
+
+    // trigger job
+    if (!Job_isActive(jobNode->jobState))
+    {
+      Job_trigger(jobNode,
+                  scheduleNode->uuid,
+                  scheduleNode->archiveType,
+                  scheduleNode->customText,
+                  scheduleNode->testCreatedArchives,
+                  scheduleNode->noStorage,
+                  FALSE,  // dryRun
+                  executeScheduleDateTime,
+                  getClientInfoString(clientInfo,s,sizeof(s))
+                 );
+    }
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  Semaphore_signalModified(&schedulerThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
 }
 
 /***********************************************************************\
@@ -14459,6 +14975,8 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  Semaphore_signalModified(&persistenceThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
 }
 
 /***********************************************************************\
@@ -14818,462 +15336,8 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-}
 
-/***********************************************************************\
-* Name   : serverCommand_scheduleOptionGet
-* Purpose: get schedule options
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            jobUUID=<uuid>
-*            scheduleUUID=<uuid>
-*            name=<name>
-*          Result:
-*            value=<value>
-\***********************************************************************/
-
-LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String             name;
-  const JobNode      *jobNode;
-  const ScheduleNode *scheduleNode;
-  uint               i;
-  String             s;
-  ConfigValueFormat  configValueFormat;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-
-  // get job UUID, schedule UUID, name
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
-    return;
-  }
-  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
-    return;
-  }
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
-    String_delete(name);
-    return;
-  }
-
-  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-  {
-    // find job
-    jobNode = Job_findByUUID(jobUUID);
-    if (jobNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
-      Job_listUnlock();
-      return;
-    }
-
-    // find schedule
-    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
-    if (scheduleNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
-      Job_listUnlock();
-      String_delete(name);
-      return;
-    }
-
-    // find config value
-#ifndef WERROR
-#warning todo
-#endif
-    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
-    if (i == CONFIG_VALUE_INDEX_NONE)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"XXXunknown schedule config '%S'",name);
-      Job_listUnlock();
-      String_delete(name);
-      return;
-    }
-    assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
-
-    if (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
-    {
-      // send value
-      s = String_new();
-      ConfigValue_formatInit(&configValueFormat,
-                             &JOB_CONFIG_VALUES[i],
-                             CONFIG_VALUE_FORMAT_MODE_VALUE,
-                             jobNode
-                            );
-      ConfigValue_format(&configValueFormat,s);
-      ConfigValue_formatDone(&configValueFormat);
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",s);
-      String_delete(s);
-    }
-    else
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DEPRECATED_OR_IGNORED_VALUE,"%S",name);
-    }
-  }
-
-  // free resources
-  String_delete(name);
-}
-
-/***********************************************************************\
-* Name   : serverCommand_scheduleOptionSet
-* Purpose: set schedule option
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            jobUUID=<uuid>
-*            scheduleUUID=<uuid>
-*            name=<name>
-*            value=<name>
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String       name,value;
-  JobNode      *jobNode;
-  ScheduleNode *scheduleNode;
-  uint         i;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-
-  // get job UUID, schedule UUID, name, value
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
-    return;
-  }
-  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
-    return;
-  }
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
-    String_delete(name);
-    return;
-  }
-  value = String_new();
-  if (!StringMap_getString(argumentMap,"value",value,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"value=<value>");
-    String_delete(value);
-    String_delete(name);
-    return;
-  }
-
-  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    // find job
-    jobNode = Job_findByUUID(jobUUID);
-    if (jobNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
-      Job_listUnlock();
-      String_delete(value);
-      String_delete(name);
-      return;
-    }
-
-    // find schedule
-    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
-    if (scheduleNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
-      Job_listUnlock();
-      String_delete(value);
-      String_delete(name);
-      return;
-    }
-
-    // parse
-    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
-    if (i == CONFIG_VALUE_INDEX_NONE)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
-      Job_listUnlock();
-      String_delete(value);
-      String_delete(name);
-      return;
-    }
-
-    if (ConfigValue_parse(JOB_CONFIG_VALUES,
-                          &JOB_CONFIG_VALUES[i],
-                          "schedule",
-                          String_cString(value),
-                          CALLBACK_(NULL,NULL),  // errorFunction
-                          CALLBACK_(NULL,NULL),  // warningFunction
-                          scheduleNode,
-                          NULL // commentLineList
-                         )
-       )
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-    }
-    else
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_VALUE,"invalid schedule config '%S'",name);
-      Job_listUnlock();
-      String_delete(value);
-      String_delete(name);
-      return;
-    }
-
-    // notify modified schedule list
-    Job_setScheduleModified(jobNode);
-  }
-
-  // free resources
-  String_delete(value);
-  String_delete(name);
-}
-
-/***********************************************************************\
-* Name   : serverCommand_scheduleOptionDelete
-* Purpose: delete schedule option
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            jobUUID=<uuid>
-*            scheduleUUID=<uuid>
-*            name=<name>
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String       name;
-  JobNode      *jobNode;
-  ScheduleNode *scheduleNode;
-  uint         i;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-
-  // get job UUID, schedule UUID, name
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
-    return;
-  }
-  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
-    return;
-  }
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
-    String_delete(name);
-    return;
-  }
-
-  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    // find job
-    jobNode = Job_findByUUID(jobUUID);
-    if (jobNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
-      Job_listUnlock();
-      return;
-    }
-
-    // find schedule
-    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
-    if (scheduleNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
-      Job_listUnlock();
-      String_delete(name);
-      return;
-    }
-
-    // find config value
-#ifndef WERROR
-#warning todo
-#endif
-    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
-    if (i == CONFIG_VALUE_INDEX_NONE)
-    {
-// TODO:
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
-      Job_listUnlock();
-      String_delete(name);
-      return;
-    }
-
-    // delete value
-#ifndef WERROR
-#warning todo?
-#endif
-//    ConfigValue_reset(&JOB_CONFIG_VALUES[z],jobNode);
-
-    // notify modified schedule list
-    Job_setScheduleModified(jobNode);
-  }
-
-  // free resources
-  String_delete(name);
-}
-
-/***********************************************************************\
-* Name   : serverCommand_scheduleTrigger
-* Purpose: trigger job schedule
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            jobUUID=<uuid>
-*            scheduleUUID=<uuid>
-*          Result:
-\***********************************************************************/
-
-LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-  ScheduleNode *scheduleNode;
-  uint64       executeScheduleDateTime;
-  uint64       dateTime;
-  uint         year,month,day,hour,minute;
-  WeekDays     weekDay;
-  char         s[256];
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-
-  // get job UUID, schedule UUID
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
-    return;
-  }
-  if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
-    return;
-  }
-
-  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    // find job
-    jobNode = Job_findByUUID(jobUUID);
-    if (jobNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
-      Job_listUnlock();
-      return;
-    }
-
-    // find schedule
-    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
-    if (scheduleNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
-      Job_listUnlock();
-      return;
-    }
-
-    // get matching time for schedule
-    executeScheduleDateTime = 0LL;
-    dateTime                = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
-    while (   (executeScheduleDateTime == 0LL)
-           && (dateTime >= 60LL)
-          )
-    {
-      // get date/time values
-      Misc_splitDateTime(dateTime,
-                         TIME_TYPE_LOCAL,
-                         &year,
-                         &month,
-                         &day,
-                         &hour,
-                         &minute,
-                         NULL,  // second
-                         &weekDay,
-                         NULL  // isDayLightSaving
-                        );
-
-      // check if date/time is matching with schedule node
-      if (   ((scheduleNode->date.year   == DATE_ANY       ) || (scheduleNode->date.year   == (int)year  ))
-          && ((scheduleNode->date.month  == DATE_ANY       ) || (scheduleNode->date.month  == (int)month ))
-          && ((scheduleNode->date.day    == DATE_ANY       ) || (scheduleNode->date.day    == (int)day   ))
-          && ((scheduleNode->weekDaySet  == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)  )
-          && ((scheduleNode->time.hour   == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
-          && ((scheduleNode->time.minute == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
-         )
-      {
-        executeScheduleDateTime = dateTime;
-      }
-
-      // next time
-      dateTime -= 60LL;
-    }
-    if (executeScheduleDateTime == 0LL)
-    {
-      executeScheduleDateTime = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
-    }
-
-    // trigger job
-    if (!Job_isActive(jobNode->jobState))
-    {
-      Job_trigger(jobNode,
-                  scheduleNode->uuid,
-                  scheduleNode->archiveType,
-                  scheduleNode->customText,
-                  scheduleNode->testCreatedArchives,
-                  scheduleNode->noStorage,
-                  FALSE,  // dryRun
-                  executeScheduleDateTime,
-                  getClientInfoString(clientInfo,s,sizeof(s))
-                 );
-    }
-  }
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+  Semaphore_signalModified(&persistenceThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
 }
 
 /***********************************************************************\
@@ -21095,6 +21159,7 @@ SERVER_COMMANDS[] =
   { "JOB_FLUSH",                   serverCommand_jobFlush,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "JOB_OPTION_GET",              serverCommand_jobOptionGet,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "JOB_OPTION_SET",              serverCommand_jobOptionSet,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+// TODO: remove
   { "JOB_OPTION_DELETE",           serverCommand_jobOptionDelete,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "JOB_STATUS",                  serverCommand_jobStatus,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
@@ -21129,10 +21194,12 @@ SERVER_COMMANDS[] =
   { "EXCLUDE_COMPRESS_LIST_REMOVE",serverCommand_excludeCompressListRemove,AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
   { "SCHEDULE_LIST",               serverCommand_scheduleList,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SCHEDULE_LIST_CLEAR",         serverCommand_scheduleListClear,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "SCHEDULE_LIST_ADD",           serverCommand_scheduleListAdd,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "SCHEDULE_LIST_REMOVE",        serverCommand_scheduleListRemove,       AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "SCHEDULE_OPTION_GET",         serverCommand_scheduleOptionGet,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "SCHEDULE_OPTION_SET",         serverCommand_scheduleOptionSet,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+// TODO: remove
   { "SCHEDULE_OPTION_DELETE",      serverCommand_scheduleOptionDelete,     AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "SCHEDULE_TRIGGER",            serverCommand_scheduleTrigger,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
@@ -21188,6 +21255,7 @@ SERVER_COMMANDS[] =
   // obsolete
   { "OPTION_GET",                  serverCommand_jobOptionGet,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "OPTION_SET",                  serverCommand_jobOptionSet,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+// TODO: remove
   { "OPTION_DELETE",               serverCommand_jobOptionDelete,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
   #ifndef NDEBUG
@@ -22496,6 +22564,7 @@ Errors Server_socket(void)
   }
   if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
+    Semaphore_init(&schedulerThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
@@ -23041,6 +23110,7 @@ Errors Server_socket(void)
       HALT_INTERNAL_ERROR("Cannot stop scheduler thread!");
     }
     Thread_done(&schedulerThread);
+    Semaphore_done(&schedulerThreadTrigger);
   }
   if (!Thread_join(&pauseThread))
   {
@@ -23184,6 +23254,7 @@ Errors Server_batch(int inputDescriptor,
   Semaphore_init(&delayThreadTrigger,SEMAPHORE_TYPE_BINARY);
   if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
+    Semaphore_init(&schedulerThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
@@ -23340,6 +23411,7 @@ processCommand(&clientInfo,commandString);
       HALT_INTERNAL_ERROR("Cannot stop scheduler thread!");
     }
     Thread_done(&schedulerThread);
+    Semaphore_done(&schedulerThreadTrigger);
   }
   Semaphore_done(&delayThreadTrigger);
 
