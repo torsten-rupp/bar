@@ -1,4 +1,6 @@
 # allow BAR tests
+Cmnd_Alias BAR_RMF=\
+  /usr/bin/rm -f *
 Cmnd_Alias BAR_MKNOD=\
   /bin/mknod character_device c *, \
   /bin/mknod block_device b *

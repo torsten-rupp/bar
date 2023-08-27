@@ -70,14 +70,17 @@ def tests()
         {
           script
           {
-            sh "make distribution"
+            if (params.DISTRIBUTION)
+            {
+              sh "make distribution"
 
-            sh "tar xf backup-archiver*.tar.bz2"
-            sh "(cd backup-archiver*; ./download-third-party-packages.sh --local-directory /media/extern)"
-            sh "(cd backup-archiver*; ./download-third-party-packages.sh)"
-            sh "(cd backup-archiver*; ./configure)"
-            sh "(cd backup-archiver*; make depend)"
-            sh "(set -x; cd backup-archiver*; make -j`nproc --ignore=1`)"
+              sh "tar xf backup-archiver*.tar.bz2"
+              sh "(cd backup-archiver*; ./download-third-party-packages.sh --local-directory /media/extern)"
+              sh "(cd backup-archiver*; ./download-third-party-packages.sh)"
+              sh "(cd backup-archiver*; ./configure)"
+              sh "(cd backup-archiver*; make depend)"
+              sh "(set -x; cd backup-archiver*; make -j`nproc --ignore=1`)"
+            }
           }
         }
       }
