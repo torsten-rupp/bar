@@ -60,7 +60,6 @@ MTX_VERSION=1.3.12
 LIBCDIO_VERSION=2.1.0
 BINUTILS_VERSION=2.41
 PTHREAD_W32_VERSION=2-9-1
-EPM_VERSION=4.2
 
 # --------------------------------- variables --------------------------------
 
@@ -113,7 +112,6 @@ mtxFlag=0
 binutilsFlag=0
 pthreadsW32Flag=0
 breakpadFlag=0
-epmFlag=0
 launch4jFlag=0
 jreWindowsFlag=0
 
@@ -264,10 +262,6 @@ while test $# != 0; do
           allFlag=0
           breakpadFlag=1
           ;;
-        epm)
-          allFlag=0
-          epmFlag=1
-          ;;
         launch4j)
           allFlag=0
           launch4jFlag=1
@@ -383,10 +377,6 @@ while test $# != 0; do
       allFlag=0
       breakpadFlag=1
       ;;
-    epm)
-      allFlag=0
-      epmFlag=1
-      ;;
     launch4j)
       allFlag=0
       launch4jFlag=1
@@ -442,7 +432,6 @@ if test $helpFlag -eq 1; then
   $ECHO "Additional optional packages:"
   $ECHO ""
   $ECHO " breakpad"
-  $ECHO " epm"
   $ECHO " launch4j"
   $ECHO " pthreads-w32"
   $ECHO " jre-windows"
@@ -1685,49 +1674,6 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $epmFlag -eq 1; then
-    # epm
-    (
-     cd "$destinationDirectory"
-
-     $ECHO_NO_NEW_LINE "Get epm ($EPM_VERSION)..."
-     fileName="epm-$EPM_VERSION-source.tar.bz2"
-     if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/epm-$EPM_VERSION-source.tar.bz2; then
-         $LN -s $localDirectory/epm-$EPM_VERSION-source.tar.bz2 $fileName
-         result=1
-       else
-         url="http://www.msweet.org/files/project2/$fileName"
-         $CURL $curlOptions --output $fileName $url
-         if test $? -ne 0; then
-           fatalError "download $url -> $fileName"
-         fi
-         result=2
-       fi
-     else
-       result=3
-     fi
-     if test $noDecompressFlag -eq 0; then
-       $TAR xjf $fileName
-       if test $? -ne 0; then
-         fatalError "decompress"
-       fi
-     fi
-
-     exit $result
-    )
-    result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/epm-$EPM_VERSION epm)
-    fi
-    case $result in
-      1) $ECHO "ok (local)"; ;;
-      2) $ECHO "ok"; ;;
-      3) $ECHO "ok (cached)"; ;;
-      *) exit $result; ;;
-    esac
-  fi
-
   if test $launch4jFlag -eq 1; then
     # launchj4
     (
@@ -2093,16 +2039,6 @@ else
       $RMRF pthreads-w32-*
     )
     $RMF $workingDirectory/pthreads-w32
-  fi
-
-  if test $allFlag -eq 1 -o $epmFlag -eq 1; then
-    # epm
-    (
-      cd "$destinationDirectory"
-      $RMF epm-*.tar.bz2
-      $RMRF epm-*
-    )
-    $RMF $workingDirectory/epm
   fi
 
   if test $allFlag -eq 1 -o $launch4jFlag -eq 1; then
