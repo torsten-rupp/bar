@@ -120,8 +120,8 @@ PGREP          = pgrep
 PSQL           = @PSQL@
 READLINK       = readlink
 RMDIR          = rmdir
-RMF            = rm -f
-RMRF           = rm -rf
+RMF            = /bin/rm -f
+RMRF           = /bin/rm -rf
 SCP            = scp
 SED            = sed
 SEQ            = seq
@@ -390,6 +390,12 @@ TEST_WEBDAV_LOGIN_NAME               ?= $(TEST_LOGIN_NAME)
 TEST_WEBDAV_PASSWORD                 ?= $(TEST_PASSWORD)
 TEST_WEBDAV_FILE_PATH                ?=
 
+TEST_SMB_HOST                        ?= $(TEST_HOST)
+TEST_SMB_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
+TEST_SMB_PASSWORD                    ?= $(TEST_PASSWORD)
+TEST_SMB_SHARE                       ?=
+TEST_SMB_FILE_PATH                   ?=
+
 TEST_OPTICAL_EMULATION               ?= $(TEST_EMULATION)
 TEST_OPTICAL_SLEEP_TIME              ?= $(if $(TEST_OPTICAL_EMULATION),5,30)
 
@@ -541,7 +547,7 @@ help_output:
 	@$(ECHO) "  test7[$(HELP_SUFFIXES)], test_convert[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test8[$(HELP_SUFFIXES)], test_image[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test9[$(HELP_SUFFIXES)], test_storage[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav|optical|device)[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav|smb|optical|device)[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test10[$(HELP_SUFFIXES)], test_huge[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test11[$(HELP_SUFFIXES)], test_index[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test12[$(HELP_SUFFIXES)], test_server[$(HELP_SUFFIXES)]"
@@ -726,6 +732,7 @@ functionCleanTestFiles = \
   $(if $(TEST_SCP_FILE_PATH),   $(FIND) $(TEST_SCP_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
   $(if $(TEST_SFTP_FILE_PATH),  $(FIND) $(TEST_SFTP_FILE_PATH)   -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
   $(if $(TEST_WEBDAV_FILE_PATH),$(FIND) $(TEST_WEBDAV_FILE_PATH) -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
+  $(if $(TEST_SMB_FILE_PATH),   $(FIND) $(TEST_SMB_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
   $(CHMOD) o+w $(INTERMEDIATE_DIR) 2>/dev/null || true
 
 # helper function for test databases
@@ -1090,6 +1097,7 @@ TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foregroun
 .PHONY: $(call functionTestNames,test_storage_sftp           )
 .PHONY: $(call functionTestNames,test_storage_webdav         )
 .PHONY: $(call functionTestNames,test_storage_webdavs        )
+.PHONY: $(call functionTestNames,test_storage_smb            )
 .PHONY: $(call functionTestNames,test_storage_optical        )
 .PHONY: $(call functionTestNames,test_storage_device         )
 .PHONY: $(call functionTestNames,test_huge             test10)
@@ -1657,6 +1665,7 @@ test9 test_storage: \
            test_storage_sftp \
            test_storage_webdav \
            test_storage_webdavs \
+           test_storage_smb \
            test_storage_optical
 
 test9-debug test_storage-debug:
@@ -1770,6 +1779,7 @@ test_storage_scp: \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SCP_PORT) --ssh-login-name='$(TEST_SCP_LOGIN_NAME)' --ssh-password='$(TEST_SCP_PASSWORD)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
+	@# with keys
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_SCP_HOST)/intermediate" \
           BAR_FILE="test" \
@@ -1951,6 +1961,47 @@ test_storage_optical: \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_optical_operations \
           ;
+
+test_storage_smb: \
+  $(TEST_BAR)
+	@$(ECHO) Info : TEST_SMB_HOST=$(TEST_SMB_HOST)
+	@$(call functionVerifyParameter,TEST_SMB_HOST,parameter TEST_SMB_HOST nor TEST_HOST set)
+	@$(call functionVerifyParameter,TEST_SMB_LOGIN_NAME,parameter TEST_SMB_LOGIN_NAME nor TEST_LOGIN_NAME set)
+	@$(call functionVerifyParameter,TEST_SMB_PASSWORD,parameter TEST_SMB_PASSWORD nor TEST_PASSWORD set)
+	$(MAKE) \
+          BAR_STORAGE="smb://$(TEST_SMB_HOST)/intermediate" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          test_file_operations_base \
+          ;
+# Note: it seems libsmb2 or the Samba server is not able to operate reliable with multiple threads
+#	$(MAKE) \
+#          BAR_STORAGE="smb://$(TEST_SMB_HOST)/intermediate" \
+#          BAR_FILE="test" \
+#          BAR_PATTERN="test" \
+#          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+#          test_file_operations_base \
+#          ;
+	$(MAKE) \
+          BAR_STORAGE="smb://$(TEST_SMB_HOST)/intermediate" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') $(OPTIONS)" \
+          test_directory_operations \
+          ;
+
+test_storage_smb-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_smb
+
+test_storage_smb-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_smb
+
+test_storage_smb-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_smb
+
+test_storage_smb-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_smb
 
 test_storage_optical-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_optical
@@ -2254,6 +2305,7 @@ test_arguments: \
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --sftp-password=$(TEST_SFTP_PASSWORD) sftp://test:test@test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --webdav-password=$(TEST_WEBDAV_PASSWORD) webdav://test:test@test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --webdav-password=$(TEST_WEBDAV_PASSWORD) webdavs://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --smb-password=$(TEST_SMB_PASSWORD) smb://test:test@test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) cd://test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) dvd://test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) bd://test/test.bar 2>/dev/null  $(LOG))
@@ -3782,6 +3834,10 @@ $(TEST_CONFIG): \
           $(ECHO) "  webdav-password = foo"; \
           $(ECHO) "[end]"; \
           $(ECHO) ""; \
+          $(ECHO) "[smb-server foo]"; \
+          $(ECHO) "  smb-password = foo"; \
+          $(ECHO) "[end]"; \
+          $(ECHO) ""; \
           $(ECHO) "[device foo]"; \
           $(ECHO) "[end]"; \
           $(ECHO) ""; \
@@ -3939,14 +3995,14 @@ test_file_operations_base: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
-	$(call functionCleanTestFiles)
+	@$(call functionCleanTestFiles)
 	@# Note: create twice to test delete+create=overwrite
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
 #TODO: support archive-part-size
 #	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --compress-algorithm=zip9 $(LOG))
 	@#
-	$(call functionCleanTestFiles)
+	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)    $(BAR_STORAGE)/$(BAR_PATTERN).bar   $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)    '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG))
@@ -4143,7 +4199,7 @@ test_file_operations_incremental: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
-	$(call functionCleanTestFiles)
+	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-full.bar --full --incremental-list-file=$(BAR_STORAGE)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
 	$(INSTALL) -d $(BAR_STORAGE)/new; $(CP) data/random1024.dat $(BAR_STORAGE)/new/random1024-new.dat
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=$(BAR_STORAGE)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=2 $(LOG))

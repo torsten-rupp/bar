@@ -173,7 +173,6 @@ uint cryptBlockLengths[CRYPT_ALGORITHM_MAX];
   extern "C" {
 #endif
 
-#ifdef HAVE_GCRYPT
 /***********************************************************************\
 * Name   : getCryptKeyLength
 * Purpose: get key length of crypt algorihm
@@ -407,7 +406,6 @@ LOCAL Errors getCryptBlockLength(CryptAlgorithms cryptAlgorithm,
 
   return ERROR_NONE;
 }
-#endif /* HAVE_GCRYPT */
 
 #ifdef HAVE_GCRYPT
 //  GCRY_THREAD_OPTION_PTHREAD_IMPL;
@@ -415,9 +413,15 @@ LOCAL Errors getCryptBlockLength(CryptAlgorithms cryptAlgorithm,
 
 Errors Crypt_initAll(void)
 {
-  #ifdef HAVE_GCRYPT
-    Errors error;
-  #endif /* HAVE_GCRYPT */
+  Errors error;
+
+  memClear(cryptKeyLengths,sizeof(cryptKeyLengths));
+  error = getCryptKeyLength(CRYPT_ALGORITHM_NONE,&cryptKeyLengths[CRYPT_ALGORITHM_NONE]);
+  if (error != ERROR_NONE) return error;
+
+  memClear(cryptBlockLengths,sizeof(cryptBlockLengths));
+  error = getCryptBlockLength(CRYPT_ALGORITHM_NONE,&cryptBlockLengths[CRYPT_ALGORITHM_NONE]);
+  if (error != ERROR_NONE) return error;
 
   #ifdef HAVE_GCRYPT
     // check version and do internal library init
@@ -434,8 +438,6 @@ Errors Crypt_initAll(void)
     #endif
 
     // get key lengths
-    error = getCryptKeyLength(CRYPT_ALGORITHM_NONE,&cryptKeyLengths[CRYPT_ALGORITHM_NONE]);
-    if (error != ERROR_NONE) return error;
     error = getCryptKeyLength(CRYPT_ALGORITHM_3DES,&cryptKeyLengths[CRYPT_ALGORITHM_3DES]);
     if (error != ERROR_NONE) return error;
     error = getCryptKeyLength(CRYPT_ALGORITHM_CAST5,&cryptKeyLengths[CRYPT_ALGORITHM_CAST5]);
@@ -466,8 +468,6 @@ Errors Crypt_initAll(void)
     if (error != ERROR_NONE) return error;
 
     // get block lengths
-    error = getCryptBlockLength(CRYPT_ALGORITHM_NONE,&cryptBlockLengths[CRYPT_ALGORITHM_NONE]);
-    if (error != ERROR_NONE) return error;
     error = getCryptBlockLength(CRYPT_ALGORITHM_3DES,&cryptBlockLengths[CRYPT_ALGORITHM_3DES]);
     if (error != ERROR_NONE) return error;
     error = getCryptBlockLength(CRYPT_ALGORITHM_CAST5,&cryptBlockLengths[CRYPT_ALGORITHM_CAST5]);

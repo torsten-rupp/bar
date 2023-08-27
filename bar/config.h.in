@@ -382,6 +382,9 @@
 /* newlocale() available */
 #undef HAVE_NEWLOCALE
 
+/* smb2_opendir() available */
+#undef HAVE_OPENDIR
+
 /* O_DIRECTORY available */
 #undef HAVE_O_DIRECTORY
 
@@ -483,6 +486,18 @@
 
 /* SIGUSR1 available */
 #undef HAVE_SIGUSR1
+
+/* SMB2 client installed */
+#undef HAVE_SMB2
+
+/* smb2_done_context() available */
+#undef HAVE_SMB2_DONE_CONTEXT
+
+/* smb2_init_context() available */
+#undef HAVE_SMB2_INIT_CONTEXT
+
+/* smb2_parse_url() available */
+#undef HAVE_SMB2_PARSE_URL
 
 /* SSH2 installed */
 #undef HAVE_SSH2
@@ -812,6 +827,9 @@
 
 /* icu version */
 #undef VERSION_ICU
+
+/* SMB2 version */
+#undef VERSION_LIBSMB2
 
 /* libssh version */
 #undef VERSION_LIBSSH2

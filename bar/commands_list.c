@@ -2451,6 +2451,7 @@ remoteBarFlag=FALSE;
     case STORAGE_TYPE_SFTP:
     case STORAGE_TYPE_WEBDAV:
     case STORAGE_TYPE_WEBDAVS:
+    case STORAGE_TYPE_SMB:
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:

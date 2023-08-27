@@ -20,6 +20,7 @@
      sftp://[<login name>@]<host name>[:<host port>]/<archive name>
      webdav://[<login name>[:<login password>]@]<host name>/<archive name>
      webdavs://[<login name>[:<login password>]@]<host name>/<archive name>
+     smb://[<login name>[:<login password>]@]<host name>/<share>/<archive name>
      cd://[<device name>:]<archive name>
      dvd://[<device name>:]<archive name>
      bd://[<device name>:]<archive name>
@@ -43,6 +44,10 @@
   #include <libssh2.h>
   #include <libssh2_sftp.h>
 #endif /* HAVE_SSH2 */
+#ifdef HAVE_SMB2
+  #include <smb2/smb2.h>
+  #include <smb2/libsmb2.h>
+#endif /* HAVE_SMB2 */
 #ifdef HAVE_ISO9660
   #include <cdio/cdio.h>
   #include <cdio/iso9660.h>
@@ -183,6 +188,7 @@ typedef enum
   STORAGE_TYPE_SFTP,
   STORAGE_TYPE_WEBDAV,
   STORAGE_TYPE_WEBDAVS,
+  STORAGE_TYPE_SMB,
   STORAGE_TYPE_CD,
   STORAGE_TYPE_DVD,
   STORAGE_TYPE_BD,
@@ -205,7 +211,8 @@ typedef struct
   uint         hostPort;                                     // host port
   bool         sslFlag;                                      // TRUE for SSL
   String       loginName;                                    // login name
-  Password     *loginPassword;                               // login name
+  Password     *loginPassword;                               // login password
+  String       share;                                        // SMB/CIFS share
   String       deviceName;                                   // device name
 
   String       archiveName;                                  // archive name
@@ -333,6 +340,15 @@ typedef struct
         StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
       } webdav;
     #endif /* HAVE_CURL */
+
+    #ifdef HAVE_SMB2
+      // SMB/CIFS storage
+      struct
+      {
+        uint                      serverId;                  // id of allocated server
+        StorageBandWidthLimiter   bandWidthLimiter;          // band width limit data
+      } smb;
+    #endif /* HAVE_SMB2 */
 
     // cd/dvd/bd storage
     struct
@@ -534,6 +550,20 @@ typedef struct
       } webdav;
     #endif /* HAVE_CURL */
 
+    #ifdef HAVE_SMB2
+      // SMB/CIFS storage
+      struct
+      {
+        struct smb2_context     *context;
+        uint32                  maxReadWriteBytes;           // max. number of bytes to read/write in single step
+        uint64                  totalSentBytes;              // total sent bytes
+        uint64                  totalReceivedBytes;          // total received bytes
+        struct smb2fh           *fileHandle;                 // file handle
+        uint64                  index;                       // current read/write index in file [0..n-1]
+        uint64                  size;                        // size of file [bytes]
+      } smb;
+    #endif /* HAVE_SMB2 */
+
     // cd/dvd/bd storage
     struct
     {
@@ -653,6 +683,16 @@ typedef struct
 */
       } webdav;
     #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
+
+    #ifdef HAVE_SMB2
+      struct
+      {
+        uint                    serverId;                    // id of allocated server
+        struct smb2_context     *context;
+        struct smb2dir          *directory;
+        struct smb2dirent       *directoryEntry;
+      } smb;
+    #endif /* HAVE_SMB2 */
 
     struct
     {

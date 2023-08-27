@@ -8,8 +8,6 @@
 *
 \***********************************************************************/
 
-#define __STORAGE_IMPLEMENTATION__
-
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -132,7 +130,6 @@ LOCAL void executeIOmkisofsOutput(StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(line != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
 //fprintf(stderr,"%s,%d: mkisofs line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
@@ -212,7 +209,6 @@ LOCAL void executeIOdvdisasterOutput(StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(line != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
 //fprintf(stderr,"%s,%d: dvdisaster line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
@@ -299,7 +295,6 @@ LOCAL void executeIOblankOutput(StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(line != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
 //fprintf(stderr,"%s,%d: blank line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
@@ -379,7 +374,6 @@ LOCAL void executeIOgrowisofsOutput(StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(line != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
 //fprintf(stderr,"%s,%d: growisofs line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
@@ -1752,7 +1746,7 @@ LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString arc
         _cdio_list_free(cdioList,TRUE,free);
       }
       (void)iso9660_close(iso9660Handle);
-    }    
+    }
 
     String_delete(fileName);
     String_delete(pathName);
@@ -1899,8 +1893,6 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,StorageHandleOpticalDisk);
-
   return ERROR_NONE;
 }
 
@@ -1967,8 +1959,6 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle,
       return ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(archiveName));
     }
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,StorageHandleOpticalDisk);
-
     return ERROR_NONE;
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);
@@ -1981,10 +1971,7 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle,
 LOCAL void StorageOptical_close(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
-
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->opticalDisk,StorageHandleOpticalDisk);
 
   switch (storageHandle->mode)
   {
@@ -2018,7 +2005,6 @@ LOCAL void StorageOptical_close(StorageHandle *storageHandle)
 LOCAL bool StorageOptical_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -2041,79 +2027,76 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
                                  ulong         *bytesRead
                                 )
 {
-  Errors error;
+  #ifdef HAVE_ISO9660
+    Errors   error;
+    uint64   blockIndex;
+    uint     blockOffset;
+    long int n;
+    ulong    bytesAvail;
+  #endif
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(buffer != NULL);
+  #ifdef HAVE_ISO9660
+    assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
+    assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
+    assert(storageHandle->opticalDisk.read.buffer.data != NULL);
+  #endif
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
-  error = ERROR_NONE;
   #ifdef HAVE_ISO9660
+    while (   (bufferSize > 0L)
+           && (storageHandle->opticalDisk.read.index < (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
+          )
     {
-      uint64   blockIndex;
-      uint     blockOffset;
-      long int n;
-      ulong    bytesAvail;
+      // get ISO9660 block index, offset
+      blockIndex  = (int64)(storageHandle->opticalDisk.read.index/ISO_BLOCKSIZE);
+      blockOffset = (uint)(storageHandle->opticalDisk.read.index%ISO_BLOCKSIZE);
 
-      assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
-      assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
-      assert(storageHandle->opticalDisk.read.buffer.data != NULL);
-
-      while (   (bufferSize > 0L)
-             && (storageHandle->opticalDisk.read.index < (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
-            )
+      if (   (blockIndex != storageHandle->opticalDisk.read.buffer.blockIndex)
+          || (blockOffset >= storageHandle->opticalDisk.read.buffer.length)
+         )
       {
-        // get ISO9660 block index, offset
-        blockIndex  = (int64)(storageHandle->opticalDisk.read.index/ISO_BLOCKSIZE);
-        blockOffset = (uint)(storageHandle->opticalDisk.read.index%ISO_BLOCKSIZE);
-
-        if (   (blockIndex != storageHandle->opticalDisk.read.buffer.blockIndex)
-            || (blockOffset >= storageHandle->opticalDisk.read.buffer.length)
-           )
+        // read ISO9660 block
+        n = iso9660_iso_seek_read(storageHandle->opticalDisk.read.iso9660Handle,
+                                  storageHandle->opticalDisk.read.buffer.data,
+                                  storageHandle->opticalDisk.read.iso9660Stat->lsn+(lsn_t)blockIndex,
+                                  1 // read 1 block
+                                 );
+        if (n < ISO_BLOCKSIZE)
         {
-          // read ISO9660 block
-          n = iso9660_iso_seek_read(storageHandle->opticalDisk.read.iso9660Handle,
-                                    storageHandle->opticalDisk.read.buffer.data,
-                                    storageHandle->opticalDisk.read.iso9660Stat->lsn+(lsn_t)blockIndex,
-                                    1 // read 1 block
-                                   );
-          if (n < ISO_BLOCKSIZE)
-          {
-            error = ERROR_(IO,errno);
-            break;
-          }
-          storageHandle->opticalDisk.read.buffer.blockIndex = blockIndex;
-          storageHandle->opticalDisk.read.buffer.length     = (((blockIndex+1)*ISO_BLOCKSIZE) <= (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
-                                                                ? ISO_BLOCKSIZE
-                                                                : (ulong)(storageHandle->opticalDisk.read.iso9660Stat->size%ISO_BLOCKSIZE);
+          error = ERROR_(IO,errno);
+          break;
         }
-
-        // copy data
-        bytesAvail = MIN(bufferSize,storageHandle->opticalDisk.read.buffer.length-blockOffset);
-        memcpy(buffer,storageHandle->opticalDisk.read.buffer.data+blockOffset,bytesAvail);
-
-        // adjust buffer, bufferSize, bytes read, index
-        buffer = (byte*)buffer+bytesAvail;
-        bufferSize -= bytesAvail;
-        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-        storageHandle->opticalDisk.read.index += (uint64)bytesAvail;
+        storageHandle->opticalDisk.read.buffer.blockIndex = blockIndex;
+        storageHandle->opticalDisk.read.buffer.length     = (((blockIndex+1)*ISO_BLOCKSIZE) <= (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
+                                                              ? ISO_BLOCKSIZE
+                                                              : (ulong)(storageHandle->opticalDisk.read.iso9660Stat->size%ISO_BLOCKSIZE);
       }
+
+      // copy data
+      bytesAvail = MIN(bufferSize,storageHandle->opticalDisk.read.buffer.length-blockOffset);
+      memcpy(buffer,storageHandle->opticalDisk.read.buffer.data+blockOffset,bytesAvail);
+
+      // adjust buffer, bufferSize, bytes read, index
+      buffer = (byte*)buffer+bytesAvail;
+      bufferSize -= bytesAvail;
+      if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+      storageHandle->opticalDisk.read.index += (uint64)bytesAvail;
     }
+
+    return error;
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
     UNUSED_VARIABLE(bufferSize);
     UNUSED_VARIABLE(bytesRead);
 
-    error = ERROR_FUNCTION_NOT_SUPPORTED;
+    return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_ISO9660 */
-  assert(error != ERROR_UNKNOWN);
-
-  return error;
 }
 
 LOCAL Errors StorageOptical_write(StorageHandle *storageHandle,
@@ -2122,7 +2105,6 @@ LOCAL Errors StorageOptical_write(StorageHandle *storageHandle,
                                  )
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -2135,17 +2117,17 @@ LOCAL Errors StorageOptical_tell(StorageHandle *storageHandle,
                                  uint64        *offset
                                 )
 {
-  Errors error;
+  #ifdef HAVE_ISO9660
+    Errors error;
+  #endif
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
   assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(offset != NULL);
 
   (*offset) = 0LL;
 
-  error = ERROR_NONE;
   #ifdef HAVE_ISO9660
     switch (storageHandle->mode)
     {
@@ -2162,27 +2144,28 @@ LOCAL Errors StorageOptical_tell(StorageHandle *storageHandle,
           break; /* not reached */
       #endif /* NDEBUG */
     }
+
+    return error;
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(offset);
-  #endif /* HAVE_ISO9660 */
-  assert(error != ERROR_UNKNOWN);
 
-  return error;
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_ISO9660 */
 }
 
 LOCAL Errors StorageOptical_seek(StorageHandle *storageHandle,
                                  uint64        offset
                                 )
 {
-  Errors error;
+  #ifdef HAVE_ISO9660
+    Errors error;
+  #endif
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
   assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
 
-  error = ERROR_NONE;
   #ifdef HAVE_ISO9660
     switch (storageHandle->mode)
     {
@@ -2199,13 +2182,13 @@ LOCAL Errors StorageOptical_seek(StorageHandle *storageHandle,
           break; /* not reached */
       #endif /* NDEBUG */
     }
+    return error;
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(offset);
-  #endif /* HAVE_ISO9660 */
-  assert(error != ERROR_UNKNOWN);
 
-  return error;
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_ISO9660 */
 }
 
 LOCAL uint64 StorageOptical_getSize(StorageHandle *storageHandle)
@@ -2213,7 +2196,6 @@ LOCAL uint64 StorageOptical_getSize(StorageHandle *storageHandle)
   uint64 size;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert(storageHandle->storageInfo != NULL);
   assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
 
@@ -2289,7 +2271,6 @@ LOCAL Errors StorageOptical_delete(const StorageInfo *storageInfo,
                                   )
 {
   assert(storageInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(!String_isEmpty(archiveName));
 
@@ -2316,10 +2297,7 @@ LOCAL Errors StorageOptical_getInfo(const StorageInfo *storageInfo,
   infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
   memClear(fileInfo,sizeof(fileInfo));
 
-  error = ERROR_FUNCTION_NOT_SUPPORTED;
-  assert(error != ERROR_UNKNOWN);
-
-  return error;
+  return ERROR_FUNCTION_NOT_SUPPORTED;
 }
 #endif /* 0 */
 
@@ -2332,8 +2310,10 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
                                               ServerConnectionPriorities serverConnectionPriority
                                              )
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
+  #ifdef HAVE_ISO9660
+    AutoFreeList autoFreeList;
+    Errors       error;
+  #endif
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -2345,13 +2325,9 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
 
-  // initialize variables
-  AutoFree_init(&autoFreeList);
-  error = ERROR_UNKNOWN;
-
-  // open directory listing
   #ifdef HAVE_ISO9660
     // init variables
+    AutoFree_init(&autoFreeList);
     storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(pathName);
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.pathName,{ String_delete(storageDirectoryListHandle->opticalDisk.pathName); });
 
@@ -2424,6 +2400,8 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
     }
 
     storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_begin(storageDirectoryListHandle->opticalDisk.cdioList);
+
+    return ERROR_NONE;
   #else /* not HAVE_ISO9660 */
     storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(pathName);
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.pathName,{ String_delete(storageDirectoryListHandle->opticalDisk.pathName); });
@@ -2438,11 +2416,11 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
       return error;
     }
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.directoryListHandle,{ File_closeDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle); });
+
+    AutoFree_done(&autoFreeList);
+
+    return ERROR_NONE;
   #endif /* HAVE_ISO9660 */
-
-  AutoFree_done(&autoFreeList);
-
-  return ERROR_NONE;
 }
 
 LOCAL void StorageOptical_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)

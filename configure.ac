@@ -816,6 +816,7 @@ AC_SUBST(ENABLE_CURL)                        dnl "yes" for curl support, "no" ot
 AC_SUBST(ENABLE_SSH)                         dnl "yes" for ssh support, "no" otherwise
 AC_SUBST(ENABLE_TLS)                         dnl "yes" for tls support, "no" otherwise
 AC_SUBST(ENABLE_ISO9660)                     dnl "yes" for iso9660 support, "no" otherwise
+AC_SUBST(ENABLE_SMBCLIENT)                   dnl "yes" for SMB client support, "no" otherwise
 AC_SUBST(ENABLE_PCRE)                        dnl "yes" for PCRE support, "no" otherwise
 AC_SUBST(ENABLE_GUI)                         dnl "yes" for GUI support, "no" otherwise
 AC_SUBST(ENABLE_GUI_I18N)                    dnl "yes" for GUI i18n support, "no" otherwise
@@ -837,6 +838,7 @@ AC_SUBST(HAVE_SSL)                           dnl "1" for ssl support, "" otherwi
 AC_SUBST(HAVE_SSH2)                          dnl "1" for ssh2 support, "" otherwise
 AC_SUBST(HAVE_GNU_TLS)                       dnl "1" for GNU TLS support, "" otherwise
 AC_SUBST(HAVE_ISO9660)                       dnl "1" for ISO9660 support, "" otherwise
+AC_SUBST(HAVE_SMB2)                          dnl "1" for SMB2 support, "" otherwise
 AC_SUBST(HAVE_PCRE)                          dnl "1" for pcre support, "" otherwise
 AC_SUBST(HAVE_MARIADB)                       dnl "1" for MariaDB support, "" otherwise
 AC_SUBST(HAVE_POSTGRESQL)                    dnl "1" for PostgreSQL support, "" otherwise
@@ -998,6 +1000,7 @@ ENABLE_CURL="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
+ENABLE_SMBCLIENT="yes"
 ENABLE_PCRE="yes"
 ENABLE_MARIADB="yes"
 ENABLE_POSTGRESQL="yes"
@@ -1203,6 +1206,11 @@ AC_ARG_ENABLE(
   iso9660,
   AC_HELP_STRING([--disable-iso9660],[disable ISO 9660 support]),
   [ENABLE_ISO9660=$enableval]
+)
+AC_ARG_ENABLE(
+  smbclient,
+  AC_HELP_STRING([--disable-smbclient],[disable SMB client support]),
+  [ENABLE_SMBCLIENT=$enableval]
 )
 AC_ARG_ENABLE(
   mariadb,
@@ -1653,6 +1661,7 @@ case $host_os in
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
+    AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     ;;
   sunos | solaris*)
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
@@ -1660,6 +1669,7 @@ case $host_os in
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
+    AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     ;;
   darwin*)
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
@@ -1667,6 +1677,7 @@ case $host_os in
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(sd_id128_get_machine,systemd,[LIBRARIES="$LIBRARIES systemd"])
+    AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     ;;
   windows*|mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
@@ -1678,6 +1689,7 @@ case $host_os in
     AC_SEARCH_STATIC_LIBRARIES(FOLDERID_LocalAppData,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"])
     AC_SEARCH_STATIC_LIBRARIES(PathRemoveFileSpec,shlwapi,[STATIC_LIBRARIES="$STATIC_LIBRARIES shlwapi"],,shlwapi.h)
     AC_SEARCH_STATIC_LIBRARIES(GetUnicastIpAddressTable,iphlpapi ssp,[STATIC_LIBRARIES="$STATIC_LIBRARIES iphlpapi ssp"],,winsock2.h netioapi.h)
+    AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     ;;
 esac
 
@@ -1832,7 +1844,8 @@ if test -d icu -o -d "`readlink icu`"; then
     AC_DEFINE(HAVE_ICU,1,[icu installed (local)])
   fi
 else
-  dnl search for installed icuuc, icui18n, icudata library
+  dnl search for installed icu library
+
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])])
   else
@@ -1919,6 +1932,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
   fi
 else
   dnl search for installed zlib library
+
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_Z=1;LIBRARIES="z $LIBRARIES";AC_DEFINE(HAVE_Z,1,[z installed])])
   else
@@ -1997,6 +2011,7 @@ if test $ENABLE_BZ2 = "yes"; then
     fi
   else
     dnl search for installed bzip2 library
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="bz2 $LIBRARIES";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
     else
@@ -2094,6 +2109,7 @@ if test $ENABLE_LZMA = "yes"; then
     fi
   else
     dnl search for installed lzma library
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="lzma $LIBRARIES";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
     else
@@ -2185,6 +2201,7 @@ if test $ENABLE_LZO = "yes"; then
     fi
   else
     dnl search for installed lzo library
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
     else
@@ -2256,6 +2273,7 @@ if test $ENABLE_LZ4 = "yes"; then
     fi
   else
     dnl search for installed lz4 library
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;LIBRARIES="lz4 $LIBRARIES";AC_DEFINE(HAVE_LZ4,1,[lz4 installed])])
     else
@@ -2330,6 +2348,7 @@ if test $ENABLE_ZSTD = "yes"; then
     fi
   else
     dnl search for installed zstd library
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;LIBRARIES="zstd $LIBRARIES";AC_DEFINE(HAVE_ZSTD,1,[zstd installed])])
     else
@@ -2352,6 +2371,8 @@ fi
 # use xdelta3
 if test $ENABLE_XDELTA3 = "yes"; then
   if test -d xdelta3 -o -d "`readlink xdelta3`"; then
+    dnl compile xdelta sources
+
     cwd=`pwd`
 
     # patch to fix warnings:
@@ -2368,7 +2389,7 @@ fi
 if test $ENABLE_GCRYPT = "yes"; then
   if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile libgcrypt library
+      dnl compile libgpg-error, libgcrypt libraries
 
       cwd=`pwd`
 
@@ -2518,7 +2539,8 @@ if test $ENABLE_GCRYPT = "yes"; then
       AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed (local)])
     fi
   else
-    dnl check if suitable gcrypt is installed
+    dnl search for installed libgpg-error, libgcrypt libraries
+
     AC_CHECK_TYPE(gcry_cipher_hd_t,
       [
         dnl search for installed gpg-error/gcrypt library
@@ -2758,6 +2780,8 @@ if test $ENABLE_SSH = "yes"; then
     AC_CHECK_FUNCTION(CRYPTO_set_locking_callback,,AC_ERROR([CRYPTO_set_locking_callback() required for SSH2]),openssl/crypto.h)
     dnl AC_CHECK_FUNCTION(CRYPTO_THREADID_set_callback,AC_DEFINE(HAVE_CRYPTO_THREADID_SET_CALLBACK,1,[CRYPTO_THREADID_set_callback() required for SSH2]),,openssl/crypto.h)
   else
+    dnl search for installed ssh2 libraries
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
     else
@@ -2793,7 +2817,7 @@ fi
 if test $ENABLE_TLS = "yes"; then
   if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile gnutls library
+      dnl compile gmp, nettle, libidn2, gnutls libraries
 
       cwd=`pwd`
 
@@ -3022,6 +3046,8 @@ if test $ENABLE_TLS = "yes"; then
       AC_DEFINE(HAVE_GNU_TLS,1,[gnutls installed (local)])
     fi
   else
+    dnl search for installed gmp, nettle, libidn2, gnutls libraries
+
     AC_CHECK_TYPE(gnutls_session_t,,AC_MSG_WARN([no or wrong version of gnutls. gnutls version >=2.0.1 needed. Disabled TLS support.]); ENABLE_TLS=no,[#include <gnutls/gnutls.h>])
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
@@ -3379,6 +3405,8 @@ if test $ENABLE_CURL = "yes"; then
     AC_CHECK_FUNCTION(gnutls_global_init,,AC_ERROR([gnutls_global_init() required for curl]))
     AC_CHECK_FUNCTION(SSL_new,,AC_ERROR([SSL_new() required for curl]))
   else
+    dnl search for installed c-ares, curl, mxml libraries
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
       AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CARES,1,[c-ares installed])])
@@ -3595,7 +3623,8 @@ if test $ENABLE_MARIADB = "yes"; then
       AC_DEFINE(HAVE_MARIADB,1,[mariadb-connector-c installed (local)])
     fi
   else
-    dnl search for installed MariaDB client library
+    dnl search for installed mariadbclient library
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
     else
@@ -3681,7 +3710,8 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed (local)])
     fi
   else
-    dnl search for installed PostgreSQL client library
+    dnl search for installed pq library
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
       AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
@@ -3707,7 +3737,7 @@ fi
 if test $ENABLE_ISO9660 = "yes"; then
   if test \( -d libiconv -o -d "`readlink libiconv`" \) -a \( -d libcdio -o -d "`readlink libcdio`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile libiconv library
+      dnl compile libiconv, cdio libraries
 
       cwd=`pwd`
 
@@ -3751,8 +3781,6 @@ if test $ENABLE_ISO9660 = "yes"; then
         AC_MSG_RESULT([done])
       fi
 
-      dnl compile libcdio library
-
       AC_MSG_COMPILE([libcdio])
       result2=1
       if test $result2 -eq 1; then
@@ -3780,7 +3808,6 @@ if test $ENABLE_ISO9660 = "yes"; then
             --disable-cxx \
             --enable-static=iso9660 \
             --disable-shared \
-            --enable-static \
             --without-cd-drive \
             --without-cd-info \
             --without-cdda-player \
@@ -3841,7 +3868,8 @@ if test $ENABLE_ISO9660 = "yes"; then
       AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed (local)])
     fi
   else
-    dnl search for installed iso9660 library
+    dnl search for installed libiconv, cdio libraries
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
     else
@@ -3857,6 +3885,236 @@ if test $ENABLE_ISO9660 = "yes"; then
   if test -z "$HAVE_ISO9660"; then
     if test ! \( -d libcdio -o -d "`readlink libcdio`" \); then
       AC_MSG_WARN([libcdio not compiled: libcdio package missing])
+    fi
+  fi
+fi
+
+# compile/use libsmb2
+if test $ENABLE_SMBCLIENT = "yes"; then
+  if test -d libsmb2 -o -d "`readlink libsmb2`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+      dnl compile krb5, smb2 libraries
+
+      cwd=`pwd`
+
+      AC_MSG_COMPILE([libkrb5])
+      result1=1
+      if test $result1 -eq 1; then
+        # patch
+# TODO
+        #   diff -u krb5-1.21.2.org/lib/iso9660/iso9660.c krb5-1.21.2/lib/iso9660/iso9660.c > ../misc/libsmb2-4.0.0-gcc-pragma.patch
+#        (cd extern/krb5-1.21.2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/krb5-1.21.2-gcc-pragma.patch) 1>/dev/null 2>/dev/null
+        case $host_os in
+          linux-*)
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+          windows*|mingw*)
+            ;;
+        esac
+      fi
+      case $host_os in
+        linux-*| sunos | solaris* | darwin*)
+          if test $result1 -eq 1; then
+            (cd krb5/src; CFLAGS="-fPIC" LDFLAGS="" ./configure \
+              --prefix=$cwd/extern \
+              --host=$host \
+              --build=$build \
+              --enable-static \
+              --disable-shared \
+            ) 1>$tmpFile 2>&1
+            if test $? -ne 0; then
+              AC_MSG_RESULT([fail (configure)])
+              AC_MSG_OUTPUT_LOG(krb5/src/config.log)
+              AC_MSG_OUTPUT_LOG($tmpFile)
+              result1=0
+            fi
+          fi
+          if test $result1 -eq 1; then
+            # Note: build only lib: tests do not compile with static libraries
+            (cd krb5/src; make clean; make -C util -j$CPU_CORES && make -C include -j$CPU_CORES && make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
+            if test $? -ne 0; then
+              AC_MSG_RESULT([fail (make)])
+              AC_MSG_OUTPUT_LOG(krb5/src/config.log)
+              AC_MSG_OUTPUT_LOG($tmpFile)
+              result1=0
+            fi
+          fi
+          if test $result1 -eq 1; then
+            # Note: work-around partial build: create required install directories
+            $INSTALL -d $cwd/extern/include/krb5
+            $INSTALL -d $cwd/extern/include/gssapi
+            $INSTALL -d $cwd/extern/include/gssrpc
+            $INSTALL -d $cwd/extern/include/kadm5
+            $INSTALL -d $cwd/extern/sbin
+            $INSTALL -d $cwd/extern/bin/compute_et
+            $INSTALL -d $cwd/extern/share/man/man1
+            (cd krb5/src;  make -C util install PREFIX=$cwd/extern && make -C include install PREFIX=$cwd/extern && make -C lib install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+            if test $? -ne 0; then
+              AC_MSG_RESULT([fail (install)])
+              AC_MSG_OUTPUT_LOG(krb5/src/config.log)
+              AC_MSG_OUTPUT_LOG($tmpFile)
+              result1=0
+            fi
+          fi
+          if test $result1 -eq 1; then
+            AC_MSG_RESULT([done])
+          fi
+          ;;
+        windows*|mingw*)
+          # not supported on Windows
+          ;;
+      esac
+
+      dnl compile libsmb2 library
+
+      AC_MSG_COMPILE([libsmb2])
+      result2=1
+      if test $result2 -eq 1; then
+        # patch
+# TODO
+        #   diff -u libsmb2-4.0.0.org/lib/iso9660/iso9660.c libsmb2-4.0.0/lib/iso9660/iso9660.c > ../misc/libsmb2-4.0.0-gcc-pragma.patch
+#        (cd extern/libsmb2-4.0.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libsmb2-4.0.0-gcc-pragma.patch) 1>/dev/null 2>/dev/null
+        case $host_os in
+          linux-*)
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+          windows*|mingw*)
+            ;;
+        esac
+      fi
+      if test $result2 -eq 1; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            if test "$ENABLE_DEBUG" = "yes"; then
+              # Note: use configure, because with cmake the external Kerberos libraries are not used
+              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" configure \
+                --prefix=$cwd/extern \
+                --host=$host \
+                --build=$build \
+                --enable-static \
+                --disable-shared \
+                --disable-werror \
+              ) 1>$tmpFile 2>&1
+            else
+              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" ./configure \
+                --prefix=$cwd/extern \
+                --host=$host \
+                --build=$build \
+                --enable-static \
+                --disable-shared \
+                --disable-werror \
+              ) 1>$tmpFile 2>&1
+            fi
+            if test $? -ne 0; then
+              AC_MSG_RESULT([fail (configure)])
+              AC_MSG_OUTPUT_LOG($tmpFile)
+              result=0
+            fi
+            ;;
+          windows*|mingw*)
+            if test "$ENABLE_DEBUG" = "yes"; then
+              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" configure \
+                --prefix=$cwd/extern \
+                --host=$host \
+                --build=$build \
+                --enable-static \
+                --disable-shared \
+                --disable-werror \
+                --without-libkrb5
+              ) 1>$tmpFile 2>&1
+            else
+              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" ./configure \
+                --prefix=$cwd/extern \
+                --host=$host \
+                --build=$build \
+                --enable-static \
+                --disable-shared \
+                --disable-werror \
+                --without-libkrb5
+              ) 1>$tmpFile 2>&1
+            fi
+            if test $? -ne 0; then
+              AC_MSG_RESULT([fail (configure)])
+              AC_MSG_OUTPUT_LOG($tmpFile)
+              result=0
+            fi
+            ;;
+        esac
+      fi
+      if test $result2 -eq 1; then
+        (cd libsmb2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        (cd libsmb2; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result1=1
+      result2=1
+    fi
+
+    if test $result1 -eq 1 -a $result2 -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            LIBRARIES="$LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5"
+            ;;
+          windows*|mingw*)
+            LIBRARIES="$LIBRARIES smb2"
+            ;;
+        esac
+      else
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            STATIC_LIBRARIES="$STATIC_LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5"
+            ;;
+          windows*|mingw*)
+            STATIC_LIBRARIES="$STATIC_LIBRARIES smb2"
+            ;;
+        esac
+      fi
+      HAVE_SMB2=1
+      AC_DEFINE(HAVE_SMB2,1,[SMB2 client installed (local)])
+    fi
+  else
+    dnl search for installed krb5, smb2 libraries
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(smb2_init_context,smb2,[HAVE_SMB2=1;LIBRARIES="$LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5";AC_DEFINE(HAVE_SMB2,1,[SMB2 client installed])])
+    else
+      if test -z "$HAVE_SMB2"; then
+        AC_SEARCH_STATIC_LIBRARIES(smb2_init_context,smb2,[HAVE_SMB2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5";AC_DEFINE(HAVE_SMB2,1,[static SMB2 client installed])])
+      fi
+      if test -z "$HAVE_SMB2"; then
+        AC_SEARCH_LIBRARIES(smb2_init_context,smb2,[HAVE_SMB2=1;LIBRARIES="$LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5";AC_DEFINE(HAVE_SMB2,1,[SMB2 client installed])])
+      fi
+    fi
+  fi
+
+  if test -z "$HAVE_SMB2"; then
+    if test ! \( -d krb5 -o -d "`readlink krb5`" \); then
+      AC_MSG_WARN([libsmb2 not compiled: krb5 package missing])
+    fi
+    if test ! \( -d libsmb2 -o -d "`readlink libsmb2`" \); then
+      AC_MSG_WARN([libsmb2 not compiled: libsmb2 package missing])
     fi
   fi
 fi
@@ -3956,6 +4214,7 @@ if test $ENABLE_PCRE = "yes"; then
     fi
   else
     dnl search for installed pcre library
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(pcre,pcre_compile,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
     else
@@ -4038,7 +4297,7 @@ esac
 if test $ENABLE_BFD = "yes"; then
   if test -d binutils -o -d "`readlink binutils`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile binutils BFD library
+      dnl compile bfd, sframe, iberty libraries
 
       cwd=`pwd`
 
@@ -4121,7 +4380,8 @@ if test $ENABLE_BFD = "yes"; then
       AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/extern/bin)
     fi
   else
-    dnl search for installed BFD library
+    dnl search for installed bfd, sframe, iberty libraries
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd sframe iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
     else
@@ -4162,6 +4422,7 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_SSH2      ,,AC_MSG_ERROR([ssh2 missing]))
    AS_IF(test $HAVE_GNU_TLS   ,,AC_MSG_ERROR([GNU TLS missing]))
    AS_IF(test $HAVE_ISO9660   ,,AC_MSG_ERROR([ISO9660 missing]))
+   AS_IF(test $HAVE_SMBCLIENT ,,AC_MSG_ERROR([smb2 missing]))
    AS_IF(test $HAVE_PCRE      ,,AC_MSG_ERROR([PCRE missing]))
    AS_IF(test $HAVE_MARIADB   ,,AC_MSG_ERROR([MariaDB missing]))
    AS_IF(test $HAVE_POSTGRESQL,,AC_MSG_ERROR([PostgreSQL missing]))
@@ -4454,6 +4715,11 @@ AC_CHECK_FUNCTION(iso9660_close,             AC_DEFINE(HAVE_ISO9660_CLOSE,      
 AC_CHECK_FUNCTION(iso9660_ifs_stat_translate,AC_DEFINE(HAVE_ISO9660_IFS_STAT_TRANSLATE,1,[iso9660_ifs_stat_translate() available]))
 AC_CHECK_FUNCTION(iso9660_iso_seek_read,     AC_DEFINE(HAVE_ISO9660_ISO_SEEK_READ,     1,[iso9660_iso_seek_read() available]))
 
+AC_CHECK_FUNCTION(smb2_init_context,      AC_DEFINE(HAVE_SMB2_INIT_CONTEXT,1,[smb2_init_context() available]))
+AC_CHECK_FUNCTION(smb2_done_context,      AC_DEFINE(HAVE_SMB2_DONE_CONTEXT,1,[smb2_done_context() available]))
+AC_CHECK_FUNCTION(smb2_parse_url,         AC_DEFINE(HAVE_SMB2_PARSE_URL,   1,[smb2_parse_url() available]))
+AC_CHECK_FUNCTION(smb2_opendir,           AC_DEFINE(HAVE_OPENDIR,          1,[smb2_opendir() available]))
+
 AC_CHECK_FUNCTION(uuid_generate,     AC_DEFINE(HAVE_UUID_GENERATE,     1,[uuid_generate() available]))
 AC_CHECK_FUNCTION(uuid_parse,        AC_DEFINE(HAVE_UUID_PARSE,        1,[uuid_parse() available]))
 AC_CHECK_FUNCTION(uuid_unparse_lower,AC_DEFINE(HAVE_UUID_UNPARSE_LOWER,1,[uuid_unparse_lower() available]))
@@ -4703,6 +4969,14 @@ else
   AC_DEFINE_UNQUOTED(VERSION_CDIO,"",[cdio version])
 fi
 
+if test $ENABLE_SMBCLIENT = "yes"; then
+  ac_cv_value=`cd libsmb2; cmake --system-information |grep 'CMAKE_PROJECT_VERSION:STATIC='|sed 's/.*=\(.*\)/\1/g';`
+  AS_VAR_SET(VERSION_LIBSMB2,$ac_cv_value)
+  AC_DEFINE_UNQUOTED(VERSION_LIBSMB2,"$VERSION_LIBSMB2",[SMB2 version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_LIBSMB2,"",[SMB2 version])
+fi
+
 if test $ENABLE_MARIADB = "yes"; then
   # Note: MariaDB does not have a define for version
   AC_TRY_LINK([#include <stdio.h>
@@ -4828,6 +5102,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  SCP/SFTP support     : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
                     echo "  TLS/SSL server       : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support     : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
+                    echo "  SMB support          : `if test "$HAVE_SMB2"; then echo "yes ($VERSION_LIBSMB2)"; else echo no; fi`";
                     echo "  PCRE support         : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  SQLite               : yes ($VERSION_SQLITE)";
                     echo "  MariaDB support      : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
@@ -4864,9 +5139,10 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_SSH2" \
                             -o ! "$HAVE_GNU_TLS" \
                             -o ! "$HAVE_ISO9660" \
+                            -o ! "$HAVE_SMB2" \
+                            -o ! "$HAVE_PCRE"\
                             -o ! "$HAVE_MARIDDB" \
-                            -o ! "$HAVE_POSTGRESQL" \
-                            -o ! "$HAVE_PCRE"; then
+                            -o ! "$HAVE_POSTGRESQL"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."
@@ -4878,6 +5154,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_REVISION="$VERSION_REVISION"
 
                    host="$host"
+
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
                    HAVE_ICU=$HAVE_ICU
                    HAVE_Z=$HAVE_Z
@@ -4894,11 +5171,12 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
+                   HAVE_SMB2=$HAVE_SMB2
                    HAVE_PCRE=$HAVE_PCRE
                    HAVE_MARIADB=$HAVE_MARIADB
                    HAVE_POSTGRESQL=$HAVE_POSTGRESQL
-
                    HAVE_BFD=$HAVE_BFD
+
                    ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_DEBUG_THREAD_CRASH_HANDLERS=$ENABLE_DEBUG_THREAD_CRASH_HANDLERS
 
@@ -4931,6 +5209,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_GMP="$VERSION_GMP"
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
+                   VERSION_LIBSMB2="$VERSION_LIBSMB2"
                    VERSION_PCRE="$VERSION_PCRE"
                    VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_MARIADB="$VERSION_MARIADB"

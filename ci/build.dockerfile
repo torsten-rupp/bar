@@ -38,6 +38,7 @@ RUN apt-get -y --fix-missing install \
   reiserfsprogs \
   rsync \
   rsyslog \
+  samba \
   socat \
   software-properties-common \
   sqlite3 \
@@ -128,6 +129,36 @@ RUN sed 's|DocumentRoot /var/www/.*|DocumentRoot /var/www|g' -i /etc/apache2/sit
 RUN sed 's|export APACHE_RUN_USER=.*|export APACHE_RUN_USER=test|g' -i /etc/apache2/envvars
 RUN sed 's|export APACHE_RUN_GROUP=.*|export APACHE_RUN_GROUP=test|g' -i /etc/apache2/envvars
 RUN chown -R test:test /var/www
+
+# enable samba
+RUN \
+( \
+  echo "jenkins = jenkins"; \
+  echo "test = test"; \
+  echo "[global]"; \
+  echo "  passdb backend = smbpasswd"; \
+  echo ""; \
+  echo "[test]"; \
+  echo "  path = /home/test"; \
+  echo "  writeable = yes"; \
+  echo "  browseable = yes"; \
+  echo "  valid users = test"; \
+  echo ""; \
+  echo "[jenkins]"; \
+  echo "  path = /home/jenkins"; \
+  echo "  writeable = yes"; \
+  echo "  browseable = yes"; \
+  echo "  valid users = jenkins"; \
+) >> /etc/samba/smb.conf
+RUN \
+( \
+  echo "jenkins = jenkins"; \
+  echo "test = test"; \
+) > /etc/samba/smbusers
+RUN usermod -aG sambashare jenkins
+RUN usermod -aG sambashare test
+RUN sh -c '(echo jenkins; echo jenkins)|smbpasswd -a jenkins'
+RUN sh -c '(echo test; echo test)|smbpasswd -a test'
 
 # add external third-party packages
 COPY download-third-party-packages.sh /root

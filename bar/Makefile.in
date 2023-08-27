@@ -433,6 +433,7 @@ BAR_SOURCES_OTHER           = forward.h \
                               storage_scp.c \
                               storage_sftp.c \
                               storage_webdav.c \
+                              storage_smb.c \
                               storage_optical.c \
                               storage_device.c \
                               storage_master.c \
@@ -1743,6 +1744,12 @@ ifneq ($(TEST_PASSWORD_WEBDAV),)
           CRYPT_NAMES="none" \
           QUIET=1
 endif
+ifneq ($(TEST_PASSWORD_SMB),)
+	@$(MAKE) gcov_storage_smb \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+endif
 	@$(MAKE) gcov_optical \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
@@ -1783,6 +1790,12 @@ ifeq ($(TEST_PASSWORD_FTP),)
 endif
 ifeq ($(TEST_PASSWORD_SSH),)
 	@$(ECHO) Warning: no SSH password - skipped scp/sftp test
+endif
+ifeq ($(TEST_PASSWORD_WEBDAV),)
+	@$(ECHO) Warning: no WebDAV password - skipped WebDAV test
+endif
+ifeq ($(TEST_PASSWORD_SMB),)
+	@$(ECHO) Warning: no SMB/CIFS password - skipped SMB/CIFS test
 endif
 else
 	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"

@@ -4887,6 +4887,7 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
           || (storageSpecifier.type == STORAGE_TYPE_SFTP      )
           || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )
           || (storageSpecifier.type == STORAGE_TYPE_WEBDAVS   )
+          || (storageSpecifier.type == STORAGE_TYPE_SMB       )
          )
       {
         // get base directory
@@ -8108,6 +8109,8 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   uint        port;
   String      loginName;
   String      password;
+// TODO:
+  String      share;
   String      publicKey;
   String      privateKey;
   uint        maxConnectionCount;
@@ -8195,6 +8198,13 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       }
       Configuration_setKeyString(&serverNode->server.webDAV.publicKey,NULL,publicKey);
       Configuration_setKeyString(&serverNode->server.webDAV.privateKey,NULL,privateKey);
+      break;
+    case SERVER_TYPE_SMB:
+      String_set(serverNode->server.smb.loginName,loginName);
+      if (!String_isEmpty(password))
+      {
+        Password_setString(&serverNode->server.smb.password,password);
+      }
       break;
   }
   serverNode->server.maxConnectionCount = maxConnectionCount;
@@ -8366,6 +8376,14 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         }
         Configuration_setKeyString(&serverNode->server.webDAV.publicKey,NULL,publicKey);
         Configuration_setKeyString(&serverNode->server.webDAV.privateKey,NULL,privateKey);
+        break;
+      case SERVER_TYPE_SMB:
+        String_set(serverNode->server.smb.loginName,loginName);
+        if (!String_isEmpty(password))
+        {
+          Password_setString(&serverNode->server.smb.password,password);
+        }
+// TODO:share
         break;
     }
     serverNode->server.maxConnectionCount = maxConnectionCount;

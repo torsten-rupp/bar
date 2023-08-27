@@ -80,6 +80,7 @@ struct JobOptions
   FTPServer                   ftpServer;                     // job specific FTP server settings
   SSHServer                   sshServer;                     // job specific SSH server settings
   WebDAVServer                webDAVServer;                  // job specific WebDAV server settings
+  SMBServer                   smbServer;                     // job specific SMB server settings
   OpticalDisk                 opticalDisk;                   // job specific optical disk settings
   Device                      device;                        // job specific device settings
 

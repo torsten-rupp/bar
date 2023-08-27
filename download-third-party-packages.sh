@@ -14,8 +14,10 @@
 
 CURL="curl"
 CURL_OPTIONS="-L --retry 5 --connect-timeout 60 --max-time 300 --insecure"
+CP="cp"
 ECHO="echo"
 ECHO_NO_NEW_LINE="echo -n"
+GIT="git"
 INSTALL="install"
 LN="ln"
 MKDIR="mkdir"
@@ -58,6 +60,9 @@ POSTGRESQL_VERSION=9.6.24
 ICU_VERSION=58.3
 MTX_VERSION=1.3.12
 LIBCDIO_VERSION=2.1.0
+KRB5_VERSION=1.21
+KRB5_VERSION_MINOR=2
+LIBSMB2_VERSION=4.0.0
 BINUTILS_VERSION=2.41
 PTHREAD_W32_VERSION=2-9-1
 
@@ -103,8 +108,9 @@ opensslFlag=0
 libssh2Flag=0
 gnutlsFlag=0
 libcdioFlag=0
+libsmb2Flag=0
 pcreFlag=0
-sqliteFlag=0
+sqlite3Flag=0
 mariaDBFlag=0
 postgreSQLFlag=0
 icuFlag=0
@@ -226,17 +232,17 @@ while test $# != 0; do
           allFlag=0
           libcdioFlag=1
           ;;
-        mtx)
+        smb2|libsmb2|smbclient|libsmbclient)
           allFlag=0
-          mtxFlag=1
+          libsmb2Flag=1
           ;;
         pcre)
           allFlag=0
           pcreFlag=1
           ;;
-        sqlite)
+        sqlite|sqlite3)
           allFlag=0
-          sqliteFlag=1
+          sqlite3Flag=1
           ;;
         mariadb)
           allFlag=0
@@ -245,6 +251,10 @@ while test $# != 0; do
         postgresql)
           allFlag=0
           postgreSQLFlag=1
+          ;;
+        mtx)
+          allFlag=0
+          mtxFlag=1
           ;;
         icu)
           allFlag=0
@@ -341,17 +351,17 @@ while test $# != 0; do
       allFlag=0
       libcdioFlag=1
       ;;
-    mtx)
+    smb2|libsmb2|smbclient|libsmbclient)
       allFlag=0
-      mtxFlag=1
+      libsmb2Flag=1
       ;;
     pcre)
       allFlag=0
       pcreFlag=1
       ;;
-    sqlite)
+    sqlite|sqlite3)
       allFlag=0
-      sqliteFlag=1
+      sqlite3Flag=1
       ;;
     mariadb)
       allFlag=0
@@ -360,6 +370,10 @@ while test $# != 0; do
     postgresql)
       allFlag=0
       postgreSQLFlag=1
+      ;;
+    mtx)
+      allFlag=0
+      mtxFlag=1
       ;;
     icu)
       allFlag=0
@@ -422,10 +436,12 @@ if test $helpFlag -eq 1; then
   $ECHO " libssh2"
   $ECHO " gnutls"
   $ECHO " libcdio"
+  $ECHO " libsmbclient"
   $ECHO " pcre"
-  $ECHO " sqlite"
+  $ECHO " sqlite3"
   $ECHO " mariadb"
   $ECHO " postgresql"
+  $ECHO " mtx"
   $ECHO " icu"
   $ECHO " binutils"
   $ECHO ""
@@ -442,6 +458,11 @@ fi
 type $CURL 1>/dev/null 2>/dev/null && $CURL --version 1>/dev/null 2>/dev/null
 if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'curl' is not available"
+  exit 1
+fi
+type $GIT 1>/dev/null 2>/dev/null && $GIT --version 1>/dev/null 2>/dev/null
+if test $? -gt 0; then
+  $ECHO >&2 "ERROR: command 'git' is not available"
   exit 1
 fi
 type $SVN 1>/dev/null 2>/dev/null && $SVN --version 1>/dev/null 2>/dev/null
@@ -1330,19 +1351,19 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
-    # mtx
+  if test $allFlag -eq 1 -o $libsmb2Flag -eq 1; then
+    # krb5
     (
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get mtx ($MTX_VERSION)..."
-     fileName="mtx-$MTX_VERSION.tar.gz"
-     if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/mtx-$MTX_VERSION.tar.gz; then
-         $LN -s $localDirectory/mtx-$MTX_VERSION.tar.gz $fileName
+     $ECHO_NO_NEW_LINE "Get Kerberos 5 ($KRB5_VERSION.$KRB5_VERSION_MINOR)..."
+     fileName="krb5-$KRB5_VERSION.$KRB5_VERSION_MINOR.tar.gz"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/$fileName; then
+         $LN -s $localDirectory/$fileName $fileName
          result=1
        else
-         url="http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/$fileName"
+         url="https://kerberos.org/dist/krb5/$KRB5_VERSION/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -1363,7 +1384,43 @@ if test $cleanFlag -eq 0; then
     )
     result=$?
     if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/mtx-$MTX_VERSION mtx)
+      (cd "$workingDirectory"; $LN -sfT `find extern -maxdepth 1 -type d -name "krb5-*"` krb5)
+    fi
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+
+    # libsmbclient
+    (
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get libsmb2 ($LIBSMB2_VERSION)..."
+     directoryName="libsmb2-$LIBSMB2_VERSION"
+     if test ! -d $directoryName; then
+       if test -n "$localDirectory" -a -d $localDirectory/libsmb2-$LIBSMB2_VERSION; then
+         # Note: make a copy to get usable file permissions (source may be owned by root)
+         $CP -r $localDirectory/libsmb2-$LIBSMB2_VERSION $directoryName
+         result=1
+       else
+         url="https://github.com/sahlberg/libsmb2"
+         $GIT clone -b v$LIBSMB2_VERSION $url $directoryName 2>/dev/null
+         if test $? -ne 0; then
+           fatalError "checkout $url -> $directoryName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+
+     exit $result
+    )
+    result=$?
+    if test $noDecompressFlag -eq 0; then
+      (cd "$workingDirectory"; $LN -sfT extern/libsmb2-$LIBSMB2_VERSION libsmb2)
     fi
     case $result in
       1) $ECHO "ok (local)"; ;;
@@ -1416,7 +1473,7 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $sqliteFlag -eq 1; then
+  if test $allFlag -eq 1 -o $sqlite3Flag -eq 1; then
     # sqlite
     (
      cd "$destinationDirectory"
@@ -1536,6 +1593,49 @@ if test $cleanFlag -eq 0; then
     result=$?
     if test $noDecompressFlag -eq 0; then
       (cd "$workingDirectory"; $LN -sfT extern/postgresql-$POSTGRESQL_VERSION postgresql)
+    fi
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
+    # mtx
+    (
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get mtx ($MTX_VERSION)..."
+     fileName="mtx-$MTX_VERSION.tar.gz"
+     if test ! -f $fileName; then
+       if test -n "$localDirectory" -a -f $localDirectory/mtx-$MTX_VERSION.tar.gz; then
+         $LN -s $localDirectory/mtx-$MTX_VERSION.tar.gz $fileName
+         result=1
+       else
+         url="http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    if test $noDecompressFlag -eq 0; then
+      (cd "$workingDirectory"; $LN -sfT extern/mtx-$MTX_VERSION mtx)
     fi
     case $result in
       1) $ECHO "ok (local)"; ;;
@@ -1967,13 +2067,20 @@ else
     $RMF $workingDirectory/libcdio
   fi
 
-  if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
-    # mtx
+  if test $allFlag -eq 1 -o $libsmb2Flag -eq 1; then
+    # krb5
     (
       cd "$destinationDirectory"
-      $RMRF mtx-*
+      $RMRF krb5
     )
-    $RMF $workingDirectory/mtx
+    $RMF $workingDirectory/krb5
+
+    # libsmb2
+    (
+      cd "$destinationDirectory"
+      $RMRF libsmb2
+    )
+    $RMF $workingDirectory/libsmb2
   fi
 
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
@@ -1985,7 +2092,7 @@ else
     $RMF $workingDirectory/pcre
   fi
 
-  if test $allFlag -eq 1 -o $sqliteFlag -eq 1; then
+  if test $allFlag -eq 1 -o $sqlite3Flag -eq 1; then
     # sqlite
     (
       cd "$destinationDirectory"
@@ -1995,7 +2102,7 @@ else
   fi
 
   if test $allFlag -eq 1 -o $mariaDBFlag -eq 1; then
-    # sqlite
+    # MariaDB
     (
       cd "$destinationDirectory"
       $RMRF mariadb-connector-c-*
@@ -2004,12 +2111,21 @@ else
   fi
 
   if test $allFlag -eq 1 -o $postgreSQLFlag -eq 1; then
-    # sqlite
+    # PostgreSQL
     (
       cd "$destinationDirectory"
       $RMRF postgresql-*
     )
     $RMF $workingDirectory/postgresql
+  fi
+
+  if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
+    # mtx
+    (
+      cd "$destinationDirectory"
+      $RMRF mtx-*
+    )
+    $RMF $workingDirectory/mtx
   fi
 
   if test $allFlag -eq 1 -o $icuFlag -eq 1; then

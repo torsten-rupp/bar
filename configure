@@ -778,6 +778,7 @@ HAVE_PTHREADS_W32
 HAVE_POSTGRESQL
 HAVE_MARIADB
 HAVE_PCRE
+HAVE_SMB2
 HAVE_ISO9660
 HAVE_GNU_TLS
 HAVE_SSH2
@@ -798,6 +799,7 @@ HAVE_ICU
 ENABLE_GUI_I18N
 ENABLE_GUI
 ENABLE_PCRE
+ENABLE_SMBCLIENT
 ENABLE_ISO9660
 ENABLE_TLS
 ENABLE_SSH
@@ -896,6 +898,7 @@ enable_curl
 enable_ssh
 enable_tls
 enable_iso9660
+enable_smbclient
 enable_mariadb
 enable_postgresql
 enable_pcre
@@ -1556,6 +1559,7 @@ Optional Features:
   --disable-ssh           disable SSH support
   --disable-tls           disable TLS support
   --disable-iso9660       disable ISO 9660 support
+  --disable-smbclient     disable SMB client support
   --disable-mariadb       disable MariaDB support
   --disable-postgresql    disable PostgreSQL support
   --disable-pcre          disable PCRE support
@@ -3317,6 +3321,7 @@ ENABLE_CURL="yes"
 ENABLE_SSH="yes"
 ENABLE_TLS="yes"
 ENABLE_ISO9660="yes"
+ENABLE_SMBCLIENT="yes"
 ENABLE_PCRE="yes"
 ENABLE_MARIADB="yes"
 ENABLE_POSTGRESQL="yes"
@@ -3563,6 +3568,13 @@ fi
 if test ${enable_iso9660+y}
 then :
   enableval=$enable_iso9660; ENABLE_ISO9660=$enableval
+
+fi
+
+# Check whether --enable-smbclient was given.
+if test ${enable_smbclient+y}
+then :
+  enableval=$enable_smbclient; ENABLE_SMBCLIENT=$enableval
 
 fi
 
@@ -10320,6 +10332,68 @@ then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES systemd"
 fi
 
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing ns_initparse" >&5
+printf %s "checking for library containing ns_initparse... " >&6; }
+if test ${ac_cv_search_libraries_ns_initparse+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in resolv ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void ns_initparse();"; fi`
+                                         return (int)ns_initparse;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_ns_initparse=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_ns_initparse+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_ns_initparse=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ns_initparse" >&5
+printf "%s\n" "$ac_cv_search_libraries_ns_initparse" >&6; }
+  ac_result=$ac_cv_search_libraries_ns_initparse
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES resolv"
+fi
+
     ;;
   sunos | solaris*)
 
@@ -10638,6 +10712,68 @@ then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES systemd"
 fi
 
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing ns_initparse" >&5
+printf %s "checking for library containing ns_initparse... " >&6; }
+if test ${ac_cv_search_libraries_ns_initparse+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in resolv ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void ns_initparse();"; fi`
+                                         return (int)ns_initparse;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_ns_initparse=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_ns_initparse+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_ns_initparse=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ns_initparse" >&5
+printf "%s\n" "$ac_cv_search_libraries_ns_initparse" >&6; }
+  ac_result=$ac_cv_search_libraries_ns_initparse
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES resolv"
+fi
+
     ;;
   darwin*)
 
@@ -10954,6 +11090,68 @@ printf "%s\n" "$ac_cv_search_libraries_sd_id128_get_machine" >&6; }
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES systemd"
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing ns_initparse" >&5
+printf %s "checking for library containing ns_initparse... " >&6; }
+if test ${ac_cv_search_libraries_ns_initparse+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in resolv ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void ns_initparse();"; fi`
+                                         return (int)ns_initparse;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_ns_initparse=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_ns_initparse+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_ns_initparse=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ns_initparse" >&5
+printf "%s\n" "$ac_cv_search_libraries_ns_initparse" >&6; }
+  ac_result=$ac_cv_search_libraries_ns_initparse
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES resolv"
 fi
 
     ;;
@@ -11534,6 +11732,68 @@ then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES iphlpapi ssp"
 fi
 
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing ns_initparse" >&5
+printf %s "checking for library containing ns_initparse... " >&6; }
+if test ${ac_cv_search_libraries_ns_initparse+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in resolv ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void ns_initparse();"; fi`
+                                         return (int)ns_initparse;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_ns_initparse=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_ns_initparse+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_ns_initparse=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ns_initparse" >&5
+printf "%s\n" "$ac_cv_search_libraries_ns_initparse" >&6; }
+  ac_result=$ac_cv_search_libraries_ns_initparse
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES resolv"
+fi
+
     ;;
 esac
 
@@ -11754,7 +12014,8 @@ printf "%s\n" "#define HAVE_ICU 1" >>confdefs.h
 
   fi
 else
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -12431,7 +12692,8 @@ printf "%s\n" "#define HAVE_Z 1" >>confdefs.h
 
   fi
 else
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -12719,7 +12981,8 @@ printf "%s\n" "#define HAVE_BZ2 1" >>confdefs.h
 
     fi
   else
-        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -13026,7 +13289,8 @@ printf "%s\n" "#define HAVE_LZMA 1" >>confdefs.h
 
     fi
   else
-        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -13327,7 +13591,8 @@ printf "%s\n" "#define HAVE_LZO 1" >>confdefs.h
 
     fi
   else
-        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -13603,7 +13868,8 @@ printf "%s\n" "#define HAVE_LZ4 1" >>confdefs.h
 
     fi
   else
-        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -13887,7 +14153,8 @@ printf "%s\n" "#define HAVE_ZSTD 1" >>confdefs.h
 
     fi
   else
-        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -14101,6 +14368,7 @@ fi
 # use xdelta3
 if test $ENABLE_XDELTA3 = "yes"; then
   if test -d xdelta3 -o -d "`readlink xdelta3`"; then
+
     cwd=`pwd`
 
     # patch to fix warnings:
@@ -14306,7 +14574,8 @@ printf "%s\n" "#define HAVE_GCRYPT 1" >>confdefs.h
 
     fi
   else
-        ac_fn_c_check_type "$LINENO" "gcry_cipher_hd_t" "ac_cv_type_gcry_cipher_hd_t" "#include <gcrypt.h>
+
+    ac_fn_c_check_type "$LINENO" "gcry_cipher_hd_t" "ac_cv_type_gcry_cipher_hd_t" "#include <gcrypt.h>
 
 "
 if test "x$ac_cv_type_gcry_cipher_hd_t" = xyes
@@ -15087,6 +15356,7 @@ then :
 fi
 
       else
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
@@ -15807,6 +16077,7 @@ printf "%s\n" "#define HAVE_GNU_TLS 1" >>confdefs.h
 
     fi
   else
+
     ac_fn_c_check_type "$LINENO" "gnutls_session_t" "ac_cv_type_gnutls_session_t" "#include <gnutls/gnutls.h>
 "
 if test "x$ac_cv_type_gnutls_session_t" = xyes
@@ -16876,6 +17147,7 @@ then :
 fi
 
   else
+
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
@@ -17826,7 +18098,8 @@ printf "%s\n" "#define HAVE_MARIADB 1" >>confdefs.h
 
     fi
   else
-        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -18122,7 +18395,8 @@ printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
 
     fi
   else
-        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -18604,7 +18878,6 @@ printf "%s\n" "done" >&6; }
       fi
 
 
-
   printf %s "compile libcdio... " >&6
 
       result2=1
@@ -18633,7 +18906,6 @@ printf "%s\n" "done" >&6; }
             --disable-cxx \
             --enable-static=iso9660 \
             --disable-shared \
-            --enable-static \
             --without-cd-drive \
             --without-cd-info \
             --without-cdda-player \
@@ -18712,7 +18984,8 @@ printf "%s\n" "#define HAVE_ISO9660 1" >>confdefs.h
 
     fi
   else
-        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -18923,6 +19196,481 @@ printf "%s\n" "$as_me: WARNING: libcdio not compiled: libcdio package missing" >
   fi
 fi
 
+# compile/use libsmb2
+if test $ENABLE_SMBCLIENT = "yes"; then
+  if test -d libsmb2 -o -d "`readlink libsmb2`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+
+      cwd=`pwd`
+
+
+  printf %s "compile libkrb5... " >&6
+
+      result1=1
+      if test $result1 -eq 1; then
+        # patch
+# TODO
+        #   diff -u krb5-1.21.2.org/lib/iso9660/iso9660.c krb5-1.21.2/lib/iso9660/iso9660.c > ../misc/libsmb2-4.0.0-gcc-pragma.patch
+#        (cd extern/krb5-1.21.2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/krb5-1.21.2-gcc-pragma.patch) 1>/dev/null 2>/dev/null
+        case $host_os in
+          linux-*)
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+          windows*|mingw*)
+            ;;
+        esac
+      fi
+      case $host_os in
+        linux-*| sunos | solaris* | darwin*)
+          if test $result1 -eq 1; then
+            (cd krb5/src; CFLAGS="-fPIC" LDFLAGS="" ./configure \
+              --prefix=$cwd/extern \
+              --host=$host \
+              --build=$build \
+              --enable-static \
+              --disable-shared \
+            ) 1>$tmpFile 2>&1
+            if test $? -ne 0; then
+              { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+printf "%s\n" "fail (configure)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat krb5/src/config.log | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+              result1=0
+            fi
+          fi
+          if test $result1 -eq 1; then
+            # Note: build only lib: tests do not compile with static libraries
+            (cd krb5/src; make clean; make -C util -j$CPU_CORES && make -C include -j$CPU_CORES && make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
+            if test $? -ne 0; then
+              { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+printf "%s\n" "fail (make)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat krb5/src/config.log | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+              result1=0
+            fi
+          fi
+          if test $result1 -eq 1; then
+            # Note: work-around partial build: create required install directories
+            $INSTALL -d $cwd/extern/include/krb5
+            $INSTALL -d $cwd/extern/include/gssapi
+            $INSTALL -d $cwd/extern/include/gssrpc
+            $INSTALL -d $cwd/extern/include/kadm5
+            $INSTALL -d $cwd/extern/sbin
+            $INSTALL -d $cwd/extern/bin/compute_et
+            $INSTALL -d $cwd/extern/share/man/man1
+            (cd krb5/src;  make -C util install PREFIX=$cwd/extern && make -C include install PREFIX=$cwd/extern && make -C lib install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+            if test $? -ne 0; then
+              { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+printf "%s\n" "fail (install)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat krb5/src/config.log | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+              result1=0
+            fi
+          fi
+          if test $result1 -eq 1; then
+            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
+printf "%s\n" "done" >&6; }
+          fi
+          ;;
+        windows*|mingw*)
+          # not supported on Windows
+          ;;
+      esac
+
+
+
+  printf %s "compile libsmb2... " >&6
+
+      result2=1
+      if test $result2 -eq 1; then
+        # patch
+# TODO
+        #   diff -u libsmb2-4.0.0.org/lib/iso9660/iso9660.c libsmb2-4.0.0/lib/iso9660/iso9660.c > ../misc/libsmb2-4.0.0-gcc-pragma.patch
+#        (cd extern/libsmb2-4.0.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libsmb2-4.0.0-gcc-pragma.patch) 1>/dev/null 2>/dev/null
+        case $host_os in
+          linux-*)
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+          windows*|mingw*)
+            ;;
+        esac
+      fi
+      if test $result2 -eq 1; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            if test "$ENABLE_DEBUG" = "yes"; then
+              # Note: use configure, because with cmake the external Kerberos libraries are not used
+              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" configure \
+                --prefix=$cwd/extern \
+                --host=$host \
+                --build=$build \
+                --enable-static \
+                --disable-shared \
+                --disable-werror \
+              ) 1>$tmpFile 2>&1
+            else
+              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" ./configure \
+                --prefix=$cwd/extern \
+                --host=$host \
+                --build=$build \
+                --enable-static \
+                --disable-shared \
+                --disable-werror \
+              ) 1>$tmpFile 2>&1
+            fi
+            if test $? -ne 0; then
+              { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+printf "%s\n" "fail (configure)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+              result=0
+            fi
+            ;;
+          windows*|mingw*)
+            if test "$ENABLE_DEBUG" = "yes"; then
+              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" configure \
+                --prefix=$cwd/extern \
+                --host=$host \
+                --build=$build \
+                --enable-static \
+                --disable-shared \
+                --disable-werror \
+                --without-libkrb5
+              ) 1>$tmpFile 2>&1
+            else
+              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" ./configure \
+                --prefix=$cwd/extern \
+                --host=$host \
+                --build=$build \
+                --enable-static \
+                --disable-shared \
+                --disable-werror \
+                --without-libkrb5
+              ) 1>$tmpFile 2>&1
+            fi
+            if test $? -ne 0; then
+              { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+printf "%s\n" "fail (configure)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+              result=0
+            fi
+            ;;
+        esac
+      fi
+      if test $result2 -eq 1; then
+        (cd libsmb2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+printf "%s\n" "fail (make)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        (cd libsmb2; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+printf "%s\n" "fail (install)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
+printf "%s\n" "done" >&6; }
+      fi
+    else
+      result1=1
+      result2=1
+    fi
+
+    if test $result1 -eq 1 -a $result2 -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            LIBRARIES="$LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5"
+            ;;
+          windows*|mingw*)
+            LIBRARIES="$LIBRARIES smb2"
+            ;;
+        esac
+      else
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            STATIC_LIBRARIES="$STATIC_LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5"
+            ;;
+          windows*|mingw*)
+            STATIC_LIBRARIES="$STATIC_LIBRARIES smb2"
+            ;;
+        esac
+      fi
+      HAVE_SMB2=1
+
+printf "%s\n" "#define HAVE_SMB2 1" >>confdefs.h
+
+    fi
+  else
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing smb2_init_context" >&5
+printf %s "checking for library containing smb2_init_context... " >&6; }
+if test ${ac_cv_search_libraries_smb2_init_context+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in smb2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void smb2_init_context();"; fi`
+                                         return (int)smb2_init_context;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_smb2_init_context=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_smb2_init_context+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_smb2_init_context=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_smb2_init_context" >&5
+printf "%s\n" "$ac_cv_search_libraries_smb2_init_context" >&6; }
+  ac_result=$ac_cv_search_libraries_smb2_init_context
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_SMB2=1;LIBRARIES="$LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5";
+printf "%s\n" "#define HAVE_SMB2 1" >>confdefs.h
+
+fi
+
+    else
+      if test -z "$HAVE_SMB2"; then
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing smb2_init_context" >&5
+printf %s "checking for static library containing smb2_init_context... " >&6; }
+if test ${ac_cv_search_static_smb2_init_context+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in smb2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void smb2_init_context();"; fi`
+                                         return (int)smb2_init_context;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_smb2_init_context=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_smb2_init_context+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_smb2_init_context=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_smb2_init_context" >&5
+printf "%s\n" "$ac_cv_search_static_smb2_init_context" >&6; }
+  ac_result=$ac_cv_search_static_smb2_init_context
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_SMB2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5";
+printf "%s\n" "#define HAVE_SMB2 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_SMB2"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing smb2_init_context" >&5
+printf %s "checking for library containing smb2_init_context... " >&6; }
+if test ${ac_cv_search_libraries_smb2_init_context+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in smb2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void smb2_init_context();"; fi`
+                                         return (int)smb2_init_context;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_smb2_init_context=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_smb2_init_context+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_smb2_init_context=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_smb2_init_context" >&5
+printf "%s\n" "$ac_cv_search_libraries_smb2_init_context" >&6; }
+  ac_result=$ac_cv_search_libraries_smb2_init_context
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_SMB2=1;LIBRARIES="$LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5";
+printf "%s\n" "#define HAVE_SMB2 1" >>confdefs.h
+
+fi
+
+      fi
+    fi
+  fi
+
+  if test -z "$HAVE_SMB2"; then
+    if test ! \( -d krb5 -o -d "`readlink krb5`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libsmb2 not compiled: krb5 package missing" >&5
+printf "%s\n" "$as_me: WARNING: libsmb2 not compiled: krb5 package missing" >&2;}
+    fi
+    if test ! \( -d libsmb2 -o -d "`readlink libsmb2`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libsmb2 not compiled: libsmb2 package missing" >&5
+printf "%s\n" "$as_me: WARNING: libsmb2 not compiled: libsmb2 package missing" >&2;}
+    fi
+  fi
+fi
+
 # compile/use pcre
 if test $ENABLE_PCRE = "yes"; then
   if test -d pcre -o -d "`readlink pcre`"; then
@@ -19036,7 +19784,8 @@ printf "%s\n" "#define HAVE_PCRE 1" >>confdefs.h
 
     fi
   else
-        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -19470,7 +20219,8 @@ done
 
     fi
   else
-        if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -19781,6 +20531,12 @@ then :
 
 else $as_nop
   as_fn_error $? "ISO9660 missing" "$LINENO" 5
+fi
+   if test $HAVE_SMBCLIENT
+then :
+
+else $as_nop
+  as_fn_error $? "smb2 missing" "$LINENO" 5
 fi
    if test $HAVE_PCRE
 then :
@@ -27597,6 +28353,231 @@ fi
 
 
 
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for smb2_init_context" >&5
+printf %s "checking for smb2_init_context... " >&6; }
+if test ${ac_cv_func_smb2_init_context+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_smb2_init_context="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void smb2_init_context();"; fi`
+                                         #ifdef smb2_init_context
+                                         #else
+                                           return (intptr_t)smb2_init_context;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_smb2_init_context=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_smb2_init_context" >&5
+printf "%s\n" "$ac_cv_func_smb2_init_context" >&6; }
+  if test "$ac_cv_func_smb2_init_context" != no
+then :
+
+printf "%s\n" "#define HAVE_SMB2_INIT_CONTEXT 1" >>confdefs.h
+
+elif :
+then :
+
+fi
+
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for smb2_done_context" >&5
+printf %s "checking for smb2_done_context... " >&6; }
+if test ${ac_cv_func_smb2_done_context+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_smb2_done_context="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void smb2_done_context();"; fi`
+                                         #ifdef smb2_done_context
+                                         #else
+                                           return (intptr_t)smb2_done_context;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_smb2_done_context=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_smb2_done_context" >&5
+printf "%s\n" "$ac_cv_func_smb2_done_context" >&6; }
+  if test "$ac_cv_func_smb2_done_context" != no
+then :
+
+printf "%s\n" "#define HAVE_SMB2_DONE_CONTEXT 1" >>confdefs.h
+
+elif :
+then :
+
+fi
+
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for smb2_parse_url" >&5
+printf %s "checking for smb2_parse_url... " >&6; }
+if test ${ac_cv_func_smb2_parse_url+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_smb2_parse_url="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void smb2_parse_url();"; fi`
+                                         #ifdef smb2_parse_url
+                                         #else
+                                           return (intptr_t)smb2_parse_url;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_smb2_parse_url=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_smb2_parse_url" >&5
+printf "%s\n" "$ac_cv_func_smb2_parse_url" >&6; }
+  if test "$ac_cv_func_smb2_parse_url" != no
+then :
+
+printf "%s\n" "#define HAVE_SMB2_PARSE_URL 1" >>confdefs.h
+
+elif :
+then :
+
+fi
+
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for smb2_opendir" >&5
+printf %s "checking for smb2_opendir... " >&6; }
+if test ${ac_cv_func_smb2_opendir+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_smb2_opendir="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void smb2_opendir();"; fi`
+                                         #ifdef smb2_opendir
+                                         #else
+                                           return (intptr_t)smb2_opendir;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_smb2_opendir=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_smb2_opendir" >&5
+printf "%s\n" "$ac_cv_func_smb2_opendir" >&6; }
+  if test "$ac_cv_func_smb2_opendir" != no
+then :
+
+printf "%s\n" "#define HAVE_OPENDIR 1" >>confdefs.h
+
+elif :
+then :
+
+fi
+
+
+
+
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for uuid_generate" >&5
 printf %s "checking for uuid_generate... " >&6; }
 if test ${ac_cv_func_uuid_generate+y}
@@ -30490,6 +31471,18 @@ printf "%s\n" "#define VERSION_CDIO \"\"" >>confdefs.h
 
 fi
 
+if test $ENABLE_SMBCLIENT = "yes"; then
+  ac_cv_value=`cd libsmb2; cmake --system-information |grep 'CMAKE_PROJECT_VERSION:STATIC='|sed 's/.*=\(.*\)/\1/g';`
+  VERSION_LIBSMB2=$ac_cv_value
+
+printf "%s\n" "#define VERSION_LIBSMB2 \"$VERSION_LIBSMB2\"" >>confdefs.h
+
+else
+
+printf "%s\n" "#define VERSION_LIBSMB2 \"\"" >>confdefs.h
+
+fi
+
 if test $ENABLE_MARIADB = "yes"; then
   # Note: MariaDB does not have a define for version
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -31338,6 +32331,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_REVISION="$VERSION_REVISION"
 
                    host="$host"
+
                    ENABLE_LINK_DYNAMIC=$ENABLE_LINK_DYNAMIC
                    HAVE_ICU=$HAVE_ICU
                    HAVE_Z=$HAVE_Z
@@ -31354,11 +32348,12 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_ISO9660=$HAVE_ISO9660
+                   HAVE_SMB2=$HAVE_SMB2
                    HAVE_PCRE=$HAVE_PCRE
                    HAVE_MARIADB=$HAVE_MARIADB
                    HAVE_POSTGRESQL=$HAVE_POSTGRESQL
-
                    HAVE_BFD=$HAVE_BFD
+
                    ENABLE_DEBUG=$ENABLE_DEBUG
                    ENABLE_DEBUG_THREAD_CRASH_HANDLERS=$ENABLE_DEBUG_THREAD_CRASH_HANDLERS
 
@@ -31391,6 +32386,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_GMP="$VERSION_GMP"
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_CDIO="$VERSION_CDIO"
+                   VERSION_LIBSMB2="$VERSION_LIBSMB2"
                    VERSION_PCRE="$VERSION_PCRE"
                    VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_MARIADB="$VERSION_MARIADB"
@@ -31990,6 +32986,7 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                     echo "  SCP/SFTP support     : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
                     echo "  TLS/SSL server       : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support     : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
+                    echo "  SMB support          : `if test "$HAVE_SMB2"; then echo "yes ($VERSION_LIBSMB2)"; else echo no; fi`";
                     echo "  PCRE support         : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  SQLite               : yes ($VERSION_SQLITE)";
                     echo "  MariaDB support      : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
@@ -32026,9 +33023,10 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                             -o ! "$HAVE_SSH2" \
                             -o ! "$HAVE_GNU_TLS" \
                             -o ! "$HAVE_ISO9660" \
+                            -o ! "$HAVE_SMB2" \
+                            -o ! "$HAVE_PCRE"\
                             -o ! "$HAVE_MARIDDB" \
-                            -o ! "$HAVE_POSTGRESQL" \
-                            -o ! "$HAVE_PCRE"; then
+                            -o ! "$HAVE_POSTGRESQL"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."

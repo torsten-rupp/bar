@@ -354,7 +354,6 @@ LOCAL size_t curlFTPReadDataCallback(void   *buffer,
   assert(buffer != NULL);
   assert(size > 0);
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->ftp.buffer != NULL);
 
   if (storageHandle->ftp.transferedBytes < storageHandle->ftp.length)
@@ -399,7 +398,6 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
   assert(buffer != NULL);
   assert(size > 0);
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->ftp.buffer != NULL);
 
   if ((n*size) <= (storageHandle->ftp.length-storageHandle->ftp.transferedBytes))
@@ -1169,7 +1167,6 @@ LOCAL Errors StorageFTP_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   #if   defined(HAVE_CURL)
     freeServer(storageInfo->ftp.serverId);
@@ -1187,7 +1184,6 @@ LOCAL bool StorageFTP_isServerAllocationPending(const StorageInfo *storageInfo)
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   #ifdef HAVE_CURL
     serverAllocationPending = isServerAllocationPending(storageInfo->ftp.serverId);
@@ -1213,7 +1209,6 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   error = ERROR_NONE;
 
@@ -1265,7 +1260,6 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   error = ERROR_NONE;
 
@@ -1308,7 +1302,6 @@ LOCAL Errors StorageFTP_unloadVolume(const StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   UNUSED_VARIABLE(storageInfo);
 
@@ -1669,8 +1662,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     String_delete(baseName);
     String_delete(directoryName);
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->ftp,StorageHandleFTP);
-
     return ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
@@ -1856,8 +1847,6 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     String_delete(baseName);
     String_delete(directoryName);
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->ftp,StorageHandleFTP);
-
     return ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageHandle);
@@ -1870,17 +1859,12 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
 LOCAL void StorageFTP_close(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   #if   defined(HAVE_CURL)
     assert(storageHandle->ftp.curlHandle != NULL);
     assert(storageHandle->ftp.curlMultiHandle != NULL);
-  #endif /* HAVE_CURL || HAVE_FTP */
-
-  #if   defined(HAVE_CURL)
-    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->ftp,StorageHandleFTP);
   #endif /* HAVE_CURL || HAVE_FTP */
 
   switch (storageHandle->mode)
@@ -1914,7 +1898,6 @@ LOCAL void StorageFTP_close(StorageHandle *storageHandle)
 LOCAL bool StorageFTP_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -1945,7 +1928,6 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -2172,7 +2154,6 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -2290,7 +2271,6 @@ LOCAL Errors StorageFTP_tell(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(offset != NULL);
@@ -2323,10 +2303,6 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
-  #ifdef HAVE_CURL
-    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->webdav);
-  #endif /* HAVE_CURL */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
@@ -2381,7 +2357,6 @@ LOCAL uint64 StorageFTP_getSize(StorageHandle *storageHandle)
   uint64 size;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
@@ -2537,7 +2512,6 @@ LOCAL Errors StorageFTP_delete(const StorageInfo *storageInfo,
   #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
@@ -2648,7 +2622,6 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
   assert(storageInfo != NULL);
   assert(fileInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
   memClear(fileInfo,sizeof(fileInfo));

@@ -164,6 +164,38 @@ ERROR SSH
     stringAppendFormat(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
   }
 
+// --- SMB/CIFS ---------------------------------------------------------
+
+ERROR INVALID_SMB_SPECIFIER            TR("invalid SMB/CIFS specifier")
+ERROR NO_SMB_PASSWORD
+  stringSet(errorText,sizeof(errorText),TR("no SMB/CIFS password given"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
+  }
+
+ERROR SMB_SESSION_FAIL                 TR("initialize SMB/CIFS session failed")
+ERROR SMB_AUTHENTICATION
+  stringSet(errorText,sizeof(errorText),TR("SMB/CIFS authentication failed"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
+  }
+
+ERROR INVALID_SMB_PASSWORD
+  stringSet(errorText,sizeof(errorText),TR("invalid SMB/CIFS password"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
+  }
+
+ERROR SMB
+  stringSet(errorText,sizeof(errorText),TR("SMB/CIFS protocol error"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s (code: %d)",ERROR_DATA,ERROR_ERRNO);
+  }
+
 // --- job --------------------------------------------------------------
 ERROR JOB_ALREADY_EXISTS
   stringSet(errorText,sizeof(errorText),TR("job '{0}' already exists",ERROR_DATA));
@@ -1053,4 +1085,5 @@ ERROR TESTCODE
   {
     stringAppendFormat(errorText,sizeof(errorText)," %s",ERROR_DATA);
   }
+
 // end of file

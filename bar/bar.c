@@ -326,7 +326,7 @@ LOCAL void signalHandler(int signalNumber)
   // Note: do not free resources to avoid further errors
 
   // exit with signal number or trigger signal
-  #ifndef NDEBUG
+  #if !defined(NDEBUG) || !defined(HAVE_KILL)
     exit(128+signalNumber);
   #else
     kill(0,signalNumber);
@@ -413,6 +413,7 @@ LOCAL void printUsage(const char *programName, uint level)
   printf("               sftp://[<login name>[:<password>]@]<host name>[:<port>]/<file name>\n");
   printf("               webdav://[<login name>[:<password>]@]<host name>/<file name>\n");
   printf("               webdavs://[<login name>[:<password>]@]<host name>/<file name>\n");
+  printf("               smb://[<login name>[:<password>]@]<host name>/<file name>\n");
   printf("               cd://[<device name>:]<file name>\n");
   printf("               dvd://[<device name>:]<file name>\n");
   printf("               bd://[<device name>:]<file name>\n");
@@ -1779,10 +1780,11 @@ const char *getPasswordTypeText(PasswordTypes passwordType)
   text = NULL;
   switch (passwordType)
   {
-    case PASSWORD_TYPE_CRYPT:  text = "crypt";  break;
-    case PASSWORD_TYPE_FTP:    text = "FTP";    break;
-    case PASSWORD_TYPE_SSH:    text = "SSH";    break;
-    case PASSWORD_TYPE_WEBDAV: text = "webDAV"; break;
+    case PASSWORD_TYPE_CRYPT:  text = "crypt";    break;
+    case PASSWORD_TYPE_FTP:    text = "FTP";      break;
+    case PASSWORD_TYPE_SSH:    text = "SSH";      break;
+    case PASSWORD_TYPE_WEBDAV: text = "webDAV";   break;
+    case PASSWORD_TYPE_SMB:    text = "SMB/CIFS"; break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1832,6 +1834,7 @@ Errors getPasswordFromConsole(String        name,
             case PASSWORD_TYPE_FTP     : String_format(title1,"FTP password"); break;
             case PASSWORD_TYPE_SSH     : String_format(title1,"SSH password"); break;
             case PASSWORD_TYPE_WEBDAV  : String_format(title1,"WebDAV password"); break;
+            case PASSWORD_TYPE_SMB     : String_format(title1,"SMB/CIFS password"); break;
             case PASSWORD_TYPE_DATABASE: String_format(title1,"Database password"); break;
           }
           if (!stringIsEmpty(text))
@@ -4418,6 +4421,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     printf("  OpenSSL    %s\n",!stringIsEmpty(VERSION_OPENSSL   ) ? VERSION_OPENSSL    : "(not included)");
     printf("  libssh2    %s\n",!stringIsEmpty(VERSION_LIBSSH2   ) ? VERSION_LIBSSH2    : "(not included)");
     printf("  curl       %s\n",!stringIsEmpty(VERSION_CURL      ) ? VERSION_CURL       : "(not included)");
+    printf("  libsmb2    %s\n",!stringIsEmpty(VERSION_LIBSMB2   ) ? VERSION_LIBSMB2    : "(not included)");
     printf("  cdio       %s\n",!stringIsEmpty(VERSION_CDIO      ) ? VERSION_CDIO       : "(not included)");
     printf("  PCRE       %s\n",!stringIsEmpty(VERSION_PCRE      ) ? VERSION_PCRE       : "(not included)");
     printf("  SQLite     %s\n",!stringIsEmpty(VERSION_SQLITE    ) ? VERSION_SQLITE     : "(not included)");

@@ -1,4 +1,6 @@
 2023-09-01 23
+  * changed version number scheme 
+  * added support for storing on Samba/CIFS server
   * upgrade zlib 1.3
   * fixed bar-index --pipe
   * fixed reserved keyword in MariaDB: offset
