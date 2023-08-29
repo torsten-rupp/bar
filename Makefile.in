@@ -72,6 +72,7 @@ CAT                    = cat
 CD                     = cd
 CHMOD                  = chmod
 CP                     = cp
+CUT                    = cut
 DIFF                   = diff
 DOCKER                 = @DOCKER@
 ECHO                   = echo
@@ -90,6 +91,8 @@ RMF                    = rm -f
 RMRF                   = rm -rf
 SED                    = sed
 TAR                    = tar
+TAIL                   = tail
+TR                     = tr
 WINE                   = @WINE@
 WINE_C_DRIVE           = @WINE_C_DRIVE@
 ZIP                    = zip
@@ -807,6 +810,8 @@ docker_update update_docker:
 docker_purge purge_docker:
 	$(DOCKER) rm $$($(DOCKER) ps -a -q)
 
+functionGetCDEmuDevice=$(shell cdemu device-mapping |$(TAIL) -n +3|$(GREP) 0|$(TR) -s ' '|$(CUT) -d ' ' -f 2)
+
 .PHONY: docker_run build_docker
 docker_run build_docker:
 	# Notes: - no image operations in docker, because /dev/loop* and mount only
@@ -816,6 +821,10 @@ docker_run build_docker:
 	#          in container; just map ssh port
 #TODO: use sudo?
 	#        - need root privileges in container to start services
+	if test -z "`cdemu device-mapping |$(TAIL) -n +3`"; then \
+    cdemu add-device; \
+    cdemu create-blank --writer-id=WRITER-ISO --medium-type=dvd+r 0 /tmp/bar-optical; \
+  fi
 	$(DOCKER) $(DOCKER_RUN_FLAGS) \
           --rm \
           -p 2222:22 \
@@ -829,6 +838,8 @@ docker_run build_docker:
           -e TEST_MOUNT_OPERATIONS=no \
           -v $(HOME):$(HOME) \
           -v $(PWD):/media/home \
+          --device `cdemu device-mapping |$(TAIL) -n +3|$(GREP) 0|$(TR) -s ' '|$(CUT) -d ' ' -f 2` \
+          -v `cdemu device-mapping |$(TAIL) -n +3|$(GREP) 0|$(TR) -s ' '|$(CUT) -d ' ' -f 2`:/dev/sr0 \
           -w $(PWD) \
           --name=bar-build \
           bar:build \
