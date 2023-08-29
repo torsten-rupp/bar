@@ -13,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -y update --fix-missing
 
 # install packages
-RUN apt-get -y install \
+RUN apt-get -y --fix-missing install \
   attr \
   bc \
   bzip2 \
@@ -33,12 +33,13 @@ RUN apt-get -y install \
   ncurses-bin \
   patch \
   pkg-config \
-  postgresql \
+  postgresql-14 \
   psmisc \
   reiserfsprogs \
   rsync \
   rsyslog \
   socat \
+  software-properties-common \
   sqlite3 \
   subversion \
   sudo \
@@ -52,7 +53,7 @@ RUN apt-get -y install \
   ;
 
 # install packages for building
-RUN apt-get -y install \
+RUN apt-get -y --fix-missing install \
   gcc \
   g++ \
   libc6 \
@@ -74,10 +75,14 @@ RUN apt-get -y install \
   ;
 
 # install packages for tests
-RUN apt-get -y install \
+RUN apt-get update --fix-missing
+RUN apt-get -y --fix-missing install \
   apache2 \
   openssh-server \
   vsftpd \
+  dvdisaster \
+  genisoimage \
+  growisofs \
   ;
 
 RUN mkdir /.cache;
