@@ -19409,9 +19409,9 @@ printf "%s\n" "done" >&6; }
       CC_DEFINES="$CC_DEFINES PACKAGE"
       CC_INCLUDES="$CC_INCLUDES $cwd/extern/include"
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES bfd iberty z"
+        LIBRARIES="$LIBRARIES bfd sframe iberty z"
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES bfd sframe iberty z"
       fi
       HAVE_BFD=1
 
@@ -19530,7 +19530,7 @@ printf "%s\n" "$ac_cv_search_libraries_bfd_init" >&6; }
   ac_result=$ac_cv_search_libraries_bfd_init
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd sframe iberty z";
 printf "%s\n" "#define HAVE_BFD 1" >>confdefs.h
 
 fi
@@ -19598,7 +19598,7 @@ printf "%s\n" "$ac_cv_search_static_bfd_init" >&6; }
   ac_result=$ac_cv_search_static_bfd_init
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd sframe iberty z";
 printf "%s\n" "#define HAVE_BFD 1" >>confdefs.h
 
 fi
@@ -19664,7 +19664,7 @@ printf "%s\n" "$ac_cv_search_libraries_bfd_init" >&6; }
   ac_result=$ac_cv_search_libraries_bfd_init
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd sframe iberty z";
 printf "%s\n" "#define HAVE_BFD 1" >>confdefs.h
 
 fi

@@ -63,7 +63,6 @@ DOCKER_PROMPT          = '\[\e[0;38;5;39m\]\u\[\e[0;38;5;39m\]@\[\e[0;38;5;39m\]
 TXT2MAN                = @TXT2MAN@
 UNOCONV                = @UNOCONV@
 
-SVNVERSION             = @SVNVERSION@
 GIT                    = @GIT@
 
 #---------------------------------- commands----------------------------------
@@ -72,6 +71,7 @@ CAT                    = cat
 CD                     = cd
 CHMOD                  = chmod
 CP                     = cp
+CUT                    = cut
 DIFF                   = diff
 DOCKER                 = @DOCKER@
 ECHO                   = echo
@@ -90,6 +90,8 @@ RMF                    = rm -f
 RMRF                   = rm -rf
 SED                    = sed
 TAR                    = tar
+TAIL                   = tail
+TR                     = tr
 WINE                   = @WINE@
 WINE_C_DRIVE           = @WINE_C_DRIVE@
 ZIP                    = zip
@@ -102,7 +104,7 @@ SHELL                  = bash -o pipefail
 VERSION_MAJOR          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 VERSION_PATCH          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
-VERSION                := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
+VERSION                := $(VERSION_MAJOR)$(if $(VERSION_MINOR),.$(VERSION_MINOR))$(VERSION_PATCH)
 
 PACKAGE_NAME           = backup-archiver
 PACKAGE_NAME_GUI       = backup-archiver-gui
@@ -807,6 +809,8 @@ docker_update update_docker:
 docker_purge purge_docker:
 	$(DOCKER) rm $$($(DOCKER) ps -a -q)
 
+functionGetCDEmuDevice=$(shell cdemu device-mapping |$(TAIL) -n +3|$(GREP) 0|$(TR) -s ' '|$(CUT) -d ' ' -f 2)
+
 .PHONY: docker_run build_docker
 docker_run build_docker:
 	# Notes: - no image operations in docker, because /dev/loop* and mount only
@@ -816,6 +820,10 @@ docker_run build_docker:
 	#          in container; just map ssh port
 #TODO: use sudo?
 	#        - need root privileges in container to start services
+	if test -z "`cdemu device-mapping |$(TAIL) -n +3`"; then \
+    cdemu add-device; \
+    cdemu create-blank --writer-id=WRITER-ISO --medium-type=dvd+r 0 /tmp/bar-optical; \
+  fi
 	$(DOCKER) $(DOCKER_RUN_FLAGS) \
           --rm \
           -p 2222:22 \
@@ -829,6 +837,8 @@ docker_run build_docker:
           -e TEST_MOUNT_OPERATIONS=no \
           -v $(HOME):$(HOME) \
           -v $(PWD):/media/home \
+          --device `cdemu device-mapping |$(TAIL) -n +3|$(GREP) 0|$(TR) -s ' '|$(CUT) -d ' ' -f 2` \
+          -v `cdemu device-mapping |$(TAIL) -n +3|$(GREP) 0|$(TR) -s ' '|$(CUT) -d ' ' -f 2`:/dev/sr0 \
           -w $(PWD) \
           --name=bar-build \
           bar:build \

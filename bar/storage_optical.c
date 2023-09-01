@@ -216,14 +216,14 @@ LOCAL void executeIOdvdisasterOutput(StorageInfo *storageInfo,
 
 //fprintf(stderr,"%s,%d: dvdisaster line=%s\n",__FILE__,__LINE__,String_cString(line));
   s = String_new();
-  if (String_matchCString(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,STRING_NO_ASSIGN,s,NULL))
+  if      (String_matchCString(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,STRING_NO_ASSIGN,s,NULL))
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: dvdisaster add space: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
     storageInfo->runningInfo.volumeProgress = ((double)(storageInfo->opticalDisk.write.step+0)*100.0+p)/(double)(storageInfo->opticalDisk.write.steps*100);
     updateStorageStatusInfo(storageInfo);
   }
-  if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,STRING_NO_ASSIGN,s,NULL))
+  else if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,STRING_NO_ASSIGN,s,NULL))
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: dvdisaster codes: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
@@ -315,7 +315,7 @@ LOCAL void executeIOblankOutput(StorageInfo *storageInfo,
 
 /***********************************************************************\
 * Name   : executeIOblankStdout
-* Purpose: process blank stdout
+* Purpose: process blank stdout output
 * Input  : line     - line
 *          userData - storage file handle variable
 * Output : -
@@ -338,7 +338,7 @@ LOCAL void executeIOblankStdout(ConstString line,
 
 /***********************************************************************\
 * Name   : executeIOblankStderr
-* Purpose: process blank stderr
+* Purpose: process blank stderr output
 * Input  : line     - line
 *          userData - storage file handle variable
 * Output : -
@@ -360,7 +360,7 @@ LOCAL void executeIOblankStderr(ConstString line,
 }
 
 /***********************************************************************\
-* Name   : executeIOgrowisofs
+* Name   : executeIOgrowisofsOutput
 * Purpose: process growisofs output
 * Input  : storageInfo - storage info
 *          line        - line
@@ -394,8 +394,8 @@ LOCAL void executeIOgrowisofsOutput(StorageInfo *storageInfo,
 }
 
 /***********************************************************************\
-* Name   : executeIOgrowisofs
-* Purpose: process growisofs output
+* Name   : executeIOgrowisofsStdout
+* Purpose: process growisofs stdout output
 * Input  : line     - line
 *          userData - storage file handle variable
 * Output : -
@@ -417,8 +417,8 @@ LOCAL void executeIOgrowisofsStdout(ConstString line,
 }
 
 /***********************************************************************\
-* Name   : executeIOgrowisofs
-* Purpose: process growisofs output
+* Name   : executeIOgrowisofsStderr
+* Purpose: process growisofs stderr output
 * Input  : line     - line
 *          userData - storage file handle variable
 * Output : -
@@ -1730,26 +1730,29 @@ LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString arc
     iso9660Handle = iso9660_open_ext(String_cString(storageInfo->storageSpecifier.deviceName),
                                      ISO_EXTENSION_ALL
                                     );
-    cdioList = iso9660_ifs_readdir(iso9660Handle,String_cString(pathName));
-    if (cdioList != NULL)
+    if (iso9660Handle != NULL)
     {
-      cdioNextNode = _cdio_list_begin(cdioList);
-      while ((cdioNextNode != NULL) && !existsFlag)
+      cdioList = iso9660_ifs_readdir(iso9660Handle,String_cString(pathName));
+      if (cdioList != NULL)
       {
-        iso9660Stat = (iso9660_stat_t*)_cdio_list_node_data(cdioNextNode);
-
-        s = (char*)malloc(strlen(iso9660Stat->filename)+1);
-        if (s != NULL)
+        cdioNextNode = _cdio_list_begin(cdioList);
+        while ((cdioNextNode != NULL) && !existsFlag)
         {
-          iso9660_name_translate_ext(iso9660Stat->filename,s,ISO_EXTENSION_JOLIET_LEVEL1);
-          existsFlag = String_equalsCString(fileName,s);
-          free(s);
+          iso9660Stat = (iso9660_stat_t*)_cdio_list_node_data(cdioNextNode);
+
+          s = (char*)malloc(strlen(iso9660Stat->filename)+1);
+          if (s != NULL)
+          {
+            iso9660_name_translate_ext(iso9660Stat->filename,s,ISO_EXTENSION_JOLIET_LEVEL1);
+            existsFlag = String_equalsCString(fileName,s);
+            free(s);
+          }
+          cdioNextNode = _cdio_list_node_next(cdioNextNode);
         }
-        cdioNextNode = _cdio_list_node_next(cdioNextNode);
+        _cdio_list_free(cdioList,TRUE,free);
       }
-      _cdio_list_free(cdioList,TRUE,free);
-    }
-    (void)iso9660_close(iso9660Handle);
+      (void)iso9660_close(iso9660Handle);
+    }    
 
     String_delete(fileName);
     String_delete(pathName);
@@ -1923,13 +1926,13 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle,
       HALT_INSUFFICIENT_MEMORY();
     }
 
-    // check if device exists
+    // check if device name exists
     if (String_isEmpty(storageHandle->storageInfo->storageSpecifier.deviceName))
     {
       free(storageHandle->opticalDisk.read.buffer.data);
       return ERROR_NO_DEVICE_NAME;
     }
-    if (!File_exists(storageHandle->storageInfo->storageSpecifier.deviceName))
+    if (!Device_exists(storageHandle->storageInfo->storageSpecifier.deviceName))
     {
       free(storageHandle->opticalDisk.read.buffer.data);
       return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,"%s",String_cString(storageHandle->storageInfo->storageSpecifier.deviceName));

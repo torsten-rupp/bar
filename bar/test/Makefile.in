@@ -541,7 +541,7 @@ help_output:
 	@$(ECHO) "  test7[$(HELP_SUFFIXES)], test_convert[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test8[$(HELP_SUFFIXES)], test_image[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test9[$(HELP_SUFFIXES)], test_storage[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav)[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav|optical)[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test10[$(HELP_SUFFIXES)], test_huge[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test11[$(HELP_SUFFIXES)], test_optical[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test12[$(HELP_SUFFIXES)], test_device[$(HELP_SUFFIXES)]"
@@ -1024,6 +1024,7 @@ TEST_FILES_INTERMEDIATE = \
   $(INTERMEDIATE_DIR)/*.bar \
   $(INTERMEDIATE_DIR)/*.bar_destroyed \
   $(INTERMEDIATE_DIR)/*.bid \
+  $(INTERMEDIATE_DIR)/*.iso \
   $(INTERMEDIATE_DIR)/*.log \
   $(INTERMEDIATE_DIR)/new \
   $(INTERMEDIATE_DIR)/*.image \
@@ -1089,6 +1090,7 @@ TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foregroun
 .PHONY: $(call functionTestNames,test_storage_sftp           )
 .PHONY: $(call functionTestNames,test_storage_webdav         )
 .PHONY: $(call functionTestNames,test_storage_webdavs        )
+.PHONY: $(call functionTestNames,test_storage_optical        )
 .PHONY: $(call functionTestNames,test_huge             test10)
 .PHONY: $(call functionTestNames,test_optical          test11)
 .PHONY: $(call functionTestNames,test_device           test12)
@@ -1651,11 +1653,12 @@ test9 test_storage: \
   $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 9: storage..."
 	@$(MAKE) test_storage_file \
-	         test_storage_ftp \
-	         test_storage_scp \
-	         test_storage_sftp \
-	         test_storage_webdav \
-	         test_storage_webdavs
+           test_storage_ftp \
+           test_storage_scp \
+           test_storage_sftp \
+           test_storage_webdav \
+           test_storage_webdavs \
+           test_storage_optical
 
 test9-debug test_storage-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage
@@ -1940,6 +1943,30 @@ test_storage_webdavs-gprof:
 test_storage_webdavs-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_webdav
 
+test_storage_optical: \
+  $(TEST_BAR)
+	@$(call functionInfoBegin,Test 11: optical)
+	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test*" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          test_optical_operations \
+          ;
+	@$(call functionInfoEnd,OK)
+
+test_storage_optical-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_optical
+
+test_storage_optical-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_optical
+
+test_storage_optical-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_optical
+
+test_storage_optical-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_optical
+
 test10 test_huge: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 10: huge files)
@@ -1974,6 +2001,7 @@ test11 test_optical: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 11: optical)
 	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
@@ -2872,7 +2900,6 @@ test_all:
           test_image \
           test_storage \
           test_huge \
-          test_optical \
           test_combined \
           test_arguments \
           test_server \
@@ -5641,24 +5668,41 @@ test_optical_operations: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# create optical
-	@$(call functionInfoHeader,test optical opertations)
+	@$(call functionInfoHeader,test optical opertationsNEW)
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
+	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
 	@$(call functionCleanTestFiles)
-	$(SLEEP) $(TEST_OPTICAL_SLEEP_TIME)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c cd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c dvd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c bd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank $(LOG))
-	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t dvd:///$(BAR_FILE).bar $(LOG))
-	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d dvd:///$(BAR_FILE).bar $(LOG))
-	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L dvd:///$(BAR_FILE).bar $(LOG))
-	$(SLEEP) $(TEST_OPTICAL_SLEEP_TIME)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c cd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank --ecc $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c dvd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank --ecc $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c bd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank --ecc $(LOG))
-	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t dvd:///$(BAR_FILE).bar $(LOG))
-	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d dvd:///$(BAR_FILE).bar $(LOG))
-	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L dvd:///$(BAR_FILE).bar $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c cd://$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --always-create-image --cd-device=$(BAR_STORAGE)/$(BAR_FILE).iso --cd-write-image-command="$(INSTALL) -D %image %device" --blank $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t cd://$(BAR_FILE).bar --cd-device=$(BAR_STORAGE)/$(BAR_FILE).iso $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t cd://$(BAR_STORAGE)/$(BAR_FILE).iso:$(BAR_FILE).bar $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d cd://$(BAR_FILE).bar --cd-device=$(BAR_STORAGE)/$(BAR_FILE).iso $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d cd://$(BAR_STORAGE)/$(BAR_FILE).iso:$(BAR_FILE).bar $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L cd://$(BAR_FILE).bar --cd-device=$(BAR_STORAGE)/$(BAR_FILE).iso $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L cd://$(BAR_STORAGE)/$(BAR_FILE).iso: $(LOG))
+	@$(call functionCleanTestFiles)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c dvd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --always-create-image --dvd-device=$(BAR_STORAGE)/$(BAR_FILE).iso --dvd-write-image-command="$(INSTALL) -D %image %device" --blank $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t dvd://$(BAR_FILE).bar --dvd-device=$(BAR_STORAGE)/$(BAR_FILE).iso $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t dvd://$(BAR_STORAGE)/$(BAR_FILE).iso:$(BAR_FILE).bar $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d dvd://$(BAR_FILE).bar --dvd-device=$(BAR_STORAGE)/$(BAR_FILE).iso $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d dvd://$(BAR_STORAGE)/$(BAR_FILE).iso:$(BAR_FILE).bar $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L dvd://$(BAR_FILE).bar --dvd-device=$(BAR_STORAGE)/$(BAR_FILE).iso $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L dvd://$(BAR_STORAGE)/$(BAR_FILE).iso: $(LOG))
+	@$(call functionCleanTestFiles)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c bd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --always-create-image --bd-device=$(BAR_STORAGE)/$(BAR_FILE).iso --bd-write-image-command="$(INSTALL) -D %image %device" --blank $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t bd://$(BAR_FILE).bar --bd-device=$(BAR_STORAGE)/$(BAR_FILE).iso $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t bd://$(BAR_STORAGE)/$(BAR_FILE).iso:$(BAR_FILE).bar $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d bd://$(BAR_FILE).bar --bd-device=$(BAR_STORAGE)/$(BAR_FILE).iso $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d bd://$(BAR_STORAGE)/$(BAR_FILE).iso:$(BAR_FILE).bar $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L bd://$(BAR_FILE).bar --bd-device=$(BAR_STORAGE)/$(BAR_FILE).iso $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -L bd://$(BAR_STORAGE)/$(BAR_FILE).iso: $(LOG))
+	@$(call functionCleanTestFiles)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c cd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --always-create-image --cd-device=$(BAR_STORAGE)/$(BAR_FILE).iso --cd-write-image-command="$(INSTALL) -D %image %device" --blank --ecc $(LOG))
+	@$(call functionCleanTestFiles)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c dvd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --always-create-image --dvd-device=$(BAR_STORAGE)/$(BAR_FILE).iso --dvd-write-image-command="$(INSTALL) -D %image %device" --blank --ecc $(LOG))
+	@$(call functionCleanTestFiles)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c bd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --always-create-image --bd-device=$(BAR_STORAGE)/$(BAR_FILE).iso --bd-write-image-command="$(INSTALL) -D %image %device" --blank --ecc $(LOG))
 	@#
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
