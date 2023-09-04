@@ -541,15 +541,13 @@ help_output:
 	@$(ECHO) "  test7[$(HELP_SUFFIXES)], test_convert[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test8[$(HELP_SUFFIXES)], test_image[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test9[$(HELP_SUFFIXES)], test_storage[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav|optical)[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav|optical|device)[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test10[$(HELP_SUFFIXES)], test_huge[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test11[$(HELP_SUFFIXES)], test_optical[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test12[$(HELP_SUFFIXES)], test_device[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test13[$(HELP_SUFFIXES)], test_index[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test14[$(HELP_SUFFIXES)], test_server[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test15_master[$(HELP_SUFFIXES)], test_master[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test15_slave[$(HELP_SUFFIXES)], test_slave[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test15_master_slave[$(HELP_SUFFIXES)], test_master_slave[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test11[$(HELP_SUFFIXES)], test_index[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test12[$(HELP_SUFFIXES)], test_server[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test13_master[$(HELP_SUFFIXES)], test_master[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test13_slave[$(HELP_SUFFIXES)], test_slave[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test13_master_slave[$(HELP_SUFFIXES)], test_master_slave[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_combined[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_arguments[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_config[$(HELP_SUFFIXES)]"
@@ -1093,13 +1091,12 @@ TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foregroun
 .PHONY: $(call functionTestNames,test_storage_webdav         )
 .PHONY: $(call functionTestNames,test_storage_webdavs        )
 .PHONY: $(call functionTestNames,test_storage_optical        )
+.PHONY: $(call functionTestNames,test_storage_device         )
 .PHONY: $(call functionTestNames,test_huge             test10)
-.PHONY: $(call functionTestNames,test_optical          test11)
-.PHONY: $(call functionTestNames,test_device           test12)
-.PHONY: $(call functionTestNames,test_index            test13)
-.PHONY: $(call functionTestNames,test_server           test14)
-.PHONY: $(addsuffix _master,$(call functionTestNames,test15))
-.PHONY: $(addsuffix _slave, $(call functionTestNames,test15))
+.PHONY: $(call functionTestNames,test_index            test11)
+.PHONY: $(call functionTestNames,test_server           test12)
+.PHONY: $(addsuffix _master,$(call functionTestNames,test13))
+.PHONY: $(addsuffix _slave, $(call functionTestNames,test13))
 .PHONY: $(call functionTestNames,test_combined)
 .PHONY: $(call functionTestNames,test_arguments)
 .PHONY: $(call functionTestNames,test_config)
@@ -1947,7 +1944,6 @@ test_storage_webdavs-valgrind:
 
 test_storage_optical: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 11: optical)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -1955,7 +1951,6 @@ test_storage_optical: \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_optical_operations \
           ;
-	@$(call functionInfoEnd,OK)
 
 test_storage_optical-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_optical
@@ -1969,9 +1964,31 @@ test_storage_optical-gprof:
 test_storage_optical-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_optical
 
+test_storage_device: \
+  $(TEST_BAR)
+	@$(call functionInfoBegin,Test 11: device)
+	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test*" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          test_device_operations \
+          ;
+
+test_storage_device-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_device
+
+test_storage_device-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_device
+
+test_storage_device-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_device
+
+test_storage_device-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_device
+
 test10 test_huge: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 10: huge files)
 	for compress in $(TEST_COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -1999,54 +2016,7 @@ test10-gprof test_huge-gprof:
 test10-valgrind test_huge-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_huge
 
-test11 test_optical: \
-  $(TEST_BAR)
-	@$(call functionInfoBegin,Test 11: optical)
-	$(MAKE) \
-          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_optical_operations \
-          ;
-	@$(call functionInfoEnd,OK)
-
-test11-debug test_optical-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_optical
-
-test11-gcov test_optical-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_optical
-
-test11-gprof test_optical-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_optical
-
-test11-valgrind test_optical-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_optical
-
-test12 test_device: \
-  $(TEST_BAR)
-	@$(call functionInfoBegin,Test 12: device)
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_device_operations \
-          ;
-	@$(call functionInfoEnd,OK)
-
-test12-debug test_device-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_device
-
-test12-gcov test_device-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_device
-
-test12-gprof test_device-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_device
-
-test12-valgrind test_device-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_device
-
-test13 test_index: \
+test11 test_index: \
   $(TEST_BAR) \
   $(TEST_BAR_INDEX)
 	@$(call functionInfoBegin,Test 13: index)
@@ -2067,19 +2037,19 @@ test13 test_index: \
         done
 	@$(call functionInfoEnd,OK)
 
-test13-debug test_index-debug:
+test11-debug test_index-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index
 
-test13-gcov test_index-gcov:
+test11-gcov test_index-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index
 
-test13-gprof test_index-gprof:
+test11-gprof test_index-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index
 
-test13-valgrind test_index-valgrind:
+test11-valgrind test_index-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_DEBUG="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" test_index
 
-test14 test_server: \
+test12 test_server: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 14: server)
 	$(MAKE) \
@@ -2100,19 +2070,19 @@ test14 test_server: \
           ;
 	@$(call functionInfoEnd,OK)
 
-test14-debug test_server-debug:
+test12-debug test_server-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_server
 
-test14-gcov test_server-gcov:
+test12-gcov test_server-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_server
 
-test14-gprof test_server-gprof:
+test12-gprof test_server-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_server
 
-test14-valgrind test_server-valgrind:
+test12-valgrind test_server-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_server
 
-test15_master_slave test_master_slave: \
+test13_master_slave test_master_slave: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
@@ -2126,19 +2096,19 @@ test15_master_slave test_master_slave: \
           ;
 	@$(call functionInfoEnd,OK)
 
-test15_master_slave-debug test_master_slave-debug:
+test13_master_slave-debug test_master_slave-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_master_slave
 
-test15_master_slave-gcov test_master_slave-gcov:
+test13_master_slave-gcov test_master_slave-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_master_slave
 
-test15_master_slave-gprof test_master_slave-gprof:
+test13_master_slave-gprof test_master_slave-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_master_slave
 
-test15_master_slave-valgrind test_master_slave-valgrind:
+test13_master_slave-valgrind test_master_slave-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_master_slave
 
-test15_master test_master: \
+test13_master test_master: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
@@ -2152,19 +2122,19 @@ test15_master test_master: \
           ;
 	@$(call functionInfoEnd,OK)
 
-test15_master-debug test_master-debug:
+test13_master-debug test_master-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_master
 
-test15_master-gcov test_master-gcov:
+test13_master-gcov test_master-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_master
 
-test15_master-gprof test_master-gprof:
+test13_master-gprof test_master-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_master
 
-test15_master-valgrind test_master-valgrind:
+test13_master-valgrind test_master-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_master
 
-test15_slave test_slave: \
+test13_slave test_slave: \
   $(TEST_BAR) \
   $(TEST_SLAVE_CONFIG) \
   $(TEST_SLAVE_JOBS_DIRECTORY)
@@ -2178,16 +2148,16 @@ test15_slave test_slave: \
           ;
 	@$(call functionInfoEnd,OK)
 
-test15_slave-debug test_slave-debug:
+test13_slave-debug test_slave-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_slave
 
-test15_slave-gcov test_slave-gcov:
+test13_slave-gcov test_slave-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_slave
 
-test15_slave-gprof test_slave-gprof:
+test13_slave-gprof test_slave-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_slave
 
-test15_slave-valgrind test_slave-valgrind:
+test13_slave-valgrind test_slave-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_slave
 
 test_combined: \
@@ -5673,7 +5643,7 @@ test_optical_operations: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# create optical
-	@$(call functionInfoHeader,test optical opertationsNEW)
+	@$(call functionInfoHeader,test optical opertations)
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
@@ -5718,7 +5688,9 @@ test_device_operations: \
   $(TEST_FILES)
 	# create device
 	@$(call functionInfoHeader,test device opertations)
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
+	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
 	@$(call functionCleanTestFiles)
 	$(SLEEP) $(TEST_DEVICE_SLEEP_TIME)
