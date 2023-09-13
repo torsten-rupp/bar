@@ -120,8 +120,8 @@ PGREP          = pgrep
 PSQL           = @PSQL@
 READLINK       = readlink
 RMDIR          = rmdir
-RMF            = rm -f
-RMRF           = rm -rf
+RMF            = /bin/rm -f
+RMRF           = /bin/rm -rf
 SCP            = scp
 SED            = sed
 SEQ            = seq
@@ -390,6 +390,12 @@ TEST_WEBDAV_LOGIN_NAME               ?= $(TEST_LOGIN_NAME)
 TEST_WEBDAV_PASSWORD                 ?= $(TEST_PASSWORD)
 TEST_WEBDAV_FILE_PATH                ?=
 
+TEST_SMB_HOST                        ?= $(TEST_HOST)
+TEST_SMB_LOGIN_NAME                  ?= $(TEST_LOGIN_NAME)
+TEST_SMB_PASSWORD                    ?= $(TEST_PASSWORD)
+TEST_SMB_SHARE                       ?=
+TEST_SMB_FILE_PATH                   ?=
+
 TEST_OPTICAL_EMULATION               ?= $(TEST_EMULATION)
 TEST_OPTICAL_SLEEP_TIME              ?= $(if $(TEST_OPTICAL_EMULATION),5,30)
 
@@ -473,7 +479,7 @@ DUMP1          = $(INTERMEDIATE_DIR)/dev1.dump
 
 # memory limits for tests
 MEMORY_LIMIT     = $(shell $(ECHO) 10*1024*1024|$(BC))    # 10G
-MEMORY_LIMIT_LOW = $(shell $(ECHO) 70*1024|$(BC))         # 50M
+MEMORY_LIMIT_LOW = $(shell $(ECHO) 70*1024|$(BC))         # 70M
 
 # build types
 BUILD_SUFFIXES = $(subst $() $(),|,-debug -gcov -gprof -valgrind)
@@ -541,15 +547,13 @@ help_output:
 	@$(ECHO) "  test7[$(HELP_SUFFIXES)], test_convert[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test8[$(HELP_SUFFIXES)], test_image[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test9[$(HELP_SUFFIXES)], test_storage[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav|optical)[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav|smb|optical|device)[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test10[$(HELP_SUFFIXES)], test_huge[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test11[$(HELP_SUFFIXES)], test_optical[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test12[$(HELP_SUFFIXES)], test_device[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test13[$(HELP_SUFFIXES)], test_index[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test14[$(HELP_SUFFIXES)], test_server[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test15_master[$(HELP_SUFFIXES)], test_master[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test15_slave[$(HELP_SUFFIXES)], test_slave[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test15_master_slave[$(HELP_SUFFIXES)], test_master_slave[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test11[$(HELP_SUFFIXES)], test_index[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test12[$(HELP_SUFFIXES)], test_server[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test13_master[$(HELP_SUFFIXES)], test_master[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test13_slave[$(HELP_SUFFIXES)], test_slave[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  test13_master_slave[$(HELP_SUFFIXES)], test_master_slave[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_combined[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_arguments[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  test_config[$(HELP_SUFFIXES)]"
@@ -727,7 +731,8 @@ functionCleanTestFiles = \
   $(if $(TEST_SSH_FILE_PATH),   $(FIND) $(TEST_SSH_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
   $(if $(TEST_SCP_FILE_PATH),   $(FIND) $(TEST_SCP_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
   $(if $(TEST_SFTP_FILE_PATH),  $(FIND) $(TEST_SFTP_FILE_PATH)   -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
-  $(if $(TEST_WEBDAV_FILE_PATH),$(FIND) $(TEST_WEBDAV_FILE_PATH) -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v; $(FIND) $(TEST_WEBDAV_FILE_PATH)) \
+  $(if $(TEST_WEBDAV_FILE_PATH),$(FIND) $(TEST_WEBDAV_FILE_PATH) -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
+  $(if $(TEST_SMB_FILE_PATH),   $(FIND) $(TEST_SMB_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
   $(CHMOD) o+w $(INTERMEDIATE_DIR) 2>/dev/null || true
 
 # helper function for test databases
@@ -757,7 +762,9 @@ functionDoneTestFiles = \
 # helper function to check valid exitcode
 # call functionTestCheckExitcode,<min. valid exitcode>,<max. valid exitcode>,<command>
 functionTestCheckExitcode = \
-  $3; rc=$$?; if test $$rc -lt $1 -o $$rc -gt $2; then \
+  $3; \
+  rc=$$?; \
+  if test $$rc -lt $1 -o $$rc -gt $2; then \
     $(ECHO) >&2 "ERROR: wrong exit code. Expected $1..$2, got $$rc"; \
     exit 1; \
   fi
@@ -1090,14 +1097,14 @@ TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foregroun
 .PHONY: $(call functionTestNames,test_storage_sftp           )
 .PHONY: $(call functionTestNames,test_storage_webdav         )
 .PHONY: $(call functionTestNames,test_storage_webdavs        )
+.PHONY: $(call functionTestNames,test_storage_smb            )
 .PHONY: $(call functionTestNames,test_storage_optical        )
+.PHONY: $(call functionTestNames,test_storage_device         )
 .PHONY: $(call functionTestNames,test_huge             test10)
-.PHONY: $(call functionTestNames,test_optical          test11)
-.PHONY: $(call functionTestNames,test_device           test12)
-.PHONY: $(call functionTestNames,test_index            test13)
-.PHONY: $(call functionTestNames,test_server           test14)
-.PHONY: $(addsuffix _master,$(call functionTestNames,test15))
-.PHONY: $(addsuffix _slave, $(call functionTestNames,test15))
+.PHONY: $(call functionTestNames,test_index            test11)
+.PHONY: $(call functionTestNames,test_server           test12)
+.PHONY: $(addsuffix _master,$(call functionTestNames,test13))
+.PHONY: $(addsuffix _slave, $(call functionTestNames,test13))
 .PHONY: $(call functionTestNames,test_combined)
 .PHONY: $(call functionTestNames,test_arguments)
 .PHONY: $(call functionTestNames,test_config)
@@ -1658,6 +1665,7 @@ test9 test_storage: \
            test_storage_sftp \
            test_storage_webdav \
            test_storage_webdavs \
+           test_storage_smb \
            test_storage_optical
 
 test9-debug test_storage-debug:
@@ -1771,6 +1779,7 @@ test_storage_scp: \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SCP_PORT) --ssh-login-name='$(TEST_SCP_LOGIN_NAME)' --ssh-password='$(TEST_SCP_PASSWORD)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_base \
           ;
+	@# with keys
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_SCP_HOST)/intermediate" \
           BAR_FILE="test" \
@@ -1945,7 +1954,6 @@ test_storage_webdavs-valgrind:
 
 test_storage_optical: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 11: optical)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -1953,7 +1961,47 @@ test_storage_optical: \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
           test_optical_operations \
           ;
-	@$(call functionInfoEnd,OK)
+
+test_storage_smb: \
+  $(TEST_BAR)
+	@$(ECHO) Info : TEST_SMB_HOST=$(TEST_SMB_HOST)
+	@$(call functionVerifyParameter,TEST_SMB_HOST,parameter TEST_SMB_HOST nor TEST_HOST set)
+	@$(call functionVerifyParameter,TEST_SMB_LOGIN_NAME,parameter TEST_SMB_LOGIN_NAME nor TEST_LOGIN_NAME set)
+	@$(call functionVerifyParameter,TEST_SMB_PASSWORD,parameter TEST_SMB_PASSWORD nor TEST_PASSWORD set)
+	$(MAKE) \
+          BAR_STORAGE="smb://$(TEST_SMB_HOST)/intermediate" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          test_file_operations_base \
+          ;
+# Note: it seems libsmb2 or the Samba server is not able to operate reliable with multiple threads
+#	$(MAKE) \
+#          BAR_STORAGE="smb://$(TEST_SMB_HOST)/intermediate" \
+#          BAR_FILE="test" \
+#          BAR_PATTERN="test" \
+#          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+#          test_file_operations_base \
+#          ;
+	$(MAKE) \
+          BAR_STORAGE="smb://$(TEST_SMB_HOST)/intermediate" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') $(OPTIONS)" \
+          test_directory_operations \
+          ;
+
+test_storage_smb-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_smb
+
+test_storage_smb-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_smb
+
+test_storage_smb-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_smb
+
+test_storage_smb-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_smb
 
 test_storage_optical-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_optical
@@ -1967,9 +2015,31 @@ test_storage_optical-gprof:
 test_storage_optical-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_optical
 
+test_storage_device: \
+  $(TEST_BAR)
+	@$(call functionInfoBegin,Test 11: device)
+	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test*" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          test_device_operations \
+          ;
+
+test_storage_device-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_device
+
+test_storage_device-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_device
+
+test_storage_device-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_device
+
+test_storage_device-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_device
+
 test10 test_huge: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 10: huge files)
 	for compress in $(TEST_COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -1997,54 +2067,7 @@ test10-gprof test_huge-gprof:
 test10-valgrind test_huge-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_huge
 
-test11 test_optical: \
-  $(TEST_BAR)
-	@$(call functionInfoBegin,Test 11: optical)
-	$(MAKE) \
-          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_optical_operations \
-          ;
-	@$(call functionInfoEnd,OK)
-
-test11-debug test_optical-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_optical
-
-test11-gcov test_optical-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_optical
-
-test11-gprof test_optical-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_optical
-
-test11-valgrind test_optical-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_optical
-
-test12 test_device: \
-  $(TEST_BAR)
-	@$(call functionInfoBegin,Test 12: device)
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_device_operations \
-          ;
-	@$(call functionInfoEnd,OK)
-
-test12-debug test_device-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_device
-
-test12-gcov test_device-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_device
-
-test12-gprof test_device-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_device
-
-test12-valgrind test_device-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_device
-
-test13 test_index: \
+test11 test_index: \
   $(TEST_BAR) \
   $(TEST_BAR_INDEX)
 	@$(call functionInfoBegin,Test 13: index)
@@ -2065,19 +2088,19 @@ test13 test_index: \
         done
 	@$(call functionInfoEnd,OK)
 
-test13-debug test_index-debug:
+test11-debug test_index-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index
 
-test13-gcov test_index-gcov:
+test11-gcov test_index-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index
 
-test13-gprof test_index-gprof:
+test11-gprof test_index-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index
 
-test13-valgrind test_index-valgrind:
+test11-valgrind test_index-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_DEBUG="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" test_index
 
-test14 test_server: \
+test12 test_server: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 14: server)
 	$(MAKE) \
@@ -2098,19 +2121,19 @@ test14 test_server: \
           ;
 	@$(call functionInfoEnd,OK)
 
-test14-debug test_server-debug:
+test12-debug test_server-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_server
 
-test14-gcov test_server-gcov:
+test12-gcov test_server-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_server
 
-test14-gprof test_server-gprof:
+test12-gprof test_server-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_server
 
-test14-valgrind test_server-valgrind:
+test12-valgrind test_server-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_server
 
-test15_master_slave test_master_slave: \
+test13_master_slave test_master_slave: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
@@ -2124,19 +2147,19 @@ test15_master_slave test_master_slave: \
           ;
 	@$(call functionInfoEnd,OK)
 
-test15_master_slave-debug test_master_slave-debug:
+test13_master_slave-debug test_master_slave-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_master_slave
 
-test15_master_slave-gcov test_master_slave-gcov:
+test13_master_slave-gcov test_master_slave-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_master_slave
 
-test15_master_slave-gprof test_master_slave-gprof:
+test13_master_slave-gprof test_master_slave-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_master_slave
 
-test15_master_slave-valgrind test_master_slave-valgrind:
+test13_master_slave-valgrind test_master_slave-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_master_slave
 
-test15_master test_master: \
+test13_master test_master: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
@@ -2150,19 +2173,19 @@ test15_master test_master: \
           ;
 	@$(call functionInfoEnd,OK)
 
-test15_master-debug test_master-debug:
+test13_master-debug test_master-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_master
 
-test15_master-gcov test_master-gcov:
+test13_master-gcov test_master-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_master
 
-test15_master-gprof test_master-gprof:
+test13_master-gprof test_master-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_master
 
-test15_master-valgrind test_master-valgrind:
+test13_master-valgrind test_master-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_master
 
-test15_slave test_slave: \
+test13_slave test_slave: \
   $(TEST_BAR) \
   $(TEST_SLAVE_CONFIG) \
   $(TEST_SLAVE_JOBS_DIRECTORY)
@@ -2176,16 +2199,16 @@ test15_slave test_slave: \
           ;
 	@$(call functionInfoEnd,OK)
 
-test15_slave-debug test_slave-debug:
+test13_slave-debug test_slave-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_slave
 
-test15_slave-gcov test_slave-gcov:
+test13_slave-gcov test_slave-gcov:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_slave
 
-test15_slave-gprof test_slave-gprof:
+test13_slave-gprof test_slave-gprof:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_slave
 
-test15_slave-valgrind test_slave-valgrind:
+test13_slave-valgrind test_slave-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_slave
 
 test_combined: \
@@ -2282,6 +2305,7 @@ test_arguments: \
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --sftp-password=$(TEST_SFTP_PASSWORD) sftp://test:test@test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --webdav-password=$(TEST_WEBDAV_PASSWORD) webdav://test:test@test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --webdav-password=$(TEST_WEBDAV_PASSWORD) webdavs://test:test@test/test.bar 2>/dev/null  $(LOG))
+	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --smb-password=$(TEST_SMB_PASSWORD) smb://test:test@test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) cd://test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) dvd://test/test.bar 2>/dev/null  $(LOG))
 	$(call functionTestCheckExitcode,0,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) bd://test/test.bar 2>/dev/null  $(LOG))
@@ -2834,13 +2858,15 @@ test_miscellaneous test_misc:
 	@$(call functionCleanTestFiles)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@#
+	# out of memory
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	$(call functionTestCheckExitcode,1,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --overwrite-archive-files 2>/dev/null $(LOG)))
 else
 	echo xxxxxxxxxx
 endif
-ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	@#
+ifeq ($(TEST_MOUNT_OPERATIONS),yes)
+	# mount
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2)
 	$(INSTALL) -d $(MOUNT_POINT0)
@@ -2858,6 +2884,7 @@ ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	@$(call functionDoneTestFiles)
 endif
 	@
+	# signals
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,132,132,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --log=all --log-file=$(INTERMEDIATE_DIR)/test.log --debug-create-signal=4 1>/dev/null 2>/dev/null))
@@ -3807,6 +3834,10 @@ $(TEST_CONFIG): \
           $(ECHO) "  webdav-password = foo"; \
           $(ECHO) "[end]"; \
           $(ECHO) ""; \
+          $(ECHO) "[smb-server foo]"; \
+          $(ECHO) "  smb-password = foo"; \
+          $(ECHO) "[end]"; \
+          $(ECHO) ""; \
           $(ECHO) "[device foo]"; \
           $(ECHO) "[end]"; \
           $(ECHO) ""; \
@@ -3964,14 +3995,14 @@ test_file_operations_base: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
-	$(call functionCleanTestFiles)
+	@$(call functionCleanTestFiles)
 	@# Note: create twice to test delete+create=overwrite
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
 #TODO: support archive-part-size
 #	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --compress-algorithm=zip9 $(LOG))
 	@#
-	$(call functionCleanTestFiles)
+	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)    $(BAR_STORAGE)/$(BAR_PATTERN).bar   $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)    '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG))
@@ -4168,7 +4199,7 @@ test_file_operations_incremental: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
-	$(call functionCleanTestFiles)
+	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-full.bar --full --incremental-list-file=$(BAR_STORAGE)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
 	$(INSTALL) -d $(BAR_STORAGE)/new; $(CP) data/random1024.dat $(BAR_STORAGE)/new/random1024-new.dat
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=$(BAR_STORAGE)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=2 $(LOG))
@@ -5668,7 +5699,7 @@ test_optical_operations: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# create optical
-	@$(call functionInfoHeader,test optical opertationsNEW)
+	@$(call functionInfoHeader,test optical opertations)
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
@@ -5713,7 +5744,9 @@ test_device_operations: \
   $(TEST_FILES)
 	# create device
 	@$(call functionInfoHeader,test device opertations)
+	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
+	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
 	@$(call functionCleanTestFiles)
 	$(SLEEP) $(TEST_DEVICE_SLEEP_TIME)
@@ -6383,6 +6416,7 @@ test_server_operations_batch: \
             $(SLEEP) 60; \
             $(call functionServerCommandBatch,SCHEDULE_TRIGGER jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
             $(call functionServerCommandBatch,SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
+            $(call functionServerCommandBatch,SCHEDULE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
             $(call functionServerCommandBatch,PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
             $(call functionServerCommandBatch,PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandBatch,PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
@@ -6655,6 +6689,7 @@ ifneq ($(SOCAT),)
             $(SLEEP) 60; \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_TRIGGER jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
+            $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SCHEUDLE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
             $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=normal minKeep=1 maxKeep=2 maxAge=3); \

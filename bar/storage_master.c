@@ -255,8 +255,6 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
 
   // free resources
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->master,StorageHandleMaster);
-
   return ERROR_NONE;
 }
 
@@ -279,11 +277,8 @@ return ERROR_STILL_NOT_IMPLEMENTED;
 LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
-
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,StorageHandleMaster);
 
   // Note: ignore error
   (void)ServerIO_executeCommand(storageHandle->storageInfo->masterIO,
@@ -299,7 +294,6 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
 LOCAL bool StorageMaster_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
@@ -316,7 +310,6 @@ LOCAL Errors StorageMaster_read(StorageHandle *storageHandle,
 //  Errors error;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
@@ -347,7 +340,6 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   uint       i;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
@@ -456,7 +448,6 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
   uint   i;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
@@ -594,7 +585,6 @@ LOCAL Errors StorageMaster_tell(StorageHandle *storageHandle,
 //  Errors error;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
   assert(offset != NULL);
@@ -611,7 +601,6 @@ LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
 //  Errors error;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
 
@@ -626,7 +615,6 @@ LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
 //  uint64 size;
 
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
 

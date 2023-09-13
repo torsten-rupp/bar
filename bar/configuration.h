@@ -538,8 +538,8 @@ void Configuration_doneFTPServerSettings(FTPServer *ftpServer);
 
 /***********************************************************************\
 * Name   : Configuration_initSSHServerSettings
-* Purpose: init device settings
-* Input  : sshServer  - SSh server variable
+* Purpose: init SSH server settings
+* Input  : sshServer  - SSH server variable
 *          hostName   - host name
 *          jobOptions - job options
 * Output : sshServer - SSH server
@@ -554,10 +554,10 @@ uint Configuration_initSSHServerSettings(SSHServer        *sshServer,
 
 /***********************************************************************\
 * Name   : Configuration_doneSSHServerSettings
-* Purpose: parse date week day set
-* Input  : names - day names to parse
-* Output : weekDaySet - week day set
-* Return : TRUE iff week day parsed
+* Purpose: done SSH server settings
+* Input  : -
+* Output : -
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
@@ -594,7 +594,7 @@ void Configuration_doneWebDAVServerSettings(WebDAVServer *webDAVServer);
 /***********************************************************************\
 * Name   : Configuration_initWebDAVSServerSettings
 * Purpose: init webDAVs server settings
-* Input  : webDAVServer - webDAV server variable
+* Input  : webDAVServer - webDAV server
 *          hostName     - host name
 *          jobOptions   - job options
 * Output : webDAVServer - webDAV server
@@ -618,6 +618,33 @@ uint Configuration_initWebDAVSServerSettings(WebDAVServer     *webDAVServer,
 \***********************************************************************/
 
 void Configuration_doneWebDAVSServerSettings(WebDAVServer *webDAVServer);
+
+/***********************************************************************\
+* Name   : Configuration_initSMBServerSettings
+* Purpose: init SMB/CIFS settings
+* Input  : smbServer  - SMB server variable
+*          hostName   - host name
+*          jobOptions - job options
+* Output : smbServer - SMB server
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+uint Configuration_initSMBServerSettings(SMBServer        *smbServer,
+                                         ConstString      hostName,
+                                         const JobOptions *jobOptions
+                                        );
+
+/***********************************************************************\
+* Name   : Configuration_doneSMBServerSettings
+* Purpose: done SMB/CIFS settings
+* Input  : smbServer - SMB server variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Configuration_doneSMBServerSettings(SMBServer *smbServer);
 
 /***********************************************************************\
 * Name   : Configuration_newServerNode

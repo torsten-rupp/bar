@@ -1496,7 +1496,7 @@ LOCAL void continuousThreadCode(void)
   error = Continuous_open(&databaseHandle);
   if (error != ERROR_NONE)
   {
-    printError("cannot initialise continuous database (error: %s)!",
+    printError("cannot initialize continuous database (error: %s)!",
                Error_getText(error)
               );
     String_delete(absoluteName);
@@ -2325,7 +2325,6 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
                                  const char     *scheduleUUID
                                 )
 {
-  assert(initFlag);
   assert(databaseHandle != NULL);
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));

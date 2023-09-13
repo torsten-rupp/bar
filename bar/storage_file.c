@@ -360,18 +360,32 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
 
   // create directory if not existing
   directoryName = File_getDirectoryName(String_new(),fileName);
-  if (!String_isEmpty(directoryName) && !File_exists(directoryName))
+  if (!String_isEmpty(directoryName))
   {
-    error = File_makeDirectory(directoryName,
-                               FILE_DEFAULT_USER_ID,
-                               FILE_DEFAULT_GROUP_ID,
-                               FILE_DEFAULT_PERMISSIONS,
-                               FALSE
-                              );
-    if (error != ERROR_NONE)
+    if (File_exists(directoryName))
     {
-      String_delete(directoryName);
-      return error;
+      // check if directory
+      if (!File_isDirectory(directoryName))
+      {
+        error = ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(directoryName));
+        String_delete(directoryName);
+        return error;
+      }
+    }
+    else
+    {
+      // create directory
+      error = File_makeDirectory(directoryName,
+                                 FILE_DEFAULT_USER_ID,
+                                 FILE_DEFAULT_GROUP_ID,
+                                 FILE_DEFAULT_PERMISSIONS,
+                                 FALSE
+                                );
+      if (error != ERROR_NONE)
+      {
+        String_delete(directoryName);
+        return error;
+      }
     }
   }
   String_delete(directoryName);
@@ -387,8 +401,6 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
   {
     return error;
   }
-
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,StorageHandleFileSystem);
 
   return ERROR_NONE;
 }
@@ -423,19 +435,14 @@ LOCAL Errors StorageFile_open(StorageHandle *storageHandle,
     return error;
   }
 
-  DEBUG_ADD_RESOURCE_TRACE(&storageHandle->fileSystem,StorageHandleFileSystem);
-
   return ERROR_NONE;
 }
 
 LOCAL void StorageFile_close(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
-
-  DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->fileSystem,StorageHandleFileSystem);
 
   switch (storageHandle->mode)
   {
@@ -456,7 +463,6 @@ LOCAL void StorageFile_close(StorageHandle *storageHandle)
 LOCAL bool StorageFile_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
@@ -471,7 +477,6 @@ LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
                              )
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
@@ -486,7 +491,6 @@ LOCAL Errors StorageFile_write(StorageHandle *storageHandle,
                               )
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
@@ -500,7 +504,6 @@ LOCAL Errors StorageFile_tell(StorageHandle *storageHandle,
                              )
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(offset != NULL);
@@ -515,7 +518,6 @@ LOCAL Errors StorageFile_seek(StorageHandle *storageHandle,
                              )
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
@@ -525,7 +527,6 @@ LOCAL Errors StorageFile_seek(StorageHandle *storageHandle,
 LOCAL uint64 StorageFile_getSize(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->fileSystem);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 

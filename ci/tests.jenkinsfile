@@ -4,16 +4,19 @@ DOCKER_IMAGE_NAME='bar:build'
 
 TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
                TEST_USER=jenkins \
-               TEST_LOGIN_NAME=jenkins TEST_PASSWORD=jenkins \
+               TEST_LOGIN_NAME=jenkins \
+               TEST_PASSWORD=jenkins \
                TEST_BASE_DIR=/home/jenkins \
                TEST_PUBLIC_KEY_SSH=/home/jenkins/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/jenkins/.ssh/id_rsa \
                TEST_MOUNT_OPERATIONS=no \
                TEST_FTP_FILE_PATH=/home/jenkins/intermediate \
                TEST_SCP_FILE_PATH=/home/jenkins/intermediate \
                TEST_WEBDAV_FILE_PATH=/var/www/intermediate \
+               TEST_SMB_SHARE=jenkins \
+               TEST_SMB_FILE_PATH=/home/jenkins/intermediate \
                "
 
-TEST_STEPS = ["basic",
+TEST_STEPSXXX = ["basic",
               "compress",
               "delta_compress",
               "crypt",
@@ -30,6 +33,7 @@ TEST_STEPS = ["basic",
               "storage_sftp",
               "storage_webdav",
               "storage_webdavs",
+              "storage_smb",
               "storage_optical",
               "index",
               "server",
@@ -37,6 +41,9 @@ TEST_STEPS = ["basic",
               "arguments",
               "config",
               "misc"
+             ];
+
+TEST_STEPS = ["storage_smb",
              ];
 
 // tests
@@ -60,7 +67,8 @@ def tests()
 
             // make (Note: avoid race condition in depend by not create dependencies in parallel)
             sh "make depend"
-            sh "make -j`nproc --ignore=1`"
+//            sh "make -j`nproc --ignore=1`"
+            sh "make -j1"
           }
         }
       }
@@ -124,6 +132,7 @@ def tests()
                     sh "sudo -n /etc/init.d/apache2 start"
                     sh "sudo -n /etc/init.d/ssh start"
                     sh "sudo -n /etc/init.d/vsftpd start"
+                    sh "sudo -n /etc/init.d/smbd start"
 
                     // work-around docker bug? Cannot create container with non-root files in it?
                     sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
@@ -131,9 +140,10 @@ def tests()
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                    sh "bash -o pipefail -c 'make test_smoke-"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'"
+                    sh "bash -o pipefail -c 'ulimit -c unlimited && make test_smoke-"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'"
 
                     // stop services
+                    sh "sudo -n /etc/init.d/smbd stop || true"
                     sh "sudo -n /etc/init.d/vsftpd stop || true"
                     sh "sudo -n /etc/init.d/ssh stop || true"
                     sh "sudo -n /etc/init.d/apache2 stop || true"
@@ -146,6 +156,7 @@ def tests()
                     sh "sudo -n /etc/init.d/apache2 start"
                     sh "sudo -n /etc/init.d/ssh start"
                     sh "sudo -n /etc/init.d/vsftpd start"
+                    sh "sudo -n /etc/init.d/smbd start"
 
                     // work-around docker bug? Cannot create container with non-root files in it?
                     sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
@@ -153,9 +164,10 @@ def tests()
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                    TEST_STEPS.each { step -> sh "bash -o pipefail -c 'make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'" }
+                    TEST_STEPS.each { step -> sh "bash -o pipefail -c 'ulimit -c unlimited && make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'" }
 
                     // stop services
+                    sh "sudo -n /etc/init.d/smbd stop || true"
                     sh "sudo -n /etc/init.d/vsftpd stop || true"
                     sh "sudo -n /etc/init.d/ssh stop || true"
                     sh "sudo -n /etc/init.d/apache2 stop || true"
@@ -182,6 +194,7 @@ def tests()
                 sh "sudo -n /etc/init.d/apache2 start"
                 sh "sudo -n /etc/init.d/ssh start"
                 sh "sudo -n /etc/init.d/vsftpd start"
+                sh "sudo -n /etc/init.d/smbd start"
 
                 // work-around docker bug? Cannot create container with non-root files in it?
                 sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
@@ -192,6 +205,7 @@ def tests()
                 sh "bash -o pipefail -c 'make test_smoke-valgrind "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test-valgrind.log'"
 
                 // stop services
+                sh "sudo -n /etc/init.d/smbd stop || true"
                 sh "sudo -n /etc/init.d/vsftpd stop || true"
                 sh "sudo -n /etc/init.d/ssh stop || true"
                 sh "sudo -n /etc/init.d/apache2 stop || true"
@@ -215,16 +229,18 @@ def tests()
                 sh "sudo -n /etc/init.d/apache2 start"
                 sh "sudo -n /etc/init.d/ssh start"
                 sh "sudo -n /etc/init.d/vsftpd start"
+                sh "sudo -n /etc/init.d/smbd start"
 
                 // work-around docker bug? Cannot create container with non-root files in it?
                 sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
                 sh "sudo -n /bin/chown -R test:test /var/www"
 
                 sh "make -C bar gcov_clean"
-                TEST_STEPS.each { step -> sh "make -C bar gcov_${step}"+" "+TEST_SETTINGS+"" }
+                TEST_STEPS.each { step -> sh "ulimit -c unlimited && make -C bar gcov_${step}"+" "+TEST_SETTINGS+"" }
                 sh "make -C bar gcov_html"
 
                 // stop services
+                sh "sudo -n /etc/init.d/smbd stop || true"
                 sh "sudo -n /etc/init.d/vsftpd stop || true"
                 sh "sudo -n /etc/init.d/ssh stop || true"
                 sh "sudo -n /etc/init.d/apache2 stop || true"
@@ -258,15 +274,17 @@ def tests()
                 sh "sudo -n /etc/init.d/apache2 start"
                 sh "sudo -n /etc/init.d/ssh start"
                 sh "sudo -n /etc/init.d/vsftpd start"
+                sh "sudo -n /etc/init.d/smbd start"
 
                 // work-around docker bug? Cannot create container with non-root files in it?
                 sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
                 sh "sudo -n /bin/chown -R test:test /var/www"
 
                 sh "make -C bar gprof_clean"
-                TEST_STEPS.each { step -> sh "make -C bar gprof_${step}"+" "+TEST_SETTINGS+"" }
+                TEST_STEPS.each { step -> sh "ulimit -c unlimited && make -C bar gprof_${step}"+" "+TEST_SETTINGS+"" }
 
                 // stop services
+                sh "sudo -n /etc/init.d/smbd stop || true"
                 sh "sudo -n /etc/init.d/vsftpd stop || true"
                 sh "sudo -n /etc/init.d/ssh stop || true"
                 sh "sudo -n /etc/init.d/apache2 stop || true"
@@ -284,7 +302,7 @@ def tests()
 //      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log', allowEmptyArchive: true
 //sh "ps auxw"
 //sh "ls -la /var/log"
-      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log, core*', allowEmptyArchive: true
     }
 
     cleanWs notFailBuild: true

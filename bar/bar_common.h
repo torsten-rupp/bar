@@ -244,6 +244,7 @@ typedef enum
   PASSWORD_TYPE_FTP,
   PASSWORD_TYPE_SSH,
   PASSWORD_TYPE_WEBDAV,
+  PASSWORD_TYPE_SMB,
   PASSWORD_TYPE_DATABASE
 } PasswordTypes;
 
@@ -543,6 +544,14 @@ typedef struct
   Key              privateKey;                                // private key data
 } WebDAVServer;
 
+// SMB/CIFS server settings
+typedef struct
+{
+  String           loginName;                                 // login name
+  Password         password;                                  // login password
+  String           share;                                     // share name
+} SMBServer;
+
 // server types
 typedef enum
 {
@@ -552,7 +561,8 @@ typedef enum
   SERVER_TYPE_FTP,
   SERVER_TYPE_SSH,
   SERVER_TYPE_WEBDAV,
-  SERVER_TYPE_WEBDAVS
+  SERVER_TYPE_WEBDAVS,
+  SERVER_TYPE_SMB
 } ServerTypes;
 
 // server
@@ -567,6 +577,7 @@ typedef struct
     FTPServer    ftp;
     SSHServer    ssh;
     WebDAVServer webDAV;
+    SMBServer    smb;
   };
   uint        maxConnectionCount;                             // max. number of concurrent connections or MAX_CONNECTION_COUNT_UNLIMITED
   uint64      maxStorageSize;                                 // max. number of bytes to store on server
@@ -633,6 +644,13 @@ typedef struct
   String writePreProcessCommand;                              // command to execute before writing
   String writePostProcessCommand;                             // command to execute after writing
 } WebDAV;
+
+// SMB/CIFS settings
+typedef struct
+{
+  String writePreProcessCommand;                              // command to execute before writing
+  String writePostProcessCommand;                             // command to execute after writing
+} SMB;
 
 // optical disk settings
 typedef struct
@@ -798,7 +816,7 @@ typedef struct
 
   BandWidthList               maxBandWidthList;               // list of max. send/receive bandwidth to use [bits/s]
 
-  ServerList                  serverList;                     // list with FTP/SSH/WebDAV servers
+  ServerList                  serverList;                     // list with FTP/SSH/WebDAV/SMB servers
   DeviceList                  deviceList;                     // list with devices
 
   Server                      defaultFileServer;
@@ -806,6 +824,7 @@ typedef struct
   Server                      defaultSSHServer;
   Server                      defaultWebDAVServer;
   Server                      defaultWebDAVSServer;
+  Server                      defaultSMBServer;
   Device                      defaultDevice;
 
   const char                  *indexDatabaseURI;
@@ -854,7 +873,7 @@ typedef struct
                                                                    3 - external programs
                                                                    4 - stdout+stderr of external programs
                                                                    5 - some SSH debug debug
-                                                                   6 - all SSH/FTP/WebDAV debug
+                                                                   6 - all SSH/FTP/WebDAV/SMB debug
                                                               */
 
   // --- run options
@@ -960,6 +979,7 @@ typedef struct
   Server                      *ftpServer;                     // current selected FTP server
   Server                      *sshServer;                     // current selected SSH server
   Server                      *webDAVServer;                  // current selected WebDAV server
+  Server                      *smbServer;                     // current selected SMB/CIFS server
   Device                      *device;                        // current selected device
 
   String                      comment;                        // comment
@@ -974,6 +994,7 @@ typedef struct
   SCP                         scp;                            // scp settings
   SFTP                        sftp;                           // sftp settings
   WebDAV                      webdav;                         // WebDAV settings
+  SMB                         smb;                            // SMB/CIFS settings
   OpticalDisk                 cd;                             // CD settings
   OpticalDisk                 dvd;                            // DVD settings
   OpticalDisk                 bd;                             // BD settings
@@ -1000,7 +1021,7 @@ typedef struct
     bool                      showChunkIdsFlag;               // TRUE to show chunk ids only
 
     uint                      createArchiveErrors;            // number of errors in created archive
-    bool                      createSignal;                   // signal to create
+    uint                      createSignal;                   // signal to create
 
     uint                      serverLevel;                    // server debug level (for debug only)
     bool                      serverFixedIdsFlag;             // always generate id=1

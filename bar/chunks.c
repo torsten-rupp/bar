@@ -2688,7 +2688,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       size = chunkInfo->io->getSize(chunkInfo->ioUserData);
       if ((size >= 0LL) && (chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size > (uint64)size))
       {
-        return ERROR_INVALID_CHUNK_SIZE;
+       return ERROR_INVALID_CHUNK_SIZE;
       }
 
       // seek to end of chunk

@@ -1881,11 +1881,13 @@ LOCAL void initGlobalOptions(void)
   Configuration_initServer(&globalOptions.defaultSSHServer,NULL,SERVER_TYPE_SSH);
   Configuration_initServer(&globalOptions.defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
   Configuration_initServer(&globalOptions.defaultWebDAVSServer,NULL,SERVER_TYPE_WEBDAVS);
+  Configuration_initServer(&globalOptions.defaultSMBServer,NULL,SERVER_TYPE_SMB);
   initDevice(&globalOptions.defaultDevice,NULL);
   globalOptions.fileServer                                      = &globalOptions.defaultFileServer;
   globalOptions.ftpServer                                       = &globalOptions.defaultFTPServer;
   globalOptions.sshServer                                       = &globalOptions.defaultSSHServer;
   globalOptions.webDAVServer                                    = &globalOptions.defaultWebDAVServer;
+  globalOptions.smbServer                                       = &globalOptions.defaultSMBServer;
   globalOptions.device                                          = &globalOptions.defaultDevice;
 
   globalOptions.comment                                         = NULL;
@@ -1903,6 +1905,9 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.sftp.writePreProcessCommand                     = NULL;
   globalOptions.sftp.writePostProcessCommand                    = NULL;
+
+  globalOptions.smb.writePreProcessCommand                      = NULL;
+  globalOptions.smb.writePostProcessCommand                     = NULL;
 
   globalOptions.cd.deviceName                                   = String_newCString(DEFAULT_CD_DEVICE_NAME);
   globalOptions.cd.requestVolumeCommand                         = NULL;
@@ -2049,6 +2054,9 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.cd.requestVolumeCommand);
   String_delete(globalOptions.cd.deviceName);
 
+  String_delete(globalOptions.smb.writePostProcessCommand);
+  String_delete(globalOptions.smb.writePreProcessCommand);
+
   String_delete(globalOptions.sftp.writePostProcessCommand);
   String_delete(globalOptions.sftp.writePreProcessCommand);
 
@@ -2066,6 +2074,7 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.comment);
 
   doneDevice(&globalOptions.defaultDevice);
+  Configuration_doneServer(&globalOptions.defaultSMBServer);
   Configuration_doneServer(&globalOptions.defaultWebDAVSServer);
   Configuration_doneServer(&globalOptions.defaultWebDAVServer);
   Configuration_doneServer(&globalOptions.defaultSSHServer);
@@ -3585,7 +3594,7 @@ LOCAL void *configValueServerWebDAVSectionDataIterator(ConfigValueSectionDataIte
 }
 
 /***********************************************************************\
-* Name   : configValueServerWebDAVSSectionIteratorNext
+* Name   : configValueServerWebDAVSSectionDataIterator
 * Purpose: get next WebDAVS server node
 * Input  : sectionDataIterator - section data iterator
 *          operation           - operation code; see ConfigValueOperations
@@ -3603,6 +3612,27 @@ LOCAL void *configValueServerWebDAVSSectionDataIterator(ConfigValueSectionDataIt
   UNUSED_VARIABLE(userData);
 
   return configValueServerSectionIterator(sectionDataIterator,SERVER_TYPE_WEBDAVS,operation,data,userData);
+}
+
+/***********************************************************************\
+* Name   : configValueServerSMBSectionDataIterator
+* Purpose: get next SMB/CIFS server node
+* Input  : sectionDataIterator - section data iterator
+*          operation           - operation code; see ConfigValueOperations
+*          data                - operation data
+*          userData            - user data
+* Output : next section data or NULL
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void *configValueServerSMBSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData)
+{
+  assert(sectionDataIterator != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  return configValueServerSectionIterator(sectionDataIterator,SERVER_TYPE_SMB,operation,data,userData);
 }
 
 /***********************************************************************\
@@ -7713,6 +7743,61 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
         Configuration_deleteServerNode(serverNode);
       }
     }
+    else if (String_parse(line,STRING_BEGIN,"[smb-server %S]",NULL,name))
+    {
+      uint       i,firstValueIndex,lastValueIndex;
+      ServerNode *serverNode;
+
+      // parse ftp-server section
+
+      // find section
+      i = ConfigValue_findSection(CONFIG_VALUES,
+                                  "smb-server",
+                                  &firstValueIndex,
+                                  &lastValueIndex
+                                 );
+      assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'smb-server'");
+      UNUSED_VARIABLE(i);
+
+      // find/allocate server node
+      serverNode = NULL;
+      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                            serverNode,
+                                               (serverNode->server.type == SERVER_TYPE_SMB)
+                                            && String_equals(serverNode->server.name,name)
+                                           );
+        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+      }
+      if (serverNode == NULL) serverNode = Configuration_newServerNode(name,SERVER_TYPE_SMB);
+      assert(serverNode != NULL);
+      assert(serverNode->server.type == SERVER_TYPE_SMB);
+      StringList_move(&serverNode->server.commentList,&commentList);
+
+      // read config section
+      error = readConfigFileSection(fileName,
+                                    &fileHandle,
+                                    &lineNb,
+                                    "smb-server",
+                                    firstValueIndex,
+                                    lastValueIndex,
+                                    printInfoFlag,
+                                    serverNode
+                                   );
+      if (error == ERROR_NONE)
+      {
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&globalOptions.serverList,serverNode);
+        }
+      }
+      else
+      {
+        Configuration_deleteServerNode(serverNode);
+      }
+    }
     else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
     {
       uint       i,firstValueIndex,lastValueIndex;
@@ -8065,6 +8150,13 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 //TODO
 //  CMD_OPTION_INTEGER64    ("webdav-max-storage-size",           0,  0,2,defaultWebDAVServer.maxStorageSize,                  0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on WebDAV server"                           ),
 
+  CMD_OPTION_STRING       ("smb-login-name",                    0,  0,2,globalOptions.defaultSMBServer.smb.loginName,                                                                     "SMB/CIFS login name","name"                                               ),
+  CMD_OPTION_SPECIAL      ("smb-password",                      0,  0,2,&globalOptions.defaultSMBServer.smb.password,        cmdOptionParsePassword,NULL,1,                               "SMB/CIFS password (use with care!)","password"                            ),
+  CMD_OPTION_STRING       ("smb-share",                         0,  0,2,globalOptions.defaultSMBServer.smb.share,                                                                         "SMB/CIFS share name","name"                                               ),
+  CMD_OPTION_INTEGER      ("smb-max-connections",               0,  0,2,globalOptions.defaultSMBServer.maxConnectionCount,   0,MAX_INT,NULL,                                              "max. number of concurrent ftp connections"                                ),
+//TODO
+//  CMD_OPTION_INTEGER64    ("smb-max-storage-size",              0,  0,2,defaultSMBServer.maxStorageSize,                   NULL,0LL,MAX_INT64,NULL,                                       "max. number of bytes to store on SMB/CIFS server"                         ),
+
   CMD_OPTION_BOOLEAN      ("server",                            0,  1,0,globalOptions.serverFlag,                                                                                         "run in server mode"                                                       ),
   CMD_OPTION_BOOLEAN      ("daemon",                            0,  1,0,globalOptions.daemonFlag,                                                                                         "run in server daemon mode"                                                ),
   CMD_OPTION_BOOLEAN      ("no-detach",                         'D',1,0,globalOptions.noDetachFlag,                                                                                       "do not detach in daemon mode"                                             ),
@@ -8103,6 +8195,9 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
   CMD_OPTION_STRING       ("webdav-write-pre-command",          0,  1,1,globalOptions.webdav.writePreProcessCommand,                                                                      "write WebDAV pre-process command","command"                               ),
   CMD_OPTION_STRING       ("webdav-write-post-command",         0,  1,1,globalOptions.webdav.writePostProcessCommand,                                                                     "write WebDAV post-process command","command"                              ),
+
+  CMD_OPTION_STRING       ("smb-write-pre-command",             0,  1,1,globalOptions.smb.writePreProcessCommand,                                                                         "write SMB/CIFS pre-process command","command"                             ),
+  CMD_OPTION_STRING       ("smb-write-post-command",            0,  1,1,globalOptions.smb.writePostProcessCommand,                                                                        "write SMB/CIFS post-process command","command"                            ),
 
   CMD_OPTION_STRING       ("cd-device",                         0,  1,1,globalOptions.cd.deviceName,                                                                                      "default CD device","device name"                                          ),
   CMD_OPTION_STRING       ("cd-request-volume-command",         0,  1,1,globalOptions.cd.requestVolumeCommand,                                                                            "request new CD volume command","command"                                  ),
@@ -8505,6 +8600,11 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("webdav-write-pre-command",         &globalOptions.webdav.writePreProcessCommand,-1,               "<command>"),
   CONFIG_VALUE_STRING            ("webdav-write-post-command",        &globalOptions.webdav.writePostProcessCommand,-1,              "<command>"),
   CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_COMMENT("smb"),
+  CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_STRING            ("smb-write-pre-command",            &globalOptions.smb.writePreProcessCommand,-1,                  "<command>"),
+  CONFIG_VALUE_STRING            ("smb-write-post-command",           &globalOptions.smb.writePostProcessCommand,-1,                 "<command>"),
+  CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_COMMENT("CD"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_STRING            ("cd-device",                        &globalOptions.cd.deviceName,-1,                               "<command>"),
@@ -8650,6 +8750,27 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_INTEGER64("webdav-max-storage-size",          ServerNode,server.maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
     CONFIG_STRUCT_VALUE_STRING   ("webdav-write-pre-command",         ServerNode,server.writePreProcessCommand,                                 "<command>"),
     CONFIG_STRUCT_VALUE_STRING   ("webdav-write-post-command",        ServerNode,server.writePostProcessCommand,                                "<command>"),
+  ),
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_VALUE_SEPARATOR("smb settings"),
+  CONFIG_VALUE_SPACE(),
+// TODO: enable
+//  CONFIG_VALUE_COMMENT("default values"),
+  CONFIG_VALUE_STRING            ("smb-login-name",                   &globalOptions.defaultSMBServer.smb.loginName,-1,                            "<name>"),
+  CONFIG_VALUE_SPECIAL           ("smb-password",                     &globalOptions.defaultSMBServer.smb.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_VALUE_STRING            ("smb-share",                        &globalOptions.defaultSMBServer.smb.share,-1,                                "<name>"),
+  CONFIG_VALUE_INTEGER           ("smb-max-connections",              &globalOptions.defaultSMBServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER64         ("smb-max-storage-size",             &globalOptions.defaultSMBServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
+  CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_SECTION_ARRAY     ("smb-server",&globalOptions.serverList,-1,configValueServerSMBSectionDataIterator,NULL,
+    CONFIG_STRUCT_VALUE_STRING   ("smb-login-name",                   ServerNode,server.smb.loginName,                                          "<name>"),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("smb-password",                     ServerNode,server.smb.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
+    CONFIG_STRUCT_VALUE_STRING   ("smb-share",                        ServerNode,server.smb.share,                                              "<name>"),
+    CONFIG_STRUCT_VALUE_INTEGER  ("smb-max-connections",              ServerNode,server.maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("smb-max-storage-size",             ServerNode,server.maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("smb-write-pre-command",            ServerNode,server.writePreProcessCommand,                                 "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("smb-write-post-command",           ServerNode,server.writePostProcessCommand,                                "<command>"),
   ),
   CONFIG_VALUE_SPACE(),
 
@@ -8805,6 +8926,11 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-password",              JobNode,job.options.sshServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-public-key",            JobNode,job.options.sshServer.publicKey,         configValueSSHKeyParse,configValueKeyFormat,NULL),
   CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueSSHKeyParse,configValueKeyFormat,NULL),
+
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_STRUCT_VALUE_STRING      ("smb-login-name",            JobNode,job.options.smbServer.loginName          ,"<name>"),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("smb-password",              JobNode,job.options.smbServer.password,          configValuePasswordParse,configValuePasswordFormat,NULL),
 
   CONFIG_VALUE_SPACE(),
 
@@ -9380,6 +9506,11 @@ void Configuration_initServer(Server *server, ConstString name, ServerTypes serv
       Configuration_initKey(&server->webDAV.publicKey);
       Configuration_initKey(&server->webDAV.privateKey);
       break;
+    case SERVER_TYPE_SMB:
+      server->smb.loginName = String_new();
+      Password_init(&server->smb.password);
+      server->smb.share = String_new();
+      break;
     #ifndef NDEBUG
       default:
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -9419,6 +9550,11 @@ void Configuration_doneServer(Server *server)
       Configuration_doneKey(&server->webDAV.publicKey);
       Password_done(&server->webDAV.password);
       String_delete(server->webDAV.loginName);
+      break;
+    case SERVER_TYPE_SMB:
+      String_delete(server->smb.share);
+      Password_done(&server->smb.password);
+      String_delete(server->smb.loginName);
       break;
     #ifndef NDEBUG
       default:
@@ -9750,6 +9886,69 @@ void Configuration_doneWebDAVSServerSettings(WebDAVServer *webDAVServer)
   Configuration_doneKey(&webDAVServer->publicKey);
   Password_done(&webDAVServer->password);
   String_delete(webDAVServer->loginName);
+}
+
+uint Configuration_initSMBServerSettings(SMBServer        *smbServer,
+                                         ConstString      hostName,
+                                         const JobOptions *jobOptions
+                                        )
+{
+  const ServerNode *serverNode;
+
+  assert(smbServer != NULL);
+  assert(hostName != NULL);
+
+  smbServer->loginName = String_new();
+  Password_init(&smbServer->password);
+  smbServer->share = String_new();
+
+  serverNode = NULL;
+  SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  {
+    // find SMB server
+    serverNode = LIST_FIND(&globalOptions.serverList,
+                           serverNode,
+                              (serverNode->server.type == SERVER_TYPE_SMB)
+                           && String_equals(serverNode->server.name,hostName)
+                          );
+
+    // get SMB server settings
+    String_set(smbServer->loginName,
+               ((jobOptions != NULL) && !String_isEmpty(jobOptions->smbServer.loginName) )
+                 ? jobOptions->smbServer.loginName
+                 : ((serverNode != NULL)
+                      ? serverNode->server.smb.loginName
+                      : globalOptions.defaultSMBServer.smb.loginName
+                   )
+              );
+    Password_set(&smbServer->password,
+                 ((jobOptions != NULL) && !Password_isEmpty(&jobOptions->smbServer.password))
+                   ? &jobOptions->smbServer.password
+                   : ((serverNode != NULL)
+                        ? &serverNode->server.smb.password
+                        : &globalOptions.defaultSMBServer.smb.password
+                     )
+                );
+    String_set(smbServer->share,
+               ((jobOptions != NULL) && !String_isEmpty(jobOptions->smbServer.share) )
+                 ? jobOptions->smbServer.share
+                 : ((serverNode != NULL)
+                      ? serverNode->server.smb.share
+                      : globalOptions.defaultSMBServer.smb.share
+                   )
+              );
+  }
+
+  return (serverNode != NULL) ? serverNode->server.id : 0;
+}
+
+void Configuration_doneSMBServerSettings(SMBServer *smbServer)
+{
+  assert(smbServer != NULL);
+
+  String_delete(smbServer->share);
+  Password_done(&smbServer->password);
+  String_delete(smbServer->loginName);
 }
 
 ServerNode *Configuration_newServerNode(ConstString name, ServerTypes serverType)

@@ -8,8 +8,6 @@
 *
 \***********************************************************************/
 
-#define __STORAGE_IMPLEMENTATION__
-
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
@@ -101,7 +99,6 @@ LOCAL LIBSSH2_SEND_FUNC(scpSendCallback)
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   assert(storageHandle->scp.oldSendCallback != NULL);
 
   n = storageHandle->scp.oldSendCallback(socket,buffer,length,flags,abstract);
@@ -135,7 +132,6 @@ LOCAL LIBSSH2_RECV_FUNC(scpReceiveCallback)
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
-  DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   assert(storageHandle->scp.oldReceiveCallback != NULL);
 
   n = storageHandle->scp.oldReceiveCallback(socket,buffer,length,flags,abstract);
@@ -971,8 +967,6 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
     storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
-
     // open channel and file for writing
     #ifdef HAVE_SSH2_SCP_SEND64
       storageHandle->scp.channel = libssh2_scp_send64(Network_getSSHSession(&storageHandle->scp.socketHandle),
@@ -999,7 +993,6 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                       "%s",
                       sshErrorText
                      );
-      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
       Network_disconnect(&storageHandle->scp.socketHandle);
@@ -1081,8 +1074,6 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
     storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
     storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
 
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
-
     // open channel and file for reading
     storageHandle->scp.channel = libssh2_scp_recv2(Network_getSSHSession(&storageHandle->scp.socketHandle),
                                                    String_cString(archiveName),
@@ -1098,7 +1089,6 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
                       "%s",
                       sshErrorText
                      );
-      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
       Network_disconnect(&storageHandle->scp.socketHandle);
@@ -1122,16 +1112,10 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
     int result;
   #endif /* HAVE_SSH2 */
 
-  #ifdef HAVE_SSH2
-  assert(storageHandle != NULL);
-    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
-  #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
   #ifdef HAVE_SSH2
-    DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
-
     libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
     libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
 
@@ -1199,9 +1183,6 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
 LOCAL bool StorageSCP_eof(StorageHandle *storageHandle)
 {
   assert(storageHandle != NULL);
-  #ifdef HAVE_SSH2
-    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
-  #endif /* HAVE_SSH2 */
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
@@ -1232,15 +1213,13 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
-  #ifdef HAVE_SSH2
-    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
-  #endif /* HAVE_SSH2 */
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(buffer != NULL);
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
+
   #ifdef HAVE_SSH2
     assert(storageHandle->scp.channel != NULL);
     assert(storageHandle->scp.readAheadBuffer.data != NULL);
@@ -1390,9 +1369,6 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
-  #ifdef HAVE_SSH2
-    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
-  #endif /* HAVE_SSH2 */
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
@@ -1499,9 +1475,6 @@ LOCAL uint64 StorageSCP_getSize(StorageHandle *storageHandle)
   uint64 size;
 
   assert(storageHandle != NULL);
-  #ifdef HAVE_SSH2
-    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
-  #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
@@ -1522,9 +1495,6 @@ LOCAL Errors StorageSCP_tell(StorageHandle *storageHandle,
   Errors error;
 
   assert(storageHandle != NULL);
-  #ifdef HAVE_SSH2
-    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
-  #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(offset != NULL);
@@ -1555,9 +1525,6 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
-  #ifdef HAVE_SSH2
-    DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
-  #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
@@ -1716,9 +1683,6 @@ LOCAL Errors StorageSCP_delete(const StorageInfo *storageInfo,
   Errors      error;
 
   assert(storageInfo != NULL);
-  #ifdef HAVE_SSH2
-    DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-  #endif /* HAVE_SSH2 */
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(archiveName));
 

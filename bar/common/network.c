@@ -443,7 +443,7 @@ fprintf(stderr,"%s:%d: t=%p %d\n",__FILE__,__LINE__,t,t->size); t++; fprintf(std
 
 /***********************************************************************\
 * Name   : initTLS
-* Purpose: initialise TLS/SSL session
+* Purpose: initialize TLS/SSL session
 * Input  : socketHandle - socket handle
 *          tlsType      - TLS type; see NETWORK_TLS_TYPE_...
 *          caData       - TLS CA data or NULL (PEM encoded)
@@ -828,6 +828,7 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
         UNUSED_VARIABLE(publicKeyLength);
         UNUSED_VARIABLE(privateKeyData);
         UNUSED_VARIABLE(privateKeyLength);
+        UNUSED_VARIABLE(timeout);
 
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GNU_TLS */
@@ -1963,12 +1964,14 @@ Errors Network_startTLS(SocketHandle    *socketHandle,
     return ERROR_NONE;
   #else /* not HAVE_GNU_TLS */
     UNUSED_VARIABLE(socketHandle);
+    UNUSED_VARIABLE(tlsType);
     UNUSED_VARIABLE(caData);
     UNUSED_VARIABLE(caLength);
     UNUSED_VARIABLE(certData);
     UNUSED_VARIABLE(certLength);
     UNUSED_VARIABLE(keyData);
     UNUSED_VARIABLE(keyLength);
+    UNUSED_VARIABLE(timeout);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GNU_TLS */
@@ -2043,6 +2046,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
         UNUSED_VARIABLE(socketHandle);
         UNUSED_VARIABLE(serverSocketHandle);
         UNUSED_VARIABLE(socketFlags);
+        UNUSED_VARIABLE(timeout);
 
         disconnectDescriptor(serverSocketHandle->handle);
 

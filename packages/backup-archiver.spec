@@ -60,7 +60,6 @@ creating automated backups in the background.
 %configure  \
   --enable-extern-check \
   --disable-crashdump \
-  --disable-epm \
   %ADDITIONAL_CONFIGURE_FLAGS
 %{__make} OPTFLAGS="%{optflags}" -C bar %{?_smp_mflags} all
 %{__make} OPTFLAGS="%{optflags}" all

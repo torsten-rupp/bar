@@ -1142,6 +1142,7 @@ uint64 Misc_makeDateTime(TimeTypes           timeType,
   assert(minute <= 59);
   assert(second <= 59);
 
+  memClear(&tm,sizeof(tm));
   tm.tm_year = year - 1900;
   tm.tm_mon  = month - 1;
   tm.tm_mday = day;
@@ -1167,16 +1168,15 @@ uint64 Misc_makeDateTime(TimeTypes           timeType,
       break;
     case TIME_TYPE_LOCAL:
       #if   defined(PLATFORM_LINUX)
-        dateTime = timelocal(&tm);
+        dateTime = mktime(&tm);
       #elif defined(PLATFORM_WINDOWS)
         dateTime = mktime(&tm);
       #endif /* PLATFORM_... */
       break;
   }
-  assert(dateTime != (time_t)(-1));
-  if (dateTime == (time_t)(-1)) dateTime = 0LL;  // avoid invalid date
+  if (dateTime < (time_t)0) dateTime = 0LL;  // avoid negative/invalid date/time
 
-  return dateTime;
+  return (uint64)dateTime;
 }
 
 void Misc_udelay(uint64 time)

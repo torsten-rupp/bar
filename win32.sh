@@ -38,7 +38,7 @@ fi
    --disable-iso9660 \
    --disable-bfd \
 --disable-lzma \
---disable-epm \
+--disable-smbclient \
    "$@";
 )
 if test $? -ne 0; then

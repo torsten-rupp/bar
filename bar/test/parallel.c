@@ -139,7 +139,18 @@ int main(int argc, const char* argv[])
   // wait for last process
   if (waitpid(pids[pidCount-1],&status,0) != -1)
   {
-    exitCode = WEXITSTATUS(status);
+    if      (WIFSIGNALED(status))
+    {
+      exitCode = 128+WTERMSIG(status);
+    }
+    else if (WIFEXITED(status))
+    {
+      exitCode = WEXITSTATUS(status);
+    }
+    else
+    {
+      exitCode = 0;
+    }
   }
   else
   {
@@ -158,33 +169,10 @@ int main(int argc, const char* argv[])
       n--;
     }
 
-    if (n > 0)
-    {
-      if (WIFEXITED(status))
-      {
-        if (exitCode == 0)
-        {
-          exitCode = WEXITSTATUS(status);
-        }
-      }
-      else
-      {
-        kill(pids[i],SIGKILL);
-        waitpid(pids[i],&status,0);
-        if (exitCode == 0)
-        {
-          exitCode = WEXITSTATUS(status);
-        }
-      }
-    }
-    else
+    if ((n == 0) || !WIFEXITED(status))
     {
       kill(pids[i],SIGKILL);
       waitpid(pids[i],&status,0);
-      if (exitCode == 0)
-      {
-        exitCode = WEXITSTATUS(status);
-      }
     }
   }
 

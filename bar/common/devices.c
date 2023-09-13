@@ -711,6 +711,7 @@ void Device_closeDeviceList(DeviceListHandle *deviceListHandle)
 
     fclose(deviceListHandle->file);
   #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(deviceListHandle);
   #endif /* PLATFORM_... */
 }
 
@@ -1246,6 +1247,10 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
     }
   #elif defined(PLATFORM_WINDOWS)
 // TODO: NYI
+UNUSED_VARIABLE(debugEmulateBlockDevice);
+UNUSED_VARIABLE(stringTokenizer);
+UNUSED_VARIABLE(emulateDeviceName);
+UNUSED_VARIABLE(emulateFileName);
     deviceInfo->mounted = TRUE;
   #endif /* PLATFORM_... */
 

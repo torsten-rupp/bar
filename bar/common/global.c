@@ -454,14 +454,15 @@ void __abortAt(const char *fileName,
 * Notes  : Some older GCC versions do not implement
 *          __sync_add_and_fetch() on 32bit. This is a replacement.
 \***********************************************************************/
-uint __sync_add_and_fetch_4(uint *p, uint n)
+
+uint __sync_add_and_fetch_4(void *p, uint n)
 {
   uint x;
 
   pthread_mutex_lock(&syncLock);
   {
-    (*p) += n;
-    x = (*p);
+    (*((int32_t*)p)) += n;
+    x = (*(int32_t*)p));
   }
   pthread_mutex_unlock(&syncLock);
 
