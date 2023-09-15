@@ -1,3 +1,4 @@
+dnl --------------------------------------------------------------------
 dnl
 dnl $Source: /home/torsten/cvs/bar/configure.in,v $
 dnl $Revision: 11560 $
@@ -175,7 +176,7 @@ EOF
 ])
 
 dnl --- get constant (define)
-dnl usage: AC_CONSTANT_VALUE(<text>,<variable>,<includes>,<source>,[<trim characters>])
+dnl usage: AC_CONSTANT_VALUE(<text>,<variable>,<includes>,<source>,<include search path>,[<trim characters>])
 AC_DEFUN([AC_CONSTANT_VALUE],
 [
   AC_REQUIRE([AC_PROG_CPP])
@@ -186,13 +187,13 @@ AC_DEFUN([AC_CONSTANT_VALUE],
       ac_cv_constant_value,
       [
         AC_LANG_CONFTEST([AC_LANG_PROGRAM([[$3]],[[__CONFTEST__ $4]])])
-        if AC_TRY_COMMAND($CPP $CPPFLAGS -P -E conftest.c -o conftest); then
+        if AC_TRY_COMMAND($CPP $CPPFLAGS `if test -n "$5"; then echo -I$5; fi` -P -E conftest.c -o conftest); then
           ac_cv_constant_value=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
         else
           ac_cv_constant_value=
         fi
-        if test -n "AS_ESCAPE([[$5]])"; then
-          ac_cv_constant_value=`echo $ac_cv_constant_value|tr -d "AS_ESCAPE([[$5]])"`
+        if test -n "AS_ESCAPE([[$6]])"; then
+          ac_cv_constant_value=`echo $ac_cv_constant_value|tr -d "AS_ESCAPE([[$6]])"`
         fi
         AS_VAR_SET($2,$ac_cv_constant_value)
 
@@ -204,13 +205,13 @@ AC_DEFUN([AC_CONSTANT_VALUE],
       ac_cv_constant_value,
       [
         AC_LANG_CONFTEST([AC_LANG_PROGRAM([[$3]],[[__CONFTEST__ $4]])])
-        if AC_TRY_COMMAND($CPP $CPPFLAGS -P -E conftest.c -o conftest); then
+        if AC_TRY_COMMAND($CPP $CPPFLAGS `if test -n "$5"; then echo -I$5; fi` -P -E conftest.c -o conftest); then
           ac_cv_constant_value=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
         else
           ac_cv_constant_value=
         fi
-        if test -n "AS_ESCAPE([[$5]])"; then
-          ac_cv_constant_value=`echo $ac_cv_constant_value|tr -d "AS_ESCAPE([[$5]])"`
+        if test -n "AS_ESCAPE([[$6]])"; then
+          ac_cv_constant_value=`echo $ac_cv_constant_value|tr -d "AS_ESCAPE([[$6]])"`
         fi
         AS_VAR_SET($2,$ac_cv_constant_value)
 
@@ -736,9 +737,9 @@ AC_DEFUN([AC_WINE_C_DRIVE],
     [wine C: drive],
     ac_cv_wine_c_drive,
     [
-      ac_cv_wine_c_drive=`winepath C:`
-      ac_cv_wine_c_drive=`dirname $ac_cv_wine_c_drive`
-      ac_cv_wine_c_drive=`realpath $ac_cv_wine_c_drive/c:`
+      ac_cv_wine_c_drive=`winepath C: 2>/dev/null`
+      ac_cv_wine_c_drive=`dirname $ac_cv_wine_c_drive 2>/dev/null`
+      ac_cv_wine_c_drive=`realpath $ac_cv_wine_c_drive/c: 2>/dev/null`
       AS_VAR_SET($1,$ac_cv_wine_c_drive)
     ]
   )
@@ -804,7 +805,7 @@ AC_SUBST(EXEEXT)                             dnl executable extension
 AC_SUBST(SHELLEXT)                           dnl shell extension
 
 AC_SUBST(ENABLE_DEBUG)                       dnl "yes" for debug version, "no" otherwise
-AC_SUBST(ENABLE_DEBUG_THREAD_CRASH_HANDLERS) dnl "yes" for debug version, "no" otherwise
+AC_SUBST(ENABLE_DEBUG_THREAD_CRASH_HANDLERS) dnl "yes" for debug version with crash handlers, "no" otherwise
 AC_SUBST(ENABLE_BZ2)                         dnl "yes" for bzip2 support, "no" otherwise
 AC_SUBST(ENABLE_LZMA)                        dnl "yes" for lzma support, "no" otherwise
 AC_SUBST(ENABLE_LZO)                         dnl "yes" for lzo support, "no" otherwise
@@ -829,6 +830,7 @@ AC_SUBST(HAVE_LZO)                           dnl "1" for lzo support, "" otherwi
 AC_SUBST(HAVE_LZ4)                           dnl "1" for lz4 support, "" otherwise
 AC_SUBST(HAVE_ZSTD)                          dnl "1" for zstd support, "" otherwise
 AC_SUBST(HAVE_XDELTA3)                       dnl "1" for xdelta3 support, "" otherwise
+AC_SUBST(HAVE_IDN2)                          dnl "1" for idn2 support, "" otherwise
 AC_SUBST(HAVE_GCRYPT)                        dnl "1" for gcrypt support, "" otherwise
 AC_SUBST(HAVE_FTP)                           dnl "1" for ftp support, "" otherwise
 AC_SUBST(HAVE_CARES)                         dnl "1" for c-ares support, "" otherwise
@@ -1708,7 +1710,7 @@ fi
 CC_INCLUDES="$CC_INCLUDES $cwd/extern/include $cwd/bar"
 LIBRARY_PATHS="$cwd/extern/lib $cwd/extern/lib/mariadb $LIBRARY_PATHS"
 
-# set variables for compile extern
+# set toolchain settings for compile extern (Note: do not move ) at the end!)
 AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
                           $CC_FLAGS,
                           $CXX_FLAGS,
@@ -1729,9 +1731,6 @@ if test -d icu -o -d "`readlink icu`"; then
     AC_MSG_COMPILE([icu])
     result=1
     if test $result -eq 1; then
-      # patch to disable xlocale: does not exists anymore? not required?
-      #   diff -u icu.org/source/i18n/digitlst.cpp icu/source/i18n/digitlst.cpp > icu-xlocale.patch
-      (cd extern/icu; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/icu-xlocale.patch) 1>/dev/null 2>/dev/null
       case $host_os in
         linux-*)
           ;;
@@ -1743,9 +1742,12 @@ if test -d icu -o -d "`readlink icu`"; then
           # patch to disable usage of lib-command when RANLIB is set
           ;;
       esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
     fi
-
-    # build host
     if test $result -eq 1; then
       install -d icu/build/$build
       (cd icu/build/$build; CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="" ../../source/configure \
@@ -1757,7 +1759,7 @@ if test -d icu -o -d "`readlink icu`"; then
         --disable-samples \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_RESULT([fail (configure host)])
         AC_MSG_OUTPUT_LOG($tmpFile)
         result=0
       fi
@@ -1765,14 +1767,12 @@ if test -d icu -o -d "`readlink icu`"; then
     if test $result -eq 1; then
       (cd icu/build/$build; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
       if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
+        AC_MSG_RESULT([fail (make host)])
         AC_MSG_OUTPUT_LOG($tmpFile)
         result=0
       fi
     fi
-
     if test "$host" != "$build"; then
-      # build target
       install -d icu/build/$host
       if test $result -eq 1; then
         (cd icu/build/$host; CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="" ../../source/configure \
@@ -1786,7 +1786,7 @@ if test -d icu -o -d "`readlink icu`"; then
           --disable-samples \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_RESULT([fail (configure target)])
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
@@ -1794,18 +1794,15 @@ if test -d icu -o -d "`readlink icu`"; then
       if test $result -eq 1; then
         (cd icu/build/$host; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
+          AC_MSG_RESULT([fail (make target)])
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
       fi
     fi
-
     if test $result -eq 1; then
       (cd icu/build/$host; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
       if test $? -ne 0; then
-        AC_MSG_RESULT([fail (install)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
         result=0
       fi
       case $host_os in
@@ -1826,6 +1823,10 @@ if test -d icu -o -d "`readlink icu`"; then
           (cd extern/lib; ln -s libsiculx.a libiculx.a) 1>/dev/null 2>/dev/null
           ;;
       esac
+      if test $result -ne 1; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+      fi
     fi
     if test $result -eq 1; then
       AC_MSG_RESULT([done])
@@ -1888,7 +1889,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
     AC_MSG_COMPILE([zlib])
     result=1
     if test $result -eq 1; then
-      (cd zlib; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+      (cd zlib; CC="$CC" CPPFLAGS="" CFLAGS="`if test "$ENABLE_DEBUG" = "yes"; then echo -- -O0 -g; fi`" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
         --prefix=$cwd/extern \
         --static \
       ) 1>$tmpFile 2>&1
@@ -1944,6 +1945,7 @@ else
     fi
   fi
 fi
+
 if test -z "$HAVE_Z"; then
   if test ! \( -d zlib -o -d "`readlink zlib`" \); then
     AC_MSG_WARN([zlib not compiled: zlib package missing])
@@ -1962,7 +1964,6 @@ if test $ENABLE_BZ2 = "yes"; then
       result=1
       if test $result -eq 1; then
         if test "$build" == "$host"; then
-          # compile build
           (cd bzip2; make clean; make -j$CPU_CORES libbz2.a) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             AC_MSG_RESULT([fail (make)])
@@ -1970,8 +1971,7 @@ if test $ENABLE_BZ2 = "yes"; then
             result=0
           fi
         else
-          # cross-compile host
-          (cd bzip2; make clean; CFLAGS="" LDFLAGS="" make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" libbz2.a) 1>$tmpFile 2>&1
+          (cd bzip2; make clean; make -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" libbz2.a) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             AC_MSG_RESULT([fail (make)])
             AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2024,6 +2024,18 @@ if test $ENABLE_BZ2 = "yes"; then
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_BZ2"; then
     if test ! \( -d bzip2 -o -d "`readlink bzip2`" \); then
       AC_MSG_WARN([bzip2 not compiled: bzip2 package missing])
@@ -2054,12 +2066,17 @@ if test $ENABLE_LZMA = "yes"; then
             #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/xz-5.0.4; then
-#              (cd extern/xz-5.0.4; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/xz-5.0.4; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/xz-5.0.4-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
       if test $result -eq 1; then
         (cd xz; ./configure \
@@ -2122,6 +2139,18 @@ if test $ENABLE_LZMA = "yes"; then
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_LZMA"; then
     if test ! \( -d xz -o -d "`readlink xz`" \); then
       AC_MSG_WARN([lzma not compiled: xz package missing])
@@ -2150,9 +2179,14 @@ if test $ENABLE_LZO = "yes"; then
           windows*|mingw*)
             # patch to fix missing --tag=CC for in libtool call
             #   diff -u extern/lzo-2.10.org/Makefile.in extern/lzo-2.10/Makefile.in  > misc/lzo-2.10-libtool.patch
-            (cd lzo; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/lzo-2.10-libtool.patch) 1>/dev/null 2>/dev/null
+#            (cd lzo; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/lzo-2.10-libtool.patch) 1>$tmpFile 2>&1
             ;;
         esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
       if test $result -eq 1; then
         install -d lzo
@@ -2214,6 +2248,18 @@ if test $ENABLE_LZO = "yes"; then
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_LZO"; then
     if test ! \( -d lzo -o -d "`readlink lzo`" \); then
       AC_MSG_WARN([lzo not compiled: lzo package missing])
@@ -2232,7 +2278,7 @@ if test $ENABLE_LZ4 = "yes"; then
       AC_MSG_COMPILE([lz4])
       result=1
       if test $result -eq 1; then
-        (cd lz4; make clean; make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" lib) 1>$tmpFile 2>&1
+        (cd lz4; make clean; make -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" lib) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2286,6 +2332,18 @@ if test $ENABLE_LZ4 = "yes"; then
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_LZ4"; then
     if test ! \( -d lz4 -o -d "`readlink lz4`" \); then
       AC_MSG_WARN([lz4 not compiled: lz4 package missing])
@@ -2305,14 +2363,15 @@ if test $ENABLE_ZSTD = "yes"; then
       result=1
       if test $result -eq 1; then
         if test "$build" == "$host"; then
-          (cd zstd; make clean; CFLAGS="" LDFLAGS="" make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
+          (cd zstd; make clean; make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             AC_MSG_RESULT([fail (make)])
             AC_MSG_OUTPUT_LOG($tmpFile)
             result=0
           fi
         else
-          (cd zstd; make clean; CFLAGS="" LDFLAGS="" make -C lib -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
+          # Note: do not set LDFLAGS
+          (cd zstd; make clean; make -C lib -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
           if test $? -ne 0; then
             AC_MSG_RESULT([fail (make)])
             AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2361,6 +2420,18 @@ if test $ENABLE_ZSTD = "yes"; then
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_ZSTD"; then
     if test ! \( -d zstd -o -d "`readlink zstd`" \); then
       AC_MSG_WARN([zstd not compiled: zstd package missing])
@@ -2375,11 +2446,30 @@ if test $ENABLE_XDELTA3 = "yes"; then
 
     cwd=`pwd`
 
-    # patch to fix warnings:
-    #   diff -Naur xdelta3-3.0.11.org xdelta3-3.0.11 > xdelta3-3.0.11.patch
-    (cd xdelta3; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
+    # Note: no cross-compile; copy source only
+    AC_MSG_CREATE([xdelta3])
+    result=1
+    if test $result -ne 1; then
+      AC_MSG_RESULT([fail])
+    fi
+    if test $result -eq 1; then
+      (cd xdelta3; \
+       install -d $cwd/extern/sources; \
+       install -d $cwd/extern/include; \
+       install -m 644 xdelta3.c $cwd/extern/sources; \
+       install -m 644 -t $cwd/extern/include \
+         xdelta3.h \
+         xdelta3-internal.h \
+         xdelta3-list.h \
+         xdelta3-hash.h \
+         xdelta3-cfgs.h \
+         xdelta3-decode.h; \
+      ) 1>$tmpFile 2>&1
+      (cd $cwd/extern/include; ln -s ../sources/xdelta3.c)
+      AC_MSG_RESULT([done])
+    fi
 
-    CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
+#    CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
     HAVE_XDELTA3=1
     AC_DEFINE(HAVE_XDELTA3,1,[xdelta3 installed])
   fi
@@ -2434,9 +2524,6 @@ if test $ENABLE_GCRYPT = "yes"; then
       AC_MSG_COMPILE([libgcrypt])
       result2=1
       if test $result2 -eq 1; then
-        # patch to disable wrong deprecated warnings:
-        #   diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
-        (cd libgcrypt; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           linux-*)
             ;;
@@ -2451,12 +2538,17 @@ if test $ENABLE_GCRYPT = "yes"; then
             #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/libgcrypt-1.5.0; then
-#              (cd extern/libgcrypt-1.5.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/libgcrypt-1.5.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libgcrypt-1.5.0-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
       if test $result2 -eq 1; then
         case $host_cpu in
@@ -2571,6 +2663,18 @@ if test $ENABLE_GCRYPT = "yes"; then
     )
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_GCRYPT"; then
     if test ! \( -d libgpg-error -o -d "`readlink libgpg-error`" \); then
       AC_MSG_WARN([libgcrypt not compiled: libgpg-error package missing])
@@ -2645,7 +2749,7 @@ if test $ENABLE_SSH = "yes"; then
         esac
       fi
       if test $result -eq 1; then
-        (cd openssl; make clean; make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
+        (cd openssl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2699,14 +2803,6 @@ if test $ENABLE_SSH = "yes"; then
       AC_MSG_COMPILE([libssh2])
       result=1
       if test $result -eq 1; then
-        # patch to support keep alive for libssh2 1.1 (ignore errors):
-        #   diff -u libssh2-1.1.org/include/libssh2.h libssh2-1.1/include/libssh2.h >  libssh2-1.1-keepalive.patch
-        #   diff -u libssh2-1.1.org/src/channel.c     libssh2-1.1/src/channel.c     >> libssh2-1.1-keepalive.patch
-#TODO: does not work anymore
-#        (cd libssh2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
-        # patch for memory leak for libssh2 1.8.2 (ignore errors):
-        #   diff -u libssh2-1.8.2.org/src libssh2-1.8.2/src > libssh2-1.8.2-memory-leak.patch
-        (cd libssh2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.8.2-memory-leak.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           linux-*)
             ;;
@@ -2721,12 +2817,17 @@ if test $ENABLE_SSH = "yes"; then
             #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/libssh2-1.4.2; then
-#              (cd extern/libssh2-1.4.2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/libssh2-1.4.2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.4.2-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
       if test $result -eq 1; then
         (cd libssh2; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
@@ -2803,28 +2904,136 @@ if test $ENABLE_SSH = "yes"; then
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-* | sunos | solaris* | darwin*)
+      dnl link crypto, too, if available (may be needed by some libssh2 implementations)
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+      else
+        if test -z "$HAVE_CRYPTO"; then
+          AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
+        fi
+        if test -z "$HAVE_CRYPTO"; then
+          AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+        fi
+      fi
+      ;;
+    windows*|mingw*)
+      dnl link crypto+crypt32, too, if available (may be needed by some libssh2 implementations)
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        AC_SEARCH_LIBRARIES(CertGetCertificateContextProperty,crypt32,[LIBRARIES="$LIBRARIES crypt32"],,windows.h wincrypt.h)
+        AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+      else
+        AC_SEARCH_STATIC_LIBRARIES(CertGetCertificateContextProperty,crypt32,[STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"],,windows.h wincrypt.h)
+        if test -z "$HAVE_CRYPTO"; then
+          AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
+        fi
+        if test -z "$HAVE_CRYPTO"; then
+          AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+        fi
+      fi
+      ;;
+  esac
+
+  if test -z "$HAVE_SSL"; then
+    if test ! \( -d openssl -o -d "`readlink openssl`" \); then
+      AC_MSG_WARN([openssl not compiled: openssl package missing])
+    fi
+  fi
   if test -z "$HAVE_SSH2"; then
     if test ! \( -d libssh2 -o -d "`readlink libssh2`" \); then
       AC_MSG_WARN([libssh2 not compiled: libssh2 package missing])
     fi
   fi
+fi
 
-  dnl link libcrypto, too, if available (may be needed by some libssh2 implementations)
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
-  else
-    if test -z "$HAVE_CRYPTO"; then
-      AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
+# compile/use libidn2
+if test \( $ENABLE_TLS = "yes" \) -o \( $ENABLE_CURL = "yes" \); then
+  if test \( -d libidn2 -o -d "`readlink libidn2`" \) ; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+      dnl compile libidn2
+
+      cwd=`pwd`
+
+      AC_MSG_COMPILE([libidn2])
+      result1=1
+      if test $result -eq 1; then
+        (cd libidn2; ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --disable-shared \
+          --enable-static \
+          --disable-doc \
+          --with-included-libunistring \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd libidn2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd libidn2; make install) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
     fi
-    if test -z "$HAVE_CRYPTO"; then
-      AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES idn2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES idn2"
+      fi
+      HAVE_IDN2=1
+      AC_DEFINE(HAVE_IDN2,1,[libidn2 installed (local)])
+    fi
+  else
+    dnl search for installed libidn2+libunistring libraries
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(idn2_check_version,idn2,[HAVE_IDN2=1;LIBRARIES="$LIBRARIES idn2";AC_DEFINE(HAVE_IDN2,1,[libidn2 installed])])
+    else
+      if test -z "$HAVE_IDN2"; then
+        AC_SEARCH_STATIC_LIBRARIES(idn2_check_version,idn2,[HAVE_IDN2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES idn2";AC_DEFINE(HAVE_IDN2,1,[static libidn2 installed])])
+      fi
     fi
   fi
+
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
 fi
 
 # compile/use gnutls
 if test $ENABLE_TLS = "yes"; then
-  if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \); then
+  if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \) -a "$HAVE_IDN2"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile gmp, nettle, libidn2, gnutls libraries
 
@@ -2960,43 +3169,6 @@ if test $ENABLE_TLS = "yes"; then
         AC_MSG_RESULT([done])
       fi
 
-      AC_MSG_COMPILE([libidn2])
-      result2=1
-      if test $result2 -eq 1; then
-        (cd libidn2; ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --disable-shared \
-          --enable-static \
-          --disable-doc \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd libidn2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd libidn2; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-
       AC_MSG_COMPILE([gnutls])
       result3=1
       if test $result3 -eq 1; then
@@ -3047,9 +3219,9 @@ if test $ENABLE_TLS = "yes"; then
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES gnutls nettle hogweed gmp idn2"
+        LIBRARIES="$LIBRARIES gnutls nettle hogweed gmp"
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp idn2"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp"
       fi
       HAVE_GNU_TLS=1
       AC_DEFINE(HAVE_GNU_TLS,1,[gnutls installed (local)])
@@ -3078,6 +3250,18 @@ if test $ENABLE_TLS = "yes"; then
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_GNU_TLS"; then
     if test ! \( -d gmp -o -d "`readlink gmp`" \); then
       AC_MSG_WARN([gnutls not compiled: gmp package missing])
@@ -3088,12 +3272,16 @@ if test $ENABLE_TLS = "yes"; then
     if test ! \( -d gnutls -o -d "`readlink gnutls`" \); then
       AC_MSG_WARN([gnutls not compiled: gnutls package missing])
     fi
+    if test ! "$HAVE_IDN2"; then
+      AC_MSG_WARN([gnutls not compiled: libidn2 package missing])
+    fi
   fi
 fi
 
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
-  if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \) -a "$HAVE_GPG_ERROR"; then
+#  if test \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \) -a "$HAVE_GPG_ERROR" -a "$HAVE_IDN2"; then
+  if test \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile c-ares, curl, mxml libraries
 
@@ -3109,6 +3297,9 @@ if test $ENABLE_CURL = "yes"; then
         AC_MSG_WARN([libssl is missing. Compiling or linking curl may fail!])
       fi
       if test -z "$HAVE_SSH2"; then
+        AC_MSG_WARN([libssh2 is missing. Compiling or linking curl may fail!])
+      fi
+      if test -z "$HAVE_IDN2"; then
         AC_MSG_WARN([libssh2 is missing. Compiling or linking curl may fail!])
       fi
 
@@ -3130,12 +3321,17 @@ if test $ENABLE_CURL = "yes"; then
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result1=0
+        fi
       fi
       if test $result1 -eq 1; then
         # Note: https://github.com/c-ares/c-ares/blob/cares-1_14_0/README.msvc#L133-L138
@@ -3204,18 +3400,23 @@ if test $ENABLE_CURL = "yes"; then
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result2=0
+        fi
       fi
       if test $result2 -eq 1; then
         if test "$host" == "$build"; then
           # compile build
 # TODO: temporary disabled brotli compression, psl
-          (cd curl; PKG_CONFIG_PATH=$cwd/openssl ./configure \
+          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
             --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
@@ -3226,10 +3427,9 @@ if test $ENABLE_CURL = "yes"; then
             --without-librtmp \
             --enable-ares=$cwd/extern \
             --with-zlib=$cwd/extern \
-            --disable-openssl-auto-load-config \
-            --with-ssl=$cwd/extern \
-            --with-gnutls=$cwd/extern \
-            --with-libssh2=$cwd/extern \
+            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; fi` \
+            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
 --without-brotli \
 --without-libpsl \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
@@ -3252,9 +3452,9 @@ if test $ENABLE_CURL = "yes"; then
             --without-librtmp \
             --enable-ares=$cwd/extern \
             --with-zlib=$cwd/extern \
-            --with-ssl=$cwd/extern \
-            --with-gnutls=$cwd/extern \
-            --with-libssh2=$cwd/extern \
+            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; fi` \
+            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
           ) 1>$tmpFile 2>&1
           if test $? -ne 0; then
@@ -3313,12 +3513,17 @@ if test $ENABLE_CURL = "yes"; then
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result3=0
+        fi
       fi
       if test $result3 -eq 1; then
         (cd mxml; ./configure \
@@ -3395,38 +3600,15 @@ if test $ENABLE_CURL = "yes"; then
       AC_DEFINE(HAVE_CARES,1,[c-ares installed (local)])
       AC_DEFINE(HAVE_CURL,1,[curl installed (local)])
       AC_DEFINE(HAVE_MXML,1,[mxml installed (local)])
-
-      # Note: update toolchain settings for defines
-      AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
-                                $CC_FLAGS,
-                                $CXX_FLAGS,
-                                $CC_DEFINES,
-                                $CC_INCLUDES,
-                                $LD_FLAGS,
-                                $LIBRARY_PATHS,
-                                $STATIC_LIBRARIES,
-                                $LIBRARIES)
     fi
-
-    # required functions for curl
-    AC_CHECK_FUNCTION(gpg_strerror,,AC_ERROR([gpg_strerror() required for curl]))
-    AC_CHECK_FUNCTION(gcry_control,,AC_ERROR([gcry_control() required for curl]))
-    AC_CHECK_FUNCTION(gnutls_global_init,,AC_ERROR([gnutls_global_init() required for curl]))
-    AC_CHECK_FUNCTION(SSL_new,,AC_ERROR([SSL_new() required for curl]))
   else
     dnl search for installed c-ares, curl, mxml libraries
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
       AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CARES,1,[c-ares installed])])
       AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
+      AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
     else
-      if test -z "$HAVE_MXML"; then
-        AC_SEARCH_STATIC_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[static mxml installed])])
-      fi
-      if test -z "$HAVE_MXML"; then
-        AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
-      fi
       if test -z "$HAVE_CARES"; then
         AC_SEARCH_STATIC_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[static c-ares installed])])
       fi
@@ -3439,27 +3621,49 @@ if test $ENABLE_CURL = "yes"; then
       if test -z "$HAVE_CURL"; then
         AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
       fi
+      if test -z "$HAVE_MXML"; then
+        AC_SEARCH_STATIC_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[static mxml installed])])
+      fi
+      if test -z "$HAVE_MXML"; then
+        AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
+      fi
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
+  if test -z "$HAVE_CARES"; then
+    if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
+      AC_MSG_WARN([curl not compiled: c-ares package missing])
+    fi
+  fi
   if test -z "$HAVE_CURL"; then
     if test ! \( -d curl -o -d "`readlink curl`" \); then
       AC_MSG_WARN([curl not compiled: curl package missing])
     fi
   fi
-  if test -z "$HAVE_CARES"; then
-    if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
-      AC_MSG_WARN([libssh2 not compiled: c-ares package missing])
-    fi
-  fi
-
   if test -z "$HAVE_MXML"; then
     if test ! \( -d mxml -o -d "`readlink mxml`" \); then
-      AC_MSG_WARN([libssh2 not compiled: mxml package missing])
+      AC_MSG_WARN([curl not compiled: mxml package missing])
+    fi
+  fi
+  if test -z "$HAVE_IDN2"; then
+    if test ! \( -d libidn2 -o -d "`readlink libidn2`" \); then
+      AC_MSG_WARN([curl not compiled: libidn2 package missing])
     fi
   fi
 
-  if test "$HAVE_CURL"; then
+  if test "$HAVE_CURL" -a "$HAVE_CARES" -a "$HAVE_MXML" -a "$HAVE_IDN2"; then
     dnl link libssl, too
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(SSL_new,ssl,[HAVE_SSL=1;LIBRARIES="$LIBRARIES ssl"],AC_ERROR([SSL library required for curl]))
@@ -3517,7 +3721,7 @@ fi
 
 # compile MariaDB client
 if test $ENABLE_MARIADB = "yes"; then
-  if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
+  if test \( -d zlib -o -d "`readlink zlib`" \) -a \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile MariaDB client library
 
@@ -3528,7 +3732,27 @@ if test $ENABLE_MARIADB = "yes"; then
       if test $result -eq 1; then
         case $host_os in
           linux-*)
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+          windows*|mingw*)
+            # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
+            #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
+#TODO            (cd mariadb-connector-c; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/mariadb-connector-c-3.1.13.patch) 1>$tmpFile 2>&1
+            ;;
+        esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        case $host_os in
+          linux-*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               -DWITH_EXTERNAL_ZLIB=ON \
@@ -3541,7 +3765,7 @@ if test $ENABLE_MARIADB = "yes"; then
             ) 1>$tmpFile 2>&1
             ;;
           sunos | solaris*)
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               -DWITH_EXTERNAL_ZLIB=ON \
@@ -3554,7 +3778,7 @@ if test $ENABLE_MARIADB = "yes"; then
             ) 1>$tmpFile 2>&1
             ;;
           darwin*)
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               -DWITH_EXTERNAL_ZLIB=ON \
@@ -3567,11 +3791,7 @@ if test $ENABLE_MARIADB = "yes"; then
             ) 1>$tmpFile 2>&1
             ;;
           windows*|mingw*)
-            # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
-            #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
-            (cd mariadb-connector-c; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/mariadb-connector-c-3.1.13.patch) 1>/dev/null 2>/dev/null
-
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="-D_WIN32_WINNT=0x0600 -D_POSIX_C_SOURCE" CFLAGS="-D_WIN32_WINNT=0x0600 -D_POSIX_C_SOURCE" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
               -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
@@ -3645,7 +3865,23 @@ if test $ENABLE_MARIADB = "yes"; then
       fi
     fi
   fi
+
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_MARIADB"; then
+    if test ! \( -d zlib -o -d "`readlink zlib`" \); then
+      AC_MSG_WARN([MariaDB client not compiled: zlib package missing])
+    fi
     if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
       AC_MSG_WARN([MariaDB client not compiled: MariaDB client package missing])
     fi
@@ -3716,7 +3952,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
          make -C src/interfaces/ecpg install PREFIX=$cwd/extern; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
+          AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
@@ -3754,6 +3990,19 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       fi
     fi
   fi
+
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_POSTGRESQL"; then
     if test ! \( -d postgresql -o -d "`readlink postgresql`" \); then
       AC_MSG_WARN([PostgreSQL not compiled: PostgreSQL package missing])
@@ -3812,9 +4061,6 @@ if test $ENABLE_ISO9660 = "yes"; then
       AC_MSG_COMPILE([libcdio])
       result2=1
       if test $result2 -eq 1; then
-        # patch to fix gcc pragma for older gcc
-        #   diff -u libcdio-2.1.0.org/lib/iso9660/iso9660.c libcdio-2.1.0/lib/iso9660/iso9660.c > ../misc/libcdio-2.1.0-gcc-pragma.patch
-        (cd extern/libcdio-2.1.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libcdio-2.1.0-gcc-pragma.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           linux-*)
             ;;
@@ -3825,6 +4071,10 @@ if test $ENABLE_ISO9660 = "yes"; then
           windows*|mingw*)
             ;;
         esac
+        if test $result2 -ne 1; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+        fi
       fi
       if test $result2 -eq 1; then
         if test "$ENABLE_DEBUG" = "yes"; then
@@ -3910,6 +4160,18 @@ if test $ENABLE_ISO9660 = "yes"; then
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_ISO9660"; then
     if test ! \( -d libcdio -o -d "`readlink libcdio`" \); then
       AC_MSG_WARN([libcdio not compiled: libcdio package missing])
@@ -3928,10 +4190,6 @@ if test $ENABLE_SMBCLIENT = "yes"; then
       AC_MSG_COMPILE([libkrb5])
       result1=1
       if test $result1 -eq 1; then
-        # patch
-# TODO
-        #   diff -u krb5-1.21.2.org/lib/iso9660/iso9660.c krb5-1.21.2/lib/iso9660/iso9660.c > ../misc/libsmb2-4.0.0-gcc-pragma.patch
-#        (cd extern/krb5-1.21.2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/krb5-1.21.2-gcc-pragma.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           linux-*)
             ;;
@@ -3942,6 +4200,10 @@ if test $ENABLE_SMBCLIENT = "yes"; then
           windows*|mingw*)
             ;;
         esac
+        if test $result1 -ne 1; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+        fi
       fi
       case $host_os in
         linux-*| sunos | solaris* | darwin*)
@@ -3993,6 +4255,8 @@ if test $ENABLE_SMBCLIENT = "yes"; then
           ;;
         windows*|mingw*)
           # not supported on Windows
+# TODO
+          AC_MSG_RESULT([skipped])
           ;;
       esac
 
@@ -4001,10 +4265,6 @@ if test $ENABLE_SMBCLIENT = "yes"; then
       AC_MSG_COMPILE([libsmb2])
       result2=1
       if test $result2 -eq 1; then
-        # patch
-# TODO
-        #   diff -u libsmb2-4.0.0.org/lib/iso9660/iso9660.c libsmb2-4.0.0/lib/iso9660/iso9660.c > ../misc/libsmb2-4.0.0-gcc-pragma.patch
-#        (cd extern/libsmb2-4.0.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libsmb2-4.0.0-gcc-pragma.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           linux-*)
             ;;
@@ -4015,6 +4275,10 @@ if test $ENABLE_SMBCLIENT = "yes"; then
           windows*|mingw*)
             ;;
         esac
+        if test $result2 -ne 1; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+        fi
       fi
       if test $result2 -eq 1; then
         case $host_os in
@@ -4047,24 +4311,36 @@ if test $ENABLE_SMBCLIENT = "yes"; then
             ;;
           windows*|mingw*)
             if test "$ENABLE_DEBUG" = "yes"; then
-              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" configure \
-                --prefix=$cwd/extern \
-                --host=$host \
-                --build=$build \
-                --enable-static \
-                --disable-shared \
-                --disable-werror \
-                --without-libkrb5
+              (cd libsmb2; ./bootstrap && cmake \
+                -DCMAKE_BUILD_TYPE=Debug \
+                -DCMAKE_SYSTEM_NAME=Windows \
+                -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
+                -DCMAKE_RC_COMPILER=i686-w64-mingw32-windres \
+                -DCMAKE_FIND_ROOT_PATH=/usr/i686-w64-mingw32 \
+                -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+                -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+                -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600" \
+                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+                \
+                -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
+                -DBUILD_SHARED_LIBS=OFF
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" ./configure \
-                --prefix=$cwd/extern \
-                --host=$host \
-                --build=$build \
-                --enable-static \
-                --disable-shared \
-                --disable-werror \
-                --without-libkrb5
+              (cd libsmb2; ./bootstrap && cmake \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_SYSTEM_NAME=Windows \
+                -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
+                -DCMAKE_RC_COMPILER=i686-w64-mingw32-windres \
+                -DCMAKE_FIND_ROOT_PATH=/usr/i686-w64-mingw32 \
+                -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+                -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+                -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600" \
+                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+                \
+                -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
+                -DBUILD_SHARED_LIBS=OFF
               ) 1>$tmpFile 2>&1
             fi
             if test $? -ne 0; then
@@ -4137,6 +4413,18 @@ if test $ENABLE_SMBCLIENT = "yes"; then
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_SMB2"; then
     if test ! \( -d krb5 -o -d "`readlink krb5`" \); then
       AC_MSG_WARN([libsmb2 not compiled: krb5 package missing])
@@ -4173,12 +4461,17 @@ if test $ENABLE_PCRE = "yes"; then
             #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/pcre-8.32; then
-#              (cd extern/pcre-8.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/pcre-8.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pcre-8.32-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
       if test $result -eq 1; then
         (cd pcre; ./configure \
@@ -4255,6 +4548,18 @@ if test $ENABLE_PCRE = "yes"; then
     fi
   fi
 
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_PCRE"; then
     if test ! \( -d pcre -o -d "`readlink pcre`" \); then
       AC_MSG_WARN([pcre not compiled: pcre package missing])
@@ -4277,12 +4582,18 @@ case $host_os in
 
           cwd=`pwd`
 
-          # patch to fix warnings:
-          #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
-          (cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch) 1>/dev/null 2>/dev/null
-
           AC_MSG_COMPILE([pthreads-w32])
           result=1
+          if test $result -eq 1; then
+            # patch to fix warnings:
+            #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
+#TODO            (cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch) 1>$tmpFile 2>&1
+            if test $? -ne 0; then
+              AC_MSG_RESULT([fail (patch)])
+              AC_MSG_OUTPUT_LOG($tmpFile)
+              result=0
+            fi
+          fi
           if test $result -eq 1; then
             if test "$ENABLE_DEBUG" = "yes"; then
               (cd pthreads-w32; make clean; make CROSS="$host-" GC-static-debug) 1>$tmpFile 2>&1
@@ -4334,7 +4645,12 @@ if test $ENABLE_BFD = "yes"; then
       if test $result -eq 1; then
         # patch to fix memory leak
         #   diff -u binutils-2.32.org/bfd/dwarf2.c binutils-2.32/bfd/dwarf2.c > ../misc/binutils-2.32-dwarf2-leak.patch
-        (cd extern/binutils-2.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/binutils-2.32-dwarf2-leak.patch) 1>/dev/null 2>/dev/null
+#TODO        (cd extern/binutils-2.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/binutils-2.32-dwarf2-leak.patch) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
         # Note: - fix distlean
         #       - use cpu+os to avoid "unknown" in name which cause
         #         using of wrong tool names by binutils build!
@@ -4411,13 +4727,13 @@ if test $ENABLE_BFD = "yes"; then
     dnl search for installed bfd, sframe, iberty libraries
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd sframe iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
+      AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
     else
       if test -z "$HAVE_BFD"; then
-        AC_SEARCH_STATIC_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd sframe iberty z";AC_DEFINE(HAVE_BFD,1,[static libbfd installed])])
+        AC_SEARCH_STATIC_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[static libbfd installed])])
       fi
       if test -z "$HAVE_BFD"; then
-        AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd sframe iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
+        AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
       fi
     fi
   fi
@@ -4459,7 +4775,7 @@ AC_ARG_ENABLE(
 
 dnl -------------- headers/functions/definitions/libraries -------------
 
-# set variables for tests
+# set toolchain settings for tests (Note: do not move ) at the end!)
 AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
                           $CC_FLAGS,
                           $CXX_FLAGS,
@@ -4564,7 +4880,7 @@ dnl AC_CHECK_FUNCTION(gethostbyname_r,AC_DEFINE(HAVE_GETHOSTBYNAME_R,1,[gethostb
 dnl AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
 dnl AC_MSG_ERROR([stop])
 
-# set variables for tests
+# set toolchain settings for tests (Note: do not move ) at the end!)
 AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
                           $CC_FLAGS,
                           $CXX_FLAGS,
@@ -4812,12 +5128,16 @@ AC_CONSTANT_VALUE([SQLite version],
                   [#include "sqlite3.h"
                   ],
                   [SQLITE_VERSION],
-                  [ "])
+                  [],
+                  [ "]
+                 )
 AC_CONSTANT_VALUE([],
                   VERSION_SQLITE_NUMBER,
                   [#include "sqlite3.h"
                   ],
-                  [SQLITE_VERSION_NUMBER])
+                  [SQLITE_VERSION_NUMBER]
+                  []
+                 )
 if test $VERSION_SQLITE_NUMBER -lt 3038000; then
   AC_ERROR([Required SQLite 3.38 (3038000) or newer - found $VERSION_SQLITE])
 fi
@@ -4828,7 +5148,9 @@ AC_CONSTANT_VALUE([ICU version],
                   [#include "unicode/uvernum.h"
                   ],
                   [U_ICU_VERSION],
-                  [ "])
+                  [],
+                  [ "]
+                 )
 AC_DEFINE_UNQUOTED(VERSION_ICU,"$VERSION_ICU",[icu version])
 
 AC_CONSTANT_VALUE([zlib version],
@@ -4836,105 +5158,125 @@ AC_CONSTANT_VALUE([zlib version],
                   [#include "zlib.h"
                   ],
                   [ZLIB_VERSION],
-                  [ "])
+                  [],
+                  [ "]
+                 )
 AC_DEFINE_UNQUOTED(VERSION_Z,"$VERSION_Z",[zlib version])
 
-if test $ENABLE_BZ2 = "yes"; then
-  # Note: bz2 does not have a define for version
-  AC_TRY_LINK([#include <stdio.h>
-               #include "bzlib.h"
-              ],
-              [printf("%s",BZ2_bzlibVersion());],
-              VERSION_BZ2=`./conftest$ac_exeext`,
-              VERSION_BZ2=
-             )
-  AC_DEFINE_UNQUOTED(VERSION_BZ2,"$VERSION_BZ2",[bzip2 version])
+if test "$HAVE_BZ2"; then
+  # Note: bz2 have a define for version on in a private header file
+  AC_CONSTANT_VALUE([bz2 version],
+                    VERSION_BZ2,
+                    [#include "bzlib_private.h"
+                    ],
+                    [BZ_VERSION],
+                    [bzip2],
+                    [ "]
+                   )
+  AC_DEFINE_UNQUOTED(VERSION_BZ2,"$VERSION_BZ2",[bz2 version])
 else
-  AC_DEFINE_UNQUOTED(VERSION_BZ2,"",[bzip2 version])
+  AC_DEFINE_UNQUOTED(VERSION_BZ2,"",[bz2 version])
 fi
 
-if test $ENABLE_LZMA = "yes"; then
+if test "$HAVE_LZMA"; then
   AC_CONSTANT_VALUE([lzma version],
                     VERSION_LZMA,
                     [#include "lzma.h"
                     ],
                     [LZMA_VERSION_MAJOR.LZMA_VERSION_MINOR.LZMA_VERSION_PATCH],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_LZMA,"$VERSION_LZMA",[lzma version])
 else
   AC_DEFINE_UNQUOTED(VERSION_LZMA,"",[lzma version])
 fi
 
-if test $ENABLE_LZO = "yes"; then
+if test "$HAVE_LZO"; then
   AC_CONSTANT_VALUE([lzo version],
                     VERSION_LZO,
                     [#include "lzo/lzoconf.h"
                     ],
                     [LZO_VERSION_STRING],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_LZO,"$VERSION_LZO",[lzo version])
 else
   AC_DEFINE_UNQUOTED(VERSION_LZO,"",[lzo version])
 fi
 
-if test $ENABLE_LZ4 = "yes"; then
+if test "$HAVE_LZ4"; then
   AC_CONSTANT_VALUE([lz4 version],
                     VERSION_LZ4,
                     [#include "lz4.h"
                     ],
                     [LZ4_VERSION_MAJOR.LZ4_VERSION_MINOR.LZ4_VERSION_RELEASE],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_LZ4,"$VERSION_LZ4",[lz4 version])
 else
   AC_DEFINE_UNQUOTED(VERSION_LZ4,"",[lz4 version])
 fi
 
-if test $ENABLE_ZSTD = "yes"; then
+if test "$HAVE_ZSTD"; then
   AC_CONSTANT_VALUE([zstd version],
                     VERSION_ZSTD,
                     [#include "zstd.h"
                     ],
                     [ZSTD_VERSION_MAJOR.ZSTD_VERSION_MINOR.ZSTD_VERSION_RELEASE],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_ZSTD,"$VERSION_ZSTD",[zstd version])
 else
   AC_DEFINE_UNQUOTED(VERSION_ZSTD,"",[zstd version])
 fi
 
-if test $ENABLE_XDELTA3 = "yes"; then
+if test "$HAVE_XDELTA3"; then
   # Note: xdelta3 does not have a define for version
   AC_DEFINE_UNQUOTED(VERSION_XDELTA3,"3.0.11",[xdelta3 version])
 else
   AC_DEFINE_UNQUOTED(VERSION_XDELTA3,"",[xdelta3 version])
 fi
 
-if test $ENABLE_GCRYPT = "yes"; then
+if test "$HAVE_GCRYPT"; then
   AC_CONSTANT_VALUE([gcrypt version],
                     VERSION_GCRYPT,
                     [#include "gcrypt.h"
                     ],
                     [GCRYPT_VERSION],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_GCRYPT,"$VERSION_GCRYPT",[gcrypt version])
   AC_CONSTANT_VALUE([GMP version],
                     VERSION_GMP,
                     [#include "gmp.h"
                     ],
                     [__GNU_MP_VERSION.__GNU_MP_VERSION_MINOR.__GNU_MP_VERSION_PATCHLEVEL],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_GMP,"$VERSION_GMP",[gmp version])
   AC_CONSTANT_VALUE([GNU TLS version],
                     VERSION_GNUTLS,
                     [#include "gnutls/gnutls.h"
                     ],
                     [GNUTLS_VERSION],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_GNUTLS,"$VERSION_GNUTLS",[gnuTLS version])
   AC_CONSTANT_VALUE([openssl version],
                     VERSION_OPENSSL,
-                    [#include "openssl/opensslv.h"],
+                    [#include "openssl/opensslv.h"
+                    ],
                     [OPENSSL_VERSION_TEXT],
-                    ["])
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_OPENSSL,"$VERSION_OPENSSL",[openssl version])
 else
   AC_DEFINE_UNQUOTED(VERSION_GCRYPT, "",[VERSION_GCRYPT version])
@@ -4943,31 +5285,37 @@ else
   AC_DEFINE_UNQUOTED(VERSION_OPENSSL,"",[openssl version])
 fi
 
-if test $ENABLE_SSH = "yes"; then
+if test "$HAVE_SSH2"; then
   AC_CONSTANT_VALUE([ssh2 version],
                     VERSION_LIBSSH2,
                     [#include "libssh2.h"
                     ],
                     [LIBSSH2_VERSION],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_LIBSSH2,"$VERSION_LIBSSH2",[libssh version])
 else
   AC_DEFINE_UNQUOTED(VERSION_LIBSSH2,"",[libssh version])
 fi
 
-if test $ENABLE_CURL = "yes"; then
+if test "$HAVE_CURL"; then
   AC_CONSTANT_VALUE([curl version],
                     VERSION_CURL,
                     [#include "curl/curl.h"
                     ],
                     [LIBCURL_VERSION],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   AC_CONSTANT_VALUE([],
                     VERSION_CURL_NUMBER,
                     [#include "curl/curl.h"
                     ],
                     [LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   if test -n "$VERSION_CURL_NUMBER" -a $VERSION_CURL_NUMBER -lt 7770; then
     AC_ERROR([Required libcurl 7.77 (0x077700) or newer - found '$VERSION_CURL'])
   fi
@@ -4976,19 +5324,24 @@ else
   AC_DEFINE_UNQUOTED(VERSION_CURL,"",[curl version])
 fi
 
-if test $ENABLE_ISO9660 = "yes"; then
+if test "$HAVE_ISO9660"; then
   AC_CONSTANT_VALUE([cdio version],
                     VERSION_CDIO,
                     [#include "cdio/cdio.h"
                     ],
                     [CDIO_VERSION],
-                    [ "])
+                    [],
+                    [ "]
+                   )
   AC_CONSTANT_VALUE([],
                     VERSION_CDIO_NUMBER,
                     [#include "cdio/cdio.h"
                     ],
                     [LIBCDIO_VERSION_NUM],
-                    [ "])
+                    [],
+                    [ "]
+                   )
+
   if test $VERSION_CDIO_NUMBER -lt 10100; then
     AC_ERROR([Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO])
   fi
@@ -4997,53 +5350,51 @@ else
   AC_DEFINE_UNQUOTED(VERSION_CDIO,"",[cdio version])
 fi
 
-if test $ENABLE_SMBCLIENT = "yes"; then
-  ac_cv_value=`cd libsmb2; grep '#define VERSION' config.h|sed 's/#define VERSION "\(.*\)"/\1/g';`
+if test "$HAVE_SMB2"; then
+  ac_cv_value=`cd libsmb2; cmake --system-information|grep CMAKE_PROJECT_VERSION:STATIC|sed 's/CMAKE_PROJECT_VERSION:STATIC=//g';`
   AS_VAR_SET(VERSION_LIBSMB2,$ac_cv_value)
   AC_DEFINE_UNQUOTED(VERSION_LIBSMB2,"$VERSION_LIBSMB2",[SMB2 version])
 else
   AC_DEFINE_UNQUOTED(VERSION_LIBSMB2,"",[SMB2 version])
 fi
 
-if test $ENABLE_MARIADB = "yes"; then
-  # Note: MariaDB does not have a define for version
-  AC_TRY_LINK([#include <stdio.h>
-               #include "mariadb/mariadb_version.h"
-              ],
-              [printf("%s",MARIADB_CLIENT_VERSION_STR);
-              ],
-              VERSION_MARIADB=`./conftest$ac_exeext`,
-              VERSION_MARIADB=unknown
-             )
+if test "$HAVE_MARIADB"; then
+  AC_CONSTANT_VALUE([MariaDB version],
+                    VERSION_MARIADB,
+                    [#include "mariadb/mariadb_version.h"
+                    ],
+                    [MARIADB_CLIENT_VERSION_STR],
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_MARIADB,"$VERSION_MARIADB",[MariaDB version])
 else
   AC_DEFINE_UNQUOTED(VERSION_MARIADB,"",[MariaDB version])
 fi
 
-if test $ENABLE_POSTGRESQL = "yes"; then
-  # Note: PostgreSQL does not have a define for version
-  AC_TRY_LINK([#include <stdio.h>
-               #include "libpq-fe.h"
-              ],
-              [printf("%d",PQlibVersion());
-              ],
-              VERSION_POSTGRESQL=`./conftest$ac_exeext`,
-              VERSION_POSTGRESQL=unknown
-             )
+if test "$HAVE_POSTGRESQL"; then
+  AC_CONSTANT_VALUE([PostgreSQL version],
+                    VERSION_POSTGRESQL,
+                    [#include "pg_config.h"
+                    ],
+                    [PG_VERSION_NUM],
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_POSTGRESQL,"$VERSION_POSTGRESQL",[PostgreSQL version])
 else
   AC_DEFINE_UNQUOTED(VERSION_POSTGRESQL,"",[PostgreSQL version])
 fi
 
-if test $ENABLE_PCRE = "yes"; then
-  # Note: PCRE does not have a define for version
-  AC_TRY_LINK([#include <stdio.h>
-               #include "pcre.h"
-              ],
-              [printf("%s",pcre_version());],
-              VERSION_PCRE=`./conftest$ac_exeext`,
-              VERSION_PCRE=unknown
-             )
+if test "$HAVE_PCRE"; then
+  AC_CONSTANT_VALUE([pcre version],
+                    VERSION_PCRE,
+                    [#include "pcre.h"
+                    ],
+                    [PCRE_MAJOR.PCRE_MINOR],
+                    [],
+                    [ "]
+                   )
   AC_DEFINE_UNQUOTED(VERSION_PCRE,"$VERSION_PCRE",[pcre version])
 else
   AC_DEFINE_UNQUOTED(VERSION_PCRE,"",[pcre version])

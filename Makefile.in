@@ -22,7 +22,9 @@ PLATFORM               = @PLATFORM@
 
 #------------------------------------ paths ----------------------------------
 
+ROOT_DIR               = $(abspath @srcdir@)
 SOURCE_DIR             = $(abspath @srcdir@)
+BUILD_DIR              = $(CURDIR)
 
 ETC_DIR                = /etc
 
@@ -146,22 +148,22 @@ TARGETS              = bar/bar@EXEEXT@ \
                          barcontrol/barcontrol.cmd \
                        ) \
 
-OTHER_SOURCES        = errors.pl \
-                       errors.def \
+OTHER_SOURCES        = $(SOURCE_DIR)/errors.pl \
+                       $(SOURCE_DIR)/errors.def \
 
 KEY_FILES            = bar-key.pem \
                        bar-ca.pem \
                        bar-server-key.pem \
                        bar-server-cert.pem \
 
-SCRIPTS              = scripts/barserver-SuSE \
-                       scripts/barserver-Fedora \
-                       scripts/barserver-RedHat \
-                       scripts/barserver-Mandrake \
-                       scripts/barserver-debian \
-                       scripts/barserver-CentOS \
-                       scripts/barserver.service \
-                       scripts/logrotate.conf \
+SCRIPTS              = $(SOURCE_DIR)/scripts/barserver-SuSE \
+                       $(SOURCE_DIR)/scripts/barserver-Fedora \
+                       $(SOURCE_DIR)/scripts/barserver-RedHat \
+                       $(SOURCE_DIR)/scripts/barserver-Mandrake \
+                       $(SOURCE_DIR)/scripts/barserver-debian \
+                       $(SOURCE_DIR)/scripts/barserver-CentOS \
+                       $(SOURCE_DIR)/scripts/barserver.service \
+                       $(SOURCE_DIR)/scripts/logrotate.conf \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -189,7 +191,7 @@ distclean: clean
 ifeq ($(ENABLE_GUI),yes)
 	-$(MAKE) -C barcontrol distclean
 endif
-	./download-third-party-packages.sh --clean
+	$(ROOT_DIR)/download-third-party-packages.sh --clean
 	$(RMRF) extern
 	$(RMF) Makefile
 	$(RMF) src/Config.java
@@ -260,6 +262,8 @@ help:
 	@$(ECHO) "  docker_purge"
 	@$(ECHO) ""
 	@$(ECHO) "  docker_run"
+	@$(ECHO) "  docker_run_win32"
+	@$(ECHO) "  docker_run_win32-x86_64"
 	@$(ECHO) ""
 	@$(ECHO) "  docker_rpm"
 	@$(ECHO) "  docker_den"
@@ -371,9 +375,6 @@ $(KEY_FILES):
 # ----------------------------------------------------------------------------
 # create documentation
 
-DOC_IMAGES := $(addprefix doc/,$(shell $(MAKE) --no-print-directory -s -C doc print_images))
-DOC_MAN    := $(addprefix doc/,$(shell $(MAKE) --no-print-directory -s -C doc print_man))
-
 .PHONY: doc clean_doc showman pdf
 doc:
 	@$(MAKE) -C doc
@@ -444,10 +445,8 @@ install_scripts: \
           scripts/barserver.service
 
 # install man-page
-install_man: \
-  $(DOC_MAN)
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_MAN_DIR)/man7"
-	$(INSTALL) -m 644 -t "$(DESTDIR)$(INSTALL_MAN_DIR)/man7" $(DOC_MAN)
+install_man:
+	$(MAKE) -C doc install_man
 
 # install keys
 # Note: prefix is used for temporary installations
@@ -527,90 +526,72 @@ distribution dist:
 clean_distribution clean_dist:
 	$(RMF) $(DISTRIBUTION_NAME).tar.bz2
 
-$(DOC_IMAGES):
-	$(MAKE) -C doc images
-
 # create distribution
 $(DISTRIBUTION_NAME).tar.bz2: \
-  configure \
-  configure.ac \
-  Makefile.in \
-  version \
-  ToDo \
-  ChangeLog \
+  $(SOURCE_DIR)/configure \
+  $(SOURCE_DIR)/configure.ac \
+  $(SOURCE_DIR)/Makefile.in \
+  $(SOURCE_DIR)/version \
+  $(SOURCE_DIR)/ToDo \
+  $(SOURCE_DIR)/ChangeLog \
   \
-  download-third-party-packages.sh \
+  $(SOURCE_DIR)/download-third-party-packages.sh \
   $(OTHER_SOURCES) \
   \
-  bin/config.guess \
-  bin/config.sub \
-  bin/install-sh \
-  bin/config.guess \
-  bin/config.sub bin/install-sh \
+  $(SOURCE_DIR)/bin/config.guess \
+  $(SOURCE_DIR)/bin/config.sub \
+  $(SOURCE_DIR)/bin/install-sh \
+  $(SOURCE_DIR)/bin/config.guess \
   \
-  bar/Makefile.in \
-  bar/test/Makefile.in \
-  barcontrol/Makefile.in \
+  $(SOURCE_DIR)/bar/Makefile.in \
+  $(SOURCE_DIR)/bar/test/Makefile.in \
+  $(SOURCE_DIR)/barcontrol/Makefile.in \
   \
-  ssl/certtool/*.tmpl \
-  ssl/openssl/*.tmpl \
+  $(SOURCE_DIR)/ssl/certtool/*.tmpl \
+  $(SOURCE_DIR)/ssl/openssl/*.tmpl \
   \
   $(SCRIPTS) \
   \
-  misc/*.patch \
+  $(SOURCE_DIR)/misc/*.patch \
   \
-  doc/Makefile.in \
-  doc/README \
-  doc/COPYING \
-  doc/backup-archiver.odt \
-  doc/backup-archiver.pdf \
-  doc/*.txt \
-  $(DOC_IMAGES) \
-  \
-  packages/*
+  $(SOURCE_DIR)/packages/*
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)
 	$(INSTALL) -m 775 \
                    -t tmp/$(DISTRIBUTION_NAME) \
-                   configure \
-                   download-third-party-packages.sh \
+                   $(SOURCE_DIR)/configure \
+                   $(SOURCE_DIR)/download-third-party-packages.sh \
                    $(OTHER_SOURCES)
 	$(INSTALL) -m 664 \
                    -t tmp/$(DISTRIBUTION_NAME) \
-                   configure.ac \
-                   Makefile.in \
-                   ToDo \
-                   ChangeLog
+                   $(SOURCE_DIR)/configure.ac \
+                   $(SOURCE_DIR)/Makefile.in \
+                   $(SOURCE_DIR)/ToDo \
+                   $(SOURCE_DIR)/ChangeLog
 	( \
-          $(GREP) MAJOR version; \
-          $(GREP) MINOR version; \
-          $(GREP) PATCH version; \
+          $(GREP) MAJOR $(SOURCE_DIR)/version; \
+          $(GREP) MINOR $(SOURCE_DIR)/version; \
+          $(GREP) PATCH $(SOURCE_DIR)/version; \
           $(ECHO) "RELEASE=$(shell $(GIT) rev-parse HEAD)"; \
         ) > tmp/$(DISTRIBUTION_NAME)/version
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
 	$(INSTALL) -m 664 \
                    -t tmp/$(DISTRIBUTION_NAME)/bin \
-                   bin/config.guess \
-                   bin/config.sub \
-                   bin/install-sh
+                   $(SOURCE_DIR)/bin/config.guess \
+                   $(SOURCE_DIR)/bin/config.sub \
+                   $(SOURCE_DIR)/bin/install-sh
 	$(MAKE) -C bar dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
 	$(MAKE) -C barcontrol dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
 	$(MAKE) -C doc dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
-	#
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/bin \
-                   bin/config.guess \
-                   bin/config.sub bin/install-sh
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl/certtool
 	$(INSTALL) -m 664 \
                    -t tmp/$(DISTRIBUTION_NAME)/ssl/certtool \
-                   ssl/certtool/*.tmpl
+                   $(SOURCE_DIR)/ssl/certtool/*.tmpl
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl/openssl
 	$(INSTALL) -m 664 \
                    -t tmp/$(DISTRIBUTION_NAME)/ssl/openssl \
-                   ssl/openssl/*.tmpl
+                   $(SOURCE_DIR)/ssl/openssl/*.tmpl
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/scripts
 	$(INSTALL) -m 664 \
@@ -620,48 +601,34 @@ $(DISTRIBUTION_NAME).tar.bz2: \
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/misc
 	$(INSTALL) -m 664 \
                    -t tmp/$(DISTRIBUTION_NAME)/misc \
-                   misc/*.patch
-	#
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/doc \
-                   doc/README \
-                   doc/COPYING \
-                   doc/backup-archiver.odt \
-                   doc/backup-archiver.pdf \
-                   doc/*.txt \
-                   $(DOC_MAN)
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc/images
-	$(INSTALL) -m 664 \
-                   -t tmp/$(DISTRIBUTION_NAME)/doc/images \
-                   $(DOC_IMAGES)
+                   $(SOURCE_DIR)/misc/*.patch
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages
 	$(INSTALL) -m 664 \
                    -t tmp/$(DISTRIBUTION_NAME)/packages \
-                   packages/*.dockerfile \
-                   packages/*.spec \
-                   packages/*.iss \
-                   packages/*.sh
+                   $(SOURCE_DIR)/packages/*.dockerfile \
+                   $(SOURCE_DIR)/packages/*.spec \
+                   $(SOURCE_DIR)/packages/*.iss \
+                   $(SOURCE_DIR)/packages/*.sh
 	$(INSTALL) -m 775 \
                    -t tmp/$(DISTRIBUTION_NAME)/packages \
-                   packages/changelog.pl
+                   $(SOURCE_DIR)/packages/changelog.pl
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages/debian
 	$(INSTALL) -m 664 \
                    -t tmp/$(DISTRIBUTION_NAME)/packages/debian \
-                   packages/debian/compat \
-                   packages/debian/conffiles \
-                   packages/debian/control \
-                   packages/debian/copyright \
-                   packages/debian/postinst \
-                   packages/debian/postrm \
-                   packages/debian/preinst \
-                   packages/debian/prerm \
-                   packages/debian/rules
+                   $(SOURCE_DIR)/packages/debian/compat \
+                   $(SOURCE_DIR)/packages/debian/conffiles \
+                   $(SOURCE_DIR)/packages/debian/control \
+                   $(SOURCE_DIR)/packages/debian/copyright \
+                   $(SOURCE_DIR)/packages/debian/postinst \
+                   $(SOURCE_DIR)/packages/debian/postrm \
+                   $(SOURCE_DIR)/packages/debian/preinst \
+                   $(SOURCE_DIR)/packages/debian/prerm \
+                   $(SOURCE_DIR)/packages/debian/rules
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages/debian/source
 	$(INSTALL) -m 664 \
                    -t tmp/$(DISTRIBUTION_NAME)/packages/debian/source \
-                   packages/debian/source/format
+                   $(SOURCE_DIR)/packages/debian/source/format
 	#
 	($(CD) tmp; $(TAR) cjf ../$@ $(DISTRIBUTION_NAME))
 	$(RMRF) tmp
@@ -800,7 +767,7 @@ docker_update update_docker:
 	$(INSTALL) download-third-party-packages.sh ci
 	$(INSTALL) bar/test/bar-sudoers ci
 	#
-	(cd ci; $(DOCKER) build -f build.dockerfile -t bar:build --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	(cd ci; $(DOCKER) build -f build.dockerfile -t bar --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
 	#
 	$(RMF) ci/bar-sudoers
 	$(RMF) ci/download-third-party-packages.sh
@@ -811,14 +778,13 @@ docker_purge purge_docker:
 
 functionGetCDEmuDevice=$(shell cdemu device-mapping |$(TAIL) -n +3|$(GREP) 0|$(TR) -s ' '|$(CUT) -d ' ' -f 2)
 
-.PHONY: docker_run build_docker
-docker_run build_docker:
+.PHONY: docker_run docker_run_win32 docker_run_win32-x86_64
+docker_run:
 	# Notes: - no image operations in docker, because /dev/loop* and mount only
 	#          work with --privileges=true which may cause dangerous/instable
 	#          behaviour
 	#        - do not enable host network, because of sftp/ssh/apache instances
 	#          in container; just map ssh port
-#TODO: use sudo?
 	#        - need root privileges in container to start services
 	if test -z "`cdemu device-mapping |$(TAIL) -n +3`"; then \
     cdemu add-device; \
@@ -840,23 +806,11 @@ docker_run build_docker:
           --device `cdemu device-mapping |$(TAIL) -n +3|$(GREP) 0|$(TR) -s ' '|$(CUT) -d ' ' -f 2` \
           -v `cdemu device-mapping |$(TAIL) -n +3|$(GREP) 0|$(TR) -s ' '|$(CUT) -d ' ' -f 2`:/dev/sr0 \
           -w $(PWD) \
-          --name=bar-build \
-          bar:build \
+          --name=bar \
+          bar \
           /bin/bash -c "echo export PS1=\'$(DOCKER_PROMPT)\' >> ~/.bashrc && /bin/bash"
 
-.PHONY: docker_rpm docker_rpm-x86_64 docker_den docker_den-x86_64 docker_win32 docker_win32-x86_64
-.PHONY: rpm_docker rpm_docker-x86_64 deb_docker deb_docker-x86_64 win32_docker win32_docker-x86_64
-docker_rpm rpm_docker:
-	echo TODO
-docker_rpm-x86_64 rpm_docker-x86_64:
-	echo TODO
-
-docker_deb deb_docker:
-	echo TODO
-docker_deb-x86_64 deb_docker-x86_64:
-	echo TODO
-
-docker_win32 win32_docker:
+docker_run_win32:
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
@@ -875,7 +829,7 @@ docker_win32 win32_docker:
               $(WINE) \
               $(DISTRIBUTION_NAME)-setup; \
         )
-docker_win32-x86_64 win32_docker-x86_64:
+docker_run_win32-x86_64:
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \

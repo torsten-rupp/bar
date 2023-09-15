@@ -17,7 +17,15 @@ PLATFORM = @PLATFORM@
 
 #------------------------------------ paths ----------------------------------
 
+ROOT_DIR   = $(abspath @srcdir@/..)
 SOURCE_DIR = $(abspath @srcdir@)
+BUILD_DIR  = $(CURDIR)/..
+
+ifeq ($(DESTDIR),)
+INSTALL_MAN_DIR        = $(if $(mandir),$(mandir),@MAN_DIR@)
+else
+INSTALL_MAN_DIR        = @MAN_DIR@
+endif
 
 #--------------------------------- tool chain --------------------------------
 
@@ -79,22 +87,25 @@ functionPrintResult = \
 #---------------------------------- rules ------------------------------------
 
 # convert images
-images/%.png: images/%.xcf
+images/%.png: $(SOURCE_DIR)/images/%.xcf
 ifneq ($(CONVERT),)
+	$(INSTALL) -d $(@D)
 	$(CONVERT) $^ -layers flatten $@
 else
 	@$(ECHO) "ERROR: no 'convert' command - cannot generate documentation"; false
 endif
 
-images/%-small.png: images/%.xcf
+images/%-small.png: $(SOURCE_DIR)/images/%.xcf
 ifneq ($(CONVERT),)
+	$(INSTALL) -d $(@D)
 	$(CONVERT) $^ -delete 1--1 -resize 200x200 $@
 else
 	@$(ECHO) "ERROR: no 'convert' command - cannot generate documentation"; false
 endif
 
-images/%-large.png: images/%.xcf
+images/%-large.png: $(SOURCE_DIR)/images/%.xcf
 ifneq ($(CONVERT),)
+	$(INSTALL) -d $(@D)
 	$(CONVERT) $^ -delete 1--1 $@
 else
 	@$(ECHO) "ERROR: no 'convert' command - cannot generate documentation"; false
@@ -107,7 +118,7 @@ DOC_MAN          = bar.7 \
 DOC_PDF          = backup-archiver.pdf \
 
 DOC              = $(DOC_MAN) $(DOC_PDF)
-								 
+
 DOC_IMAGES       = images/archivename-editor.png \
                    images/entries.png \
                    images/images.png \
@@ -123,7 +134,7 @@ DOC_IMAGES       = images/archivename-editor.png \
                    images/server-verbosity+log.png \
                    images/status.png \
                    images/storage.png \
-								 
+
 DOC_IMAGES_SMALL = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-small.png)
 DOC_IMAGES_LARGE = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-large.png)
 
@@ -164,7 +175,7 @@ images: $(DOC_IMAGES)
 print_images:
 	$(ECHO) $(DOC_IMAGES)
 
-image_small : $(DOC_IMAGES_SMALL)
+image_small: $(DOC_IMAGES_SMALL)
 
 .PHONY: print_images_small
 print_images_small:
@@ -220,14 +231,33 @@ pdf: backup-archiver.pdf
 
 # ----------------------------------------------------------------------------
 
+.PHONY: install install_man
+install install_man: \
+  $(DOC_MAN)
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_MAN_DIR)/man7"
+	$(INSTALL) -m 644 -t "$(DESTDIR)$(INSTALL_MAN_DIR)/man7" $(DOC_MAN)
+
+# ----------------------------------------------------------------------------
+
 # copy distribution files
 .PHONY: dist
-dist:
+dist: \
+  $(DOC_IMAGES)
 ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/doc
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/doc \
-                   Makefile.in
+                   $(SOURCE_DIR)/Makefile.in \
+                   $(SOURCE_DIR)/README \
+                   $(SOURCE_DIR)/COPYING \
+                   $(SOURCE_DIR)/backup-archiver.odt \
+                   $(SOURCE_DIR)/backup-archiver.pdf \
+                   $(SOURCE_DIR)/*.txt \
+                   $(SOURCE_DIR)/$(DOC_MAN)
+	$(INSTALL) -d $(DIRECTORY)/doc/images
+	$(INSTALL) -m 664 \
+                   -t $(DIRECTORY)/doc/images \
+                   $(DOC_IMAGES)
 else
 	@$(ECHO) "Please call 'make dist' from top-level directory to create a distribution."; false
 endif

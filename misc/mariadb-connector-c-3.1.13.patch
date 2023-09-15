@@ -1,0 +1,24 @@
+diff -u -r mariadb-connector-c-3.1.13-src.org/CMakeLists.txt mariadb-connector-c-3.1.13-src/CMakeLists.txt
+--- mariadb-connector-c-3.1.13-src.org/CMakeLists.txt	2021-05-03 11:58:17.000000000 +0000
++++ mariadb-connector-c-3.1.13-src/CMakeLists.txt	2022-01-28 14:01:41.621053382 +0000
+@@ -314,7 +314,7 @@
+       MESSAGE(FATAL_ERROR "GnuTLS not found")
+     ENDIF()
+   ENDIF()
+-  IF(WIN32)
++  IF(WITH_SSL STREQUAL WIN32)
+     IF(WITH_SSL STREQUAL "SCHANNEL")
+       ADD_DEFINITIONS(-DHAVE_SCHANNEL -DHAVE_TLS)
+       SET(SSL_SOURCES "${CC_SOURCE_DIR}/libmariadb/secure/schannel.c"
+diff -u -r mariadb-connector-c-3.1.13-src.org/libmariadb/ma_client_plugin.c.in mariadb-connector-c-3.1.13-src/libmariadb/ma_client_plugin.c.in
+--- mariadb-connector-c-3.1.13-src.org/libmariadb/ma_client_plugin.c.in	2021-05-03 11:58:17.000000000 +0000
++++ mariadb-connector-c-3.1.13-src/libmariadb/ma_client_plugin.c.in	2022-01-28 14:11:11.261117476 +0000
+@@ -472,7 +472,7 @@
+ 
+ 
+ /* see <mysql/client_plugin.h> for a full description */
+-struct st_mysql_client_plugin * STDCALL
++struct st_mysql_client_plugin *
+ mysql_load_plugin(MYSQL *mysql, const char *name, int type, int argc, ...)
+ {
+   struct st_mysql_client_plugin *p;

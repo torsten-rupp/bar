@@ -1,0 +1,11 @@
+--- zlib-1.3.org/deflate.c	2023-08-18 10:45:36.000000000 +0200
++++ zlib-1.3/deflate.c	2023-10-06 08:48:27.345436049 +0200
+@@ -448,6 +448,8 @@
+ 
+     s->window = (Bytef *) ZALLOC(strm, s->w_size, 2*sizeof(Byte));
+     s->prev   = (Posf *)  ZALLOC(strm, s->w_size, sizeof(Pos));
++// work-around valgrind issue: clear memory
++memset(s->prev, 0, s->w_size * sizeof(Pos));
+     s->head   = (Posf *)  ZALLOC(strm, s->hash_size, sizeof(Pos));
+ 
+     s->high_water = 0;      /* nothing written to s->window yet */

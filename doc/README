@@ -64,6 +64,7 @@ optional:
 * ssh2 1.6.0 or newer library (http://www.libssh2.org)
 * curl 7.77 or newer (http://curl.haxx.se)
 * c-areas (http://c-ares.haxx.se)
+* libidn2 2.3.4 or newer (https://ftp.gnu.org/gnu/libidn)
 * mmxml (http://www.minixml.org)
 * libiconv library (http://www.gnu.org/software/libiconv)
 * Kerberos 5 library (https://kerberos.org/dist/krb5)
@@ -96,6 +97,8 @@ for compiling:
 
 for building packages:
 * docker
+
+Note: use the docker file to build a working build environment.
 
 --- Installation
 

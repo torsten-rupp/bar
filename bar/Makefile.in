@@ -16,10 +16,11 @@ TESTCODE_EXITCODE       = 124
 
 #------------------------------------ paths ----------------------------------
 
-BASE_DIR           = $(CURDIR)
+ROOT_DIR           = $(abspath @srcdir@/..)
 SOURCE_DIR         = $(abspath @srcdir@)
 CONFIG_DIR         = @CONFIG_DIR@
 TLS_DIR            = @TLS_DIR@
+BUILD_DIR          = $(CURDIR)/..
 
 ifeq ($(DESTDIR),)
 INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
@@ -206,29 +207,29 @@ LCOV            = @LCOV@
 GENHTML         = @GENHTML@
 
 VALGRIND        = valgrind
-VALGRIND_FLAGS  = --gen-suppressions=no --num-callers=32 --track-fds=yes --track-origins=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
+VALGRIND_FLAGS  = --gen-suppressions=no --num-callers=32 --track-fds=yes --track-origins=yes --suppressions=$(ROOT_DIR)/bar/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
 CALLGRIND_FLAGS = -v
 
 #------------------------ specific variables/settings ------------------------
 
 # major, minor version number, repository hash
-VERSION_MAJOR      := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
-VERSION_MINOR      := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
-VERSION_PATCH      := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
+VERSION_MAJOR      := $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR      := $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
+VERSION_PATCH      := $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
 VERSION            := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
-VERSION_REPOSITORY = $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
+VERSION_REPOSITORY = $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
 ifneq   ($(wildcard ../.git),)
   ifneq ($(GIT),)
-		VERSION_REPOSITORY = $(shell ($(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE= || $(GIT) rev-parse HEAD 2>/dev/null)|$(SED) 's/RELEASE=//g')
+		VERSION_REPOSITORY = $(shell ($(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE= || $(GIT) rev-parse HEAD 2>/dev/null)|$(SED) 's/RELEASE=//g')
 	else
-		VERSION_REPOSITORY = $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
+		VERSION_REPOSITORY = $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
 	endif
 endif
 ifneq ($(wildcard ../.svn),)
   ifneq ($(SVNVERSION),)
-	  VERSION_REPOSITORY = $(shell ($(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE= || $(SVNVERSION) . 2>/dev/null)|$(SED) 's/RELEASE=//g')
+	  VERSION_REPOSITORY = $(shell ($(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE= || $(SVNVERSION) . 2>/dev/null)|$(SED) 's/RELEASE=//g')
 	else
-		VERSION_REPOSITORY = $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
+		VERSION_REPOSITORY = $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
 	endif
 endif
 
@@ -260,7 +261,7 @@ ifeq (@HAVE_GCRYPT@,1)
 endif
 
 # SQLite flags
-SQLITE_FLAGS         = $(if @HAVE_USLEEP@,-DHAVE_USLEEP=1) -DSQLITE_DEFAULT_FILE_PERMISSIONS=0600 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU)
+SQLITE_FLAGS         = $(if @HAVE_USLEEP@,-DHAVE_USLEEP=1) -DSQLITE_DEFAULT_FILE_PERMISSIONS=0600 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU) -DSQLITE_ENABLE_UNLOCK_NOTIFY
 SQLITE_FLAGS_RELEASE =
 SQLITE_FLAGS_DEBUG   = -DSQLITE_DEBUG
 #-DSQLITE_LOCK_TRACE
@@ -300,8 +301,8 @@ LANGUAGES = de jp
 #---------------------------------- rules ------------------------------------
 
 # source search paths
-vpath %.c   $(SOURCE_DIR)
-vpath %.cpp $(SOURCE_DIR)
+vpath %.c   $(BUILD_DIR)/bar:$(SOURCE_DIR)
+vpath %.cpp $(BUILD_DIR)/bar:$(SOURCE_DIR)
 
 # disable implicit rule for *.y -> *.c
 %.c: %.y
@@ -310,22 +311,37 @@ vpath %.cpp $(SOURCE_DIR)
 release/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
+release/%.o: %.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o release/$*.o
 
 debug/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
+debug/%.o: %.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o debug/$*.o
 
 gcov/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_GCOV) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
+gcov/%.o: %.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_GCOV) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o gcov/$*.o
 
 gprof/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_GPROF) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gprof/$*.o
+gprof/%.o: %.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_GPROF) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o gprof/$*.o
 
 valgrind/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_VALGRIND) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_VALGRIND),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
+valgrind/%.o: %.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_VALGRIND) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_VALGRIND),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o valgrind/$*.o
 
 common/%.o: $(SOURCE_DIR)/common/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
@@ -333,6 +349,8 @@ common/%.o: $(SOURCE_DIR)/common/%.c | errors.h archive_format.h archive_format_
 
 %.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+%.o: %.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 release/%.o: %.c
 	$(INSTALL) -d $(@D)
@@ -382,6 +400,7 @@ common/%.o: common/%.cpp
 %.o: %.cc
 	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" $(if $(VERSION_MINOR),-DVERSION_MINOR="$(VERSION_MINOR)") $(if $(VERSION_PATCH),-DVERSION_PATCH="$(VERSION_PATCH)") -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cc -o $*.o
 
+# unknown source
 %.o:
 	$(error Unkown object file '$*.o': do not know how to create it)
 
@@ -526,20 +545,23 @@ COMMON_SOURCES_FILTER       = \
 COMMON_HEADERS              = $(patsubst %.c,  %.h,$(filter %.c,  $(COMMON_SOURCES))) \
                               $(patsubst %.cpp,%.h,$(filter %.cpp,$(COMMON_SOURCES))) \
 
+SQLITE3_SOURCES             = $(if $(wildcard $(BUILD_DIR)/extern/sources/sqlite3.c),$(BUILD_DIR)/extern/sources/sqlite3.c,$(SOURCE_DIR)/sqlite3.c)
 
-SQLITE3_SOURCES             = $(if $(wildcard ../sqlite/sqlite3.c),../sqlite/sqlite3.c,sqlite3.c)
+SQLITE3_HEADERS             = $(if $(wildcard $(BUILD_DIR)/extern/include/sqlite3.h),$(BUILD_DIR)/extern/include/sqlite3.h,$(SOURCE_DIR)/sqlite3.h)
 
-SQLITE3_HEADERS             = $(if $(wildcard ../sqlite/sqlite3.h),../sqlite/sqlite3.h,sqlite3.h)
+SQLITE3_OBJECTS             = sqlite3.o
 
-SQLITE3_OBJECTS             = $(foreach z,$(filter %.c,  $(notdir $(SQLITE3_SOURCES))),$(patsubst %.c,  %.o,$z)) \
-                              $(foreach z,$(filter %.cpp,$(notdir $(SQLITE3_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+XDELTA3_SOURCES             = $(BUILD_DIR)/extern/sources/xdelta3.c
+
+XDELTA3_HEADERS             = $(BUILD_DIR)/extern/include/xdelta3.h
+
+XDELTA3_OBJECTS             = xdelta3.o
 
 EXTERN_SOURCES              = $(SQLITE3_SOURCES) \
 
-EXTERN_HEADERS              = $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
+EXTERN_HEADERS              = $(SQLITE3_HEADERS) \
 
-EXTERN_OBJECTS              = $(foreach z,$(filter %.c,  $(notdir $(EXTERN_SOURCES))),$(patsubst %.c,  %.o,$z)) \
-                              $(foreach z,$(filter %.cpp,$(notdir $(EXTERN_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+EXTERN_OBJECTS              = $(SQLITE3_OBJECTS) \
                               $(if @HAVE_XDELTA3@,xdelta3.o) \
 
 EXTERN_OBJECTS_RELEASE      = $(addprefix release/,$(EXTERN_OBJECTS))
@@ -561,7 +583,6 @@ DESTROYER_OBJECTS           = $(foreach z,$(filter %.c,  $(DESTROYER_SOURCES)),$
                               errors.o \
                               $(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.c,  %.o,$z)) \
                               $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
-
 
 BAR_INDEX_SOURCES           = bar-index.c \
                               bar_common.c \
@@ -781,104 +802,90 @@ help:
 .PHONY: depend
 depend: Makefile.depend
 
-Makefile.depend: $(SOURCE_DIR)/Makefile $(SOURCE_DIR)/Makefile.in
+Makefile.depend: $(SOURCE_DIR)/Makefile.in
 	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
 	$(ECHO) >Makefile.depend
-	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_INDEX_SOURCES); do \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(foreach header,$(INTERMEDIATE_HEADERS),\
-              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
-            ) \
+	for source in $(addprefix $(SOURCE_DIR)/,$(BAR_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_INDEX_SOURCES)) $(EXTERN_SOURCES); do \
+          $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|release/\1|g' | \
             $(CAT) >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(foreach header,$(INTERMEDIATE_HEADERS),\
-              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
-            ) \
+          $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|debug/\1|g' | \
             $(CAT) >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(foreach header,$(INTERMEDIATE_HEADERS),\
-              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
-            ) \
+          $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|gcov/\1|g' | \
             $(CAT) >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(foreach header,$(INTERMEDIATE_HEADERS),\
-              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
-            ) \
+          $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|gprof/\1|g' | \
             $(CAT) >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
-            $(foreach header,$(INTERMEDIATE_HEADERS),\
-              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
-            ) \
+          $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|valgrind/\1|g' | \
             $(CAT) >> Makefile.depend; \
         done;
-	for z in $(COMMON_SOURCES); do \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+	for source in $(addprefix $(SOURCE_DIR)/,$(COMMON_SOURCES)); do \
+          $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|release/common/\1|g' >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|debug/common/\1|g' >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|gcov/common/\1|g' >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|gprof/common/\1|g' >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|valgrind/common/\1|g' >> Makefile.depend; \
         done;
 
 # create tags file
 bar.tags: \
-  $(BAR_SOURCES) \
-  $(BAR_SOURCES_OTHER) \
-  $(COMMON_SOURCES) \
-  $(COMMON_SOURCES_OTHER) \
-  $(EXTERN_SOURCES) \
-  $(DESTROYER_SOURCES) \
-  $(BAR_INDEX_SOURCES) \
-  $(BAR_INDEX_SOURCES_OTHER) \
-  $(BAR_INDEX_SOURCES_COMMON) \
-  $(BAR_MINIDUMP_SOURCES) \
-  $(BAR_MINIDUMP_SOURCES_COMMON)
-	$(CTAGS) $(CTAGS_FLAGS) -f $@ $^
+  $(addprefix $(SOURCE_DIR)/,$(BAR_SOURCES) \
+                             $(BAR_SOURCES_OTHER) \
+                             $(COMMON_SOURCES) \
+                             $(COMMON_SOURCES_OTHER) \
+                             $(DESTROYER_SOURCES) \
+                             $(BAR_INDEX_SOURCES) \
+                             $(BAR_INDEX_SOURCES_OTHER) \
+                             $(BAR_INDEX_SOURCES_COMMON) \
+                             $(BAR_MINIDUMP_SOURCES) \
+                             $(BAR_MINIDUMP_SOURCES_COMMON) \
+   ) \
+  $(EXTERN_SOURCES)
+	$(CTAGS) $(CTAGS_FLAGS) -f $@ $(addprefix $(SOURCE_DIR)/,$^)
 
 # ----------------------------------------------------------------------------
 
 # compile SQLite, xdelta C source without warning flags
 release/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(SQLITE_FLAGS)                       $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(SQLITE_FLAGS)                       $(foreach i,$(CC_DEFINES),-D$i) $(foreach i,$(CC_INCLUDES),-I$i) -c $< -o $@
 debug/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach i,$(CC_DEFINES),-D$i) $(foreach i,$(CC_INCLUDES),-I$i) -c $< -o $@
 gcov/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach i,$(CC_DEFINES),-D$i) $(foreach i,$(CC_INCLUDES),-I$i) -c $< -o $@
 gprof/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach i,$(CC_DEFINES),-D$i) $(foreach i,$(CC_INCLUDES),-I$i) -c $< -o $@
 valgrind/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach i,$(CC_DEFINES),-D$i) $(foreach i,$(CC_INCLUDES),-I$i) -c $< -o $@
 
 ifeq (@HAVE_XDELTA3@,1)
-release/xdelta3.o: ../xdelta3/xdelta3.c
+release/xdelta3.o: $(XDELTA3_SOURCES) $(XDELTA3_HEADERS) ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H $(XDELTA3_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(foreach i,$(CC_INCLUDES),-I$i) -c $< -o $@
 debug/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H $(XDELTA3_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(foreach i,$(CC_INCLUDES),-I$i) -c $< -o $@
 gcov/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H $(XDELTA3_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(foreach i,$(CC_INCLUDES),-I$i) -c $< -o $@
 gprof/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H $(XDELTA3_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(foreach i,$(CC_INCLUDES),-I$i) -c $< -o $@
 valgrind/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H $(XDELTA3_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(foreach i,$(CC_INCLUDES),-I$i) -c $< -o $@
 endif
 
 # create BAR
@@ -957,13 +964,13 @@ bar-keygen@SHELLEXT@: $(SOURCE_DIR)/bar-keygen.in
         ( \
           while IFS="" read -r line; do \
             if   test "$$line" = "@CERTTOOL/CA.TEMPL@"; then \
-              $(CAT) $(SOURCE_DIR)/../ssl/certtool/ca.tmpl; \
+              $(CAT) $(ROOT_DIR)/ssl/certtool/ca.tmpl; \
             elif test "$$line" = "@CERTTOOL/SERVER.TEMPL@"; then \
-              $(CAT) $(SOURCE_DIR)/../ssl/certtool/server.tmpl; \
+              $(CAT) $(ROOT_DIR)/ssl/certtool/server.tmpl; \
             elif test "$$line" = "@OPENSSL/CA.TEMPL@"; then \
-              $(CAT) $(SOURCE_DIR)/../ssl/openssl/ca.tmpl; \
+              $(CAT) $(ROOT_DIR)/ssl/openssl/ca.tmpl; \
             elif test "$$line" = "@OPENSSL/SERVER.TEMPL@"; then \
-              $(CAT) $(SOURCE_DIR)/../ssl/openssl/server.tmpl; \
+              $(CAT) $(ROOT_DIR)/ssl/openssl/server.tmpl; \
             else \
               line=`$(ECHO) "$$line"|$(SED) 's|\@TLS_DIR\@|$(DESTDIR)$(TLS_DIR)|g'`; \
               line=`$(ECHO) "$$line"|$(SED) 's|\@CONFIG_DIR\@|$(DESTDIR)$(CONFIG_DIR)|g'`; \
@@ -975,13 +982,13 @@ bar-keygen@SHELLEXT@: $(SOURCE_DIR)/bar-keygen.in
 
 # error definition
 errors.h: \
-  $(SOURCE_DIR)/../errors.def \
-  $(SOURCE_DIR)/../errors.pl
-	$(PERL) $(SOURCE_DIR)/../errors.pl < $(SOURCE_DIR)/../errors.def -h $@
+  $(ROOT_DIR)/errors.def \
+  $(ROOT_DIR)/errors.pl
+	$(PERL) $(ROOT_DIR)/errors.pl < $(ROOT_DIR)/errors.def -h $@
 errors.c: \
-  $(SOURCE_DIR)/../errors.def \
-  $(SOURCE_DIR)/../errors.pl
-	$(PERL) $(SOURCE_DIR)/../errors.pl < $(SOURCE_DIR)/../errors.def -c $@
+  $(ROOT_DIR)/errors.def \
+  $(ROOT_DIR)/errors.pl
+	$(PERL) $(ROOT_DIR)/errors.pl < $(ROOT_DIR)/errors.def -c $@
 release/errors.o: errors.c errors.h
 debug/errors.o: errors.c errors.h
 gcov/errors.o: errors.c errors.h
@@ -1132,11 +1139,11 @@ po/jp/LC_MESSAGES/bar.mo: $(SOURCE_DIR)/po/japanese.po
 
 # ----------------------------------------------------------------------------
 
-/tmp/bar.cfg: bar.cfg
-	$(INSTALL) -m 600 bar.cfg $@
+/tmp/bar.cfg: $(SOURCE_DIR)/bar.cfg
+	$(INSTALL) -m 600 $(SOURCE_DIR)/bar.cfg $@
 
-/tmp/bar-slave.cfg: bar.cfg
-	$(INSTALL) -m 600 bar.cfg $@
+/tmp/bar-slave.cfg: $(SOURCE_DIR)/bar.cfg
+	$(INSTALL) -m 600 $(SOURCE_DIR)/bar.cfg $@
 
 ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem:
 	$(MAKE) -C .. keys
@@ -1150,7 +1157,7 @@ run runserver: bar@EXEEXT@
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           $(OPTIONS)
@@ -1161,7 +1168,7 @@ rund runserverd: bar-debug@EXEEXT@
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           $(OPTIONS)
@@ -1172,7 +1179,7 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1186,7 +1193,7 @@ run_slave runserver_slave: bar@EXEEXT@
           --server-mode=slave \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs-slave \
+          --jobs-directory=$(SOURCE_DIR)/jobs-slave \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --pairing-master-file=/tmp/pairing \
@@ -1200,7 +1207,7 @@ rund_slave runserverd_slave: bar-debug@EXEEXT@
           --server-mode=slave \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs-slave \
+          --jobs-directory=$(SOURCE_DIR)/jobs-slave \
           --incremental-data-directory=/tmp \
           --pairing-master-file=/tmp/pairing \
           --log-file=/tmp/bar-slave.log --log=all \
@@ -1213,7 +1220,7 @@ run_en runserver_en: bar@EXEEXT@
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           $(OPTIONS)
@@ -1224,7 +1231,7 @@ run_de runserver_de: bar@EXEEXT@
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           $(OPTIONS)
@@ -1235,7 +1242,7 @@ run_jp runserver_jp: bar@EXEEXT@
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           $(OPTIONS)
@@ -1248,7 +1255,7 @@ rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1263,7 +1270,7 @@ rundev1 rundevd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1278,7 +1285,7 @@ rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ..
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE2) --index-database=$(SERVER_DATABASE2) --index-database-keep-time=365days \
-          --jobs-directory=jobs2 \
+          --jobs-directory=$(SOURCE_DIR)/jobs2 \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=0 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1293,7 +1300,7 @@ rundevgdb: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1308,7 +1315,7 @@ rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1323,7 +1330,7 @@ rundevgcov: bar-gcov@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1338,7 +1345,7 @@ rundevgprof: bar-gprof@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1353,7 +1360,7 @@ rundevvalgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-ce
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1368,7 +1375,7 @@ rundevcallgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-c
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_CONTINUOUS_DATABASE) --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1384,7 +1391,7 @@ rundevd_wine:
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=C:/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --pairing-master-file=C:/tmp/pairing \
@@ -1397,7 +1404,7 @@ rundevd_slave_wine:
           --server-mode=slave \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=C:/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --pairing-master-file=C:/tmp/pairing \
@@ -1411,7 +1418,7 @@ rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pe
           --server-mode=slave \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs-slave \
+          --jobs-directory=$(SOURCE_DIR)/jobs-slave \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_SLAVE_PORT) --server-tls-port=$(SERVER_SLAVE_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1428,7 +1435,7 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
           --server-mode=slave \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs-slave \
+          --jobs-directory=$(SOURCE_DIR)/jobs-slave \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_SLAVE_PORT) --server-tls-port=$(SERVER_SLAVE_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1445,7 +1452,7 @@ rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --server-mode=slave \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs-slave \
+          --jobs-directory=$(SOURCE_DIR)/jobs-slave \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_SLAVE_PORT) --server-tls-port=$(SERVER_SLAVE_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1462,7 +1469,7 @@ rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --server-mode=slave \
           --pid-file=/tmp/bar.pid \
           --continuous-database=$(SERVER_SLAVE_CONTINUOUS_DATABASE) --index-database=$(SERVER_SLAVE_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs-slave \
+          --jobs-directory=$(SOURCE_DIR)/jobs-slave \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_SLAVE_PORT) --server-tls-port=$(SERVER_SLAVE_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1478,7 +1485,7 @@ rundev_en: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1491,7 +1498,7 @@ rundev_de: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1504,7 +1511,7 @@ rundev_jp: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1517,7 +1524,7 @@ rundev_ssl: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar
           --server-mode=master \
           --pid-file=/tmp/bar.pid \
           --index-database=$(SERVER_DATABASE) --index-database-keep-time=365days \
-          --jobs-directory=jobs \
+          --jobs-directory=$(SOURCE_DIR)/jobs \
           --incremental-data-directory=/tmp \
           --server-port=$(SERVER_PORT) --server-tls-port=$(SERVER_TLS_PORT) \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
@@ -1805,14 +1812,15 @@ gcov%: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	$(MAKE) \
-	  -C test \
-	  -j1 \
-	  TEST_BAR=$(BASE_DIR)/bar-gcov \
-	  COMPRESS_NAMES="`if test -z "$(COMPRESS_NAMES)"; then $(ECHO) $(COMPRESS_NAMES); else $(ECHO) $(MIN_COMPRESS_NAMES); fi`" \
-	  CRYPT_NAMES="`if test -z "$(CRYPT_NAMES)"; then $(ECHO) $(CRYPT_NAMES); else $(ECHO) $(MIN_CRYPT_NAMES); fi`" \
-	  $(subst gcov,test,$@)
+    -C test \
+    -j1 \
+    TEST_BAR=$(BUILD_DIR)/bar/bar-gcov \
+    COMPRESS_NAMES="`if test -z "$(COMPRESS_NAMES)"; then $(ECHO) $(COMPRESS_NAMES); else $(ECHO) $(MIN_COMPRESS_NAMES); fi`" \
+    CRYPT_NAMES="`if test -z "$(CRYPT_NAMES)"; then $(ECHO) $(CRYPT_NAMES); else $(ECHO) $(MIN_CRYPT_NAMES); fi`" \
+    $(subst gcov,test,$@)
 
 gcov_clean:
+	$(INSTALL) -d gcov
 	$(FIND) gcov -type f -name '*.gcda'|$(XARGS) $(RMF)
 	$(RMRF) coverage
 
@@ -1840,7 +1848,7 @@ gprof_clean:
 gprof%: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	$(MAKE) -C test -j1 $(subst gprof,test,$@) TEST_BAR=$(BASE_DIR)/bar-gprof@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
+	$(MAKE) -C test -j1 $(subst gprof,test,$@) TEST_BAR=$(BUILD_DIR)/bar/bar-gprof@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
 
 # ----------------------------------------------------------------------------
 
@@ -2074,14 +2082,14 @@ ifneq ($(DIRECTORY),)
 	$(foreach name,Makefile.in \
                        config.h.in \
                        $(sort $(ALL_SOURCES)), \
-                       $(INSTALL) -m 664 -t $(DIRECTORY)/bar/$(dir $(name)) $(name); \
+                       $(INSTALL) -m 664 -t $(DIRECTORY)/bar/$(dir $(name)) $(SOURCE_DIR)/$(name); \
         )
 	$(INSTALL) -d $(DIRECTORY)/bar/po
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/bar/po \
-                   $(sort po/Makefile.in \
-                          po/*.pot \
-                          po/*.po \
+                   $(sort $(SOURCE_DIR)/po/Makefile.in \
+                          $(SOURCE_DIR)/po/*.pot \
+                          $(SOURCE_DIR)/po/*.po \
                    )
 	$(MAKE) -C test dist DIRECTORY=../$(DIRECTORY)
 else

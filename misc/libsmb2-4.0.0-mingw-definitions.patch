@@ -1,0 +1,90 @@
+diff --git a/include/asprintf.h b/include/asprintf.h
+index 88c83cc..84567a5 100644
+--- a/include/asprintf.h
++++ b/include/asprintf.h
+@@ -20,6 +20,8 @@ static inline int _vscprintf_so(const char * format, va_list pargs) {
+ }
+ #endif // _vscprintf
+ 
++// already defined, tr 2023-10-01
++#if 0
+ #ifndef vasprintf
+ static inline int vasprintf(char **strp, const char *fmt, va_list ap) {
+   int len = _vscprintf_so(fmt, ap);
+@@ -42,5 +44,6 @@ static inline int asprintf(char *strp[], const char *fmt, ...) {
+   return r;
+ }
+ #endif // asprintf
++#endif
+ 
+ #endif // ! _ASPRINTF_H_
+diff --git a/include/msvc/sys/socket.h b/include/msvc/sys/socket.h
+index 2bfa367..4588c01 100644
+--- a/include/msvc/sys/socket.h
++++ b/include/msvc/sys/socket.h
+@@ -18,7 +18,10 @@ extern "C" {
+ 
+ #define EBADF WSAENOTSOCK
+ 
++// already defined, tr 2023-10-01
++#if 0
+ typedef SSIZE_T ssize_t;
++#endif
+ 
+ struct iovec
+ {
+@@ -51,10 +54,13 @@ inline int readv(t_socket sock, struct iovec *iov, int nvecs)
+   return -1;
+ }
+ 
++//already defined, tr 2023-10-01
++#if 0
+ inline int close(t_socket sock)
+ {
+   return closesocket(sock);
+ }
++#endif
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/lib/aes128ccm.c b/lib/aes128ccm.c
+index a916513..fc914d5 100644
+--- a/lib/aes128ccm.c
++++ b/lib/aes128ccm.c
+@@ -23,7 +23,7 @@
+ #include <stdint.h>
+ #endif
+ 
+-#if !defined(_MSC_VER) && !defined(PS2_EE_PLATFORM) && !defined(PS2_IOP_PLATFORM)
++#if !defined(WIN32) && !defined(_MSC_VER) && !defined(PS2_EE_PLATFORM) && !defined(PS2_IOP_PLATFORM)
+ #include <arpa/inet.h>
+ #endif /* !_MSC_VER && !PS2_EE_PLATFORM !PS2_IOP_PLATFORM */
+ 
+diff --git a/lib/socket.c b/lib/socket.c
+index 123fb5d..4ee0912 100644
+--- a/lib/socket.c
++++ b/lib/socket.c
+@@ -41,6 +41,9 @@
+ #else
+ #include <poll.h>
+ #endif
++// required for Windows, tr 2023-10-02
++#elif WIN32
++#include <winsock2.h>
+ #endif
+ 
+ #ifdef HAVE_STDLIB_H
+diff --git a/lib/sync.c b/lib/sync.c
+index 50be6ad..221c569 100644
+--- a/lib/sync.c
++++ b/lib/sync.c
+@@ -38,6 +38,9 @@
+ #else
+ #include <poll.h>
+ #endif
++// required for Windows, tr 2023-10-02
++#elif WIN32
++#include <winsock2.h>
+ #endif
+ 
+ #ifdef HAVE_STRING_H

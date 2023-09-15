@@ -167,6 +167,8 @@ LOCAL Errors CompressZIP_decompressData(CompressInfo *compressInfo)
         compressInfo->zlib.stream.avail_in  = maxCompressBytes;
         compressInfo->zlib.stream.next_out  = (Bytef*)RingBuffer_cArrayIn(&compressInfo->dataRingBuffer);
         compressInfo->zlib.stream.avail_out = maxDataBytes;
+//memClear(compressInfo->zlib.stream.next_in,compressInfo->zlib.stream.avail_in);
+//memClear(compressInfo->zlib.stream.next_out,compressInfo->zlib.stream.avail_out);
         zlibResult = inflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
         if      (zlibResult == Z_STREAM_END)
         {

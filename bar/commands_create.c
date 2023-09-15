@@ -3819,7 +3819,8 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
       {
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
-          String_setCString(createInfo->statusInfo.message,"wait for temporary space");
+//TODO: translate
+          String_setCString(createInfo->statusInfo.message,"waiting for temporary space");
         }
 
         do
@@ -7851,8 +7852,6 @@ Errors Command_create(ServerIO                     *masterIO,
   assert(storageName != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
-
-assert(createdDateTime < 0x0FFFFFFFFFFFFFFFLL);
 
   // init variables
   AutoFree_init(&autoFreeList);

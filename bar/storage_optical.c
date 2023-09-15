@@ -2407,6 +2407,8 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
 
     storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_begin(storageDirectoryListHandle->opticalDisk.cdioList);
 
+    AutoFree_done(&autoFreeList);
+
     return ERROR_NONE;
   #else /* not HAVE_ISO9660 */
     storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(pathName);

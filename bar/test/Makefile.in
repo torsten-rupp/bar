@@ -17,13 +17,17 @@ TESTCODE_EXITCODE       = 124
 
 #------------------------------------ paths ----------------------------------
 
-BASE_DIR      = $(CURDIR)
+ROOT_DIR      = $(abspath @srcdir@/../..)
+SOURCE_DIR    = $(abspath @srcdir@)
 BAR_DIR       = $(CURDIR)/..
-SUB_DIR       = $(subst $(abspath $(BAR_DIR))/,,$(abspath $(BASE_DIR)))
-UP_DIR        = $(subst $() $(),/,$(foreach i,$(subst /,$() $(),$(SUB_DIR)),..))
+#SUB_DIR       = $(subst $(abspath $(BAR_DIR))/,,$(abspath $(BAR_DIR)))
+SUB_DIR       = test
+#UP_DIR        = $(subst $() $(),/,$(foreach i,$(subst /,$() $(),$(SUB_DIR)),..))
+UP_DIR        = ..
+BUILD_DIR     = $(CURDIR)/../..
 
 # test intermediate files directory
-TEST_BASE_DIR           ?=
+TEST_BUILD_DIR           ?=
 
 # test data directory
 TEST_DATA_DIR           ?= test
@@ -67,7 +71,7 @@ CC_FLAGS_OPTIMIZE          = @CC_FLAGS_OPTIMIZE@
 CC_FLAGS_OPTIMIZE_RELEASE  = @CC_FLAGS_OPTIMIZE_RELEASE@
 CC_DEFINES                 = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s,...)=s"
 CC_DEFINES_RELEASE         = @CC_DEFINES_RELEASE@
-CC_INCLUDES                = . @CC_INCLUDES@ extern $(SOURCE_DIR)
+CC_INCLUDES                = . @CC_INCLUDES@ extern $(SOURCE_DIR) $(SOURCE_DIR)/..
 
 LD                         = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS                   = @LD_FLAGS@
@@ -175,7 +179,7 @@ LCOV           = lcov
 GENHTML        = genhtml
 
 VALGRIND       = valgrind
-VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --track-origins=yes --suppressions=$(BAR_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
+VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --track-origins=yes --suppressions=$(ROOT_DIR)/bar/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
 
 INFO           = echo >&2
 INFO_NO_LF     = echo -n >&2
@@ -305,7 +309,7 @@ endif
 EXT_BLOCK_SIZES ?= default 1024 2048 4096
 
 # intermediate files directory
-INTERMEDIATE_DIR := $(abspath $(addprefix $(if $(TEST_BASE_DIR),$(TEST_BASE_DIR)/),intermediate))
+INTERMEDIATE_DIR := $(abspath $(addprefix $(if $(TEST_BUILD_DIR),$(TEST_BUILD_DIR)/),intermediate))
 
 # test settings
 TEST_CONFIG                          = $(INTERMEDIATE_DIR)/bar.cfg
@@ -498,14 +502,17 @@ BUILD_SUFFIXES = $(subst $() $(),|,-debug -gcov -gprof -valgrind)
 
 # source search paths
 
+%.o: $(SOURCE_DIR)/../%.c
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/../$*.c -o $*.o
+
+%.o: $(SOURCE_DIR)/../common/%.c
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/../common/$*.c -o $*.o
+
+%.o: $(SOURCE_DIR)/%.c
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+
 %.o: ../%.c
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c ../$*.c -o $*.o
-
-%.o: ../common/%.c
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c ../common/$*.c -o $*.o
-
-%.o: %.c
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_PATCH='"$(VERSION_PATCH)"' -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.c -o $*.o
 
 #--------------------------------- objects -----------------------------------
 
@@ -602,7 +609,7 @@ help_output:
 	@$(ECHO) ""
 	@$(ECHO) "Variables:"
 	@$(ECHO) ""
-	@$(ECHO) "  TEST_BASE_DIR=<test base directory>"
+	@$(ECHO) "  TEST_BUILD_DIR=<test base directory>"
 	@$(ECHO) "  TEST_DATA_DIR=<test data directory>"
 	@$(ECHO) ""
 	@$(ECHO) "  TEST_COMPRESS_NAMES"
@@ -641,10 +648,10 @@ help_output:
 
 # ----------------------------------------------------------------------------
 
-parallel.o: parallel.c
-global.o: ../common/global.c ../common/global.h
-strings.o: ../common/strings.c ../common/strings.h
-errors.o: ../errors.c ../errors.h
+parallel.o: $(SOURCE_DIR)/parallel.c ../config.h
+global.o: $(SOURCE_DIR)/../common/global.c $(SOURCE_DIR)/../common/global.h ../config.h
+strings.o: $(SOURCE_DIR)/../common/strings.c $(SOURCE_DIR)/../common/strings.h ../config.h
+errors.o: ../errors.c ../errors.h ../config.h
 
 parallel$(EXE_SUFFIX): \
   parallel.o \
@@ -905,6 +912,7 @@ functionWaitProcess = \
 
 # test files
 TEST_FILE_NAMES_SIMPLE = \
+  zero0.dat \
   zero128.dat \
   zero1024.dat \
   zero512k.dat \
@@ -912,7 +920,6 @@ TEST_FILE_NAMES_SIMPLE = \
   random1024.dat \
   random512k.dat \
   zero-random512k.dat \
-  zero.dat \
   readonly.dat \
   readonly512k.dat \
   unreadable.dat \
@@ -2109,7 +2116,7 @@ test11 test_index: \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
             TEST_INDEX_DATABASE=$$testIndexDatabase \
-            TEST_INDEX_DATABASE_IMPORT=archive/index.sql \
+            TEST_INDEX_DATABASE_IMPORT=$(SOURCE_DIR)/archive/index.sql \
             test_index_operations \
             ; \
           rc=$$?; \
@@ -2306,7 +2313,7 @@ test_arguments: \
 	@#
 	# short/long options
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --create $(INTERMEDIATE_DIR)/test.bar data/zero.dat $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --create $(INTERMEDIATE_DIR)/test.bar data/zero0.dat $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --test $(INTERMEDIATE_DIR)/test.bar $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --compare $(INTERMEDIATE_DIR)/test.bar $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --extract $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore $(LOG))
@@ -2325,8 +2332,8 @@ test_arguments: \
 	@#
 	# working directory
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --directory data $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar zero.dat --overwrite-archive-files $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C data $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar zero.dat --overwrite-archive-files $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) --directory data $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar zero0.dat --overwrite-archive-files $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C data $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar zero0.dat --overwrite-archive-files $(LOG))
 	@#
 	# destinations (ignore errors)
 	@$(call functionCleanTestFiles)
@@ -2367,7 +2374,7 @@ test_arguments: \
 	@#
 	# patterns
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data/zero.dat $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data/zero0.dat $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l $(INTERMEDIATE_DIR)/test*.bar $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -l "$(INTERMEDIATE_DIR)/test*.bar" $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -t $(INTERMEDIATE_DIR)/test*.bar $(LOG))
@@ -2434,13 +2441,13 @@ endif
 	@#
 	# commands
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --pre-command="touch $(INTERMEDIATE_DIR)/aux0" --post-command="touch $(INTERMEDIATE_DIR)/aux1" data/zero.dat --overwrite-archive-files $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --pre-command="touch $(INTERMEDIATE_DIR)/aux0" --post-command="touch $(INTERMEDIATE_DIR)/aux1" data/zero0.dat --overwrite-archive-files $(LOG))
 	test -f $(INTERMEDIATE_DIR)/aux0
 	test -f $(INTERMEDIATE_DIR)/aux1
 	@#
 	# commands (test parsing command line options only for commands only used in server)
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --file-write-pre-command="echo" --file-write-post-command="echo" data/zero.dat --overwrite-archive-files $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --file-write-pre-command="echo" --file-write-post-command="echo" data/zero0.dat --overwrite-archive-files $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --include-file-command="find data" --skip-unreadable --overwrite-archive-files $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --include-image-command="find data" --skip-unreadable --overwrite-archive-files $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --exclude-command="find data" --skip-unreadable --overwrite-archive-files $(LOG))
@@ -2504,7 +2511,7 @@ endif
 	@$(call functionCleanTestFiles)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --skip-unreadable $(TEST_FILES) $(LOG))
 	$(RMRF) $(INTERMEDIATE_DIR)/restore
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar -# data/zero.dat --destination $(INTERMEDIATE_DIR)/restore --verbose=0 $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar -# data/zero0.dat --destination $(INTERMEDIATE_DIR)/restore --verbose=0 $(LOG))
 	$(RMRF) $(INTERMEDIATE_DIR)/restore
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar -# data/sub_dir -# data/sub_dir.ext --destination $(INTERMEDIATE_DIR)/restore --no-stop-on-attribute-error $(LOG))
 	$(RMRF) $(INTERMEDIATE_DIR)/restore
@@ -2518,7 +2525,7 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore --restore-entry-mode=stop --no-stop-on-error --no-stop-on-attribute-error --no-fragments-check $(LOG))
 	$(RMF) $(INTERMEDIATE_DIR)/restore/data/readonly.dat $(INTERMEDIATE_DIR)/restore/data/file400.dat $(INTERMEDIATE_DIR)/restore/data/readonly512k.dat
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore --restore-entry-mode=overwrite --no-stop-on-attribute-error  $(LOG))
-	test -f $(INTERMEDIATE_DIR)/restore/data/zero.dat
+	test -f $(INTERMEDIATE_DIR)/restore/data/zero0.dat
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore --restore-entry-mode=skip-existing --no-stop-on-attribute-error --no-fragments-check $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar -# data/zero128.dat -# data/sub_dir -# data/sub_dir.ext -# data/link.dat -# 'data/hardlink*.dat' -# data/fifo -# data/fifo.ext -# data/character_device -# data/block_device --destination $(INTERMEDIATE_DIR)/restore --restore-entry-mode=rename --no-stop-on-attribute-error $(LOG))
 	test -f $(INTERMEDIATE_DIR)/restore/data/zero128-0.dat
@@ -2945,7 +2952,7 @@ test_miscellaneous-gprof test_misc-gprof:
 
 test_miscellaneous-valgrind test_misc-valgrind:
 	#Note: do not use VALGRIND_FLAGS, because of exit code
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck --gen-suppressions=no --track-fds=yes --track-origins=yes --suppressions=$(BAR_DIR)/valgrind.supp --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_miscellaneous
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck --gen-suppressions=no --track-fds=yes --track-origins=yes --suppressions=$(ROOT_DIR)/bar/valgrind.supp --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_miscellaneous
 
 test_all:
 	@$(MAKE) --no-print-directory \
@@ -3585,7 +3592,7 @@ data/zero-random512k.dat:
 	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
 	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>>$@ 2>/dev/null
 	$(DD) if=$(DEVICE_ZERO)   bs=1k count=64 1>>$@ 2>/dev/null
-data/zero.dat:
+data/zero0.dat:
 	$(INSTALL) -d $(@D)
 	$(RMF) $0; touch $@
 data/sparse.dat:
@@ -7092,14 +7099,14 @@ dist: \
   $(TEST_FILES)
 ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)
-	$(INSTALL) -m 664 Makefile.in \
-                          parallel.c \
+	$(INSTALL) -m 664 $(SOURCE_DIR)/Makefile.in \
+                          $(SOURCE_DIR)/parallel.c \
                           $(DIRECTORY)/bar/$(TEST_DATA_DIR)
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/archive
 	$(INSTALL) -t $(DIRECTORY)/bar/$(TEST_DATA_DIR)/archive \
-    archive/*
+    $(SOURCE_DIR)/archive/*
 	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
-	$(INSTALL) -m 664 data/zero.dat \
+	$(INSTALL) -m 664 data/zero0.dat \
                           data/zero128.dat \
                           data/zero1024.dat \
                           data/zero512k.dat \

@@ -21,6 +21,7 @@ GIT="git"
 INSTALL="install"
 LN="ln"
 MKDIR="mkdir"
+PATCH="patch"
 RMF="rm -f"
 RMRF="rm -rf"
 SVN="svn"
@@ -30,7 +31,7 @@ XZ="xz"
 
 ZLIB_VERSION=1.3
 BZIP2_VERSION=1.0.8
-LZMA_VERSION=5.2.5
+XZ_VERSION=5.2.5
 LZO_VERSION=2.10
 LZ4_VERSION=r131
 ZSTD_VERSION=1.5.2
@@ -40,7 +41,7 @@ LIBGPG_ERROR_VERSION=1.45
 LIBGCRYPT_VERSION=1.10.1
 NETTLE_VERSION=3.7.3
 GMP_VERSION=6.2.1
-LIBIDN2_VERSION=2.3.2
+LIBIDN2_VERSION=2.3.4
 GNU_TLS_SUB_DIRECTORY=v3.6
 GNU_TLS_VERSION=3.6.16
 LIBICONV_VERSION=1.16
@@ -80,11 +81,11 @@ fatalError()
   exit 4
 }
 
-
 # ------------------------------------ main ----------------------------------
 
 # parse arguments
 workingDirectory=$PWD
+patchDirectory=$workingDirectory/misc
 destinationDirectory=$PWD/extern
 localDirectory=
 noDecompressFlag=0
@@ -96,7 +97,7 @@ helpFlag=0
 allFlag=1
 zlibFlag=0
 bzip2Flag=0
-lzmaFlag=0
+xzFlag=0
 lzoFlag=0
 lz4Flag=0
 zstdFlag=0
@@ -128,7 +129,12 @@ while test $# != 0; do
       shift
       ;;
     -w | --working-directory)
-      workingDirectory="$2"
+      workingDirectory=`readlink -f "$2"`
+      shift
+      shift
+      ;;
+    -p | --patch-directory)
+      patchDirectory=`readlink -f "$2"`
       shift
       shift
       ;;
@@ -183,9 +189,9 @@ while test $# != 0; do
           allFlag=0
           bzip2Flag=1
           ;;
-        lzma)
+        xz | lzma)
           allFlag=0
-          lzmaFlag=1
+          xzFlag=1
           ;;
         lzo)
           allFlag=0
@@ -302,9 +308,9 @@ while test $# != 0; do
       allFlag=0
       bzip2Flag=1
       ;;
-    lzma)
+    xz | lzma)
       allFlag=0
-      lzmaFlag=1
+      xzFlag=1
       ;;
     lzo)
       allFlag=0
@@ -412,6 +418,7 @@ if test $helpFlag -eq 1; then
   $ECHO "Usage: download-third-party-packages.sh [<options>] all|<package> ..."
   $ECHO ""
   $ECHO "Options: -d|--destination <path>      - destination directory"
+  $ECHO "         -p|--patch-directory <path>  - directory with patches"
   $ECHO "         -l|--local-directory <path>  - local directory to get packages from"
   $ECHO "         -n|--no-decompress           - do not decompress archives"
   $ECHO "         --insecure                   - disable SSL certificate checks"
@@ -424,7 +431,7 @@ if test $helpFlag -eq 1; then
   $ECHO ""
   $ECHO " zlib"
   $ECHO " bzip2"
-  $ECHO " lzma"
+  $ECHO " xz"
   $ECHO " lzo"
   $ECHO " lz4"
   $ECHO " zstd"
@@ -470,6 +477,11 @@ if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'svn' is not available"
   exit 1
 fi
+type $PATCH 1>/dev/null 2>/dev/null
+if test $? -gt 10; then
+  $ECHO >&2 "ERROR: command 'patch' is not available"
+  exit 1
+fi
 type $UNZIP 1>/dev/null 2>/dev/null && $UNZIP --version 1>/dev/null 2>/dev/null
 if test $? -gt 10; then
   $ECHO >&2 "ERROR: command 'unzip' is not available"
@@ -490,9 +502,6 @@ if test $verboseFlag -eq 0; then
   curlOptions="$curlOptions --silent"
 fi
 
-# create directories
-install -d "$destinationDirectory"
-
 #trap 'abort' 1
 #trap 'abort' 0
 #set -e
@@ -505,6 +514,7 @@ if test $cleanFlag -eq 0; then
   if test $allFlag -eq 1 -o $zlibFlag -eq 1; then
     # zlib
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get zlib ($ZLIB_VERSION)..."
@@ -529,15 +539,24 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT `find $destinationDirectory -maxdepth 1 -type d -name "zlib-*"` zlib)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to fix missing valgrind issue in zlib 1.3
+       #   diff -u zlib-1.3.org/deflate.c zlib-1.3/deflate.c > ../misc/zlib-1.3-valgrind-issue.patch
+       # Note: ignore exit code 1: patch may already be applied
+       (cd $workingDirectory/zlib; $PATCH --batch -N -p1 < $patchDirectory/zlib-1.3-valgrind-issue.patch) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
+       fi
      fi
 
      exit $result
     )
     result=$?
-
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT `find extern -maxdepth 1 -type d -name "zlib-*"` zlib)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -549,6 +568,7 @@ if test $cleanFlag -eq 0; then
   if test $allFlag -eq 1 -o $bzip2Flag -eq 1; then
     # bzip2
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get bzip2 ($BZIP2_VERSION)..."
@@ -573,14 +593,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/bzip2-$BZIP2_VERSION bzip2)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/bzip2-$BZIP2_VERSION bzip2)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -589,16 +611,17 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $lzmaFlag -eq 1; then
-    # lzma
+  if test $allFlag -eq 1 -o $xzFlag -eq 1; then
+    # xz
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get lzma ($LZMA_VERSION)..."
-     fileName="xz-$LZMA_VERSION.tar.gz"
+     $ECHO_NO_NEW_LINE "Get xz ($XZ_VERSION)..."
+     fileName="xz-$XZ_VERSION.tar.gz"
      if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/xz-$LZMA_VERSION.tar.gz; then
-         $LN -s $localDirectory/xz-$LZMA_VERSION.tar.gz $fileName
+       if test -n "$localDirectory" -a -f $localDirectory/xz-$XZ_VERSION.tar.gz; then
+         $LN -s $localDirectory/xz-$XZ_VERSION.tar.gz $fileName
          result=1
        else
          url="https://tukaani.org/xz/$fileName"
@@ -616,14 +639,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/xz-$XZ_VERSION xz)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/xz-$LZMA_VERSION xz)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -635,6 +660,7 @@ if test $cleanFlag -eq 0; then
   if test $allFlag -eq 1 -o $lzoFlag -eq 1; then
     # lzo
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get lzo ($LZO_VERSION)..."
@@ -677,9 +703,6 @@ if test $cleanFlag -eq 0; then
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/lzo-$LZO_VERSION lzo)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -691,6 +714,7 @@ if test $cleanFlag -eq 0; then
   if test $allFlag -eq 1 -o $lz4Flag -eq 1; then
     # lz4
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get lz4 ($LZ4_VERSION)..."
@@ -715,14 +739,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT `find $destinationDirectory -maxdepth 1 -type d -name "lz4-*"` lz4)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT `find extern -maxdepth 1 -type d -name "lz4-*"` lz4)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -734,6 +760,7 @@ if test $cleanFlag -eq 0; then
   if test $allFlag -eq 1 -o $zstdFlag -eq 1; then
     # zstd
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get zstd ($ZSTD_VERSION)..."
@@ -758,14 +785,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT `find $destinationDirectory -maxdepth 1 -type d -name "zstd-*"` zstd)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT `find extern -maxdepth 1 -type d -name "zstd-*"` zstd)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -777,6 +806,7 @@ if test $cleanFlag -eq 0; then
   if test $allFlag -eq 1 -o $xdelta3Flag -eq 1; then
     # xdelta3
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get xdelta3 ($XDELTA3_VERSION)..."
@@ -819,9 +849,6 @@ if test $cleanFlag -eq 0; then
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT `find extern -maxdepth 1 -type d -name "xdelta3-*"` xdelta3)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -831,8 +858,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $gcryptFlag -eq 1; then
-    # gpg-error, gcrypt
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get gpg-error ($LIBGPG_ERROR_VERSION)..."
@@ -857,14 +884,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -872,8 +901,8 @@ if test $cleanFlag -eq 0; then
       *) exit $result; ;;
     esac
 
-    # gpg-error, gcrypt
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get gcrypt ($LIBGCRYPT_VERSION)..."
@@ -898,14 +927,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libgcrypt-$LIBGCRYPT_VERSION libgcrypt)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/libgcrypt-$LIBGCRYPT_VERSION libgcrypt)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -915,8 +946,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $curlFlag -eq 1; then
-    # c-ares
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get c-ares ($C_ARES_VERSION)..."
@@ -941,46 +972,10 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
-     fi
 
-     exit $result
-    )
-    result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/c-ares-$C_ARES_VERSION c-ares)
-    fi
-    case $result in
-      1) $ECHO "ok (local)"; ;;
-      2) $ECHO "ok"; ;;
-      3) $ECHO "ok (cached)"; ;;
-      *) exit $result; ;;
-    esac
-
-    # curl
-    (
-     cd "$destinationDirectory"
-
-     $ECHO_NO_NEW_LINE "Get curl ($CURL_VERSION)..."
-     fileName="curl-$CURL_VERSION.tar.bz2"
-     if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/curl-$CURL_VERSION.tar.bz2; then
-         $LN -s $localDirectory/curl-$CURL_VERSION.tar.bz2 $fileName
-         result=1
-       else
-         url="http://curl.haxx.se/download/$fileName"
-         $CURL $curlOptions --output $fileName $url
-         if test $? -ne 0; then
-           fatalError "download $url -> $fileName"
-         fi
-         result=2
-       fi
-     else
-       result=3
-     fi
-     if test $noDecompressFlag -eq 0; then
-       $TAR xjf $fileName
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/c-ares-$C_ARES_VERSION c-ares)
        if test $? -ne 0; then
-         fatalError "decompress"
+         fatalError "symbolic link"
        fi
      fi
 
@@ -1182,49 +1177,8 @@ if test $cleanFlag -eq 0; then
       *) exit $result; ;;
     esac
 
-    # gmp
     (
-     cd "$destinationDirectory"
-
-     $ECHO_NO_NEW_LINE "Get gmp ($GMP_VERSION)..."
-     fileName="gmp-$GMP_VERSION.tar.xz"
-     if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/gmp-$GMP_VERSION.tar.xz; then
-         $LN -s $localDirectory/gmp-$GMP_VERSION.tar.xz $fileName
-         result=1
-       else
-         url="https://gmplib.org/download/gmp/$fileName"
-         $CURL $curlOptions --output $fileName $url
-         if test $? -ne 0; then
-           fatalError "download $url -> $fileName"
-         fi
-         result=2
-       fi
-     else
-       result=3
-     fi
-     if test $noDecompressFlag -eq 0; then
-       $TAR xJf $fileName
-       if test $? -ne 0; then
-         fatalError "decompress"
-       fi
-     fi
-
-     exit $result
-    )
-    result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT `find extern -maxdepth 1 -type d -name "gmp-*"` gmp)
-    fi
-    case $result in
-      1) $ECHO "ok (local)"; ;;
-      2) $ECHO "ok"; ;;
-      3) $ECHO "ok (cached)"; ;;
-      *) exit $result; ;;
-    esac
-
-    # libidn2
-    (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get libidn2 ($LIBIDN2_VERSION)..."
@@ -1249,14 +1203,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT `find $destinationDirectory -maxdepth 1 -type d -name "libidn2-*"` libidn2)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT `find extern -maxdepth 1 -type d -name "libidn2-*"` libidn2)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1264,8 +1220,324 @@ if test $cleanFlag -eq 0; then
       *) exit $result; ;;
     esac
 
-    # gnutls
     (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get curl ($CURL_VERSION)..."
+     fileName="curl-$CURL_VERSION.tar.bz2"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/curl-$CURL_VERSION.tar.bz2; then
+         $LN -s $localDirectory/curl-$CURL_VERSION.tar.bz2 $fileName
+         result=1
+       else
+         url="http://curl.haxx.se/download/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xjf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/curl-$CURL_VERSION curl)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $mxmlFlag -eq 1; then
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get mxml ($MXML_VERSION)..."
+     fileName="mxml-$MXML_VERSION.zip"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/mxml-$MXML_VERSION.zip; then
+         $LN -s $localDirectory/mxml-$MXML_VERSION.zip $fileName
+         result=1
+       else
+         url="https://github.com/michaelrsweet/mxml/archive/v$MXML_VERSION.zip"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $UNZIP -o -q $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/mxml-$MXML_VERSION mxml)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $opensslFlag -eq 1; then
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get openssl ($OPENSSL_VERSION)..."
+     fileName="openssl-$OPENSSL_VERSION.tar.gz"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/openssl-$OPENSSL_VERSION.tar.gz; then
+         $LN -s $localDirectory/openssl-$OPENSSL_VERSION.tar.gz $fileName
+         result=1
+       else
+         url="http://www.openssl.org/source/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/openssl-$OPENSSL_VERSION openssl)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get libssh2 ($LIBSSH2_VERSION)..."
+     fileName="libssh2-$LIBSSH2_VERSION.tar.gz"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz; then
+         $LN -s $localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz $fileName
+         result=1
+       else
+         url="http://www.libssh2.org/download/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libssh2-$LIBSSH2_VERSION libssh2)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch for memory leak for libssh2 1.8.2 (ignore errors):
+       #   diff -u libssh2-1.8.2.org/src libssh2-1.8.2/src > libssh2-1.8.2-memory-leak.patch
+#         (cd $workingDirectory/libssh2; $PATCH --batch -N -p1 < $patchDirectory/libssh2-1.8.2-memory-leak.patch) 1>/dev/null
+#         if test $? -ne 0; then
+#           fatalError "patch"
+#         fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get nettle ($NETTLE_VERSION)..."
+     fileName="nettle-$NETTLE_VERSION.tar.gz"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/nettle-$NETTLE_VERSION.tar.gz; then
+         $LN -s $localDirectory/nettle-$NETTLE_VERSION.tar.gz $fileName
+         result=1
+       else
+         url="https://ftp.gnu.org/gnu/nettle/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/nettle-$NETTLE_VERSION nettle)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get gmp ($GMP_VERSION)..."
+     fileName="gmp-$GMP_VERSION.tar.xz"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/gmp-$GMP_VERSION.tar.xz; then
+         $LN -s $localDirectory/gmp-$GMP_VERSION.tar.xz $fileName
+         result=1
+       else
+         url="https://gmplib.org/download/gmp/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xJf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT `find $destinationDirectory -maxdepth 1 -type d -name "gmp-*"` gmp)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get libidn2 ($LIBIDN2_VERSION)..."
+     fileName="libidn2-$LIBIDN2_VERSION.tar.gz"
+     if test ! -f $fileName; then
+       if test -n "$localDirectory" -a -f $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz; then
+         $LN -s $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz $fileName
+         result=1
+       else
+         url="https://ftp.gnu.org/gnu/libidn/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+     if test $noDecompressFlag -eq 0; then
+       $TAR xzf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT `find $destinationDirectory -maxdepth 1 -type d -name "libidn2-*"` libidn2)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+
+    (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get gnutls ($GNU_TLS_VERSION)..."
@@ -1290,14 +1562,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/gnutls-$GNU_TLS_VERSION gnutls)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/gnutls-$GNU_TLS_VERSION gnutls)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1307,8 +1581,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
-    # libiconv
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get libiconv ($LIBICONV_VERSION)..."
@@ -1333,14 +1607,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libiconv-$LIBICONV_VERSION libiconv)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/libiconv-$LIBICONV_VERSION libiconv)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1348,8 +1624,8 @@ if test $cleanFlag -eq 0; then
       *) exit $result; ;;
     esac
 
-    # libcdio
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get libcdio ($LIBCDIO_VERSION)..."
@@ -1374,14 +1650,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libcdio-$LIBCDIO_VERSION libcdio)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/libcdio-$LIBCDIO_VERSION libcdio)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1391,8 +1669,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $libsmb2Flag -eq 1; then
-    # krb5
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get Kerberos 5 ($KRB5_VERSION.$KRB5_VERSION_MINOR)..."
@@ -1417,14 +1695,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT `find $destinationDirectory -maxdepth 1 -type d -name "krb5-*"` krb5)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT `find extern -maxdepth 1 -type d -name "krb5-*"` krb5)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1432,8 +1712,8 @@ if test $cleanFlag -eq 0; then
       *) exit $result; ;;
     esac
 
-    # libsmbclient
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get libsmb2 ($LIBSMB2_VERSION)..."
@@ -1473,20 +1753,21 @@ if test $cleanFlag -eq 0; then
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/libsmb2-$LIBSMB2_VERSION libsmb2)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
       3) $ECHO "ok (cached)"; ;;
       *) exit $result; ;;
     esac
+
+    if test $noDecompressFlag -eq 0; then
+      (cd "$workingDirectory"; $LN -sfT extern/libsmb2-$LIBSMB2_VERSION libsmb2)
+    fi
   fi
 
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
-    # pcre
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get pcre ($PCRE_VERSION)..."
@@ -1511,14 +1792,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/pcre-$PCRE_VERSION pcre)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/pcre-$PCRE_VERSION pcre)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1528,8 +1811,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $sqlite3Flag -eq 1; then
-    # sqlite
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get sqlite ($SQLITE_VERSION)..."
@@ -1554,14 +1837,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/sqlite-src-$SQLITE_VERSION sqlite)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/sqlite-src-$SQLITE_VERSION sqlite)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1571,8 +1856,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $mariaDBFlag -eq 1; then
-    # MariaDB
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get MariaDB ($MARIADB_CLIENT_VERSION)..."
@@ -1615,9 +1900,6 @@ if test $cleanFlag -eq 0; then
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/mariadb-connector-c-$MARIADB_CLIENT_VERSION-src mariadb-connector-c)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1627,8 +1909,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $postgreSQLFlag -eq 1; then
-    # PostgreSQL
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get PostgreSQL ($POSTGRESQL_VERSION)..."
@@ -1653,14 +1935,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/postgresql-$POSTGRESQL_VERSION postgresql)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/postgresql-$POSTGRESQL_VERSION postgresql)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1670,8 +1954,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $mtxFlag -eq 1; then
-    # mtx
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get mtx ($MTX_VERSION)..."
@@ -1696,14 +1980,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/mtx-$MTX_VERSION mtx)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/mtx-$MTX_VERSION mtx)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1713,8 +1999,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $icuFlag -eq 1; then
-    # icu
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get icu ($ICU_VERSION)..."
@@ -1757,9 +2043,6 @@ if test $cleanFlag -eq 0; then
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/icu icu)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1769,8 +2052,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $binutilsFlag -eq 1; then
-    # binutils
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get binutils ($BINUTILS_VERSION)..."
@@ -1795,14 +2078,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/binutils-$BINUTILS_VERSION binutils)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/binutils-$BINUTILS_VERSION binutils)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1812,8 +2097,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $pthreadsW32Flag -eq 1; then
-    # pthreads-w32 2.9.1
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get pthreads w32 ($PTHREAD_W32_VERSION)..."
@@ -1856,9 +2141,6 @@ if test $cleanFlag -eq 0; then
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/pthreads-w32-2-9-1-release pthreads-w32)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1868,8 +2150,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $launch4jFlag -eq 1; then
-    # launchj4
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get launchj4..."
@@ -1894,14 +2176,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/launch4j launch4j)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/launch4j launch4j)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1911,8 +2195,8 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $jreWindowsFlag -eq 1; then
-    # Windows JRE from OpenJDK 6
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get OpenJDK Windows..."
@@ -1937,7 +2221,24 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get OpenJDK Windows 64bit..."
      fileName="openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip"
@@ -1961,15 +2262,16 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
      fi
 
      exit $result
     )
     result=$?
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows)
-      (cd "$workingDirectory"; $LN -sfT extern/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64)
-    fi
     case $result in
       1) $ECHO "ok (local)"; ;;
       2) $ECHO "ok"; ;;
@@ -1986,7 +2288,7 @@ else
       cd "$destinationDirectory"
       $RMF zlib-*.tar.gz
       $RMRF zlib-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/zlib
   fi
 
@@ -1996,17 +2298,17 @@ else
       cd "$destinationDirectory"
       $RMF bzip2-*.tar.gz
       $RMRF bzip2-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/bzip2
   fi
 
-  if test $allFlag -eq 1 -o $lzmaFlag -eq 1; then
-    # lzma
+  if test $allFlag -eq 1 -o $xzFlag -eq 1; then
+    # xz
     (
       cd "$destinationDirectory"
       $RMF `find . -maxdepth 1 -type f -name "xz-*.tar.gz" 2>/dev/null`
       $RMRF `find . -maxdepth 1 -type d -name "xz-*" 2>/dev/null`
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/xz
   fi
 
@@ -2016,7 +2318,7 @@ else
       cd "$destinationDirectory"
       $RMF lzo-*.tar.gz
       $RMRF lzo-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/lzo
   fi
 
@@ -2026,7 +2328,7 @@ else
       cd "$destinationDirectory"
       $RMF lz4*.tar.gz
       $RMRF lz4*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/lz4
   fi
 
@@ -2036,7 +2338,7 @@ else
       cd "$destinationDirectory"
       $RMF zstd*.zip
       $RMRF zstd*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/zstd
   fi
 
@@ -2046,7 +2348,7 @@ else
       cd "$destinationDirectory"
       $RMF `find . -maxdepth 1 -type f -name "xdelta3-*.tar.gz" 2>/dev/null`
       $RMRF `find . -maxdepth 1 -type d -name "xdelta3-*" 2>/dev/null`
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/xdelta3
   fi
 
@@ -2056,7 +2358,7 @@ else
       cd "$destinationDirectory"
       $RMF libgpg-error-*.tar.bz2 libgcrypt-*.tar.bz2
       $RMRF libgpg-error-* libgcrypt-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/libgpg-error libgcrypt
   fi
 
@@ -2066,15 +2368,23 @@ else
       cd "$destinationDirectory"
       $RMF curl-*-.tar.bz2
       $RMRF curl-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/curl
+
+    # libidn2
+    (
+      cd "$destinationDirectory"
+      $RMF libidn2-*.tar.gz
+      $RMRF libidn2-*
+    ) 2>/dev/null
+    $RMF $workingDirectory/libidn2
 
     # c-areas
     (
       cd "$destinationDirectory"
       $RMF c-ares-*-.tar.gz
       $RMRF c-ares-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/c-ares
   fi
 
@@ -2084,7 +2394,7 @@ else
       cd "$destinationDirectory"
       $RMF mxml-*-.tar.bz2
       $RMRF mxml-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/mxml
   fi
 
@@ -2094,7 +2404,7 @@ else
       cd "$destinationDirectory"
       $RMF openssl*.tar.gz
       $RMRF openssl*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/openssl
   fi
 
@@ -2104,7 +2414,7 @@ else
       cd "$destinationDirectory"
       $RMF libssh2*.tar.gz
       $RMRF libssh2*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/libssh2
   fi
 
@@ -2114,7 +2424,7 @@ else
       cd "$destinationDirectory"
       $RMF gnutls-*.tar.bz2
       $RMRF gnutls-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/gnutls
 
     # libidn2
@@ -2122,7 +2432,7 @@ else
       cd "$destinationDirectory"
       $RMF libidn2-*.tar.gz
       $RMRF libidn2-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/libidn2
 
     # gmp
@@ -2130,7 +2440,7 @@ else
       cd "$destinationDirectory"
       $RMF gmp-*.tar.bz2
       $RMRF gmp-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/gmp
 
     # nettle
@@ -2138,7 +2448,7 @@ else
       cd "$destinationDirectory"
       $RMF nettle-*.tar.bz2
       $RMRF nettle-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/nettle
   fi
 
@@ -2148,7 +2458,7 @@ else
       cd "$destinationDirectory"
       $RMF libiconv-*.tar.gz
       $RMRF libiconv-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/libiconv
 
     # libcdio
@@ -2156,7 +2466,7 @@ else
       cd "$destinationDirectory"
       $RMF libcdio-*.tar.gz
       $RMRF libcdio-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/libcdio
   fi
 
@@ -2164,15 +2474,15 @@ else
     # krb5
     (
       cd "$destinationDirectory"
-      $RMRF krb5
-    )
+      $RMRF krb5-*
+    ) 2>/dev/null
     $RMF $workingDirectory/krb5
 
     # libsmb2
     (
       cd "$destinationDirectory"
-      $RMRF libsmb2
-    )
+      $RMRF libsmb2-*
+    ) 2>/dev/null
     $RMF $workingDirectory/libsmb2
   fi
 
@@ -2181,7 +2491,7 @@ else
     (
       cd "$destinationDirectory"
       $RMRF pcre-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/pcre
   fi
 
@@ -2190,7 +2500,7 @@ else
     (
       cd "$destinationDirectory"
       $RMRF sqlite-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/sqlite
   fi
 
@@ -2199,7 +2509,7 @@ else
     (
       cd "$destinationDirectory"
       $RMRF mariadb-connector-c-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/mariadb-connector-c
   fi
 
@@ -2208,7 +2518,7 @@ else
     (
       cd "$destinationDirectory"
       $RMRF postgresql-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/postgresql
   fi
 
@@ -2217,7 +2527,7 @@ else
     (
       cd "$destinationDirectory"
       $RMRF mtx-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/mtx
   fi
 
@@ -2227,7 +2537,7 @@ else
       cd "$destinationDirectory"
       $RMF icu4c-*
       $RMRF icu
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/icu
   fi
 
@@ -2237,7 +2547,7 @@ else
       cd "$destinationDirectory"
       $RMRF binutils-*
       $RMRF binutils
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/binutils
   fi
 
@@ -2246,7 +2556,7 @@ else
     (
       cd "$destinationDirectory"
       $RMRF pthreads-w32-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/pthreads-w32
   fi
 
@@ -2256,7 +2566,7 @@ else
       cd "$destinationDirectory"
       $RMF launch4j-*.tgz
       $RMRF launch4j
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/launch4j
   fi
 
@@ -2266,7 +2576,7 @@ else
       cd "$destinationDirectory"
       $RMF openjdk-*.zip
       $RMRF openjdk-*
-    )
+    ) 2>/dev/null
     $RMF $workingDirectory/jre_windows jre_windows_64
   fi
 fi

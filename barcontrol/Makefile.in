@@ -16,6 +16,8 @@ ENABLE_GUI         = @ENABLE_GUI@
 
 #------------------------------------ paths ----------------------------------
 
+BUILD_DIR          = $(CURDIR)
+ROOT_DIR           = $(abspath @srcdir@/..)
 SOURCE_DIR         = $(abspath @srcdir@)
 
 SWT_DIR            = @SWT_DIR@
@@ -134,9 +136,9 @@ XARGS      = xargs
 
 #------------------------ specific variables/settings ------------------------
 
-VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
-VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
-VERSION_PATCH := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
+VERSION_MAJOR := $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR := $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
+VERSION_PATCH := $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
 VERSION       := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
 
 # languages
@@ -182,7 +184,7 @@ functionTestCheckExitcode = \
 #---------------------------------- rules ------------------------------------
 
 # source search paths
-vpath %.java $(SOURCE_DIR)
+vpath %.java $(BUILD_DIR)/barcontrol:$(SOURCE_DIR)
 
 # compile Java sources
 .NOTPARALLEL: classes/%.class
@@ -192,6 +194,7 @@ ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
           -d classes \
           -classpath $(CLASSPATH) \
+          $(BUILD_DIR)/src/*.java \
           $(SOURCE_DIR)/src/*.java \
           $(SOURCE_DIR)/src/utils/*.java \
           $(SOURCE_DIR)/src/widgets/*.java
@@ -204,6 +207,7 @@ ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
           -d classes \
           -classpath $(CLASSPATH) \
+          $(BUILD_DIR)/src/*.java \
           $(SOURCE_DIR)/src/*.java \
           $(SOURCE_DIR)/src/utils/*.java \
           $(SOURCE_DIR)/src/widgets/*.java
@@ -216,6 +220,7 @@ ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
           -d classes \
           -classpath $(CLASSPATH) \
+          $(BUILD_DIR)/src/*.java \
           $(SOURCE_DIR)/src/*.java \
           $(SOURCE_DIR)/src/utils/*.java \
           $(SOURCE_DIR)/src/widgets/*.java
@@ -344,9 +349,9 @@ help:
 depend:
 
 # error definition
-src/BARException.java: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl Makefile
+src/BARException.java: $(ROOT_DIR)/errors.def $(ROOT_DIR)/errors.pl Makefile
 	$(INSTALL) -d $(@D)
-	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -j $@ --java-class-name BARException --tr BARControl.tr
+	$(PERL) $(ROOT_DIR)/errors.pl < $^ -j $@ --java-class-name BARException --tr BARControl.tr
 
 .PHONY: compile c
 compile c: $(OBJECTS)
@@ -367,13 +372,13 @@ $(SOURCE_DIR)/po/barcontrol.pot: $(SOURCE_DIR)/src/*.java
 .NOTPARALLEL: $(SOURCE_DIR)/po/german.po
 $(SOURCE_DIR)/po/german.po: $(SOURCE_DIR)/po/barcontrol.pot
 	$(INSTALL) -d $(@D)
-	$(MSGMERGE) -U $@ po/barcontrol.pot
+	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/barcontrol.pot
 	$(TOUCH) $@
 
 .NOTPARALLEL: $(SOURCE_DIR)/po/japanese.po
 $(SOURCE_DIR)/po/japanese.po: $(SOURCE_DIR)/po/barcontrol.pot
 	$(INSTALL) -d $(@D)
-	$(MSGMERGE) -U $@ po/barcontrol.pot
+	$(MSGMERGE) -U $@ $(SOURCE_DIR)/po/barcontrol.pot
 	$(TOUCH) $@
 
 .NOTPARALLEL: classes/app/i18n/Messages_de.class
@@ -900,48 +905,56 @@ ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/barcontrol
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/barcontrol \
-                   Makefile.in \
-                   barcontrol.cfg
+                   $(SOURCE_DIR)/Makefile.in \
+                   $(SOURCE_DIR)/barcontrol.cfg \
+                   $(addprefix $(SOURCE_DIR)/,$(OTHER_SOURCES))
 	#
-	$(INSTALL) -d $(DIRECTORY)/barcontrol
-	$(CP) --parents \
-              $(sort $(SOURCES)) \
-              $(sort $(OTHER_SOURCES)) \
-              src/Config.java.in \
-              $(DIRECTORY)/barcontrol
+	$(INSTALL) -d $(DIRECTORY)/barcontrol/src
+	$(INSTALL) -m 664 \
+                   -t $(DIRECTORY)/barcontrol/src \
+                   $(sort $(SOURCE_DIR)/src/*.java) \
+                   $(SOURCE_DIR)/src/Config.java.in
+	$(INSTALL) -d $(DIRECTORY)/barcontrol/src/utils
+	$(INSTALL) -m 664 \
+                   -t $(DIRECTORY)/barcontrol/src/utils \
+                   $(sort $(SOURCE_DIR)/src/utils/*.java)
+	$(INSTALL) -d $(DIRECTORY)/barcontrol/src/widgets
+	$(INSTALL) -m 664 \
+                   -t $(DIRECTORY)/barcontrol/src/widgets \
+                   $(sort $(SOURCE_DIR)/src/widgets/*.java)
 	#
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/images
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/barcontrol/images \
-                   images/*.png
+                   $(SOURCE_DIR)/images/*.png
 	#
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/po
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/barcontrol/po \
-                   $(sort po/*.pot \
-                          po/*.po \
+                   $(sort $(SOURCE_DIR)/po/*.pot \
+                          $(SOURCE_DIR)/po/*.po \
                    )
 	#
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/barcontrol/jars \
-                   jars/*.jar
+                   $(SOURCE_DIR)/jars/*.jar
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars/linux
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/barcontrol/jars/linux \
-                   jars/linux/*.jar
+                   $(SOURCE_DIR)/jars/linux/*.jar
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars/solaris
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/barcontrol/jars/solaris \
-                   jars/solaris/*.jar
+                   $(SOURCE_DIR)/jars/solaris/*.jar
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars/macosx
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/barcontrol/jars/macosx \
-                   jars/macosx/*.jar
+                   $(SOURCE_DIR)/jars/macosx/*.jar
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars/windows
 	$(INSTALL) -m 664 \
                    -t $(DIRECTORY)/barcontrol/jars/windows \
-                   jars/windows/*.jar
+                   $(SOURCE_DIR)/jars/windows/*.jar
 else
 	@$(ECHO) "Please call 'make dist' from top-level directory to create a distribution."
 endif

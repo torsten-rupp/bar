@@ -2172,8 +2172,6 @@ LOCAL Errors StorageSMB_openDirectoryList(StorageDirectoryListHandle *storageDir
   UNUSED_VARIABLE(serverConnectionPriority);
 
   #ifdef HAVE_SMB2
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     // init variables
     AutoFree_init(&autoFreeList);
 
@@ -2275,7 +2273,7 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
                              storageDirectoryListHandle->storageSpecifier.loginPassword,
                              shareName
                             );
-    if (error == ERROR_NONE)
+    if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList);
       return error;

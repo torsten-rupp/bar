@@ -1,6 +1,7 @@
 #!groovy
 
-DOCKER_IMAGE_NAME='bar:build'
+DOCKER_IMAGE_NAME_HOST='bar'
+DOCKER_IMAGE_NAME_WIN32='bar-mingw32'
 
 TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
                TEST_USER=jenkins \
@@ -16,7 +17,7 @@ TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
                TEST_SMB_FILE_PATH=/home/jenkins/intermediate \
                "
 
-TEST_STEPSXXX = ["basic",
+TEST_STEPS = ["basic",
               "compress",
               "delta_compress",
               "crypt",
@@ -43,9 +44,6 @@ TEST_STEPSXXX = ["basic",
               "misc"
              ];
 
-TEST_STEPS = ["storage_smb",
-             ];
-
 // tests
 def tests()
 {
@@ -53,42 +51,122 @@ def tests()
   {
     timestamps
     {
-      stage("Build")
+      stage("Checkout")
       {
-        docker.image(DOCKER_IMAGE_NAME).inside('')
+        docker.image(DOCKER_IMAGE_NAME_HOST).inside('')
         {
+          // checkout sources
           checkout scm
+        }
+      }
+
+      stage("Build host")
+      {
+        docker.image(DOCKER_IMAGE_NAME_HOST).inside('')
+        {
           script
           {
-            // configure
-            sh "./download-third-party-packages.sh --local-directory /media/extern"
-            sh "./download-third-party-packages.sh"
-            sh "./configure --disable-debug-thread-crash-handlers"
+            sh "install -d host"
 
-            // make (Note: avoid race condition in depend by not create dependencies in parallel)
-            sh "make depend"
-//            sh "make -j`nproc --ignore=1`"
-            sh "make -j1"
+            // get external packages
+            sh "(cd host; ../download-third-party-packages.sh --patch-directory ../misc --local-directory /media/extern)"
+            sh "(cd host; ../download-third-party-packages.sh --patch-directory ../misc)"
+
+            // configure
+            sh "(cd host; \
+                 ../configure \
+                   --host=x86_64-linux \
+                   --build=x86_64-linux \
+                   --disable-debug-thread-crash-handlers \
+                ) \
+               "
+
+            // make (Note: avoid race condition by not create dependencies in parallel)
+            sh "(cd host; make depend)"
+            if (params.PARALLEL_BUILD)
+            {
+              sh "(cd host; make -j`nproc --ignore=1`)"
+            }
+            else
+            {
+              sh "(cd host; make -j1)"
+            }
+
+            // save artifacts
+//            stash name:"host", includes:"Makefile, bar/Makefile, bar/tests/Makefile, bar/bar, bar/bar-debug"
+          }
+        }
+      }
+
+      stage("Build Win32")
+      {
+        docker.image(DOCKER_IMAGE_NAME_WIN32).inside('')
+        {
+          script
+          {
+            if (params.BUILD_WIN32)
+            {
+              sh "install -d win32"
+
+              // get external packages
+              sh "(cd win32; ../download-third-party-packages.sh --patch-directory ../misc --local-directory /media/extern)"
+              sh "(cd win32; ../download-third-party-packages.sh --patch-directory ../misc)"
+
+              // configure
+              sh "(cd win32; \
+                   ../configure \
+                     --host=i686-w64-mingw32 \
+                     --build=x86_64-linux \
+                     --enable-link-static \
+                     --disable-link-dynamic \
+                     --disable-debug-thread-crash-handlers \
+                     \
+                     --disable-smbclient \
+                     --disable-bfd \
+                  ) \
+                "
+
+              // make (Note: avoid race condition by not create dependencies in parallel)
+              sh "(cd win32; make depend)"
+              if (params.PARALLEL_BUILD)
+              {
+                sh "(cd win32; make -j`nproc --ignore=1`)"
+              }
+              else
+              {
+                sh "(cd win32; make -j1)"
+              }
+
+              // save artifacts
+//              stash name:"win32", includes:"bar/bar.exe, bar/bar-debug.exe"
+            }
           }
         }
       }
 
       stage("Distribution")
       {
-        docker.image(DOCKER_IMAGE_NAME).inside('')
+        docker.image(DOCKER_IMAGE_NAME_HOST).inside('')
         {
           script
           {
             if (params.DISTRIBUTION)
             {
-              sh "make distribution"
+              sh "(cd host; make distribution)"
 
-              sh "tar xf backup-archiver*.tar.bz2"
-              sh "(cd backup-archiver*; ./download-third-party-packages.sh --local-directory /media/extern)"
-              sh "(cd backup-archiver*; ./download-third-party-packages.sh)"
-              sh "(cd backup-archiver*; ./configure)"
-              sh "(cd backup-archiver*; make depend)"
-              sh "(set -x; cd backup-archiver*; make -j`nproc --ignore=1`)"
+              sh "(cd host; tar xf backup-archiver*.tar.bz2)"
+              sh "(cd host/backup-archiver*; ./download-third-party-packages.sh --local-directory /media/extern)"
+              sh "(cd host/backup-archiver*; ./download-third-party-packages.sh)"
+              sh "(cd host/backup-archiver*; ./configure)"
+              sh "(cd host/backup-archiver*; make depend)"
+              if (params.PARALLEL_BUILD)
+              {
+                sh "(cd host/backup-archiver*; make -j`nproc --ignore=1`)"
+              }
+              else
+              {
+                sh "(cd host/backup-archiver*; make -j1)"
+              }
             }
           }
         }
@@ -121,12 +199,15 @@ def tests()
                   binaryExtension="";
                   break;
               }
-              sh "echo binaryExtension="+binaryExtension
+//              unstash "host"
+//              unstash "win32"
+//sh "wine bin/bar-debug.exe --xhelp"
+sh "echo binaryExtension="+binaryExtension
               switch (params.TEST_TYPE)
               {
                 case "SMOKE":
                 default:
-                  docker.image(DOCKER_IMAGE_NAME).inside('')
+                  docker.image(DOCKER_IMAGE_NAME_HOST).inside('')
                   {
                     // start services
                     sh "sudo -n /etc/init.d/apache2 start"
@@ -140,7 +221,7 @@ def tests()
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                    sh "bash -o pipefail -c 'ulimit -c unlimited && make test_smoke-"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'"
+                    sh "bash -o pipefail -c 'ulimit -c unlimited && (cd host; make test_smoke-"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test.log'"
 
                     // stop services
                     sh "sudo -n /etc/init.d/smbd stop || true"
@@ -150,7 +231,7 @@ def tests()
                   }
                   break;
                 case "FULL":
-                  docker.image(DOCKER_IMAGE_NAME).inside('')
+                  docker.image(DOCKER_IMAGE_NAME_HOST).inside('')
                   {
                     // start services
                     sh "sudo -n /etc/init.d/apache2 start"
@@ -164,7 +245,7 @@ def tests()
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                    TEST_STEPS.each { step -> sh "bash -o pipefail -c 'ulimit -c unlimited && make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test.log'" }
+                    TEST_STEPS.each { step -> sh "bash -o pipefail -c 'ulimit -c unlimited && (cd host; make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test.log'" }
 
                     // stop services
                     sh "sudo -n /etc/init.d/smbd stop || true"
@@ -188,7 +269,7 @@ def tests()
           {
             if (params.VALGRIND)
             {
-              docker.image(DOCKER_IMAGE_NAME).inside('')
+              docker.image(DOCKER_IMAGE_NAME_HOST).inside('')
               {
                 // start services
                 sh "sudo -n /etc/init.d/apache2 start"
@@ -202,7 +283,7 @@ def tests()
 
                 sh "rm -f bar-test-valgrind.log"
                 // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                sh "bash -o pipefail -c 'make test_smoke-valgrind "+TEST_SETTINGS+" O=\'--verbose=1\' | tee -a bar-test-valgrind.log'"
+                sh "bash -o pipefail -c '(cd host; make test_smoke-valgrind "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test-valgrind.log'"
 
                 // stop services
                 sh "sudo -n /etc/init.d/smbd stop || true"
@@ -223,7 +304,7 @@ def tests()
           {
             if (params.CODE_COVERAGE)
             {
-              docker.image(DOCKER_IMAGE_NAME).inside('')
+              docker.image(DOCKER_IMAGE_NAME_HOST).inside('')
               {
                 // start services
                 sh "sudo -n /etc/init.d/apache2 start"
@@ -235,9 +316,9 @@ def tests()
                 sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
                 sh "sudo -n /bin/chown -R test:test /var/www"
 
-                sh "make -C bar gcov_clean"
-                TEST_STEPS.each { step -> sh "ulimit -c unlimited && make -C bar gcov_${step}"+" "+TEST_SETTINGS+"" }
-                sh "make -C bar gcov_html"
+                sh "make -C host/bar gcov_clean"
+                TEST_STEPS.each { step -> sh "ulimit -c unlimited && make -C host/bar gcov_${step}"+" "+TEST_SETTINGS }
+                sh "make -C host/bar gcov_html"
 
                 // stop services
                 sh "sudo -n /etc/init.d/smbd stop || true"
@@ -249,7 +330,7 @@ def tests()
               publishHTML([allowMissing:          false,
                            alwaysLinkToLastBuild: false,
                            keepAll:               true,
-                           reportDir:             'bar/coverage',
+                           reportDir:             'host/bar/coverage',
                            reportFiles:           'index.html',
                            reportName:            'Code Coverage Report',
                            reportTitles:          'BAR Code Coverage'
@@ -268,7 +349,7 @@ def tests()
           {
             if (params.PROFILING)
             {
-              docker.image(DOCKER_IMAGE_NAME).inside('')
+              docker.image(DOCKER_IMAGE_NAME_HOST).inside('')
               {
                 // start services
                 sh "sudo -n /etc/init.d/apache2 start"
@@ -280,8 +361,8 @@ def tests()
                 sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
                 sh "sudo -n /bin/chown -R test:test /var/www"
 
-                sh "make -C bar gprof_clean"
-                TEST_STEPS.each { step -> sh "ulimit -c unlimited && make -C bar gprof_${step}"+" "+TEST_SETTINGS+"" }
+                sh "make -C host/bar gprof_clean"
+                TEST_STEPS.each { step -> sh "ulimit -c unlimited && make -C host/bar gprof_${step}"+" "+TEST_SETTINGS }
 
                 // stop services
                 sh "sudo -n /etc/init.d/smbd stop || true"
@@ -303,6 +384,7 @@ def tests()
 //sh "ps auxw"
 //sh "ls -la /var/log"
       archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log, core*', allowEmptyArchive: true
+//      archiveArtifacts artifacts: 'win32/**, bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log, core*', allowEmptyArchive: true
     }
 
     cleanWs notFailBuild: true

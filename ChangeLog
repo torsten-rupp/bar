@@ -2,6 +2,7 @@
   * changed version number scheme 
   * added support for storing on Samba/CIFS server
   * upgrade zlib 1.3
+  * upgrade libidn2 2.3.4
   * fixed bar-index --pipe
   * fixed reserved keyword in MariaDB: offset
   * fixed undefined value when update aggregates

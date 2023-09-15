@@ -7053,8 +7053,6 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(fileInfo != NULL);
 
-  UNUSED_VARIABLE(fragmentSize);
-
   // init variables
   AutoFree_init(&autoFreeList);
 
@@ -7473,8 +7471,6 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(deviceInfo != NULL);
   assert(deviceInfo->blockSize > 0);
-
-  UNUSED_VARIABLE(blockCount);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -8353,8 +8349,6 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(!StringList_isEmpty(fileNameList));
   assert(fileInfo != NULL);
-
-  UNUSED_VARIABLE(fragmentSize);
 
   // init variables
   AutoFree_init(&autoFreeList);

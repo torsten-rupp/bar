@@ -22251,7 +22251,41 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
   }
 }
 
-/*---------------------------------------------------------------------*/
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : isServerHandle
+* Purpose: check if server handle
+* Input  : serverFlag         - TRUE iff server
+*          serverSocketHandle - socket handle
+*          handle             - handle
+* Output : -
+* Return : TRUE iff server use handle
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isServerHandle(bool serverFlag, const ServerSocketHandle *serverSocketHandle, int handle)
+{
+  return serverFlag && (handle == Network_getServerSocket(serverSocketHandle));
+}
+
+/***********************************************************************\
+* Name   : isServerTLSHandle
+* Purpose: check if server TLS handle
+* Input  : serverTLSFlag         - TRUE iff TLS server
+*          serverTLSSocketHandle - socket handle
+*          handle                - handle
+* Output : -
+* Return : TRUE iff server use handle
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isServerTLSHandle(bool serverTLSFlag, const ServerSocketHandle *serverTLSSocketHandle, int handle)
+{
+  return serverTLSFlag && (handle == Network_getServerSocket(serverTLSSocketHandle));
+}
+
+// ----------------------------------------------------------------------
 
 Errors Server_initAll(void)
 {
@@ -22277,15 +22311,6 @@ void Server_doneAll(void)
   #ifdef SIMULATE_PURGE
     Array_done(&simulatedPurgeEntityIdArray);
   #endif /* SIMULATE_PURGE */
-}
-
-LOCAL_INLINE bool isServerHandle(bool serverFlag, const ServerSocketHandle *serverSocketHandle, int handle)
-{
-  return serverFlag && (handle == Network_getServerSocket(serverSocketHandle));
-}
-LOCAL_INLINE bool isServerTLSHandle(bool serverTLSFlag, const ServerSocketHandle *serverTLSSocketHandle, int handle)
-{
-  return serverTLSFlag && (handle == Network_getServerSocket(serverTLSSocketHandle));
 }
 
 Errors Server_socket(void)

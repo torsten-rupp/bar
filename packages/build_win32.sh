@@ -212,19 +212,21 @@ temporaryDirectory=`mktemp -d /tmp/win32-XXXXXX`
   fi
 
   # build Win32
-  ./download-third-party-packages.sh \
+  $projectRoot/download-third-party-packages.sh \
     --local-directory /media/extern \
+    --patch-directory $projectRoot/misc \
     --no-verbose \
     $ADDITIONAL_DOWNLOAD_FLAGS
 #TODO: enable smbclient
 #TODO: enable postgres
   $projectRoot/configure \
---disable-smbclient \
---disable-postgresql \
     --host=i686-w64-mingw32 \
     --build=x86_64-linux \
     --enable-link-static \
     --disable-link-dynamic \
+    --disable-debug-thread-crash-handlers \
+    \
+    --disable-smbclient \
     --disable-bfd
   make
   make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows

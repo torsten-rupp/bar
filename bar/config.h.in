@@ -229,6 +229,9 @@
 /* Define to 1 if you have the <icu.h> header file. */
 #undef HAVE_ICU_H
 
+/* static libidn2 installed */
+#undef HAVE_IDN2
+
 /* inotify_add_watch() available */
 #undef HAVE_INOTIFY_ADD_WATCH
 
@@ -807,7 +810,7 @@
 /* TLS directory */
 #undef TLS_DIR
 
-/* bzip2 version */
+/* bz2 version */
 #undef VERSION_BZ2
 
 /* cdio version */

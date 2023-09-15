@@ -1,9 +1,9 @@
 #!groovy
 
-DOCKER_IMAGE_NAME='dockerregistry.macio.de:5000/backup_archiver:latest'
-DOCKER_IMAGE_NAME_RPM='dockerregistry.macio.de:5000/backup_archiver_rpm:latest'
-DOCKER_IMAGE_NAME_DEB='dockerregistry.macio.de:5000/backup_archiver_deb:latest'
-DOCKER_IMAGE_NAME_WIN32='dockerregistry.macio.de:5000/backup_archiver_win32:latest'
+DOCKER_IMAGE_NAME='bar'
+DOCKER_IMAGE_NAME_RPM='bar-centos-x86_64'
+DOCKER_IMAGE_NAME_DEB='bar-debian-x86_64'
+DOCKER_IMAGE_NAME_WIN32='bar-mingw32'
 
 // build
 def build()

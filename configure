@@ -788,6 +788,7 @@ HAVE_CURL
 HAVE_CARES
 HAVE_FTP
 HAVE_GCRYPT
+HAVE_IDN2
 HAVE_XDELTA3
 HAVE_ZSTD
 HAVE_LZ4
@@ -7026,9 +7027,9 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-      ac_cv_wine_c_drive=`winepath C:`
-      ac_cv_wine_c_drive=`dirname $ac_cv_wine_c_drive`
-      ac_cv_wine_c_drive=`realpath $ac_cv_wine_c_drive/c:`
+      ac_cv_wine_c_drive=`winepath C: 2>/dev/null`
+      ac_cv_wine_c_drive=`dirname $ac_cv_wine_c_drive 2>/dev/null`
+      ac_cv_wine_c_drive=`realpath $ac_cv_wine_c_drive/c: 2>/dev/null`
       WINE_C_DRIVE=$ac_cv_wine_c_drive
 
 
@@ -11811,7 +11812,7 @@ fi
 CC_INCLUDES="$CC_INCLUDES $cwd/extern/include $cwd/bar"
 LIBRARY_PATHS="$cwd/extern/lib $cwd/extern/lib/mariadb $LIBRARY_PATHS"
 
-# set variables for compile extern
+# set toolchain settings for compile extern (Note: do not move ) at the end!)
 
   CPPFLAGS="$CPP_FLAGS"
   CFLAGS="$CC_FLAGS -v"
@@ -11871,9 +11872,6 @@ if test -d icu -o -d "`readlink icu`"; then
 
     result=1
     if test $result -eq 1; then
-      # patch to disable xlocale: does not exists anymore? not required?
-      #   diff -u icu.org/source/i18n/digitlst.cpp icu/source/i18n/digitlst.cpp > icu-xlocale.patch
-      (cd extern/icu; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/icu-xlocale.patch) 1>/dev/null 2>/dev/null
       case $host_os in
         linux-*)
           ;;
@@ -11885,9 +11883,17 @@ if test -d icu -o -d "`readlink icu`"; then
           # patch to disable usage of lib-command when RANLIB is set
           ;;
       esac
-    fi
+      if test $? -ne 0; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
 
-    # build host
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+        result=0
+      fi
+    fi
     if test $result -eq 1; then
       install -d icu/build/$build
       (cd icu/build/$build; CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="" ../../source/configure \
@@ -11899,8 +11905,8 @@ if test -d icu -o -d "`readlink icu`"; then
         --disable-samples \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
-printf "%s\n" "fail (configure)" >&6; }
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure host)" >&5
+printf "%s\n" "fail (configure host)" >&6; }
 
   printf "%s\n" "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
@@ -11912,8 +11918,8 @@ printf "%s\n" "fail (configure)" >&6; }
     if test $result -eq 1; then
       (cd icu/build/$build; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
       if test $? -ne 0; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
-printf "%s\n" "fail (make)" >&6; }
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make host)" >&5
+printf "%s\n" "fail (make host)" >&6; }
 
   printf "%s\n" "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
@@ -11922,9 +11928,7 @@ printf "%s\n" "fail (make)" >&6; }
         result=0
       fi
     fi
-
     if test "$host" != "$build"; then
-      # build target
       install -d icu/build/$host
       if test $result -eq 1; then
         (cd icu/build/$host; CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="" ../../source/configure \
@@ -11938,8 +11942,8 @@ printf "%s\n" "fail (make)" >&6; }
           --disable-samples \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
-printf "%s\n" "fail (configure)" >&6; }
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure target)" >&5
+printf "%s\n" "fail (configure target)" >&6; }
 
   printf "%s\n" "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
@@ -11951,8 +11955,8 @@ printf "%s\n" "fail (configure)" >&6; }
       if test $result -eq 1; then
         (cd icu/build/$host; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
-printf "%s\n" "fail (make)" >&6; }
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make target)" >&5
+printf "%s\n" "fail (make target)" >&6; }
 
   printf "%s\n" "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
@@ -11962,17 +11966,9 @@ printf "%s\n" "fail (make)" >&6; }
         fi
       fi
     fi
-
     if test $result -eq 1; then
       (cd icu/build/$host; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
       if test $? -ne 0; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
-printf "%s\n" "fail (install)" >&6; }
-
-  printf "%s\n" "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
-  printf "%s\n" "---------------------------------------------------------------------------------------"
-
         result=0
       fi
       case $host_os in
@@ -11993,6 +11989,15 @@ printf "%s\n" "fail (install)" >&6; }
           (cd extern/lib; ln -s libsiculx.a libiculx.a) 1>/dev/null 2>/dev/null
           ;;
       esac
+      if test $result -ne 1; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+printf "%s\n" "fail (install)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+      fi
     fi
     if test $result -eq 1; then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
@@ -12631,7 +12636,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
 
     result=1
     if test $result -eq 1; then
-      (cd zlib; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+      (cd zlib; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
         --prefix=$cwd/extern \
         --static \
       ) 1>$tmpFile 2>&1
@@ -12895,6 +12900,7 @@ fi
     fi
   fi
 fi
+
 if test -z "$HAVE_Z"; then
   if test ! \( -d zlib -o -d "`readlink zlib`" \); then
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: zlib not compiled: zlib package missing" >&5
@@ -12915,7 +12921,6 @@ if test $ENABLE_BZ2 = "yes"; then
       result=1
       if test $result -eq 1; then
         if test "$build" == "$host"; then
-          # compile build
           (cd bzip2; make clean; make -j$CPU_CORES libbz2.a) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
@@ -12928,8 +12933,7 @@ printf "%s\n" "fail (make)" >&6; }
             result=0
           fi
         else
-          # cross-compile host
-          (cd bzip2; make clean; CFLAGS="" LDFLAGS="" make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" libbz2.a) 1>$tmpFile 2>&1
+          (cd bzip2; make clean; make -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" libbz2.a) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 printf "%s\n" "fail (make)" >&6; }
@@ -13185,6 +13189,17 @@ fi
     fi
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_BZ2"; then
     if test ! \( -d bzip2 -o -d "`readlink bzip2`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: bzip2 not compiled: bzip2 package missing" >&5
@@ -13217,12 +13232,22 @@ if test $ENABLE_LZMA = "yes"; then
             #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/xz-5.0.4; then
-#              (cd extern/xz-5.0.4; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/xz-5.0.4; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/xz-5.0.4-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
       fi
       if test $result -eq 1; then
         (cd xz; ./configure \
@@ -13493,6 +13518,17 @@ fi
     fi
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_LZMA"; then
     if test ! \( -d xz -o -d "`readlink xz`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: lzma not compiled: xz package missing" >&5
@@ -13523,9 +13559,19 @@ if test $ENABLE_LZO = "yes"; then
           windows*|mingw*)
             # patch to fix missing --tag=CC for in libtool call
             #   diff -u extern/lzo-2.10.org/Makefile.in extern/lzo-2.10/Makefile.in  > misc/lzo-2.10-libtool.patch
-            (cd lzo; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/lzo-2.10-libtool.patch) 1>/dev/null 2>/dev/null
+#            (cd lzo; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/lzo-2.10-libtool.patch) 1>$tmpFile 2>&1
             ;;
         esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
       fi
       if test $result -eq 1; then
         install -d lzo
@@ -13795,6 +13841,17 @@ fi
     fi
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_LZO"; then
     if test ! \( -d lzo -o -d "`readlink lzo`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: lzo not compiled: lzo package missing" >&5
@@ -13815,7 +13872,7 @@ if test $ENABLE_LZ4 = "yes"; then
 
       result=1
       if test $result -eq 1; then
-        (cd lz4; make clean; make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" lib) 1>$tmpFile 2>&1
+        (cd lz4; make clean; make -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" lib) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 printf "%s\n" "fail (make)" >&6; }
@@ -14072,6 +14129,17 @@ fi
     fi
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_LZ4"; then
     if test ! \( -d lz4 -o -d "`readlink lz4`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: lz4 not compiled: lz4 package missing" >&5
@@ -14093,7 +14161,7 @@ if test $ENABLE_ZSTD = "yes"; then
       result=1
       if test $result -eq 1; then
         if test "$build" == "$host"; then
-          (cd zstd; make clean; CFLAGS="" LDFLAGS="" make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
+          (cd zstd; make clean; make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 printf "%s\n" "fail (make)" >&6; }
@@ -14105,7 +14173,8 @@ printf "%s\n" "fail (make)" >&6; }
             result=0
           fi
         else
-          (cd zstd; make clean; CFLAGS="" LDFLAGS="" make -C lib -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
+          # Note: do not set LDFLAGS
+          (cd zstd; make clean; make -C lib -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
           if test $? -ne 0; then
             { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 printf "%s\n" "fail (make)" >&6; }
@@ -14357,6 +14426,17 @@ fi
     fi
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_ZSTD"; then
     if test ! \( -d zstd -o -d "`readlink zstd`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: zstd not compiled: zstd package missing" >&5
@@ -14371,11 +14451,34 @@ if test $ENABLE_XDELTA3 = "yes"; then
 
     cwd=`pwd`
 
-    # patch to fix warnings:
-    #   diff -Naur xdelta3-3.0.11.org xdelta3-3.0.11 > xdelta3-3.0.11.patch
-    (cd xdelta3; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
+    # Note: no cross-compile; copy source only
 
-    CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
+  printf %s "create xdelta3... " >&6
+
+    result=1
+    if test $result -ne 1; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail" >&5
+printf "%s\n" "fail" >&6; }
+    fi
+    if test $result -eq 1; then
+      (cd xdelta3; \
+       install -d $cwd/extern/sources; \
+       install -d $cwd/extern/include; \
+       install -m 644 xdelta3.c $cwd/extern/sources; \
+       install -m 644 -t $cwd/extern/include \
+         xdelta3.h \
+         xdelta3-internal.h \
+         xdelta3-list.h \
+         xdelta3-hash.h \
+         xdelta3-cfgs.h \
+         xdelta3-decode.h; \
+      ) 1>$tmpFile 2>&1
+      (cd $cwd/extern/include; ln -s ../sources/xdelta3.c)
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
+printf "%s\n" "done" >&6; }
+    fi
+
+#    CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
     HAVE_XDELTA3=1
 
 printf "%s\n" "#define HAVE_XDELTA3 1" >>confdefs.h
@@ -14451,9 +14554,6 @@ printf "%s\n" "done" >&6; }
 
       result2=1
       if test $result2 -eq 1; then
-        # patch to disable wrong deprecated warnings:
-        #   diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
-        (cd libgcrypt; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           linux-*)
             ;;
@@ -14468,12 +14568,22 @@ printf "%s\n" "done" >&6; }
             #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/libgcrypt-1.5.0; then
-#              (cd extern/libgcrypt-1.5.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/libgcrypt-1.5.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libgcrypt-1.5.0-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
       fi
       if test $result2 -eq 1; then
         case $host_cpu in
@@ -14992,6 +15102,17 @@ fi
 
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_GCRYPT"; then
     if test ! \( -d libgpg-error -o -d "`readlink libgpg-error`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libgcrypt not compiled: libgpg-error package missing" >&5
@@ -15084,7 +15205,7 @@ printf "%s\n" "fail (configure)" >&6; }
         esac
       fi
       if test $result -eq 1; then
-        (cd openssl; make clean; make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
+        (cd openssl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 printf "%s\n" "fail (make)" >&6; }
@@ -15152,14 +15273,6 @@ printf "%s\n" "#define HAVE_SSL 1" >>confdefs.h
 
       result=1
       if test $result -eq 1; then
-        # patch to support keep alive for libssh2 1.1 (ignore errors):
-        #   diff -u libssh2-1.1.org/include/libssh2.h libssh2-1.1/include/libssh2.h >  libssh2-1.1-keepalive.patch
-        #   diff -u libssh2-1.1.org/src/channel.c     libssh2-1.1/src/channel.c     >> libssh2-1.1-keepalive.patch
-#TODO: does not work anymore
-#        (cd libssh2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
-        # patch for memory leak for libssh2 1.8.2 (ignore errors):
-        #   diff -u libssh2-1.8.2.org/src libssh2-1.8.2/src > libssh2-1.8.2-memory-leak.patch
-        (cd libssh2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.8.2-memory-leak.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           linux-*)
             ;;
@@ -15174,12 +15287,22 @@ printf "%s\n" "#define HAVE_SSL 1" >>confdefs.h
             #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/libssh2-1.4.2; then
-#              (cd extern/libssh2-1.4.2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/libssh2-1.4.2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.4.2-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
       fi
       if test $result -eq 1; then
         (cd libssh2; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
@@ -15464,14 +15587,9 @@ fi
     fi
   fi
 
-  if test -z "$HAVE_SSH2"; then
-    if test ! \( -d libssh2 -o -d "`readlink libssh2`" \); then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 not compiled: libssh2 package missing" >&5
-printf "%s\n" "$as_me: WARNING: libssh2 not compiled: libssh2 package missing" >&2;}
-    fi
-  fi
-
-    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    case $host_os in
+    linux-* | sunos | solaris* | darwin*)
+            if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
     ac_result=""
@@ -15536,8 +15654,8 @@ printf "%s\n" "#define HAVE_CRYPTO 1" >>confdefs.h
 
 fi
 
-  else
-    if test -z "$HAVE_CRYPTO"; then
+      else
+        if test -z "$HAVE_CRYPTO"; then
 
 
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing MD5_Init" >&5
@@ -15604,8 +15722,8 @@ printf "%s\n" "#define HAVE_CRYPTO 1" >>confdefs.h
 
 fi
 
-    fi
-    if test -z "$HAVE_CRYPTO"; then
+        fi
+        if test -z "$HAVE_CRYPTO"; then
 
 
     ac_result=""
@@ -15670,13 +15788,585 @@ printf "%s\n" "#define HAVE_CRYPTO 1" >>confdefs.h
 
 fi
 
+        fi
+      fi
+      ;;
+    windows*|mingw*)
+            if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing CertGetCertificateContextProperty" >&5
+printf %s "checking for library containing CertGetCertificateContextProperty... " >&6; }
+if test ${ac_cv_search_libraries_CertGetCertificateContextProperty+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in crypt32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo windows.h wincrypt.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z "windows.h wincrypt.h"; then echo "extern void CertGetCertificateContextProperty();"; fi`
+                                         return (int)CertGetCertificateContextProperty;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_CertGetCertificateContextProperty=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_CertGetCertificateContextProperty+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_CertGetCertificateContextProperty=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_CertGetCertificateContextProperty" >&5
+printf "%s\n" "$ac_cv_search_libraries_CertGetCertificateContextProperty" >&6; }
+  ac_result=$ac_cv_search_libraries_CertGetCertificateContextProperty
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES crypt32"
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing MD5_Init" >&5
+printf %s "checking for library containing MD5_Init... " >&6; }
+if test ${ac_cv_search_libraries_MD5_Init+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in crypto ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void MD5_Init();"; fi`
+                                         return (int)MD5_Init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_MD5_Init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_MD5_Init+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_MD5_Init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_MD5_Init" >&5
+printf "%s\n" "$ac_cv_search_libraries_MD5_Init" >&6; }
+  ac_result=$ac_cv_search_libraries_MD5_Init
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";
+printf "%s\n" "#define HAVE_CRYPTO 1" >>confdefs.h
+
+fi
+
+      else
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing CertGetCertificateContextProperty" >&5
+printf %s "checking for static library containing CertGetCertificateContextProperty... " >&6; }
+if test ${ac_cv_search_static_CertGetCertificateContextProperty+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in crypt32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo windows.h wincrypt.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z "windows.h wincrypt.h"; then echo "extern void CertGetCertificateContextProperty();"; fi`
+                                         return (int)CertGetCertificateContextProperty;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_CertGetCertificateContextProperty=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_CertGetCertificateContextProperty+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_CertGetCertificateContextProperty=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_CertGetCertificateContextProperty" >&5
+printf "%s\n" "$ac_cv_search_static_CertGetCertificateContextProperty" >&6; }
+  ac_result=$ac_cv_search_static_CertGetCertificateContextProperty
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"
+fi
+
+        if test -z "$HAVE_CRYPTO"; then
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing MD5_Init" >&5
+printf %s "checking for static library containing MD5_Init... " >&6; }
+if test ${ac_cv_search_static_MD5_Init+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in crypto ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void MD5_Init();"; fi`
+                                         return (int)MD5_Init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_MD5_Init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_MD5_Init+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_MD5_Init=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_MD5_Init" >&5
+printf "%s\n" "$ac_cv_search_static_MD5_Init" >&6; }
+  ac_result=$ac_cv_search_static_MD5_Init
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";
+printf "%s\n" "#define HAVE_CRYPTO 1" >>confdefs.h
+
+fi
+
+        fi
+        if test -z "$HAVE_CRYPTO"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing MD5_Init" >&5
+printf %s "checking for library containing MD5_Init... " >&6; }
+if test ${ac_cv_search_libraries_MD5_Init+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in crypto ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void MD5_Init();"; fi`
+                                         return (int)MD5_Init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_MD5_Init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_MD5_Init+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_MD5_Init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_MD5_Init" >&5
+printf "%s\n" "$ac_cv_search_libraries_MD5_Init" >&6; }
+  ac_result=$ac_cv_search_libraries_MD5_Init
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";
+printf "%s\n" "#define HAVE_CRYPTO 1" >>confdefs.h
+
+fi
+
+        fi
+      fi
+      ;;
+  esac
+
+  if test -z "$HAVE_SSL"; then
+    if test ! \( -d openssl -o -d "`readlink openssl`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: openssl not compiled: openssl package missing" >&5
+printf "%s\n" "$as_me: WARNING: openssl not compiled: openssl package missing" >&2;}
+    fi
+  fi
+  if test -z "$HAVE_SSH2"; then
+    if test ! \( -d libssh2 -o -d "`readlink libssh2`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 not compiled: libssh2 package missing" >&5
+printf "%s\n" "$as_me: WARNING: libssh2 not compiled: libssh2 package missing" >&2;}
     fi
   fi
 fi
 
+# compile/use libidn2
+if test \( $ENABLE_TLS = "yes" \) -o \( $ENABLE_CURL = "yes" \); then
+  if test \( -d libidn2 -o -d "`readlink libidn2`" \) ; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+
+      cwd=`pwd`
+
+
+  printf %s "compile libidn2... " >&6
+
+      result1=1
+      if test $result -eq 1; then
+        (cd libidn2; ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --disable-shared \
+          --enable-static \
+          --disable-doc \
+          --with-included-libunistring \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+printf "%s\n" "fail (configure)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd libidn2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+printf "%s\n" "fail (make)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd libidn2; make install) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+printf "%s\n" "fail (install)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
+printf "%s\n" "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES idn2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES idn2"
+      fi
+      HAVE_IDN2=1
+
+printf "%s\n" "#define HAVE_IDN2 1" >>confdefs.h
+
+    fi
+  else
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing idn2_check_version" >&5
+printf %s "checking for library containing idn2_check_version... " >&6; }
+if test ${ac_cv_search_libraries_idn2_check_version+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in idn2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void idn2_check_version();"; fi`
+                                         return (int)idn2_check_version;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_idn2_check_version=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_idn2_check_version+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_idn2_check_version=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_idn2_check_version" >&5
+printf "%s\n" "$ac_cv_search_libraries_idn2_check_version" >&6; }
+  ac_result=$ac_cv_search_libraries_idn2_check_version
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_IDN2=1;LIBRARIES="$LIBRARIES idn2";
+printf "%s\n" "#define HAVE_IDN2 1" >>confdefs.h
+
+fi
+
+    else
+      if test -z "$HAVE_IDN2"; then
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing idn2_check_version" >&5
+printf %s "checking for static library containing idn2_check_version... " >&6; }
+if test ${ac_cv_search_static_idn2_check_version+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in idn2 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void idn2_check_version();"; fi`
+                                         return (int)idn2_check_version;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_idn2_check_version=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_idn2_check_version+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_idn2_check_version=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_idn2_check_version" >&5
+printf "%s\n" "$ac_cv_search_static_idn2_check_version" >&6; }
+  ac_result=$ac_cv_search_static_idn2_check_version
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_IDN2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES idn2";
+printf "%s\n" "#define HAVE_IDN2 1" >>confdefs.h
+
+fi
+
+      fi
+    fi
+  fi
+
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+fi
+
 # compile/use gnutls
 if test $ENABLE_TLS = "yes"; then
-  if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \); then
+  if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \) -a "$HAVE_IDN2"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 
       cwd=`pwd`
@@ -15849,61 +16539,6 @@ printf "%s\n" "done" >&6; }
       fi
 
 
-  printf %s "compile libidn2... " >&6
-
-      result2=1
-      if test $result2 -eq 1; then
-        (cd libidn2; ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --disable-shared \
-          --enable-static \
-          --disable-doc \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
-printf "%s\n" "fail (configure)" >&6; }
-
-  printf "%s\n" "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
-  printf "%s\n" "---------------------------------------------------------------------------------------"
-
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd libidn2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
-printf "%s\n" "fail (make)" >&6; }
-
-  printf "%s\n" "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
-  printf "%s\n" "---------------------------------------------------------------------------------------"
-
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd libidn2; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
-printf "%s\n" "fail (install)" >&6; }
-
-  printf "%s\n" "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
-  printf "%s\n" "---------------------------------------------------------------------------------------"
-
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
-printf "%s\n" "done" >&6; }
-      fi
-
-
   printf %s "compile gnutls... " >&6
 
       result3=1
@@ -15971,9 +16606,9 @@ printf "%s\n" "done" >&6; }
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES gnutls nettle hogweed gmp idn2"
+        LIBRARIES="$LIBRARIES gnutls nettle hogweed gmp"
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp idn2"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp"
       fi
       HAVE_GNU_TLS=1
 
@@ -16394,6 +17029,17 @@ fi
     fi
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_GNU_TLS"; then
     if test ! \( -d gmp -o -d "`readlink gmp`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: gnutls not compiled: gmp package missing" >&5
@@ -16407,12 +17053,17 @@ printf "%s\n" "$as_me: WARNING: gnutls not compiled: nettle package missing" >&2
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: gnutls not compiled: gnutls package missing" >&5
 printf "%s\n" "$as_me: WARNING: gnutls not compiled: gnutls package missing" >&2;}
     fi
+    if test ! "$HAVE_IDN2"; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: gnutls not compiled: libidn2 package missing" >&5
+printf "%s\n" "$as_me: WARNING: gnutls not compiled: libidn2 package missing" >&2;}
+    fi
   fi
 fi
 
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
-  if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \) -a "$HAVE_GPG_ERROR"; then
+#  if test \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \) -a "$HAVE_GPG_ERROR" -a "$HAVE_IDN2"; then
+  if test \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 
       cwd=`pwd`
@@ -16430,6 +17081,10 @@ printf "%s\n" "$as_me: WARNING: gnutls is missing. Compiling or linking curl may
 printf "%s\n" "$as_me: WARNING: libssl is missing. Compiling or linking curl may fail!" >&2;}
       fi
       if test -z "$HAVE_SSH2"; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 is missing. Compiling or linking curl may fail!" >&5
+printf "%s\n" "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fail!" >&2;}
+      fi
+      if test -z "$HAVE_IDN2"; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 is missing. Compiling or linking curl may fail!" >&5
 printf "%s\n" "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fail!" >&2;}
       fi
@@ -16454,12 +17109,22 @@ printf "%s\n" "$as_me: WARNING: libssh2 is missing. Compiling or linking curl ma
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result1=0
+        fi
       fi
       if test $result1 -eq 1; then
         # Note: https://github.com/c-ares/c-ares/blob/cares-1_14_0/README.msvc#L133-L138
@@ -16546,18 +17211,28 @@ printf "%s\n" "done" >&6; }
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result2=0
+        fi
       fi
       if test $result2 -eq 1; then
         if test "$host" == "$build"; then
           # compile build
 # TODO: temporary disabled brotli compression, psl
-          (cd curl; PKG_CONFIG_PATH=$cwd/openssl ./configure \
+          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
             --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
@@ -16568,10 +17243,9 @@ printf "%s\n" "done" >&6; }
             --without-librtmp \
             --enable-ares=$cwd/extern \
             --with-zlib=$cwd/extern \
-            --disable-openssl-auto-load-config \
-            --with-ssl=$cwd/extern \
-            --with-gnutls=$cwd/extern \
-            --with-libssh2=$cwd/extern \
+            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; fi` \
+            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
 --without-brotli \
 --without-libpsl \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
@@ -16599,9 +17273,9 @@ printf "%s\n" "fail (configure)" >&6; }
             --without-librtmp \
             --enable-ares=$cwd/extern \
             --with-zlib=$cwd/extern \
-            --with-ssl=$cwd/extern \
-            --with-gnutls=$cwd/extern \
-            --with-libssh2=$cwd/extern \
+            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; fi` \
+            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
           ) 1>$tmpFile 2>&1
           if test $? -ne 0; then
@@ -16678,12 +17352,22 @@ printf "%s\n" "done" >&6; }
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result3=0
+        fi
       fi
       if test $result3 -eq 1; then
         (cd mxml; ./configure \
@@ -16782,341 +17466,10 @@ printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
 
 printf "%s\n" "#define HAVE_MXML 1" >>confdefs.h
 
-
-      # Note: update toolchain settings for defines
-
-  CPPFLAGS="$CPP_FLAGS"
-  CFLAGS="$CC_FLAGS -v"
-  CXXFLAGS="$CXX_FLAGS -v"
-  for z in $CC_DEFINES ""; do
-    if test -n "$z"; then
-      CPPFLAGS="$CPPFLAGS -D$z"
-      CFLAGS="$CFLAGS -D$z"
     fi
-  done
-  for z in $CC_INCLUDES ""; do
-    if test -n "$z"; then
-      CPPFLAGS="$CPPFLAGS -I$z"
-      CFLAGS="$CFLAGS -I$z"
-    fi
-  done
-  LDFLAGS="$LD_FLAGS"
-  for z in $LIBRARY_PATHS ""; do
-    if test -n "$z"; then
-      LDFLAGS="$LDFLAGS -L$z"
-    fi
-  done
-  LIBS=""
-  for z in $STATIC_LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
-    fi
-  done
-  for z in $LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
-    fi
-  done
-  for z in $STATIC_LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
-    fi
-  done
-  for z in $LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
-    fi
-  done
-
-  # some host tests need dynamic libraries
-  export LD_LIBRARY_PATH=`pwd`/extern/lib
-
-    fi
-
-    # required functions for curl
-
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gpg_strerror" >&5
-printf %s "checking for gpg_strerror... " >&6; }
-if test ${ac_cv_func_gpg_strerror+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-      ac_cv_func_gpg_strerror="no"
-      echo > conftest.log
-
-      for ac_headers in  ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdint.h>
-                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-
-int
-main (void)
-{
-`if test -z "$ac_headers"; then echo "extern void gpg_strerror();"; fi`
-                                         #ifdef gpg_strerror
-                                         #else
-                                           return (intptr_t)gpg_strerror;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_func_gpg_strerror=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gpg_strerror" >&5
-printf "%s\n" "$ac_cv_func_gpg_strerror" >&6; }
-  if test "$ac_cv_func_gpg_strerror" != no
-then :
-
-elif :
-then :
-  as_fn_error $? "gpg_strerror() required for curl" "$LINENO" 5
-fi
-
-
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gcry_control" >&5
-printf %s "checking for gcry_control... " >&6; }
-if test ${ac_cv_func_gcry_control+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-      ac_cv_func_gcry_control="no"
-      echo > conftest.log
-
-      for ac_headers in  ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdint.h>
-                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-
-int
-main (void)
-{
-`if test -z "$ac_headers"; then echo "extern void gcry_control();"; fi`
-                                         #ifdef gcry_control
-                                         #else
-                                           return (intptr_t)gcry_control;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_func_gcry_control=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gcry_control" >&5
-printf "%s\n" "$ac_cv_func_gcry_control" >&6; }
-  if test "$ac_cv_func_gcry_control" != no
-then :
-
-elif :
-then :
-  as_fn_error $? "gcry_control() required for curl" "$LINENO" 5
-fi
-
-
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gnutls_global_init" >&5
-printf %s "checking for gnutls_global_init... " >&6; }
-if test ${ac_cv_func_gnutls_global_init+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-      ac_cv_func_gnutls_global_init="no"
-      echo > conftest.log
-
-      for ac_headers in  ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdint.h>
-                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-
-int
-main (void)
-{
-`if test -z "$ac_headers"; then echo "extern void gnutls_global_init();"; fi`
-                                         #ifdef gnutls_global_init
-                                         #else
-                                           return (intptr_t)gnutls_global_init;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_func_gnutls_global_init=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gnutls_global_init" >&5
-printf "%s\n" "$ac_cv_func_gnutls_global_init" >&6; }
-  if test "$ac_cv_func_gnutls_global_init" != no
-then :
-
-elif :
-then :
-  as_fn_error $? "gnutls_global_init() required for curl" "$LINENO" 5
-fi
-
-
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for SSL_new" >&5
-printf %s "checking for SSL_new... " >&6; }
-if test ${ac_cv_func_SSL_new+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-      ac_cv_func_SSL_new="no"
-      echo > conftest.log
-
-      for ac_headers in  ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdint.h>
-                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-
-int
-main (void)
-{
-`if test -z "$ac_headers"; then echo "extern void SSL_new();"; fi`
-                                         #ifdef SSL_new
-                                         #else
-                                           return (intptr_t)SSL_new;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_func_SSL_new=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_SSL_new" >&5
-printf "%s\n" "$ac_cv_func_SSL_new" >&6; }
-  if test "$ac_cv_func_SSL_new" != no
-then :
-
-elif :
-then :
-  as_fn_error $? "SSL_new() required for curl" "$LINENO" 5
-fi
-
   else
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-
-
-    ac_result=""
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing mxmlNewXML" >&5
-printf %s "checking for library containing mxmlNewXML... " >&6; }
-if test ${ac_cv_search_libraries_mxmlNewXML+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_libraries_save_LIBS=$LIBS
-
-      for ac_library in mxml ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void mxmlNewXML();"; fi`
-                                         return (int)mxmlNewXML;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_libraries_mxmlNewXML=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_libraries_mxmlNewXML+y}
-then :
-
-else $as_nop
-  ac_cv_search_libraries_mxmlNewXML=no
-fi
-
-            LIBS=$ac_func_search_libraries_save_LIBS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_mxmlNewXML" >&5
-printf "%s\n" "$ac_cv_search_libraries_mxmlNewXML" >&6; }
-  ac_result=$ac_cv_search_libraries_mxmlNewXML
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";
-printf "%s\n" "#define HAVE_MXML 1" >>confdefs.h
-
-fi
-
 
 
     ac_result=""
@@ -17245,76 +17598,6 @@ printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
 
 fi
 
-    else
-      if test -z "$HAVE_MXML"; then
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing mxmlNewXML" >&5
-printf %s "checking for static library containing mxmlNewXML... " >&6; }
-if test ${ac_cv_search_static_mxmlNewXML+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      for ac_library in mxml ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void mxmlNewXML();"; fi`
-                                         return (int)mxmlNewXML;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_static_mxmlNewXML=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_static_mxmlNewXML+y}
-then :
-
-else $as_nop
-  ac_cv_search_static_mxmlNewXML=no
-fi
-
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_mxmlNewXML" >&5
-printf "%s\n" "$ac_cv_search_static_mxmlNewXML" >&6; }
-  ac_result=$ac_cv_search_static_mxmlNewXML
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MXML=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mxml";
-printf "%s\n" "#define HAVE_MXML 1" >>confdefs.h
-
-fi
-
-      fi
-      if test -z "$HAVE_MXML"; then
 
 
     ac_result=""
@@ -17379,7 +17662,7 @@ printf "%s\n" "#define HAVE_MXML 1" >>confdefs.h
 
 fi
 
-      fi
+    else
       if test -z "$HAVE_CARES"; then
 
 
@@ -17648,30 +17931,180 @@ printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
 fi
 
       fi
+      if test -z "$HAVE_MXML"; then
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing mxmlNewXML" >&5
+printf %s "checking for static library containing mxmlNewXML... " >&6; }
+if test ${ac_cv_search_static_mxmlNewXML+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in mxml ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void mxmlNewXML();"; fi`
+                                         return (int)mxmlNewXML;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_mxmlNewXML=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_mxmlNewXML+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_mxmlNewXML=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_mxmlNewXML" >&5
+printf "%s\n" "$ac_cv_search_static_mxmlNewXML" >&6; }
+  ac_result=$ac_cv_search_static_mxmlNewXML
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MXML=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mxml";
+printf "%s\n" "#define HAVE_MXML 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_MXML"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing mxmlNewXML" >&5
+printf %s "checking for library containing mxmlNewXML... " >&6; }
+if test ${ac_cv_search_libraries_mxmlNewXML+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in mxml ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void mxmlNewXML();"; fi`
+                                         return (int)mxmlNewXML;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_mxmlNewXML=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_mxmlNewXML+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_mxmlNewXML=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_mxmlNewXML" >&5
+printf "%s\n" "$ac_cv_search_libraries_mxmlNewXML" >&6; }
+  ac_result=$ac_cv_search_libraries_mxmlNewXML
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";
+printf "%s\n" "#define HAVE_MXML 1" >>confdefs.h
+
+fi
+
+      fi
     fi
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
+  if test -z "$HAVE_CARES"; then
+    if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: curl not compiled: c-ares package missing" >&5
+printf "%s\n" "$as_me: WARNING: curl not compiled: c-ares package missing" >&2;}
+    fi
+  fi
   if test -z "$HAVE_CURL"; then
     if test ! \( -d curl -o -d "`readlink curl`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: curl not compiled: curl package missing" >&5
 printf "%s\n" "$as_me: WARNING: curl not compiled: curl package missing" >&2;}
     fi
   fi
-  if test -z "$HAVE_CARES"; then
-    if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 not compiled: c-ares package missing" >&5
-printf "%s\n" "$as_me: WARNING: libssh2 not compiled: c-ares package missing" >&2;}
-    fi
-  fi
-
   if test -z "$HAVE_MXML"; then
     if test ! \( -d mxml -o -d "`readlink mxml`" \); then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 not compiled: mxml package missing" >&5
-printf "%s\n" "$as_me: WARNING: libssh2 not compiled: mxml package missing" >&2;}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: curl not compiled: mxml package missing" >&5
+printf "%s\n" "$as_me: WARNING: curl not compiled: mxml package missing" >&2;}
+    fi
+  fi
+  if test -z "$HAVE_IDN2"; then
+    if test ! \( -d libidn2 -o -d "`readlink libidn2`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: curl not compiled: libidn2 package missing" >&5
+printf "%s\n" "$as_me: WARNING: curl not compiled: libidn2 package missing" >&2;}
     fi
   fi
 
-  if test "$HAVE_CURL"; then
+  if test "$HAVE_CURL" -a "$HAVE_CARES" -a "$HAVE_MXML" -a "$HAVE_IDN2"; then
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
@@ -17868,7 +18301,7 @@ fi
 
 # compile MariaDB client
 if test $ENABLE_MARIADB = "yes"; then
-  if test -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`"; then
+  if test \( -d zlib -o -d "`readlink zlib`" \) -a \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 
       cwd=`pwd`
@@ -17880,7 +18313,32 @@ if test $ENABLE_MARIADB = "yes"; then
       if test $result -eq 1; then
         case $host_os in
           linux-*)
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+          windows*|mingw*)
+            # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
+            #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
+#TODO            (cd mariadb-connector-c; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/mariadb-connector-c-3.1.13.patch) 1>$tmpFile 2>&1
+            ;;
+        esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        case $host_os in
+          linux-*)
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               -DWITH_EXTERNAL_ZLIB=ON \
@@ -17893,7 +18351,7 @@ if test $ENABLE_MARIADB = "yes"; then
             ) 1>$tmpFile 2>&1
             ;;
           sunos | solaris*)
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               -DWITH_EXTERNAL_ZLIB=ON \
@@ -17906,7 +18364,7 @@ if test $ENABLE_MARIADB = "yes"; then
             ) 1>$tmpFile 2>&1
             ;;
           darwin*)
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               -DWITH_EXTERNAL_ZLIB=ON \
@@ -17919,11 +18377,7 @@ if test $ENABLE_MARIADB = "yes"; then
             ) 1>$tmpFile 2>&1
             ;;
           windows*|mingw*)
-            # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
-            #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
-            (cd mariadb-connector-c; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/mariadb-connector-c-3.1.13.patch) 1>/dev/null 2>/dev/null
-
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="-D_WIN32_WINNT=0x0600 -D_POSIX_C_SOURCE" CFLAGS="-D_WIN32_WINNT=0x0600 -D_POSIX_C_SOURCE" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
               -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
@@ -18205,7 +18659,23 @@ fi
       fi
     fi
   fi
+
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_MARIADB"; then
+    if test ! \( -d zlib -o -d "`readlink zlib`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: MariaDB client not compiled: zlib package missing" >&5
+printf "%s\n" "$as_me: WARNING: MariaDB client not compiled: zlib package missing" >&2;}
+    fi
     if test ! \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: MariaDB client not compiled: MariaDB client package missing" >&5
 printf "%s\n" "$as_me: WARNING: MariaDB client not compiled: MariaDB client package missing" >&2;}
@@ -18288,8 +18758,8 @@ printf "%s\n" "fail (make)" >&6; }
          make -C src/interfaces/ecpg install PREFIX=$cwd/extern; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
-printf "%s\n" "fail (make)" >&6; }
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+printf "%s\n" "fail (install)" >&6; }
 
   printf "%s\n" "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
@@ -18715,6 +19185,18 @@ fi
       fi
     fi
   fi
+
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_POSTGRESQL"; then
     if test ! \( -d postgresql -o -d "`readlink postgresql`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: PostgreSQL not compiled: PostgreSQL package missing" >&5
@@ -18805,9 +19287,6 @@ printf "%s\n" "done" >&6; }
 
       result2=1
       if test $result2 -eq 1; then
-        # patch to fix gcc pragma for older gcc
-        #   diff -u libcdio-2.1.0.org/lib/iso9660/iso9660.c libcdio-2.1.0/lib/iso9660/iso9660.c > ../misc/libcdio-2.1.0-gcc-pragma.patch
-        (cd extern/libcdio-2.1.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libcdio-2.1.0-gcc-pragma.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           linux-*)
             ;;
@@ -18818,6 +19297,15 @@ printf "%s\n" "done" >&6; }
           windows*|mingw*)
             ;;
         esac
+        if test $result2 -ne 1; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+        fi
       fi
       if test $result2 -eq 1; then
         if test "$ENABLE_DEBUG" = "yes"; then
@@ -19111,6 +19599,17 @@ fi
     fi
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_ISO9660"; then
     if test ! \( -d libcdio -o -d "`readlink libcdio`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libcdio not compiled: libcdio package missing" >&5
@@ -19131,10 +19630,6 @@ if test $ENABLE_SMBCLIENT = "yes"; then
 
       result1=1
       if test $result1 -eq 1; then
-        # patch
-# TODO
-        #   diff -u krb5-1.21.2.org/lib/iso9660/iso9660.c krb5-1.21.2/lib/iso9660/iso9660.c > ../misc/libsmb2-4.0.0-gcc-pragma.patch
-#        (cd extern/krb5-1.21.2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/krb5-1.21.2-gcc-pragma.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           linux-*)
             ;;
@@ -19145,6 +19640,15 @@ if test $ENABLE_SMBCLIENT = "yes"; then
           windows*|mingw*)
             ;;
         esac
+        if test $result1 -ne 1; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+        fi
       fi
       case $host_os in
         linux-*| sunos | solaris* | darwin*)
@@ -19224,6 +19728,9 @@ printf "%s\n" "done" >&6; }
           ;;
         windows*|mingw*)
           # not supported on Windows
+# TODO
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: skipped" >&5
+printf "%s\n" "skipped" >&6; }
           ;;
       esac
 
@@ -19233,10 +19740,6 @@ printf "%s\n" "done" >&6; }
 
       result2=1
       if test $result2 -eq 1; then
-        # patch
-# TODO
-        #   diff -u libsmb2-4.0.0.org/lib/iso9660/iso9660.c libsmb2-4.0.0/lib/iso9660/iso9660.c > ../misc/libsmb2-4.0.0-gcc-pragma.patch
-#        (cd extern/libsmb2-4.0.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libsmb2-4.0.0-gcc-pragma.patch) 1>/dev/null 2>/dev/null
         case $host_os in
           linux-*)
             ;;
@@ -19247,6 +19750,15 @@ printf "%s\n" "done" >&6; }
           windows*|mingw*)
             ;;
         esac
+        if test $result2 -ne 1; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+        fi
       fi
       if test $result2 -eq 1; then
         case $host_os in
@@ -19284,24 +19796,36 @@ printf "%s\n" "fail (configure)" >&6; }
             ;;
           windows*|mingw*)
             if test "$ENABLE_DEBUG" = "yes"; then
-              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" configure \
-                --prefix=$cwd/extern \
-                --host=$host \
-                --build=$build \
-                --enable-static \
-                --disable-shared \
-                --disable-werror \
-                --without-libkrb5
+              (cd libsmb2; ./bootstrap && cmake \
+                -DCMAKE_BUILD_TYPE=Debug \
+                -DCMAKE_SYSTEM_NAME=Windows \
+                -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
+                -DCMAKE_RC_COMPILER=i686-w64-mingw32-windres \
+                -DCMAKE_FIND_ROOT_PATH=/usr/i686-w64-mingw32 \
+                -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+                -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+                -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600" \
+                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+                \
+                -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
+                -DBUILD_SHARED_LIBS=OFF
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" ./configure \
-                --prefix=$cwd/extern \
-                --host=$host \
-                --build=$build \
-                --enable-static \
-                --disable-shared \
-                --disable-werror \
-                --without-libkrb5
+              (cd libsmb2; ./bootstrap && cmake \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_SYSTEM_NAME=Windows \
+                -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
+                -DCMAKE_RC_COMPILER=i686-w64-mingw32-windres \
+                -DCMAKE_FIND_ROOT_PATH=/usr/i686-w64-mingw32 \
+                -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+                -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+                -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600" \
+                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+                \
+                -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
+                -DBUILD_SHARED_LIBS=OFF
               ) 1>$tmpFile 2>&1
             fi
             if test $? -ne 0; then
@@ -19582,6 +20106,17 @@ fi
     fi
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_SMB2"; then
     if test ! \( -d krb5 -o -d "`readlink krb5`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libsmb2 not compiled: krb5 package missing" >&5
@@ -19621,12 +20156,22 @@ if test $ENABLE_PCRE = "yes"; then
             #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/pcre-8.32; then
-#              (cd extern/pcre-8.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/pcre-8.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pcre-8.32-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
 #            fi
             ;;
         esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
       fi
       if test $result -eq 1; then
         (cd pcre; ./configure \
@@ -19911,6 +20456,17 @@ fi
     fi
   fi
 
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
   if test -z "$HAVE_PCRE"; then
     if test ! \( -d pcre -o -d "`readlink pcre`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: pcre not compiled: pcre package missing" >&5
@@ -19933,14 +20489,25 @@ case $host_os in
 
           cwd=`pwd`
 
-          # patch to fix warnings:
-          #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
-          (cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch) 1>/dev/null 2>/dev/null
-
 
   printf %s "compile pthreads-w32... " >&6
 
           result=1
+          if test $result -eq 1; then
+            # patch to fix warnings:
+            #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
+#TODO            (cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch) 1>$tmpFile 2>&1
+            if test $? -ne 0; then
+              { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+              result=0
+            fi
+          fi
           if test $result -eq 1; then
             if test "$ENABLE_DEBUG" = "yes"; then
               (cd pthreads-w32; make clean; make CROSS="$host-" GC-static-debug) 1>$tmpFile 2>&1
@@ -20001,7 +20568,17 @@ if test $ENABLE_BFD = "yes"; then
       if test $result -eq 1; then
         # patch to fix memory leak
         #   diff -u binutils-2.32.org/bfd/dwarf2.c binutils-2.32/bfd/dwarf2.c > ../misc/binutils-2.32-dwarf2-leak.patch
-        (cd extern/binutils-2.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/binutils-2.32-dwarf2-leak.patch) 1>/dev/null 2>/dev/null
+#TODO        (cd extern/binutils-2.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/binutils-2.32-dwarf2-leak.patch) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (patch)" >&5
+printf "%s\n" "fail (patch)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
         # Note: - fix distlean
         #       - use cpu+os to avoid "unknown" in name which cause
         #         using of wrong tool names by binutils build!
@@ -20203,7 +20780,7 @@ printf "%s\n" "$ac_cv_search_libraries_bfd_init" >&6; }
   ac_result=$ac_cv_search_libraries_bfd_init
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd sframe iberty z";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";
 printf "%s\n" "#define HAVE_BFD 1" >>confdefs.h
 
 fi
@@ -20271,7 +20848,7 @@ printf "%s\n" "$ac_cv_search_static_bfd_init" >&6; }
   ac_result=$ac_cv_search_static_bfd_init
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd sframe iberty z";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z";
 printf "%s\n" "#define HAVE_BFD 1" >>confdefs.h
 
 fi
@@ -20337,7 +20914,7 @@ printf "%s\n" "$ac_cv_search_libraries_bfd_init" >&6; }
   ac_result=$ac_cv_search_libraries_bfd_init
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd sframe iberty z";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";
 printf "%s\n" "#define HAVE_BFD 1" >>confdefs.h
 
 fi
@@ -20485,7 +21062,7 @@ fi
 
 
 
-# set variables for tests
+# set toolchain settings for tests (Note: do not move ) at the end!)
 
   CPPFLAGS="$CPP_FLAGS"
   CFLAGS="$CC_FLAGS -v"
@@ -21394,7 +21971,7 @@ fi
 esac
 
 
-# set variables for tests
+# set toolchain settings for tests (Note: do not move ) at the end!)
 
   CPPFLAGS="$CPP_FLAGS"
   CFLAGS="$CC_FLAGS -v"
@@ -29878,7 +30455,7 @@ __CONFTEST__ SQLITE_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -29888,8 +30465,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_SQLITE=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_SQLITE=`echo $ac_cv_constant_value_VERSION_SQLITE|tr -d " \""`
+        if test -n " \"
+                 "; then
+          ac_cv_constant_value_VERSION_SQLITE=`echo $ac_cv_constant_value_VERSION_SQLITE|tr -d " \"
+                 "`
         fi
         VERSION_SQLITE=$ac_cv_constant_value_VERSION_SQLITE
 
@@ -29916,7 +30495,7 @@ __CONFTEST__ SQLITE_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -29926,8 +30505,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_SQLITE=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_SQLITE=`echo $ac_cv_constant_value_VERSION_SQLITE|tr -d " \""`
+        if test -n " \"
+                 "; then
+          ac_cv_constant_value_VERSION_SQLITE=`echo $ac_cv_constant_value_VERSION_SQLITE|tr -d " \"
+                 "`
         fi
         VERSION_SQLITE=$ac_cv_constant_value_VERSION_SQLITE
 
@@ -29955,11 +30536,13 @@ int
 main (void)
 {
 __CONFTEST__ SQLITE_VERSION_NUMBER
+
+
   ;
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -29993,11 +30576,13 @@ int
 main (void)
 {
 __CONFTEST__ SQLITE_VERSION_NUMBER
+
+
   ;
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30047,7 +30632,7 @@ __CONFTEST__ U_ICU_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30057,8 +30642,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_ICU=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_ICU=`echo $ac_cv_constant_value_VERSION_ICU|tr -d " \""`
+        if test -n " \"
+                 "; then
+          ac_cv_constant_value_VERSION_ICU=`echo $ac_cv_constant_value_VERSION_ICU|tr -d " \"
+                 "`
         fi
         VERSION_ICU=$ac_cv_constant_value_VERSION_ICU
 
@@ -30085,7 +30672,7 @@ __CONFTEST__ U_ICU_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30095,8 +30682,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_ICU=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_ICU=`echo $ac_cv_constant_value_VERSION_ICU|tr -d " \""`
+        if test -n " \"
+                 "; then
+          ac_cv_constant_value_VERSION_ICU=`echo $ac_cv_constant_value_VERSION_ICU|tr -d " \"
+                 "`
         fi
         VERSION_ICU=$ac_cv_constant_value_VERSION_ICU
 
@@ -30132,7 +30721,7 @@ __CONFTEST__ ZLIB_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30142,8 +30731,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_Z=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_Z=`echo $ac_cv_constant_value_VERSION_Z|tr -d " \""`
+        if test -n " \"
+                 "; then
+          ac_cv_constant_value_VERSION_Z=`echo $ac_cv_constant_value_VERSION_Z|tr -d " \"
+                 "`
         fi
         VERSION_Z=$ac_cv_constant_value_VERSION_Z
 
@@ -30170,7 +30761,7 @@ __CONFTEST__ ZLIB_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30180,8 +30771,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_Z=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_Z=`echo $ac_cv_constant_value_VERSION_Z|tr -d " \""`
+        if test -n " \"
+                 "; then
+          ac_cv_constant_value_VERSION_Z=`echo $ac_cv_constant_value_VERSION_Z|tr -d " \"
+                 "`
         fi
         VERSION_Z=$ac_cv_constant_value_VERSION_Z
 
@@ -30195,30 +30788,93 @@ fi
 printf "%s\n" "#define VERSION_Z \"$VERSION_Z\"" >>confdefs.h
 
 
-if test $ENABLE_BZ2 = "yes"; then
-  # Note: bz2 does not have a define for version
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+if test "$HAVE_BZ2"; then
+  # Note: bz2 have a define for version on in a private header file
+
+
+    if test -n "bz2 version"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking bz2 version" >&5
+printf %s "checking bz2 version... " >&6; }
+if test ${ac_cv_constant_value_VERSION_BZ2+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include <stdio.h>
-               #include "bzlib.h"
+#include "bzlib_private.h"
 
 int
 main (void)
 {
-printf("%s",BZ2_bzlibVersion());
+__CONFTEST__ BZ_VERSION
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  VERSION_BZ2=`./conftest$ac_exeext`
-else $as_nop
-  VERSION_BZ2=
+        if { ac_try='$CPP $CPPFLAGS `if test -n "bzip2"; then echo -Ibzip2; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_BZ2=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_BZ2=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_BZ2=`echo $ac_cv_constant_value_VERSION_BZ2|tr -d " \"
+                   "`
+        fi
+        VERSION_BZ2=$ac_cv_constant_value_VERSION_BZ2
+
+        rm -f conftest.c conftest
+
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_BZ2" >&5
+printf "%s\n" "$ac_cv_constant_value_VERSION_BZ2" >&6; }  else
+    if test ${ac_cv_constant_value_VERSION_BZ2+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "bzlib_private.h"
+
+int
+main (void)
+{
+__CONFTEST__ BZ_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS `if test -n "bzip2"; then echo -Ibzip2; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_BZ2=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_BZ2=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_BZ2=`echo $ac_cv_constant_value_VERSION_BZ2|tr -d " \"
+                   "`
+        fi
+        VERSION_BZ2=$ac_cv_constant_value_VERSION_BZ2
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
 
 printf "%s\n" "#define VERSION_BZ2 \"$VERSION_BZ2\"" >>confdefs.h
 
@@ -30228,7 +30884,7 @@ printf "%s\n" "#define VERSION_BZ2 \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_LZMA = "yes"; then
+if test "$HAVE_LZMA"; then
 
 
     if test -n "lzma version"; then
@@ -30251,7 +30907,7 @@ __CONFTEST__ LZMA_VERSION_MAJOR.LZMA_VERSION_MINOR.LZMA_VERSION_PATCH
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30261,8 +30917,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_LZMA=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_LZMA=`echo $ac_cv_constant_value_VERSION_LZMA|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_LZMA=`echo $ac_cv_constant_value_VERSION_LZMA|tr -d " \"
+                   "`
         fi
         VERSION_LZMA=$ac_cv_constant_value_VERSION_LZMA
 
@@ -30289,7 +30947,7 @@ __CONFTEST__ LZMA_VERSION_MAJOR.LZMA_VERSION_MINOR.LZMA_VERSION_PATCH
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30299,8 +30957,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_LZMA=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_LZMA=`echo $ac_cv_constant_value_VERSION_LZMA|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_LZMA=`echo $ac_cv_constant_value_VERSION_LZMA|tr -d " \"
+                   "`
         fi
         VERSION_LZMA=$ac_cv_constant_value_VERSION_LZMA
 
@@ -30319,7 +30979,7 @@ printf "%s\n" "#define VERSION_LZMA \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_LZO = "yes"; then
+if test "$HAVE_LZO"; then
 
 
     if test -n "lzo version"; then
@@ -30342,7 +31002,7 @@ __CONFTEST__ LZO_VERSION_STRING
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30352,8 +31012,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_LZO=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_LZO=`echo $ac_cv_constant_value_VERSION_LZO|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_LZO=`echo $ac_cv_constant_value_VERSION_LZO|tr -d " \"
+                   "`
         fi
         VERSION_LZO=$ac_cv_constant_value_VERSION_LZO
 
@@ -30380,7 +31042,7 @@ __CONFTEST__ LZO_VERSION_STRING
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30390,8 +31052,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_LZO=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_LZO=`echo $ac_cv_constant_value_VERSION_LZO|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_LZO=`echo $ac_cv_constant_value_VERSION_LZO|tr -d " \"
+                   "`
         fi
         VERSION_LZO=$ac_cv_constant_value_VERSION_LZO
 
@@ -30410,7 +31074,7 @@ printf "%s\n" "#define VERSION_LZO \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_LZ4 = "yes"; then
+if test "$HAVE_LZ4"; then
 
 
     if test -n "lz4 version"; then
@@ -30433,7 +31097,7 @@ __CONFTEST__ LZ4_VERSION_MAJOR.LZ4_VERSION_MINOR.LZ4_VERSION_RELEASE
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30443,8 +31107,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_LZ4=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_LZ4=`echo $ac_cv_constant_value_VERSION_LZ4|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_LZ4=`echo $ac_cv_constant_value_VERSION_LZ4|tr -d " \"
+                   "`
         fi
         VERSION_LZ4=$ac_cv_constant_value_VERSION_LZ4
 
@@ -30471,7 +31137,7 @@ __CONFTEST__ LZ4_VERSION_MAJOR.LZ4_VERSION_MINOR.LZ4_VERSION_RELEASE
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30481,8 +31147,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_LZ4=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_LZ4=`echo $ac_cv_constant_value_VERSION_LZ4|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_LZ4=`echo $ac_cv_constant_value_VERSION_LZ4|tr -d " \"
+                   "`
         fi
         VERSION_LZ4=$ac_cv_constant_value_VERSION_LZ4
 
@@ -30501,7 +31169,7 @@ printf "%s\n" "#define VERSION_LZ4 \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_ZSTD = "yes"; then
+if test "$HAVE_ZSTD"; then
 
 
     if test -n "zstd version"; then
@@ -30524,7 +31192,7 @@ __CONFTEST__ ZSTD_VERSION_MAJOR.ZSTD_VERSION_MINOR.ZSTD_VERSION_RELEASE
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30534,8 +31202,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_ZSTD=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_ZSTD=`echo $ac_cv_constant_value_VERSION_ZSTD|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_ZSTD=`echo $ac_cv_constant_value_VERSION_ZSTD|tr -d " \"
+                   "`
         fi
         VERSION_ZSTD=$ac_cv_constant_value_VERSION_ZSTD
 
@@ -30562,7 +31232,7 @@ __CONFTEST__ ZSTD_VERSION_MAJOR.ZSTD_VERSION_MINOR.ZSTD_VERSION_RELEASE
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30572,8 +31242,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_ZSTD=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_ZSTD=`echo $ac_cv_constant_value_VERSION_ZSTD|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_ZSTD=`echo $ac_cv_constant_value_VERSION_ZSTD|tr -d " \"
+                   "`
         fi
         VERSION_ZSTD=$ac_cv_constant_value_VERSION_ZSTD
 
@@ -30592,7 +31264,7 @@ printf "%s\n" "#define VERSION_ZSTD \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_XDELTA3 = "yes"; then
+if test "$HAVE_XDELTA3"; then
   # Note: xdelta3 does not have a define for version
 
 printf "%s\n" "#define VERSION_XDELTA3 \"3.0.11\"" >>confdefs.h
@@ -30603,7 +31275,7 @@ printf "%s\n" "#define VERSION_XDELTA3 \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_GCRYPT = "yes"; then
+if test "$HAVE_GCRYPT"; then
 
 
     if test -n "gcrypt version"; then
@@ -30626,7 +31298,7 @@ __CONFTEST__ GCRYPT_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30636,8 +31308,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_GCRYPT=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_GCRYPT=`echo $ac_cv_constant_value_VERSION_GCRYPT|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_GCRYPT=`echo $ac_cv_constant_value_VERSION_GCRYPT|tr -d " \"
+                   "`
         fi
         VERSION_GCRYPT=$ac_cv_constant_value_VERSION_GCRYPT
 
@@ -30664,7 +31338,7 @@ __CONFTEST__ GCRYPT_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30674,8 +31348,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_GCRYPT=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_GCRYPT=`echo $ac_cv_constant_value_VERSION_GCRYPT|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_GCRYPT=`echo $ac_cv_constant_value_VERSION_GCRYPT|tr -d " \"
+                   "`
         fi
         VERSION_GCRYPT=$ac_cv_constant_value_VERSION_GCRYPT
 
@@ -30710,7 +31386,7 @@ __CONFTEST__ __GNU_MP_VERSION.__GNU_MP_VERSION_MINOR.__GNU_MP_VERSION_PATCHLEVEL
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30720,8 +31396,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_GMP=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_GMP=`echo $ac_cv_constant_value_VERSION_GMP|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_GMP=`echo $ac_cv_constant_value_VERSION_GMP|tr -d " \"
+                   "`
         fi
         VERSION_GMP=$ac_cv_constant_value_VERSION_GMP
 
@@ -30748,7 +31426,7 @@ __CONFTEST__ __GNU_MP_VERSION.__GNU_MP_VERSION_MINOR.__GNU_MP_VERSION_PATCHLEVEL
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30758,8 +31436,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_GMP=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_GMP=`echo $ac_cv_constant_value_VERSION_GMP|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_GMP=`echo $ac_cv_constant_value_VERSION_GMP|tr -d " \"
+                   "`
         fi
         VERSION_GMP=$ac_cv_constant_value_VERSION_GMP
 
@@ -30794,7 +31474,7 @@ __CONFTEST__ GNUTLS_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30804,8 +31484,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_GNUTLS=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_GNUTLS=`echo $ac_cv_constant_value_VERSION_GNUTLS|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_GNUTLS=`echo $ac_cv_constant_value_VERSION_GNUTLS|tr -d " \"
+                   "`
         fi
         VERSION_GNUTLS=$ac_cv_constant_value_VERSION_GNUTLS
 
@@ -30832,7 +31514,7 @@ __CONFTEST__ GNUTLS_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30842,8 +31524,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_GNUTLS=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_GNUTLS=`echo $ac_cv_constant_value_VERSION_GNUTLS|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_GNUTLS=`echo $ac_cv_constant_value_VERSION_GNUTLS|tr -d " \"
+                   "`
         fi
         VERSION_GNUTLS=$ac_cv_constant_value_VERSION_GNUTLS
 
@@ -30869,6 +31553,7 @@ else $as_nop
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "openssl/opensslv.h"
+
 int
 main (void)
 {
@@ -30877,7 +31562,7 @@ __CONFTEST__ OPENSSL_VERSION_TEXT
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30887,8 +31572,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_OPENSSL=
         fi
-        if test -n "\""; then
-          ac_cv_constant_value_VERSION_OPENSSL=`echo $ac_cv_constant_value_VERSION_OPENSSL|tr -d "\""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_OPENSSL=`echo $ac_cv_constant_value_VERSION_OPENSSL|tr -d " \"
+                   "`
         fi
         VERSION_OPENSSL=$ac_cv_constant_value_VERSION_OPENSSL
 
@@ -30906,6 +31593,7 @@ else $as_nop
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "openssl/opensslv.h"
+
 int
 main (void)
 {
@@ -30914,7 +31602,7 @@ __CONFTEST__ OPENSSL_VERSION_TEXT
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30924,8 +31612,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_OPENSSL=
         fi
-        if test -n "\""; then
-          ac_cv_constant_value_VERSION_OPENSSL=`echo $ac_cv_constant_value_VERSION_OPENSSL|tr -d "\""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_OPENSSL=`echo $ac_cv_constant_value_VERSION_OPENSSL|tr -d " \"
+                   "`
         fi
         VERSION_OPENSSL=$ac_cv_constant_value_VERSION_OPENSSL
 
@@ -30953,7 +31643,7 @@ printf "%s\n" "#define VERSION_OPENSSL \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_SSH = "yes"; then
+if test "$HAVE_SSH2"; then
 
 
     if test -n "ssh2 version"; then
@@ -30976,7 +31666,7 @@ __CONFTEST__ LIBSSH2_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -30986,8 +31676,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_LIBSSH2=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_LIBSSH2=`echo $ac_cv_constant_value_VERSION_LIBSSH2|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_LIBSSH2=`echo $ac_cv_constant_value_VERSION_LIBSSH2|tr -d " \"
+                   "`
         fi
         VERSION_LIBSSH2=$ac_cv_constant_value_VERSION_LIBSSH2
 
@@ -31014,7 +31706,7 @@ __CONFTEST__ LIBSSH2_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -31024,8 +31716,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_LIBSSH2=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_LIBSSH2=`echo $ac_cv_constant_value_VERSION_LIBSSH2|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_LIBSSH2=`echo $ac_cv_constant_value_VERSION_LIBSSH2|tr -d " \"
+                   "`
         fi
         VERSION_LIBSSH2=$ac_cv_constant_value_VERSION_LIBSSH2
 
@@ -31044,7 +31738,7 @@ printf "%s\n" "#define VERSION_LIBSSH2 \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_CURL = "yes"; then
+if test "$HAVE_CURL"; then
 
 
     if test -n "curl version"; then
@@ -31067,7 +31761,7 @@ __CONFTEST__ LIBCURL_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -31077,8 +31771,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_CURL=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_CURL=`echo $ac_cv_constant_value_VERSION_CURL|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_CURL=`echo $ac_cv_constant_value_VERSION_CURL|tr -d " \"
+                   "`
         fi
         VERSION_CURL=$ac_cv_constant_value_VERSION_CURL
 
@@ -31105,7 +31801,7 @@ __CONFTEST__ LIBCURL_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -31115,8 +31811,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_CURL=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_CURL=`echo $ac_cv_constant_value_VERSION_CURL|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_CURL=`echo $ac_cv_constant_value_VERSION_CURL|tr -d " \"
+                   "`
         fi
         VERSION_CURL=$ac_cv_constant_value_VERSION_CURL
 
@@ -31148,7 +31846,7 @@ __CONFTEST__ LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -31158,8 +31856,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_CURL_NUMBER=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_CURL_NUMBER=`echo $ac_cv_constant_value_VERSION_CURL_NUMBER|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_CURL_NUMBER=`echo $ac_cv_constant_value_VERSION_CURL_NUMBER|tr -d " \"
+                   "`
         fi
         VERSION_CURL_NUMBER=$ac_cv_constant_value_VERSION_CURL_NUMBER
 
@@ -31186,7 +31886,7 @@ __CONFTEST__ LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -31196,8 +31896,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_CURL_NUMBER=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_CURL_NUMBER=`echo $ac_cv_constant_value_VERSION_CURL_NUMBER|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_CURL_NUMBER=`echo $ac_cv_constant_value_VERSION_CURL_NUMBER|tr -d " \"
+                   "`
         fi
         VERSION_CURL_NUMBER=$ac_cv_constant_value_VERSION_CURL_NUMBER
 
@@ -31219,7 +31921,7 @@ printf "%s\n" "#define VERSION_CURL \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_ISO9660 = "yes"; then
+if test "$HAVE_ISO9660"; then
 
 
     if test -n "cdio version"; then
@@ -31242,7 +31944,7 @@ __CONFTEST__ CDIO_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -31252,8 +31954,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_CDIO=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_CDIO=`echo $ac_cv_constant_value_VERSION_CDIO|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_CDIO=`echo $ac_cv_constant_value_VERSION_CDIO|tr -d " \"
+                   "`
         fi
         VERSION_CDIO=$ac_cv_constant_value_VERSION_CDIO
 
@@ -31280,7 +31984,7 @@ __CONFTEST__ CDIO_VERSION
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -31290,8 +31994,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_CDIO=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_CDIO=`echo $ac_cv_constant_value_VERSION_CDIO|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_CDIO=`echo $ac_cv_constant_value_VERSION_CDIO|tr -d " \"
+                   "`
         fi
         VERSION_CDIO=$ac_cv_constant_value_VERSION_CDIO
 
@@ -31323,7 +32029,7 @@ __CONFTEST__ LIBCDIO_VERSION_NUM
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -31333,8 +32039,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_CDIO_NUMBER=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_CDIO_NUMBER=`echo $ac_cv_constant_value_VERSION_CDIO_NUMBER|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_CDIO_NUMBER=`echo $ac_cv_constant_value_VERSION_CDIO_NUMBER|tr -d " \"
+                   "`
         fi
         VERSION_CDIO_NUMBER=$ac_cv_constant_value_VERSION_CDIO_NUMBER
 
@@ -31361,7 +32069,7 @@ __CONFTEST__ LIBCDIO_VERSION_NUM
   return 0;
 }
 _ACEOF
-        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
@@ -31371,8 +32079,10 @@ _ACEOF
         else
           ac_cv_constant_value_VERSION_CDIO_NUMBER=
         fi
-        if test -n " \""; then
-          ac_cv_constant_value_VERSION_CDIO_NUMBER=`echo $ac_cv_constant_value_VERSION_CDIO_NUMBER|tr -d " \""`
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_CDIO_NUMBER=`echo $ac_cv_constant_value_VERSION_CDIO_NUMBER|tr -d " \"
+                   "`
         fi
         VERSION_CDIO_NUMBER=$ac_cv_constant_value_VERSION_CDIO_NUMBER
 
@@ -31381,6 +32091,7 @@ _ACEOF
 
 fi
   fi
+
 
   if test $VERSION_CDIO_NUMBER -lt 10100; then
     as_fn_error $? "Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO" "$LINENO" 5
@@ -31394,8 +32105,8 @@ printf "%s\n" "#define VERSION_CDIO \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_SMBCLIENT = "yes"; then
-  ac_cv_value=`cd libsmb2; grep '#define VERSION' config.h|sed 's/#define VERSION "\(.*\)"/\1/g';`
+if test "$HAVE_SMB2"; then
+  ac_cv_value=`cd libsmb2; cmake --system-information|grep CMAKE_PROJECT_VERSION:STATIC|sed 's/CMAKE_PROJECT_VERSION:STATIC=//g';`
   VERSION_LIBSMB2=$ac_cv_value
 
 printf "%s\n" "#define VERSION_LIBSMB2 \"$VERSION_LIBSMB2\"" >>confdefs.h
@@ -31406,31 +32117,92 @@ printf "%s\n" "#define VERSION_LIBSMB2 \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_MARIADB = "yes"; then
-  # Note: MariaDB does not have a define for version
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+if test "$HAVE_MARIADB"; then
+
+
+    if test -n "MariaDB version"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking MariaDB version" >&5
+printf %s "checking MariaDB version... " >&6; }
+if test ${ac_cv_constant_value_VERSION_MARIADB+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include <stdio.h>
-               #include "mariadb/mariadb_version.h"
+#include "mariadb/mariadb_version.h"
 
 int
 main (void)
 {
-printf("%s",MARIADB_CLIENT_VERSION_STR);
-
+__CONFTEST__ MARIADB_CLIENT_VERSION_STR
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  VERSION_MARIADB=`./conftest$ac_exeext`
-else $as_nop
-  VERSION_MARIADB=unknown
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_MARIADB=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_MARIADB=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_MARIADB=`echo $ac_cv_constant_value_VERSION_MARIADB|tr -d " \"
+                   "`
+        fi
+        VERSION_MARIADB=$ac_cv_constant_value_VERSION_MARIADB
+
+        rm -f conftest.c conftest
+
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_MARIADB" >&5
+printf "%s\n" "$ac_cv_constant_value_VERSION_MARIADB" >&6; }  else
+    if test ${ac_cv_constant_value_VERSION_MARIADB+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "mariadb/mariadb_version.h"
+
+int
+main (void)
+{
+__CONFTEST__ MARIADB_CLIENT_VERSION_STR
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_MARIADB=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_MARIADB=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_MARIADB=`echo $ac_cv_constant_value_VERSION_MARIADB|tr -d " \"
+                   "`
+        fi
+        VERSION_MARIADB=$ac_cv_constant_value_VERSION_MARIADB
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
 
 printf "%s\n" "#define VERSION_MARIADB \"$VERSION_MARIADB\"" >>confdefs.h
 
@@ -31440,31 +32212,92 @@ printf "%s\n" "#define VERSION_MARIADB \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_POSTGRESQL = "yes"; then
-  # Note: PostgreSQL does not have a define for version
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+if test "$HAVE_POSTGRESQL"; then
+
+
+    if test -n "PostgreSQL version"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking PostgreSQL version" >&5
+printf %s "checking PostgreSQL version... " >&6; }
+if test ${ac_cv_constant_value_VERSION_POSTGRESQL+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include <stdio.h>
-               #include "libpq-fe.h"
+#include "pg_config.h"
 
 int
 main (void)
 {
-printf("%d",PQlibVersion());
-
+__CONFTEST__ PG_VERSION_NUM
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  VERSION_POSTGRESQL=`./conftest$ac_exeext`
-else $as_nop
-  VERSION_POSTGRESQL=unknown
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_POSTGRESQL=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_POSTGRESQL=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_POSTGRESQL=`echo $ac_cv_constant_value_VERSION_POSTGRESQL|tr -d " \"
+                   "`
+        fi
+        VERSION_POSTGRESQL=$ac_cv_constant_value_VERSION_POSTGRESQL
+
+        rm -f conftest.c conftest
+
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_POSTGRESQL" >&5
+printf "%s\n" "$ac_cv_constant_value_VERSION_POSTGRESQL" >&6; }  else
+    if test ${ac_cv_constant_value_VERSION_POSTGRESQL+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "pg_config.h"
+
+int
+main (void)
+{
+__CONFTEST__ PG_VERSION_NUM
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_POSTGRESQL=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_POSTGRESQL=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_POSTGRESQL=`echo $ac_cv_constant_value_VERSION_POSTGRESQL|tr -d " \"
+                   "`
+        fi
+        VERSION_POSTGRESQL=$ac_cv_constant_value_VERSION_POSTGRESQL
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
 
 printf "%s\n" "#define VERSION_POSTGRESQL \"$VERSION_POSTGRESQL\"" >>confdefs.h
 
@@ -31474,30 +32307,92 @@ printf "%s\n" "#define VERSION_POSTGRESQL \"\"" >>confdefs.h
 
 fi
 
-if test $ENABLE_PCRE = "yes"; then
-  # Note: PCRE does not have a define for version
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+if test "$HAVE_PCRE"; then
+
+
+    if test -n "pcre version"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking pcre version" >&5
+printf %s "checking pcre version... " >&6; }
+if test ${ac_cv_constant_value_VERSION_PCRE+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include <stdio.h>
-               #include "pcre.h"
+#include "pcre.h"
 
 int
 main (void)
 {
-printf("%s",pcre_version());
+__CONFTEST__ PCRE_MAJOR.PCRE_MINOR
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  VERSION_PCRE=`./conftest$ac_exeext`
-else $as_nop
-  VERSION_PCRE=unknown
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_PCRE=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_PCRE=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_PCRE=`echo $ac_cv_constant_value_VERSION_PCRE|tr -d " \"
+                   "`
+        fi
+        VERSION_PCRE=$ac_cv_constant_value_VERSION_PCRE
+
+        rm -f conftest.c conftest
+
 
 fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_PCRE" >&5
+printf "%s\n" "$ac_cv_constant_value_VERSION_PCRE" >&6; }  else
+    if test ${ac_cv_constant_value_VERSION_PCRE+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "pcre.h"
+
+int
+main (void)
+{
+__CONFTEST__ PCRE_MAJOR.PCRE_MINOR
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_PCRE=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_PCRE=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_PCRE=`echo $ac_cv_constant_value_VERSION_PCRE|tr -d " \"
+                   "`
+        fi
+        VERSION_PCRE=$ac_cv_constant_value_VERSION_PCRE
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
 
 printf "%s\n" "#define VERSION_PCRE \"$VERSION_PCRE\"" >>confdefs.h
 
