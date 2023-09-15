@@ -2048,6 +2048,7 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
   #ifdef HAVE_ISO9660
+    error = ERROR_NONE;
     while (   (bufferSize > 0L)
            && (storageHandle->opticalDisk.read.index < (uint64)storageHandle->opticalDisk.read.iso9660Stat->size)
           )
@@ -2129,6 +2130,7 @@ LOCAL Errors StorageOptical_tell(StorageHandle *storageHandle,
   (*offset) = 0LL;
 
   #ifdef HAVE_ISO9660
+    error = ERROR_UNKNOWN;
     switch (storageHandle->mode)
     {
       case STORAGE_MODE_READ:
@@ -2144,6 +2146,7 @@ LOCAL Errors StorageOptical_tell(StorageHandle *storageHandle,
           break; /* not reached */
       #endif /* NDEBUG */
     }
+    assert(error != ERROR_UNKNOWN);
 
     return error;
   #else /* not HAVE_ISO9660 */
@@ -2167,6 +2170,7 @@ LOCAL Errors StorageOptical_seek(StorageHandle *storageHandle,
   assert((storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
 
   #ifdef HAVE_ISO9660
+    error = ERROR_UNKNOWN;
     switch (storageHandle->mode)
     {
       case STORAGE_MODE_READ:
@@ -2182,6 +2186,8 @@ LOCAL Errors StorageOptical_seek(StorageHandle *storageHandle,
           break; /* not reached */
       #endif /* NDEBUG */
     }
+    assert(error != ERROR_UNKNOWN);
+
     return error;
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageHandle);

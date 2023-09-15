@@ -206,10 +206,10 @@ tmpDir=`mktemp -d /tmp/deb-XXXXXX`
     chown $userGroup $sourcePath/$debFileNameGUI
   fi
 
-  # get MD5 hash
-  md5sum $sourcePath/$debFileName
+  # get SHA256 hash
+  sha256sum $sourcePath/$debFileName
   if test -n "$debFileNameGUI"; then
-    md5sum $sourcePath/$debFileNameGUI
+    sha256sum $sourcePath/$debFileNameGUI
   fi
 
   set +e

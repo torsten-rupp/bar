@@ -1247,10 +1247,12 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
     }
   #elif defined(PLATFORM_WINDOWS)
 // TODO: NYI
+    #ifndef NDEBUG
 UNUSED_VARIABLE(debugEmulateBlockDevice);
 UNUSED_VARIABLE(stringTokenizer);
 UNUSED_VARIABLE(emulateDeviceName);
 UNUSED_VARIABLE(emulateFileName);
+    #endif
     deviceInfo->mounted = TRUE;
   #endif /* PLATFORM_... */
 

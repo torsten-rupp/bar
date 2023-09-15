@@ -679,6 +679,8 @@ const StorageSpecifier *storageSpecifier,
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SMB);
 
+UNUSED_VARIABLE(storageSpecifier);
+
   #ifdef HAVE_SMB2
     // init variables
     AutoFree_init(&autoFreeList);
@@ -1358,7 +1360,7 @@ LOCAL Errors StorageSMB_open(StorageHandle *storageHandle,
     storageHandle->smb.index              = 0LL;
     storageHandle->smb.size               = 0LL;
 
-    smb2InitSharePath(&share,&path,&storageHandle->storageInfo->storageSpecifier,storageHandle->storageInfo->storageSpecifier.archiveName);
+    smb2InitSharePath(&share,&path,&storageHandle->storageInfo->storageSpecifier,archiveName);
 
     // connect share
     error = smb2ConnectShare(&storageHandle->smb.context,
@@ -2159,7 +2161,6 @@ LOCAL Errors StorageSMB_openDirectoryList(StorageDirectoryListHandle *storageDir
     AutoFreeList autoFreeList;
     String       share,path;
     Errors       error;
-    int          smbErrorCode;
     SMBServer    smbServer;
     uint         retries;
   #endif /* HAVE_SMB2 */
@@ -2203,7 +2204,7 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->smb.serverId,{ freeServer(storageDirectoryListHandle->smb.serverId); });
 
     // get share, path
-    smb2InitSharePath(&share,&path,&storageDirectoryListHandle->storageSpecifier,storageDirectoryListHandle->storageSpecifier.archiveName);
+    smb2InitSharePath(&share,&path,&storageDirectoryListHandle->storageSpecifier,pathName);
     AUTOFREE_ADD(&autoFreeList,&share,{ smb2DoneSharePath(share,path); });
 
     // check if SMB/CIFS login is possible
@@ -2270,36 +2271,19 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
     // store password as default SMB/CIFS password
     Password_set(&defaultSMBPassword,storageDirectoryListHandle->storageSpecifier.loginPassword);
 
-    // create context
-    storageDirectoryListHandle->smb.context = smb2_init_context();
-    if (storageDirectoryListHandle->smb.context == NULL)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_INSUFFICIENT_MEMORY;
-    }
-    AUTOFREE_ADD(&autoFreeList,storageDirectoryListHandle->smb.context,{ smb2_destroy_context(storageDirectoryListHandle->smb.context); });
-
-    // set authentication
-    smb2_set_security_mode(storageDirectoryListHandle->smb.context, SMB2_NEGOTIATE_SIGNING_ENABLED);
-    smb2_set_authentication(storageDirectoryListHandle->smb.context, 1);
-    PASSWORD_DEPLOY_DO(plainPassword,storageDirectoryListHandle->storageSpecifier.loginPassword)
-    {
-      smb2_set_password(storageDirectoryListHandle->smb.context,plainPassword);
-    }
-
     // connect share
-    smbErrorCode = smb2_connect_share(storageDirectoryListHandle->smb.context,
-                                      String_cString(storageDirectoryListHandle->storageSpecifier.hostName),
-                                      String_cString(share),
-                                      String_cString(storageDirectoryListHandle->storageSpecifier.loginName)
-                                     );
-    assert(smbErrorCode <= 0);
-    if (smbErrorCode != 0)
+    error = smb2ConnectShare(&storageDirectoryListHandle->smb.context,
+                             storageDirectoryListHandle->storageSpecifier.hostName,
+                             storageDirectoryListHandle->storageSpecifier.loginName,
+                             storageDirectoryListHandle->storageSpecifier.loginPassword,
+                             share
+                            );
+    if (error == ERROR_NONE)
     {
-      error = ERRORX_(SMB,(uint)(-smbErrorCode),"%s",nterror_to_str(smbErrorCode));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->smb.context,{ smb2DisconnectShare(storageDirectoryListHandle->smb.context); });
 
     // open directory for reading
 	  storageDirectoryListHandle->smb.directory = smb2_opendir(storageDirectoryListHandle->smb.context,

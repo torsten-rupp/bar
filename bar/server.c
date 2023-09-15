@@ -22387,7 +22387,7 @@ Errors Server_socket(void)
     {
       printError("'%s' is not a directory!",String_cString(globalOptions.jobsDirectory));
       AutoFree_cleanup(&autoFreeList);
-      return ERROR_NOT_A_DIRECTORY;
+      return ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(globalOptions.jobsDirectory));
     }
   }
 

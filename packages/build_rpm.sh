@@ -171,8 +171,8 @@ chmod 666 $distributionFileName
   cp -f $tmpDir/RPMS/*/backup-archiver-[0-9]*.rpm $sourcePath/$rpmFileName
   chown $userGroup $sourcePath/$rpmFileName
 
-  # get MD5 hash
-  md5sum $sourcePath/$rpmFileName
+  # get SHA256 hash
+  sha256sum $sourcePath/$rpmFileName
 
   set +e
 )

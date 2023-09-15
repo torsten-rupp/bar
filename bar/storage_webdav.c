@@ -3261,7 +3261,8 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
 
     // read directory data
     directoryData = String_new();
-    curlCode = CURLE_OK;
+    curlSList     = NULL;
+    curlCode      = CURLE_OK;
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));

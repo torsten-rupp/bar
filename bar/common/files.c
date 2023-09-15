@@ -57,6 +57,7 @@
   #include <shlobj.h>
   #include <combaseapi.h>
   #include <knownfolders.h>
+  #include <direct.h>
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
@@ -1337,6 +1338,7 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
 {
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
+    int         driveNumber;
     WCHAR       *data;
     static char buffer[4*MAX_PATH+1];
     int         bufferLength;
@@ -1371,34 +1373,56 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
         break; /* not reached */
     }
   #elif defined(PLATFORM_WINDOWS)
-    bufferLength = 0;
     switch (fileSystemPathType)
     {
       case FILE_SYSTEM_PATH_ROOT:
-// TODO: current drive?
-        String_setCString(path,"C:/");
+        driveNumber = _getdrive();
+        if (driveNumber > 0)
+        {
+          String_format(path,"%c:"FILE_PATH_SEPARATOR_STRING,'A'+driveNumber-1);
+        }
+        else
+        {
+          String_setCString(path,"C:"FILE_PATH_SEPARATOR_STRING);
+        }
         break;
       case FILE_SYSTEM_PATH_TMP:
         bufferLength = GetTempPath(sizeof(buffer),buffer);
-        if (bufferLength == 0)
+        if (bufferLength != 0)
         {
-          String_setCString(path,"C:\\tmp");
+          String_setBuffer(path,buffer,bufferLength);
+          // skip trailing \ if Windows added it (Note: Windows should not try to be smart - it cannot...)
+          String_trimEnd(path,"\\");
+        }
+        else
+        {
+          if (String_isEmpty(path)) String_setCString(path,getenv("TMP"));
+          if (String_isEmpty(path)) String_setCString(path,"C:"FILE_PATH_SEPARATOR_STRING"temp");
         }
         break;
       case FILE_SYSTEM_PATH_CONFIGURATION:
         SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &data);
         bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
         CoTaskMemFree(data);
+        String_setBuffer(path,buffer,bufferLength);
+        // skip trailing \ if Windows added it (Note: Windows should not try to be smart - it cannot...)
+        String_trimEnd(path,"\\");
         break;
       case FILE_SYSTEM_PATH_RUNTIME:
         SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &data);
         bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
         CoTaskMemFree(data);
+        String_setBuffer(path,buffer,bufferLength);
+        // skip trailing \ if Windows added it (Note: Windows should not try to be smart - it cannot...)
+        String_trimEnd(path,"\\");
         break;
       case FILE_SYSTEM_PATH_TLS:
         SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &data);
         bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
         CoTaskMemFree(data);
+        String_setBuffer(path,buffer,bufferLength);
+        // skip trailing \ if Windows added it (Note: Windows should not try to be smart - it cannot...)
+        String_trimEnd(path,"\\");
         break;
       default:
         #ifndef NDEBUG
@@ -1406,14 +1430,6 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
         #endif /* NDEBUG */
         break; /* not reached */
     }
-
-    // skip trailing \\ if Windows added it (Note: Windows should not try to be smart - it cannot...)
-    while ((bufferLength > 0) && buffer[bufferLength-1] == '\\')
-    {
-      bufferLength--;
-    }
-
-    String_setBuffer(path,buffer,bufferLength);
   #endif /* PLATFORM_... */
   if (subDirectory != NULL) File_appendFileNameCString(path,subDirectory);
 
@@ -4839,8 +4855,9 @@ Errors File_makeDirectory(ConstString     pathName,
   currentCreationMask = umask(0);
   umask(currentCreationMask);
 
-  // create directory including parent directories
   File_initSplitFileName(&pathNameTokenizer,pathName);
+
+  // get root directory
   if (File_getNextSplitFileName(&pathNameTokenizer,&token))
   {
     if (!String_isEmpty(token))
@@ -4852,6 +4869,8 @@ Errors File_makeDirectory(ConstString     pathName,
       File_getSystemDirectory(directoryName,FILE_SYSTEM_PATH_ROOT,NULL);
     }
   }
+
+  // create/check root directory
   if      (!File_exists(directoryName))
   {
     // create root-directory
@@ -4879,6 +4898,8 @@ Errors File_makeDirectory(ConstString     pathName,
           return error;
         }
       }
+    #else
+      #error MKDIR_ARGUMENTS_COUNT unknown
     #endif /* MKDIR_ARGUMENTS_COUNT == ... */
 
     // set owner/group
@@ -4925,13 +4946,14 @@ Errors File_makeDirectory(ConstString     pathName,
   }
   else if (!File_isDirectory(directoryName))
   {
-    error = ERRORX_(NOT_A_DIRECTORY,0,"not a directory");
+    error = ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(directoryName));
     File_doneSplitFileName(&pathNameTokenizer);
     File_deleteFileName(parentDirectoryName);
     File_deleteFileName(directoryName);
     return error;
   }
 
+  // create/check sub-directories
   while (File_getNextSplitFileName(&pathNameTokenizer,&token))
   {
     if (!String_isEmpty(token))
@@ -4939,7 +4961,7 @@ Errors File_makeDirectory(ConstString     pathName,
       // get new parent directory
       File_setFileName(parentDirectoryName,directoryName);
 
-      // get sub-directory
+      // add sub-directory
       File_appendFileName(directoryName,token);
 
       if      (!File_exists(directoryName))
@@ -5040,7 +5062,7 @@ Errors File_makeDirectory(ConstString     pathName,
       }
       else if (!File_isDirectory(directoryName))
       {
-        error = ERRORX_(NOT_A_DIRECTORY,0,"not a directory");
+        error = ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(directoryName));
         File_doneSplitFileName(&pathNameTokenizer);
         File_deleteFileName(parentDirectoryName);
         File_deleteFileName(directoryName);

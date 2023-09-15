@@ -31472,7 +31472,7 @@ printf "%s\n" "#define VERSION_CDIO \"\"" >>confdefs.h
 fi
 
 if test $ENABLE_SMBCLIENT = "yes"; then
-  ac_cv_value=`cd libsmb2; cmake --system-information |grep 'CMAKE_PROJECT_VERSION:STATIC='|sed 's/.*=\(.*\)/\1/g';`
+  ac_cv_value=`cd libsmb2; grep '#define VERSION' config.h|sed 's/#define VERSION "\(.*\)"/\1/g';`
   VERSION_LIBSMB2=$ac_cv_value
 
 printf "%s\n" "#define VERSION_LIBSMB2 \"$VERSION_LIBSMB2\"" >>confdefs.h

@@ -9,7 +9,7 @@
 
 #---------------------------------- settings ---------------------------------
 
-PLATFORM                = @PLATFORM@
+PLATFORM                ?= @PLATFORM@
 CPU                     = @CPU@
 
 VALGRIND_ERROR_EXITCODE = 123
@@ -33,21 +33,31 @@ ifeq ($(CONTAINER),docker)
 TEST_SPARSE_FILES       ?= no
 TEST_SPECIAL_ATTRIBUTES ?= no
 else
+ifeq ($(PLATFORM),LINUX)
 TEST_SPARSE_FILES       ?= yes
 TEST_SPECIAL_ATTRIBUTES ?= yes
 endif
+ifeq ($(PLATFORM),WINDOWS)
+TEST_SPARSE_FILES       ?= no
+TEST_SPECIAL_ATTRIBUTES ?= no
+endif
+endif
 
-TEST_SPARSE_FILES=yes
 #--------------------------------- tool chain --------------------------------
+
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
 
 # shell in Makefile must be bash with pipe-fail handling
 SHELL = bash -o pipefail
 
 ifeq ($(PLATFORM),LINUX)
   EXE_PREFIX =
+  EXE_SUFFIX =
 endif
 ifeq ($(PLATFORM),WINDOWS)
-  EXE_PREFIX = $(WINE)
+  EXE_PREFIX = $(WINE)$(SPACE)
+  EXE_SUFFIX ?= @EXEEXT@
 endif
 
 CC                         = @CC@
@@ -71,17 +81,17 @@ LD_DYNAMIC_PREFIX          = -Wl,-Bdynamic
 #------------------------------- test commands--------------------------------
 
 # test executables
-TEST_BAR                ?= $(BAR_DIR)/bar@EXEEXT@
-TEST_BAR_DEBUG          ?= $(BAR_DIR)/bar-debug@EXEEXT@
-TEST_BAR_GCOV           ?= $(BAR_DIR)/bar-gcov@EXEEXT@
-TEST_BAR_GPROF          ?= $(BAR_DIR)/bar-gprof@EXEEXT@
-TEST_BAR_VALGRIND       ?= $(BAR_DIR)/bar-valgrind@EXEEXT@
-TEST_BAR_INDEX          ?= $(BAR_DIR)/bar-index@EXEEXT@
-TEST_BAR_INDEX_DEBUG    ?= $(BAR_DIR)/bar-index-debug@EXEEXT@
-TEST_BAR_INDEX_GCOV     ?= $(BAR_DIR)/bar-index-gcov@EXEEXT@
-TEST_BAR_INDEX_GPROF    ?= $(BAR_DIR)/bar-index-gprof@EXEEXT@
-TEST_BAR_INDEX_VALGRIND ?= $(BAR_DIR)/bar-index-valgrind@EXEEXT@
-TEST_DESTROYER          ?= $(BAR_DIR)/destroyer@EXEEXT@
+TEST_BAR                ?= $(BAR_DIR)/bar$(EXE_SUFFIX)
+TEST_BAR_DEBUG          ?= $(BAR_DIR)/bar-debug$(EXE_SUFFIX)
+TEST_BAR_GCOV           ?= $(BAR_DIR)/bar-gcov$(EXE_SUFFIX)
+TEST_BAR_GPROF          ?= $(BAR_DIR)/bar-gprof$(EXE_SUFFIX)
+TEST_BAR_VALGRIND       ?= $(BAR_DIR)/bar-valgrind$(EXE_SUFFIX)
+TEST_BAR_INDEX          ?= $(BAR_DIR)/bar-index$(EXE_SUFFIX)
+TEST_BAR_INDEX_DEBUG    ?= $(BAR_DIR)/bar-index-debug$(EXE_SUFFIX)
+TEST_BAR_INDEX_GCOV     ?= $(BAR_DIR)/bar-index-gcov$(EXE_SUFFIX)
+TEST_BAR_INDEX_GPROF    ?= $(BAR_DIR)/bar-index-gprof$(EXE_SUFFIX)
+TEST_BAR_INDEX_VALGRIND ?= $(BAR_DIR)/bar-index-valgrind$(EXE_SUFFIX)
+TEST_DESTROYER          ?= $(BAR_DIR)/destroyer$(EXE_SUFFIX)
 
 #---------------------------------- commands----------------------------------
 
@@ -636,7 +646,7 @@ global.o: ../common/global.c ../common/global.h
 strings.o: ../common/strings.c ../common/strings.h
 errors.o: ../errors.c ../errors.h
 
-parallel@EXEEXT@: \
+parallel$(EXE_SUFFIX): \
   parallel.o \
   global.o \
   strings.o \
@@ -649,48 +659,48 @@ parallel@EXEEXT@: \
 
 # ----------------------------------------------------------------------------
 
-.PHONY: $(BAR_DIR)/bar@EXEEXT@
-$(BAR_DIR)/bar@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar$(EXE_SUFFIX)
+$(BAR_DIR)/bar$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/bar-debug@EXEEXT@
-$(BAR_DIR)/bar-debug@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar-debug$(EXE_SUFFIX)
+$(BAR_DIR)/bar-debug$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/bar-gcov@EXEEXT@
-$(BAR_DIR)/bar-gcov@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar-gcov$(EXE_SUFFIX)
+$(BAR_DIR)/bar-gcov$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/bar-gprof@EXEEXT@
-$(BAR_DIR)/bar-gprof@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar-gprof$(EXE_SUFFIX)
+$(BAR_DIR)/bar-gprof$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/bar-valgrind@EXEEXT@
-$(BAR_DIR)/bar-valgrind@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar-valgrind$(EXE_SUFFIX)
+$(BAR_DIR)/bar-valgrind$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/bar-index@EXEEXT@
-$(BAR_DIR)/bar-index@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar-index$(EXE_SUFFIX)
+$(BAR_DIR)/bar-index$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/bar-index-debug@EXEEXT@
-$(BAR_DIR)/bar-index-debug@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar-index-debug$(EXE_SUFFIX)
+$(BAR_DIR)/bar-index-debug$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/bar-index-gcov@EXEEXT@
-$(BAR_DIR)/bar-index-gcov@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar-index-gcov$(EXE_SUFFIX)
+$(BAR_DIR)/bar-index-gcov$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/bar-index-gprof@EXEEXT@
-$(BAR_DIR)/bar-index-gprof@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar-index-gprof$(EXE_SUFFIX)
+$(BAR_DIR)/bar-index-gprof$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/bar-index-valgrind@EXEEXT@
-$(BAR_DIR)/bar-index-valgrind@EXEEXT@:
+.PHONY: $(BAR_DIR)/bar-index-valgrind$(EXE_SUFFIX)
+$(BAR_DIR)/bar-index-valgrind$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
-.PHONY: $(BAR_DIR)/destroyer@EXEEXT@
-$(BAR_DIR)/destroyer@EXEEXT@:
+.PHONY: $(BAR_DIR)/destroyer$(EXE_SUFFIX)
+$(BAR_DIR)/destroyer$(EXE_SUFFIX):
 	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
 # ----------------------------------------------------------------------------
@@ -4036,6 +4046,7 @@ test_file_operations_base: \
           data $(INTERMEDIATE_DIR)/restore/data
 ifeq ($(PLATFORM),LINUX)
 ifeq ($(TEST_SPARSE_FILES),yes)
+	test -f $(INTERMEDIATE_DIR)/restore/data/sparse.dat
 	test `$(FIND) $(INTERMEDIATE_DIR)/restore/data/sparse.dat -printf %k` = 192
 endif
 	$(READLINK) $(INTERMEDIATE_DIR)/restore/data/link.dat 2>/dev/null $(LOG)
@@ -4245,14 +4256,14 @@ test_file_operations_destroyed: \
 	@#
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
-	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(TEST_DESTROYER) $$fileName m:16:FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0 >$${fileName}_destroyed; done
+	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(call functionExec,$(TEST_DESTROYER)) $$fileName m:16:FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0 >$${fileName}_destroyed; done
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/test*.bar_destroyed $(BAR_OPTIONS) < /dev/null) $(LOG))
-	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(TEST_DESTROYER) $$fileName m:20:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
+	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(call functionExec,$(TEST_DESTROYER)) $$fileName m:20:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) < /dev/null) $(LOG))
-	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(TEST_DESTROYER) $$fileName m:128:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
+	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(call functionExec,$(TEST_DESTROYER)) $$fileName m:128:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) < /dev/null) $(LOG))
 #TODO: detect wrong data
-	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(TEST_DESTROYER) $$fileName d:1024:10 >$${fileName}_destroyed; done
+	$(LS) $(BAR_STORAGE)/*.bar|while read fileName; do $(ECHO) $$fileName; $(call functionExec,$(TEST_DESTROYER)) $$fileName d:1024:10 >$${fileName}_destroyed; done
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,255,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) < /dev/null) $(LOG))
 	@#
 	@$(call functionCleanTestFiles)
@@ -6824,7 +6835,7 @@ endif
 test_server_operations_socket: \
   $(TEST_BAR) \
   $(TEST_FILES) \
-  parallel@EXEEXT@
+  parallel$(EXE_SUFFIX)
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -6835,7 +6846,7 @@ test_server_operations_socket: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=0 $(LOG))
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@#
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) ./parallel@EXEEXT@ \
+	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) ./parallel$(EXE_SUFFIX) \
           "$(MAKE) test_server_operations_socket_server" \
           "$(MAKE) test_server_operations_socket_client"
 	$(call functionWaitProcess,$(TEST_SERVER_PID_FILE),60)
@@ -7040,12 +7051,12 @@ endif
 
 test_master_slave_operations: \
   $(TEST_BAR) \
-  parallel@EXEEXT@
+  parallel$(EXE_SUFFIX)
 	@$(call functionCleanTestFiles)
 	@#
 	@$(KILLALL) -w -9 $(shell basename $(call functionExec,$(TEST_BAR))) 2>/dev/null || true
 	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE_SQLITE))
-	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) ./parallel@EXEEXT@ \
+	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) ./parallel$(EXE_SUFFIX) \
           "$(MAKE) test_master_slave_operations_master" \
           "$(MAKE) test_master_slave_operations_slave" \
           "$(MAKE) test_master_slave_operations_create"

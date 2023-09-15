@@ -4970,7 +4970,7 @@ else
 fi
 
 if test $ENABLE_SMBCLIENT = "yes"; then
-  ac_cv_value=`cd libsmb2; cmake --system-information |grep 'CMAKE_PROJECT_VERSION:STATIC='|sed 's/.*=\(.*\)/\1/g';`
+  ac_cv_value=`cd libsmb2; grep '#define VERSION' config.h|sed 's/#define VERSION "\(.*\)"/\1/g';`
   AS_VAR_SET(VERSION_LIBSMB2,$ac_cv_value)
   AC_DEFINE_UNQUOTED(VERSION_LIBSMB2,"$VERSION_LIBSMB2",[SMB2 version])
 else

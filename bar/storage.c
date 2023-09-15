@@ -2464,6 +2464,7 @@ uint Storage_getServerSettings(Server                 *server,
     switch (storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_done(storageInfo);
@@ -2774,6 +2775,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     switch (storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
+        break;
       case STORAGE_TYPE_FILESYSTEM:
         error = ERROR_NONE;
         break;
@@ -3615,6 +3618,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     switch (storageHandle->storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_read(storageHandle,buffer,bufferSize,bytesRead);
@@ -4017,7 +4021,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         break;
       case STORAGE_TYPE_SSH:
         #ifdef HAVE_SSH2
-  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         #else /* not HAVE_SSH2 */
           error = ERROR_FUNCTION_NOT_SUPPORTED;
         #endif /* HAVE_SSH2 */
@@ -4329,6 +4333,7 @@ Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName)
       switch (storageInfo->storageSpecifier.type)
       {
         case STORAGE_TYPE_NONE:
+          error = ERROR_NONE;
           break;
         case STORAGE_TYPE_FILESYSTEM:
           error = StorageFile_makeDirectory(storageInfo,directoryName);
@@ -4430,6 +4435,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
           switch (storageInfo->storageSpecifier.type)
           {
             case STORAGE_TYPE_NONE:
+              error = ERROR_NONE;
               break;
             case STORAGE_TYPE_FILESYSTEM:
               error = StorageFile_delete(storageInfo,directoryName);
@@ -4594,6 +4600,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     switch (storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         errors = StorageFile_getInfo(storageInfo,archiveName,fileInfo);
@@ -4859,6 +4866,7 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   switch (storageDirectoryListHandle->storageSpecifier.type)
   {
     case STORAGE_TYPE_NONE:
+      error = ERROR_NONE;
       break;
     case STORAGE_TYPE_FILESYSTEM:
       error = StorageFile_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);

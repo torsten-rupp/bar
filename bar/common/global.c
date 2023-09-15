@@ -462,7 +462,7 @@ uint __sync_add_and_fetch_4(void *p, uint n)
   pthread_mutex_lock(&syncLock);
   {
     (*((int32_t*)p)) += n;
-    x = (*(int32_t*)p));
+    x = (*(int32_t*)p);
   }
   pthread_mutex_unlock(&syncLock);
 

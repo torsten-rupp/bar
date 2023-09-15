@@ -240,8 +240,8 @@ temporaryDirectory=`mktemp -d /tmp/win32-XXXXXX`
   # get result
   chown $userGroup $sourcePath/${setupName}.exe
 
-  # get MD5 hash
-  md5sum $sourcePath/${setupName}.exe
+  # get SHA256 hash
+  sha256sum $sourcePath/${setupName}.exe
 
   set +e
 )
