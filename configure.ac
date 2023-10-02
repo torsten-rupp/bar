@@ -2593,7 +2593,7 @@ if test $ENABLE_SSH = "yes"; then
       result=1
       if test $result -eq 1; then
         case $host_os in
-          linux-*)
+          linux-* | sunos | solaris* | darwin*)
             if test "$host_cpu" = "x86_64"; then
               (cd openssl; ./Configure \
                 --prefix=$cwd/extern \
@@ -2669,9 +2669,23 @@ if test $ENABLE_SSH = "yes"; then
 
     if test $result -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES ssl crypto"
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            LIBRARIES="$LIBRARIES ssl crypto"
+            ;;
+          windows*|mingw*)
+            LIBRARIES="$LIBRARIES ssl crypto crypt32"
+            ;;
+        esac
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto"
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto"
+            ;;
+          windows*|mingw*)
+            STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto crypt32"
+            ;;
+        esac
       fi
       HAVE_SSL=1
       AC_DEFINE(HAVE_SSL,1,[ssl installed (local)])
@@ -2774,11 +2788,6 @@ if test $ENABLE_SSH = "yes"; then
       HAVE_SSH2=1
       AC_DEFINE(HAVE_SSH2,1,[ssh2 installed (local)])
     fi
-
-    # required functions for ssh2
-    AC_CHECK_FUNCTION(CRYPTO_set_id_callback,     ,AC_ERROR([CRYPTO_set_id_callback() required for SSH2]),openssl/crypto.h)
-    AC_CHECK_FUNCTION(CRYPTO_set_locking_callback,,AC_ERROR([CRYPTO_set_locking_callback() required for SSH2]),openssl/crypto.h)
-    dnl AC_CHECK_FUNCTION(CRYPTO_THREADID_set_callback,AC_DEFINE(HAVE_CRYPTO_THREADID_SET_CALLBACK,1,[CRYPTO_THREADID_set_callback() required for SSH2]),,openssl/crypto.h)
   else
     dnl search for installed ssh2 libraries
 
@@ -3654,17 +3663,34 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       AC_MSG_COMPILE([PostgreSQL])
       result=1
       if test $result -eq 1; then
-        (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" LIBS="-lpthread" ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --with-includes=$cwd/extern/include \
-          --with-libraries=$cwd/extern/lib \
-          --enable-thread-safety \
-          `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
-          --without-readline \
-          `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-        ) 1>$tmpFile 2>&1
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+              --with-includes=$cwd/extern/include \
+              --with-libraries=$cwd/extern/lib \
+              --enable-thread-safety \
+              `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
+              --without-readline \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+              --with-includes=$cwd/extern/include \
+              --with-libraries=$cwd/extern/lib \
+              --enable-thread-safety \
+              `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
+              --without-readline \
+              `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+            ) 1>$tmpFile 2>&1
+            ;;
+        esac
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3673,8 +3699,9 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd postgresql; \
-         make clean; \
-         make -C src/interfaces -j$CPU_CORES; \
+         make -C src/common -j$CPU_CORES; \
+         make -C src/interfaces/libpq -j$CPU_CORES; \
+         make -C src/interfaces/ecpg -j$CPU_CORES; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
@@ -3685,7 +3712,8 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       if test $result -eq 1; then
         (cd postgresql; \
          make -C src/include install PREFIX=$cwd/extern; \
-         make -C src/interfaces install PREFIX=$cwd/extern; \
+         make -C src/interfaces/libpq install PREFIX=$cwd/extern; \
+         make -C src/interfaces/ecpg install PREFIX=$cwd/extern; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
