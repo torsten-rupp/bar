@@ -8294,9 +8294,7 @@ Dprintf.dprintf("");
                 // table view
                 for (TableItem tableItem : widgetStorageTable.getSelection())
                 {
-Dprintf.dprintf("_");
                   updateStorageTreeTableThread.triggerUpdate(tableItem);
-Dprintf.dprintf("_");
                 }
                 break;
             }
@@ -8460,6 +8458,7 @@ Dprintf.dprintf("_");
       int          hostPort;
       String       loginName;
       String       loginPassword;
+      String       shareName;
       String       deviceName;
       String       archiveName;
 
@@ -8470,6 +8469,7 @@ Dprintf.dprintf("_");
         this.hostPort      = 0;
         this.loginName     = "";
         this.loginPassword = "";
+        this.shareName     = "";
         this.deviceName    = "";
         this.archiveName   = "";
       }
@@ -8735,6 +8735,7 @@ Dprintf.dprintf("_");
                                           data.hostPort,
                                           data.loginName,
                                           data.loginPassword,
+                                          data.shareName,
                                           data.deviceName,
                                           data.archiveName
                                          );

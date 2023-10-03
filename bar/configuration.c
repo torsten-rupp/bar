@@ -8152,7 +8152,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
   CMD_OPTION_STRING       ("smb-login-name",                    0,  0,2,globalOptions.defaultSMBServer.smb.loginName,                                                                     "SMB/CIFS login name","name"                                               ),
   CMD_OPTION_SPECIAL      ("smb-password",                      0,  0,2,&globalOptions.defaultSMBServer.smb.password,        cmdOptionParsePassword,NULL,1,                               "SMB/CIFS password (use with care!)","password"                            ),
-  CMD_OPTION_STRING       ("smb-share",                         0,  0,2,globalOptions.defaultSMBServer.smb.share,                                                                         "SMB/CIFS share name","name"                                               ),
+  CMD_OPTION_STRING       ("smb-share",                         0,  0,2,globalOptions.defaultSMBServer.smb.shareName,                                                                     "SMB/CIFS share name","name"                                               ),
   CMD_OPTION_INTEGER      ("smb-max-connections",               0,  0,2,globalOptions.defaultSMBServer.maxConnectionCount,   0,MAX_INT,NULL,                                              "max. number of concurrent ftp connections"                                ),
 //TODO
 //  CMD_OPTION_INTEGER64    ("smb-max-storage-size",              0,  0,2,defaultSMBServer.maxStorageSize,                   NULL,0LL,MAX_INT64,NULL,                                       "max. number of bytes to store on SMB/CIFS server"                         ),
@@ -8664,29 +8664,29 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_COMMENT("device"),
   CONFIG_VALUE_SPACE(),
-  CONFIG_VALUE_STRING            ("device-request-volume-command",    &globalOptions.defaultDevice.requestVolumeCommand,-1,                        "<command>"),
-  CONFIG_VALUE_STRING            ("device-unload-volume-command",     &globalOptions.defaultDevice.unloadVolumeCommand,-1,                         "<command>"),
-  CONFIG_VALUE_STRING            ("device-load-volume-command",       &globalOptions.defaultDevice.loadVolumeCommand,-1,                           "<command>"),
-  CONFIG_VALUE_INTEGER64         ("device-volume-size",               &globalOptions.defaultDevice.volumeSize,-1,                                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
-  CONFIG_VALUE_STRING            ("device-image-pre-command",         &globalOptions.defaultDevice.imagePreProcessCommand,-1,                      "<command>"),
-  CONFIG_VALUE_STRING            ("device-image-post-command",        &globalOptions.defaultDevice.imagePostProcessCommand,-1,                     "<command>"),
-  CONFIG_VALUE_STRING            ("device-image-command",             &globalOptions.defaultDevice.imageCommand,-1,                                "<command>"),
-  CONFIG_VALUE_STRING            ("device-ecc-pre-command",           &globalOptions.defaultDevice.eccPreProcessCommand,-1,                        "<command>"),
-  CONFIG_VALUE_STRING            ("device-ecc-post-command",          &globalOptions.defaultDevice.eccPostProcessCommand,-1,                       "<command>"),
-  CONFIG_VALUE_STRING            ("device-ecc-command",               &globalOptions.defaultDevice.eccCommand,-1,                                  "<command>"),
-  CONFIG_VALUE_STRING            ("device-blank-command",             &globalOptions.defaultDevice.blankCommand,-1,                                "<command>"),
-  CONFIG_VALUE_STRING            ("device-write-pre-command",         &globalOptions.defaultDevice.writePreProcessCommand,-1,                      "<command>"),
-  CONFIG_VALUE_STRING            ("device-write-post-command",        &globalOptions.defaultDevice.writePostProcessCommand,-1,                     "<command>"),
-  CONFIG_VALUE_STRING            ("device-write-command",             &globalOptions.defaultDevice.writeCommand,-1,                                "<command>"),
+  CONFIG_VALUE_STRING            ("device-request-volume-command",    &globalOptions.defaultDevice.requestVolumeCommand,-1,          "<command>"),
+  CONFIG_VALUE_STRING            ("device-unload-volume-command",     &globalOptions.defaultDevice.unloadVolumeCommand,-1,           "<command>"),
+  CONFIG_VALUE_STRING            ("device-load-volume-command",       &globalOptions.defaultDevice.loadVolumeCommand,-1,             "<command>"),
+  CONFIG_VALUE_INTEGER64         ("device-volume-size",               &globalOptions.defaultDevice.volumeSize,-1,                    0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+  CONFIG_VALUE_STRING            ("device-image-pre-command",         &globalOptions.defaultDevice.imagePreProcessCommand,-1,        "<command>"),
+  CONFIG_VALUE_STRING            ("device-image-post-command",        &globalOptions.defaultDevice.imagePostProcessCommand,-1,       "<command>"),
+  CONFIG_VALUE_STRING            ("device-image-command",             &globalOptions.defaultDevice.imageCommand,-1,                  "<command>"),
+  CONFIG_VALUE_STRING            ("device-ecc-pre-command",           &globalOptions.defaultDevice.eccPreProcessCommand,-1,          "<command>"),
+  CONFIG_VALUE_STRING            ("device-ecc-post-command",          &globalOptions.defaultDevice.eccPostProcessCommand,-1,         "<command>"),
+  CONFIG_VALUE_STRING            ("device-ecc-command",               &globalOptions.defaultDevice.eccCommand,-1,                    "<command>"),
+  CONFIG_VALUE_STRING            ("device-blank-command",             &globalOptions.defaultDevice.blankCommand,-1,                  "<command>"),
+  CONFIG_VALUE_STRING            ("device-write-pre-command",         &globalOptions.defaultDevice.writePreProcessCommand,-1,        "<command>"),
+  CONFIG_VALUE_STRING            ("device-write-post-command",        &globalOptions.defaultDevice.writePostProcessCommand,-1,       "<command>"),
+  CONFIG_VALUE_STRING            ("device-write-command",             &globalOptions.defaultDevice.writeCommand,-1,                  "<command>"),
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("file settings"),
   CONFIG_VALUE_SPACE(),
 //  CONFIG_VALUE_INTEGER64         ("file-max-storage-size",            &defaultFileServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SECTION_ARRAY     ("file-server",NULL,-1,NULL,NULL,
-    CONFIG_STRUCT_VALUE_INTEGER64("file-max-storage-size",            ServerNode,server.maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
-    CONFIG_STRUCT_VALUE_STRING   ("file-write-pre-command",           ServerNode,server.writePreProcessCommand,                                 "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("file-write-post-command",          ServerNode,server.writePostProcessCommand,                                "<command>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("file-max-storage-size",            ServerNode,server.maxStorageSize,                              0LL,MAX_INT64,NULL,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("file-write-pre-command",           ServerNode,server.writePreProcessCommand,                      "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("file-write-post-command",          ServerNode,server.writePostProcessCommand,                     "<command>"),
   ),
   CONFIG_VALUE_SPACE(),
 
@@ -8694,62 +8694,62 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 // TODO: enable
 //  CONFIG_VALUE_COMMENT("default values"),
-  CONFIG_VALUE_STRING            ("ftp-login-name",                   &globalOptions.defaultFTPServer.ftp.loginName,-1,                            "<name>"),
-  CONFIG_VALUE_SPECIAL           ("ftp-password",                     &globalOptions.defaultFTPServer.ftp.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_VALUE_INTEGER           ("ftp-max-connections",              &globalOptions.defaultFTPServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
-  CONFIG_VALUE_INTEGER64         ("ftp-max-storage-size",             &globalOptions.defaultFTPServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
+  CONFIG_VALUE_STRING            ("ftp-login-name",                   &globalOptions.defaultFTPServer.ftp.loginName,-1,              "<name>"),
+  CONFIG_VALUE_SPECIAL           ("ftp-password",                     &globalOptions.defaultFTPServer.ftp.password,-1,               configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_VALUE_INTEGER           ("ftp-max-connections",              &globalOptions.defaultFTPServer.maxConnectionCount,-1,         0,MAX_INT,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER64         ("ftp-max-storage-size",             &globalOptions.defaultFTPServer.maxStorageSize,-1,             0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SECTION_ARRAY     ("ftp-server",&globalOptions.serverList,-1,configValueServerFTPSectionDataIterator,NULL,
-    CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",                   ServerNode,server.ftp.loginName,                                          "<name>"),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",                     ServerNode,server.ftp.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER  ("ftp-max-connections",              ServerNode,server.maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
-    CONFIG_STRUCT_VALUE_INTEGER64("ftp-max-storage-size",             ServerNode,server.maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
-    CONFIG_STRUCT_VALUE_STRING   ("ftp-write-pre-command",            ServerNode,server.writePreProcessCommand,                                 "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("ftp-write-post-command",           ServerNode,server.writePostProcessCommand,                                "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ftp-login-name",                   ServerNode,server.ftp.loginName,                               "<name>"),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ftp-password",                     ServerNode,server.ftp.password,                                configValuePasswordParse,configValuePasswordFormat,NULL),
+    CONFIG_STRUCT_VALUE_INTEGER  ("ftp-max-connections",              ServerNode,server.maxConnectionCount,                          0,MAX_INT,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("ftp-max-storage-size",             ServerNode,server.maxStorageSize,                              0LL,MAX_INT64,NULL,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ftp-write-pre-command",            ServerNode,server.writePreProcessCommand,                      "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ftp-write-post-command",           ServerNode,server.writePostProcessCommand,                     "<command>"),
   ),
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("ssh settings"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_COMMENT("default values"),
-  CONFIG_VALUE_STRING            ("ssh-login-name",                   &globalOptions.defaultSSHServer.ssh.loginName,-1,                            "<name>"),
-  CONFIG_VALUE_SPECIAL           ("ssh-password",                     &globalOptions.defaultSSHServer.ssh.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_VALUE_INTEGER           ("ssh-port",                         &globalOptions.defaultSSHServer.ssh.port,-1,                                 0,MAX_PORT_NUMBER,NULL,"<n>"),
-  CONFIG_VALUE_SPECIAL           ("ssh-public-key",                   &globalOptions.defaultSSHServer.ssh.publicKey,-1,                            configValueSSHKeyParse,configValueKeyFormat,NULL),
-  CONFIG_VALUE_SPECIAL           ("ssh-private-key",                  &globalOptions.defaultSSHServer.ssh.privateKey,-1,                           configValueSSHKeyParse,configValueKeyFormat,NULL),
-  CONFIG_VALUE_INTEGER           ("ssh-max-connections",              &globalOptions.defaultSSHServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
-  CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",             &globalOptions.defaultSSHServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
+  CONFIG_VALUE_STRING            ("ssh-login-name",                   &globalOptions.defaultSSHServer.ssh.loginName,-1,              "<name>"),
+  CONFIG_VALUE_SPECIAL           ("ssh-password",                     &globalOptions.defaultSSHServer.ssh.password,-1,               configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_VALUE_INTEGER           ("ssh-port",                         &globalOptions.defaultSSHServer.ssh.port,-1,                   0,MAX_PORT_NUMBER,NULL,"<n>"),
+  CONFIG_VALUE_SPECIAL           ("ssh-public-key",                   &globalOptions.defaultSSHServer.ssh.publicKey,-1,              configValueSSHKeyParse,configValueKeyFormat,NULL),
+  CONFIG_VALUE_SPECIAL           ("ssh-private-key",                  &globalOptions.defaultSSHServer.ssh.privateKey,-1,             configValueSSHKeyParse,configValueKeyFormat,NULL),
+  CONFIG_VALUE_INTEGER           ("ssh-max-connections",              &globalOptions.defaultSSHServer.maxConnectionCount,-1,         0,MAX_INT,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER64         ("ssh-max-storage-size",             &globalOptions.defaultSSHServer.maxStorageSize,-1,             0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SECTION_ARRAY     ("ssh-server",&globalOptions.serverList,-1,configValueServerSSHSectionDataIterator,NULL,
-    CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                         ServerNode,server.ssh.port,                                               0,MAX_PORT_NUMBER,NULL,"<n>"),
-    CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",                   ServerNode,server.ssh.loginName,                                          "<name>"),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",                     ServerNode,server.ssh.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",                   ServerNode,server.ssh.publicKey,                                          configValueSSHKeyParse,configValueKeyFormat,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",                  ServerNode,server.ssh.privateKey,                                         configValueSSHKeyParse,configValueKeyFormat,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER  ("ssh-max-connections",              ServerNode,server.maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
-    CONFIG_STRUCT_VALUE_INTEGER64("ssh-max-storage-size",             ServerNode,server.maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
-    CONFIG_STRUCT_VALUE_STRING   ("ssh-write-pre-command",            ServerNode,server.writePreProcessCommand,                                 "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("ssh-write-post-command",           ServerNode,server.writePostProcessCommand,                                "<command>"),
+    CONFIG_STRUCT_VALUE_INTEGER  ("ssh-port",                         ServerNode,server.ssh.port,                                    0,MAX_PORT_NUMBER,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ssh-login-name",                   ServerNode,server.ssh.loginName,                               "<name>"),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-password",                     ServerNode,server.ssh.password,                                configValuePasswordParse,configValuePasswordFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-public-key",                   ServerNode,server.ssh.publicKey,                               configValueSSHKeyParse,configValueKeyFormat,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("ssh-private-key",                  ServerNode,server.ssh.privateKey,                              configValueSSHKeyParse,configValueKeyFormat,NULL),
+    CONFIG_STRUCT_VALUE_INTEGER  ("ssh-max-connections",              ServerNode,server.maxConnectionCount,                          0,MAX_INT,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("ssh-max-storage-size",             ServerNode,server.maxStorageSize,                              0LL,MAX_INT64,NULL,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ssh-write-pre-command",            ServerNode,server.writePreProcessCommand,                      "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ssh-write-post-command",           ServerNode,server.writePostProcessCommand,                     "<command>"),
   ),
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("webDAV settings"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_COMMENT("default values"),
-  CONFIG_VALUE_INTEGER           ("webdav-port",                      &globalOptions.defaultWebDAVServer.webDAV.port,-1,                           0,MAX_PORT_NUMBER,NULL,"<n>"),
-  CONFIG_VALUE_STRING            ("webdav-login-name",                &globalOptions.defaultWebDAVServer.webDAV.loginName,-1,                      "<name>"),
-  CONFIG_VALUE_SPECIAL           ("webdav-password",                  &globalOptions.defaultWebDAVServer.webDAV.password,-1,                       configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_VALUE_INTEGER           ("webdav-max-connections",           &globalOptions.defaultWebDAVServer.maxConnectionCount,-1,                    0,MAX_INT,NULL,"<n>"),
-  CONFIG_VALUE_INTEGER64         ("webdav-max-storage-size",          &globalOptions.defaultWebDAVServer.maxStorageSize,-1,                        0LL,MAX_INT64,NULL,"<size>"),
+  CONFIG_VALUE_INTEGER           ("webdav-port",                      &globalOptions.defaultWebDAVServer.webDAV.port,-1,             0,MAX_PORT_NUMBER,NULL,"<n>"),
+  CONFIG_VALUE_STRING            ("webdav-login-name",                &globalOptions.defaultWebDAVServer.webDAV.loginName,-1,        "<name>"),
+  CONFIG_VALUE_SPECIAL           ("webdav-password",                  &globalOptions.defaultWebDAVServer.webDAV.password,-1,         configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_VALUE_INTEGER           ("webdav-max-connections",           &globalOptions.defaultWebDAVServer.maxConnectionCount,-1,      0,MAX_INT,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER64         ("webdav-max-storage-size",          &globalOptions.defaultWebDAVServer.maxStorageSize,-1,          0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SECTION_ARRAY     ("webdav-server",&globalOptions.serverList,-1,configValueServerWebDAVSectionDataIterator,NULL,
-    CONFIG_STRUCT_VALUE_INTEGER  ("webdav-port",                      ServerNode,server.webDAV.port,                                            0,MAX_PORT_NUMBER,NULL,"<n>"),
-    CONFIG_STRUCT_VALUE_STRING   ("webdav-login-name",                ServerNode,server.webDAV.loginName,                                       "<name>"),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("webdav-password",                  ServerNode,server.webDAV.password,                                        configValuePasswordParse,configValuePasswordFormat,NULL),
-    CONFIG_STRUCT_VALUE_INTEGER  ("webdav-max-connections",           ServerNode,server.maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
-    CONFIG_STRUCT_VALUE_INTEGER64("webdav-max-storage-size",          ServerNode,server.maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
-    CONFIG_STRUCT_VALUE_STRING   ("webdav-write-pre-command",         ServerNode,server.writePreProcessCommand,                                 "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("webdav-write-post-command",        ServerNode,server.writePostProcessCommand,                                "<command>"),
+    CONFIG_STRUCT_VALUE_INTEGER  ("webdav-port",                      ServerNode,server.webDAV.port,                                 0,MAX_PORT_NUMBER,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_STRING   ("webdav-login-name",                ServerNode,server.webDAV.loginName,                            "<name>"),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("webdav-password",                  ServerNode,server.webDAV.password,                             configValuePasswordParse,configValuePasswordFormat,NULL),
+    CONFIG_STRUCT_VALUE_INTEGER  ("webdav-max-connections",           ServerNode,server.maxConnectionCount,                          0,MAX_INT,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("webdav-max-storage-size",          ServerNode,server.maxStorageSize,                              0LL,MAX_INT64,NULL,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("webdav-write-pre-command",         ServerNode,server.writePreProcessCommand,                      "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("webdav-write-post-command",        ServerNode,server.writePostProcessCommand,                     "<command>"),
   ),
   CONFIG_VALUE_SPACE(),
 
@@ -8757,44 +8757,44 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 // TODO: enable
 //  CONFIG_VALUE_COMMENT("default values"),
-  CONFIG_VALUE_STRING            ("smb-login-name",                   &globalOptions.defaultSMBServer.smb.loginName,-1,                            "<name>"),
-  CONFIG_VALUE_SPECIAL           ("smb-password",                     &globalOptions.defaultSMBServer.smb.password,-1,                             configValuePasswordParse,configValuePasswordFormat,NULL),
-  CONFIG_VALUE_STRING            ("smb-share",                        &globalOptions.defaultSMBServer.smb.share,-1,                                "<name>"),
-  CONFIG_VALUE_INTEGER           ("smb-max-connections",              &globalOptions.defaultSMBServer.maxConnectionCount,-1,                       0,MAX_INT,NULL,"<n>"),
-  CONFIG_VALUE_INTEGER64         ("smb-max-storage-size",             &globalOptions.defaultSMBServer.maxStorageSize,-1,                           0LL,MAX_INT64,NULL,"<size>"),
+  CONFIG_VALUE_STRING            ("smb-login-name",                   &globalOptions.defaultSMBServer.smb.loginName,-1,              "<name>"),
+  CONFIG_VALUE_SPECIAL           ("smb-password",                     &globalOptions.defaultSMBServer.smb.password,-1,               configValuePasswordParse,configValuePasswordFormat,NULL),
+  CONFIG_VALUE_STRING            ("smb-share",                        &globalOptions.defaultSMBServer.smb.shareName,-1,              "<name>"),
+  CONFIG_VALUE_INTEGER           ("smb-max-connections",              &globalOptions.defaultSMBServer.maxConnectionCount,-1,         0,MAX_INT,NULL,"<n>"),
+  CONFIG_VALUE_INTEGER64         ("smb-max-storage-size",             &globalOptions.defaultSMBServer.maxStorageSize,-1,             0LL,MAX_INT64,NULL,"<size>"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SECTION_ARRAY     ("smb-server",&globalOptions.serverList,-1,configValueServerSMBSectionDataIterator,NULL,
-    CONFIG_STRUCT_VALUE_STRING   ("smb-login-name",                   ServerNode,server.smb.loginName,                                          "<name>"),
-    CONFIG_STRUCT_VALUE_SPECIAL  ("smb-password",                     ServerNode,server.smb.password,                                           configValuePasswordParse,configValuePasswordFormat,NULL),
-    CONFIG_STRUCT_VALUE_STRING   ("smb-share",                        ServerNode,server.smb.share,                                              "<name>"),
-    CONFIG_STRUCT_VALUE_INTEGER  ("smb-max-connections",              ServerNode,server.maxConnectionCount,                                     0,MAX_INT,NULL,"<n>"),
-    CONFIG_STRUCT_VALUE_INTEGER64("smb-max-storage-size",             ServerNode,server.maxStorageSize,                                         0LL,MAX_INT64,NULL,"<size>"),
-    CONFIG_STRUCT_VALUE_STRING   ("smb-write-pre-command",            ServerNode,server.writePreProcessCommand,                                 "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("smb-write-post-command",           ServerNode,server.writePostProcessCommand,                                "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("smb-login-name",                   ServerNode,server.smb.loginName,                               "<name>"),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("smb-password",                     ServerNode,server.smb.password,                                configValuePasswordParse,configValuePasswordFormat,NULL),
+    CONFIG_STRUCT_VALUE_STRING   ("smb-share",                        ServerNode,server.smb.shareName,                               "<name>"),
+    CONFIG_STRUCT_VALUE_INTEGER  ("smb-max-connections",              ServerNode,server.maxConnectionCount,                          0,MAX_INT,NULL,"<n>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("smb-max-storage-size",             ServerNode,server.maxStorageSize,                              0LL,MAX_INT64,NULL,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("smb-write-pre-command",            ServerNode,server.writePreProcessCommand,                      "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("smb-write-post-command",           ServerNode,server.writePostProcessCommand,                     "<command>"),
   ),
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_SEPARATOR("device settings"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_COMMENT("default values"),
-  CONFIG_VALUE_STRING            ("device",                           &globalOptions.defaultDevice.name,-1,                                        "<name>"),
+  CONFIG_VALUE_STRING            ("device",                           &globalOptions.defaultDevice.name,-1,                          "<name>"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_SECTION_ARRAY     ("device",&globalOptions.deviceList,-1,configValueDeviceSectionDataIterator,NULL,
-    CONFIG_STRUCT_VALUE_STRING   ("name",                      Device,name,                                                   "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("request-volume-command",    Device,requestVolumeCommand,                                   "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("unload-volume-command",     Device,unloadVolumeCommand,                                    "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("load-volume-command",       Device,loadVolumeCommand,                                      "<command>"),
-    CONFIG_STRUCT_VALUE_INTEGER64("volume-size",               Device,volumeSize,                                             0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
-    CONFIG_STRUCT_VALUE_STRING   ("image-pre-command",         Device,imagePreProcessCommand,                                 "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("image-post-command",        Device,imagePostProcessCommand,                                "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("image-command",             Device,imageCommand,                                           "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("ecc-pre-command",           Device,eccPreProcessCommand,                                   "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("ecc-post-command",          Device,eccPostProcessCommand,                                  "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("ecc-command",               Device,eccCommand,                                             "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("blank-command",             Device,blankCommand,                                           "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("write-pre-command",         Device,writePreProcessCommand,                                 "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("write-post-command",        Device,writePostProcessCommand,                                "<command>"),
-    CONFIG_STRUCT_VALUE_STRING   ("write-command",             Device,writeCommand,                                           "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("name",                      Device,name,                                                          "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("request-volume-command",    Device,requestVolumeCommand,                                          "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("unload-volume-command",     Device,unloadVolumeCommand,                                           "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("load-volume-command",       Device,loadVolumeCommand,                                             "<command>"),
+    CONFIG_STRUCT_VALUE_INTEGER64("volume-size",               Device,volumeSize,                                                    0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS,"<size>"),
+    CONFIG_STRUCT_VALUE_STRING   ("image-pre-command",         Device,imagePreProcessCommand,                                        "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("image-post-command",        Device,imagePostProcessCommand,                                       "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("image-command",             Device,imageCommand,                                                  "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ecc-pre-command",           Device,eccPreProcessCommand,                                          "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ecc-post-command",          Device,eccPostProcessCommand,                                         "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("ecc-command",               Device,eccCommand,                                                    "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("blank-command",             Device,blankCommand,                                                  "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("write-pre-command",         Device,writePreProcessCommand,                                        "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("write-post-command",        Device,writePostProcessCommand,                                       "<command>"),
+    CONFIG_STRUCT_VALUE_STRING   ("write-command",             Device,writeCommand,                                                  "<command>"),
   ),
   CONFIG_VALUE_SPACE(),
 
@@ -9509,7 +9509,7 @@ void Configuration_initServer(Server *server, ConstString name, ServerTypes serv
     case SERVER_TYPE_SMB:
       server->smb.loginName = String_new();
       Password_init(&server->smb.password);
-      server->smb.share = String_new();
+      server->smb.shareName = String_new();
       break;
     #ifndef NDEBUG
       default:
@@ -9552,7 +9552,7 @@ void Configuration_doneServer(Server *server)
       String_delete(server->webDAV.loginName);
       break;
     case SERVER_TYPE_SMB:
-      String_delete(server->smb.share);
+      String_delete(server->smb.shareName);
       Password_done(&server->smb.password);
       String_delete(server->smb.loginName);
       break;
@@ -9900,7 +9900,7 @@ uint Configuration_initSMBServerSettings(SMBServer        *smbServer,
 
   smbServer->loginName = String_new();
   Password_init(&smbServer->password);
-  smbServer->share = String_new();
+  smbServer->shareName = String_new();
 
   serverNode = NULL;
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
@@ -9929,12 +9929,12 @@ uint Configuration_initSMBServerSettings(SMBServer        *smbServer,
                         : &globalOptions.defaultSMBServer.smb.password
                      )
                 );
-    String_set(smbServer->share,
-               ((jobOptions != NULL) && !String_isEmpty(jobOptions->smbServer.share) )
-                 ? jobOptions->smbServer.share
+    String_set(smbServer->shareName,
+               ((jobOptions != NULL) && !String_isEmpty(jobOptions->smbServer.shareName) )
+                 ? jobOptions->smbServer.shareName
                  : ((serverNode != NULL)
-                      ? serverNode->server.smb.share
-                      : globalOptions.defaultSMBServer.smb.share
+                      ? serverNode->server.smb.shareName
+                      : globalOptions.defaultSMBServer.smb.shareName
                    )
               );
   }
@@ -9946,7 +9946,7 @@ void Configuration_doneSMBServerSettings(SMBServer *smbServer)
 {
   assert(smbServer != NULL);
 
-  String_delete(smbServer->share);
+  String_delete(smbServer->shareName);
   Password_done(&smbServer->password);
   String_delete(smbServer->loginName);
 }

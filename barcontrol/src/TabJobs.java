@@ -2600,6 +2600,7 @@ public class TabJobs
                                                                                                                              StorageTypes.SFTP,
                                                                                                                              StorageTypes.WEBDAV,
                                                                                                                              StorageTypes.WEBDAVS,
+                                                                                                                             StorageTypes.SMB,
                                                                                                                              StorageTypes.CD,
                                                                                                                              StorageTypes.DVD,
                                                                                                                              StorageTypes.BD,
@@ -2611,6 +2612,7 @@ public class TabJobs
   private WidgetVariable               storageHostPort           = new WidgetVariable<Integer>           ("",0);
   private WidgetVariable               storageLoginName          = new WidgetVariable<String>            ("","");
   private WidgetVariable               storageLoginPassword      = new WidgetVariable<String>            ("","");
+  private WidgetVariable               storageShareName          = new WidgetVariable<String>            ("","");
   private WidgetVariable               storageDeviceName         = new WidgetVariable<String>            ("","");
   private WidgetVariable               storageFileName           = new WidgetVariable<String>            ("","");
   private WidgetVariable               archiveFileMode           = new WidgetVariable<String>            ("archive-file-mode",
@@ -6800,6 +6802,7 @@ public class TabJobs
                                              "  on SSH server with sftp (secure FTP)\n"+
                                              "  on WebDAV server\n"+
                                              "  on WebDAV secure server\n"+
+                                             "  on SMB/CIFS server\n"+
                                              "  on CD\n"+
                                              "  on DVD\n"+
                                              "  on BD\n"+
@@ -6813,6 +6816,7 @@ public class TabJobs
                                                            "sftp",        StorageTypes.SFTP,
                                                            "webdav",      StorageTypes.WEBDAV,
                                                            "webdavs",     StorageTypes.WEBDAVS,
+                                                           "smb",         StorageTypes.SMB,
                                                            "CD",          StorageTypes.CD,
                                                            "DVD",         StorageTypes.DVD,
                                                            "BD",          StorageTypes.BD,
@@ -7384,6 +7388,101 @@ public class TabJobs
           });
         }
 
+        // destination SMB
+        BARWidgets.SMB widgetSMB = new BARWidgets.SMB(tab,
+                                                      storageHostName,
+                                                      storageLoginName,
+                                                      storageLoginPassword,
+                                                      storageShareName,
+                                                      archiveFileMode
+                                                     );
+        Widgets.layout(widgetSMB,11,1,TableLayoutData.WE|TableLayoutData.N);
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSMB.hostName,storageHostName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSMB.loginName,storageLoginName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSMB.loginPassword,storageLoginPassword)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSMB.shareName,storageShareName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSMB.archiveFileMode,archiveFileMode)
+          {
+            @Override
+            public void modified(Combo combo, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,archiveFileMode);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(widgetSMB,storageType)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              Widgets.setVisible(control,variable.getEnum() == StorageTypes.SMB);
+            }
+          });
+        }
+
         // destination cd/dvd/bd
         BARWidgets.Optical widgetOptical = new BARWidgets.Optical(tab,
                                                                   storageDeviceName,
@@ -7543,6 +7642,7 @@ public class TabJobs
           storageLoginPassword.set(uriParts.loginPassword);
           storageHostName.set     (uriParts.hostName     );
           storageHostPort.set     (uriParts.hostPort     );
+          storageShareName.set    (uriParts.shareName    );
           storageDeviceName.set   (uriParts.deviceName   );
           storageFileName.set     (uriParts.fileName     );
         }
@@ -9685,6 +9785,7 @@ throw new Error("NYI");
    *   sftp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
    *   webdav://[[<login name>[:<login password>]@<host name>[:<host port>]/]<file name>
    *   webdavs://[[<login name>[:<login password>]@<host name>[:<host port>]/]<file name>
+   *   smb://[[<login name>[:<login password>]@<host name>/]<file name>
    *   cd://[<device name>:]<file name>
    *   dvd://[<device name>:]<file name>
    *   bd://[<device name>:]<file name>
@@ -9698,6 +9799,7 @@ throw new Error("NYI");
                                      storageHostPort.getInteger(),
                                      storageLoginName.getString(),
                                      storageLoginPassword.getString(),
+                                     storageShareName.getString(),
                                      storageDeviceName.getString(),
                                      storageFileName.getString()
                                     );
@@ -14835,6 +14937,7 @@ throw new Error("NYI");
     final BARWidgets.FTP    widgetMoveToFTP;
     final BARWidgets.SFTP   widgetMoveToSFTP;
     final BARWidgets.WebDAV widgetMoveToWebDAV;
+    final BARWidgets.SMB    widgetMoveToSMB;
 
     final Button   widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE);
@@ -15039,7 +15142,8 @@ throw new Error("NYI");
                                            "  on SSH server with scp (secure copy)\n"+
                                            "  on SSH server with sftp (secure FTP)\n"+
                                            "  on WebDAV server\n"+
-                                           "  on WebDAV secure server\n"
+                                           "  on WebDAV secure server\n"+
+                                           "  on SMB/CIFS server\n"
                                           )
                             );
         Widgets.setComboItems(widgetMoveToType,
@@ -15048,7 +15152,8 @@ throw new Error("NYI");
                                                          "scp",         StorageTypes.SCP,
                                                          "sftp",        StorageTypes.SFTP,
                                                          "webdav",      StorageTypes.WEBDAV,
-                                                         "webdavs",     StorageTypes.WEBDAVS
+                                                         "webdavs",     StorageTypes.WEBDAVS,
+                                                         "smb",         StorageTypes.SMB
                                           }
                         );
         Widgets.setSelectedComboItem(widgetMoveToType,persistenceData.moveTo.type);
@@ -15128,6 +15233,24 @@ throw new Error("NYI");
                                 Widgets.getSelectedComboItem(combo) == StorageTypes.WEBDAV
                              || Widgets.getSelectedComboItem(combo) == StorageTypes.WEBDAVS
                             );
+          dialog.pack();
+        }
+      });
+
+      // destination SMB
+      widgetMoveToSMB = new BARWidgets.SMB(composite);
+      Widgets.layout(widgetMoveToSMB,5,1,TableLayoutData.WE|TableLayoutData.N);
+      {
+        widgetMoveToSMB.hostName.setText(persistenceData.moveTo.hostName);
+        widgetMoveToSMB.loginName.setText(persistenceData.moveTo.loginName);
+        widgetMoveToSMB.loginPassword.setText(persistenceData.moveTo.loginPassword);
+      }
+      Widgets.addModifyListener(new WidgetModifyListener(widgetMoveToSMB,widgetMoveToType)
+      {
+        @Override
+        public void modified(Control control, Combo combo)
+        {
+          Widgets.setVisible(control,Widgets.getSelectedComboItem(combo) == StorageTypes.SMB);
           dialog.pack();
         }
       });
@@ -15226,6 +15349,11 @@ throw new Error("NYI");
             persistenceData.moveTo.hostPort      = widgetMoveToWebDAV.hostPort.getSelection();
             persistenceData.moveTo.loginName     = widgetMoveToWebDAV.loginName.getText();
             persistenceData.moveTo.loginPassword = widgetMoveToWebDAV.loginPassword.getText();
+            break;
+          case SMB:
+            persistenceData.moveTo.hostName      = widgetMoveToSMB.hostName.getText();
+            persistenceData.moveTo.loginName     = widgetMoveToSMB.loginName.getText();
+            persistenceData.moveTo.loginPassword = widgetMoveToSMB.loginPassword.getText();
             break;
         }
 

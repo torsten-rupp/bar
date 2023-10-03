@@ -659,6 +659,19 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/lzo-$LZO_VERSION lzo)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to fix missing --tag=CC for in libtool call
+       #   diff -u extern/lzo-2.10.org/Makefile.in extern/lzo-2.10/Makefile.in  > misc/lzo-2.10-libtool.patch
+       # Note: ignore exit code 1: patch may already be applied
+       (cd $workingDirectory/lzo; $PATCH --batch -N -p1 < $patchDirectory/lzo-2.10-libtool.patch) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
+       fi
      fi
 
      exit $result
@@ -787,6 +800,19 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
        if test $? -ne 0; then
          fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT `find $destinationDirectory -maxdepth 1 -type d -name "xdelta3-*"` xdelta3)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to fix warnings:
+       #   diff -Naur xdelta3-3.0.11.org xdelta3-3.0.11 > xdelta3-3.0.11.patch
+       # Note: ignore exit code 1: patch may already be applied
+       (cd $workingDirectory/xdelta3; $PATCH --batch -N -p1 < $patchDirectory/xdelta3-3.0.11.patch) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
        fi
      fi
 
@@ -1085,6 +1111,19 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libssh2-$LIBSSH2_VERSION libssh2)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch for memory leak for libssh2 1.8.2 (ignore errors):
+       #   diff -u libssh2-1.8.2.org/src libssh2-1.8.2/src > libssh2-1.8.2-memory-leak.patch
+       # Note: ignore exit code 1: patch may already be applied
+#         (cd $workingDirectory/libssh2; $PATCH --batch -N -p1 < $patchDirectory/libssh2-1.8.2-memory-leak.patch) 1>/dev/null
+#         if test $? -gt 1; then
+#           fatalError "patch"
+#         fi
      fi
 
      exit $result
@@ -1416,6 +1455,21 @@ if test $cleanFlag -eq 0; then
        result=3
      fi
 
+     if test $noDecompressFlag -eq 0; then
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libsmb2-$LIBSMB2_VERSION libsmb2)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to fix defintions for MinGW:
+       #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
+       # Note: ignore exit code 1: patch may already be applied
+       (cd $workingDirectory/libsmb2; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
+       fi
+     fi
+
      exit $result
     )
     result=$?
@@ -1542,6 +1596,19 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
        if test $? -ne 0; then
          fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/mariadb-connector-c-$MARIADB_CLIENT_VERSION-src mariadb-connector-c)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
+       #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
+       # Note: ignore exit code 1: patch may already be applied
+       (cd $workingDirectory/mariadb-connector-c; $PATCH --batch -N -p1 < $patchDirectory/mariadb-connector-c-3.1.13.patch) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
        fi
      fi
 
@@ -1672,6 +1739,19 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "decompress"
        fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/icu icu)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to disable xlocale: does not exists anymore? not required?
+       #   diff -u icu.org/source/i18n/digitlst.cpp icu/source/i18n/digitlst.cpp > icu-xlocale.patch
+       # Note: ignore exit code 1: patch may already be applied
+       (cd $workingDirectory/icu; $PATCH --batch -N -p1 < $patchDirectory/icu-xlocale.patch) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
+       fi
      fi
 
      exit $result
@@ -1757,6 +1837,19 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
        if test $? -ne 0; then
          fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/pthreads-w32-2-9-1-release pthreads-w32)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to fix missing include:
+       #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
+       # Note: ignore exit code 1: patch may already be applied
+       (cd $workingDirectory/pthreads-w32; $PATCH --batch -N -p1 < $patchDirectory/pthreads-w32-2-9-1-release.patch) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
        fi
      fi
 

@@ -130,6 +130,7 @@ enum StorageTypes
   SFTP,
   WEBDAV,
   WEBDAVS,
+  SMB,
   CD,
   DVD,
   BD,
@@ -166,6 +167,10 @@ enum StorageTypes
     else if (string.equalsIgnoreCase("webdavs"))
     {
       type = StorageTypes.WEBDAVS;
+    }
+    else if (string.equalsIgnoreCase("smb"))
+    {
+      type = StorageTypes.SMB;
     }
     else if (string.equalsIgnoreCase("cd"))
     {
@@ -206,6 +211,7 @@ enum StorageTypes
       case SFTP:       return "sftp";
       case WEBDAV:     return "webdav";
       case WEBDAVS:    return "webdavs";
+      case SMB:        return "smb";
       case CD:         return "cd";
       case DVD:        return "dvd";
       case BD:         return "bd";
@@ -229,6 +235,7 @@ enum StorageTypes
       case SFTP:       return "sftp";
       case WEBDAV:     return "webdav";
       case WEBDAVS:    return "webdavs";
+      case SMB:        return "smb";
       case CD:         return "cd";
       case DVD:        return "dvd";
       case BD:         return "bd";
@@ -246,6 +253,7 @@ class URIParts implements Cloneable
   public int          hostPort;       // host port
   public String       loginName;      // login name
   public String       loginPassword;  // login password
+  public String       shareName;      // share name
   public String       deviceName;     // device name
   public String       fileName;       // file name
 
@@ -255,6 +263,7 @@ class URIParts implements Cloneable
    * @param hostPort host port
    * @param loginName login name
    * @param loginPassword login password
+   * @param shareName share name
    * @param deviceName device name
    * @param fileName file name
    */
@@ -263,6 +272,7 @@ class URIParts implements Cloneable
                   int          hostPort,
                   String       loginName,
                   String       loginPassword,
+                  String       shareName,
                   String       deviceName,
                   String       fileName
                  )
@@ -272,6 +282,7 @@ class URIParts implements Cloneable
     this.hostPort      = hostPort;
     this.loginName     = loginName;
     this.loginPassword = loginPassword;
+    this.shareName     = shareName;
     this.deviceName    = deviceName;
     this.fileName      = fileName;
   }
@@ -282,6 +293,7 @@ class URIParts implements Cloneable
    *   scp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
    *   sftp://[[<login name>[:<login password>]@]<host name>[:<host port>]/]<file name>
    *   webdav://[[<login name>[:<login password>]@<host name>[:<host port>]/]<file name>
+   *   smb://[[<login name>[:<login password>]@<host name>[:<share>]/]<file name>
    *   cd://[<device name>:]<file name>
    *   dvd://[<device name>:]<file name>
    *   bd://[<device name>:]<file name>
@@ -298,6 +310,7 @@ class URIParts implements Cloneable
     hostPort      = 0;
     loginName     = "";
     loginPassword = "";
+    shareName     = "";
     deviceName    = "";
     fileName      = "";
 
@@ -580,6 +593,63 @@ class URIParts implements Cloneable
         fileName = specifier;
       }
     }
+    else if (uri.startsWith("smb://"))
+    {
+      // sftp
+      type = StorageTypes.SMB;
+
+      String specifier = uri.substring(6);
+      if      ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?):([^:]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // smb://<login name>:<login password>@<host name>:<share>/<file name>
+        loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        loginPassword = matcher.group(2);
+        hostName      = matcher.group(4);
+        shareName     = matcher.group(5);
+        fileName      = matcher.group(6);
+      }
+      else if ((matcher = Pattern.compile("^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // smb://<login name>:<login password>@<host name>/<file name>
+        loginName     = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        loginPassword = matcher.group(2);
+        hostName      = matcher.group(4);
+        fileName      = matcher.group(5);
+      }
+      else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@/]*?):([^:]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // smb://<login name>@<host name>:<share>/<file name>
+        loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        hostName  = matcher.group(3);
+        shareName = matcher.group(4);
+        fileName  = matcher.group(5);
+      }
+      else if ((matcher = Pattern.compile("^(([^@]|\\@)*?)@([^@/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // smb://<login name>@<host name>/<file name>
+        loginName = StringUtils.map(matcher.group(1),new String[]{"\\@"},new String[]{"@"});
+        hostName  = matcher.group(3);
+        fileName  = matcher.group(4);
+      }
+      else if ((matcher = Pattern.compile("^([^@:/]*?):([^:]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // smb://<host name>:<share>/<file name>
+        hostName  = matcher.group(1);
+        shareName = matcher.group(2);
+        fileName  = matcher.group(3);
+      }
+      else if ((matcher = Pattern.compile("^([^@:/]*?)/(.*)$").matcher(specifier)).matches())
+      {
+        // smb://<host name>/<file name>
+        hostName = matcher.group(1);
+        fileName = matcher.group(2);
+      }
+      else
+      {
+        // smb://<file name>
+        fileName = specifier;
+      }
+    }
     else if (uri.startsWith("cd://"))
     {
       // cd
@@ -680,6 +750,7 @@ class URIParts implements Cloneable
                         hostPort,
                         loginName,
                         loginPassword,
+                        shareName,
                         deviceName,
                         fileName
                        );
@@ -764,6 +835,20 @@ class URIParts implements Cloneable
           }
           if (!hostName.isEmpty()) { buffer.append(hostName); }
           if (hostPort > 0) { buffer.append(':'); buffer.append(hostPort); }
+        }
+        break;
+      case SMB:
+        buffer.append("smb://");
+        if (!loginName.isEmpty() || !hostName.isEmpty())
+        {
+          if (!loginName.isEmpty() || !loginPassword.isEmpty())
+          {
+            if (!loginName.isEmpty()) buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"}));
+            if (!loginPassword.isEmpty()) { buffer.append(':'); buffer.append(loginPassword); }
+            buffer.append('@');
+          }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
+          if (!shareName.isEmpty()) { buffer.append(':'); buffer.append(shareName); }
         }
         break;
       case CD:
@@ -879,6 +964,16 @@ class URIParts implements Cloneable
           buffer.append('/');
         }
         break;
+      case SMB:
+        buffer.append("smb://");
+        if (!loginName.isEmpty() || !hostName.isEmpty())
+        {
+          if (!loginName.isEmpty()) { buffer.append(StringUtils.map(loginName,new String[]{"@"},new String[]{"\\@"})); buffer.append('@'); }
+          if (!hostName.isEmpty()) { buffer.append(hostName); }
+          if (!shareName.isEmpty()) { buffer.append(':'); buffer.append(shareName); }
+          buffer.append('/');
+        }
+        break;
       case CD:
         buffer.append("cd://");
         if (!deviceName.isEmpty())
@@ -934,7 +1029,7 @@ class URIParts implements Cloneable
   @Override
   public String toString()
   {
-    return "URIParts {"+type+", "+loginName+", "+loginPassword+", "+hostName+", "+hostPort+", "+deviceName+", "+fileName+"}";
+    return "URIParts {"+type+", "+loginName+", "+loginPassword+", "+hostName+", "+hostPort+", "+shareName+", "+deviceName+", "+fileName+"}";
   }
 }
 

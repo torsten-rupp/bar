@@ -1962,16 +1962,6 @@ test_storage_webdavs-gprof:
 test_storage_webdavs-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_webdav
 
-test_storage_optical: \
-  $(TEST_BAR)
-	$(MAKE) \
-          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
-          BAR_FILE="test" \
-          BAR_PATTERN="test*" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_optical_operations \
-          ;
-
 test_storage_smb: \
   $(TEST_BAR)
 	@$(ECHO) Info : TEST_SMB_HOST=$(TEST_SMB_HOST)
@@ -1985,6 +1975,13 @@ test_storage_smb: \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
           test_file_operations_base \
           ;
+	$(MAKE) \
+          BAR_STORAGE="smb://$(TEST_SMB_HOST):$(if $(TEST_SMB_SHARE),$(TEST_SMB_SHARE))/intermediate" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+          test_file_operations_base \
+          ;
 # Note: it seems libsmb2 or the Samba server is not able to operate reliable with multiple threads
 #	$(MAKE) \
 #          BAR_STORAGE="smb://$(TEST_SMB_HOST)/intermediate" \
@@ -1993,11 +1990,25 @@ test_storage_smb: \
 #          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
 #          test_file_operations_base \
 #          ;
+#	$(MAKE) \
+#          BAR_STORAGE="smb://$(TEST_SMB_HOST):$(if $(TEST_SMB_SHARE),$(TEST_SMB_SHARE))/intermediate" \
+#          BAR_FILE="test" \
+#          BAR_PATTERN="test" \
+#          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+#          test_file_operations_base \
+#          ;
 	$(MAKE) \
           BAR_STORAGE="smb://$(TEST_SMB_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') $(OPTIONS)" \
+          test_directory_operations \
+          ;
+	$(MAKE) \
+          BAR_STORAGE="smb://$(TEST_SMB_HOST):$(if $(TEST_SMB_SHARE),$(TEST_SMB_SHARE))/intermediate" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(OPTIONS)" \
           test_directory_operations \
           ;
 
@@ -2012,6 +2023,16 @@ test_storage_smb-gprof:
 
 test_storage_smb-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_smb
+
+test_storage_optical: \
+  $(TEST_BAR)
+	$(MAKE) \
+          BAR_STORAGE="$(INTERMEDIATE_DIR)" \
+          BAR_FILE="test" \
+          BAR_PATTERN="test*" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
+          test_optical_operations \
+          ;
 
 test_storage_optical-debug:
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_optical

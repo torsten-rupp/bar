@@ -549,7 +549,7 @@ typedef struct
 {
   String           loginName;                                 // login name
   Password         password;                                  // login password
-  String           share;                                     // share name
+  String           shareName;                                 // share name
 } SMBServer;
 
 // server types

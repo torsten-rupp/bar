@@ -20,7 +20,7 @@
      sftp://[<login name>@]<host name>[:<host port>]/<archive name>
      webdav://[<login name>[:<login password>]@]<host name>/<archive name>
      webdavs://[<login name>[:<login password>]@]<host name>/<archive name>
-     smb://[<login name>[:<login password>]@]<host name>/<share>/<archive name>
+     smb://[<login name>[:<login password>]@]<host name>[:<share>]/<archive name>
      cd://[<device name>:]<archive name>
      dvd://[<device name>:]<archive name>
      bd://[<device name>:]<archive name>
@@ -212,8 +212,8 @@ typedef struct
   bool         sslFlag;                                      // TRUE for SSL
   String       loginName;                                    // login name
   Password     *loginPassword;                               // login password
-  String       share;                                        // SMB/CIFS share
-  String       deviceName;                                   // device name
+  String       shareName;                                    // SMB/CIFS share name
+  String       deviceName;                                   // optical/device name
 
   String       archiveName;                                  // archive name
   String       archivePatternString;                         // archive pattern string or NULL if no pattern
@@ -949,7 +949,7 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
 /***********************************************************************\
 * Name   : Storage_parseSCPSpecifier
 * Purpose: parse scp specifier:
-*            [<login name>@]<host name>[:<host port>]
+*            [<login name>[:<login password>]@]<host name>[:<host port>]
 * Input  : sshSpecifier - ssh specifier string
 *          hostName     - host name variable (can be NULL)
 *          hostPort     - host port number variable (can be NULL)
@@ -972,8 +972,8 @@ bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
 /***********************************************************************\
 * Name   : Storage_parseSFTPSpecifier
 * Purpose: parse sftp specifier:
-*            [<login name>@]<host name>[:<host port>]
-* Input  : sftpSpecifier - ssh specifier string
+*            [<login name>[:<login password>]@]<host name>[:<host port>]
+* Input  : sftpSpecifier - sftp specifier string
 *          hostName      - host name variable (can be NULL)
 *          hostPort      - host port number variable (can be NULL)
 *          loginName     - login name variable (can be NULL)
@@ -981,7 +981,7 @@ bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
 *          hostPort      - host port number (can be NULL)
 *          loginName     - login name (can be NULL)
 *          loginPassword - login password
-* Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
+* Return : TRUE if sfto specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
 
@@ -995,7 +995,7 @@ bool Storage_parseSFTPSpecifier(ConstString sftpSpecifier,
 /***********************************************************************\
 * Name   : Storage_parseWebDAVSpecifier
 * Purpose: parse WebDAV specifier:
-*            [<login name>@]<host name>
+*            [<login name>[:<login password>]@]<host name>
 * Input  : webdavSpecifier - WebDAV specifier string
 *          hostName        - host name variable (can be NULL)
 *          hostPort        - host port number variable (can be NULL)
@@ -1015,6 +1015,29 @@ bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
                                   String      loginName,
                                   Password    *loginPassword
                                  );
+
+/***********************************************************************\
+* Name   : Storage_parseSMBSpecifier
+* Purpose: parse SMB specifier:
+*            [<login name>[:<login password>]@]<host name>
+* Input  : smbSpecifier  - SMB specifier string
+*          hostName      - host name variable (can be NULL)
+*          loginName     - login name variable (can be NULL)
+*          share         - share name variable (can be NULL)
+* Output : hostName      - host name (can be NULL)
+*          loginName     - login name (can be NULL)
+*          loginPassword - login password
+*          shareName     - share name
+* Return : TRUE if SMB specifier parsed, FALSE if specifier invalid
+* Notes  : -
+\***********************************************************************/
+
+bool Storage_parseSMBSpecifier(ConstString sftpSpecifier,
+                               String      hostName,
+                               String      loginName,
+                               Password    *loginPassword,
+                               String      shareName
+                              );
 
 /***********************************************************************\
 * Name   : Storage_parseOpticalSpecifier

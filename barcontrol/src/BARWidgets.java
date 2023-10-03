@@ -2068,9 +2068,9 @@ public class BARWidgets
      * @param maxStorageSizeVariable max. storage size variable (can be null)
      * @param archiveFileModeVariable archive mode variable (can be null)
      */
-    public File(final Composite      composite,
-                final WidgetVariable maxStorageSizeVariable,
-                final WidgetVariable archiveFileModeVariable
+    public File(Composite      composite,
+                WidgetVariable maxStorageSizeVariable,
+                WidgetVariable archiveFileModeVariable
                )
     {
       this(composite,
@@ -2095,7 +2095,7 @@ public class BARWidgets
           );
     }
 
-    /** create device super widget
+    /** create file super widget
      * @param composite parent composite
      */
     public File(Composite composite)
@@ -2477,11 +2477,11 @@ public class BARWidgets
      * @param loginPasswordVariable login password variable (can be null)
      * @param archiveFileModeVariable archive mode variable (can be null)
      */
-    public FTP(final Composite      composite,
-               final WidgetVariable hostNameVariable,
-               final WidgetVariable loginNameVariable,
-               final WidgetVariable loginPasswordVariable,
-               final WidgetVariable archiveFileModeVariable
+    public FTP(Composite      composite,
+               WidgetVariable hostNameVariable,
+               WidgetVariable loginNameVariable,
+               WidgetVariable loginPasswordVariable,
+               WidgetVariable archiveFileModeVariable
               )
     {
       this(composite,
@@ -3203,7 +3203,7 @@ public class BARWidgets
       setVisible(false);
     }
 
-    /** create device super widget
+    /** create sftp super widget
      * @param composite parent composite
      * @param hostNameVariable host name variable (can be null)
      * @param hostPortVariable host port variable (can be null)
@@ -3213,14 +3213,14 @@ public class BARWidgets
      * @param privateKeyVariable private key variable (can be null)
      * @param archiveFileModeVariable archive mode variable (can be null)
      */
-    public SFTP(final Composite      composite,
-                final WidgetVariable hostNameVariable,
-                final WidgetVariable hostPortVariable,
-                final WidgetVariable loginNameVariable,
-                final WidgetVariable loginPasswordVariable,
-                final WidgetVariable publicKeyVariable,
-                final WidgetVariable privateKeyVariable,
-                final WidgetVariable archiveFileModeVariable
+    public SFTP(Composite      composite,
+                WidgetVariable hostNameVariable,
+                WidgetVariable hostPortVariable,
+                WidgetVariable loginNameVariable,
+                WidgetVariable loginPasswordVariable,
+                WidgetVariable publicKeyVariable,
+                WidgetVariable privateKeyVariable,
+                WidgetVariable archiveFileModeVariable
                )
     {
       this(composite,
@@ -3265,6 +3265,497 @@ public class BARWidgets
     }
   };
 
+  /** SMB super widget
+   */
+  static class SMB extends Composite
+  {
+    enum WidgetTypes
+    {
+      PUBLIC_KEY,
+      PRIVATE_KEY,
+      ARCHIVE_FILE_MODE
+    };
+
+    Text  hostName;
+    Text  loginName;
+    Text  loginPassword;
+    Text  shareName;
+    Combo archiveFileMode;
+
+    /** create SMB super widget
+     * @param composite parent composite
+     * @param widgets optional widgets to show
+     * @param hostNameVariable host name variable (can be null)
+     * @param loginNameVariable login name variable (can be null)
+     * @param loginPasswordVariable login password variable (can be null)
+     * @param shareNameVariable share name variable (can be null)
+     * @param archiveFileModeVariable archive mode variable (can be null)
+     */
+    public SMB(final Composite      composite,
+               EnumSet<WidgetTypes> widgets,
+               final WidgetVariable hostNameVariable,
+               final WidgetVariable loginNameVariable,
+               final WidgetVariable loginPasswordVariable,
+               final WidgetVariable shareNameVariable,
+               final WidgetVariable archiveFileModeVariable
+              )
+    {
+      super(composite,SWT.NONE);
+      setLayout(new TableLayout(0.0,new double[]{0.0,1.0}));
+
+      int       row;
+      Composite subComposite;
+      Label     label;
+      Button    button;
+
+      row = 0;
+
+      label = Widgets.newLabel(this,BARControl.tr("Server")+":");
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      subComposite = Widgets.newComposite(this,SWT.NONE);
+      subComposite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0,1.0}));
+      Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+      {
+        hostName = Widgets.newText(subComposite);
+        hostName.setToolTipText(BARControl.tr("SMB/CIFS server name."));
+        Widgets.layout(hostName,0,0,TableLayoutData.WE);
+        hostName.addModifyListener(new ModifyListener()
+        {
+          @Override
+          public void modifyText(ModifyEvent modifyEvent)
+          {
+            Text   widget = (Text)modifyEvent.widget;
+            String string = widget.getText();
+
+            if (hostNameVariable != null)
+            {
+              Color color = COLOR_MODIFIED;
+              if (hostNameVariable.getString().equals(string)) color = null;
+              widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
+            }
+          }
+        });
+        hostName.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+            Text widget = (Text)selectionEvent.widget;
+
+            if (hostNameVariable != null)
+            {
+              hostNameVariable.set(widget.getText());
+              widget.setBackground(null);
+            }
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        hostName.addFocusListener(new FocusListener()
+        {
+          @Override
+          public void focusGained(FocusEvent focusEvent)
+          {
+            Text widget = (Text)focusEvent.widget;
+
+            widget.setData("showedErrorDialog",false);
+          }
+          @Override
+          public void focusLost(FocusEvent focusEvent)
+          {
+            Text widget = (Text)focusEvent.widget;
+
+            if (hostNameVariable != null)
+            {
+              hostNameVariable.set(widget.getText());
+              widget.setBackground(null);
+            }
+          }
+        });
+        if (hostNameVariable != null)
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(hostName,hostNameVariable));
+        }
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Share")+":");
+        Widgets.layout(label,0,1,TableLayoutData.W);
+
+        shareName = Widgets.newText(subComposite);
+        shareName.setToolTipText(BARControl.tr("SMB/CIFS server share name. Leave it empty to use the default share name from the configuration file."));
+        Widgets.layout(shareName,0,2,TableLayoutData.WE);
+        shareName.addModifyListener(new ModifyListener()
+        {
+          @Override
+          public void modifyText(ModifyEvent modifyEvent)
+          {
+            Text   widget = (Text)modifyEvent.widget;
+            String string = widget.getText();
+
+            if (shareNameVariable != null)
+            {
+              Color color = COLOR_MODIFIED;
+              if (shareNameVariable.getString().equals(string)) color = null;
+              widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
+            }
+          }
+        });
+        shareName.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+            Text widget = (Text)selectionEvent.widget;
+
+            if (shareNameVariable != null)
+            {
+              shareNameVariable.set(widget.getText());
+              widget.setBackground(null);
+            }
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        shareName.addFocusListener(new FocusListener()
+        {
+          @Override
+          public void focusGained(FocusEvent focusEvent)
+          {
+            Text widget = (Text)focusEvent.widget;
+
+            widget.setData("showedErrorDialog",false);
+          }
+          @Override
+          public void focusLost(FocusEvent focusEvent)
+          {
+            Text widget = (Text)focusEvent.widget;
+
+            if (shareNameVariable != null)
+            {
+              shareNameVariable.set(widget.getText());
+              widget.setBackground(null);
+            }
+          }
+        });
+        if (shareNameVariable != null)
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(shareName,shareNameVariable));
+        }
+      }
+      row++;
+
+      label = Widgets.newLabel(this,BARControl.tr("Login")+":");
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      subComposite = Widgets.newComposite(this,SWT.NONE);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0,1.0}));
+      Widgets.layout(subComposite,row,1,TableLayoutData.WE);
+      {
+        loginName = Widgets.newText(subComposite);
+        loginName.setToolTipText(BARControl.tr("SSH server user login name. Leave it empty to use the default name from the configuration file."));
+        Widgets.layout(loginName,0,0,TableLayoutData.WE);
+        loginName.addModifyListener(new ModifyListener()
+        {
+          @Override
+          public void modifyText(ModifyEvent modifyEvent)
+          {
+            Text   widget = (Text)modifyEvent.widget;
+            String string = widget.getText();
+
+            if (loginNameVariable != null)
+            {
+              Color color = COLOR_MODIFIED;
+              if (loginNameVariable.getString().equals(string)) color = null;
+              widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
+            }
+          }
+        });
+        loginName.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+            Text widget = (Text)selectionEvent.widget;
+
+            if (loginNameVariable != null)
+            {
+              loginNameVariable.set(widget.getText());
+              widget.setBackground(null);
+            }
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        loginName.addFocusListener(new FocusListener()
+        {
+          @Override
+          public void focusGained(FocusEvent focusEvent)
+          {
+            Text widget = (Text)focusEvent.widget;
+
+            widget.setData("showedErrorDialog",false);
+          }
+          @Override
+          public void focusLost(FocusEvent focusEvent)
+          {
+            Text widget = (Text)focusEvent.widget;
+
+            if (loginNameVariable != null)
+            {
+              loginNameVariable.set(widget.getText());
+              widget.setBackground(null);
+            }
+          }
+        });
+        if (loginNameVariable != null)
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(loginName,loginNameVariable));
+        }
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Password")+":");
+        Widgets.layout(label,0,1,TableLayoutData.W);
+
+        loginPassword = Widgets.newPassword(subComposite);
+        loginPassword.setToolTipText(BARControl.tr("SSH server login password. Leave it empty to use the default password from the configuration file."));
+        Widgets.layout(loginPassword,0,2,TableLayoutData.WE);
+        loginPassword.addModifyListener(new ModifyListener()
+        {
+          @Override
+          public void modifyText(ModifyEvent modifyEvent)
+          {
+            Text   widget = (Text)modifyEvent.widget;
+            String string = widget.getText();
+
+            if (loginPasswordVariable != null)
+            {
+              Color color = COLOR_MODIFIED;
+              if (loginPasswordVariable.getString().equals(string)) color = null;
+              widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
+            }
+          }
+        });
+        loginPassword.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+            Text widget = (Text)selectionEvent.widget;
+
+            if (loginPasswordVariable != null)
+            {
+              loginPasswordVariable.set(widget.getText());
+              widget.setBackground(null);
+            }
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+        loginPassword.addFocusListener(new FocusListener()
+        {
+          @Override
+          public void focusGained(FocusEvent focusEvent)
+          {
+            Text widget = (Text)focusEvent.widget;
+
+            widget.setData("showedErrorDialog",false);
+          }
+          @Override
+          public void focusLost(FocusEvent focusEvent)
+          {
+            Text widget = (Text)focusEvent.widget;
+
+            if (loginPasswordVariable != null)
+            {
+              loginPasswordVariable.set(widget.getText());
+              widget.setBackground(null);
+            }
+          }
+        });
+        if (loginPasswordVariable != null)
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(loginPassword,loginPasswordVariable));
+        }
+      }
+      row++;
+//??? shareName
+
+/*
+      if (widgets.contains(WidgetTypes.ARCHIVE_FILE_MODE))
+      {
+      label = Widgets.newLabel(composite,BARControl.tr("Max. band width")+":");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+      composite = Widgets.newComposite(composite,SWT.NONE);
+      Widgets.layout(composite,1,1,TableLayoutData.WE);
+      {
+        button = Widgets.newRadio(composite,BARControl.tr("unlimited"));
+        Widgets.layout(button,0,0,TableLayoutData.W);
+        button.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            try
+            {
+              maxBandWidthFlag.set(false);
+              maxBandWidth.set(0);
+              BARServer.setJobOption(selectedJobData.uuid,maxBandWidth);
+            }
+            catch (Exception exception)
+            {
+              // ignored
+            }
+          }
+        });
+        Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
+        {
+          @Override
+          public void modified(Control control, WidgetVariable archivePartSizeFlag)
+          {
+            ((Button)control).setSelection(!maxBandWidthFlag.getBoolean());
+            widgetFTPMaxBandWidth.setEnabled(!maxBandWidthFlag.getBoolean());
+          }
+        });
+
+        button = Widgets.newRadio(composite,BARControl.tr("limit to"));
+        Widgets.layout(button,0,1,TableLayoutData.W);
+        button.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            archivePartSizeFlag.set(true);
+          }
+        });
+        Widgets.addModifyListener(new WidgetModifyListener(button,archivePartSizeFlag)
+        {
+          @Override
+          public void modified(Control control, WidgetVariable archivePartSizeFlag)
+          {
+            ((Button)control).setSelection(maxBandWidthFlag.getBoolean());
+            widgetFTPMaxBandWidth.setEnabled(maxBandWidthFlag.getBoolean());
+          }
+        });
+
+        widgetFTPMaxBandWidth = Widgets.newCombo(composite);
+        widgetFTPMaxBandWidth.setItems(new String[]{"32K","64K","128K","256K","512K"});
+        Widgets.layout(widgetFTPMaxBandWidth,0,2,TableLayoutData.W);
+      }
+*/
+
+      if (widgets.contains(WidgetTypes.ARCHIVE_FILE_MODE))
+      {
+        label = Widgets.newLabel(this,BARControl.tr("Archive file mode")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+
+        archiveFileMode = Widgets.newOptionMenu(this);
+        archiveFileMode.setToolTipText(BARControl.tr("If set to ''rename'' then the archive is renamed if it already exists.\nIf set to ''append'' then data is appended to the existing archive files.\nIf set to ''overwrite'' then existing archive files are overwritten."));
+        Widgets.setComboItems(archiveFileMode,new Object[]{BARControl.tr("stop if exists"  ),"stop",
+                                                           BARControl.tr("rename if exists"),"rename",
+                                                           BARControl.tr("append"          ),"append",
+                                                           BARControl.tr("overwrite"       ),"overwrite"
+                                                          }
+                             );
+        Widgets.layout(archiveFileMode,row,1,TableLayoutData.W);
+        archiveFileMode.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Combo  widget = (Combo)selectionEvent.widget;
+            String string = Widgets.getSelectedComboItem(widget,"stop");
+
+            if (archiveFileModeVariable != null)
+            {
+              archiveFileModeVariable.set(string);
+            }
+          }
+        });
+        if (archiveFileModeVariable != null)
+        {
+          Widgets.addModifyListener(new WidgetModifyListener(archiveFileMode,archiveFileModeVariable));
+        }
+        row++;
+      }
+
+      setVisible(false);
+    }
+
+    /** create SMB super widget
+     * @param composite parent composite
+     * @param hostNameVariable host name variable (can be null)
+     * @param loginNameVariable login name variable (can be null)
+     * @param loginPasswordVariable login password variable (can be null)
+     * @param shareNameVariable share name variable (can be null)
+     * @param archiveFileModeVariable archive mode variable (can be null)
+     */
+    public SMB(Composite      composite,
+               WidgetVariable hostNameVariable,
+               WidgetVariable loginNameVariable,
+               WidgetVariable loginPasswordVariable,
+               WidgetVariable shareNameVariable,
+               WidgetVariable archiveFileModeVariable
+              )
+    {
+      this(composite,
+           EnumSet.allOf(WidgetTypes.class),
+           hostNameVariable,
+           loginNameVariable,
+           loginPasswordVariable,
+           shareNameVariable,
+           archiveFileModeVariable
+          );
+    }
+
+    /** create SMB super widget
+     * @param composite parent composite
+     * @param widgets optional widgets to show
+     */
+    public SMB(Composite            composite,
+               EnumSet<WidgetTypes> widgets
+              )
+    {
+      this(composite,
+           widgets,
+           (WidgetVariable)null,
+           (WidgetVariable)null,
+           (WidgetVariable)null,
+           (WidgetVariable)null,
+           (WidgetVariable)null
+          );
+    }
+
+    /** create SMB super widget
+     */
+    public SMB(Composite composite)
+    {
+      this(composite,
+           EnumSet.noneOf(WidgetTypes.class)
+          );
+    }
+  };
+
   /** WebDAV super widget
    */
   static class WebDAV extends Composite
@@ -3283,7 +3774,7 @@ public class BARWidgets
     Text    publicKey,privateKey;
     Combo   archiveFileMode;
 
-    /** create device super widget
+    /** create webDAV super widget
      * @param composite parent composite
      * @param widgets optional widgets to show
      * @param hostNameVariable host name variable (can be null)
@@ -3939,7 +4430,7 @@ public class BARWidgets
       setVisible(false);
     }
 
-    /** create device super widget
+    /** create webDAV super widget
      * @param composite parent composite
      * @param widgets optional widgets to show
      * @param hostNameVariable host name variable (can be null)
@@ -3950,14 +4441,14 @@ public class BARWidgets
      * @param privateKeyVariable private key variable (can be null)
      * @param archiveFileModeVariable archive mode variable (can be null)
      */
-    public WebDAV(final Composite      composite,
-                  final WidgetVariable hostNameVariable,
-                  final WidgetVariable hostPortVariable,
-                  final WidgetVariable loginNameVariable,
-                  final WidgetVariable loginPasswordVariable,
-                  final WidgetVariable publicKeyVariable,
-                  final WidgetVariable privateKeyVariable,
-                  final WidgetVariable archiveFileModeVariable
+    public WebDAV(Composite      composite,
+                  WidgetVariable hostNameVariable,
+                  WidgetVariable hostPortVariable,
+                  WidgetVariable loginNameVariable,
+                  WidgetVariable loginPasswordVariable,
+                  WidgetVariable publicKeyVariable,
+                  WidgetVariable privateKeyVariable,
+                  WidgetVariable archiveFileModeVariable
                  )
     {
       this(composite,
@@ -3972,7 +4463,7 @@ public class BARWidgets
           );
     }
 
-    /** create device super widget
+    /** create webDAV super widget
      * @param composite parent composite
      * @param widgets optional widgets to show
      */
@@ -3992,7 +4483,7 @@ public class BARWidgets
           );
     }
 
-    /** create device super widget
+    /** create webDAV super widget
      */
     public WebDAV(Composite composite)
     {
@@ -4024,7 +4515,7 @@ public class BARWidgets
     Button blank;
     Button waitFirstVolume;
 
-    /** create device super widget
+    /** create optical super widget
      * @param composite parent composite
      * @param widgets optional widgets to show
      * @param deviceNameVariable device name variable (can be null)
@@ -4343,7 +4834,7 @@ public class BARWidgets
       setVisible(false);
     }
 
-    /** create device super widget
+    /** create optical super widget
      * @param composite parent composite
      * @param widgets optional widgets to show
      * @param deviceNameVariable device name variable (can be null)
@@ -4354,14 +4845,14 @@ public class BARWidgets
      * @param archivePartSizeFlag archive parts enable variable (can be null)
      * @param archivePartSize archive part size variable (can be null)
      */
-    public Optical(final Composite      composite,
-                   final WidgetVariable deviceNameVariable,
-                   final WidgetVariable volumeSizeVariable,
-                   final WidgetVariable eccVariable,
-                   final WidgetVariable blankVariable,
-                   final WidgetVariable waitFirstVolumeVariable,
-                   final WidgetVariable archivePartSizeFlag,
-                   final WidgetVariable archivePartSize
+    public Optical(Composite      composite,
+                   WidgetVariable deviceNameVariable,
+                   WidgetVariable volumeSizeVariable,
+                   WidgetVariable eccVariable,
+                   WidgetVariable blankVariable,
+                   WidgetVariable waitFirstVolumeVariable,
+                   WidgetVariable archivePartSizeFlag,
+                   WidgetVariable archivePartSize
                   )
     {
       this(composite,
@@ -4376,7 +4867,7 @@ public class BARWidgets
           );
     }
 
-    /** create device super widget
+    /** create optical super widget
      * @param composite parent composite
      * @param widgets optional widgets to show
      */
@@ -4396,7 +4887,7 @@ public class BARWidgets
           );
     }
 
-    /** create device super widget
+    /** create optical super widget
      */
     public Optical(Composite composite)
     {
@@ -4605,9 +5096,9 @@ public class BARWidgets
      * @param deviceNameVariable device name variable (can be null)
      * @param volumeSizeVariable volume size variable (can be null)
      */
-    public Device(final Composite      composite,
-                  final WidgetVariable deviceNameVariable,
-                  final WidgetVariable volumeSizeVariable
+    public Device(Composite      composite,
+                  WidgetVariable deviceNameVariable,
+                  WidgetVariable volumeSizeVariable
                  )
     {
       this(composite,

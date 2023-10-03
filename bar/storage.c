@@ -1052,7 +1052,7 @@ void Storage_doneAll(void)
   storageSpecifier->hostPort             = 0;
   storageSpecifier->loginName            = String_new();
   storageSpecifier->loginPassword        = Password_new();
-  storageSpecifier->share                = String_new();
+  storageSpecifier->shareName            = String_new();
   storageSpecifier->deviceName           = String_new();
   storageSpecifier->archiveName          = String_new();
   storageSpecifier->archivePatternString = NULL;
@@ -1087,7 +1087,7 @@ void Storage_doneAll(void)
   destinationStorageSpecifier->hostPort             = sourceStorageSpecifier->hostPort;
   destinationStorageSpecifier->loginName            = String_duplicate(sourceStorageSpecifier->loginName);
   destinationStorageSpecifier->loginPassword        = Password_duplicate(sourceStorageSpecifier->loginPassword);
-  destinationStorageSpecifier->share                = String_duplicate(sourceStorageSpecifier->share);
+  destinationStorageSpecifier->shareName            = String_duplicate(sourceStorageSpecifier->shareName);
   destinationStorageSpecifier->deviceName           = String_duplicate(sourceStorageSpecifier->deviceName);
   destinationStorageSpecifier->archiveName          = String_duplicate(sourceStorageSpecifier->archiveName);
   if (sourceStorageSpecifier->archivePatternString != NULL)
@@ -1136,7 +1136,7 @@ void Storage_doneAll(void)
   }
   String_delete(storageSpecifier->archiveName);
   String_delete(storageSpecifier->deviceName);
-  String_delete(storageSpecifier->share);
+  String_delete(storageSpecifier->shareName);
   Password_delete(storageSpecifier->loginPassword);
   String_delete(storageSpecifier->loginName);
   String_delete(storageSpecifier->hostName);
@@ -1319,6 +1319,21 @@ bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
   assert(loginName != NULL);
 
   return StorageWebDAV_parseSpecifier(webdavSpecifier,hostName,hostPort,loginName,loginPassword);
+}
+
+bool Storage_parseSMBSpecifier(ConstString smbSpecifier,
+                               String      hostName,
+                               String      loginName,
+                               Password    *loginPassword,
+                               String      shareName
+                              )
+{
+  assert(smbSpecifier != NULL);
+  assert(hostName != NULL);
+  assert(loginName != NULL);
+  assert(shareName != NULL);
+
+  return StorageSMB_parseSpecifier(smbSpecifier,hostName,loginName,loginPassword,shareName);
 }
 
 bool Storage_parseOpticalSpecifier(ConstString opticalSpecifier,
@@ -1588,16 +1603,16 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     {
       String_sub(string,storageName,6,nextIndex-6);
       String_trimEnd(string,"/");
-      if (!Storage_parseWebDAVSpecifier(string,
-                                        storageSpecifier->hostName,
-                                        &storageSpecifier->hostPort,
-                                        storageSpecifier->loginName,
-                                        storageSpecifier->loginPassword
-                                       )
+      if (!Storage_parseSMBSpecifier(string,
+                                     storageSpecifier->hostName,
+                                     storageSpecifier->loginName,
+                                     storageSpecifier->loginPassword,
+                                     storageSpecifier->shareName
+                                    )
          )
       {
         AutoFree_cleanup(&autoFreeList);
-        return ERROR_INVALID_WEBDAV_SPECIFIER;
+        return ERROR_INVALID_SMB_SPECIFIER;
       }
       String_sub(archiveName,storageName,nextIndex,STRING_END);
     }
@@ -2219,7 +2234,7 @@ uint Storage_getServerSettings(Server                 *server,
           Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_SMB);
           server->smb.loginName = String_duplicate(existingServerNode->server.smb.loginName);
           Password_set(&server->smb.password,&existingServerNode->server.smb.password);
-          server->smb.share = String_duplicate(existingServerNode->server.smb.share);
+          server->smb.shareName = String_duplicate(existingServerNode->server.smb.shareName);
           server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->server.writePreProcessCommand )
                                                                ? existingServerNode->server.writePreProcessCommand
                                                                : globalOptions.smb.writePreProcessCommand

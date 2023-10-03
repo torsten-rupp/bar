@@ -640,7 +640,6 @@ LOCAL void doneOptionsSSHServer(SSHServer *sshServer)
 LOCAL void initOptionsWebDAVServer(WebDAVServer *webDAVServer)
 {
   assert(webDAVServer != NULL);
-//  assert(globalOptions.defaultWebDAVServer != NULL);
 
   webDAVServer->loginName = String_new();
   Password_initDuplicate(&webDAVServer->password,&globalOptions.defaultWebDAVServer.webDAV.password);
@@ -652,21 +651,21 @@ LOCAL void initOptionsWebDAVServer(WebDAVServer *webDAVServer)
 * Name   : duplicateOptionsWebDAVServer
 * Purpose: duplicate webDAV server
 * Input  : webDAVServer     - webDAV server
-*          fromWEBDAVServer - from webDAV server
+*          fromWebDAVServer - from webDAV server
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void duplicateOptionsWebDAVServer(WebDAVServer *webDAVServer, const WebDAVServer *fromWEBDAVServer)
+LOCAL void duplicateOptionsWebDAVServer(WebDAVServer *webDAVServer, const WebDAVServer *fromWebDAVServer)
 {
   assert(webDAVServer != NULL);
-  assert(fromWEBDAVServer != NULL);
+  assert(fromWebDAVServer != NULL);
 
-  webDAVServer->loginName = String_duplicate(fromWEBDAVServer->loginName);
-  Password_initDuplicate(&webDAVServer->password,&fromWEBDAVServer->password);
-  Configuration_duplicateKey(&webDAVServer->publicKey,&fromWEBDAVServer->publicKey);
-  Configuration_duplicateKey(&webDAVServer->privateKey,&fromWEBDAVServer->privateKey);
+  webDAVServer->loginName = String_duplicate(fromWebDAVServer->loginName);
+  Password_initDuplicate(&webDAVServer->password,&fromWebDAVServer->password);
+  Configuration_duplicateKey(&webDAVServer->publicKey,&fromWebDAVServer->publicKey);
+  Configuration_duplicateKey(&webDAVServer->privateKey,&fromWebDAVServer->privateKey);
 }
 
 /***********************************************************************\
@@ -705,6 +704,76 @@ LOCAL void doneOptionsWebDAVServer(WebDAVServer *webDAVServer)
   Configuration_doneKey(&webDAVServer->publicKey);
   Password_done(&webDAVServer->password);
   String_delete(webDAVServer->loginName);
+}
+
+/***********************************************************************\
+* Name   : initOptionsSMBServer
+* Purpose: init SMB server
+* Input  : smbServer - SMB server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initOptionsSMBServer(SMBServer *smbServer)
+{
+  assert(smbServer != NULL);
+
+  smbServer->loginName = String_new();
+  Password_initDuplicate(&smbServer->password,&globalOptions.defaultSMBServer.smb.password);
+}
+
+/***********************************************************************\
+* Name   : duplicateOptionsSMBServer
+* Purpose: duplicate SMB server
+* Input  : smbServer     - SMB server
+*          fromSMBServer - from SMB server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void duplicateOptionsSMBServer(SMBServer *smbServer, const SMBServer *fromSMBServer)
+{
+  assert(smbServer != NULL);
+  assert(fromSMBServer != NULL);
+
+  smbServer->loginName = String_duplicate(fromSMBServer->loginName);
+  Password_initDuplicate(&smbServer->password,&fromSMBServer->password);
+}
+
+/***********************************************************************\
+* Name   : clearOptionsSMBServer
+* Purpose: clear SMB server
+* Input  : smbServer - SMB server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clearOptionsSMBServer(SMBServer *smbServer)
+{
+  assert(smbServer != NULL);
+
+  String_clear(smbServer->loginName);
+  Password_clear(&smbServer->password);
+}
+
+/***********************************************************************\
+* Name   : doneOptionsSMBServer
+* Purpose: done SMB server
+* Input  : smbServer - SMB server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneOptionsSMBServer(SMBServer *smbServer)
+{
+  assert(smbServer != NULL);
+
+  Password_done(&smbServer->password);
+  String_delete(smbServer->loginName);
 }
 
 /***********************************************************************\
@@ -1021,6 +1090,7 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   clearOptionsFTPServer(&jobOptions->ftpServer);
   clearOptionsSSHServer(&jobOptions->sshServer);
   clearOptionsWebDAVServer(&jobOptions->webDAVServer);
+  clearOptionsSMBServer(&jobOptions->smbServer);
   clearOptionsOpticalDisk(&jobOptions->opticalDisk);
   clearOptionsDevice(&jobOptions->device);
 
@@ -2808,6 +2878,7 @@ void Job_initOptions(JobOptions *jobOptions)
   initOptionsFTPServer(&jobOptions->ftpServer);
   initOptionsSSHServer(&jobOptions->sshServer);
   initOptionsWebDAVServer(&jobOptions->webDAVServer);
+  initOptionsSMBServer(&jobOptions->smbServer);
   initOptionsOpticalDisk(&jobOptions->opticalDisk);
   initOptionsDevice(&jobOptions->device);
 
@@ -2939,6 +3010,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   duplicateOptionsFTPServer(&jobOptions->ftpServer,&fromJobOptions->ftpServer);
   duplicateOptionsSSHServer(&jobOptions->sshServer,&fromJobOptions->sshServer);
   duplicateOptionsWebDAVServer(&jobOptions->webDAVServer,&fromJobOptions->webDAVServer);
+  duplicateOptionsSMBServer(&jobOptions->smbServer,&fromJobOptions->smbServer);
   duplicateOptionsOpticalDisk(&jobOptions->opticalDisk,&fromJobOptions->opticalDisk);
   duplicateOptionsDevice(&jobOptions->device,&fromJobOptions->device);
 
@@ -2990,6 +3062,7 @@ void Job_doneOptions(JobOptions *jobOptions)
   doneOptionsDevice(&jobOptions->device);
   doneOptionsOpticalDisk(&jobOptions->opticalDisk);
 
+  doneOptionsSMBServer(&jobOptions->smbServer);
   doneOptionsWebDAVServer(&jobOptions->webDAVServer);
   doneOptionsSSHServer(&jobOptions->sshServer);
   doneOptionsFTPServer(&jobOptions->ftpServer);

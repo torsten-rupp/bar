@@ -2949,7 +2949,6 @@ public class TabStatus
         {
           public void run()
           {
-Dprintf.dprintf("valueMap=%s",valueMap);
             JobData.States state       = valueMap.getEnum  ("state",JobData.States.class);
             int            errorCode   = valueMap.getInt   ("errorCode");
             int            errorNumber = valueMap.getInt   ("errorNumber");
