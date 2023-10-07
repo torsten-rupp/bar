@@ -1975,14 +1975,14 @@ void initStatusInfo(StatusInfo *statusInfo)
   statusInfo->storage.totalSize   = 0LL;
   statusInfo->volume.number       = 0;
   statusInfo->volume.progress     = 0.0;
-  statusInfo->message             = String_new();
+  statusInfo->message.data        = String_new();
 }
 
 void doneStatusInfo(StatusInfo *statusInfo)
 {
   assert(statusInfo != NULL);
 
-  String_delete(statusInfo->message);
+  String_delete(statusInfo->message.data);
   String_delete(statusInfo->storage.name);
   String_delete(statusInfo->entry.name);
 }
@@ -1991,26 +1991,28 @@ void setStatusInfo(StatusInfo *statusInfo, const StatusInfo *fromStatusInfo)
 {
   assert(statusInfo != NULL);
 
-  statusInfo->done.count           = fromStatusInfo->done.count;
-  statusInfo->done.size            = fromStatusInfo->done.size;
-  statusInfo->total.count          = fromStatusInfo->total.count;
-  statusInfo->total.size           = fromStatusInfo->total.size;
-  statusInfo->collectTotalSumDone  = fromStatusInfo->collectTotalSumDone;
-  statusInfo->skipped.count        = fromStatusInfo->skipped.count;
-  statusInfo->skipped.size         = fromStatusInfo->skipped.size;
-  statusInfo->error.count          = fromStatusInfo->error.count;
-  statusInfo->error.size           = fromStatusInfo->error.size;
-  statusInfo->archiveSize          = fromStatusInfo->archiveSize;
-  statusInfo->compressionRatio     = fromStatusInfo->compressionRatio;
+  statusInfo->done.count          = fromStatusInfo->done.count;
+  statusInfo->done.size           = fromStatusInfo->done.size;
+  statusInfo->total.count         = fromStatusInfo->total.count;
+  statusInfo->total.size          = fromStatusInfo->total.size;
+  statusInfo->collectTotalSumDone = fromStatusInfo->collectTotalSumDone;
+  statusInfo->skipped.count       = fromStatusInfo->skipped.count;
+  statusInfo->skipped.size        = fromStatusInfo->skipped.size;
+  statusInfo->error.count         = fromStatusInfo->error.count;
+  statusInfo->error.size          = fromStatusInfo->error.size;
+  statusInfo->archiveSize         = fromStatusInfo->archiveSize;
+  statusInfo->compressionRatio    = fromStatusInfo->compressionRatio;
   String_set(statusInfo->entry.name,fromStatusInfo->entry.name);
-  statusInfo->entry.doneSize       = fromStatusInfo->entry.doneSize;
-  statusInfo->entry.totalSize      = fromStatusInfo->entry.totalSize;
+  statusInfo->entry.doneSize      = fromStatusInfo->entry.doneSize;
+  statusInfo->entry.totalSize     = fromStatusInfo->entry.totalSize;
   String_set(statusInfo->storage.name,fromStatusInfo->storage.name);
-  statusInfo->storage.doneSize     = fromStatusInfo->storage.doneSize;
-  statusInfo->storage.totalSize    = fromStatusInfo->storage.totalSize;
-  statusInfo->volume.number        = fromStatusInfo->volume.number;
-  statusInfo->volume.progress      = fromStatusInfo->volume.progress;
-  String_set(statusInfo->message,fromStatusInfo->message);
+  statusInfo->storage.doneSize    = fromStatusInfo->storage.doneSize;
+  statusInfo->storage.totalSize   = fromStatusInfo->storage.totalSize;
+  statusInfo->volume.number       = fromStatusInfo->volume.number;
+  statusInfo->volume.progress     = fromStatusInfo->volume.progress;
+
+  statusInfo->message.code        = fromStatusInfo->message.code;
+  String_set(statusInfo->message.data,fromStatusInfo->message.data);
 }
 
 Errors addStorageNameListFromFile(StringList *storageNameList, const char *fileName)

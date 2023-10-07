@@ -3819,8 +3819,7 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
       {
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
-//TODO: translate
-          String_setCString(createInfo->statusInfo.message,"waiting for temporary space");
+          createInfo->statusInfo.message.code = MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE;
         }
 
         do
@@ -3835,7 +3834,7 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
-          String_clear(createInfo->statusInfo.message);
+          createInfo->statusInfo.message.code = MESSAGE_CODE_NONE;
         }
       }
     }

@@ -1509,31 +1509,11 @@ bool Job_parseState(const char *name, JobStates *jobState, bool *noStorage, bool
   else if (stringEqualsIgnoreCase(name,"DRY_RUNNING"))
   {
     (*jobState) = JOB_STATE_RUNNING;
-    if (dryRun    != NULL) (*dryRun)    = TRUE;
+    if (dryRun != NULL) (*dryRun) = TRUE;
   }
   else if (stringEqualsIgnoreCase(name,"RUNNING"))
   {
     (*jobState) = JOB_STATE_RUNNING;
-  }
-  else if (stringEqualsIgnoreCase(name,"REQUEST_FTP_PASSWORD"))
-  {
-    (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
-  }
-  else if (stringEqualsIgnoreCase(name,"REQUEST_SSH_PASSWORD"))
-  {
-    (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
-  }
-  else if (stringEqualsIgnoreCase(name,"REQUEST_WEBDAV_PASSWORD"))
-  {
-    (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
-  }
-  else if (stringEqualsIgnoreCase(name,"REQUEST_CRYPT_PASSWORD"))
-  {
-    (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
-  }
-  else if (stringEqualsIgnoreCase(name,"REQUEST_VOLUME"))
-  {
-    (*jobState) = JOB_STATE_REQUEST_VOLUME;
   }
   else if (stringEqualsIgnoreCase(name,"DONE"))
   {
@@ -1586,21 +1566,6 @@ const char *Job_getStateText(JobStates jobState, bool noStorage, bool dryRun)
         stateText = "RUNNING";
       }
       break;
-    case JOB_STATE_REQUEST_FTP_PASSWORD:
-      stateText = "REQUEST_FTP_PASSWORD";
-      break;
-    case JOB_STATE_REQUEST_SSH_PASSWORD:
-      stateText = "REQUEST_SSH_PASSWORD";
-      break;
-    case JOB_STATE_REQUEST_WEBDAV_PASSWORD:
-      stateText = "REQUEST_WEBDAV_PASSWORD";
-      break;
-    case JOB_STATE_REQUEST_CRYPT_PASSWORD:
-      stateText = "REQUEST_CRYPT_PASSWORD";
-      break;
-    case JOB_STATE_REQUEST_VOLUME:
-      stateText = "REQUEST_VOLUME";
-      break;
     case JOB_STATE_DONE:
       stateText = "DONE";
       break;
@@ -1621,6 +1586,24 @@ const char *Job_getStateText(JobStates jobState, bool noStorage, bool dryRun)
   }
 
   return stateText;
+}
+
+const char *Job_getMessageCodeText(MessageCodes messageCode)
+{
+  const char *MESSAGE_CODE_TEXT[] =
+  {
+    "NONE",
+    "WAIT_FOR_TEMPORARY_SPACE",
+    "WAIT_FOR_VOLUME",
+    "ADD_ERROR_CORRECTION_CODES",
+    "BLANK_MEDIUM",
+    "WRITE_MEDIUM"
+  };
+
+  assert(messageCode >= MESSAGE_CODE_MIN);
+  assert(messageCode <= MESSAGE_CODE_MAX);
+
+  return MESSAGE_CODE_TEXT[(uint)messageCode];
 }
 
 ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID)
@@ -2782,7 +2765,8 @@ void Job_resetStatusInfo(StatusInfo *statusInfo)
   statusInfo->storage.totalSize      = 0LL;
   statusInfo->volume.number          = 0;
   statusInfo->volume.progress        = 0.0;
-  String_clear(statusInfo->message);
+  statusInfo->message.code           = MESSAGE_CODE_NONE;
+  String_clear(statusInfo->message.data);
 }
 
 void Job_resetRunningInfo(RunningInfo *runningInfo)

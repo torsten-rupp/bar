@@ -273,6 +273,41 @@ typedef enum
   RESTORE_ENTRY_MODE_SKIP_EXISTING
 } RestoreEntryModes;
 
+// message codes
+typedef enum
+{
+  MESSAGE_CODE_NONE,
+  MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE,
+// TODO: rename MESSAGE_CODE_REQUEST_VOLUME -> MESSAGE_CODE_REQUEST_MEDIUM
+  MESSAGE_CODE_REQUEST_VOLUME,
+  MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES,
+  MESSAGE_CODE_BLANK_MEDIUM,
+  MESSAGE_CODE_WRITE_MEDIUM,
+} MessageCodes;
+#define MESSAGE_CODE_MIN MESSAGE_CODE_NONE
+#define MESSAGE_CODE_MAX MESSAGE_CODE_WRITE_MEDIUM
+
+// running info
+typedef struct
+{
+  Errors            error;                            // error
+
+  uint              lastErrorCode;
+  uint              lastErrorNumber;
+  String            lastErrorData;
+
+  uint64            lastExecutedDateTime;             // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
+
+  PerformanceFilter entriesPerSecondFilter;
+  PerformanceFilter bytesPerSecondFilter;
+  PerformanceFilter storageBytesPerSecondFilter;
+
+  double            entriesPerSecond;                 // average processed entries last 10s [1/s]
+  double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
+  double            storageBytesPerSecond;            // average processed storage bytes last 10s [1/s]
+  ulong             estimatedRestTime;                // estimated rest running time [s]
+} RunningInfo;
+
 // log types
 typedef enum
 {
@@ -1083,8 +1118,29 @@ typedef struct
     uint      number;                                         // current volume number
     double    progress;                                       // current volume progress [0..100]
   } volume;
-  String message;                                             // last message
+
+  struct
+  {
+    MessageCodes code;
+    String       data;
+  } message;                                                  // last message
 } StatusInfo;
+
+/***********************************************************************\
+* Name   : StatusInfoFunction
+* Purpose: status info call-back
+* Input  : error      - error code
+*          statusInfo - create status info
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*StatusInfoFunction)(Errors           error,
+                                  const StatusInfo *statusInfo,
+                                  void             *userData
+                                 );
 
 /***********************************************************************\
 * Name   : GetNamePasswordFunction
@@ -1112,22 +1168,6 @@ typedef Errors(*GetNamePasswordFunction)(String        name,
                                          bool          weakCheckFlag,
                                          void          *userData
                                         );
-
-/***********************************************************************\
-* Name   : StatusInfoFunction
-* Purpose: status info call-back
-* Input  : error      - error code
-*          statusInfo - create status info
-*          userData   - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-typedef void(*StatusInfoFunction)(Errors           error,
-                                  const StatusInfo *statusInfo,
-                                  void             *userData
-                                 );
 
 /***********************************************************************\
 * Name   : IsPauseFunction

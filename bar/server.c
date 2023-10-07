@@ -796,11 +796,10 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    // request volume, set job state
+    // request volume
     assert(jobNode->jobState == JOB_STATE_RUNNING);
     jobNode->requestedVolumeNumber = volumeNumber;
-    String_setCString(jobNode->statusInfo.message,message);
-    jobNode->jobState = JOB_STATE_REQUEST_VOLUME;
+    jobNode->statusInfo.message.code = MESSAGE_CODE_REQUEST_VOLUME;
     Job_listSignalModifed();
 
     // wait until volume is available or job is aborted
@@ -827,9 +826,8 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
            && (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_NONE)
           );
 
-    // clear request volume, set job state
-    String_clear(jobNode->statusInfo.message);
-    jobNode->jobState = JOB_STATE_RUNNING;
+    // clear request volume
+    jobNode->statusInfo.message.code = MESSAGE_CODE_NONE;
     Job_listSignalModifed();
   }
 
@@ -6250,7 +6248,7 @@ LOCAL void jobThreadCode(void)
                      jobNode->jobState,
                      jobNode->noStorage,
                      jobNode->dryRun,
-                     jobNode->statusInfo.message
+                     jobNode->statusInfo.message.data
                     );
     }
     doneLog(&logHandle);
@@ -11078,7 +11076,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     JOB_LIST_ITERATEX(jobNode,!isQuit() && !isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveTLSMode=%s slaveState=%'s slaveTLS=%y slaveInsecureTLS=%y archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S estimatedRestTime=%lu",
+                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveTLSMode=%s slaveState=%'s slaveTLS=%y slaveInsecureTLS=%y archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S estimatedRestTime=%lu messageCode=%s",
                           jobNode->job.uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
@@ -11110,7 +11108,8 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           jobNode->runningInfo.lastExecutedDateTime,
                           jobNode->runningInfo.lastErrorCode,
                           jobNode->runningInfo.lastErrorData,
-                          jobNode->runningInfo.estimatedRestTime
+                          jobNode->runningInfo.estimatedRestTime,
+                          Job_getMessageCodeText(jobNode->statusInfo.message.code)
                          );
     }
   }
@@ -11979,7 +11978,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     // format and send result
     // Note: remote jobs status is updated in jobThreadRun->Connector_create()
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%s errorCode=%u errorNumber=%d errorData=%'S doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
+                        "state=%s errorCode=%u errorNumber=%d errorData=%'S doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d messageCode=%s messageData=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
                         Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),
                         jobNode->runningInfo.lastErrorCode,
                         jobNode->runningInfo.lastErrorNumber,
@@ -12004,7 +12003,8 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
                         jobNode->statusInfo.volume.number,
                         jobNode->statusInfo.volume.progress,
                         jobNode->requestedVolumeNumber,
-                        jobNode->statusInfo.message,
+                        Job_getMessageCodeText(jobNode->statusInfo.message.code),
+                        jobNode->statusInfo.message.data,
                         jobNode->runningInfo.entriesPerSecond,
                         jobNode->runningInfo.bytesPerSecond,
                         jobNode->runningInfo.storageBytesPerSecond,

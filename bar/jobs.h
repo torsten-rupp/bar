@@ -154,11 +154,6 @@ typedef enum
   JOB_STATE_NONE,
   JOB_STATE_WAITING,
   JOB_STATE_RUNNING,
-  JOB_STATE_REQUEST_FTP_PASSWORD,
-  JOB_STATE_REQUEST_SSH_PASSWORD,
-  JOB_STATE_REQUEST_WEBDAV_PASSWORD,
-  JOB_STATE_REQUEST_CRYPT_PASSWORD,
-  JOB_STATE_REQUEST_VOLUME,
   JOB_STATE_DONE,
   JOB_STATE_ERROR,
   JOB_STATE_ABORTED,
@@ -174,27 +169,6 @@ typedef enum
   SLAVE_STATE_WRONG_PROTOCOL_VERSION,
   SLAVE_STATE_PAIRED
 } SlaveStates;
-
-// running info
-typedef struct
-{
-  Errors            error;                            // error
-
-  uint              lastErrorCode;
-  uint              lastErrorNumber;
-  String            lastErrorData;
-
-  uint64            lastExecutedDateTime;             // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
-
-  PerformanceFilter entriesPerSecondFilter;
-  PerformanceFilter bytesPerSecondFilter;
-  PerformanceFilter storageBytesPerSecondFilter;
-
-  double            entriesPerSecond;                 // average processed entries last 10s [1/s]
-  double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
-  double            storageBytesPerSecond;            // average processed storage bytes last 10s [1/s]
-  ulong             estimatedRestTime;                // estimated rest running time [s]
-} RunningInfo;
 
 // job node
 typedef struct JobNode
@@ -229,8 +203,6 @@ typedef struct JobNode
   bool                slaveTLS;                         // TRUE if slave TLS connection established
   bool                slaveInsecureTLS;                 // TRUE if insecure slave TLS connection established
 
-  StatusInfo          statusInfo;
-
   String              scheduleUUID;                     // schedule UUID or empty
   ArchiveTypes        archiveType;                      // archive type to create
   String              customText;                       // custom text or empty
@@ -247,6 +219,8 @@ typedef struct JobNode
   String              volumeMessage;                    // load volume message
   bool                volumeUnloadFlag;                 // TRUE to unload volume
 
+// TODO: combine
+  StatusInfo          statusInfo;
   RunningInfo         runningInfo;
 
   // cached statistics info
@@ -1136,11 +1110,6 @@ INLINE bool Job_isActive(JobStates jobState)
 {
   return (   (jobState == JOB_STATE_WAITING)
           || (jobState == JOB_STATE_RUNNING)
-          || (jobState == JOB_STATE_REQUEST_FTP_PASSWORD)
-          || (jobState == JOB_STATE_REQUEST_SSH_PASSWORD)
-          || (jobState == JOB_STATE_REQUEST_WEBDAV_PASSWORD)
-          || (jobState == JOB_STATE_REQUEST_CRYPT_PASSWORD)
-          || (jobState == JOB_STATE_REQUEST_VOLUME)
           || (jobState == JOB_STATE_DISCONNECTED)
          );
 }
@@ -1160,11 +1129,6 @@ INLINE bool Job_isRunning(JobStates jobState);
 INLINE bool Job_isRunning(JobStates jobState)
 {
   return (   (jobState == JOB_STATE_RUNNING)
-          || (jobState == JOB_STATE_REQUEST_FTP_PASSWORD)
-          || (jobState == JOB_STATE_REQUEST_SSH_PASSWORD)
-          || (jobState == JOB_STATE_REQUEST_WEBDAV_PASSWORD)
-          || (jobState == JOB_STATE_REQUEST_CRYPT_PASSWORD)
-          || (jobState == JOB_STATE_REQUEST_VOLUME)
           || (jobState == JOB_STATE_DISCONNECTED)
          );
 }
@@ -1572,7 +1536,7 @@ void Job_reset(JobNode *jobNode);
 * Notes  : -
 \***********************************************************************/
 
-void Job_resetStatusInfo(StatusInfo *statusInfo);
+//void Job_resetStatusInfo(StatusInfo *statusInfo);
 
 /***********************************************************************\
 * Name   : Job_resetRunningInfo

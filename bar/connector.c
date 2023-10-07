@@ -4155,16 +4155,41 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
     else if (stringEquals(jobStateText,"WAITING"                )) (*jobState) = JOB_STATE_WAITING;
     else if (stringEquals(jobStateText,"DRY_RUNNING"            )) (*jobState) = JOB_STATE_RUNNING;
     else if (stringEquals(jobStateText,"RUNNING"                )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEquals(jobStateText,"REQUEST_FTP_PASSWORD"   )) (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
-    else if (stringEquals(jobStateText,"REQUEST_SSH_PASSWORD"   )) (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
-    else if (stringEquals(jobStateText,"REQUEST_WEBDAV_PASSWORD")) (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
-    else if (stringEquals(jobStateText,"REQUEST_CRYPT_PASSWORD" )) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
-    else if (stringEquals(jobStateText,"REQUEST_VOLUME"         )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
     else if (stringEquals(jobStateText,"DONE"                   )) (*jobState) = JOB_STATE_DONE;
     else if (stringEquals(jobStateText,"ERROR"                  )) (*jobState) = JOB_STATE_ERROR;
     else if (stringEquals(jobStateText,"ABORTED"                )) (*jobState) = JOB_STATE_ABORTED;
     else if (stringEquals(jobStateText,"DISCONNECTED"           )) (*jobState) = JOB_STATE_DISCONNECTED;
     else                                                           (*jobState) = JOB_STATE_ERROR;
+
+    return TRUE;
+  }
+
+  /***********************************************************************\
+  * Name   : parseMessageCode
+  * Purpose: parse message code text
+  * Input  : jobStateText - job state text
+  *          jobState     - job state variable
+  *          userData     - user data (not used)
+  * Output : jobState - job state
+  * Return : always TRUE
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool parseMessageCode(const char *messageCodeText, MessageCodes *messageCode, void *userData);
+  bool parseMessageCode(const char *messageCodeText, MessageCodes *messageCode, void *userData)
+  {
+    assert(messageCodeText != NULL);
+    assert(messageCode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    if      (stringEquals(messageCodeText,"-"                         )) (*messageCode) = MESSAGE_CODE_NONE;
+    else if (stringEquals(messageCodeText,"WAIT_FOR_TEMPORARY_SPACE"  )) (*messageCode) = MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE;
+    else if (stringEquals(messageCodeText,"REQUEST_VOLUME"            )) (*messageCode) = MESSAGE_CODE_REQUEST_VOLUME;
+    else if (stringEquals(messageCodeText,"ADD_ERROR_CORRECTION_CODES")) (*messageCode) = MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES;
+    else if (stringEquals(messageCodeText,"BLANK_MEDIUM"              )) (*messageCode) = MESSAGE_CODE_BLANK_MEDIUM;
+    else if (stringEquals(messageCodeText,"WRITE_MEDIUM"              )) (*messageCode) = MESSAGE_CODE_WRITE_MEDIUM;
+    else                                                                 (*messageCode) = MESSAGE_CODE_NONE;
 
     return TRUE;
   }
@@ -4287,7 +4312,8 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                        StringMap_getUInt64(resultMap,"storageTotalSize",     &statusInfo.storage.totalSize,0L);
                                        StringMap_getUInt  (resultMap,"volumeNumber",         &statusInfo.volume.number,0);
                                        StringMap_getDouble(resultMap,"volumeProgress",       &statusInfo.volume.progress,0.0);
-                                       StringMap_getString(resultMap,"message",              statusInfo.message,NULL);
+                                       StringMap_getEnum  (resultMap,"messageCode",          &statusInfo.message.code,CALLBACK_((StringMapParseEnumFunction)parseMessageCode,NULL),MESSAGE_CODE_NONE);
+                                       StringMap_getString(resultMap,"messageData",          statusInfo.message.data,NULL);
 //TODO
 //                                       StringMap_getULong (resultMap,"entriesPerSecond",    &statusInfo.entriesPerSecond,0L);
 //                                       StringMap_getULong (resultMap,"bytesPerSecond",    &statusInfo.bytesPerSecond,0L);

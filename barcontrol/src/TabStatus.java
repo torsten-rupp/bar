@@ -71,11 +71,6 @@ class JobData implements Comparable<JobData>
     RUNNING,
     NO_STORAGE,
     DRY_RUNNING,
-    REQUEST_FTP_PASSWORD,
-    REQUEST_SSH_PASSWORD,
-    REQUEST_WEBDAV_PASSWORD,
-    REQUEST_CRYPT_PASSWORD,
-    REQUEST_VOLUME,
     DONE,
     ERROR,
     ABORTED,
@@ -88,20 +83,15 @@ class JobData implements Comparable<JobData>
     {
       switch (this)
       {
-        case NONE:                    return "";
-        case WAITING:                 return BARControl.tr("waiting");
-        case RUNNING:                 return BARControl.tr("running");
-        case NO_STORAGE:              return BARControl.tr("running (no storage)");
-        case DRY_RUNNING:             return BARControl.tr("dry run");
-        case REQUEST_FTP_PASSWORD:    return BARControl.tr("request FTP password");
-        case REQUEST_SSH_PASSWORD:    return BARControl.tr("request SSH password");
-        case REQUEST_WEBDAV_PASSWORD: return BARControl.tr("request webDAV password");
-        case REQUEST_CRYPT_PASSWORD:  return BARControl.tr("request crypt password");
-        case REQUEST_VOLUME:          return BARControl.tr("request volume");
-        case DONE:                    return BARControl.tr("done");
-        case ERROR:                   return BARControl.tr("ERROR");
-        case ABORTED:                 return BARControl.tr("aborted");
-        case DISCONNECTED:            return BARControl.tr("disconnected");
+        case NONE:         return "";
+        case WAITING:      return BARControl.tr("waiting");
+        case RUNNING:      return BARControl.tr("running");
+        case NO_STORAGE:   return BARControl.tr("running (no storage)");
+        case DRY_RUNNING:  return BARControl.tr("dry run");
+        case DONE:         return BARControl.tr("done");
+        case ERROR:        return BARControl.tr("ERROR");
+        case ABORTED:      return BARControl.tr("aborted");
+        case DISCONNECTED: return BARControl.tr("disconnected");
       }
 
       return "";
@@ -117,6 +107,41 @@ class JobData implements Comparable<JobData>
     WRONG_MODE,
     WRONG_PROTOCOL_VERSION,
     PAIRED;
+  };
+
+  /** message codes
+   */
+  static enum MessageCodes
+  {
+    NONE,
+    WAIT_FOR_TEMPORARY_SPACE,
+    REQUEST_FTP_PASSWORD,
+    REQUEST_SSH_PASSWORD,
+    REQUEST_WEBDAV_PASSWORD,
+    REQUEST_CRYPT_PASSWORD,
+// TODO: WAIT_FOR_VOLUME -> REQUEST_MEDIUM
+    WAIT_FOR_VOLUME,
+    ADD_ERROR_CORRECTION_CODES,
+    BLANK_MEDIUM,
+    WRITE_MEDIUM;
+
+    /** get (translated) running state text
+     * @return running state text
+     */
+    public String getText()
+    {
+      switch (this)
+      {
+        case NONE:                       return "";
+        case WAIT_FOR_TEMPORARY_SPACE:   return BARControl.tr("waiting for temporary space");
+        case WAIT_FOR_VOLUME:            return BARControl.tr("waiting for volumne");
+        case ADD_ERROR_CORRECTION_CODES: return BARControl.tr("adding error correction codes");
+        case BLANK_MEDIUM:               return BARControl.tr("blanking medium");
+        case WRITE_MEDIUM:               return BARControl.tr("writing medium");
+      }
+
+      return "";
+    }
   };
 
   /** get state text
@@ -181,6 +206,7 @@ class JobData implements Comparable<JobData>
   String       cryptPasswordMode;
   long         lastExecutedDateTime;
   long         estimatedRestTime;
+  MessageCodes messageCode;
 
   // date/time format
   private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -204,6 +230,7 @@ class JobData implements Comparable<JobData>
    * @param cryptPasswordMode crypt password mode
    * @param lastExecutedDateTime last executed date/time [s]
    * @param estimatedRestTime estimated rest time [s]
+   * @param messageCode message code
    */
   JobData(String       uuid,
           String       master,
@@ -222,7 +249,8 @@ class JobData implements Comparable<JobData>
           String       cryptType,
           String       cryptPasswordMode,
           long         lastExecutedDateTime,
-          long         estimatedRestTime
+          long         estimatedRestTime,
+          MessageCodes messageCode
          )
   {
     this.uuid                   = uuid;
@@ -243,6 +271,7 @@ class JobData implements Comparable<JobData>
     this.cryptPasswordMode      = cryptPasswordMode;
     this.lastExecutedDateTime   = lastExecutedDateTime;
     this.estimatedRestTime      = estimatedRestTime;
+    this.messageCode            = messageCode;
   }
 
   /** compare with other job data
@@ -1504,11 +1533,10 @@ public class TabStatus
         public void handle(Widget widget, JobData jobData)
         {
           MenuItem menuItem = (MenuItem)widget;
-          menuItem.setEnabled(   (jobData.state == JobData.States.WAITING       )
-                              || (jobData.state == JobData.States.RUNNING       )
-                              || (jobData.state == JobData.States.NO_STORAGE    )
-                              || (jobData.state == JobData.States.DRY_RUNNING   )
-                              || (jobData.state == JobData.States.REQUEST_VOLUME)
+          menuItem.setEnabled(   (jobData.state == JobData.States.WAITING    )
+                              || (jobData.state == JobData.States.RUNNING    )
+                              || (jobData.state == JobData.States.NO_STORAGE )
+                              || (jobData.state == JobData.States.DRY_RUNNING)
                              );
         }
       });
@@ -1569,7 +1597,7 @@ public class TabStatus
         public void handle(Widget widget, JobData jobData)
         {
           MenuItem menuItem = (MenuItem)widget;
-          menuItem.setEnabled(jobData.state == JobData.States.REQUEST_VOLUME);
+          menuItem.setEnabled(jobData.messageCode == JobData.MessageCodes.WAIT_FOR_VOLUME);
         }
       });
 
@@ -2244,11 +2272,10 @@ public class TabStatus
         public void handle(Widget widget, JobData jobData)
         {
           Button button = (Button)widget;
-          button.setEnabled(   (jobData.state == JobData.States.WAITING       )
-                            || (jobData.state == JobData.States.RUNNING       )
-                            || (jobData.state == JobData.States.NO_STORAGE    )
-                            || (jobData.state == JobData.States.DRY_RUNNING   )
-                            || (jobData.state == JobData.States.REQUEST_VOLUME)
+          button.setEnabled(   (jobData.state == JobData.States.WAITING    )
+                            || (jobData.state == JobData.States.RUNNING    )
+                            || (jobData.state == JobData.States.NO_STORAGE )
+                            || (jobData.state == JobData.States.DRY_RUNNING)
                            );
         }
       });
@@ -2310,7 +2337,7 @@ public class TabStatus
         public void handle(Widget widget, JobData jobData)
         {
           Button button = (Button)widget;
-          button.setEnabled(jobData.state == JobData.States.REQUEST_VOLUME);
+          button.setEnabled(jobData.messageCode == JobData.MessageCodes.WAIT_FOR_VOLUME);
         }
       });
 
@@ -2448,29 +2475,30 @@ public class TabStatus
                                  public void handle(int i, ValueMap valueMap)
                                  {
                                    // get data
-                                   String              jobUUID                = valueMap.getString ("jobUUID"                             );
-                                   String              master                 = valueMap.getString ("master",""                           );
-                                   String              name                   = valueMap.getString ("name"                                );
-                                   JobData.States      state                  = valueMap.getEnum   ("state",JobData.States.class          );
-                                   String              slaveHostName          = valueMap.getString ("slaveHostName",""                    );
-                                   int                 slaveHostPort          = valueMap.getInt    ("slaveHostPort",0                     );
-                                   JobData.SlaveStates slaveState             = valueMap.getEnum   ("slaveState",JobData.SlaveStates.class);
-                                   boolean             slaveTLS               = valueMap.getBoolean("slaveTLS",false                      );
-                                   boolean             slaveInsecureTLS       = valueMap.getBoolean("slaveInsecureTLS",true               );
-                                   ArchiveTypes        archiveType            = valueMap.getEnum   ("archiveType",ArchiveTypes.class      );
-                                   long                archivePartSize        = valueMap.getLong   ("archivePartSize"                     );
+                                   String               jobUUID                = valueMap.getString ("jobUUID"                               );
+                                   String               master                 = valueMap.getString ("master",""                             );
+                                   String               name                   = valueMap.getString ("name"                                  );
+                                   JobData.States       state                  = valueMap.getEnum   ("state",JobData.States.class            );
+                                   String               slaveHostName          = valueMap.getString ("slaveHostName",""                      );
+                                   int                  slaveHostPort          = valueMap.getInt    ("slaveHostPort",0                       );
+                                   JobData.SlaveStates  slaveState             = valueMap.getEnum   ("slaveState",JobData.SlaveStates.class  );
+                                   boolean              slaveTLS               = valueMap.getBoolean("slaveTLS",false                        );
+                                   boolean              slaveInsecureTLS       = valueMap.getBoolean("slaveInsecureTLS",true                 );
+                                   ArchiveTypes         archiveType            = valueMap.getEnum   ("archiveType",ArchiveTypes.class        );
+                                   long                 archivePartSize        = valueMap.getLong   ("archivePartSize"                       );
 //TODO: enum?
-                                   String              deltaCompressAlgorithm = valueMap.getString ("deltaCompressAlgorithm"              );
+                                   String               deltaCompressAlgorithm = valueMap.getString ("deltaCompressAlgorithm"                );
 //TODO: enum?
-                                   String              byteCompressAlgorithm  = valueMap.getString ("byteCompressAlgorithm"               );
+                                   String               byteCompressAlgorithm  = valueMap.getString ("byteCompressAlgorithm"                 );
 //TODO: enum?
-                                   String              cryptAlgorithm         = valueMap.getString ("cryptAlgorithm"                      );
+                                   String               cryptAlgorithm         = valueMap.getString ("cryptAlgorithm"                        );
 //TODO: enum?
-                                   String              cryptType              = valueMap.getString ("cryptType"                           );
+                                   String               cryptType              = valueMap.getString ("cryptType"                             );
 //TODO: enum?
-                                   String              cryptPasswordMode      = valueMap.getString ("cryptPasswordMode"                   );
-                                   long                lastExecutedDateTime   = valueMap.getLong   ("lastExecutedDateTime"                );
-                                   long                estimatedRestTime      = valueMap.getLong   ("estimatedRestTime"                   );
+                                   String               cryptPasswordMode      = valueMap.getString ("cryptPasswordMode"                     );
+                                   long                 lastExecutedDateTime   = valueMap.getLong   ("lastExecutedDateTime"                  );
+                                   long                 estimatedRestTime      = valueMap.getLong   ("estimatedRestTime"                     );
+                                   JobData.MessageCodes messageCode            = valueMap.getEnum   ("messageCode",JobData.MessageCodes.class);
 
                                    JobData jobData = jobDataMap.get(jobUUID);
                                    if (jobData != null)
@@ -2492,6 +2520,7 @@ public class TabStatus
                                      jobData.cryptPasswordMode      = cryptPasswordMode;
                                      jobData.lastExecutedDateTime   = lastExecutedDateTime;
                                      jobData.estimatedRestTime      = estimatedRestTime;
+                                     jobData.messageCode            = messageCode;
                                    }
                                    else
                                    {
@@ -2512,7 +2541,8 @@ public class TabStatus
                                                            cryptType,
                                                            cryptPasswordMode,
                                                            lastExecutedDateTime,
-                                                           estimatedRestTime
+                                                           estimatedRestTime,
+                                                           messageCode
                                                           );
                                    }
                                    newJobDataMap.put(jobUUID,jobData);
@@ -2601,14 +2631,19 @@ public class TabStatus
                   case RUNNING:
                   case NO_STORAGE:
                   case DRY_RUNNING:
-                    tableItem.setBackground(COLOR_RUNNING);
-                    break;
-                  case REQUEST_FTP_PASSWORD:
-                  case REQUEST_SSH_PASSWORD:
-                  case REQUEST_WEBDAV_PASSWORD:
-                  case REQUEST_CRYPT_PASSWORD:
-                  case REQUEST_VOLUME:
-                    tableItem.setBackground(COLOR_REQUEST);
+                    switch (jobData.messageCode)
+                    {
+                      case REQUEST_FTP_PASSWORD:
+                      case REQUEST_SSH_PASSWORD:
+                      case REQUEST_WEBDAV_PASSWORD:
+                      case REQUEST_CRYPT_PASSWORD:
+                      case WAIT_FOR_VOLUME:
+                        tableItem.setBackground(COLOR_REQUEST);
+                        break;
+                      default:
+                        tableItem.setBackground(COLOR_RUNNING);
+                        break;
+                    }
                     break;
                   case ERROR:
                     tableItem.setBackground(COLOR_ERROR);
@@ -2949,10 +2984,12 @@ public class TabStatus
         {
           public void run()
           {
-            JobData.States state       = valueMap.getEnum  ("state",JobData.States.class);
-            int            errorCode   = valueMap.getInt   ("errorCode");
-            int            errorNumber = valueMap.getInt   ("errorNumber");
-            String         errorData   = valueMap.getString("errorData");
+            JobData.States       state       = valueMap.getEnum  ("state",JobData.States.class);
+            int                  errorCode   = valueMap.getInt   ("errorCode");
+            int                  errorNumber = valueMap.getInt   ("errorNumber");
+            String               errorData   = valueMap.getString("errorData");
+            JobData.MessageCodes messageCode = valueMap.getEnum  ("messageCode",JobData.MessageCodes.class);
+            String               messageData = valueMap.getString("messageData");
 
             doneCount.set            (valueMap.getLong   ("doneCount"            ));
             doneSize.set             (valueMap.getLong   ("doneSize"             ));
@@ -2983,7 +3020,6 @@ public class TabStatus
                                                   totalEntrySize.getLong())
                                                  );
             requestedVolumeNumber.set(valueMap.getInt("requestedVolumeNumber"));
-            message.set              (valueMap.getString("message"));
 
             // trigger update job state listeners
             if (selectedJobData != null)
@@ -2999,25 +3035,36 @@ public class TabStatus
             {
               case NONE:
               case WAITING:
-                message.set("");
-                break;
               case RUNNING:
               case NO_STORAGE:
               case DRY_RUNNING:
-                break;
-              case REQUEST_FTP_PASSWORD:
-              case REQUEST_SSH_PASSWORD:
-              case REQUEST_WEBDAV_PASSWORD:
-              case REQUEST_CRYPT_PASSWORD:
-                break;
-              case REQUEST_VOLUME:
-                if (message.getString().isEmpty())
+                if      (!messageData.isEmpty())
                 {
-                  message.set(BARControl.tr("Please insert volume #{0}",requestedVolumeNumber.getInteger()));
+                  message.set(messageData);
+                }
+                else if (messageCode != JobData.MessageCodes.NONE)
+                {
+                  switch (messageCode)
+                  {
+                    case WAIT_FOR_VOLUME:
+// TODO: proper format of message without message.getString()
+                      if (message.getString().isEmpty())
+                      {
+                        message.set(BARControl.tr("Please insert volume #{0}",requestedVolumeNumber.getInteger()));
+                      }
+                      else
+                      {
+                        message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",requestedVolumeNumber.getInteger(),message.getString()));
+                      }
+                      break;
+                    default:
+                      message.set(messageCode.getText());
+                      break;
+                  }
                 }
                 else
                 {
-                  message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",requestedVolumeNumber.getInteger(),message.getString()));
+                  message.set("");
                 }
                 break;
               case DONE:
