@@ -761,26 +761,26 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
                 );
   }
 
-  storageInfo->opticalDisk.write.requestVolumeCommand   = String_duplicate(opticalDisk.requestVolumeCommand);
-  storageInfo->opticalDisk.write.unloadVolumeCommand    = String_duplicate(opticalDisk.unloadVolumeCommand);
-  storageInfo->opticalDisk.write.loadVolumeCommand      = String_duplicate(opticalDisk.loadVolumeCommand);
-  storageInfo->opticalDisk.write.volumeSize             = volumeSize;
-  storageInfo->opticalDisk.write.imagePreProcessCommand = String_duplicate(opticalDisk.imagePreProcessCommand);
-  storageInfo->opticalDisk.write.imagePostProcessCommand= String_duplicate(opticalDisk.imagePostProcessCommand);
-  storageInfo->opticalDisk.write.imageCommand           = String_duplicate(opticalDisk.imageCommand);
-  storageInfo->opticalDisk.write.eccPreProcessCommand   = String_duplicate(opticalDisk.eccPreProcessCommand);
-  storageInfo->opticalDisk.write.eccPostProcessCommand  = String_duplicate(opticalDisk.eccPostProcessCommand);
-  storageInfo->opticalDisk.write.eccCommand             = String_duplicate(opticalDisk.eccCommand);
-  storageInfo->opticalDisk.write.blankCommand           = String_duplicate(opticalDisk.blankCommand);
-  storageInfo->opticalDisk.write.writePreProcessCommand = String_duplicate(opticalDisk.writePreProcessCommand);
-  storageInfo->opticalDisk.write.writePostProcessCommand= String_duplicate(opticalDisk.writePostProcessCommand);
-  storageInfo->opticalDisk.write.writeCommand           = String_duplicate(opticalDisk.writeCommand);
-  storageInfo->opticalDisk.write.writeImageCommand      = String_duplicate(opticalDisk.writeImageCommand);
-  storageInfo->opticalDisk.write.steps                  = 1;
+  storageInfo->opticalDisk.write.requestVolumeCommand    = String_duplicate(opticalDisk.requestVolumeCommand);
+  storageInfo->opticalDisk.write.unloadVolumeCommand     = String_duplicate(opticalDisk.unloadVolumeCommand);
+  storageInfo->opticalDisk.write.loadVolumeCommand       = String_duplicate(opticalDisk.loadVolumeCommand);
+  storageInfo->opticalDisk.write.volumeSize              = volumeSize;
+  storageInfo->opticalDisk.write.imagePreProcessCommand  = String_duplicate(opticalDisk.imagePreProcessCommand);
+  storageInfo->opticalDisk.write.imagePostProcessCommand = String_duplicate(opticalDisk.imagePostProcessCommand);
+  storageInfo->opticalDisk.write.imageCommand            = String_duplicate(opticalDisk.imageCommand);
+  storageInfo->opticalDisk.write.eccPreProcessCommand    = String_duplicate(opticalDisk.eccPreProcessCommand);
+  storageInfo->opticalDisk.write.eccPostProcessCommand   = String_duplicate(opticalDisk.eccPostProcessCommand);
+  storageInfo->opticalDisk.write.eccCommand              = String_duplicate(opticalDisk.eccCommand);
+  storageInfo->opticalDisk.write.blankCommand            = String_duplicate(opticalDisk.blankCommand);
+  storageInfo->opticalDisk.write.writePreProcessCommand  = String_duplicate(opticalDisk.writePreProcessCommand);
+  storageInfo->opticalDisk.write.writePostProcessCommand = String_duplicate(opticalDisk.writePostProcessCommand);
+  storageInfo->opticalDisk.write.writeCommand            = String_duplicate(opticalDisk.writeCommand);
+  storageInfo->opticalDisk.write.writeImageCommand       = String_duplicate(opticalDisk.writeImageCommand);
+  storageInfo->opticalDisk.write.steps                   = 1;
   if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag) storageInfo->opticalDisk.write.steps += 3;
   if ((jobOptions != NULL) && jobOptions->blankFlag) storageInfo->opticalDisk.write.steps += 1;
-  storageInfo->opticalDisk.write.directory              = String_new();
-  storageInfo->opticalDisk.write.step                   = 0;
+  storageInfo->opticalDisk.write.directory               = String_new();
+  storageInfo->opticalDisk.write.step                    = 0;
   if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)
   {
     storageInfo->opticalDisk.write.number        = 0;
