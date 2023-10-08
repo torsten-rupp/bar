@@ -278,19 +278,68 @@ typedef enum
 {
   MESSAGE_CODE_NONE,
   MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE,
-// TODO: rename MESSAGE_CODE_REQUEST_VOLUME -> MESSAGE_CODE_REQUEST_MEDIUM
   MESSAGE_CODE_REQUEST_VOLUME,
   MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES,
-  MESSAGE_CODE_BLANK_MEDIUM,
-  MESSAGE_CODE_WRITE_MEDIUM,
+  MESSAGE_CODE_BLANK_VOLUME,
+  MESSAGE_CODE_WRITE_VOLUME
 } MessageCodes;
 #define MESSAGE_CODE_MIN MESSAGE_CODE_NONE
-#define MESSAGE_CODE_MAX MESSAGE_CODE_WRITE_MEDIUM
+#define MESSAGE_CODE_MAX MESSAGE_CODE_WRITE_VOLUME
 
 // running info
 typedef struct
 {
   Errors            error;                            // error
+
+  struct
+  {
+    struct
+    {
+      ulong     count;                                // number of entries processed
+      uint64    size;                                 // size processed [bytes]
+    } done;
+    struct
+    {
+      ulong     count;                                // total number of entries
+      uint64    size;                                 // total size of entries [bytes]
+    } total;
+    bool   collectTotalSumDone;                       // TRUE iff all entries are collected
+    struct
+    {
+      ulong     count;                                // number of skipped entries
+      uint64    size;                                 // size sum skipped [bytes]
+    } skipped;
+    struct
+    {
+      ulong     count;                                // number of entries with errors
+      uint64    size;                                 // size sum of entries with errors [bytes]
+    } error;
+    uint64 archiveSize;                               // number stored in archive [bytes]
+    double compressionRatio;                          // compression ratio
+    struct
+    {
+      String    name;                                 // current entry name
+      uint64    doneSize;                             // size processed of current entry [bytes]
+      uint64    totalSize;                            // total size of current entry [bytes]
+    } entry;
+    struct
+    {
+      String    name;                                 // current storage name
+      uint64    doneSize;                             // size processed of current archive [bytes]
+      uint64    totalSize;                            // total size of current archive [bytes]
+    } storage;
+    struct
+    {
+      uint      number;                               // current volume number
+      double    done;                                 // current volume progress done [0..100%]
+    } volume;
+  }                 progress;
+
+  struct
+  {
+    MessageCodes code;
+    String       data;
+  }                 message;                          // last message
 
   uint              lastErrorCode;
   uint              lastErrorNumber;
@@ -1075,72 +1124,21 @@ typedef struct
   #endif /* NDEBUG */
 } GlobalOptions;
 
-// status info data
-typedef struct
-{
-  struct
-  {
-    ulong     count;                                          // number of entries processed
-    uint64    size;                                           // size processed [bytes]
-  } done;
-  struct
-  {
-    ulong     count;                                          // total number of entries
-    uint64    size;                                           // total size of entries [bytes]
-  } total;
-  bool   collectTotalSumDone;                                 // TRUE iff all entries are collected
-  struct
-  {
-    ulong     count;                                          // number of skipped entries
-    uint64    size;                                           // size sum skipped [bytes]
-  } skipped;
-  struct
-  {
-    ulong     count;                                          // number of entries with errors
-    uint64    size;                                           // size sum of entries with errors [bytes]
-  } error;
-  uint64 archiveSize;                                         // number stored in archive [bytes]
-  double compressionRatio;                                    // compression ratio
-  struct
-  {
-    String    name;                                           // current entry name
-    uint64    doneSize;                                       // size processed of current entry [bytes]
-    uint64    totalSize;                                      // total size of current entry [bytes]
-  } entry;
-  struct
-  {
-    String    name;                                           // current storage name
-    uint64    doneSize;                                       // size processed of current archive [bytes]
-    uint64    totalSize;                                      // total size of current archive [bytes]
-  } storage;
-  struct
-  {
-    uint      number;                                         // current volume number
-    double    progress;                                       // current volume progress [0..100]
-  } volume;
-
-  struct
-  {
-    MessageCodes code;
-    String       data;
-  } message;                                                  // last message
-} StatusInfo;
-
 /***********************************************************************\
-* Name   : StatusInfoFunction
-* Purpose: status info call-back
-* Input  : error      - error code
-*          statusInfo - create status info
-*          userData   - user data
+* Name   : RunningInfoFunction
+* Purpose: running info call-back
+* Input  : error       - error code
+*          runningInfo - running info
+*          userData    - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*StatusInfoFunction)(Errors           error,
-                                  const StatusInfo *statusInfo,
-                                  void             *userData
-                                 );
+typedef void(*RunningInfoFunction)(Errors             error,
+                                   const RunningInfo *runningInfo,
+                                   void              *userData
+                                  );
 
 /***********************************************************************\
 * Name   : GetNamePasswordFunction
@@ -1238,6 +1236,64 @@ Errors Common_initAll(void);
 void Common_doneAll(void);
 
 // ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : initRunningInfo
+* Purpose: initialize running info
+* Input  : runningInfo - running info variable
+* Output : runningInfo - initialized create running variable
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void initRunningInfo(RunningInfo *runningInfo);
+
+/***********************************************************************\
+* Name   : doneRunningInfo
+* Purpose: done running info
+* Input  : runningInfo - running info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneRunningInfo(RunningInfo *runningInfo);
+
+/***********************************************************************\
+* Name   : setRunningInfo
+* Purpose: set running info from other info
+* Input  : runningInfo     - running info
+*          fromRunningInfo - from running info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void setRunningInfo(RunningInfo *runningInfo, const RunningInfo *fromRunningInfo);
+
+/***********************************************************************\
+* Name   : resetRunningInfo
+* Purpose: reset running info
+* Input  : runningInfo - running info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void resetRunningInfo(RunningInfo *runningInfo);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : messageCodeToString
+* Purpose: get message code string
+* Input  : messageCode - messsage code
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+const char *messageCodeToString(MessageCodes messageCode);
 
 /***********************************************************************\
 * Name   : templateInit

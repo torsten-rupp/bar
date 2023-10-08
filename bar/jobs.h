@@ -220,7 +220,7 @@ typedef struct JobNode
   bool                volumeUnloadFlag;                 // TRUE to unload volume
 
 // TODO: combine
-  StatusInfo          statusInfo;
+//  StatusInfo          statusInfo;
   RunningInfo         runningInfo;
 
   // cached statistics info
@@ -1526,28 +1526,6 @@ void Job_abort(JobNode *jobNode, const char *abortedByInfo);
 \***********************************************************************/
 
 void Job_reset(JobNode *jobNode);
-
-/***********************************************************************\
-* Name   : Job_resetStatusInfo
-* Purpose: reset job status info
-* Input  : statusInfo - status info*
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-//void Job_resetStatusInfo(StatusInfo *statusInfo);
-
-/***********************************************************************\
-* Name   : Job_resetRunningInfo
-* Purpose: reset job running info
-* Input  : runningInfo - running info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Job_resetRunningInfo(RunningInfo *runningInfo);
 
 #if 0
 /***********************************************************************\

@@ -1156,7 +1156,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->customText);
   String_delete(jobNode->scheduleUUID);
 
-  doneStatusInfo(&jobNode->statusInfo);
+  doneRunningInfo(&jobNode->runningInfo);
 
   String_delete(jobNode->byName);
 
@@ -1323,7 +1323,7 @@ JobNode *Job_new(JobTypes    jobType,
   jobNode->slaveTLS                         = FALSE;
   jobNode->slaveInsecureTLS                 = FALSE;
 
-  initStatusInfo(&jobNode->statusInfo);
+  initRunningInfo(&jobNode->runningInfo);
 
   jobNode->archiveType                      = ARCHIVE_TYPE_NORMAL;
   jobNode->scheduleUUID                     = String_new();
@@ -1349,8 +1349,7 @@ JobNode *Job_new(JobTypes    jobType,
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
-  Job_resetStatusInfo(&jobNode->statusInfo);
-  Job_resetRunningInfo(&jobNode->runningInfo);
+  resetRunningInfo(&jobNode->runningInfo);
 
   jobNode->executionCount.normal            = 0L;
   jobNode->executionCount.full              = 0L;
@@ -1403,7 +1402,7 @@ JobNode *Job_copy(const JobNode *jobNode,
   newJobNode->slaveTLS                         = FALSE;
   newJobNode->slaveInsecureTLS                 = FALSE;
 
-  initStatusInfo(&newJobNode->statusInfo);
+  initRunningInfo(&newJobNode->runningInfo);
 
   newJobNode->archiveType                      = ARCHIVE_TYPE_NORMAL;
   newJobNode->scheduleUUID                     = String_new();
@@ -1429,8 +1428,7 @@ JobNode *Job_copy(const JobNode *jobNode,
   Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
-  Job_resetStatusInfo(&newJobNode->statusInfo);
-  Job_resetRunningInfo(&newJobNode->runningInfo);
+  resetRunningInfo(&newJobNode->runningInfo);
 
   newJobNode->executionCount.normal            = 0L;
   newJobNode->executionCount.full              = 0L;
@@ -1586,24 +1584,6 @@ const char *Job_getStateText(JobStates jobState, bool noStorage, bool dryRun)
   }
 
   return stateText;
-}
-
-const char *Job_getMessageCodeText(MessageCodes messageCode)
-{
-  const char *MESSAGE_CODE_TEXT[] =
-  {
-    "NONE",
-    "WAIT_FOR_TEMPORARY_SPACE",
-    "WAIT_FOR_VOLUME",
-    "ADD_ERROR_CORRECTION_CODES",
-    "BLANK_MEDIUM",
-    "WRITE_MEDIUM"
-  };
-
-  assert(messageCode >= MESSAGE_CODE_MIN);
-  assert(messageCode <= MESSAGE_CODE_MAX);
-
-  return MESSAGE_CODE_TEXT[(uint)messageCode];
 }
 
 ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID)
@@ -2635,8 +2615,7 @@ void Job_trigger(JobNode      *jobNode,
     jobNode->volumeUnloadFlag      = FALSE;
     Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
-    Job_resetStatusInfo(&jobNode->statusInfo);
-    Job_resetRunningInfo(&jobNode->runningInfo);
+    resetRunningInfo(&jobNode->runningInfo);
 
     Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
   }
@@ -2651,8 +2630,7 @@ void Job_start(JobNode *jobNode)
   {
     // set job state, reset running info
     jobNode->jobState = JOB_STATE_RUNNING;
-    Job_resetStatusInfo(&jobNode->statusInfo);
-    Job_resetRunningInfo(&jobNode->runningInfo);
+    resetRunningInfo(&jobNode->runningInfo);
 
     // increment active counter
     jobList.activeCount++;
@@ -2737,58 +2715,8 @@ void Job_reset(JobNode *jobNode)
   if (!Job_isActive(jobNode->jobState))
   {
     jobNode->jobState = JOB_STATE_NONE;
-    Job_resetStatusInfo(&jobNode->statusInfo);
-    Job_resetRunningInfo(&jobNode->runningInfo);
+    resetRunningInfo(&jobNode->runningInfo);
   }
-}
-
-void Job_resetStatusInfo(StatusInfo *statusInfo)
-{
-  assert(statusInfo != NULL);
-
-  statusInfo->done.count             = 0L;
-  statusInfo->done.size              = 0LL;
-  statusInfo->total.count            = 0L;
-  statusInfo->total.size             = 0LL;
-  statusInfo->collectTotalSumDone    = FALSE;
-  statusInfo->skipped.count          = 0L;
-  statusInfo->skipped.size           = 0LL;
-  statusInfo->error.count            = 0L;
-  statusInfo->error.size             = 0LL;
-  statusInfo->archiveSize            = 0LL;
-  statusInfo->compressionRatio       = 0.0;
-  String_clear(statusInfo->entry.name);
-  statusInfo->entry.doneSize         = 0LL;
-  statusInfo->entry.totalSize        = 0LL;
-  String_clear(statusInfo->storage.name);
-  statusInfo->storage.doneSize       = 0LL;
-  statusInfo->storage.totalSize      = 0LL;
-  statusInfo->volume.number          = 0;
-  statusInfo->volume.progress        = 0.0;
-  statusInfo->message.code           = MESSAGE_CODE_NONE;
-  String_clear(statusInfo->message.data);
-}
-
-void Job_resetRunningInfo(RunningInfo *runningInfo)
-{
-  assert(runningInfo != NULL);
-
-  runningInfo->error                 = ERROR_NONE;
-
-  runningInfo->lastErrorCode         = ERROR_CODE_NONE;
-  runningInfo->lastErrorNumber       = 0;
-  String_clear(runningInfo->lastErrorData);
-
-  runningInfo->lastExecutedDateTime  = 0LL;
-
-  Misc_performanceFilterClear(&runningInfo->entriesPerSecondFilter     );
-  Misc_performanceFilterClear(&runningInfo->bytesPerSecondFilter       );
-  Misc_performanceFilterClear(&runningInfo->storageBytesPerSecondFilter);
-
-  runningInfo->entriesPerSecond      = 0.0;
-  runningInfo->bytesPerSecond        = 0.0;
-  runningInfo->storageBytesPerSecond = 0.0;
-  runningInfo->estimatedRestTime     = 0L;
 }
 
 void Job_initOptions(JobOptions *jobOptions)

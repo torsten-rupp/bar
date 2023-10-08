@@ -407,9 +407,9 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
 *                                         be NULL)
 *          getNamePasswordUserData      - user data for get password
 *                                         call back
-*          statusInfoFunction           - status info call back
+*          runningInfoFunction          - running info call back
 *                                         function (can be NULL)
-*          statusInfoUserData           - user data for status info
+*          runningInfoUserData          - user data for running info
 *                                         function
 *          storageRequestVolumeFunction - request volume call back
 *                                         function (can be NULL)
@@ -433,8 +433,8 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         ConstString                  customText,
                         GetNamePasswordFunction      getNamePasswordFunction,
                         void                         *getNamePasswordUserData,
-                        StatusInfoFunction           statusInfoFunction,
-                        void                         *statusInfoUserData,
+                        RunningInfoFunction          runningInfoFunction,
+                        void                         *runningInfoUserData,
                         StorageRequestVolumeFunction storageRequestVolumeFunction,
                         void                         *storageRequestVolumeUserData
                        );

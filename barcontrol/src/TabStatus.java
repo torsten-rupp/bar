@@ -119,11 +119,10 @@ class JobData implements Comparable<JobData>
     REQUEST_SSH_PASSWORD,
     REQUEST_WEBDAV_PASSWORD,
     REQUEST_CRYPT_PASSWORD,
-// TODO: WAIT_FOR_VOLUME -> REQUEST_MEDIUM
     WAIT_FOR_VOLUME,
     ADD_ERROR_CORRECTION_CODES,
-    BLANK_MEDIUM,
-    WRITE_MEDIUM;
+    BLANK_VOLUME,
+    WRITE_VOLUME;
 
     /** get (translated) running state text
      * @return running state text
@@ -134,10 +133,10 @@ class JobData implements Comparable<JobData>
       {
         case NONE:                       return "";
         case WAIT_FOR_TEMPORARY_SPACE:   return BARControl.tr("waiting for temporary space");
-        case WAIT_FOR_VOLUME:            return BARControl.tr("waiting for volumne");
+        case WAIT_FOR_VOLUME:            return BARControl.tr("waiting for volumn");
         case ADD_ERROR_CORRECTION_CODES: return BARControl.tr("adding error correction codes");
-        case BLANK_MEDIUM:               return BARControl.tr("blanking medium");
-        case WRITE_MEDIUM:               return BARControl.tr("writing medium");
+        case BLANK_VOLUME:               return BARControl.tr("blanking volumn");
+        case WRITE_VOLUME:               return BARControl.tr("writing volumn");
       }
 
       return "";
@@ -963,7 +962,7 @@ public class TabStatus
   private WidgetVariable                  storageName             = new WidgetVariable<String>("");
   private WidgetVariable                  storageProgress         = new WidgetVariable<Double>(0.0);
   private WidgetVariable                  volumeNumber            = new WidgetVariable<Long>(0L);
-  private WidgetVariable                  volumeProgress          = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  volumeDone              = new WidgetVariable<Double>(0.0);
   private WidgetVariable                  totalEntriesProgress    = new WidgetVariable<Double>(0.0);
   private WidgetVariable                  totalBytesProgress      = new WidgetVariable<Double>(0.0);
   private WidgetVariable                  collectTotalSumDone     = new WidgetVariable<Boolean>(false);
@@ -2136,7 +2135,7 @@ public class TabStatus
       Widgets.layout(label,9,0,TableLayoutData.W);
       progressBar = Widgets.newProgressBar(composite);
       Widgets.layout(progressBar,9,1,TableLayoutData.WE,0,9);
-      Widgets.addModifyListener(new WidgetModifyListener(progressBar,volumeProgress));
+      Widgets.addModifyListener(new WidgetModifyListener(progressBar,volumeDone));
 
       // total files percentage
       label = Widgets.newLabel(composite,BARControl.tr("Total files")+":");
@@ -3011,7 +3010,7 @@ public class TabStatus
             storageName.set          (valueMap.getString("storageName"));
             storageProgress.set      (getProgress(valueMap.getLong("storageDoneSize"),valueMap.getLong("storageTotalSize")));
             volumeNumber.set         (valueMap.getLong("volumeNumber"));
-            volumeProgress.set       (valueMap.getDouble("volumeProgress")*100.0);
+            volumeDone.set           (valueMap.getDouble("volumeDone"));
             totalEntriesProgress.set (getProgress(doneCount.getLong()+skippedEntryCount.getLong()+errorEntryCount.getLong(),
                                                   totalEntryCount.getLong()
                                                  )
@@ -3111,7 +3110,7 @@ public class TabStatus
           storageName.set          ("");
           storageProgress.set      (getProgress(0L,0L));
           volumeNumber.set         (0L);
-          volumeProgress.set       (0.0);
+          volumeDone.set           (0.0);
           totalEntriesProgress.set (getProgress(0L,0L));
           totalBytesProgress.set   (getProgress(0L,0L));
           requestedVolumeNumber.set(0);

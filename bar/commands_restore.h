@@ -33,33 +33,33 @@
 /***************************** Datatypes *******************************/
 
 /***********************************************************************\
-* Name   : RestoreStatusInfoFunction
-* Purpose: restore status info call-back
-* Input  : statusInfo - status info
-*          userData   - user data
+* Name   : RestoreRunningInfoFunction
+* Purpose: restore running info call-back
+* Input  : runningInfo - running info
+*          userData    - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*RestoreUpdateStatusInfoFunction)(const StatusInfo *statusInfo,
-                                               void             *userData
-                                              );
+typedef void(*RestoreUpdateRunningInfoFunction)(const RunningInfo *runningInfo,
+                                                void              *userData
+                                               );
 
 /***********************************************************************\
 * Name   : RestoreErrorFunction
-* Purpose: restore status info call-back
-* Input  : error      - error code
-*          statusInfo - status info
-*          userData   - user data
+* Purpose: restore error call-back
+* Input  : error       - error code
+*          runningInfo - running info
+*          userData    - user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*RestoreHandleErrorFunction)(Errors           error,
-                                            const StatusInfo *statusInfo,
-                                            void             *userData
+typedef Errors(*RestoreHandleErrorFunction)(Errors            error,
+                                            const RunningInfo *runningInfo,
+                                            void              *userData
                                            );
 
 /***************************** Variables *******************************/
@@ -81,9 +81,9 @@ typedef Errors(*RestoreHandleErrorFunction)(Errors           error,
 *          includeEntryList             - include entry list
 *          excludePatternList           - exclude pattern list
 *          jobOptions                   - job options
-*          updateStatusInfoFunction     - status info call back
+*          updateRunningInfoFunction    - running info call back
 *                                         function (can be NULL)
-*          updateStatusInfoUserData     - user data for status info
+*          updateRunningInfoUserData    - user data for running info
 *                                         function
 *          handleErrorFunction          - error call back (can be NULL)
 *          handleErrorUserData          - user data for error call back
@@ -106,8 +106,8 @@ Errors Command_restore(const StringList                *storageNameList,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
                        JobOptions                      *jobOptions,
-                       RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
-                       void                            *updateStatusInfoUserData,
+                       RestoreUpdateRunningInfoFunction updateRunningInfoFunction,
+                       void                            *updateRunningInfoUserData,
                        RestoreHandleErrorFunction      handleErrorFunction,
                        void                            *handleErrorUserData,
                        GetNamePasswordFunction         getNamePasswordFunction,

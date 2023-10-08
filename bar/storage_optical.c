@@ -137,8 +137,9 @@ LOCAL void executeIOmkisofsOutput(StorageInfo *storageInfo,
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: mkisofs: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
-    storageInfo->runningInfo.volumeProgress = ((double)storageInfo->opticalDisk.write.step*100.0+p)/(double)(storageInfo->opticalDisk.write.steps*100);
-    updateStorageStatusInfo(storageInfo);
+    assert(storageInfo->opticalDisk.write.steps > 0);
+    storageInfo->progress.volumeDone = ((double)storageInfo->opticalDisk.write.step*100.0+p)/(double)(storageInfo->opticalDisk.write.steps);
+    updateStorageRunningInfo(storageInfo);
   }
   String_delete(s);
 }
@@ -216,15 +217,17 @@ LOCAL void executeIOdvdisasterOutput(StorageInfo *storageInfo,
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: dvdisaster add space: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
-    storageInfo->runningInfo.volumeProgress = ((double)(storageInfo->opticalDisk.write.step+0)*100.0+p)/(double)(storageInfo->opticalDisk.write.steps*100);
-    updateStorageStatusInfo(storageInfo);
+    assert(storageInfo->opticalDisk.write.steps > 0);
+    storageInfo->progress.volumeDone = ((double)(storageInfo->opticalDisk.write.step+0)*100.0+p)/(double)(storageInfo->opticalDisk.write.steps);
+    updateStorageRunningInfo(storageInfo);
   }
   else if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,STRING_NO_ASSIGN,s,NULL))
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: dvdisaster codes: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
-    storageInfo->runningInfo.volumeProgress = ((double)(storageInfo->opticalDisk.write.step+1)*100.0+p)/(double)(storageInfo->opticalDisk.write.steps*100);
-    updateStorageStatusInfo(storageInfo);
+    assert(storageInfo->opticalDisk.write.steps > 0);
+    storageInfo->progress.volumeDone = ((double)(storageInfo->opticalDisk.write.step+1)*100.0+p)/(double)(storageInfo->opticalDisk.write.steps);
+    updateStorageRunningInfo(storageInfo);
   }
   String_delete(s);
 }
@@ -302,8 +305,9 @@ LOCAL void executeIOblankOutput(StorageInfo *storageInfo,
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: blank: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
-    storageInfo->runningInfo.volumeProgress = ((double)storageInfo->opticalDisk.write.step*100.0+p)/(double)(storageInfo->opticalDisk.write.steps*100);
-    updateStorageStatusInfo(storageInfo);
+    assert(storageInfo->opticalDisk.write.steps > 0);
+    storageInfo->progress.volumeDone = ((double)storageInfo->opticalDisk.write.step*100.0+p)/(double)(storageInfo->opticalDisk.write.steps);
+    updateStorageRunningInfo(storageInfo);
   }
   String_delete(s);
 }
@@ -381,8 +385,9 @@ LOCAL void executeIOgrowisofsOutput(StorageInfo *storageInfo,
   {
     p = String_toDouble(s,0,NULL,NULL,0);
 //fprintf(stderr,"%s,%d: growisofs: %s -> %lf\n",__FILE__,__LINE__,String_cString(line),p);
-    storageInfo->runningInfo.volumeProgress = ((double)storageInfo->opticalDisk.write.step*100.0+p)/(double)(storageInfo->opticalDisk.write.steps*100);
-    updateStorageStatusInfo(storageInfo);
+    assert(storageInfo->opticalDisk.write.steps > 0);
+    storageInfo->progress.volumeDone = ((double)storageInfo->opticalDisk.write.step*100.0+p)/(double)(storageInfo->opticalDisk.write.steps);
+    updateStorageRunningInfo(storageInfo);
   }
   String_delete(s);
 }
@@ -1124,9 +1129,9 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
         // store new medium number
         storageInfo->volumeNumber = storageInfo->requestedVolumeNumber;
 
-        // update volume info
-        storageInfo->runningInfo.volumeNumber = storageInfo->volumeNumber;
-        updateStorageStatusInfo(storageInfo);
+        // update running info
+        storageInfo->progress.volumeNumber = storageInfo->volumeNumber;
+        updateStorageRunningInfo(storageInfo);
 
         storageInfo->volumeState = STORAGE_VOLUME_STATE_LOADED;
         return ERROR_NONE;
@@ -1260,9 +1265,9 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     executeIOInfo.commandLine           = String_new();
     StringList_init(&executeIOInfo.stderrList);
 
-    // update volume info
-    storageInfo->runningInfo.volumeProgress = 0.0;
-    updateStorageStatusInfo(storageInfo);
+    // update running info
+    storageInfo->progress.volumeDone = 0.0;
+    updateStorageRunningInfo(storageInfo);
 
     // get temporary image file name
     imageFileName = String_new();
@@ -1404,7 +1409,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
-        updateStorageStatusInfo(storageInfo);
+        updateStorageRunningInfo(storageInfo);
       }
 
       if (storageInfo->jobOptions->blankFlag)
@@ -1526,7 +1531,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           StringList_done(&executeIOInfo.stderrList);
           return error;
         }
-        updateStorageStatusInfo(storageInfo);
+        updateStorageRunningInfo(storageInfo);
       }
 
       if (storageInfo->jobOptions->blankFlag)
@@ -1637,9 +1642,9 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     File_delete(imageFileName,FALSE);
     String_delete(imageFileName);
 
-    // update volume info
-    storageInfo->runningInfo.volumeProgress = 1.0;
-    updateStorageStatusInfo(storageInfo);
+    // update running info
+    storageInfo->progress.volumeDone = 100.0;
+    updateStorageRunningInfo(storageInfo);
 
     // delete stored files
     fileName = String_new();

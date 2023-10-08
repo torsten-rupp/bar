@@ -225,8 +225,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         storageInfo->volumeNumber = storageInfo->requestedVolumeNumber;
 
         // update volume info
-        storageInfo->runningInfo.volumeNumber = storageInfo->volumeNumber;
-        updateStorageStatusInfo(storageInfo);
+        storageInfo->progress.volumeNumber = storageInfo->volumeNumber;
+        updateStorageRunningInfo(storageInfo);
 
         storageInfo->volumeState = STORAGE_VOLUME_STATE_LOADED;
         return ERROR_NONE;
@@ -609,7 +609,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       {
         return error;
       }
-      updateStorageStatusInfo(storageInfo);
+      updateStorageRunningInfo(storageInfo);
     }
 
     // get temporary image file name

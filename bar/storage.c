@@ -146,26 +146,28 @@ LOCAL void signalHandler(int signalNumber)
 #endif /* HAVE_SIGALRM */
 
 /***********************************************************************\
-* Name   : updateStorageStatusInfo
-* Purpose: update storage status info
+* Name   : updateStorageRunningInfo
+* Purpose: update storage running info
 * Input  : storageInfo - storage info
 * Output : -
 * Return : TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool updateStorageStatusInfo(const StorageInfo *storageInfo)
+LOCAL bool updateStorageRunningInfo(const StorageInfo *storageInfo)
 {
   bool result;
 
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
-  if (storageInfo->updateStatusInfoFunction != NULL)
+  if (storageInfo->updateRunningInfoFunction != NULL)
   {
-    result = storageInfo->updateStatusInfoFunction(&storageInfo->runningInfo,
-                                                   storageInfo->updateStatusInfoUserData
-                                                  );
+    result = storageInfo->updateRunningInfoFunction(storageInfo->progress.storageDoneBytes,
+                                                    storageInfo->progress.volumeNumber,
+                                                    storageInfo->progress.volumeDone,
+                                                    storageInfo->updateRunningInfoUserData
+                                                   );
   }
   else
   {
@@ -782,7 +784,7 @@ LOCAL Errors transferFileToStorage(FileHandle                  *fileHandle,
     // next part
     transferedBytes += (uint64)n;
 
-    // update status info
+    // update running info
     if (storageTransferInfoFunction != NULL)
     {
       storageTransferInfoFunction(transferedBytes,
@@ -791,8 +793,9 @@ LOCAL Errors transferFileToStorage(FileHandle                  *fileHandle,
                                  );
     }
 // TODO: remove
-    storageHandle->storageInfo->runningInfo.storageDoneBytes += (uint64)n;
-    if (!updateStorageStatusInfo(storageHandle->storageInfo))
+// TODO: replace by storageTransferInfoFunction
+    storageHandle->storageInfo->progress.storageDoneBytes += (uint64)n;
+    if (!updateStorageRunningInfo(storageHandle->storageInfo))
     {
       free(buffer);
       return ERROR_ABORTED;
@@ -889,14 +892,14 @@ LOCAL Errors transferStorageToStorage(StorageHandle               *fromStorageHa
     // next part
     transferedBytes += (uint64)n;
 
-    // update status info
+    // update running info
     if (storageTransferInfoFunction != NULL)
     {
       storageTransferInfoFunction(transferedBytes,size,storageTransferInfoUserData);
     }
 // TODO: replace by storageTransferInfoFunction
-    toStorageHandle->storageInfo->runningInfo.storageDoneBytes += (uint64)n;
-    if (!updateStorageStatusInfo(toStorageHandle->storageInfo))
+    toStorageHandle->storageInfo->progress.storageDoneBytes += (uint64)n;
+    if (!updateStorageRunningInfo(toStorageHandle->storageInfo))
     {
       break;
     }
@@ -2269,45 +2272,45 @@ uint Storage_getServerSettings(Server                 *server,
 }
 
 #ifdef NDEBUG
-  Errors Storage_init(StorageInfo                     *storageInfo,
-                      ServerIO                        *masterIO,
-                      const StorageSpecifier          *storageSpecifier,
+  Errors Storage_init(StorageInfo                      *storageInfo,
+                      ServerIO                         *masterIO,
+                      const StorageSpecifier           *storageSpecifier,
 // TODO: only storageOnMasterFlag need, pass this value and avoid jobOptions?
-                      const JobOptions                *jobOptions,
-                      BandWidthList                   *maxBandWidthList,
-                      ServerConnectionPriorities      serverConnectionPriority,
-                      StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
-                      void                            *storageUpdateStatusInfoUserData,
-                      GetNamePasswordFunction         getNamePasswordFunction,
-                      void                            *getNamePasswordUserData,
-                      StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                      void                            *storageRequestVolumeUserData,
-                      IsPauseFunction                 isPauseFunction,
-                      void                            *isPauseUserData,
-                      IsAbortedFunction               isAbortedFunction,
-                      void                            *isAbortedUserData,
-                      LogHandle                       *logHandle
+                      const JobOptions                 *jobOptions,
+                      BandWidthList                    *maxBandWidthList,
+                      ServerConnectionPriorities       serverConnectionPriority,
+                      StorageUpdateRunningInfoFunction storageUpdateRunningInfoFunction,
+                      void                             *storageUpdateRunningInfoUserData,
+                      GetNamePasswordFunction          getNamePasswordFunction,
+                      void                             *getNamePasswordUserData,
+                      StorageRequestVolumeFunction     storageRequestVolumeFunction,
+                      void                             *storageRequestVolumeUserData,
+                      IsPauseFunction                  isPauseFunction,
+                      void                             *isPauseUserData,
+                      IsAbortedFunction                isAbortedFunction,
+                      void                             *isAbortedUserData,
+                      LogHandle                        *logHandle
                      )
 #else /* not NDEBUG */
-  Errors __Storage_init(const char                      *__fileName__,
-                        ulong                           __lineNb__,
-                        StorageInfo                     *storageInfo,
-                        ServerIO                        *masterIO,
-                        const StorageSpecifier          *storageSpecifier,
-                        const JobOptions                *jobOptions,
-                        BandWidthList                   *maxBandWidthList,
-                        ServerConnectionPriorities      serverConnectionPriority,
-                        StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
-                        void                            *storageUpdateStatusInfoUserData,
-                        GetNamePasswordFunction         getNamePasswordFunction,
-                        void                            *getNamePasswordUserData,
-                        StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                        void                            *storageRequestVolumeUserData,
-                        IsPauseFunction                 isPauseFunction,
-                        void                            *isPauseUserData,
-                        IsAbortedFunction               isAbortedFunction,
-                        void                            *isAbortedUserData,
-                        LogHandle                       *logHandle
+  Errors __Storage_init(const char                       *__fileName__,
+                        ulong                            __lineNb__,
+                        StorageInfo                      *storageInfo,
+                        ServerIO                         *masterIO,
+                        const StorageSpecifier           *storageSpecifier,
+                        const JobOptions                 *jobOptions,
+                        BandWidthList                    *maxBandWidthList,
+                        ServerConnectionPriorities       serverConnectionPriority,
+                        StorageUpdateRunningInfoFunction storageUpdateRunningInfoFunction,
+                        void                             *storageUpdateRunningInfoUserData,
+                        GetNamePasswordFunction          getNamePasswordFunction,
+                        void                             *getNamePasswordUserData,
+                        StorageRequestVolumeFunction     storageRequestVolumeFunction,
+                        void                             *storageRequestVolumeUserData,
+                        IsPauseFunction                  isPauseFunction,
+                        void                             *isPauseUserData,
+                        IsAbortedFunction                isAbortedFunction,
+                        void                             *isAbortedUserData,
+                        LogHandle                        *logHandle
                        )
 #endif /* NDEBUG */
 {
@@ -2330,8 +2333,8 @@ uint Storage_getServerSettings(Server                 *server,
   storageInfo->jobOptions                = jobOptions;
   storageInfo->masterIO                  = masterIO;
   storageInfo->logHandle                 = logHandle;
-  storageInfo->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
-  storageInfo->updateStatusInfoUserData  = storageUpdateStatusInfoUserData;
+  storageInfo->updateRunningInfoFunction = storageUpdateRunningInfoFunction;
+  storageInfo->updateRunningInfoUserData = storageUpdateRunningInfoUserData;
   storageInfo->getNamePasswordFunction   = getNamePasswordFunction;
   storageInfo->getNamePasswordUserData   = getNamePasswordUserData;
   storageInfo->requestVolumeFunction     = storageRequestVolumeFunction;
@@ -2429,9 +2432,9 @@ uint Storage_getServerSettings(Server                 *server,
     return error;
   }
 
-  storageInfo->runningInfo.storageDoneBytes = 0LL;
-  storageInfo->runningInfo.volumeNumber     = 0;
-  storageInfo->runningInfo.volumeProgress   = 0;
+  storageInfo->progress.storageDoneBytes = 0LL;
+  storageInfo->progress.volumeNumber     = 0;
+  storageInfo->progress.volumeDone       = 0.0;
 
   // free resources
   AutoFree_done(&autoFreeList);
@@ -4078,8 +4081,8 @@ Errors Storage_copyToLocal(const StorageSpecifier          *storageSpecifier,
                            ConstString                     localFileName,
                            const JobOptions                *jobOptions,
                            BandWidthList                   *maxBandWidthList,
-                           StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
-                           void                            *storageUpdateStatusInfoUserData,
+                           StorageUpdateRunningInfoFunction storageUpdateRunningInfoFunction,
+                           void                            *storageUpdateRunningInfoUserData,
                            StorageRequestVolumeFunction    storageRequestVolumeFunction,
                            void                            *storageRequestVolumeUserData
                           )
@@ -4113,7 +4116,7 @@ NULL, // masterIO
                        jobOptions,
                        maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(storageUpdateStatusInfoFunction,storageUpdateStatusInfoUserData),
+                       CALLBACK_(storageUpdateRunningInfoFunction,storageUpdateRunningInfoUserData),
                        CALLBACK_(NULL,NULL),  // updateStatusInfo
                        CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData),
                        CALLBACK_(NULL,NULL),  // isPause

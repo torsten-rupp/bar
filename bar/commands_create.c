@@ -92,64 +92,64 @@ typedef struct
 // create info
 typedef struct
 {
-  StorageInfo                 storageInfo;                          // storage info
+  StorageInfo                 storageInfo;                           // storage info
   IndexHandle                 *indexHandle;
-  const char                  *jobUUID;                             // job UUID to store or NULL
-  const char                  *scheduleUUID;                        // schedule UUID or NULL
-  const char                  *scheduleTitle;                       // schedule title or NULL
-  const char                  *entityUUID;                          // entity UUID to store or NULL
-  ArchiveTypes                archiveType;                          // archive type to create
-  const char                  *customText;                          // custom text or NULL
-  const EntryList             *includeEntryList;                    // list of included entries
-  const PatternList           *excludePatternList;                  // list of exclude patterns
+  const char                  *jobUUID;                              // job UUID to store or NULL
+  const char                  *scheduleUUID;                         // schedule UUID or NULL
+  const char                  *scheduleTitle;                        // schedule title or NULL
+  const char                  *entityUUID;                           // entity UUID to store or NULL
+  ArchiveTypes                archiveType;                           // archive type to create
+  const char                  *customText;                           // custom text or NULL
+  const EntryList             *includeEntryList;                     // list of included entries
+  const PatternList           *excludePatternList;                   // list of exclude patterns
   JobOptions                  *jobOptions;
-  uint64                      createdDateTime;                      // date/time of created [s]
+  uint64                      createdDateTime;                       // date/time of created [s]
 
-  LogHandle                   *logHandle;                           // log handle
+  LogHandle                   *logHandle;                            // log handle
 
-  bool                        partialFlag;                          // TRUE for create incremental/differential archive
-  Dictionary                  namesDictionary;                      // dictionary with files (used for incremental/differental backup)
-  bool                        storeIncrementalFileInfoFlag;         // TRUE to store incremental file data
+  bool                        partialFlag;                           // TRUE for create incremental/differential archive
+  Dictionary                  namesDictionary;                       // dictionary with files (used for incremental/differental backup)
+  bool                        storeIncrementalFileInfoFlag;          // TRUE to store incremental file data
 
-  MsgQueue                    entryMsgQueue;                        // queue with entries to store
+  MsgQueue                    entryMsgQueue;                         // queue with entries to store
 
   ArchiveHandle               archiveHandle;
 
-  bool                        collectorSumThreadExitedFlag;         // TRUE iff collector sum thread exited
+  bool                        collectorSumThreadExitedFlag;          // TRUE iff collector sum thread exited
 
-  MsgQueue                    storageMsgQueue;                      // queue with waiting storage files
-  Semaphore                   storageInfoLock;                      // lock semaphore for storage info
+  MsgQueue                    storageMsgQueue;                       // queue with waiting storage files
+  Semaphore                   storageInfoLock;                       // lock semaphore for storage info
   struct
   {
-    uint                      count;                                // number of current storage files
-    uint64                    bytes;                                // number of bytes in current storage files
+    uint                      count;                                 // number of current storage files
+    uint64                    bytes;                                 // number of bytes in current storage files
   }                           storage;
   bool                        storageThreadExitFlag;
-  StringList                  storageFileList;                      // list with stored storage files
+  StringList                  storageFileList;                       // list with stored storage files
 
-  Errors                      failError;                            // failure error
+  Errors                      failError;                             // failure error
 
-  IsPauseFunction             isPauseCreateFunction;                // pause create check callback (can be NULL)
-  void                        *isPauseCreateUserData;               // user data for pause create check
+  IsPauseFunction             isPauseCreateFunction;                 // pause create check callback (can be NULL)
+  void                        *isPauseCreateUserData;                // user data for pause create check
 
-  IsAbortedFunction           isAbortedFunction;                    // abort create check callback (can be NULL)
-  void                        *isAbortedUserData;                   // user data for abort create check
+  IsAbortedFunction           isAbortedFunction;                     // abort create check callback (can be NULL)
+  void                        *isAbortedUserData;                    // user data for abort create check
 
-  FragmentList                statusInfoFragmentList;               // status info fragment list
+  FragmentList                runningInfoFragmentList;               // running info fragment list
 
-  StatusInfoFunction          statusInfoFunction;                   // status info callback
-  void                        *statusInfoUserData;                  // user data for status info call back
-  Semaphore                   statusInfoLock;                       // status info lock
-  StatusInfo                  statusInfo;                           // status info
-  const FragmentNode          *statusInfoCurrentFragmentNode;       // current fragment node in status info
-  uint64                      statusInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
+  RunningInfoFunction         runningInfoFunction;                   // running info callback
+  void                        *runningInfoUserData;                  // user data for running info call back
+  Semaphore                   runningInfoLock;                       // running info lock
+  RunningInfo                 runningInfo;                           // running info
+  const FragmentNode          *runningInfoCurrentFragmentNode;       // current fragment node in running info
+  uint64                      runningInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
 } CreateInfo;
 
 // hard link info
 typedef struct
 {
-  uint       count;                                                 // number of hard links
-  StringList nameList;                                              // list of hard linked names
+  uint       count;                                                  // number of hard links
+  StringList nameList;                                               // list of hard linked names
   FileInfo   fileInfo;
 } HardLinkInfo;
 
@@ -158,15 +158,15 @@ typedef struct
 {
   EntryTypes entryType;
   FileTypes  fileType;
-  String     name;                                                // file/image/directory/link/special name
-  StringList nameList;                                            // list of hard link names
+  String     name;                                                   // file/image/directory/link/special name
+  StringList nameList;                                               // list of hard link names
   union
   {
     FileInfo   fileInfo;
     DeviceInfo deviceInfo;
   };
-  uint       fragmentNumber;                                      // fragment number [0..n-1]
-  uint       fragmentCount;                                       // fragment count
+  uint       fragmentNumber;                                         // fragment number [0..n-1]
+  uint       fragmentCount;                                          // fragment count
   uint64     fragmentOffset;
   uint64     fragmentSize;
 } EntryMsg;
@@ -178,9 +178,9 @@ typedef struct
   IndexId      entityId;
 //  ArchiveTypes archiveType;
   IndexId      storageId;
-  String       intermediateFileName;                              // intermediate archive file name
-  uint64       intermediateFileSize;                              // intermediate archive size [bytes]
-  String       archiveName;                                       // destination archive name
+  String       intermediateFileName;                                 // intermediate archive file name
+  uint64       intermediateFileSize;                                 // intermediate archive size [bytes]
+  String       archiveName;                                          // destination archive name
 } StorageMsg;
 
 /***************************** Variables *******************************/
@@ -272,9 +272,9 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *                                       be NULL)
 *          isPauseCreateUserData      - user data for is pause create
 *                                       check
-*          statusInfoFunction         - status info call back function
+*          runningInfoFunction        - running info call back function
 *                                       (can be NULL)
-*          statusInfoUserData         - user data for status info
+*          runningInfoUserData        - user data for running info
 *                                       function
 *          isAbortedFunction          - is abort check callback (can be
 *                                       NULL)
@@ -285,70 +285,70 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initCreateInfo(CreateInfo         *createInfo,
-                          IndexHandle        *indexHandle,
-                          const char         *jobUUID,
-                          const char         *scheduleUUID,
-                          const char         *scheduleTitle,
-                          const char         *entityUUID,
-                          ArchiveTypes       archiveType,
-                          const EntryList    *includeEntryList,
-                          const PatternList  *excludePatternList,
-                          const char         *customText,
-                          JobOptions         *jobOptions,
-                          uint64             createdDateTime,
-                          IsPauseFunction    isPauseCreateFunction,
-                          void               *isPauseCreateUserData,
-                          StatusInfoFunction statusInfoFunction,
-                          void               *statusInfoUserData,
-                          IsAbortedFunction  isAbortedFunction,
-                          void               *isAbortedUserData,
-                          LogHandle          *logHandle
+LOCAL void initCreateInfo(CreateInfo          *createInfo,
+                          IndexHandle         *indexHandle,
+                          const char          *jobUUID,
+                          const char          *scheduleUUID,
+                          const char          *scheduleTitle,
+                          const char          *entityUUID,
+                          ArchiveTypes        archiveType,
+                          const EntryList     *includeEntryList,
+                          const PatternList   *excludePatternList,
+                          const char          *customText,
+                          JobOptions          *jobOptions,
+                          uint64              createdDateTime,
+                          IsPauseFunction     isPauseCreateFunction,
+                          void                *isPauseCreateUserData,
+                          RunningInfoFunction runningInfoFunction,
+                          void                *runningInfoUserData,
+                          IsAbortedFunction   isAbortedFunction,
+                          void                *isAbortedUserData,
+                          LogHandle           *logHandle
                          )
 {
   assert(createInfo != NULL);
 
   // init variables
-  createInfo->indexHandle                          = indexHandle;
-  createInfo->jobUUID                              = jobUUID;
-  createInfo->scheduleUUID                         = scheduleUUID;
+  createInfo->indexHandle                           = indexHandle;
+  createInfo->jobUUID                               = jobUUID;
+  createInfo->scheduleUUID                          = scheduleUUID;
 // TODO: needed?
-  createInfo->scheduleTitle                        = scheduleTitle;
-  createInfo->entityUUID                           = entityUUID;
-  createInfo->includeEntryList                     = includeEntryList;
-  createInfo->excludePatternList                   = excludePatternList;
-  createInfo->customText                           = customText;
-  createInfo->jobOptions                           = jobOptions;
-  createInfo->createdDateTime                      = createdDateTime;
+  createInfo->scheduleTitle                         = scheduleTitle;
+  createInfo->entityUUID                            = entityUUID;
+  createInfo->includeEntryList                      = includeEntryList;
+  createInfo->excludePatternList                    = excludePatternList;
+  createInfo->customText                            = customText;
+  createInfo->jobOptions                            = jobOptions;
+  createInfo->createdDateTime                       = createdDateTime;
 
-  createInfo->logHandle                            = logHandle;
+  createInfo->logHandle                             = logHandle;
 
   Dictionary_init(&createInfo->namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
-  createInfo->storeIncrementalFileInfoFlag         = FALSE;
+  createInfo->storeIncrementalFileInfoFlag          = FALSE;
 
-  createInfo->collectorSumThreadExitedFlag         = FALSE;
+  createInfo->collectorSumThreadExitedFlag          = FALSE;
 
-  createInfo->storage.count                        = 0;
-  createInfo->storage.bytes                        = 0LL;
-  createInfo->storageThreadExitFlag                = FALSE;
+  createInfo->storage.count                         = 0;
+  createInfo->storage.bytes                         = 0LL;
+  createInfo->storageThreadExitFlag                 = FALSE;
   StringList_init(&createInfo->storageFileList);
 
-  createInfo->failError                            = ERROR_NONE;
+  createInfo->failError                             = ERROR_NONE;
 
-  createInfo->statusInfoFunction                   = statusInfoFunction;
-  createInfo->statusInfoUserData                   = statusInfoUserData;
-  FragmentList_init(&createInfo->statusInfoFragmentList);
-  createInfo->statusInfoCurrentFragmentNode        = NULL;
-  createInfo->statusInfoCurrentLastUpdateTimestamp = 0LL;
+  createInfo->runningInfoFunction                   = runningInfoFunction;
+  createInfo->runningInfoUserData                   = runningInfoUserData;
+  FragmentList_init(&createInfo->runningInfoFragmentList);
+  createInfo->runningInfoCurrentFragmentNode        = NULL;
+  createInfo->runningInfoCurrentLastUpdateTimestamp = 0LL;
 
-  createInfo->isPauseCreateFunction                = isPauseCreateFunction;
-  createInfo->isPauseCreateUserData                = isPauseCreateUserData;
+  createInfo->isPauseCreateFunction                 = isPauseCreateFunction;
+  createInfo->isPauseCreateUserData                 = isPauseCreateUserData;
 
-  createInfo->isAbortedFunction                    = isAbortedFunction;
-  createInfo->isAbortedUserData                    = isAbortedUserData;
+  createInfo->isAbortedFunction                     = isAbortedFunction;
+  createInfo->isAbortedUserData                     = isAbortedUserData;
 
-  initStatusInfo(&createInfo->statusInfo);
+  initRunningInfo(&createInfo->runningInfo);
 
   // get archive type
   if (archiveType != ARCHIVE_TYPE_NONE)
@@ -385,9 +385,9 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
   {
     HALT_FATAL_ERROR("Cannot initialize storage semaphore!");
   }
-  if (!Semaphore_init(&createInfo->statusInfoLock,SEMAPHORE_TYPE_BINARY))
+  if (!Semaphore_init(&createInfo->runningInfoLock,SEMAPHORE_TYPE_BINARY))
   {
-    HALT_FATAL_ERROR("Cannot initialize status info semaphore!");
+    HALT_FATAL_ERROR("Cannot initialize running info semaphore!");
   }
 
   DEBUG_ADD_RESOURCE_TRACE(createInfo,CreateInfo);
@@ -408,14 +408,14 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 
   DEBUG_REMOVE_RESOURCE_TRACE(createInfo,CreateInfo);
 
-  Semaphore_done(&createInfo->statusInfoLock);
+  Semaphore_done(&createInfo->runningInfoLock);
   Semaphore_done(&createInfo->storageInfoLock);
 
   MsgQueue_done(&createInfo->storageMsgQueue);
   MsgQueue_done(&createInfo->entryMsgQueue);
 
-  doneStatusInfo(&createInfo->statusInfo);
-  FragmentList_done(&createInfo->statusInfoFragmentList);
+  doneRunningInfo(&createInfo->runningInfo);
+  FragmentList_done(&createInfo->runningInfoFragmentList);
   StringList_done(&createInfo->storageFileList);
 
   Dictionary_done(&createInfo->namesDictionary);
@@ -870,8 +870,8 @@ LOCAL void addIncrementalList(Dictionary     *namesDictionary,
 }
 
 /***********************************************************************\
-* Name   : updateStatusInfo
-* Purpose: update status info
+* Name   : updateRunningInfo
+* Purpose: update running info
 * Input  : createInfo  - create info
 *          forceUpdate - true to force update
 * Output : -
@@ -879,31 +879,31 @@ LOCAL void addIncrementalList(Dictionary     *namesDictionary,
 * Notes  : Update only every 500ms or if forced
 \***********************************************************************/
 
-LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
+LOCAL void updateRunningInfo(CreateInfo *createInfo, bool forceUpdate)
 {
   static uint64 lastTimestamp = 0LL;
   uint64        timestamp;
 
   assert(createInfo != NULL);
-  assert(Semaphore_isLocked(&createInfo->statusInfoLock));
+  assert(Semaphore_isLocked(&createInfo->runningInfoLock));
 
-  if (createInfo->statusInfoFunction != NULL)
+  if (createInfo->runningInfoFunction != NULL)
   {
     timestamp = Misc_getTimestamp();
     if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
     {
-      createInfo->statusInfoFunction(createInfo->failError,
-                                     &createInfo->statusInfo,
-                                     createInfo->statusInfoUserData
-                                    );
+      createInfo->runningInfoFunction(createInfo->failError,
+                                      &createInfo->runningInfo,
+                                      createInfo->runningInfoUserData
+                                     );
       lastTimestamp = timestamp;
     }
   }
 }
 
 /***********************************************************************\
-* Name   : statusInfoUpdateLock
-* Purpose: lock status info update
+* Name   : runningInfoUpdateLock
+* Purpose: lock running info update
 * Input  : createInfo   - create info structure
 *          fragmentNode - fragment node (can be NULL)
 * Output : -
@@ -911,25 +911,25 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString name, FragmentNode **foundFragmentNode)
+LOCAL SemaphoreLock runningInfoUpdateLock(CreateInfo *createInfo, ConstString name, FragmentNode **foundFragmentNode)
 {
   assert(createInfo != NULL);
 
   // lock
-  Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+  Semaphore_lock(&createInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
   if (foundFragmentNode != NULL)
   {
     // find fragment node
-    (*foundFragmentNode) = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+    (*foundFragmentNode) = FragmentList_find(&createInfo->runningInfoFragmentList,name);
   }
 
   return TRUE;
 }
 
 /***********************************************************************\
-* Name   : statusInfoUpdateUnlock
-* Purpose: status info update unlock
+* Name   : runningInfoUpdateUnlock
+* Purpose: running info update unlock
 * Input  : createInfo - create info structure
 *          name       - name of entry
 * Output : -
@@ -937,7 +937,7 @@ LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString nam
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
+LOCAL void runningInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
 {
   const FragmentNode *fragmentNode;
 
@@ -945,50 +945,50 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
 
   if (name != NULL)
   {
-    // update current status info if not set or timeout
-    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
-        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+    // update current running info if not set or timeout
+    if (   (createInfo->runningInfoCurrentFragmentNode == NULL)
+        || ((Misc_getTimestamp()-createInfo->runningInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
        )
     {
       // find fragment node
-      fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+      fragmentNode = FragmentList_find(&createInfo->runningInfoFragmentList,name);
 
-      // set new current status info
-      String_set(createInfo->statusInfo.entry.name,name);
+      // set new current running info
+      String_set(createInfo->runningInfo.progress.entry.name,name);
       if (fragmentNode != NULL)
       {
-        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+        createInfo->runningInfo.progress.entry.doneSize  = FragmentList_getSize(fragmentNode);
+        createInfo->runningInfo.progress.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
 
-        createInfo->statusInfoCurrentFragmentNode = !FragmentList_isComplete(fragmentNode) ? fragmentNode : NULL;
+        createInfo->runningInfoCurrentFragmentNode = !FragmentList_isComplete(fragmentNode) ? fragmentNode : NULL;
       }
       else
       {
-        createInfo->statusInfoCurrentFragmentNode = NULL;
+        createInfo->runningInfoCurrentFragmentNode = NULL;
       }
 
       // save last update time
-      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
+      createInfo->runningInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
     }
   }
 
-  // update status info
-  updateStatusInfo(createInfo,TRUE);
+  // update running info
+  updateRunningInfo(createInfo,TRUE);
 
   // unlock
-  Semaphore_unlock(&createInfo->statusInfoLock);
+  Semaphore_unlock(&createInfo->runningInfoLock);
 }
 
 //TODO: comment
 #define STATUS_INFO_GET(createInfo,name) \
-  for (SemaphoreLock semaphoreLock = Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
+  for (SemaphoreLock semaphoreLock = Semaphore_lock(&createInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
        semaphoreLock; \
-       Semaphore_unlock(&createInfo->statusInfoLock), semaphoreLock = FALSE \
+       Semaphore_unlock(&createInfo->runningInfoLock), semaphoreLock = FALSE \
       )
 
 /***********************************************************************\
 * Name   : STATUS_INFO_UPDATE
-* Purpose: update status info
+* Purpose: update running info
 * Input  : createInfo   - create info structure
 *          name         - name of entry
 *          fragmentNode - fragment node variable (can be NULL)
@@ -998,35 +998,38 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
 \***********************************************************************/
 
 #define STATUS_INFO_UPDATE(createInfo,name,fragmentNode) \
-  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,name,fragmentNode); \
+  for (SemaphoreLock semaphoreLock = runningInfoUpdateLock(createInfo,name,fragmentNode); \
        semaphoreLock; \
-       statusInfoUpdateUnlock(createInfo,name), semaphoreLock = FALSE \
+       runningInfoUpdateUnlock(createInfo,name), semaphoreLock = FALSE \
       )
 
 /***********************************************************************\
-* Name   : updateStorageStatusInfo
+* Name   : updateStorageRunningInfo
 * Purpose: update storage info data
-* Input  : userData          - user data: create info
-*          storageStatusInfo - storage status info
+* Input  : doneSize     - done size [bytes]
+*          volumeNumber - volume number [1..n]
+*          volumeDone   - volume done [0..100%]
+*          userData     - user data
 * Output : -
 * Return : TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
-                                   void                    *userData
-                                  )
+LOCAL bool updateStorageRunningInfo(uint64 doneSize,
+                                    uint   volumeNumber,
+                                    double volumeDone,
+                                    void   *userData
+                                   )
 {
   CreateInfo *createInfo = (CreateInfo*)userData;
 
   assert(createInfo != NULL);
-  assert(storageStatusInfo != NULL);
 
   STATUS_INFO_UPDATE(createInfo,NULL,NULL)
   {
-    createInfo->statusInfo.storage.doneSize = storageStatusInfo->storageDoneBytes;
-    createInfo->statusInfo.volume.number    = storageStatusInfo->volumeNumber;
-    createInfo->statusInfo.volume.progress  = storageStatusInfo->volumeProgress;
+    createInfo->runningInfo.progress.storage.doneSize = doneSize;
+    createInfo->runningInfo.progress.volume.number    = volumeNumber;
+    createInfo->runningInfo.progress.volume.done      = volumeDone;
   }
 
   return !isAborted(createInfo);
@@ -1614,8 +1617,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
                       STATUS_INFO_UPDATE(createInfo,name,NULL)
                       {
-                        createInfo->statusInfo.total.count++;
-                        createInfo->statusInfo.total.size += fileInfo.size;
+                        createInfo->runningInfo.progress.total.count++;
+                        createInfo->runningInfo.progress.total.size += fileInfo.size;
                       }
                     }
                   }
@@ -1626,7 +1629,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
                   STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-                    createInfo->statusInfo.total.count++;
+                    createInfo->runningInfo.progress.total.count++;
                   }
                   break;
                 case FILE_TYPE_LINK:
@@ -1642,7 +1645,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
                       STATUS_INFO_UPDATE(createInfo,name,NULL)
                       {
-                        createInfo->statusInfo.total.count++;
+                        createInfo->runningInfo.progress.total.count++;
                       }
                     }
                   }
@@ -1715,8 +1718,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                           // update status
                           STATUS_INFO_UPDATE(createInfo,name,NULL)
                           {
-                            createInfo->statusInfo.total.count++;
-                            createInfo->statusInfo.total.size += fileInfo.size;
+                            createInfo->runningInfo.progress.total.count++;
+                            createInfo->runningInfo.progress.total.size += fileInfo.size;
                           }
                         }
                       }
@@ -1736,7 +1739,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
                       STATUS_INFO_UPDATE(createInfo,name,NULL)
                       {
-                        createInfo->statusInfo.total.count++;
+                        createInfo->runningInfo.progress.total.count++;
                       }
                     }
                   }
@@ -1844,8 +1847,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         {
                           STATUS_INFO_UPDATE(createInfo,name,NULL)
                           {
-                            createInfo->statusInfo.total.count++;
-                            createInfo->statusInfo.total.size += fileInfo.size;
+                            createInfo->runningInfo.progress.total.count++;
+                            createInfo->runningInfo.progress.total.size += fileInfo.size;
                           }
                         }
                         break;
@@ -1881,7 +1884,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         {
                           STATUS_INFO_UPDATE(createInfo,name,NULL)
                           {
-                            createInfo->statusInfo.total.count++;
+                            createInfo->runningInfo.progress.total.count++;
                           }
                         }
                         break;
@@ -1947,8 +1950,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     {
                                       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                       {
-                                        createInfo->statusInfo.total.count++;
-                                        createInfo->statusInfo.total.size += fileInfo.size;
+                                        createInfo->runningInfo.progress.total.count++;
+                                        createInfo->runningInfo.progress.total.size += fileInfo.size;
                                       }
                                     }
                                     break;
@@ -1982,7 +1985,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     {
                                       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                       {
-                                        createInfo->statusInfo.total.count++;
+                                        createInfo->runningInfo.progress.total.count++;
                                       }
                                     }
                                     break;
@@ -2003,8 +2006,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                         {
                                           STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                           {
-                                            createInfo->statusInfo.total.count++;
-                                            createInfo->statusInfo.total.size += deviceInfo.size;
+                                            createInfo->runningInfo.progress.total.count++;
+                                            createInfo->runningInfo.progress.total.size += deviceInfo.size;
                                           }
                                         }
                                       }
@@ -2085,8 +2088,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                           // update status
                                           STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                           {
-                                            createInfo->statusInfo.total.count++;
-                                            createInfo->statusInfo.total.size += fileInfo.size;
+                                            createInfo->runningInfo.progress.total.count++;
+                                            createInfo->runningInfo.progress.total.size += fileInfo.size;
                                           }
                                         }
                                       }
@@ -2118,12 +2121,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     {
                                       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                       {
-                                        createInfo->statusInfo.total.count++;
+                                        createInfo->runningInfo.progress.total.count++;
                                         if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
                                             && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                            )
                                         {
-                                          createInfo->statusInfo.total.size += fileInfo.size;
+                                          createInfo->runningInfo.progress.total.size += fileInfo.size;
                                         }
                                       }
                                     }
@@ -2133,8 +2136,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     {
                                       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                       {
-                                        createInfo->statusInfo.total.count++;
-                                        createInfo->statusInfo.total.size += fileInfo.size;
+                                        createInfo->runningInfo.progress.total.count++;
+                                        createInfo->runningInfo.progress.total.size += fileInfo.size;
                                       }
                                     }
                                     break;
@@ -2178,7 +2181,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         {
                           STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                           {
-                            createInfo->statusInfo.total.count++;
+                            createInfo->runningInfo.progress.total.count++;
                           }
                         }
                         break;
@@ -2199,8 +2202,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                             {
                               STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                               {
-                                createInfo->statusInfo.total.count++;
-                                createInfo->statusInfo.total.size += deviceInfo.size;
+                                createInfo->runningInfo.progress.total.count++;
+                                createInfo->runningInfo.progress.total.size += deviceInfo.size;
                               }
                             }
                           }
@@ -2287,8 +2290,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                               // update status
                               STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                               {
-                                createInfo->statusInfo.total.count++;
-                                createInfo->statusInfo.total.size += fileInfo.size;
+                                createInfo->runningInfo.progress.total.count++;
+                                createInfo->runningInfo.progress.total.size += fileInfo.size;
                               }
                             }
                           }
@@ -2326,7 +2329,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         {
                           STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                           {
-                            createInfo->statusInfo.total.count++;
+                            createInfo->runningInfo.progress.total.count++;
                           }
                         }
                         break;
@@ -2346,8 +2349,8 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
                             STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                             {
-                              createInfo->statusInfo.total.count++;
-                              createInfo->statusInfo.total.size += deviceInfo.size;
+                              createInfo->runningInfo.progress.total.count++;
+                              createInfo->runningInfo.progress.total.size += deviceInfo.size;
                             }
                           }
                         }
@@ -2383,7 +2386,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   // done
   STATUS_INFO_UPDATE(createInfo,NULL,NULL)
   {
-    createInfo->statusInfo.collectTotalSumDone = TRUE;
+    createInfo->runningInfo.progress.collectTotalSumDone = TRUE;
   }
 
   // free resoures
@@ -2529,7 +2532,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
           STATUS_INFO_UPDATE(createInfo,name,NULL)
           {
-            createInfo->statusInfo.error.count++;
+            createInfo->runningInfo.progress.error.count++;
           }
 
           continue;
@@ -2570,8 +2573,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                     STATUS_INFO_UPDATE(createInfo,name,NULL)
                     {
-                      createInfo->statusInfo.skipped.count++;
-                      createInfo->statusInfo.skipped.size += fileInfo.size;
+                      createInfo->runningInfo.progress.skipped.count++;
+                      createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                     }
                   }
                 }
@@ -2582,8 +2585,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 STATUS_INFO_UPDATE(createInfo,name,NULL)
                 {
-                  createInfo->statusInfo.skipped.count++;
-                  createInfo->statusInfo.skipped.size += fileInfo.size;
+                  createInfo->runningInfo.progress.skipped.count++;
+                  createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                 }
               }
               break;
@@ -2630,8 +2633,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 STATUS_INFO_UPDATE(createInfo,name,NULL)
                 {
-                  createInfo->statusInfo.skipped.count++;
-                  createInfo->statusInfo.skipped.size += fileInfo.size;
+                  createInfo->runningInfo.progress.skipped.count++;
+                  createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                 }
               }
               break;
@@ -2712,8 +2715,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                     STATUS_INFO_UPDATE(createInfo,name,NULL)
                     {
-                      createInfo->statusInfo.skipped.count++;
-                      createInfo->statusInfo.skipped.size += fileInfo.size;
+                      createInfo->runningInfo.progress.skipped.count++;
+                      createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                     }
                   }
                 }
@@ -2724,8 +2727,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 STATUS_INFO_UPDATE(createInfo,name,NULL)
                 {
-                  createInfo->statusInfo.skipped.count++;
-                  createInfo->statusInfo.skipped.size += fileInfo.size;
+                  createInfo->runningInfo.progress.skipped.count++;
+                  createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                 }
               }
               break;
@@ -2758,8 +2761,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                 STATUS_INFO_UPDATE(createInfo,name,NULL)
                 {
-                  createInfo->statusInfo.skipped.count++;
-                  createInfo->statusInfo.skipped.size += fileInfo.size;
+                  createInfo->runningInfo.progress.skipped.count++;
+                  createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                 }
               }
               break;
@@ -2769,8 +2772,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
               STATUS_INFO_UPDATE(createInfo,name,NULL)
               {
-                createInfo->statusInfo.error.count++;
-                createInfo->statusInfo.error.size += (uint64)fileInfo.size;
+                createInfo->runningInfo.progress.error.count++;
+                createInfo->runningInfo.progress.error.size += (uint64)fileInfo.size;
               }
               break;
           }
@@ -2875,7 +2878,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
           STATUS_INFO_UPDATE(createInfo,name,NULL)
           {
-            createInfo->statusInfo.error.count++;
+            createInfo->runningInfo.progress.error.count++;
           }
 
           continue;
@@ -2935,8 +2938,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                   STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-                    createInfo->statusInfo.skipped.count++;
-                    createInfo->statusInfo.skipped.size += fileInfo.size;
+                    createInfo->runningInfo.progress.skipped.count++;
+                    createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                   }
                 }
               }
@@ -2986,8 +2989,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                     STATUS_INFO_UPDATE(createInfo,name,NULL)
                     {
-                      createInfo->statusInfo.skipped.count++;
-                      createInfo->statusInfo.skipped.size += fileInfo.size;
+                      createInfo->runningInfo.progress.skipped.count++;
+                      createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                     }
                   }
                 }
@@ -3019,8 +3022,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
-                        createInfo->statusInfo.error.count++;
-                        createInfo->statusInfo.error.size += (uint64)fileInfo.size;
+                        createInfo->runningInfo.progress.error.count++;
+                        createInfo->runningInfo.progress.error.size += (uint64)fileInfo.size;
                       }
 
                       continue;
@@ -3040,7 +3043,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
-                        createInfo->statusInfo.error.count++;
+                        createInfo->runningInfo.progress.error.count++;
                       }
 
                       continue;
@@ -3150,7 +3153,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                                           STATUS_INFO_UPDATE(createInfo,name,NULL)
                                           {
-                                            createInfo->statusInfo.error.count++;
+                                            createInfo->runningInfo.progress.error.count++;
                                           }
 
                                           continue;
@@ -3305,7 +3308,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                                         STATUS_INFO_UPDATE(createInfo,name,NULL)
                                         {
-                                          createInfo->statusInfo.error.count++;
+                                          createInfo->runningInfo.progress.error.count++;
                                         }
 
                                         continue;
@@ -3334,8 +3337,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                               STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                               {
-                                createInfo->statusInfo.error.count++;
-                                createInfo->statusInfo.error.size += (uint64)fileInfo.size;
+                                createInfo->runningInfo.progress.error.count++;
+                                createInfo->runningInfo.progress.error.size += (uint64)fileInfo.size;
                               }
                               break;
                           }
@@ -3346,8 +3349,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                           STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                           {
-                            createInfo->statusInfo.skipped.count++;
-                            createInfo->statusInfo.skipped.size += fileInfo.size;
+                            createInfo->runningInfo.progress.skipped.count++;
+                            createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                           }
                         }
                       }
@@ -3357,8 +3360,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                         STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                         {
-                          createInfo->statusInfo.skipped.count++;
-                          createInfo->statusInfo.skipped.size += fileInfo.size;
+                          createInfo->runningInfo.progress.skipped.count++;
+                          createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                         }
                       }
                     }
@@ -3379,7 +3382,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                   STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-                    createInfo->statusInfo.error.count++;
+                    createInfo->runningInfo.progress.error.count++;
                   }
                 }
               }
@@ -3437,7 +3440,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                               STATUS_INFO_UPDATE(createInfo,name,NULL)
                               {
-                                createInfo->statusInfo.error.count++;
+                                createInfo->runningInfo.progress.error.count++;
                               }
 
                               continue;
@@ -3467,8 +3470,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                   STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-                    createInfo->statusInfo.skipped.count++;
-                    createInfo->statusInfo.skipped.size += fileInfo.size;
+                    createInfo->runningInfo.progress.skipped.count++;
+                    createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                   }
                 }
               }
@@ -3567,8 +3570,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                   STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-                    createInfo->statusInfo.skipped.count++;
-                    createInfo->statusInfo.skipped.size += fileInfo.size;
+                    createInfo->runningInfo.progress.skipped.count++;
+                    createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                   }
                 }
               }
@@ -3633,7 +3636,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                               STATUS_INFO_UPDATE(createInfo,name,NULL)
                               {
-                                createInfo->statusInfo.error.count++;
+                                createInfo->runningInfo.progress.error.count++;
                               }
 
                               continue;
@@ -3663,8 +3666,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                   STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-                    createInfo->statusInfo.skipped.count++;
-                    createInfo->statusInfo.skipped.size += fileInfo.size;
+                    createInfo->runningInfo.progress.skipped.count++;
+                    createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                   }
                 }
               }
@@ -3675,8 +3678,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
               STATUS_INFO_UPDATE(createInfo,name,NULL)
               {
-                createInfo->statusInfo.error.count++;
-                createInfo->statusInfo.error.size += (uint64)fileInfo.size;
+                createInfo->runningInfo.progress.error.count++;
+                createInfo->runningInfo.progress.error.size += (uint64)fileInfo.size;
               }
               break;
           }
@@ -3687,8 +3690,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
           STATUS_INFO_UPDATE(createInfo,name,NULL)
           {
-            createInfo->statusInfo.skipped.count++;
-            createInfo->statusInfo.skipped.size += fileInfo.size;
+            createInfo->runningInfo.progress.skipped.count++;
+            createInfo->runningInfo.progress.skipped.size += fileInfo.size;
           }
         }
 
@@ -3707,7 +3710,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
-          createInfo->statusInfo.error.count++;
+          createInfo->runningInfo.progress.error.count++;
         }
       }
 
@@ -3819,7 +3822,7 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
       {
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
-          createInfo->statusInfo.message.code = MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE;
+          createInfo->runningInfo.message.code = MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE;
         }
 
         do
@@ -3834,7 +3837,7 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
-          createInfo->statusInfo.message.code = MESSAGE_CODE_NONE;
+          createInfo->runningInfo.message.code = MESSAGE_CODE_NONE;
         }
       }
     }
@@ -4195,10 +4198,10 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
     return ERROR_ABORTED;
   }
 
-  // update status info
+  // update running info
   STATUS_INFO_UPDATE(createInfo,NULL,NULL)
   {
-    createInfo->statusInfo.storage.totalSize += intermediateFileSize;
+    createInfo->runningInfo.progress.storage.totalSize += intermediateFileSize;
   }
 
   return ERROR_NONE;
@@ -4346,7 +4349,7 @@ NULL, // masterIO
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               CALLBACK_(NULL,NULL),  // updateStatusInfo
+                               CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
                                CALLBACK_(NULL,NULL),  // getPassword
                                CALLBACK_(NULL,NULL),  // requestVolume
                                CALLBACK_(NULL,NULL),  // isPause
@@ -4568,7 +4571,7 @@ NULL, // masterIO
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               CALLBACK_(NULL,NULL),  // updateStatusInfo
+                               CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
                                CALLBACK_(NULL,NULL),  // getPassword
                                CALLBACK_(NULL,NULL),  // requestVolume
                                CALLBACK_(NULL,NULL),  // isPause
@@ -4950,10 +4953,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                      }
                     );
 
-        // update status info
+        // update running info
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
-          String_set(createInfo->statusInfo.storage.name,printableStorageName);
+          String_set(createInfo->runningInfo.progress.storage.name,printableStorageName);
         }
 
         // pause, check abort/error
@@ -5514,10 +5517,10 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size, u
   STATUS_INFO_UPDATE(createInfo,name,NULL)
   {
     // get/create fragment node
-    fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+    fragmentNode = FragmentList_find(&createInfo->runningInfoFragmentList,name);
     if (fragmentNode == NULL)
     {
-      fragmentNode = FragmentList_add(&createInfo->statusInfoFragmentList,name,size,NULL,0,fragmentCount);
+      fragmentNode = FragmentList_add(&createInfo->runningInfoFragmentList,name,size,NULL,0,fragmentCount);
       if (fragmentNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
@@ -5526,18 +5529,18 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size, u
     assert(fragmentNode != NULL);
 
     // status update
-    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
-        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+    if (   (createInfo->runningInfoCurrentFragmentNode == NULL)
+        || ((Misc_getTimestamp()-createInfo->runningInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
        )
     {
-      createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
-      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
+      createInfo->runningInfoCurrentFragmentNode        = fragmentNode;
+      createInfo->runningInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
 
-      String_set(createInfo->statusInfo.entry.name,name);
-      createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-      createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+      String_set(createInfo->runningInfo.progress.entry.name,name);
+      createInfo->runningInfo.progress.entry.doneSize  = FragmentList_getSize(fragmentNode);
+      createInfo->runningInfo.progress.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
     }
-    assert(createInfo->statusInfoCurrentFragmentNode != NULL);
+    assert(createInfo->runningInfoCurrentFragmentNode != NULL);
   }
 }
 
@@ -5558,10 +5561,10 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
   assert(createInfo != NULL);
   assert(name != NULL);
 
-  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&createInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // get fragment node
-    fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+    fragmentNode = FragmentList_find(&createInfo->runningInfoFragmentList,name);
     if (fragmentNode != NULL)
     {
       if (fragmentNode->size > 0LL)
@@ -5573,12 +5576,12 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
       // check if fragment complete
       if (FragmentList_isComplete(fragmentNode))
       {
-        if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+        if (fragmentNode == createInfo->runningInfoCurrentFragmentNode)
         {
-          createInfo->statusInfoCurrentFragmentNode = NULL;
+          createInfo->runningInfoCurrentFragmentNode = NULL;
         }
 
-        FragmentList_discard(&createInfo->statusInfoFragmentList,fragmentNode);
+        FragmentList_discard(&createInfo->runningInfoFragmentList,fragmentNode);
       }
     }
   }
@@ -5736,7 +5739,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.skipped.count++;
+        createInfo->runningInfo.progress.skipped.count++;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -5753,7 +5756,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.error.count++;
+        createInfo->runningInfo.progress.error.count++;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -5778,8 +5781,8 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.skipped.count += (fragmentOffset == 0LL) ? 1 : 0;
-        createInfo->statusInfo.skipped.size  += fragmentSize;
+        createInfo->runningInfo.progress.skipped.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->runningInfo.progress.skipped.size  += fragmentSize;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -5796,8 +5799,8 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.error.count += (fragmentOffset == 0LL) ? 1 : 0;
-        createInfo->statusInfo.error.size  += (uint64)fileInfo->size;
+        createInfo->runningInfo.progress.error.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->runningInfo.progress.error.size  += (uint64)fileInfo->size;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -5899,18 +5902,18 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
                   // add fragment
                   FragmentList_addRange(fragmentNode,offset,bufferLength);
 
-                  // update status info
-                  if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+                  // update running info
+                  if (fragmentNode == createInfo->runningInfoCurrentFragmentNode)
                   {
-                    createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-                    createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+                    createInfo->runningInfo.progress.entry.doneSize   = FragmentList_getSize(createInfo->runningInfoCurrentFragmentNode);
+                    createInfo->runningInfo.progress.entry.totalSize  = FragmentList_getTotalSize(createInfo->runningInfoCurrentFragmentNode);
                   }
                 }
-                createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferLength;
-                createInfo->statusInfo.archiveSize      = archiveSize+createInfo->statusInfo.storage.totalSize;
-                createInfo->statusInfo.compressionRatio = (!createInfo->jobOptions->dryRun && (createInfo->statusInfo.done.size > 0))
-                                                            ? 100.0-(archiveSize*100.0)/createInfo->statusInfo.done.size
-                                                            : 0.0;
+                createInfo->runningInfo.progress.done.size        = createInfo->runningInfo.progress.done.size+(uint64)bufferLength;
+                createInfo->runningInfo.progress.archiveSize      = archiveSize+createInfo->runningInfo.progress.storage.totalSize;
+                createInfo->runningInfo.progress.compressionRatio = (!createInfo->jobOptions->dryRun && (createInfo->runningInfo.progress.done.size > 0))
+                                                                      ? 100.0-(archiveSize*100.0)/createInfo->runningInfo.progress.done.size
+                                                                      : 0.0;
               }
               offset += bufferLength;
             }
@@ -5928,8 +5931,8 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
               percentageDone = 0;
               STATUS_INFO_GET(createInfo,fileName)
               {
-                percentageDone = (createInfo->statusInfo.entry.totalSize > 0LL)
-                                   ? (uint)((createInfo->statusInfo.entry.doneSize*100LL)/createInfo->statusInfo.entry.totalSize)
+                percentageDone = (createInfo->runningInfo.progress.entry.totalSize > 0LL)
+                                   ? (uint)((createInfo->runningInfo.progress.entry.doneSize*100LL)/createInfo->runningInfo.progress.entry.totalSize)
                                    : 100;
               }
               printInfo(2,"%3d%%\b\b\b\b",percentageDone);
@@ -5975,8 +5978,8 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 
         STATUS_INFO_UPDATE(createInfo,fileName,NULL)
         {
-          createInfo->statusInfo.error.count++;
-          createInfo->statusInfo.error.size += fragmentSize;
+          createInfo->runningInfo.progress.error.count++;
+          createInfo->runningInfo.progress.error.size += fragmentSize;
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
@@ -6087,19 +6090,19 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
              );
   }
 
-  // update status info
+  // update running info
   STATUS_INFO_UPDATE(createInfo,fileName,&fragmentNode)
   {
     if (fragmentNode != NULL)
     {
-      if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+      if (fragmentNode == createInfo->runningInfoCurrentFragmentNode)
       {
-        createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-        createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+        createInfo->runningInfo.progress.entry.doneSize   = FragmentList_getSize(createInfo->runningInfoCurrentFragmentNode);
+        createInfo->runningInfo.progress.entry.totalSize  = FragmentList_getTotalSize(createInfo->runningInfoCurrentFragmentNode);
       }
       if (FragmentList_isComplete(fragmentNode))
       {
-        createInfo->statusInfo.done.count++;
+        createInfo->runningInfo.progress.done.count++;
       }
     }
   }
@@ -6213,8 +6216,8 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
       {
-        createInfo->statusInfo.skipped.count++;
-        createInfo->statusInfo.skipped.size += fragmentSize;
+        createInfo->runningInfo.progress.skipped.count++;
+        createInfo->runningInfo.progress.skipped.size += fragmentSize;
       }
 
       return ERROR_NONE;
@@ -6229,8 +6232,8 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
       {
-        createInfo->statusInfo.error.count += (fragmentOffset == 0LL) ? 1 : 0;
-        createInfo->statusInfo.error.size  += fragmentSize;
+        createInfo->runningInfo.progress.error.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->runningInfo.progress.error.size  += fragmentSize;
       }
 
       return error;
@@ -6355,7 +6358,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
           // get current archive size
           archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
-          // update status info
+          // update running info
           STATUS_INFO_UPDATE(createInfo,deviceName,&fragmentNode)
           {
             if (fragmentNode != NULL)
@@ -6363,18 +6366,18 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
               // add fragment
               FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo->blockSize,(uint64)bufferBlockCount*(uint64)deviceInfo->blockSize);
 
-              // update status info
-              if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+              // update running info
+              if (fragmentNode == createInfo->runningInfoCurrentFragmentNode)
               {
-                createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-                createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+                createInfo->runningInfo.progress.entry.doneSize   = FragmentList_getSize(createInfo->runningInfoCurrentFragmentNode);
+                createInfo->runningInfo.progress.entry.totalSize  = FragmentList_getTotalSize(createInfo->runningInfoCurrentFragmentNode);
               }
             }
-            createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferBlockCount*(uint64)deviceInfo->blockSize;
-            createInfo->statusInfo.archiveSize      = archiveSize+createInfo->statusInfo.storage.totalSize;
-            createInfo->statusInfo.compressionRatio = (!createInfo->jobOptions->dryRun && (createInfo->statusInfo.done.size > 0))
-                                                        ? 100.0-(archiveSize*100.0)/createInfo->statusInfo.done.size
-                                                        : 0.0;
+            createInfo->runningInfo.progress.done.size        = createInfo->runningInfo.progress.done.size+(uint64)bufferBlockCount*(uint64)deviceInfo->blockSize;
+            createInfo->runningInfo.progress.archiveSize      = archiveSize+createInfo->runningInfo.progress.storage.totalSize;
+            createInfo->runningInfo.progress.compressionRatio = (!createInfo->jobOptions->dryRun && (createInfo->runningInfo.progress.done.size > 0))
+                                                                  ? 100.0-(archiveSize*100.0)/createInfo->runningInfo.progress.done.size
+                                                                  : 0.0;
           }
           blockOffset += (uint64)bufferBlockCount;
         }
@@ -6392,8 +6395,8 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
           percentageDone = 0;
           STATUS_INFO_GET(createInfo,deviceName)
           {
-            percentageDone = (createInfo->statusInfo.entry.totalSize > 0LL)
-                               ? (uint)((createInfo->statusInfo.entry.doneSize*100LL)/createInfo->statusInfo.entry.totalSize)
+            percentageDone = (createInfo->runningInfo.progress.entry.totalSize > 0LL)
+                               ? (uint)((createInfo->runningInfo.progress.entry.doneSize*100LL)/createInfo->runningInfo.progress.entry.totalSize)
                                : 100;
           }
           printInfo(2,"%3d%%\b\b\b\b",percentageDone);
@@ -6429,8 +6432,8 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
 
         STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
         {
-          createInfo->statusInfo.error.count++;
-          createInfo->statusInfo.error.size += fragmentSize;
+          createInfo->runningInfo.progress.error.count++;
+          createInfo->runningInfo.progress.error.size += fragmentSize;
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
@@ -6553,20 +6556,20 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
              );
   }
 
-  // update status info
+  // update running info
   STATUS_INFO_UPDATE(createInfo,deviceName,&fragmentNode)
   {
     if (fragmentNode != NULL)
     {
-      if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+      if (fragmentNode == createInfo->runningInfoCurrentFragmentNode)
       {
-        createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-        createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+        createInfo->runningInfo.progress.entry.doneSize   = FragmentList_getSize(createInfo->runningInfoCurrentFragmentNode);
+        createInfo->runningInfo.progress.entry.totalSize  = FragmentList_getTotalSize(createInfo->runningInfoCurrentFragmentNode);
       }
 
       if (FragmentList_isComplete(fragmentNode))
       {
-        createInfo->statusInfo.done.count++;
+        createInfo->runningInfo.progress.done.count++;
       }
     }
   }
@@ -6639,7 +6642,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
       {
-        createInfo->statusInfo.error.count++;
+        createInfo->runningInfo.progress.error.count++;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -6722,10 +6725,10 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
     printInfo(1,"OK (not stored)\n");
   }
 
-  // update status info
+  // update running info
   STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
   {
-    createInfo->statusInfo.done.count++;
+    createInfo->runningInfo.progress.done.count++;
   }
 
   // free resources
@@ -6799,7 +6802,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,linkName,NULL)
       {
-        createInfo->statusInfo.error.count++;
+        createInfo->runningInfo.progress.error.count++;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -6839,8 +6842,8 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
 
         STATUS_INFO_UPDATE(createInfo,linkName,NULL)
         {
-          createInfo->statusInfo.error.count++;
-          createInfo->statusInfo.error.size += (uint64)fileInfo->size;
+          createInfo->runningInfo.progress.error.count++;
+          createInfo->runningInfo.progress.error.size += (uint64)fileInfo->size;
         }
 
         String_delete(fileName);
@@ -6889,7 +6892,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
     }
     String_delete(archiveEntryName);
 
-    // update status info
+    // update running info
     STATUS_INFO_UPDATE(createInfo,linkName,NULL)
     {
       // no additional values
@@ -6931,10 +6934,10 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
     printInfo(1,"OK (not stored)\n");
   }
 
-  // update status info
+  // update running info
   STATUS_INFO_UPDATE(createInfo,linkName,NULL)
   {
-    createInfo->statusInfo.done.count++;
+    createInfo->runningInfo.progress.done.count++;
   }
 
   // free resources
@@ -7034,7 +7037,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
-        createInfo->statusInfo.skipped.count++;
+        createInfo->runningInfo.progress.skipped.count++;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7051,7 +7054,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
-        createInfo->statusInfo.error.count++;
+        createInfo->runningInfo.progress.error.count++;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7076,8 +7079,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
-        createInfo->statusInfo.skipped.count += (fragmentOffset == 0LL) ? 1 : 0;
-        createInfo->statusInfo.skipped.size  += fragmentSize;
+        createInfo->runningInfo.progress.skipped.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->runningInfo.progress.skipped.size  += fragmentSize;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7094,8 +7097,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
-        createInfo->statusInfo.error.count += (fragmentOffset == 0LL) ? 1 : 0;
-        createInfo->statusInfo.error.size  += fragmentSize;
+        createInfo->runningInfo.progress.error.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->runningInfo.progress.error.size  += fragmentSize;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7188,7 +7191,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               // get current archive size
               archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
-              // update status info
+              // update running info
               STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),&fragmentNode)
               {
                 if (fragmentNode != NULL)
@@ -7196,18 +7199,18 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                   // add fragment
                   FragmentList_addRange(fragmentNode,offset,bufferLength);
 
-                  // update status info
-                  if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+                  // update running info
+                  if (fragmentNode == createInfo->runningInfoCurrentFragmentNode)
                   {
-                    createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-                    createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+                    createInfo->runningInfo.progress.entry.doneSize   = FragmentList_getSize(createInfo->runningInfoCurrentFragmentNode);
+                    createInfo->runningInfo.progress.entry.totalSize  = FragmentList_getTotalSize(createInfo->runningInfoCurrentFragmentNode);
                   }
                 }
-                createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferLength;
-                createInfo->statusInfo.archiveSize      = archiveSize+createInfo->statusInfo.storage.totalSize;
-                createInfo->statusInfo.compressionRatio = (!createInfo->jobOptions->dryRun && (createInfo->statusInfo.done.size > 0))
-                                                            ? 100.0-(createInfo->statusInfo.archiveSize *100.0)/createInfo->statusInfo.done.size
-                                                            : 0.0;
+                createInfo->runningInfo.progress.done.size        = createInfo->runningInfo.progress.done.size+(uint64)bufferLength;
+                createInfo->runningInfo.progress.archiveSize      = archiveSize+createInfo->runningInfo.progress.storage.totalSize;
+                createInfo->runningInfo.progress.compressionRatio = (!createInfo->jobOptions->dryRun && (createInfo->runningInfo.progress.done.size > 0))
+                                                                      ? 100.0-(createInfo->runningInfo.progress.archiveSize *100.0)/createInfo->runningInfo.progress.done.size
+                                                                      : 0.0;
               }
               offset += bufferLength;
             }
@@ -7225,8 +7228,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               percentageDone = 0;
               STATUS_INFO_GET(createInfo,StringList_first(fileNameList,NULL))
               {
-                percentageDone = (createInfo->statusInfo.entry.totalSize > 0LL)
-                                   ? (uint)((createInfo->statusInfo.entry.doneSize*100LL)/createInfo->statusInfo.entry.totalSize)
+                percentageDone = (createInfo->runningInfo.progress.entry.totalSize > 0LL)
+                                   ? (uint)((createInfo->runningInfo.progress.entry.doneSize*100LL)/createInfo->runningInfo.progress.entry.totalSize)
                                    : 100;
               }
               printInfo(2,"%3d%%\b\b\b\b",percentageDone);
@@ -7273,8 +7276,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
         STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
         {
-          createInfo->statusInfo.error.count++;
-          createInfo->statusInfo.error.size += fragmentSize;
+          createInfo->runningInfo.progress.error.count++;
+          createInfo->runningInfo.progress.error.size += fragmentSize;
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
@@ -7388,20 +7391,20 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
              );
   }
 
-  // update status info
+  // update running info
   STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),&fragmentNode)
   {
     if (fragmentNode != NULL)
     {
-      if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+      if (fragmentNode == createInfo->runningInfoCurrentFragmentNode)
       {
-        createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-        createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+        createInfo->runningInfo.progress.entry.doneSize   = FragmentList_getSize(createInfo->runningInfoCurrentFragmentNode);
+        createInfo->runningInfo.progress.entry.totalSize  = FragmentList_getTotalSize(createInfo->runningInfoCurrentFragmentNode);
       }
 
       if (FragmentList_isComplete(fragmentNode))
       {
-        createInfo->statusInfo.done.count += StringList_count(fileNameList);
+        createInfo->runningInfo.progress.done.count += StringList_count(fileNameList);
       }
     }
   }
@@ -7483,7 +7486,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.error.count++;
+        createInfo->runningInfo.progress.error.count++;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7562,10 +7565,10 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
     printInfo(1,"OK (not stored)\n");
   }
 
-  // update status info
+  // update running info
   STATUS_INFO_UPDATE(createInfo,fileName,NULL)
   {
-    createInfo->statusInfo.done.count++;
+    createInfo->runningInfo.progress.done.count++;
   }
 
   // free resources
@@ -7768,14 +7771,14 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
       STATUS_INFO_UPDATE(createInfo,entryMsg.name,NULL)
       {
-        createInfo->statusInfo.skipped.count++;
+        createInfo->runningInfo.progress.skipped.count++;
       }
     }
 
-    // update status info and check if aborted
-    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    // update running info and check if aborted
+    SEMAPHORE_LOCKED_DO(&createInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      updateStatusInfo(createInfo,FALSE);
+      updateRunningInfo(createInfo,FALSE);
     }
 
     // free entry message
@@ -7784,7 +7787,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 // NYI: is this really useful? (avoid that sum-collector-thread is slower than file-collector-thread)
     // slow down if too fast
     while (   !createInfo->collectorSumThreadExitedFlag
-           && (createInfo->statusInfo.done.count >= createInfo->statusInfo.total.count)
+           && (createInfo->runningInfo.progress.done.count >= createInfo->runningInfo.progress.total.count)
           )
     {
       Misc_udelay(1000LL*US_PER_MS);
@@ -7817,8 +7820,8 @@ Errors Command_create(ServerIO                     *masterIO,
                       uint64                       createdDateTime,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
-                      StatusInfoFunction           statusInfoFunction,
-                      void                         *statusInfoUserData,
+                      RunningInfoFunction          runningInfoFunction,
+                      void                         *runningInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,
                       void                         *storageRequestVolumeUserData,
                       IsPauseFunction              isPauseCreateFunction,
@@ -7918,7 +7921,7 @@ Errors Command_create(ServerIO                     *masterIO,
                  jobOptions,
                  createdDateTime,
                  CALLBACK_(isPauseCreateFunction,isPauseCreateUserData),
-                 CALLBACK_(statusInfoFunction,statusInfoUserData),
+                 CALLBACK_(runningInfoFunction,runningInfoUserData),
                  CALLBACK_(isAbortedFunction,isAbortedUserData),
                  logHandle
                 );
@@ -7947,7 +7950,7 @@ Errors Command_create(ServerIO                     *masterIO,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(updateStorageStatusInfo,&createInfo),
+                       CALLBACK_(updateStorageRunningInfo,&createInfo),
                        CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                        CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData),
                        CALLBACK_(isPauseStorageFunction,isPauseStorageUserData),
@@ -8210,10 +8213,10 @@ Errors Command_create(ServerIO                     *masterIO,
   ThreadPool_join(&workerThreadPool,collectorStorageThreadNode);
   AUTOFREE_REMOVE(&autoFreeList,collectorStorageThreadNode);
 
-  // final update of status info
-  SEMAPHORE_LOCKED_DO(&createInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+  // final update of running info
+  SEMAPHORE_LOCKED_DO(&createInfo.runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
   {
-    (void)updateStatusInfo(&createInfo,TRUE);
+    (void)updateRunningInfo(&createInfo,TRUE);
   }
 
   // update index
@@ -8287,34 +8290,34 @@ Errors Command_create(ServerIO                     *masterIO,
   {
     printInfo(1,
               "%lu entries/%.1lf%s (%"PRIu64" bytes) included\n",
-              createInfo.statusInfo.done.count,
-              BYTES_SHORT(createInfo.statusInfo.done.size),
-              BYTES_UNIT(createInfo.statusInfo.done.size),
-              createInfo.statusInfo.done.size
+              createInfo.runningInfo.progress.done.count,
+              BYTES_SHORT(createInfo.runningInfo.progress.done.size),
+              BYTES_UNIT(createInfo.runningInfo.progress.done.size),
+              createInfo.runningInfo.progress.done.size
              );
     printInfo(2,
               "%lu entries/%.1lf%s (%"PRIu64" bytes) skipped\n",
-              createInfo.statusInfo.skipped.count,
-              BYTES_SHORT(createInfo.statusInfo.skipped.size),
-              BYTES_UNIT(createInfo.statusInfo.skipped.size),
-              createInfo.statusInfo.skipped.size
+              createInfo.runningInfo.progress.skipped.count,
+              BYTES_SHORT(createInfo.runningInfo.progress.skipped.size),
+              BYTES_UNIT(createInfo.runningInfo.progress.skipped.size),
+              createInfo.runningInfo.progress.skipped.size
              );
     printInfo(2,
               "%lu entries/%.1lf%s (%"PRIu64" bytes) with errors\n",
-              createInfo.statusInfo.error.count,
-              BYTES_SHORT(createInfo.statusInfo.error.size),
-              BYTES_UNIT(createInfo.statusInfo.error.size),
-              createInfo.statusInfo.error.size
+              createInfo.runningInfo.progress.error.count,
+              BYTES_SHORT(createInfo.runningInfo.progress.error.size),
+              BYTES_UNIT(createInfo.runningInfo.progress.error.size),
+              createInfo.runningInfo.progress.error.size
              );
     logMessage(logHandle,
                LOG_TYPE_ALWAYS,
                "%lu entries/%.1lf%s (%"PRIu64" bytes) included, %lu entries skipped, %lu entries with errors",
-               createInfo.statusInfo.done.count,
-               BYTES_SHORT(createInfo.statusInfo.done.size),
-               BYTES_UNIT(createInfo.statusInfo.done.size),
-               createInfo.statusInfo.done.size,
-               createInfo.statusInfo.skipped.count,
-               createInfo.statusInfo.error.count
+               createInfo.runningInfo.progress.done.count,
+               BYTES_SHORT(createInfo.runningInfo.progress.done.size),
+               BYTES_UNIT(createInfo.runningInfo.progress.done.size),
+               createInfo.runningInfo.progress.done.size,
+               createInfo.runningInfo.progress.skipped.count,
+               createInfo.runningInfo.progress.error.count
               );
   }
 

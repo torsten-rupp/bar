@@ -4506,8 +4506,8 @@ public class BARWidgets
       ARCHIVE_PART_SIZE
     };
 
-    // max. size of medium data with ECC [%]
-    private final double MAX_MEDIUM_SIZE_ECC = 0.8;
+    // max. size of volume data with ECC [%]
+    private final double MAX_VOLUME_SIZE_ECC = 0.8;
 
     Text   deviceName;
     Combo  volumeSize;
@@ -4521,8 +4521,8 @@ public class BARWidgets
      * @param deviceNameVariable device name variable (can be null)
      * @param volumeSizeVariable volume size variable (can be null)
      * @param eccVariable add error correction codes variable (can be null)
-     * @param blankVariable blank medium variable (can be null)
-     * @param waitFirstVolumeVariable wait for first medium variable (can be null)
+     * @param blankVariable blank volumn variable (can be null)
+     * @param waitFirstVolumeVariable wait for first volumn variable (can be null)
      * @param archivePartSizeFlag archive parts enable variable (can be null)
      * @param archivePartSize archive part size variable (can be null)
      */
@@ -4742,7 +4742,7 @@ public class BARWidgets
                 try
                 {
                   long n    = Units.parseByteSize(volumeSize.getText());
-                  long size = (long)((double)n*MAX_MEDIUM_SIZE_ECC);
+                  long size = (long)((double)n*MAX_VOLUME_SIZE_ECC);
 
                   if (   checkedFlag
                       && archivePartSizeFlag.getBoolean()

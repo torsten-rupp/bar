@@ -65,9 +65,9 @@
 *          getNamePasswordFunction      - get password callback (can
 *                                         be NULL)
 *          getNamePasswordUserData      - user data for get password
-*          statusInfoFunction           - status info callback
+*          runningInfoFunction          - running info callback
 *                                         function (can be NULL)
-*          statusInfoUserData           - user data for status info
+*          runningInfoUserData          - user data for running info
 *          storageRequestVolumeFunction - request volume callback
 *                                         function (can be NULL)
 *          storageRequestVolumeUserData - user data for request
@@ -103,8 +103,8 @@ Errors Command_create(ServerIO                     *masterIO,
                       uint64                       createdDateTime,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
-                      StatusInfoFunction           statusInfoFunction,
-                      void                         *statusInfoUserData,
+                      RunningInfoFunction          runningInfoFunction,
+                      void                         *runningInfoUserData,
                       StorageRequestVolumeFunction storageRequestVolumeFunction,
                       void                         *storageRequestVolumeUserData,
                       IsPauseFunction              isPauseCreateFunction,
