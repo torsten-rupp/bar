@@ -3489,10 +3489,9 @@ if (false) {
         public void handle(Widget widget, JobData jobData)
         {
           MenuItem menuItem = (MenuItem)widget;
-          menuItem.setEnabled(   (jobData.state == JobData.States.WAITING       )
-                              || (jobData.state == JobData.States.RUNNING       )
-                              || (jobData.state == JobData.States.DRY_RUNNING   )
-                              || (jobData.state == JobData.States.REQUEST_VOLUME)
+          menuItem.setEnabled(   (jobData.state == JobData.States.WAITING    )
+                              || (jobData.state == JobData.States.RUNNING    )
+                              || (jobData.state == JobData.States.DRY_RUNNING)
                              );
         }
       });

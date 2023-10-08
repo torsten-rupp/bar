@@ -1248,19 +1248,14 @@ class $javaClassName extends Exception
     buffer.append(text);
   }
 
-  private static void stringAppend(StringBuilder buffer, int size, StringBuilder text)
-  {
-    buffer.append(text);
-  }
-
   private static void stringAppend(StringBuilder buffer, int size, String text)
   {
     buffer.append(text);
   }
 
-  private static void stringAppend(StringBuilder buffer, int n, int size)
+  private static void stringAppendChar(StringBuilder buffer, int size, char ch)
   {
-    buffer.append(String.format(\"%03x\",n));
+    buffer.append(ch);
   }
 
   private static void stringFormat(StringBuilder buffer, int size, String format, Object... arguments)

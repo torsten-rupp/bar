@@ -534,9 +534,9 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
     transferedBytes += (uint64)length;
     storageHandle->master.index += (uint64)length;
 
-    // update status info
-    storageHandle->storageInfo->runningInfo.storageDoneBytes += (uint64)length;
-    if (!updateStorageStatusInfo(storageHandle->storageInfo))
+    // update running info
+    storageHandle->storageInfo->progress.storageDoneBytes += (uint64)length;
+    if (!updateStorageRunningInfo(storageHandle->storageInfo))
     {
       String_delete(encodedData);
       free(buffer);

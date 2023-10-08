@@ -56,7 +56,8 @@ LOCAL const struct
 {
   const char      *name;
   CryptAlgorithms cryptAlgorithm;
-} CRYPT_ALGORITHMS[] =
+}
+CRYPT_ALGORITHMS[] =
 {
   { "none",       CRYPT_ALGORITHM_NONE        },
 
@@ -81,7 +82,8 @@ LOCAL const struct
 {
   const char          *name;
   CryptHashAlgorithms cryptHashAlgorithm;
-} CRYPT_HASH_ALGORITHMS[] =
+}
+CRYPT_HASH_ALGORITHMS[] =
 {
   { "SHA2-224",   CRYPT_HASH_ALGORITHM_SHA2_224 },
   { "SHA2-256",   CRYPT_HASH_ALGORITHM_SHA2_256 },
@@ -94,7 +96,8 @@ LOCAL const struct
 {
   const char         *name;
   CryptMACAlgorithms cryptMACAlgorithm;
-} CRYPT_MAC_ALGORITHMS[] =
+}
+CRYPT_MAC_ALGORITHMS[] =
 {
   { "SHA2-224",   CRYPT_MAC_ALGORITHM_SHA2_224 },
   { "SHA2-256",   CRYPT_MAC_ALGORITHM_SHA2_256 },

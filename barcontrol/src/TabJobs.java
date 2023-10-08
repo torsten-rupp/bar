@@ -2455,7 +2455,7 @@ public class TabJobs
   }
 
   // max. size of medium data with ECC [%]
-  private final double MAX_MEDIUM_SIZE_ECC = 0.8;
+  private final double MAX_VOLUME_SIZE_ECC = 0.8;
 
   // colors
   private final Color  COLOR_BLACK;
@@ -6849,7 +6849,7 @@ public class TabJobs
                     Dialogs.warning(shell,BARControl.tr("When writing to a CD without setting medium size\nthe resulting archive file may not fit on medium."));
                   }
 
-                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_MEDIUM_SIZE_ECC);
+                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_VOLUME_SIZE_ECC);
                   if (   ecc.getBoolean()
                       && archivePartSizeFlag.getBoolean()
                       && (archivePartSize.getLong() > 0)
@@ -6882,7 +6882,7 @@ public class TabJobs
                                    );
                   }
 
-                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_MEDIUM_SIZE_ECC);
+                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_VOLUME_SIZE_ECC);
                   if (   ecc.getBoolean()
                       && archivePartSizeFlag.getBoolean()
                       && (archivePartSize.getLong() > 0)
@@ -6916,7 +6916,7 @@ public class TabJobs
                                    );
                   }
 
-                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_MEDIUM_SIZE_ECC);
+                  long size = (long)((double)Units.parseByteSize(volumeSize.getString())*MAX_VOLUME_SIZE_ECC);
                   if (   ecc.getBoolean()
                       && archivePartSizeFlag.getBoolean()
                       && (archivePartSize.getLong() > 0)

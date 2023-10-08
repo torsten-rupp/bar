@@ -59,38 +59,38 @@
 // restore information
 typedef struct
 {
-  StorageSpecifier                *storageSpecifier;                    // storage specifier structure
-  const EntryList                 *includeEntryList;                    // list of included entries
-  const PatternList               *excludePatternList;                  // list of exclude patterns
-  JobOptions                      *jobOptions;
+  StorageSpecifier                 *storageSpecifier;                     // storage specifier structure
+  const EntryList                  *includeEntryList;                     // list of included entries
+  const PatternList                *excludePatternList;                   // list of exclude patterns
+  JobOptions                       *jobOptions;
 
-  LogHandle                       *logHandle;                           // log handle
+  LogHandle                        *logHandle;                            // log handle
 
-  Semaphore                       namesDictionaryLock;
-  Dictionary                      namesDictionary;                      // dictionary with files (used for detecting overwrite existing files)
+  Semaphore                        namesDictionaryLock;
+  Dictionary                       namesDictionary;                       // dictionary with files (used for detecting overwrite existing files)
 
-  RestoreUpdateStatusInfoFunction updateStatusInfoFunction;             // update status info call-back
-  void                            *updateStatusInfoUserData;            // user data for update status info call-back
-  RestoreHandleErrorFunction      handleErrorFunction;                  // handle error call-back
-  void                            *handleErrorUserData;                 // user data for handle error call-back
-  GetNamePasswordFunction         getNamePasswordFunction;              // get name/password call-back
-  void                            *getNamePasswordUserData;             // user data for get password call-back
-  IsPauseFunction                 isPauseFunction;                      // check for pause call-back
-  void                            *isPauseUserData;                     // user data for check for pause call-back
-  IsAbortedFunction               isAbortedFunction;                    // check for aborted call-back
-  void                            *isAbortedUserData;                   // user data for check for aborted call-back
+  RestoreUpdateRunningInfoFunction updateRunningInfoFunction;             // update running info call-back
+  void                             *updateRunningInfoUserData;            // user data for update running info call-back
+  RestoreHandleErrorFunction       handleErrorFunction;                   // handle error call-back
+  void                             *handleErrorUserData;                  // user data for handle error call-back
+  GetNamePasswordFunction          getNamePasswordFunction;               // get name/password call-back
+  void                             *getNamePasswordUserData;              // user data for get password call-back
+  IsPauseFunction                  isPauseFunction;                       // check for pause call-back
+  void                             *isPauseUserData;                      // user data for check for pause call-back
+  IsAbortedFunction                isAbortedFunction;                     // check for aborted call-back
+  void                             *isAbortedUserData;                    // user data for check for aborted call-back
 
-  MsgQueue                        entryMsgQueue;                        // queue with entries to store
+  MsgQueue                         entryMsgQueue;                         // queue with entries to store
 
-  Errors                          failError;                            // failure error
+  Errors                           failError;                             // failure error
 
-  Semaphore                       fragmentListLock;
-  FragmentList                    fragmentList;                         // entry fragments
+  Semaphore                        fragmentListLock;
+  FragmentList                     fragmentList;                          // entry fragments
 
-  Semaphore                       statusInfoLock;
-  StatusInfo                      statusInfo;                           // status info
-  const FragmentNode              *statusInfoCurrentFragmentNode;       // current fragment node in status info
-  uint64                          statusInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
+  Semaphore                        runningInfoLock;
+  RunningInfo                      runningInfo;                           // running info
+  const FragmentNode               *runningInfoCurrentFragmentNode;       // current fragment node in running info
+  uint64                           runningInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
 } RestoreInfo;
 
 // entry message send to restore threads
@@ -143,9 +143,9 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 *          compressExcludePatternList - exclude compression pattern list
 *          jobOptions                 - job options
 *          storageNameCustomText      - storage name custome text or NULL
-*          updateStatusInfoFunction   - status info function call-back
+*          updateRunningInfoFunction  - running info function call-back
 *                                       (can be NULL)
-*          updateStatusInfoUserData   - user data for status info
+*          updateRunningInfoUserData  - user data for running info
 *                                       function
 *          handleErrorFunction        - get password call-back
 *          handleErrorUserData        - user data for get password
@@ -165,8 +165,8 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
                            const EntryList                 *includeEntryList,
                            const PatternList               *excludePatternList,
                            JobOptions                      *jobOptions,
-                           RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
-                           void                            *updateStatusInfoUserData,
+                           RestoreUpdateRunningInfoFunction updateRunningInfoFunction,
+                           void                            *updateRunningInfoUserData,
                            RestoreHandleErrorFunction      handleErrorFunction,
                            void                            *handleErrorUserData,
                            GetNamePasswordFunction         getNamePasswordFunction,
@@ -190,8 +190,8 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
 
   restoreInfo->failError                            = ERROR_NONE;
 
-  restoreInfo->updateStatusInfoFunction             = updateStatusInfoFunction;
-  restoreInfo->updateStatusInfoUserData             = updateStatusInfoUserData;
+  restoreInfo->updateRunningInfoFunction            = updateRunningInfoFunction;
+  restoreInfo->updateRunningInfoUserData            = updateRunningInfoUserData;
   restoreInfo->handleErrorFunction                  = handleErrorFunction;
   restoreInfo->handleErrorUserData                  = handleErrorUserData;
   restoreInfo->getNamePasswordFunction              = getNamePasswordFunction;
@@ -213,13 +213,13 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   }
   FragmentList_init(&restoreInfo->fragmentList);
 
-  if (!Semaphore_init(&restoreInfo->statusInfoLock,SEMAPHORE_TYPE_BINARY))
+  if (!Semaphore_init(&restoreInfo->runningInfoLock,SEMAPHORE_TYPE_BINARY))
   {
-    HALT_FATAL_ERROR("Cannot initialize status info semaphore!");
+    HALT_FATAL_ERROR("Cannot initialize running info semaphore!");
   }
-  initStatusInfo(&restoreInfo->statusInfo);
-  restoreInfo->statusInfoCurrentFragmentNode        = NULL;
-  restoreInfo->statusInfoCurrentLastUpdateTimestamp = 0LL;
+  initRunningInfo(&restoreInfo->runningInfo);
+  restoreInfo->runningInfoCurrentFragmentNode        = NULL;
+  restoreInfo->runningInfoCurrentLastUpdateTimestamp = 0LL;
 
   // init entry name queue, storage queue
   if (!MsgQueue_init(&restoreInfo->entryMsgQueue,
@@ -249,10 +249,10 @@ LOCAL void doneRestoreInfo(RestoreInfo *restoreInfo)
 
   DEBUG_REMOVE_RESOURCE_TRACE(restoreInfo,RestoreInfo);
 
-  Semaphore_done(&restoreInfo->statusInfoLock);
+  Semaphore_done(&restoreInfo->runningInfoLock);
   MsgQueue_done(&restoreInfo->entryMsgQueue);
 
-  doneStatusInfo(&restoreInfo->statusInfo);
+  doneRunningInfo(&restoreInfo->runningInfo);
 
   FragmentList_done(&restoreInfo->fragmentList);
   Semaphore_done(&restoreInfo->fragmentListLock);
@@ -377,8 +377,8 @@ LOCAL String getDestinationDeviceName(String      destinationDeviceName,
 }
 
 /***********************************************************************\
-* Name   : updateStatusInfo
-* Purpose: update restore status info
+* Name   : updateRunningInfo
+* Purpose: update restore running info
 * Input  : restoreInfo - restore info
 *          forceUpdate - true to force update
 * Output : -
@@ -386,20 +386,20 @@ LOCAL String getDestinationDeviceName(String      destinationDeviceName,
 * Notes  : Update only every 500ms or if forced
 \***********************************************************************/
 
-LOCAL void updateStatusInfo(RestoreInfo *restoreInfo, bool forceUpdate)
+LOCAL void updateRunningInfo(RestoreInfo *restoreInfo, bool forceUpdate)
 {
   static uint64 lastTimestamp = 0LL;
   uint64        timestamp;
 
   assert(restoreInfo != NULL);
 
-  if (restoreInfo->updateStatusInfoFunction != NULL)
+  if (restoreInfo->updateRunningInfoFunction != NULL)
   {
     timestamp = Misc_getTimestamp();
     if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
     {
-      restoreInfo->updateStatusInfoFunction(&restoreInfo->statusInfo,
-                                            restoreInfo->updateStatusInfoUserData
+      restoreInfo->updateRunningInfoFunction(&restoreInfo->runningInfo,
+                                            restoreInfo->updateRunningInfoUserData
                                            );
       lastTimestamp = timestamp;
     }
@@ -409,8 +409,8 @@ LOCAL void updateStatusInfo(RestoreInfo *restoreInfo, bool forceUpdate)
 #if 0
 //TODO: remove?
 /***********************************************************************\
-* Name   : statusInfoUpdateLock
-* Purpose: lock status info update
+* Name   : runningInfoUpdateLock
+* Purpose: lock running info update
 * Input  : createInfo   - create info structure
 *          fragmentNode - fragment node (can be NULL)
 * Output : -
@@ -418,12 +418,12 @@ LOCAL void updateStatusInfo(RestoreInfo *restoreInfo, bool forceUpdate)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL SemaphoreLock statusInfoUpdateLock(RestoreInfo *restoreInfo, ConstString name, FragmentNode **foundFragmentNode)
+LOCAL SemaphoreLock runningInfoUpdateLock(RestoreInfo *restoreInfo, ConstString name, FragmentNode **foundFragmentNode)
 {
   assert(restoreInfo != NULL);
 
   // lock
-  Semaphore_lock(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+  Semaphore_lock(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
   if (foundFragmentNode != NULL)
   {
@@ -438,8 +438,8 @@ LOCAL SemaphoreLock statusInfoUpdateLock(RestoreInfo *restoreInfo, ConstString n
 }
 
 /***********************************************************************\
-* Name   : statusInfoUpdateUnlock
-* Purpose: status info update unlock
+* Name   : runningInfoUpdateUnlock
+* Purpose: running info update unlock
 * Input  : createInfo   - create info structure
 *          name         - name of entry
 *          fragmentNode - fragment node (can be NULL)
@@ -448,7 +448,7 @@ LOCAL SemaphoreLock statusInfoUpdateLock(RestoreInfo *restoreInfo, ConstString n
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void statusInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name, const FragmentNode *fragmentNode)
+LOCAL void runningInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name, const FragmentNode *fragmentNode)
 {
   const FragmentNode *fragmentNode;
 
@@ -456,44 +456,44 @@ LOCAL void statusInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name, co
 
   if (name != NULL)
   {
-    // update current status info if not set or timeout
-    if (   (restoreInfo->statusInfoCurrentFragmentNode == NULL)
-        || ((Misc_getTimestamp()-restoreInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+    // update current running info if not set or timeout
+    if (   (restoreInfo->runningInfoCurrentFragmentNode == NULL)
+        || ((Misc_getTimestamp()-restoreInfo->runningInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
        )
     {
-      // set new current status info
-      String_set(restoreInfo->statusInfo.entry.name,name);
+      // set new current running info
+      String_set(restoreInfo->runningInfo.progress.entry.name,name);
       if (fragmentNode != NULL)
       {
-        restoreInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-        restoreInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+        restoreInfo->runningInfo.progress.entry.doneSize  = FragmentList_getSize(fragmentNode);
+        restoreInfo->runningInfo.progress.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
 
-        restoreInfo->statusInfoCurrentFragmentNode = !FragmentList_isComplete(fragmentNode) ? fragmentNode : NULL;
+        restoreInfo->runningInfoCurrentFragmentNode = !FragmentList_isComplete(fragmentNode) ? fragmentNode : NULL;
       }
       else
       {
-        restoreInfo->statusInfoCurrentFragmentNode = NULL;
+        restoreInfo->runningInfoCurrentFragmentNode = NULL;
       }
 
       // save last update time
-      restoreInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
+      restoreInfo->runningInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
     }
   }
 
-  // update status info
-  updateStatusInfo(restoreInfo,TRUE);
+  // update running info
+  updateRunningInfo(restoreInfo,TRUE);
 
   // unlock
   if (fragmentNode != NULL)
   {
     Semaphore_unlock(&restoreInfo->fragmentListLock);
   }
-  Semaphore_unlock(&restoreInfo->statusInfoLock);
+  Semaphore_unlock(&restoreInfo->runningInfoLock);
 }
 
 /***********************************************************************\
 * Name   : STATUS_INFO_UPDATE
-* Purpose: update status info
+* Purpose: update running info
 * Input  : restoreInfo  - restore info structure
 *          name         - name of entry
 *          fragmentNode - fragment node variable (can be NULL)
@@ -503,9 +503,9 @@ LOCAL void statusInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name, co
 \***********************************************************************/
 
 #define STATUS_INFO_UPDATE(restoreInfo,name,fragmentNode) \
-  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(restoreInfo,name,fragmentNode); \
+  for (SemaphoreLock semaphoreLock = runningInfoUpdateLock(restoreInfo,name,fragmentNode); \
        semaphoreLock; \
-       statusInfoUpdateUnlock(restoreInfo,name), semaphoreLock = FALSE \
+       runningInfoUpdateUnlock(restoreInfo,name), semaphoreLock = FALSE \
       )
 #endif
 
@@ -527,7 +527,7 @@ LOCAL Errors handleError(RestoreInfo *restoreInfo, Errors error)
   if (restoreInfo->handleErrorFunction != NULL)
   {
     error = restoreInfo->handleErrorFunction(error,
-                                             &restoreInfo->statusInfo,
+                                             &restoreInfo->runningInfo,
                                              restoreInfo->handleErrorUserData
                                             );
   }
@@ -764,13 +764,13 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                                                 );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
-    // update status info
-    SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    // update running info
+    SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
-      restoreInfo->statusInfo.entry.doneSize  = 0LL;
-      restoreInfo->statusInfo.entry.totalSize = fragmentSize;
-      updateStatusInfo(restoreInfo,TRUE);
+      String_set(restoreInfo->runningInfo.progress.entry.name,destinationFileName);
+      restoreInfo->runningInfo.progress.entry.doneSize  = 0LL;
+      restoreInfo->runningInfo.progress.entry.totalSize = fragmentSize;
+      updateRunningInfo(restoreInfo,TRUE);
     }
 
     // restore file
@@ -1010,9 +1010,9 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         }
       }
 
-      // update status info
-      restoreInfo->statusInfo.entry.doneSize += (uint64)bufferLength;
-      updateStatusInfo(restoreInfo,FALSE);
+      // update running info
+      restoreInfo->runningInfo.progress.entry.doneSize += (uint64)bufferLength;
+      updateRunningInfo(restoreInfo,FALSE);
 
       length += (uint64)bufferLength;
 
@@ -1212,9 +1212,9 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     // skip
     printInfo(2,"  Restore file      '%s'...skipped\n",String_cString(fileName));
 
-    restoreInfo->statusInfo.skipped.count++;
-    restoreInfo->statusInfo.skipped.size += (uint64)fileInfo.size;
-    updateStatusInfo(restoreInfo,FALSE);
+    restoreInfo->runningInfo.progress.skipped.count++;
+    restoreInfo->runningInfo.progress.skipped.size += (uint64)fileInfo.size;
+    updateRunningInfo(restoreInfo,FALSE);
   }
 
   // close archive file, free resources
@@ -1328,13 +1328,13 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                                                     );
     AUTOFREE_ADD(&autoFreeList,destinationDeviceName,{ String_delete(destinationDeviceName); });
 
-    // update status info
-    SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    // update running info
+    SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      String_set(restoreInfo->statusInfo.entry.name,destinationDeviceName);
-      restoreInfo->statusInfo.entry.doneSize  = 0LL;
-      restoreInfo->statusInfo.entry.totalSize = blockCount;
-      updateStatusInfo(restoreInfo,TRUE);
+      String_set(restoreInfo->runningInfo.progress.entry.name,destinationDeviceName);
+      restoreInfo->runningInfo.progress.entry.doneSize  = 0LL;
+      restoreInfo->runningInfo.progress.entry.totalSize = blockCount;
+      updateRunningInfo(restoreInfo,TRUE);
     }
 
     // restore image
@@ -1607,11 +1607,11 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         }
       }
 
-      // update status info
-      SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      // update running info
+      SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        restoreInfo->statusInfo.entry.doneSize += bufferBlockCount*deviceInfo.blockSize;
-        updateStatusInfo(restoreInfo,FALSE);
+        restoreInfo->runningInfo.progress.entry.doneSize += bufferBlockCount*deviceInfo.blockSize;
+        updateRunningInfo(restoreInfo,FALSE);
       }
 
       block += (uint64)bufferBlockCount;
@@ -1801,13 +1801,13 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                                                 );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
-    // update status info
-    SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    // update running info
+    SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
-      restoreInfo->statusInfo.entry.doneSize  = 0LL;
-      restoreInfo->statusInfo.entry.totalSize = 0LL;
-      updateStatusInfo(restoreInfo,TRUE);
+      String_set(restoreInfo->runningInfo.progress.entry.name,destinationFileName);
+      restoreInfo->runningInfo.progress.entry.doneSize  = 0LL;
+      restoreInfo->runningInfo.progress.entry.totalSize = 0LL;
+      updateRunningInfo(restoreInfo,TRUE);
     }
 
     // restore directory
@@ -2106,13 +2106,13 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                                                 );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
-    // update status info
-    SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    // update running info
+    SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
-      restoreInfo->statusInfo.entry.doneSize  = 0LL;
-      restoreInfo->statusInfo.entry.totalSize = 0LL;
-      updateStatusInfo(restoreInfo,TRUE);
+      String_set(restoreInfo->runningInfo.progress.entry.name,destinationFileName);
+      restoreInfo->runningInfo.progress.entry.doneSize  = 0LL;
+      restoreInfo->runningInfo.progress.entry.totalSize = 0LL;
+      updateRunningInfo(restoreInfo,TRUE);
     }
 
     // restore link
@@ -2407,13 +2407,13 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                              restoreInfo->jobOptions->destination,
                              restoreInfo->jobOptions->directoryStripCount
                             );
-      // update status info
-      SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      // update running info
+      SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
-        restoreInfo->statusInfo.entry.doneSize  = 0LL;
-        restoreInfo->statusInfo.entry.totalSize = fragmentSize;
-        updateStatusInfo(restoreInfo,TRUE);
+        String_set(restoreInfo->runningInfo.progress.entry.name,destinationFileName);
+        restoreInfo->runningInfo.progress.entry.doneSize  = 0LL;
+        restoreInfo->runningInfo.progress.entry.totalSize = fragmentSize;
+        updateRunningInfo(restoreInfo,TRUE);
       }
 
       // restore hardlink
@@ -2657,11 +2657,11 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             }
           }
 
-          // update status info
-          SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          // update running info
+          SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
-            restoreInfo->statusInfo.entry.doneSize += (uint64)bufferLength;
-            updateStatusInfo(restoreInfo,FALSE);
+            restoreInfo->runningInfo.progress.entry.doneSize += (uint64)bufferLength;
+            updateRunningInfo(restoreInfo,FALSE);
           }
 
           length += (uint64)bufferLength;
@@ -2977,13 +2977,13 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                                                 );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
-    // update status info
-    SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    // update running info
+    SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      String_set(restoreInfo->statusInfo.entry.name,destinationFileName);
-      restoreInfo->statusInfo.entry.doneSize  = 0LL;
-      restoreInfo->statusInfo.entry.totalSize = 0LL;
-      updateStatusInfo(restoreInfo,TRUE);
+      String_set(restoreInfo->runningInfo.progress.entry.name,destinationFileName);
+      restoreInfo->runningInfo.progress.entry.doneSize  = 0LL;
+      restoreInfo->runningInfo.progress.entry.totalSize = 0LL;
+      updateRunningInfo(restoreInfo,TRUE);
     }
 
     // restore special entry
@@ -3406,13 +3406,13 @@ LOCAL Errors restoreArchive(RestoreInfo      *restoreInfo,
   // get printable storage name
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
 
-  // init status info
-  SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  // init running info
+  SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    String_set(restoreInfo->statusInfo.storage.name,printableStorageName);
-    restoreInfo->statusInfo.storage.doneSize  = 0LL;
-    restoreInfo->statusInfo.storage.totalSize = 0LL;
-    updateStatusInfo(restoreInfo,TRUE);
+    String_set(restoreInfo->runningInfo.progress.storage.name,printableStorageName);
+    restoreInfo->runningInfo.progress.storage.doneSize  = 0LL;
+    restoreInfo->runningInfo.progress.storage.totalSize = 0LL;
+    updateRunningInfo(restoreInfo,TRUE);
   }
 
   // init storage
@@ -3422,7 +3422,7 @@ NULL, // masterIO
                        restoreInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
                        CALLBACK_(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
                        CALLBACK_(NULL,NULL), // requestVolume
 //TODO
@@ -3516,11 +3516,11 @@ NULL, // masterIO
     }
   }
 
-  // update status info
-  SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  // update running info
+  SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    restoreInfo->statusInfo.storage.totalSize = Archive_getSize(&archiveHandle);
-    updateStatusInfo(restoreInfo,TRUE);
+    restoreInfo->runningInfo.progress.storage.totalSize = Archive_getSize(&archiveHandle);
+    updateRunningInfo(restoreInfo,TRUE);
   }
 
   // output info
@@ -3572,10 +3572,10 @@ NULL, // masterIO
     }
 
     // update storage status
-    SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      restoreInfo->statusInfo.storage.doneSize = Archive_tell(&archiveHandle);
-      updateStatusInfo(restoreInfo,TRUE);
+      restoreInfo->runningInfo.progress.storage.doneSize = Archive_tell(&archiveHandle);
+      updateRunningInfo(restoreInfo,TRUE);
     }
 
     // restore entries
@@ -3622,10 +3622,10 @@ NULL, // masterIO
     }
 
     // update storage status
-    SEMAPHORE_LOCKED_DO(&restoreInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      restoreInfo->statusInfo.storage.doneSize = Archive_tell(&archiveHandle);
-      updateStatusInfo(restoreInfo,TRUE);
+      restoreInfo->runningInfo.progress.storage.doneSize = Archive_tell(&archiveHandle);
+      updateRunningInfo(restoreInfo,TRUE);
     }
   }
 
@@ -3682,8 +3682,8 @@ Errors Command_restore(const StringList                *storageNameList,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
                        JobOptions                      *jobOptions,
-                       RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
-                       void                            *updateStatusInfoUserData,
+                       RestoreUpdateRunningInfoFunction updateRunningInfoFunction,
+                       void                            *updateRunningInfoUserData,
                        RestoreHandleErrorFunction      handleErrorFunction,
                        void                            *handleErrorUserData,
                        GetNamePasswordFunction         getNamePasswordFunction,
@@ -3719,7 +3719,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   includeEntryList,
                   excludePatternList,
                   jobOptions,
-                  CALLBACK_(updateStatusInfoFunction,updateStatusInfoUserData),
+                  CALLBACK_(updateRunningInfoFunction,updateRunningInfoUserData),
                   CALLBACK_(handleErrorFunction,handleErrorUserData),
                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                   CALLBACK_(isPauseFunction,isPauseUserData),
@@ -3728,11 +3728,11 @@ Errors Command_restore(const StringList                *storageNameList,
                  );
 
   // restore
-  SEMAPHORE_LOCKED_DO(&restoreInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&restoreInfo.runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    restoreInfo.statusInfo.done.count = 0L;
-    restoreInfo.statusInfo.done.size  = 0LL;
-    updateStatusInfo(&restoreInfo,TRUE);
+    restoreInfo.runningInfo.progress.done.count = 0L;
+    restoreInfo.runningInfo.progress.done.size  = 0LL;
+    updateRunningInfo(&restoreInfo,TRUE);
   }
   error            = ERROR_NONE;
   abortFlag        = FALSE;
@@ -3826,12 +3826,12 @@ Errors Command_restore(const StringList                *storageNameList,
     }
 
     // update statuss
-    SEMAPHORE_LOCKED_DO(&restoreInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&restoreInfo.runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      restoreInfo.statusInfo.done.count++;
+      restoreInfo.runningInfo.progress.done.count++;
 //TODO: done size?
-//      restoreInfo.statusInfo.done.size;
-      updateStatusInfo(&restoreInfo,TRUE);
+//      restoreInfo.runningInfo.done.size;
+      updateRunningInfo(&restoreInfo,TRUE);
     }
   }
   if ((restoreInfo.failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
@@ -3948,9 +3948,9 @@ Errors Command_restore(const StringList                *storageNameList,
   }
 
   // final update status
-  SEMAPHORE_LOCKED_DO(&restoreInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&restoreInfo.runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    updateStatusInfo(&restoreInfo,TRUE);
+    updateRunningInfo(&restoreInfo,TRUE);
   }
 
   // get error

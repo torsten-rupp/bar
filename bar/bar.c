@@ -1952,67 +1952,6 @@ Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patt
   return error;
 }
 
-void initStatusInfo(StatusInfo *statusInfo)
-{
-  assert(statusInfo != NULL);
-
-  statusInfo->done.count          = 0L;
-  statusInfo->done.size           = 0LL;
-  statusInfo->total.count         = 0L;
-  statusInfo->total.size          = 0LL;
-  statusInfo->collectTotalSumDone = FALSE;
-  statusInfo->skipped.count       = 0L;
-  statusInfo->skipped.size        = 0LL;
-  statusInfo->error.count         = 0L;
-  statusInfo->error.size          = 0LL;
-  statusInfo->archiveSize         = 0LL;
-  statusInfo->compressionRatio    = 0.0;
-  statusInfo->entry.name          = String_new();
-  statusInfo->entry.doneSize      = 0LL;
-  statusInfo->entry.totalSize     = 0LL;
-  statusInfo->storage.name        = String_new();
-  statusInfo->storage.doneSize    = 0LL;
-  statusInfo->storage.totalSize   = 0LL;
-  statusInfo->volume.number       = 0;
-  statusInfo->volume.progress     = 0.0;
-  statusInfo->message             = String_new();
-}
-
-void doneStatusInfo(StatusInfo *statusInfo)
-{
-  assert(statusInfo != NULL);
-
-  String_delete(statusInfo->message);
-  String_delete(statusInfo->storage.name);
-  String_delete(statusInfo->entry.name);
-}
-
-void setStatusInfo(StatusInfo *statusInfo, const StatusInfo *fromStatusInfo)
-{
-  assert(statusInfo != NULL);
-
-  statusInfo->done.count           = fromStatusInfo->done.count;
-  statusInfo->done.size            = fromStatusInfo->done.size;
-  statusInfo->total.count          = fromStatusInfo->total.count;
-  statusInfo->total.size           = fromStatusInfo->total.size;
-  statusInfo->collectTotalSumDone  = fromStatusInfo->collectTotalSumDone;
-  statusInfo->skipped.count        = fromStatusInfo->skipped.count;
-  statusInfo->skipped.size         = fromStatusInfo->skipped.size;
-  statusInfo->error.count          = fromStatusInfo->error.count;
-  statusInfo->error.size           = fromStatusInfo->error.size;
-  statusInfo->archiveSize          = fromStatusInfo->archiveSize;
-  statusInfo->compressionRatio     = fromStatusInfo->compressionRatio;
-  String_set(statusInfo->entry.name,fromStatusInfo->entry.name);
-  statusInfo->entry.doneSize       = fromStatusInfo->entry.doneSize;
-  statusInfo->entry.totalSize      = fromStatusInfo->entry.totalSize;
-  String_set(statusInfo->storage.name,fromStatusInfo->storage.name);
-  statusInfo->storage.doneSize     = fromStatusInfo->storage.doneSize;
-  statusInfo->storage.totalSize    = fromStatusInfo->storage.totalSize;
-  statusInfo->volume.number        = fromStatusInfo->volume.number;
-  statusInfo->volume.progress      = fromStatusInfo->volume.progress;
-  String_set(statusInfo->message,fromStatusInfo->message);
-}
-
 Errors addStorageNameListFromFile(StringList *storageNameList, const char *fileName)
 {
   Errors     error;
@@ -3238,8 +3177,8 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
                          &jobOptions,
                          Misc_getCurrentDateTime(),
                          CALLBACK_(getPasswordFromConsole,NULL),
-                         CALLBACK_(NULL,NULL),  // createStatusInfoFunction
-                         CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
+                         CALLBACK_(NULL,NULL),  // runningInfo
+                         CALLBACK_(NULL,NULL),  // storageRequestVolume
                          CALLBACK_(NULL,NULL),  // isPauseCreate
                          CALLBACK_(NULL,NULL),  // isPauseStorage
                          CALLBACK_(NULL,NULL),  // isAborted
@@ -3470,7 +3409,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &jobOptions,
                                  Misc_getCurrentDateTime(),
                                  CALLBACK_(getPasswordFromConsole,NULL),
-                                 CALLBACK_(NULL,NULL),  // createStatusInfo
+                                 CALLBACK_(NULL,NULL),  // runningInfo
                                  CALLBACK_(NULL,NULL),  // storageRequestVolume
                                  CALLBACK_(NULL,NULL),  // isPauseCreate
                                  CALLBACK_(NULL,NULL),  // isPauseStorage
@@ -3617,11 +3556,11 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     &globalOptions.includeEntryList,
                                     &globalOptions.excludePatternList,
                                     &jobOptions,
-                                    CALLBACK_(NULL,NULL),  // restoreStatusInfo callback
-                                    CALLBACK_(NULL,NULL),  // restoreError callback
+                                    CALLBACK_(NULL,NULL),  // restoreRunningInfo
+                                    CALLBACK_(NULL,NULL),  // restoreError
                                     CALLBACK_(getPasswordFromConsole,NULL),
-                                    CALLBACK_(NULL,NULL),  // isPause callback
-                                    CALLBACK_(NULL,NULL),  // isAborted callback
+                                    CALLBACK_(NULL,NULL),  // isPause
+                                    CALLBACK_(NULL,NULL),  // isAborted
                                     NULL  // logHandle
                                    );
             break;
@@ -3982,7 +3921,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                            &jobOptions,
                            &globalOptions.indexDatabaseMaxBandWidthList,
                            SERVER_CONNECTION_PRIORITY_LOW,
-                           CALLBACK_(NULL,NULL),  // updateStatusInfo
+                           CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
                            CALLBACK_(NULL,NULL),  // getNamePassword
                            CALLBACK_(NULL,NULL),  // requestVolume
                            CALLBACK_(NULL,NULL),  // isPause
@@ -4249,7 +4188,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                            &jobOptions,
                            &globalOptions.indexDatabaseMaxBandWidthList,
                            SERVER_CONNECTION_PRIORITY_LOW,
-                           CALLBACK_(NULL,NULL),  // updateStatusInfo
+                           CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
                            CALLBACK_(NULL,NULL),  // getNamePassword
                            CALLBACK_(NULL,NULL),  // requestVolume
                            CALLBACK_(NULL,NULL),  // isPause

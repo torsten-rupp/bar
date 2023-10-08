@@ -1361,7 +1361,7 @@ NULL, // masterSocketHandle
                        testInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
                        CALLBACK_(NULL,NULL),  // getPassword
                        CALLBACK_(NULL,NULL),  // requestVolume
                        CALLBACK_(NULL,NULL),  // isPause

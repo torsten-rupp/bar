@@ -88,7 +88,7 @@ LOCAL Errors createLocalStorageArchive(StorageSpecifier       *localStorageSpeci
                               jobOptions,
                               &globalOptions.maxBandWidthList,
                               CALLBACK_(NULL,NULL),  // StorageRequestVolumeFunction
-                              CALLBACK_(NULL,NULL)  // StorageStatusInfoFunction
+                              CALLBACK_(NULL,NULL)  // StorageRunningInfoFunction
                              );
   if (error != ERROR_NONE)
   {
@@ -200,7 +200,7 @@ NULL, // masterIO
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
                        CALLBACK_(NULL,NULL),  // getPassword
                        CALLBACK_(NULL,NULL),  // requestVolume
                        CALLBACK_(NULL,NULL),  // isPause

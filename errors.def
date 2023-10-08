@@ -132,14 +132,16 @@ ERROR NO_SSH_PASSWORD
   stringSet(errorText,sizeof(errorText),TR("no SSH password given"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
+    stringAppendChar(errorText,sizeof(errorText),' ');
+    stringAppend(errorText,sizeof(errorText),TR("for '{0}'",ERROR_DATA));
   }
 
 ERROR INVALID_SSH_PASSWORD
   stringSet(errorText,sizeof(errorText),TR("invalid SSH password"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
+    stringAppendChar(errorText,sizeof(errorText),' ');
+    stringAppend(errorText,sizeof(errorText),TR("for '{0}'",ERROR_DATA));
   }
 
 ERROR INVALID_SSH_PRIVATE_KEY
@@ -171,7 +173,8 @@ ERROR NO_SMB_PASSWORD
   stringSet(errorText,sizeof(errorText),TR("no SMB/CIFS password given"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
+    stringAppendChar(errorText,sizeof(errorText),' ');
+    stringAppend(errorText,sizeof(errorText),TR("for '{0}'",ERROR_DATA));
   }
 
 ERROR SMB_SESSION_FAIL                 TR("initialize SMB/CIFS session failed")
@@ -186,7 +189,8 @@ ERROR INVALID_SMB_PASSWORD
   stringSet(errorText,sizeof(errorText),TR("invalid SMB/CIFS password"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
+    stringAppendChar(errorText,sizeof(errorText),' ');
+    stringAppend(errorText,sizeof(errorText),TR("for '{0}'",ERROR_DATA));
   }
 
 ERROR SMB
@@ -267,7 +271,8 @@ ERROR NO_WEBDAV_PASSWORD
   stringSet(errorText,sizeof(errorText),TR("no WebDAV password given"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
+    stringAppendChar(errorText,sizeof(errorText),' ');
+    stringAppend(errorText,sizeof(errorText),TR("for '{0}'",ERROR_DATA));
   }
 
 ERROR INVALID_WEBDAV_PASSWORD          TR("invalid WebDAV password")
@@ -690,7 +695,8 @@ ERROR NO_FILE_DATA
   stringSet(errorText,sizeof(errorText),TR("no file data entry"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),TR(" for '{0}'",ERROR_DATA));
+    stringAppendChar(errorText,sizeof(errorText),' ');
+    stringAppend(errorText,sizeof(errorText),TR("for '{0}'",ERROR_DATA));
   }
 
 ERROR NO_DIRECTORY_ENTRY               TR("no directory entry")

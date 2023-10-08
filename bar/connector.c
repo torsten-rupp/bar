@@ -4010,7 +4010,7 @@ Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
 //TODO
-CALLBACK_(NULL,NULL),//                       CALLBACK_(updateStorageStatusInfo,connectorInfo),
+CALLBACK_(NULL,NULL),//                       CALLBACK_(updateStorageRunningInfo,connectorInfo),
 CALLBACK_(NULL,NULL),//                       CALLBACK_(getPasswordFunction,getPasswordUserData),
 CALLBACK_(NULL,NULL),//                       CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData)
                        CALLBACK_(NULL,NULL),  // isPause
@@ -4126,8 +4126,8 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         ConstString                  scheduleCustomText,
                         GetNamePasswordFunction      getNamePasswordFunction,
                         void                         *getNamePasswordUserData,
-                        StatusInfoFunction           statusInfoFunction,
-                        void                         *statusInfoUserData,
+                        RunningInfoFunction          runningInfoFunction,
+                        void                         *runningInfoUserData,
                         StorageRequestVolumeFunction storageRequestVolumeFunction,
                         void                         *storageRequestVolumeUserData
                        )
@@ -4155,16 +4155,41 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
     else if (stringEquals(jobStateText,"WAITING"                )) (*jobState) = JOB_STATE_WAITING;
     else if (stringEquals(jobStateText,"DRY_RUNNING"            )) (*jobState) = JOB_STATE_RUNNING;
     else if (stringEquals(jobStateText,"RUNNING"                )) (*jobState) = JOB_STATE_RUNNING;
-    else if (stringEquals(jobStateText,"REQUEST_FTP_PASSWORD"   )) (*jobState) = JOB_STATE_REQUEST_FTP_PASSWORD;
-    else if (stringEquals(jobStateText,"REQUEST_SSH_PASSWORD"   )) (*jobState) = JOB_STATE_REQUEST_SSH_PASSWORD;
-    else if (stringEquals(jobStateText,"REQUEST_WEBDAV_PASSWORD")) (*jobState) = JOB_STATE_REQUEST_WEBDAV_PASSWORD;
-    else if (stringEquals(jobStateText,"REQUEST_CRYPT_PASSWORD" )) (*jobState) = JOB_STATE_REQUEST_CRYPT_PASSWORD;
-    else if (stringEquals(jobStateText,"REQUEST_VOLUME"         )) (*jobState) = JOB_STATE_REQUEST_VOLUME;
     else if (stringEquals(jobStateText,"DONE"                   )) (*jobState) = JOB_STATE_DONE;
     else if (stringEquals(jobStateText,"ERROR"                  )) (*jobState) = JOB_STATE_ERROR;
     else if (stringEquals(jobStateText,"ABORTED"                )) (*jobState) = JOB_STATE_ABORTED;
     else if (stringEquals(jobStateText,"DISCONNECTED"           )) (*jobState) = JOB_STATE_DISCONNECTED;
     else                                                           (*jobState) = JOB_STATE_ERROR;
+
+    return TRUE;
+  }
+
+  /***********************************************************************\
+  * Name   : parseMessageCode
+  * Purpose: parse message code text
+  * Input  : jobStateText - job state text
+  *          jobState     - job state variable
+  *          userData     - user data (not used)
+  * Output : jobState - job state
+  * Return : always TRUE
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool parseMessageCode(const char *messageCodeText, MessageCodes *messageCode, void *userData);
+  bool parseMessageCode(const char *messageCodeText, MessageCodes *messageCode, void *userData)
+  {
+    assert(messageCodeText != NULL);
+    assert(messageCode != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    if      (stringEquals(messageCodeText,"-"                         )) (*messageCode) = MESSAGE_CODE_NONE;
+    else if (stringEquals(messageCodeText,"WAIT_FOR_TEMPORARY_SPACE"  )) (*messageCode) = MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE;
+    else if (stringEquals(messageCodeText,"REQUEST_VOLUME"            )) (*messageCode) = MESSAGE_CODE_REQUEST_VOLUME;
+    else if (stringEquals(messageCodeText,"ADD_ERROR_CORRECTION_CODES")) (*messageCode) = MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES;
+    else if (stringEquals(messageCodeText,"BLANK_VOLUME"              )) (*messageCode) = MESSAGE_CODE_BLANK_VOLUME;
+    else if (stringEquals(messageCodeText,"WRITE_VOLUME"              )) (*messageCode) = MESSAGE_CODE_WRITE_VOLUME;
+    else                                                                 (*messageCode) = MESSAGE_CODE_NONE;
 
     return TRUE;
   }
@@ -4175,7 +4200,7 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
   JobStates    state;
   uint         errorCode;
   String       errorData;
-  StatusInfo   statusInfo;
+  RunningInfo  runningInfo;
 
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
@@ -4188,14 +4213,14 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
   // init variables
   AutoFree_init(&autoFreeList);
   errorData = String_new();
-  initStatusInfo(&statusInfo);
+  initRunningInfo(&runningInfo);
   resultMap = StringMap_new();
   if (resultMap == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   AUTOFREE_ADD(&autoFreeList,errorData,{ String_delete(errorData); });
-  AUTOFREE_ADD(&autoFreeList,&statusInfo,{ doneStatusInfo(&statusInfo); });
+  AUTOFREE_ADD(&autoFreeList,&runningInfo,{ doneRunningInfo(&runningInfo); });
   AUTOFREE_ADD(&autoFreeList,resultMap,{ StringMap_delete(resultMap); });
 
   // transmit job to slave
@@ -4268,26 +4293,27 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                        StringMap_getEnum  (resultMap,"state",                &state,CALLBACK_((StringMapParseEnumFunction)parseJobState,NULL),JOB_STATE_NONE);
                                        StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_CODE_NONE);
                                        StringMap_getString(resultMap,"errorData",            errorData,NULL);
-                                       StringMap_getULong (resultMap,"doneCount",            &statusInfo.done.count,0L);
-                                       StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.done.size,0LL);
-                                       StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.total.count,0L);
-                                       StringMap_getUInt64(resultMap,"totalEntrySize",       &statusInfo.total.size,0LL);
-                                       StringMap_getBool  (resultMap,"collectTotalSumDone",  &statusInfo.collectTotalSumDone,FALSE);
-                                       StringMap_getULong (resultMap,"skippedEntryCount",    &statusInfo.skipped.count,0L);
-                                       StringMap_getUInt64(resultMap,"skippedEntrySize",     &statusInfo.skipped.size,0LL);
-                                       StringMap_getULong (resultMap,"errorEntryCount",      &statusInfo.error.count,0L);
-                                       StringMap_getUInt64(resultMap,"errorEntrySize",       &statusInfo.error.size,0LL);
-                                       StringMap_getUInt64(resultMap,"archiveSize",          &statusInfo.archiveSize,0LL);
-                                       StringMap_getDouble(resultMap,"compressionRatio",     &statusInfo.compressionRatio,0.0);
-                                       StringMap_getString(resultMap,"entryName",            statusInfo.entry.name,NULL);
-                                       StringMap_getUInt64(resultMap,"entryDoneSize",        &statusInfo.entry.doneSize,0LL);
-                                       StringMap_getUInt64(resultMap,"entryTotalSize",       &statusInfo.entry.totalSize,0LL);
-                                       StringMap_getString(resultMap,"storageName",          statusInfo.storage.name,NULL);
-                                       StringMap_getUInt64(resultMap,"storageDoneSize",      &statusInfo.storage.doneSize,0L);
-                                       StringMap_getUInt64(resultMap,"storageTotalSize",     &statusInfo.storage.totalSize,0L);
-                                       StringMap_getUInt  (resultMap,"volumeNumber",         &statusInfo.volume.number,0);
-                                       StringMap_getDouble(resultMap,"volumeProgress",       &statusInfo.volume.progress,0.0);
-                                       StringMap_getString(resultMap,"message",              statusInfo.message,NULL);
+                                       StringMap_getULong (resultMap,"doneCount",            &runningInfo.progress.done.count,0L);
+                                       StringMap_getUInt64(resultMap,"doneSize",             &runningInfo.progress.done.size,0LL);
+                                       StringMap_getULong (resultMap,"totalEntryCount",      &runningInfo.progress.total.count,0L);
+                                       StringMap_getUInt64(resultMap,"totalEntrySize",       &runningInfo.progress.total.size,0LL);
+                                       StringMap_getBool  (resultMap,"collectTotalSumDone",  &runningInfo.progress.collectTotalSumDone,FALSE);
+                                       StringMap_getULong (resultMap,"skippedEntryCount",    &runningInfo.progress.skipped.count,0L);
+                                       StringMap_getUInt64(resultMap,"skippedEntrySize",     &runningInfo.progress.skipped.size,0LL);
+                                       StringMap_getULong (resultMap,"errorEntryCount",      &runningInfo.progress.error.count,0L);
+                                       StringMap_getUInt64(resultMap,"errorEntrySize",       &runningInfo.progress.error.size,0LL);
+                                       StringMap_getUInt64(resultMap,"archiveSize",          &runningInfo.progress.archiveSize,0LL);
+                                       StringMap_getDouble(resultMap,"compressionRatio",     &runningInfo.progress.compressionRatio,0.0);
+                                       StringMap_getString(resultMap,"entryName",            runningInfo.progress.entry.name,NULL);
+                                       StringMap_getUInt64(resultMap,"entryDoneSize",        &runningInfo.progress.entry.doneSize,0LL);
+                                       StringMap_getUInt64(resultMap,"entryTotalSize",       &runningInfo.progress.entry.totalSize,0LL);
+                                       StringMap_getString(resultMap,"storageName",          runningInfo.progress.storage.name,NULL);
+                                       StringMap_getUInt64(resultMap,"storageDoneSize",      &runningInfo.progress.storage.doneSize,0L);
+                                       StringMap_getUInt64(resultMap,"storageTotalSize",     &runningInfo.progress.storage.totalSize,0L);
+                                       StringMap_getUInt  (resultMap,"volumeNumber",         &runningInfo.progress.volume.number,0);
+                                       StringMap_getDouble(resultMap,"volumeDone",           &runningInfo.progress.volume.done,0.0);
+                                       StringMap_getEnum  (resultMap,"messageCode",          &runningInfo.message.code,CALLBACK_((StringMapParseEnumFunction)parseMessageCode,NULL),MESSAGE_CODE_NONE);
+                                       StringMap_getString(resultMap,"messageData",          runningInfo.message.data,NULL);
 //TODO
 //                                       StringMap_getULong (resultMap,"entriesPerSecond",    &statusInfo.entriesPerSecond,0L);
 //                                       StringMap_getULong (resultMap,"bytesPerSecond",    &statusInfo.bytesPerSecond,0L);
@@ -4302,8 +4328,8 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                      jobUUID
                                     );
 
-    // update job status
-    statusInfoFunction(error,&statusInfo,statusInfoUserData);
+    // update running info
+    runningInfoFunction(error,&runningInfo,runningInfoUserData);
 
     // sleep a short time
     Misc_mdelay(SLEEP_TIME_STATUS_UPDATE);
@@ -4322,7 +4348,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
 
   // free resources
   StringMap_delete(resultMap);
-  doneStatusInfo(&statusInfo);
+  doneRunningInfo(&runningInfo);
   String_delete(errorData);
   AutoFree_done(&autoFreeList);
 

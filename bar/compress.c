@@ -36,7 +36,12 @@
 
 /***************************** Constants *******************************/
 
-LOCAL const struct { const char *name; CompressAlgorithms compressAlgorithm; } COMPRESS_ALGORITHMS[] =
+LOCAL const struct
+{
+  const char         *name;
+  CompressAlgorithms compressAlgorithm;
+}
+COMPRESS_ALGORITHMS[] =
 {
   { "none",     COMPRESS_ALGORITHM_NONE      },
 

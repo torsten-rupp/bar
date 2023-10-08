@@ -812,51 +812,6 @@ Errors getPasswordFromConsole(String        name,
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType);
 
-/***********************************************************************\
-* Name   : initStatusInfo
-* Purpose: initialize status info
-* Input  : statusInfo - status info variable
-* Output : statusInfo - initialized create status variable
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void initStatusInfo(StatusInfo *statusInfo);
-
-/***********************************************************************\
-* Name   : doneStatusInfo
-* Purpose: done status info
-* Input  : statusInfo - status info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void doneStatusInfo(StatusInfo *statusInfo);
-
-/***********************************************************************\
-* Name   : setStatusInfo
-* Purpose: set status info from other info
-* Input  : statusInfo     - status info
-*          fromStatusInfo - from status info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void setStatusInfo(StatusInfo *statusInfo, const StatusInfo *fromStatusInfo);
-
-/***********************************************************************\
-* Name   : resetStatusInfo
-* Purpose: reset status info
-* Input  : statusInfo - status info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void resetStatusInfo(StatusInfo *statusInfo);
-
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
