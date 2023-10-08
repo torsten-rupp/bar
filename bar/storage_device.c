@@ -49,11 +49,8 @@
 #define MAX_BUFFER_SIZE       (64*1024)
 #define MAX_FILENAME_LENGTH   ( 8*1024)
 
-// TODO: compile a separate module
-#undef UNLOAD_VOLUME_DELAY_TIME
-#define UNLOAD_VOLUME_DELAY_TIME (10LL*US_PER_SECOND) /* [us] */
-#undef LOAD_VOLUME_DELAY_TIME
-#define LOAD_VOLUME_DELAY_TIME   (10LL*US_PER_SECOND) /* [us] */
+#define UNLOAD_VOLUME_DELAY_TIME (10LL*MS_PER_SECOND) /* [ms] */
+#define LOAD_VOLUME_DELAY_TIME   (10LL*MS_PER_SECOND) /* [ms] */
 
 /***************************** Datatypes *******************************/
 
@@ -97,7 +94,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
   {
     // sleep a short time to give hardware time for finishing volume; unload current volume
     printInfo(1,"Unload volume #%d...",storageInfo->volumeNumber);
-    Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
+    Misc_mdelay(UNLOAD_VOLUME_DELAY_TIME);
     Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
                         textMacros.data,
                         textMacros.count,
@@ -129,7 +126,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
         printInfo(1,"Unload volume...");
-        Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
+        Misc_mdelay(UNLOAD_VOLUME_DELAY_TIME);
         Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
                             textMacros.data,
                             textMacros.count,
@@ -218,7 +215,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
                             CALLBACK_(executeIOOutput,NULL),
                             CALLBACK_(executeIOOutput,NULL)
                            );
-        Misc_udelay(LOAD_VOLUME_DELAY_TIME);
+        Misc_mdelay(LOAD_VOLUME_DELAY_TIME);
         printInfo(1,"OK\n");
 
         // store new volume number

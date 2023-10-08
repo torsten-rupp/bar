@@ -272,7 +272,6 @@ LOCAL void signalHandler(int signalNumber)
   if (signalNumber != SIGTERM)
   {
     static char    line[256];
-    size_t         bytesWritten;
     #if   defined(PLATFORM_LINUX)
       struct utsname utsname;
     #elif defined(PLATFORM_WINDOWS)
@@ -286,10 +285,10 @@ LOCAL void signalHandler(int signalNumber)
                    ""
                  #endif
                 );
-    bytesWritten = fwrite(line,1,stringLength(line),stderr);
+    UNUSED_RESULT(fwrite(line,1,stringLength(line),stderr));
     fatalLogMessage(line,NULL);
 
-    fprintf(stderr,"FATAL ERROR:\n");
+    UNUSED_RESULT(fprintf(stderr,"FATAL ERROR:\n"));
     #if   defined(PLATFORM_LINUX)
       uname(&utsname);
       stringFormat(line,sizeof(line),
@@ -301,17 +300,16 @@ LOCAL void signalHandler(int signalNumber)
                   );
     #elif defined(PLATFORM_WINDOWS)
     #endif /* PLATFORM_... */
-    bytesWritten = fwrite(line,1,stringLength(line),stderr);
+    UNUSED_RESULT(fwrite(line,1,stringLength(line),stderr));
     fatalLogMessage(line,NULL);
 
     stringFormat(line,sizeof(line),"signal %d\n",signalNumber);
-    bytesWritten = fwrite(line,1,stringLength(line),stderr);
+    UNUSED_RESULT(fwrite(line,1,stringLength(line),stderr));
     fatalLogMessage(line,NULL);
 
     #ifndef NDEBUG
       debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1);
     #endif /* NDEBUG */
-    UNUSED_VARIABLE(bytesWritten);
   }
 
   // delete pid file
@@ -452,7 +450,7 @@ LOCAL Errors initAll(void)
   #if HAVE_BREAKPAD
     if (!MiniDump_init())
     {
-      (void)fprintf(stderr,"Warning: Cannot initialize crash dump handler. No crash dumps will be created.\n");
+      UNUSED_RESULT(fprintf(stderr,"Warning: Cannot initialize crash dump handler. No crash dumps will be created.\n"));
     }
   #endif /* HAVE_BREAKPAD */
 
@@ -848,7 +846,6 @@ void outputConsole(FILE *file, ConstString string)
 {
   String outputLine;
   ulong  i;
-  size_t bytesWritten;
   char   ch;
 
   assert(file != NULL);
@@ -867,25 +864,24 @@ void outputConsole(FILE *file, ConstString string)
         {
           for (i = 0; i < String_length(lastOutputLine); i++)
           {
-            bytesWritten = fwrite("\b",1,1,file);
+            UNUSED_RESULT(fwrite("\b",1,1,file));
           }
           for (i = 0; i < String_length(lastOutputLine); i++)
           {
-            bytesWritten = fwrite(" ",1,1,file);
+            UNUSED_RESULT(fwrite(" ",1,1,file));
           }
           for (i = 0; i < String_length(lastOutputLine); i++)
           {
-            bytesWritten = fwrite("\b",1,1,file);
+            UNUSED_RESULT(fwrite("\b",1,1,file));
           }
-          fflush(file);
         }
 
         // restore line
-        bytesWritten = fwrite(String_cString(outputLine),1,String_length(outputLine),file);
+        UNUSED_RESULT(fwrite(String_cString(outputLine),1,String_length(outputLine),file));
       }
 
       // output new string
-      bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
+      UNUSED_RESULT(fwrite(String_cString(string),1,String_length(string),file));
 
       // store output string
       STRING_CHAR_ITERATE(string,i,ch)
@@ -910,8 +906,8 @@ void outputConsole(FILE *file, ConstString string)
     {
       if (String_index(string,STRING_END) == '\n')
       {
-        if (outputLine != NULL) bytesWritten = fwrite(String_cString(outputLine),1,String_length(outputLine),file);
-        bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
+        if (outputLine != NULL) UNUSED_RESULT(fwrite(String_cString(outputLine),1,String_length(outputLine),file));
+        UNUSED_RESULT(fwrite(String_cString(string),1,String_length(string),file));
         String_clear(outputLine);
       }
       else
@@ -919,14 +915,13 @@ void outputConsole(FILE *file, ConstString string)
         String_append(outputLine,string);
       }
     }
-    fflush(file);
   }
   else
   {
     // no thread local vairable -> output string
-    bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
+    UNUSED_RESULT(fwrite(String_cString(string),1,String_length(string),file));
   }
-  UNUSED_VARIABLE(bytesWritten);
+  fflush(file);
 }
 
 bool lockConsole(void)
@@ -943,8 +938,7 @@ void unlockConsole(void)
 
 void saveConsole(FILE *file, String *saveLine)
 {
-  ulong  i;
-  size_t bytesWritten;
+  ulong i;
 
   assert(file != NULL);
   assert(saveLine != NULL);
@@ -959,15 +953,15 @@ void saveConsole(FILE *file, String *saveLine)
     {
       for (i = 0; i < String_length(lastOutputLine); i++)
       {
-        bytesWritten = fwrite("\b",1,1,file);
+        UNUSED_RESULT(fwrite("\b",1,1,file));
       }
       for (i = 0; i < String_length(lastOutputLine); i++)
       {
-        bytesWritten = fwrite(" ",1,1,file);
+        UNUSED_RESULT(fwrite(" ",1,1,file));
       }
       for (i = 0; i < String_length(lastOutputLine); i++)
       {
-        bytesWritten = fwrite("\b",1,1,file);
+        UNUSED_RESULT(fwrite("\b",1,1,file));
       }
       fflush(file);
     }
@@ -975,8 +969,6 @@ void saveConsole(FILE *file, String *saveLine)
     // save last line
     String_set(*saveLine,lastOutputLine);
   }
-
-  UNUSED_VARIABLE(bytesWritten);
 }
 
 void restoreConsole(FILE *file, const String *saveLine)
@@ -1034,7 +1026,6 @@ void printWarning(const char *text, ...)
   va_list arguments;
   String  line;
   String  saveLine;
-  size_t  bytesWritten;
 
   assert(text != NULL);
 
@@ -1054,9 +1045,8 @@ void printWarning(const char *text, ...)
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     saveConsole(stderr,&saveLine);
-    bytesWritten = fwrite(String_cString(line),1,String_length(line),stderr);
+    UNUSED_RESULT(fwrite(String_cString(line),1,String_length(line),stderr));
     restoreConsole(stderr,&saveLine);
-    UNUSED_VARIABLE(bytesWritten);
   }
   String_delete(line);
 }
@@ -1066,7 +1056,6 @@ void printError(const char *text, ...)
   va_list arguments;
   String  line;
   String  saveLine;
-  size_t  bytesWritten;
 
   assert(text != NULL);
 
@@ -1086,9 +1075,8 @@ void printError(const char *text, ...)
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     saveConsole(stderr,&saveLine);
-    bytesWritten = fwrite(String_cString(line),1,String_length(line),stderr);
+    UNUSED_RESULT(fwrite(String_cString(line),1,String_length(line),stderr));
     restoreConsole(stderr,&saveLine);
-    UNUSED_VARIABLE(bytesWritten);
   }
   String_delete(line);
 }
@@ -1188,16 +1176,16 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
           // append to job log file (if possible)
           if (logHandle->logFile != NULL)
           {
-            (void)fprintf(logHandle->logFile,"%s> ",String_cString(dateTime));
+            UNUSED_RESULT(fprintf(logHandle->logFile,"%s> ",String_cString(dateTime)));
             if (prefix != NULL)
             {
-              (void)fputs(prefix,logHandle->logFile);
-              (void)fprintf(logHandle->logFile,": ");
+              UNUSED_RESULT(fputs(prefix,logHandle->logFile));
+              UNUSED_RESULT(fprintf(logHandle->logFile,": "));
             }
             va_copy(tmpArguments,arguments);
-            (void)vfprintf(logHandle->logFile,text,tmpArguments);
+            UNUSED_RESULT(vfprintf(logHandle->logFile,text,tmpArguments));
             va_end(tmpArguments);
-            fputc('\n',logHandle->logFile);
+            UNUSED_RESULT(fputc('\n',logHandle->logFile));
           }
         }
 
@@ -1213,16 +1201,16 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
           }
 
           // append to log file
-          (void)fprintf(logFile,"%s> ",String_cString(dateTime));
+          UNUSED_RESULT(fprintf(logFile,"%s> ",String_cString(dateTime)));
           if (prefix != NULL)
           {
-            (void)fputs(prefix,logFile);
-            (void)fprintf(logFile,": ");
+            UNUSED_RESULT(fputs(prefix,logFile));
+            UNUSED_RESULT(fprintf(logFile,": "));
           }
           va_copy(tmpArguments,arguments);
-          (void)vfprintf(logFile,text,tmpArguments);
+          UNUSED_RESULT(vfprintf(logFile,text,tmpArguments));
           va_end(tmpArguments);
-          fputc('\n',logFile);
+          UNUSED_RESULT(fputc('\n',logFile));
           fflush(logFile);
         }
 
@@ -1289,9 +1277,9 @@ void fatalLogMessage(const char *text, void *userData)
       dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,globalOptions.logFormat);
 
       // append to log file
-      (void)fprintf(logFile,"%s> ",String_cString(dateTime));
-      (void)fputs("FATAL: ",logFile);
-      (void)fputs(text,logFile);
+      UNUSED_RESULT(fprintf(logFile,"%s> ",String_cString(dateTime)));
+      UNUSED_RESULT(fputs("FATAL: ",logFile));
+      UNUSED_RESULT(fputs(text,logFile));
       fflush(logFile);
 
       String_delete(dateTime);
@@ -2602,7 +2590,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   Errors   error;
   CryptKey publicKey,privateKey;
   String   directoryName;
-  size_t   bytesWritten;
 
   // initialize variables
   publicKeyFileName  = String_new();
@@ -2807,8 +2794,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   String_delete(privateKeyFileName);
   String_delete(publicKeyFileName);
 
-  UNUSED_VARIABLE(bytesWritten);
-
   return ERROR_NONE;
 }
 
@@ -2829,7 +2814,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   Errors   error;
   CryptKey publicKey,privateKey;
   String   directoryName;
-  size_t   bytesWritten;
 
   // initialize variables
   publicKeyFileName  = String_new();
@@ -3010,8 +2994,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   // free resources
   String_delete(privateKeyFileName);
   String_delete(publicKeyFileName);
-
-  UNUSED_VARIABLE(bytesWritten);
 
   return ERROR_NONE;
 }
@@ -4678,7 +4660,7 @@ int main(int argc, const char *argv[])
   error = initAll();
   if (error != ERROR_NONE)
   {
-    (void)fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Error_getText(error));
+    UNUSED_RESULT(fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Error_getText(error)));
     #ifndef NDEBUG
       debugResourceDone();
       File_debugDone();
@@ -4771,13 +4753,14 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     Array_debugDone();
     String_debugDone();
     List_debugDone();
-    fprintf(stderr,
-            "DEBUG: %s exitcode %d\n",
-            (globalOptions.serverMode == SERVER_MODE_MASTER)
-              ? "master"
-              : "slave",
-            errorToExitcode(error)
-           );
+    UNUSED_RESULT(fprintf(stderr,
+                          "DEBUG: %s exitcode %d\n",
+                          (globalOptions.serverMode == SERVER_MODE_MASTER)
+                            ? "master"
+                            : "slave",
+                          errorToExitcode(error)
+                         )
+                 );
   #endif /* not NDEBUG */
 
   return errorToExitcode(error);
