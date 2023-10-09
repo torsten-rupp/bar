@@ -892,7 +892,7 @@ LOCAL Errors StorageSMB_preProcess(const StorageInfo *storageInfo,
       TEXT_MACROS_INIT(textMacros)
       {
         TEXT_MACRO_X_STRING ("%file",  archiveName,              NULL);
-        TEXT_MACRO_X_INTEGER("%number",storageInfo->volumeNumber,NULL);
+        TEXT_MACRO_X_INT("%number",storageInfo->volumeNumber,NULL);
       }
 
       // write pre-processing
@@ -955,7 +955,7 @@ LOCAL Errors StorageSMB_postProcess(const StorageInfo *storageInfo,
       TEXT_MACROS_INIT(textMacros)
       {
         TEXT_MACRO_X_STRING ("%file",  archiveName,                NULL);
-        TEXT_MACRO_X_INTEGER("%number",storageInfo->volumeNumber,NULL);
+        TEXT_MACRO_X_INT("%number",storageInfo->volumeNumber,NULL);
       }
 
       // write post-process

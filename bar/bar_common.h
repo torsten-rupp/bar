@@ -195,6 +195,8 @@ typedef enum
 #define ARCHIVE_TYPE_MIN ARCHIVE_TYPE_NORMAL
 #define ARCHIVE_TYPE_MAX ARCHIVE_TYPE_CONTINUOUS
 
+typedef Set ArchiveTypeSet;
+
 // date/time
 /*
 #define WEEKDAY_ANY_MONTH \
@@ -439,7 +441,6 @@ typedef struct
 } LogHandle;
 
 // week day sets
-//typedef long WeekDaySet;                                      // week days set or WEEKDAY_SET_ANY
 typedef Set WeekDaySet;
 
 // certificate data

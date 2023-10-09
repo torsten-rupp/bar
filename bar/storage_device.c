@@ -85,7 +85,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING ("%device",storageInfo->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_X_INTEGER("%number",storageInfo->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_X_INT("%number",storageInfo->requestedVolumeNumber,      NULL);
   }
 
   if (   (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
@@ -551,7 +551,7 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
   {
     TEXT_MACRO_X_STRING ("%device",storageInfo->storageSpecifier.deviceName,NULL);
     TEXT_MACRO_X_STRING ("%file",  archiveName,                             NULL);
-    TEXT_MACRO_X_INTEGER("%number",storageInfo->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_X_INT("%number",storageInfo->requestedVolumeNumber,      NULL);
   }
 
   // write pre-processing
@@ -624,7 +624,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       TEXT_MACRO_X_STRING ("%directory",storageInfo->device.write.directory,     NULL);
       TEXT_MACRO_X_STRING ("%image",    imageFileName,                           NULL);
       TEXT_MACRO_X_STRING ("%file",     archiveName,                             NULL);
-      TEXT_MACRO_X_INTEGER("%number",   storageInfo->volumeNumber,               NULL);
+      TEXT_MACRO_X_INT("%number",   storageInfo->volumeNumber,               NULL);
     }
 
     // create image

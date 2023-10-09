@@ -889,7 +889,7 @@ LOCAL Errors StorageOptical_loadVolume(const StorageInfo *storageInfo)
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING ("%device",storageInfo->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_X_INTEGER("%number",storageInfo->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_X_INT("%number",storageInfo->requestedVolumeNumber,      NULL);
   }
   error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.loadVolumeCommand),
                               textMacros.data,
@@ -945,7 +945,7 @@ LOCAL Errors StorageOptical_unloadVolume(const StorageInfo *storageInfo)
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING ("%device",storageInfo->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_X_INTEGER("%number",storageInfo->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_X_INT("%number",storageInfo->requestedVolumeNumber,      NULL);
   }
   error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.unloadVolumeCommand),
                               textMacros.data,
@@ -1007,7 +1007,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING ("%device",storageInfo->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_X_INTEGER("%number",storageInfo->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_X_INT("%number",storageInfo->requestedVolumeNumber,      NULL);
   }
 
   if (   (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
@@ -1197,9 +1197,9 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
   {
     TEXT_MACRO_X_STRING ("%device",storageInfo->storageSpecifier.deviceName,NULL);
     TEXT_MACRO_X_STRING ("%file",  archiveName,                             NULL);
-    TEXT_MACRO_X_INTEGER("%number",storageInfo->requestedVolumeNumber,      NULL);
-    TEXT_MACRO_X_INTEGER("%j",     j,                                       NULL);
-    TEXT_MACRO_X_INTEGER("%j1",    (j > 1) ? j-1 : 1,                       NULL);
+    TEXT_MACRO_X_INT("%number",storageInfo->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_X_INT("%j",     j,                                       NULL);
+    TEXT_MACRO_X_INT("%j1",    (j > 1) ? j-1 : 1,                       NULL);
   }
 
   // write pre-processing
@@ -1286,11 +1286,11 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       TEXT_MACRO_X_STRING ("%device",   storageInfo->storageSpecifier.deviceName,NULL);
       TEXT_MACRO_X_STRING ("%directory",storageInfo->opticalDisk.write.directory,NULL);
       TEXT_MACRO_X_STRING ("%image",    imageFileName,                           NULL);
-      TEXT_MACRO_X_INTEGER("%sectors",  0,                                       NULL);
+      TEXT_MACRO_X_INT("%sectors",  0,                                       NULL);
       TEXT_MACRO_X_STRING ("%file",     archiveName,                             NULL);
-      TEXT_MACRO_X_INTEGER("%number",   storageInfo->volumeNumber,               NULL);
-      TEXT_MACRO_X_INTEGER("%j",        j,                                       NULL);
-      TEXT_MACRO_X_INTEGER("%j1",       (j > 1) ? j-1 : 1,                       NULL);
+      TEXT_MACRO_X_INT("%number",   storageInfo->volumeNumber,               NULL);
+      TEXT_MACRO_X_INT("%j",        j,                                       NULL);
+      TEXT_MACRO_X_INT("%j1",       (j > 1) ? j-1 : 1,                       NULL);
     }
 
     if (   (storageInfo->jobOptions != NULL)
@@ -1389,11 +1389,11 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         TEXT_MACRO_X_STRING ("%device",   storageInfo->storageSpecifier.deviceName,NULL);
         TEXT_MACRO_X_STRING ("%directory",storageInfo->opticalDisk.write.directory,NULL);
         TEXT_MACRO_X_STRING ("%image",    imageFileName,                           NULL);
-        TEXT_MACRO_X_INTEGER("%sectors",  (ulong)(fileInfo.size/2048LL),           NULL);
+        TEXT_MACRO_X_INT("%sectors",  (ulong)(fileInfo.size/2048LL),           NULL);
         TEXT_MACRO_X_STRING ("%file",     archiveName,                             NULL);
-        TEXT_MACRO_X_INTEGER("%number",   storageInfo->volumeNumber,               NULL);
-        TEXT_MACRO_X_INTEGER("%j",        j,                                       NULL);
-        TEXT_MACRO_X_INTEGER("%j1",       (j > 1) ? j-1 : 1,                       NULL);
+        TEXT_MACRO_X_INT("%number",   storageInfo->volumeNumber,               NULL);
+        TEXT_MACRO_X_INT("%j",        j,                                       NULL);
+        TEXT_MACRO_X_INT("%j1",       (j > 1) ? j-1 : 1,                       NULL);
       }
 
       // check if new medium is required

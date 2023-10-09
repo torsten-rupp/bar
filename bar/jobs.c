@@ -1467,7 +1467,7 @@ bool Job_isSomeRunning(void)
   bool          runningFlag;
 
   runningFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     JOB_LIST_ITERATE(jobNode)
     {
@@ -1693,7 +1693,7 @@ void Job_flushAll()
 {
   JobNode *jobNode;
 
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     JOB_LIST_ITERATE(jobNode)
     {
@@ -2391,7 +2391,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
     // check if readable file and not ".*"
     if (File_isFile(fileName) && File_isReadable(fileName) && !String_startsWithChar(baseName,'.'))
     {
-      SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         jobNode = Job_find(baseName);
         if (jobNode == NULL)
@@ -2447,7 +2447,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
   File_closeDirectoryList(&directoryListHandle);
 
   // remove not existing jobs
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     jobNode = jobList.head;
     while (jobNode != NULL)
@@ -2478,7 +2478,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
   }
 
   // create UUIDs if empty
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     JOB_LIST_ITERATE(jobNode)
     {
@@ -2491,7 +2491,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
   }
 
   // check for duplicate UUIDs
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     jobNode1 = jobList.head;
     while (jobNode1 != NULL)

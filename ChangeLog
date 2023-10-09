@@ -1,6 +1,7 @@
 2023-09-01 23
   * changed version number scheme 
   * added support for storing on Samba/CIFS server
+  * added pre/post command macro %nextScheduleDateTime
   * upgrade zlib 1.3
   * upgrade libidn2 2.3.4
   * fixed bar-index --pipe

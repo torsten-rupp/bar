@@ -3418,7 +3418,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
               TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
               TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
               TEXT_MACRO_X_CSTRING("%state",    "",                                                           NULL);
-              TEXT_MACRO_X_INTEGER("%error",    Error_getCode(error),                                         NULL);
+              TEXT_MACRO_X_UINT   ("%error",    Error_getCode(error),                                         NULL);
               TEXT_MACRO_X_CSTRING("%message",  Error_getText(error),                                         NULL);
             }
             error = executeTemplate(String_cString(globalOptions.postProcessScript),

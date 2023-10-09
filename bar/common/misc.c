@@ -2077,11 +2077,17 @@ String Misc_expandMacros(String           string,
               {
                 switch (macros[j].type)
                 {
-                  case TEXT_MACRO_TYPE_INTEGER:
+                  case TEXT_MACRO_TYPE_INT:
                     stringSet(format,sizeof(format),"%d");
                     break;
-                  case TEXT_MACRO_TYPE_INTEGER64:
+                  case TEXT_MACRO_TYPE_UINT:
+                    stringSet(format,sizeof(format),"%u");
+                    break;
+                  case TEXT_MACRO_TYPE_INT64:
                     stringSet(format,sizeof(format),"%"PRIi64);
+                    break;
+                  case TEXT_MACRO_TYPE_UINT64:
+                    stringSet(format,sizeof(format),"%"PRIu64);
                     break;
                   case TEXT_MACRO_TYPE_DOUBLE:
                     stringSet(format,sizeof(format),"%lf");
@@ -2103,11 +2109,17 @@ String Misc_expandMacros(String           string,
               // expand macro into string
               switch (macros[j].type)
               {
-                case TEXT_MACRO_TYPE_INTEGER:
+                case TEXT_MACRO_TYPE_INT:
                   String_appendFormat(expanded,format,macros[j].value.i);
                   break;
-                case TEXT_MACRO_TYPE_INTEGER64:
-                  String_appendFormat(expanded,format,macros[j].value.l);
+                case TEXT_MACRO_TYPE_UINT:
+                  String_appendFormat(expanded,format,macros[j].value.u);
+                  break;
+                case TEXT_MACRO_TYPE_INT64:
+                  String_appendFormat(expanded,format,macros[j].value.i64);
+                  break;
+                case TEXT_MACRO_TYPE_UINT64:
+                  String_appendFormat(expanded,format,macros[j].value.u64);
                   break;
                 case TEXT_MACRO_TYPE_DOUBLE:
                   String_appendFormat(expanded,format,macros[j].value.d);

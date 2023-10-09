@@ -1,3 +1,8 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
@@ -2410,7 +2415,7 @@ msgstr ""
 
 #: src/BARWidgets.java:2157
 msgid "FTP server name."
-msgstr "FTPサーバ名"
+msgstr "FTPサーバ名。"
 
 #: src/BARWidgets.java:2230
 msgid ""
@@ -4241,7 +4246,7 @@ msgstr "後で入力"
 
 #: src/TabJobs.java:6087
 msgid "Input password for encryption."
-msgstr "暗号化用パスワード入力"
+msgstr "暗号化用パスワード入力。"
 
 #: src/TabJobs.java:6134
 msgid "this"

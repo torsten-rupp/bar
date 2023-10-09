@@ -91,11 +91,13 @@ typedef enum
 #define MISC_ID_NONE 0
 
 // text macro patterns
-#define TEXT_MACRO_PATTERN_INTEGER   "[+-]{0,1}\\d+"
-#define TEXT_MACRO_PATTERN_INTEGER64 "[+-]{0,1}\\d+"
-#define TEXT_MACRO_PATTERN_DOUBLE    "[+-]{0,1}(\\d+|\\d+\.\\d*|\\d*\.\\d+)"
-#define TEXT_MACRO_PATTERN_CSTRING   "\\S+"
-#define TEXT_MACRO_PATTERN_STRING    "\\S+"
+#define TEXT_MACRO_PATTERN_INT     "[+-]{0,1}\\d+"
+#define TEXT_MACRO_PATTERN_UINT    "[+]{0,1}\\d+"
+#define TEXT_MACRO_PATTERN_INT64   "[+-]{0,1}\\d+"
+#define TEXT_MACRO_PATTERN_UINT64  "[+]{0,1}\\d+"
+#define TEXT_MACRO_PATTERN_DOUBLE  "[+-]{0,1}(\\d+|\\d+\.\\d*|\\d*\.\\d+)"
+#define TEXT_MACRO_PATTERN_CSTRING "\\S+"
+#define TEXT_MACRO_PATTERN_STRING  "\\S+"
 
 // file/socket handle events
 #if   defined(PLATFORM_LINUX)
@@ -159,8 +161,10 @@ typedef const byte* MachineId;
 // text macros
 typedef enum
 {
-  TEXT_MACRO_TYPE_INTEGER,
-  TEXT_MACRO_TYPE_INTEGER64,
+  TEXT_MACRO_TYPE_INT,
+  TEXT_MACRO_TYPE_UINT,
+  TEXT_MACRO_TYPE_INT64,
+  TEXT_MACRO_TYPE_UINT64,
   TEXT_MACRO_TYPE_DOUBLE,
   TEXT_MACRO_TYPE_CSTRING,
   TEXT_MACRO_TYPE_STRING,
@@ -173,7 +177,9 @@ typedef struct
   struct
   {
     int            i;
-    int64          l;
+    uint           u;
+    int64          i64;
+    uint64         u64;
     double         d;
     const char     *s;
     String         string;
@@ -292,7 +298,7 @@ typedef struct
 *
 *          TEXT_MACROS_INIT(textMacros)
 *          {
-*            TEXT_MACRO_INTEGER(name,value,pattern);
+*            TEXT_MACRO_INT(name,value,pattern);
 *            TEXT_MACRO_CSTRING(name,value,pattern);
 *            TEXT_MACRO_STRING (name,value,pattern);
 *          }
@@ -328,39 +334,53 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define TEXT_MACRO_INTEGER(name,value,pattern) \
+#define TEXT_MACRO_INT(name,value,pattern) \
   { \
-    TEXT_MACRO_TYPE_INTEGER, \
+    TEXT_MACRO_TYPE_INT, \
     name, \
-    {value,0LL,0.0,NULL,NULL}, \
+    {value,0,0LL,0UL,0.0,NULL,NULL}, \
     pattern \
   }
-#define TEXT_MACRO_INTEGER64(name,value,pattern) \
+#define TEXT_MACRO_UINT(name,value,pattern) \
   { \
-    TEXT_MACRO_TYPE_INTEGER64, \
+    TEXT_MACRO_TYPE_UINT, \
     name, \
-    {0,value,0.0,NULL,NULL}, \
+    {0,value,0LL,0UL,0.0,NULL,NULL}, \
+    pattern \
+  }
+#define TEXT_MACRO_INT64(name,value,pattern) \
+  { \
+    TEXT_MACRO_TYPE_INT64, \
+    name, \
+    {0,0,value,0UL,0.0,NULL,NULL}, \
+    pattern \
+  }
+#define TEXT_MACRO_UINT64(name,value,pattern) \
+  { \
+    TEXT_MACRO_TYPE_UINT64, \
+    name, \
+    {0,0,0LL,value,0.0,NULL,NULL}, \
     pattern \
   }
 #define TEXT_MACRO_DOUBLE(name,value,pattern) \
   { \
     TEXT_MACRO_TYPE_DOUBLE, \
     name, \
-    {0,0LL,value,NULL,NULL}, \
+    {0,0,0LL,0UL,value,NULL,NULL}, \
     pattern \
   }
 #define TEXT_MACRO_CSTRING(name,value,pattern) \
   { \
     TEXT_MACRO_TYPE_CSTRING, \
     name, \
-    {0,0LL,0.0,value,NULL}, \
+    {0,0,0LL,0UL,0.0,value,NULL}, \
     pattern \
   }
 #define TEXT_MACRO_STRING(name,value,pattern) \
   { \
     TEXT_MACRO_TYPE_STRING, \
     name, \
-    {0,0LL,0.0,NULL,value}, \
+    {0,0,0LL,0UL,0.0,NULL,value}, \
     pattern \ \
   }
 
@@ -376,19 +396,33 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define TEXT_MACRO_N_INTEGER(textMacro,_name,_value,_pattern) \
+#define TEXT_MACRO_N_INT(textMacro,_name,_value,_pattern) \
   do { \
-    textMacro.type    = TEXT_MACRO_TYPE_INTEGER; \
+    textMacro.type    = TEXT_MACRO_TYPE_INT; \
     textMacro.name    = _name; \
     textMacro.value.i = _value; \
     textMacro.pattern = _pattern; \
   } while (0)
-#define TEXT_MACRO_N_INTEGER64(textMacro,_name,_value,_pattern) \
+#define TEXT_MACRO_N_UINT(textMacro,_name,_value,_pattern) \
   do { \
-    textMacro.type    = TEXT_MACRO_TYPE_INTEGER64; \
+    textMacro.type    = TEXT_MACRO_TYPE_UINT; \
     textMacro.name    = _name; \
-    textMacro.value.l = _value; \
+    textMacro.value.u = _value; \
     textMacro.pattern = _pattern; \
+  } while (0)
+#define TEXT_MACRO_N_INT64(textMacro,_name,_value,_pattern) \
+  do { \
+    textMacro.type      = TEXT_MACRO_TYPE_INT64; \
+    textMacro.name      = _name; \
+    textMacro.value.i64 = _value; \
+    textMacro.pattern   = _pattern; \
+  } while (0)
+#define TEXT_MACRO_N_UINT64(textMacro,_name,_value,_pattern) \
+  do { \
+    textMacro.type      = TEXT_MACRO_TYPE_UINT64; \
+    textMacro.name      = _name; \
+    textMacro.value.u64 = _value; \
+    textMacro.pattern   = _pattern; \
   } while (0)
 #define TEXT_MACRO_N_DOUBLE(textMacro,_name,_value,_pattern) \
   do { \
@@ -423,22 +457,40 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define TEXT_MACRO_X_INTEGER(_name,_value,_pattern) \
+#define TEXT_MACRO_X_INT(_name,_value,_pattern) \
   do { \
     assert(__textMacro < __textMacroEnd); \
-    __textMacro->type    = TEXT_MACRO_TYPE_INTEGER; \
+    __textMacro->type    = TEXT_MACRO_TYPE_INT; \
     __textMacro->name    = _name; \
     __textMacro->value.i = _value; \
     __textMacro->pattern = _pattern; \
     __textMacro++; \
   } while (0)
-#define TEXT_MACRO_X_INTEGER64(_name,_value,_pattern) \
+#define TEXT_MACRO_X_UINT(_name,_value,_pattern) \
   do { \
     assert(__textMacro < __textMacroEnd); \
-    __textMacro->type    = TEXT_MACRO_TYPE_INTEGER64; \
+    __textMacro->type    = TEXT_MACRO_TYPE_UINT; \
     __textMacro->name    = _name; \
-    __textMacro->value.l = _value; \
+    __textMacro->value.u = _value; \
     __textMacro->pattern = _pattern; \
+    __textMacro++; \
+  } while (0)
+#define TEXT_MACRO_X_INT64(_name,_value,_pattern) \
+  do { \
+    assert(__textMacro < __textMacroEnd); \
+    __textMacro->type      = TEXT_MACRO_TYPE_INT64; \
+    __textMacro->name      = _name; \
+    __textMacro->value.i64 = _value; \
+    __textMacro->pattern   = _pattern; \
+    __textMacro++; \
+  } while (0)
+#define TEXT_MACRO_X_UINT64(_name,_value,_pattern) \
+  do { \
+    assert(__textMacro < __textMacroEnd); \
+    __textMacro->type      = TEXT_MACRO_TYPE_UINT64; \
+    __textMacro->name      = _name; \
+    __textMacro->value.u64 = _value; \
+    __textMacro->pattern   = _pattern; \
     __textMacro++; \
   } while (0)
 #define TEXT_MACRO_X_DOUBLE(_name,_value,_pattern) \

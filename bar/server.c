@@ -87,7 +87,8 @@
 
 // sleep times [s]
 #define SLEEP_TIME_PAIRING_THREAD                ( 1*S_PER_MINUTE)
-#define SLEEP_TIME_SCHEDULER_THREAD              ( 1*S_PER_MINUTE)
+// TODO: revert #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*S_PER_MINUTE)
+#define SLEEP_TIME_SCHEDULER_THREAD ( 10)
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*S_PER_MINUTE)
@@ -1669,8 +1670,10 @@ LOCAL void schedulerThreadCode(void)
     }
   }
 
+  // init resources
   Misc_initTimeout(&rereadJobTimeout,SLEEP_TIME_SCHEDULER_THREAD);
   List_init(&jobScheduleList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeJobScheduleNode,NULL));
+
   executeScheduleDateTime = 0LL;
   while (!isQuit())
   {
@@ -1683,7 +1686,7 @@ LOCAL void schedulerThreadCode(void)
       Misc_restartTimeout(&rereadJobTimeout,0);
     }
 
-    // get jobs schedule list
+    // get jobs schedule list (Note: avoid long locking of job list)
     List_clear(&jobScheduleList);
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
@@ -1772,9 +1775,8 @@ LOCAL void schedulerThreadCode(void)
             {
               while ((day >= 1) && !isQuit())
               {
-//const char *W[7]={"Mo","Di","Mi","Do","Fr","Sa","So"};
                 weekDay = Misc_getWeekDay(year,month,day);
-//fprintf(stderr,"%s:%d: month=%d day=%d weekday=%d %s %d\n",__FILE__,__LINE__,month,day,weekDay,W[weekDay],jobScheduleNode->date.day);
+//const char *W[7]={"Mo","Di","Mi","Do","Fr","Sa","So"}; fprintf(stderr,"%s:%d: month=%d day=%d weekday=%d %s %d\n",__FILE__,__LINE__,month,day,weekDay,W[weekDay],jobScheduleNode->date.day);
 
                 if (   ((jobScheduleNode->date.day   == DATE_ANY       ) || (jobScheduleNode->date.day == (int)day)    )
                     && ((jobScheduleNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(jobScheduleNode->weekDaySet,weekDay))
@@ -1872,6 +1874,7 @@ LOCAL void schedulerThreadCode(void)
         year--;
         month = 12;
       }
+//fprintf(stderr,"%s:%d: found executeScheduleNode=%p executeScheduleDateTime=%lu\n",__FILE__,__LINE__,executeScheduleNode,executeScheduleDateTime);
 
       if (executeScheduleNode != NULL)
       {
@@ -1886,6 +1889,7 @@ LOCAL void schedulerThreadCode(void)
               && !Job_isActive(jobNode->jobState)
              )
           {
+//fprintf(stderr,"%s:%d: trigger executeScheduleNode=%p executeScheduleDateTime=%lu\n",__FILE__,__LINE__,executeScheduleNode,executeScheduleDateTime);
             Job_trigger(jobNode,
                         scheduleNode->uuid,
                         scheduleNode->archiveType,
@@ -1914,6 +1918,8 @@ LOCAL void schedulerThreadCode(void)
     // sleep and check quit flag
     delayThread(SLEEP_TIME_SCHEDULER_THREAD,&schedulerThreadTrigger);
   }
+
+  // free resources
   List_done(&jobScheduleList);
   Misc_doneTimeout(&rereadJobTimeout);
 
@@ -2080,6 +2086,211 @@ LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
   #undef TIME_END
   #undef TIME_BEGIN
   #undef TIME
+}
+
+/***********************************************************************\
+* Name   : getNextScheduleDateTime
+* Purpose: get next schedule date/time
+* Input  : scheduleDateTime - schedule date/time
+* Output : -
+* Return : next schedule date/time or 0
+* Notes  : -
+\***********************************************************************/
+
+uint64 getNextScheduleDateTime(uint64 scheduleDateTime)
+{
+  #define MAX_NEXT_SCHEDULE (7*24*60)  // max. next schedule check minutes [min]
+
+  typedef struct JobScheduleNode
+  {
+    LIST_NODE_HEADER(struct JobScheduleNode);
+
+    ScheduleDate       date;
+    ScheduleWeekDaySet weekDaySet;
+    ScheduleTime       time;
+    ArchiveTypes       archiveType;
+    ScheduleTime       beginTime,endTime;
+    uint64             lastExecutedDateTime;
+  } JobScheduleNode;
+
+  typedef struct
+  {
+    LIST_HEADER(JobScheduleNode);
+  } JobScheduleList;
+
+  /***********************************************************************\
+  * Name   : freeJobScheduleNode
+  * Purpose: free job schedule node
+  * Input  : jobScheduleNode - job schedule node
+  *          userData        - user data (not used)
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeJobScheduleNode(JobScheduleNode *jobScheduleNode, void *userData);
+  void freeJobScheduleNode(JobScheduleNode *jobScheduleNode, void *userData)
+  {
+    assert(jobScheduleNode != NULL);
+
+    UNUSED_VARIABLE(userData);
+  }
+
+  JobScheduleList jobScheduleList;
+  JobNode         *jobNode;
+  ScheduleNode    *scheduleNode;
+  JobScheduleNode *jobScheduleNode;
+
+  // init variables
+  List_init(&jobScheduleList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeJobScheduleNode,NULL));
+
+  // get jobs schedule list (Note: avoid long locking of job list)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    JOB_LIST_ITERATE(jobNode)
+    {
+      LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+      {
+        if (   scheduleNode->enabled
+            && (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
+           )
+        {
+          jobScheduleNode = LIST_NEW_NODE(JobScheduleNode);
+          if (jobScheduleNode == NULL)
+          {
+            HALT_INSUFFICIENT_MEMORY();
+          }
+
+          jobScheduleNode->date                 = scheduleNode->date;
+          jobScheduleNode->weekDaySet           = scheduleNode->weekDaySet;
+          jobScheduleNode->time                 = scheduleNode->time;
+          jobScheduleNode->archiveType          = scheduleNode->archiveType;
+          jobScheduleNode->beginTime            = scheduleNode->beginTime;
+          jobScheduleNode->endTime              = scheduleNode->endTime;
+          jobScheduleNode->lastExecutedDateTime = scheduleNode->lastExecutedDateTime;
+
+          List_append(&jobScheduleList,jobScheduleNode);
+        }
+      }
+    }
+  }
+
+  // get search start date/time
+  uint year,month,day;
+  uint hour,minute;
+  uint weekDay;
+  Misc_splitDateTime(scheduleDateTime,
+                     TIME_TYPE_LOCAL,
+                     &year,
+                     &month,
+                     &day,
+                     &hour,
+                     &minute,
+                     NULL,  // second
+                     &weekDay,
+                     NULL  // dayLightSavingMode
+                    );
+
+  // search for next schedule
+  uint64 nextScheduleDateTime = 0LL;
+  uint   i = 0;
+  while (i < MAX_NEXT_SCHEDULE)
+  {
+    // check matching schedules
+    LIST_ITERATEX(&jobScheduleList,jobScheduleNode,!isQuit())
+    {
+      if ((jobScheduleNode->date.year == DATE_ANY) || (jobScheduleNode->date.year == (int)year))
+      {
+//fprintf(stderr,"%s:%d: schedule month=%d month=%d\n",__FILE__,__LINE__,jobScheduleNode->date.month,month);
+        if ((jobScheduleNode->date.month == DATE_ANY) || (jobScheduleNode->date.month == (int)month))
+        {
+          uint weekDay = Misc_getWeekDay(year,month,day);
+//const char *W[7]={"Mo","Di","Mi","Do","Fr","Sa","So"}; fprintf(stderr,"%s:%d: %d-%d-%d -> weekday=%d schedule day=%s day=%d\n",__FILE__,__LINE__,year,month,day,weekDay,W[weekDay],jobScheduleNode->date.day,day);
+          if (   ((jobScheduleNode->date.day   == DATE_ANY       ) || (jobScheduleNode->date.day == (int)day)    )
+              && ((jobScheduleNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(jobScheduleNode->weekDaySet,weekDay))
+             )
+          {
+//fprintf(stderr,"%s:%d: schedule hour=%d hour=%d\n",__FILE__,__LINE__,jobScheduleNode->time.hour,hour);
+            if (   (jobScheduleNode->time.hour == TIME_ANY)
+                || (jobScheduleNode->time.hour == (int)hour)
+               )
+            {
+//fprintf(stderr,"%s:%d: schedule minute=%d minute=%d\n",__FILE__,__LINE__,jobScheduleNode->time.minute,minute);
+              if (   (jobScheduleNode->time.minute == TIME_ANY)
+                  || (jobScheduleNode->time.minute == (int)minute)
+                 )
+              {
+                uint64 dateTime = Misc_makeDateTime(TIME_TYPE_LOCAL,
+                                                    year,
+                                                    month,
+                                                    day,
+                                                    hour,
+                                                    minute,
+                                                    0,
+                                                    DAY_LIGHT_SAVING_MODE_AUTO
+                                                   );
+                if (   (dateTime > scheduleDateTime)
+                    && (dateTime > jobScheduleNode->lastExecutedDateTime)
+                    && ((nextScheduleDateTime == 0LL) || (dateTime < nextScheduleDateTime))
+                   )
+                {
+                  nextScheduleDateTime = dateTime;
+                }
+              } // minute
+            } // hour
+          } // day
+        } // month
+      } // year
+    }
+
+    // next date/time
+    if (minute < 60)
+    {
+      minute++;
+    }
+    else
+    {
+      minute = 0;
+
+      if (hour < 24)
+      {
+        hour++;
+      }
+      else
+      {
+        hour = 0;
+
+        uint lastDayOfMonth = Misc_getLastDayOfMonth(year,month);
+        if (day < lastDayOfMonth)
+        {
+          day++;
+        }
+        else
+        {
+          day = 1;
+
+          if (month < 12)
+          {
+            month++;
+          }
+          else
+          {
+            month = 1;
+            year++;
+          }
+        }
+      }
+    }
+
+    i++;
+  }
+
+  // free resources
+  List_done(&jobScheduleList);
+
+  return nextScheduleDateTime;
+
+  #undef MAX_NEXT_SCHEDULE
 }
 
 /*---------------------------------------------------------------------*/
@@ -5505,13 +5716,14 @@ LOCAL void jobThreadCode(void)
   ArchiveTypes     archiveType;
   uint64           startDateTime;
   JobOptions       jobOptions;
+  uint64           nextScheduleDateTime;
   LogHandle        logHandle;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   StaticString     (entityUUID,MISC_UUID_STRING_LENGTH);
   uint64           executeStartDateTime,executeEndDateTime;
   StringList       storageNameList;
-  TextMacros       (textMacros,9);
+  TextMacros       (textMacros,10);
   StaticString     (s,64);
   IndexHandle      indexHandle;
   bool             isIndexOpened;
@@ -5707,6 +5919,9 @@ LOCAL void jobThreadCode(void)
     // get start date/time
     executeStartDateTime = Misc_getCurrentDateTime();
 
+    // get next schedule date/time
+    nextScheduleDateTime = getNextScheduleDateTime(executeStartDateTime);
+
     // job pre-process command
     if      (!Job_isRemote(jobNode))
     {
@@ -5716,12 +5931,13 @@ LOCAL void jobThreadCode(void)
         {
           TEXT_MACROS_INIT(textMacros)
           {
-            TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
-            TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
-            TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
-            TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
-            TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-            TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+            TEXT_MACRO_X_STRING ("%name",                jobName,                                                      NULL);
+            TEXT_MACRO_X_STRING ("%archive",             storageName,                                                  NULL);
+            TEXT_MACRO_X_CSTRING("%type",                Archive_archiveTypeToString(archiveType),                     NULL);
+            TEXT_MACRO_X_CSTRING("%T",                   Archive_archiveTypeToShortString(archiveType),                NULL);
+            TEXT_MACRO_X_STRING ("%directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+            TEXT_MACRO_X_STRING ("%file",                storageSpecifier.archiveName,                                 NULL);
+            TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                         NULL);
           }
           error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
                                   executeStartDateTime,
@@ -5977,15 +6193,16 @@ LOCAL void jobThreadCode(void)
       {
         TEXT_MACROS_INIT(textMacros)
         {
-          TEXT_MACRO_X_STRING ("%name",     jobName,                                                               NULL);
-          TEXT_MACRO_X_STRING ("%archive",  storageName,                                                           NULL);
-          TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                              NULL);
-          TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                         NULL);
-          TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),         NULL);
-          TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                          NULL);
-          TEXT_MACRO_X_CSTRING("%state",    Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),NULL);
-          TEXT_MACRO_X_INTEGER("%error",    Error_getCode(jobNode->runningInfo.error),                             NULL);
-          TEXT_MACRO_X_CSTRING("%message",  Error_getText(jobNode->runningInfo.error),                             NULL);
+          TEXT_MACRO_X_STRING ("%name",                jobName,                                                               NULL);
+          TEXT_MACRO_X_STRING ("%archive",             storageName,                                                           NULL);
+          TEXT_MACRO_X_CSTRING("%type",                Archive_archiveTypeToString(archiveType),                              NULL);
+          TEXT_MACRO_X_CSTRING("%T",                   Archive_archiveTypeToShortString(archiveType),                         NULL);
+          TEXT_MACRO_X_STRING ("%directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),         NULL);
+          TEXT_MACRO_X_STRING ("%file",                storageSpecifier.archiveName,                                          NULL);
+          TEXT_MACRO_X_CSTRING("%state",               Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),NULL);
+          TEXT_MACRO_X_UINT   ("%error",               Error_getCode(jobNode->runningInfo.error),                             NULL);
+          TEXT_MACRO_X_CSTRING("%message",             Error_getText(jobNode->runningInfo.error),                             NULL);
+          TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                                  NULL);
         }
         error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
                                 executeStartDateTime,
