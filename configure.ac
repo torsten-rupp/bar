@@ -1524,26 +1524,26 @@ fi
 # compiler/link flags/paths
 
 # Note: do not use AC_PROG_CC_STDC, because it adds the option to the CC command
-AC_CC_OPTION(-std=gnu99,                   CC_FLAGS)
+AC_CC_OPTION(-std=gnu99,                      CC_FLAGS)
 
 # Note: disable address randomization for debug/analysis builds
-AC_CC_OPTION(-fno-pie,                     CC_FLAGS_DEBUG CC_FLAGS_GCOV CC_FLAGS_GPROF CC_FLAGS_VALGRIND CXX_FLAGS_DEBUG)
+AC_CC_OPTION(-fno-pie,                        CC_FLAGS_DEBUG CC_FLAGS_GCOV CC_FLAGS_GPROF CC_FLAGS_VALGRIND CXX_FLAGS_DEBUG)
 
-AC_CC_OPTION(-Wall,                        CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wpointer-arith,              CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wunused-label,               CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wunused-parameter,           CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wunused-variable,            CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wmissing-prototypes,         CC_WARN_FLAGS)
-AC_CC_OPTION(-Wmissing-declarations,       CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wstrict-aliasing,            CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wextra,                      CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wfloat-equal,                CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wdeclaration-after-statement,CC_WARN_FLAGS)
-AC_CC_OPTION(-Wbad-function-cast,          CC_WARN_FLAGS)
-AC_CC_OPTION(-Wsign-compare,               CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
-AC_CC_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wall,                           CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wpointer-arith,                 CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wunused-label,                  CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wunused-parameter,              CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wunused-variable,               CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wmissing-prototypes,            CC_WARN_FLAGS)
+AC_CC_OPTION(-Wmissing-declarations,          CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wstrict-aliasing,               CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wextra,                         CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wfloat-equal,                   CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wbad-function-cast,             CC_WARN_FLAGS)
+AC_CC_OPTION(-Wsign-compare,                  CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wstrict-prototypes,             CC_WARN_FLAGS)
+AC_CC_OPTION(-Wno-declaration-after-statement,CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wno-unknown-pragmas,            CC_WARN_FLAGS CXX_WARN_FLAGS)
 case $host_os in
   linux-*)
     ;;

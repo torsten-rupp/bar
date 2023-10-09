@@ -53,8 +53,8 @@
 #define MAX_BUFFER_SIZE       (64*1024)
 #define MAX_FILENAME_LENGTH   ( 8*1024)
 
-#define UNLOAD_VOLUME_DELAY_TIME (30LL*MS_PER_SECOND) /* [ms] */
-#define LOAD_VOLUME_DELAY_TIME   (30LL*MS_PER_SECOND) /* [ms] */
+#define OPTICAL_UNLOAD_VOLUME_DELAY_TIME (30LL*MS_PER_SECOND) /* [ms] */
+#define OPTICAL_LOAD_VOLUME_DELAY_TIME   (30LL*MS_PER_SECOND) /* [ms] */
 
 #define MAX_CD_SIZE  (900LL*1024LL*1024LL)     // 900M
 #define MAX_DVD_SIZE (2LL*4613734LL*1024LL)    // 9G (dual layer)
@@ -1016,7 +1016,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
   {
     // sleep a short time to give hardware time for finishing volume, then unload current volume
     printInfo(1,"Unload medium #%d...",storageInfo->volumeNumber);
-    Misc_mdelay(UNLOAD_VOLUME_DELAY_TIME);
+    Misc_mdelay(OPTICAL_UNLOAD_VOLUME_DELAY_TIME);
     (void)StorageOptical_unloadVolume(storageInfo);
     printInfo(1,"OK\n");
 
@@ -1044,7 +1044,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
         // sleep a short time to give hardware time for finishing volume, then unload current medium
         printInfo(1,"Unload medium...");
 //TODO: check if medium is ready
-        Misc_mdelay(UNLOAD_VOLUME_DELAY_TIME);
+        Misc_mdelay(OPTICAL_UNLOAD_VOLUME_DELAY_TIME);
         (void)StorageOptical_unloadVolume(storageInfo);
         printInfo(1,"OK\n");
       }
@@ -1123,7 +1123,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
         // load medium, then sleep a short time to give hardware time for reading medium information
         printInfo(1,"Load medium #%d...",storageInfo->requestedVolumeNumber);
         (void)StorageOptical_loadVolume(storageInfo);
-        Misc_mdelay(LOAD_VOLUME_DELAY_TIME);
+        Misc_mdelay(OPTICAL_LOAD_VOLUME_DELAY_TIME);
         printInfo(1,"OK\n");
 
         // store new medium number
@@ -1142,7 +1142,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
         (void)StorageOptical_loadVolume(storageInfo);
         printInfo(1,"OK\n");
 //TODO: check if medium is ready
-        Misc_mdelay(LOAD_VOLUME_DELAY_TIME);
+        Misc_mdelay(OPTICAL_LOAD_VOLUME_DELAY_TIME);
 
         return ERROR_ABORTED;
         break;

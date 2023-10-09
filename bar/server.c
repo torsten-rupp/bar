@@ -2097,7 +2097,7 @@ LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-uint64 getNextScheduleDateTime(uint64 scheduleDateTime)
+LOCAL uint64 getNextScheduleDateTime(uint64 scheduleDateTime)
 {
   #define MAX_NEXT_SCHEDULE (7*24*60)  // max. next schedule check minutes [min]
 
@@ -2133,6 +2133,7 @@ uint64 getNextScheduleDateTime(uint64 scheduleDateTime)
   {
     assert(jobScheduleNode != NULL);
 
+    UNUSED_VARIABLE(jobScheduleNode);
     UNUSED_VARIABLE(userData);
   }
 
@@ -8247,6 +8248,18 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
                               "WEBDAVS",
                               serverNode->server.webDAV.port,
                               serverNode->server.webDAV.loginName,
+                              serverNode->server.maxConnectionCount,
+                              serverNode->server.maxStorageSize
+                             );
+          break;
+        case SERVER_TYPE_SMB:
+          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+                              "id=%u name=%'S serverType=%s loginName=%'S share=%'S maxConnectionCount=%d maxStorageSize=%"PRIu64,
+                              serverNode->server.id,
+                              serverNode->server.name,
+                              "SMB",
+                              serverNode->server.smb.loginName,
+                              serverNode->server.smb.shareName,
                               serverNode->server.maxConnectionCount,
                               serverNode->server.maxStorageSize
                              );
