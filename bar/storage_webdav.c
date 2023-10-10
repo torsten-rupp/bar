@@ -50,7 +50,7 @@
 #define BUFFER_SIZE (64*1024)
 
 // different timeouts [ms]
-#define WEBDAV_TIMEOUT (30*1000)
+#define WEBDAV_TIMEOUT (10*1000)
 
 #define INITIAL_BUFFER_SIZE   (64*1024)
 #define INCREMENT_BUFFER_SIZE ( 8*1024)
@@ -215,7 +215,7 @@ UNUSED_VARIABLE(privateKeyLength);
   }
   if (curlCode == CURLE_OK)
   {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CONNECTTIMEOUT_MS,timeout);
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_TIMEOUT_MS,timeout);
   }
   if (globalOptions.verboseLevel >= 6)
   {
@@ -428,7 +428,7 @@ LOCAL Errors checkWebDAVLogin(StorageTypes type,
       {
         curlCode = curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,curlSList);
       }
-     if (curlCode == CURLE_OK)
+      if (curlCode == CURLE_OK)
       {
         curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
       }

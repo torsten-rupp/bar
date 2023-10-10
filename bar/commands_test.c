@@ -1648,6 +1648,7 @@ NULL,  //               requestedAbortFlag,
 
     error = ERROR_UNKNOWN;
 
+    // try test archive content
     if (error != ERROR_NONE)
     {
       if (String_isEmpty(storageSpecifier.archivePatternString))
@@ -1657,9 +1658,14 @@ NULL,  //               requestedAbortFlag,
                             &storageSpecifier,
                             NULL  // fileName
                            );
-        someStorageFound = TRUE;
+        if (error == ERROR_NONE)
+        {
+          someStorageFound = TRUE;
+        }
       }
     }
+
+    // try test directory content
     if (error != ERROR_NONE)
     {
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
@@ -1704,6 +1710,7 @@ NULL,  //               requestedAbortFlag,
               if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
             }
           }
+
           someStorageFound = TRUE;
         }
         String_delete(fileName);
@@ -1711,6 +1718,7 @@ NULL,  //               requestedAbortFlag,
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
     }
+
     if (error != ERROR_NONE)
     {
       if (testInfo.failError == ERROR_NONE) testInfo.failError = error;

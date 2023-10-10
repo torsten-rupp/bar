@@ -2899,8 +2899,6 @@ test_miscellaneous test_misc:
 	# out of memory
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	$(call functionTestCheckExitcode,1,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --overwrite-archive-files 2>/dev/null $(LOG)))
-else
-	echo xxxxxxxxxx
 endif
 	@#
 ifeq ($(TEST_MOUNT_OPERATIONS),yes)
@@ -2921,6 +2919,29 @@ ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
 endif
+	@
+	# parse storage names
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l file://not_exists.bar 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l ftp://localhost/not_exists.bar          --ftp-password=not_exists    </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l ftp://localhost:1234/not_exists.bar     --ftp-password=not_exists    </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,127,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l ssh://localhost/not_exists.bar          --ssh-password=not_exists    </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,127,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l ssh://localhost:1234/not_exists.bar     --ssh-password=not_exists    </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l sftp://localhost/not_exists.bar         --ssh-password=not_exists    </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l sftp://localhost:1234/not_exists.bar    --ssh-password=not_exists    </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l webdav://localhost/not_exists.bar       --webdav-password=not_exists </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l webdav://localhost:1234/not_exists.bar  --webdav-password=not_exists </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l webdavs://localhost/not_exists.bar      --webdav-password=not_exist  </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l webdavs://localhost:1234/not_exists.bar --webdav-password=not_exists </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l smb://localhost/not_exists.bar          --smb-password=not_exist     </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l smb://localhost/share/not_exists.bar    --smb-password=not_exist     </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l cd:///dev/not_exists.bar                --cd-device=not_exists                  1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l cd:///dev/not_exists:not_exists.bar     --cd-device=not_exists                  1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l dvd:///dev/not_exists.bar               --dvd-device=not_exists                 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l dvd:///dev/not_exists:not_exists.bar    --dvd-device=not_exists                 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l bd:///dev/not_exists.bar                --bd-device=not_exists                  1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l bd:///dev/not_exists:not_exists.bar     --bd-device=not_exists                  1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,127,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l device:///dev/not_exists.bar            --device=not_exists                     1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,127,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS)   -l device:///dev/not_exists:not_exists.bar --device=not_exists                     1>/dev/null 2>/dev/null))
 	@
 	# signals
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)

@@ -91,9 +91,6 @@ def tests()
             {
               sh "(cd host; make -j1)"
             }
-
-            // save artifacts
-//            stash name:"host", includes:"Makefile, bar/Makefile, bar/tests/Makefile, bar/bar, bar/bar-debug"
           }
         }
       }
@@ -136,9 +133,6 @@ def tests()
               {
                 sh "(cd win32; make -j1)"
               }
-
-              // save artifacts
-//              stash name:"win32", includes:"bar/bar.exe, bar/bar-debug.exe"
             }
           }
         }

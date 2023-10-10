@@ -3308,7 +3308,6 @@ NULL, // masterSocketHandle
       break;
 //TODO: remove?
     case STORAGE_TYPE_SSH:
-//    case STORAGE_TYPE_SCP:
       {
         #define TIMEOUT (60*1000)
 
@@ -3318,7 +3317,6 @@ NULL, // masterSocketHandle
         NetworkExecuteHandle networkExecuteHandle;
         String               line;
         uint                 protocolVersionMajor,protocolVersionMinor;
-        Errors               error;
         uint                 retryCount;
         int                  id,errorCode;
         bool                 completedFlag;
@@ -3331,7 +3329,6 @@ NULL, // masterSocketHandle
         // start remote BAR via SSH (if not already started)
         if (!remoteBarFlag)
         {
-
           // get SSH server settings
           Configuration_initSSHServerSettings(&sshServer,storageSpecifier->hostName,jobOptions);
           if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,sshServer.loginName);
@@ -3431,7 +3428,6 @@ NULL, // masterSocketHandle
                        Error_getText(error)
                       );
 #endif
-            (void)Network_disconnect(&socketHandle);
             Configuration_doneSSHServerSettings(&sshServer);
             break;
           }
@@ -4555,6 +4551,29 @@ Errors Command_list(StringList              *storageNameList,
 
     error = ERROR_UNKNOWN;
 
+    // try list archive content
+    if (error != ERROR_NONE)
+    {
+      if (   !String_isEmpty(storageSpecifier.archiveName)
+          && String_isEmpty(storageSpecifier.archivePatternString)
+         )
+      {
+        error = listArchiveContent(&storageSpecifier,
+                                   NULL,  // fileName
+                                   includeEntryList,
+                                   excludePatternList,
+                                   showEntriesFlag,
+                                   jobOptions,
+                                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
+                                   logHandle
+                                  );
+        if (error == ERROR_NONE)
+        {
+          someStorageFound = TRUE;
+        }
+      }
+    }
+
     // try list directory content
     if (error != ERROR_NONE)
     {
@@ -4614,26 +4633,6 @@ Errors Command_list(StringList              *storageNameList,
           String_delete(fileName);
         }
         Storage_closeDirectoryList(&storageDirectoryListHandle);
-      }
-    }
-
-    // try list archive content
-    if (error != ERROR_NONE)
-    {
-      if (   !String_isEmpty(storageSpecifier.archiveName)
-          && String_isEmpty(storageSpecifier.archivePatternString)
-         )
-      {
-        error = listArchiveContent(&storageSpecifier,
-                                   NULL,  // fileName
-                                   includeEntryList,
-                                   excludePatternList,
-                                   showEntriesFlag,
-                                   jobOptions,
-                                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                                   logHandle
-                                  );
-        someStorageFound = TRUE;
       }
     }
 

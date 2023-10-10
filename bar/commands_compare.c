@@ -2275,16 +2275,27 @@ NULL,  //               requestedAbortFlag,
     }
     DEBUG_TESTCODE() { compareInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
 
-    if (String_isEmpty(storageSpecifier.archivePatternString))
+    error = ERROR_UNKNOWN;
+
+    // try compare archive content
+    if (error != ERROR_NONE)
     {
-      // compare archive content
-      error = compareArchive(&compareInfo,
-                                    &storageSpecifier,
-                                    NULL
-                                   );
-      someStorageFound = TRUE;
+      if (String_isEmpty(storageSpecifier.archivePatternString))
+      {
+        // compare archive content
+        error = compareArchive(&compareInfo,
+                                      &storageSpecifier,
+                                      NULL
+                                     );
+        if (error == ERROR_NONE)
+        {
+          someStorageFound = TRUE;
+        }
+      }
     }
-    else
+
+    // try compare directory content
+    if (error != ERROR_NONE)
     {
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
@@ -2335,6 +2346,7 @@ NULL,  //               requestedAbortFlag,
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
     }
+
     if (error != ERROR_NONE)
     {
       if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;

@@ -472,6 +472,7 @@ LOCAL bool StorageOptical_parseSpecifier(ConstString deviceSpecifier,
 
   String_clear(deviceName);
 
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(deviceSpecifier));
   if (String_matchCString(deviceSpecifier,STRING_BEGIN,"^([^:]*):$",NULL,STRING_NO_ASSIGN,deviceName,NULL))
   {
     // <device name>

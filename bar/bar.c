@@ -1269,7 +1269,6 @@ void fatalLogMessage(const char *text, void *userData)
     if (logFile == NULL)
     {
       logFile = fopen(globalOptions.logFileName,"a");
-      if (logFile == NULL) printWarning("cannot re-open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
     }
 
     if (logFile != NULL)

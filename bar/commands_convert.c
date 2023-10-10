@@ -2555,6 +2555,7 @@ Errors Command_convert(const StringList        *storageNameList,
 
     error = ERROR_UNKNOWN;
 
+    // try convert archive content
     if (error != ERROR_NONE)
     {
       if (String_isEmpty(storageSpecifier.archivePatternString))
@@ -2564,9 +2565,14 @@ Errors Command_convert(const StringList        *storageNameList,
                                &storageSpecifier,
                                NULL
                               );
-        someStorageFound = TRUE;
+        if (error == ERROR_NONE)
+        {
+          someStorageFound = TRUE;
+        }
       }
     }
+
+    // try convert directory content
     if (error != ERROR_NONE)
     {
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
@@ -2618,6 +2624,7 @@ Errors Command_convert(const StringList        *storageNameList,
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
     }
+
     if (error != ERROR_NONE)
     {
       if (failError == ERROR_NONE) failError = error;

@@ -3757,20 +3757,26 @@ Errors Command_restore(const StringList                *storageNameList,
       continue;
     }
 
-    if (String_isEmpty(storageSpecifier.archivePatternString))
+    // try restore archive content
+    if (error != ERROR_NONE)
     {
-      // restore archive content
-      error = restoreArchive(&restoreInfo,
-                             &storageSpecifier,
-                             NULL  // archiveName
-                            );
-      if (error != ERROR_NONE)
+      if (String_isEmpty(storageSpecifier.archivePatternString))
       {
-        if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
+        // restore archive content
+        error = restoreArchive(&restoreInfo,
+                               &storageSpecifier,
+                               NULL  // archiveName
+                              );
+        if (error != ERROR_NONE)
+        {
+          if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
+          someStorageFound = TRUE;
+        }
       }
-      someStorageFound = TRUE;
     }
-    else
+
+    // try restore directory content
+    if (error != ERROR_NONE)
     {
       // restore all matching archives content
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
