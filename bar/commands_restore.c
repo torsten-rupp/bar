@@ -3757,6 +3757,8 @@ Errors Command_restore(const StringList                *storageNameList,
       continue;
     }
 
+    error = ERROR_UNKNOWN;
+
     // try restore archive content
     if (error != ERROR_NONE)
     {

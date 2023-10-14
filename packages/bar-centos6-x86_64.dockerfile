@@ -1,6 +1,9 @@
 FROM centos:6
 ENV container docker
 
+ARG uid=0
+ARG gid=0
+
 # use different repository
 # see: https://www.getpagespeed.com/server-setup/how-to-fix-yum-after-centos-6-went-eol
 RUN curl https://www.getpagespeed.com/files/centos6-eol.repo --output /etc/yum.repos.d/CentOS-Base.repo;
@@ -68,6 +71,13 @@ RUN yum -y install \
 RUN yum -y install \
   devtoolset-7 \
   ;
+
+# add users
+RUN groupadd -g ${gid} jenkins
+RUN useradd -m -u ${uid} -g ${gid} -p `openssl passwd jenkins` jenkins
+
+# enable sudo for all
+RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" > /etc/sudoers.d/all
 
 # add external third-party packages
 COPY download-third-party-packages.sh /root

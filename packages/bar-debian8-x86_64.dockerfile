@@ -1,9 +1,8 @@
 FROM debian:8
 ENV container docker
 
-# add user for build process
-RUN groupadd -g 1000 build
-RUN useradd -g 1000 -u 1000 build
+ARG uid=0
+ARG gid=0
 
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
@@ -58,6 +57,15 @@ RUN apt-get -y --force-yes install \
   txt2man \
   valgrind \
   ;
+
+# add users
+RUN groupadd -g 1000 build
+RUN useradd -g 1000 -u 1000 build
+RUN groupadd -g ${gid} jenkins
+RUN useradd -m -u ${uid} -g ${gid} -p `openssl passwd jenkins` jenkins
+
+# enable sudo for all
+RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" > /etc/sudoers.d/all
 
 # add external third-party packages
 COPY download-third-party-packages.sh /root

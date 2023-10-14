@@ -39,7 +39,7 @@ XDELTA3_VERSION=3.0.11
 MXML_VERSION=3.3
 LIBGPG_ERROR_VERSION=1.45
 LIBGCRYPT_VERSION=1.10.1
-NETTLE_VERSION=3.7.3
+NETTLE_VERSION=3.9.1
 GMP_VERSION=6.2.1
 LIBIDN2_VERSION=2.3.4
 GNU_TLS_SUB_DIRECTORY=v3.6
@@ -47,7 +47,7 @@ GNU_TLS_VERSION=3.6.16
 LIBICONV_VERSION=1.16
 OPENSSL_VERSION=1.1.1n
 LIBSSH2_VERSION=1.10.0
-C_ARES_VERSION=1.18.1
+C_ARES_VERSION=1.20.1
 CURL_VERSION=7.77.0
 PCRE_VERSION=8.45
 SQLITE_YEAR=2022
@@ -996,6 +996,7 @@ if test $cleanFlag -eq 0; then
   if test $allFlag -eq 1 -o $mxmlFlag -eq 1; then
     # mxml
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get mxml ($MXML_VERSION)..."
@@ -1037,8 +1038,9 @@ if test $cleanFlag -eq 0; then
   fi
 
   if test $allFlag -eq 1 -o $opensslFlag -eq 1; then
-    # openssl 1.0.1g
+    # openssl
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get openssl ($OPENSSL_VERSION)..."
@@ -1082,6 +1084,7 @@ if test $cleanFlag -eq 0; then
   if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
     # libssh2
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get libssh2 ($LIBSSH2_VERSION)..."
@@ -1138,6 +1141,7 @@ if test $cleanFlag -eq 0; then
   if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
     # nettle
     (
+     install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get nettle ($NETTLE_VERSION)..."
@@ -1251,148 +1255,6 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
-     fi
-
-     exit $result
-    )
-    result=$?
-    case $result in
-      1) $ECHO "ok (local)"; ;;
-      2) $ECHO "ok"; ;;
-      3) $ECHO "ok (cached)"; ;;
-      *) exit $result; ;;
-    esac
-  fi
-
-  if test $allFlag -eq 1 -o $mxmlFlag -eq 1; then
-    (
-     install -d "$destinationDirectory"
-     cd "$destinationDirectory"
-
-     $ECHO_NO_NEW_LINE "Get mxml ($MXML_VERSION)..."
-     fileName="mxml-$MXML_VERSION.zip"
-     if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/mxml-$MXML_VERSION.zip; then
-         $LN -s $localDirectory/mxml-$MXML_VERSION.zip $fileName
-         result=1
-       else
-         url="https://github.com/michaelrsweet/mxml/archive/v$MXML_VERSION.zip"
-         $CURL $curlOptions --output $fileName $url
-         if test $? -ne 0; then
-           fatalError "download $url -> $fileName"
-         fi
-         result=2
-       fi
-     else
-       result=3
-     fi
-     if test $noDecompressFlag -eq 0; then
-       $UNZIP -o -q $fileName
-       if test $? -ne 0; then
-         fatalError "decompress"
-       fi
-
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/mxml-$MXML_VERSION mxml)
-       if test $? -ne 0; then
-         fatalError "symbolic link"
-       fi
-     fi
-
-     exit $result
-    )
-    result=$?
-    case $result in
-      1) $ECHO "ok (local)"; ;;
-      2) $ECHO "ok"; ;;
-      3) $ECHO "ok (cached)"; ;;
-      *) exit $result; ;;
-    esac
-  fi
-
-  if test $allFlag -eq 1 -o $opensslFlag -eq 1; then
-    (
-     install -d "$destinationDirectory"
-     cd "$destinationDirectory"
-
-     $ECHO_NO_NEW_LINE "Get openssl ($OPENSSL_VERSION)..."
-     fileName="openssl-$OPENSSL_VERSION.tar.gz"
-     if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/openssl-$OPENSSL_VERSION.tar.gz; then
-         $LN -s $localDirectory/openssl-$OPENSSL_VERSION.tar.gz $fileName
-         result=1
-       else
-         url="http://www.openssl.org/source/$fileName"
-         $CURL $curlOptions --output $fileName $url
-         if test $? -ne 0; then
-           fatalError "download $url -> $fileName"
-         fi
-         result=2
-       fi
-     else
-       result=3
-     fi
-     if test $noDecompressFlag -eq 0; then
-       $TAR xzf $fileName
-       if test $? -ne 0; then
-         fatalError "decompress"
-       fi
-
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/openssl-$OPENSSL_VERSION openssl)
-       if test $? -ne 0; then
-         fatalError "symbolic link"
-       fi
-     fi
-
-     exit $result
-    )
-    result=$?
-    case $result in
-      1) $ECHO "ok (local)"; ;;
-      2) $ECHO "ok"; ;;
-      3) $ECHO "ok (cached)"; ;;
-      *) exit $result; ;;
-    esac
-  fi
-
-  if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
-    (
-     install -d "$destinationDirectory"
-     cd "$destinationDirectory"
-
-     $ECHO_NO_NEW_LINE "Get libssh2 ($LIBSSH2_VERSION)..."
-     fileName="libssh2-$LIBSSH2_VERSION.tar.gz"
-     if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz; then
-         $LN -s $localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz $fileName
-         result=1
-       else
-         url="http://www.libssh2.org/download/$fileName"
-         $CURL $curlOptions --output $fileName $url
-         if test $? -ne 0; then
-           fatalError "download $url -> $fileName"
-         fi
-         result=2
-       fi
-     else
-       result=3
-     fi
-     if test $noDecompressFlag -eq 0; then
-       $TAR xzf $fileName
-       if test $? -ne 0; then
-         fatalError "decompress"
-       fi
-
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libssh2-$LIBSSH2_VERSION libssh2)
-       if test $? -ne 0; then
-         fatalError "symbolic link"
-       fi
-
-       # patch for memory leak for libssh2 1.8.2 (ignore errors):
-       #   diff -u libssh2-1.8.2.org/src libssh2-1.8.2/src > libssh2-1.8.2-memory-leak.patch
-#         (cd $workingDirectory/libssh2; $PATCH --batch -N -p1 < $patchDirectory/libssh2-1.8.2-memory-leak.patch) 1>/dev/null
-#         if test $? -ne 0; then
-#           fatalError "patch"
-#         fi
      fi
 
      exit $result
@@ -1725,7 +1587,7 @@ if test $cleanFlag -eq 0; then
          result=1
        else
          url="https://github.com/sahlberg/libsmb2"
-         $GIT clone -b v$LIBSMB2_VERSION $url $directoryName 2>/dev/null
+         $GIT clone -b v$LIBSMB2_VERSION $url $directoryName 1>/dev/null 2>/dev/null
          if test $? -ne 0; then
            fatalError "checkout $url -> $directoryName"
          fi

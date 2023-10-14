@@ -220,7 +220,7 @@ temporaryDirectory=`mktemp -d /tmp/win32-XXXXXX`
 #TODO: enable smbclient
 #TODO: enable postgres
   $projectRoot/configure \
-    --host=i686-w64-mingw32 \
+    --host=x86_64-w64-mingw32 \
     --build=x86_64-linux \
     --enable-link-static \
     --disable-link-dynamic \

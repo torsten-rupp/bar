@@ -108,7 +108,8 @@ LD_DYNAMIC_PREFIX          = -Wl,-Bdynamic
 
 WINDOWS_DLLS               = /usr/lib/gcc/i686-w64-mingw32/*-win32/libgcc_s_sjlj-1.dll \
                              /usr/lib/gcc/i686-w64-mingw32/*-win32/libstdc++-6.dll \
-                             /usr/i686-w64-mingw32/lib/libwinpthread-1.dll
+                             /usr/i686-w64-mingw32/lib/libwinpthread-1.dll \
+                             $(BUILD_DIR)/extern/lib/libpq.dll
 
 ifneq ($(SANITIZER),)
   CC_FLAGS_DEBUG += -fno-sanitize-recover=all -fstack-protector-all

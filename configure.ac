@@ -2735,7 +2735,7 @@ if test $ENABLE_SSH = "yes"; then
             else
               (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
                 --prefix=$cwd/extern \
-                --cross-compile-prefix=i686-w64-mingw32- \
+                --cross-compile-prefix=x86_64-w64-mingw32- \
                 no-shared \
                 mingw \
               ) 1>$tmpFile 2>&1
@@ -3336,7 +3336,7 @@ if test $ENABLE_CURL = "yes"; then
       if test $result1 -eq 1; then
         # Note: https://github.com/c-ares/c-ares/blob/cares-1_14_0/README.msvc#L133-L138
         install -d c-ares
-        (cd c-ares; CFLAGS="-DCARES_STATICLIB" LDFLAGS="" ./configure \
+        (cd c-ares; CPPFLAGS="-DCARES_STATICLIB" CFLAGS="" LDFLAGS="" ./configure \
           --host=$host \
           --build=$build \
           --prefix=$cwd/extern \
@@ -3441,7 +3441,7 @@ if test $ENABLE_CURL = "yes"; then
           fi
         else
           # cross-compile host
-          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32" ./configure \
+          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CPPFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32 -liphlpapi -lssp" ./configure \
             --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
@@ -3751,33 +3751,7 @@ if test $ENABLE_MARIADB = "yes"; then
       fi
       if test $result -eq 1; then
         case $host_os in
-          linux-*)
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
-              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-              -DWITH_EXTERNAL_ZLIB=ON \
-              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
-              -DWITH_CURL=OFF \
-              -DWITH_UNIT_TESTS=OFF \
-              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
-            ) 1>$tmpFile 2>&1
-            ;;
-          sunos | solaris*)
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
-              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-              -DWITH_EXTERNAL_ZLIB=ON \
-              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
-              -DWITH_CURL=OFF \
-              -DWITH_UNIT_TESTS=OFF \
-              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
-            ) 1>$tmpFile 2>&1
-            ;;
-          darwin*)
+          linux-* | sunos | solaris* | darwin*)
             (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_INSTALL_PREFIX=$cwd/extern \
@@ -3794,8 +3768,8 @@ if test $ENABLE_MARIADB = "yes"; then
             (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="-D_WIN32_WINNT=0x0600 -D_POSIX_C_SOURCE" CFLAGS="-D_WIN32_WINNT=0x0600 -D_POSIX_C_SOURCE" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
               -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
               -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
-              -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
-              -DCMAKE_RC_COMPILER=i686-w64-mingw32-windres \
+              -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+              -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
               -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               -DWITH_EXTERNAL_ZLIB=ON \
               -DZLIB_INCLUDE_DIR=$cwd/extern/include \
@@ -4314,9 +4288,9 @@ if test $ENABLE_SMBCLIENT = "yes"; then
               (cd libsmb2; ./bootstrap && cmake \
                 -DCMAKE_BUILD_TYPE=Debug \
                 -DCMAKE_SYSTEM_NAME=Windows \
-                -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
-                -DCMAKE_RC_COMPILER=i686-w64-mingw32-windres \
-                -DCMAKE_FIND_ROOT_PATH=/usr/i686-w64-mingw32 \
+                -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+                -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
+                -DCMAKE_FIND_ROOT_PATH=/usr/x86_64-w64-mingw32 \
                 -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
                 -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
                 -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
@@ -4330,9 +4304,9 @@ if test $ENABLE_SMBCLIENT = "yes"; then
               (cd libsmb2; ./bootstrap && cmake \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_SYSTEM_NAME=Windows \
-                -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
-                -DCMAKE_RC_COMPILER=i686-w64-mingw32-windres \
-                -DCMAKE_FIND_ROOT_PATH=/usr/i686-w64-mingw32 \
+                -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+                -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
+                -DCMAKE_FIND_ROOT_PATH=/usr/x86_64-w64-mingw32 \
                 -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
                 -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
                 -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \

@@ -148,7 +148,8 @@ sed '/^%changelog/q1' < $sourcePath/packages/backup-archiver.spec > $tmpDir/back
 LANG=en_US.utf8 $sourcePath/packages/changelog.pl --type rpm < $sourcePath/ChangeLog >> $tmpDir/backup-archiver.spec
 
 # build rpm package (Note: rpmbuild require access)
-chmod 666 $distributionFileName
+sudo chown $userGroup $distributionFileName
+chmod a+r $distributionFileName
 (
   set -e
 
