@@ -19770,7 +19770,7 @@ printf "%s\n" "fail (configure)" >&6; }
             ;;
           windows*|mingw*)
             if test "$ENABLE_DEBUG" = "yes"; then
-              (cd libsmb2; ./bootstrap && cmake \
+              (cd libsmb2; cmake \
                 -DCMAKE_BUILD_TYPE=Debug \
                 -DCMAKE_SYSTEM_NAME=Windows \
                 -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
@@ -19786,7 +19786,7 @@ printf "%s\n" "fail (configure)" >&6; }
                 -DBUILD_SHARED_LIBS=OFF
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; ./bootstrap && cmake \
+              (cd libsmb2; cmake \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_SYSTEM_NAME=Windows \
                 -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
@@ -21006,7 +21006,7 @@ then :
 else $as_nop
   as_fn_error $? "ISO9660 missing" "$LINENO" 5
 fi
-   if test $HAVE_SMBCLIENT
+   if test $HAVE_SMB2
 then :
 
 else $as_nop

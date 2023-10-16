@@ -6,6 +6,8 @@
   * upgrade libidn2 2.3.4
   * upgrade nettle 3.9.1
   * upgrade c-ares 1.20.1
+  * upgrade build pipeline for Debian 10
+  * upgrade RPM build enviroment to CentOS 7
   * fixed bar-index --pipe
   * fixed reserved keyword in MariaDB: offset
   * fixed undefined value when update aggregates
@@ -58,7 +60,6 @@
   * BARControl: fixed clone job and update view
   * BARControl: fixed file requester if job is unknown
   * BARControl: added source for storage add to index
-
   * BARControl: fixed update storage tree view
 
 2023-04-16 0.22g

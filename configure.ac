@@ -4285,7 +4285,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
             ;;
           windows*|mingw*)
             if test "$ENABLE_DEBUG" = "yes"; then
-              (cd libsmb2; ./bootstrap && cmake \
+              (cd libsmb2; cmake \
                 -DCMAKE_BUILD_TYPE=Debug \
                 -DCMAKE_SYSTEM_NAME=Windows \
                 -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
@@ -4301,7 +4301,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
                 -DBUILD_SHARED_LIBS=OFF
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; ./bootstrap && cmake \
+              (cd libsmb2; cmake \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_SYSTEM_NAME=Windows \
                 -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
@@ -4740,7 +4740,7 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_SSH2      ,,AC_MSG_ERROR([ssh2 missing]))
    AS_IF(test $HAVE_GNU_TLS   ,,AC_MSG_ERROR([GNU TLS missing]))
    AS_IF(test $HAVE_ISO9660   ,,AC_MSG_ERROR([ISO9660 missing]))
-   AS_IF(test $HAVE_SMBCLIENT ,,AC_MSG_ERROR([smb2 missing]))
+   AS_IF(test $HAVE_SMB2      ,,AC_MSG_ERROR([smb2 missing]))
    AS_IF(test $HAVE_PCRE      ,,AC_MSG_ERROR([PCRE missing]))
    AS_IF(test $HAVE_MARIADB   ,,AC_MSG_ERROR([MariaDB missing]))
    AS_IF(test $HAVE_POSTGRESQL,,AC_MSG_ERROR([PostgreSQL missing]))

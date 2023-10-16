@@ -33,7 +33,6 @@ build-stamp:
           CFLAGS="$(CFLAGS)" \
           LDFLAGS="-Wl,-z,defs" \
 	        --enable-extern-check \
-          --disable-crashdump \
           --disable-epm \
           $(ADDITIONAL_CONFIGURE_FLAGS)
 	$(MAKE) -C bar -j8 all

@@ -59,7 +59,6 @@ creating automated backups in the background.
   %{ADDITIONAL_DOWNLOAD_FLAGS}
 %configure  \
   --enable-extern-check \
-  --disable-crashdump \
   %ADDITIONAL_CONFIGURE_FLAGS
 %{__make} OPTFLAGS="%{optflags}" -C bar %{?_smp_mflags} all
 %{__make} OPTFLAGS="%{optflags}" all

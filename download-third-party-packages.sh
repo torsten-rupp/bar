@@ -1587,9 +1587,16 @@ if test $cleanFlag -eq 0; then
          result=1
        else
          url="https://github.com/sahlberg/libsmb2"
-         $GIT clone -b v$LIBSMB2_VERSION $url $directoryName 1>/dev/null 2>/dev/null
+         $GIT clone $url $directoryName 1>/dev/null 2>/dev/null
          if test $? -ne 0; then
            fatalError "checkout $url -> $directoryName"
+         fi
+         (cd $directoryName; \
+          $GIT checkout v$LIBSMB2_VERSION; \
+          install -d m4;
+         )
+         if test $? -ne 0; then
+           fatalError "checkout tag v$LIBSMB2_VERSION"
          fi
          result=2
        fi

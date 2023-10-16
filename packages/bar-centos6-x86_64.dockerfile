@@ -54,13 +54,14 @@ RUN yum -y install \
   ;
 # Note: no valgrind available
 RUN yum -y install \
+  autoconf \
+  automake \
   gcc \
   gcc-c++ \
   java-1.6.0-openjdk-devel \
   jre \
-  cmake \
+  libtool \
   make \
-  bison \
   flex \
   rpm-build \
   valgrind \
@@ -71,6 +72,22 @@ RUN yum -y install \
 RUN yum -y install \
   devtoolset-7 \
   ;
+
+# add cmake >= 3.2
+RUN wget --no-check-certificate --quiet https://cmake.org/files/v3.2/cmake-3.2.3.tar.gz
+RUN tar xf cmake-3.2.3.tar.gz
+RUN (cd cmake-3.2.3; ./bootstrap)
+RUN (cd cmake-3.2.3; make -j`nproc --ignore 1`)
+RUN (cd cmake-3.2.3; make install)
+RUN rm -rf cmake-3.2.3
+
+# add bison >= 3.0.4
+RUN wget --no-check-certificate --quiet https://ftp.gnu.org/gnu/bison/bison-3.0.5.tar.xz
+RUN tar xf bison-3.0.5.tar.xz
+RUN (cd bison-3.0.5; ./configure)
+RUN (cd bison-3.0.5; make -j`nproc --ignore 1`)
+RUN (cd bison-3.0.5; make install)
+RUN rm -rf bison-3.0.5
 
 # add users
 RUN groupadd -g ${gid} jenkins

@@ -711,14 +711,12 @@ packages: \
 .PHONY: docker_update update_docker
 docker_update update_docker:
 	# base images
-	$(DOCKER) pull i386/centos:6
-	$(DOCKER) pull centos:6
-	$(DOCKER) pull i386/debian:8
-	$(DOCKER) pull debian:8
+	$(DOCKER) pull centos:7
+	$(DOCKER) pull debian:10
 	#
 	# test images
 	$(DOCKER) pull i386/centos:7
-	$(DOCKER) pull centos:7
+	$(DOCKER) pull centos:6
 	#
 	$(DOCKER) pull fedora:28
 	$(DOCKER) pull fedora:29
@@ -728,12 +726,9 @@ docker_update update_docker:
 	$(DOCKER) pull opensuse/tumbleweed
 	$(DOCKER) pull opensuse/leap
 	#
-	$(DOCKER) pull i386/debian:8
-	$(DOCKER) pull debian:8
-	$(DOCKER) pull i386/debian:9
-	$(DOCKER) pull debian:9
-	$(DOCKER) pull i386/debian:10
 	$(DOCKER) pull debian:10
+	$(DOCKER) pull debian:11
+	$(DOCKER) pull debian:12
 	#
 	$(DOCKER) pull ubuntu:18.04
 	$(DOCKER) pull ubuntu:19.04
@@ -744,16 +739,13 @@ docker_update update_docker:
 	# base images
 	$(INSTALL) download-third-party-packages.sh packages
 	#
-#	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile         -t bar-centos:6        --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
-	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile -t bar-centos-x86_64:6 --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
-#	(cd packages; $(DOCKER) build -f bar-debian8.dockerfile         -t bar-debian:8        --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
-	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile -t bar-debian-x86_64:8 --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
-	(cd packages; $(DOCKER) build -f bar-ubuntu-mingw32.dockerfile -t bar-mingw32         --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	(cd packages; $(DOCKER) build -f bar-centos7-x86_64.dockerfile -t bar-centos-x86_64:7  --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile -t bar-debian-x86_64:10 --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	(cd packages; $(DOCKER) build -f bar-ubuntu-mingw32.dockerfile -t bar-mingw32          --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
 	#
 	# test images
 	##(cd packages; $(DOCKER) build -f bar-debian9-x86_64.dockerfile     -t bar-debian-x86_64:9     .)
 	#(cd packages; $(DOCKER) build -f bar-centos7.dockerfile            -t bar-centos:7            .)
-	#(cd packages; $(DOCKER) build -f bar-centos7-x86_64.dockerfile     -t bar-centos-x86_64:7     .)
 	##(cd packages; $(DOCKER) build -f bar-fedora28-x86_64.dockerfile    -t bar-fedora-x86_64:28    .)
 	#(cd packages; $(DOCKER) build -f bar-fedora29-x86_64.dockerfile    -t bar-fedora-x86_64:29    .)
 	#
@@ -875,7 +867,6 @@ clean_rpm:
 
 $(DISTRIBUTION_NAME).rpm: \
   $(DISTRIBUTION_NAME).tar.bz2
-	# Note: scl_source to enable gcc 7
 	@$(call functionPrintInfo,Build RPM on CentOS 6 32bit)
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
@@ -892,7 +883,6 @@ $(DISTRIBUTION_NAME).rpm: \
 
 $(DISTRIBUTION_NAME)-x86_64.rpm: \
   $(DISTRIBUTION_NAME).tar.bz2
-	# Note: scl_source to enable gcc 7
 	@$(call functionPrintInfo,Build RPM on CentOS 6 64bit)
 	@( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
@@ -902,7 +892,7 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
-            bar-centos-x86_64:6 setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
+            bar-centos-x86_64:7 setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -969,7 +959,7 @@ $(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
-            bar-debian:8 setarch i686 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
+            bar-debian:10 setarch i686 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -984,7 +974,7 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
-            bar-debian-x86_64:8 setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
+            bar-debian-x86_64:10 setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -1057,10 +1047,7 @@ install_test:
 
 .PHONY: install_test_rpm
 install_test_rpm: \
-  install_test_rpm_centos6 \
   install_test_rpm_centos6-x86_64 \
-  install_test_rpm_centos7 \
-  install_test_rpm_centos7-x86_64 \
   install_test_rpm_fedora28-x86_64 \
   install_test_rpm_fedora29-x86_64 \
   install_test_rpm_opensuse-tumbleweed-x86_64 \
@@ -1159,33 +1146,33 @@ install_test_deb: \
 
 .PHONY: install_test_deb_debian8
 install_test_deb_debian8:
-	@$(call functionPrintInfo,Test install Debian 8)
-	@$(call functionInstallTestDEB,bar-debian:8,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintInfo,Test install Debian 10)
+	@$(call functionInstallTestDEB,bar-debian:10,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian8-x86_64
 install_test_deb_debian8-x86_64:
-	@$(call functionPrintInfo,Test install Debian 8 64bit)
-	@$(call functionInstallTestDEB,bar-debian-x86_64:8,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintInfo,Test install Debian 10 64bit)
+	@$(call functionInstallTestDEB,bar-debian-x86_64:10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian9
 install_test_deb_debian9:
-	@$(call functionPrintInfo,Test install Debian 9)
-	@$(call functionInstallTestDEB,i386/debian:9,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintInfo,Test install Debian 11)
+	@$(call functionInstallTestDEB,i386/debian:11,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian9-x86_64
 install_test_deb_debian9-x86_64:
-	@$(call functionPrintInfo,Test install Debian 9 64bit)
-	@$(call functionInstallTestDEB,debian:9,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintInfo,Test install Debian 11 64bit)
+	@$(call functionInstallTestDEB,debian:11,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian10
 install_test_deb_debian10:
-	@$(call functionPrintInfo,Test install Debian 10)
-	@$(call functionInstallTestDEB,i386/debian:10,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintInfo,Test install Debian 12)
+	@$(call functionInstallTestDEB,i386/debian:12,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian10-x86_64
 install_test_deb_debian10-x86_64:
-	@$(call functionPrintInfo,Test install Debian 10 64bit)
-	@$(call functionInstallTestDEB,debian:10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintInfo,Test install Debian 12 64bit)
+	@$(call functionInstallTestDEB,debian:12,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_deb_ubuntu18.04-x86_64

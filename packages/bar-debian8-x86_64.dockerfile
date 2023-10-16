@@ -1,4 +1,4 @@
-FROM debian:8
+FROM debian:10
 ENV container docker
 
 ARG uid=0
@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get -y update
 
 # install packages (Note: ignore expired key with --force-yes)
-RUN apt-get -y --force-yes install \
+RUN apt-get -y install \
   bc \
   bzip2 \
   coreutils \
@@ -25,7 +25,7 @@ RUN apt-get -y --force-yes install \
   less \
   lua5.1 \
   m4 \
-  mysql-client \
+  mariadb-client \
   patch \
   pkg-config \
   postgresql \
@@ -40,7 +40,8 @@ RUN apt-get -y --force-yes install \
   wget \
   xz-utils \
   ;
-RUN apt-get -y --force-yes install \
+RUN apt-get -y install \
+  autoconf \
   autotools-dev \
   dh-autoreconf \
   gcc \
