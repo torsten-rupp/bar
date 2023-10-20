@@ -2,10 +2,8 @@
 
 #set -x
 
-BASE_PATH=/media/home
-
 # parse arugments
-debFileSuffix=""
+debFiles=""
 debugFlag=0
 helpFlag=0
 n=0
@@ -28,27 +26,17 @@ while test $# != 0; do
       exit 1
       ;;
     *)
-      case $n in
-        0)
-          debFileSuffix="$1"
-          n=1
-          ;;
-      esac
+      debFiles="$debFiles $1"
       shift
       ;;
   esac
 done
 while test $# != 0; do
-  case $n in
-    0)
-      debFileSuffix="$1"
-      n=1
-      ;;
-  esac
+  debFiles="$debFiles $1"
   shift
 done
 if test $helpFlag -eq 1; then
-  echo "Usage: $0 [options] <DEB file suffix>"
+  echo "Usage: $0 [options] <DEB files>..."
   echo ""
   echo "Options:  -d|--debug  enable debugging"
   echo "          -h|--help   print help"
@@ -56,7 +44,7 @@ if test $helpFlag -eq 1; then
 fi
 
 # check arguments
-if test -z "$debFileSuffix"; then
+if test -z "$debFiles"; then
   echo >&2 ERROR: no DEB file suffix given!
   exit 1
 fi
@@ -89,8 +77,7 @@ trap /bin/bash ERR
 set -e
 
 # install deb
-dpkg -i $BASE_PATH/backup-archiver-$debFileSuffix.deb
-dpkg -i $BASE_PATH/backup-archiver-gui-$debFileSuffix.deb
+dpkg -i $debFiles
 
 # simple command test
 bar --version

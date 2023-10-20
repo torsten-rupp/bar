@@ -5313,7 +5313,7 @@ else
 fi
 
 if test "$HAVE_SMB2"; then
-  ac_cv_value=`cd libsmb2; cmake --system-information|grep CMAKE_PROJECT_VERSION:STATIC|sed 's/CMAKE_PROJECT_VERSION:STATIC=//g';`
+  ac_cv_value=`cd libsmb2; PKG_CONFIG_PATH=. pkg-config --modversion libsmb2`
   AS_VAR_SET(VERSION_LIBSMB2,$ac_cv_value)
   AC_DEFINE_UNQUOTED(VERSION_LIBSMB2,"$VERSION_LIBSMB2",[SMB2 version])
 else

@@ -16,19 +16,32 @@ def build()
     {
       timeout(time: 120, unit: 'MINUTES')
       {
-        stage("Build")
+        stage("Checkout")
+        {
+          checkout scm
+        }
+
+        stage("Configure")
         {
 //          docker.image(DOCKER_IMAGE_NAME).inside('-u root --privileged')
           docker.image(DOCKER_IMAGE_NAME).inside('')
           {
-            checkout scm
             script
             {
               // configure
               sh "./download-third-party-packages.sh --local-directory /media/extern"
               sh "./download-third-party-packages.sh"
               sh "./configure"
+            }
+          }
+        }
 
+        stage("Build")
+        {
+          docker.image(DOCKER_IMAGE_NAME).inside('')
+          {
+            script
+            {
               // make (Note: avoid race condition by not creating dependencies in parallel)
               sh "make depend"
               sh "make -j`nproc --ignore=1`"

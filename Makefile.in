@@ -114,6 +114,12 @@ DISTRIBUTION_NAME      = $(PACKAGE_NAME)-$(VERSION)
 DISTRIBUTION_NAME_ORIG = $(PACKAGE_NAME)_$(VERSION).orig
 DISTRIBUTION_NAME_GUI  = $(PACKAGE_NAME_GUI)-$(VERSION)
 
+TEST_PACKAGS_CENTOS="8"
+TEST_PACKAGS_FEDORA="36 37 38 39 40"
+TEST_PACKAGS_OPENSUSE_LEAP="15.1 15.2 15.3 15.4 15.5"
+TEST_PACKAGS_DEBIAN="10 11 12"
+TEST_PACKAGS_UBUNTU="20.04 22.04 23.04 23.10"
+
 #-------------------------------- functions ----------------------------------
 
 # print info line
@@ -711,19 +717,6 @@ docker_update update_docker:
 	$(DOCKER) pull centos:7
 	$(DOCKER) pull debian:10
 	#
-	# test images
-	$(DOCKER) pull centos:8
-	#
-	$(foreach i,36 37 38 39 40,$(DOCKER) pull fedora:$i;)
-	#
-	$(DOCKER) pull opensuse/tumbleweed
-	$(foreach i,15.1 15.2 15.3 15.4 15.5,$(DOCKER) pull opensuse/leap:$i;)
-	#
-	$(foreach i,10 11 12,$(DOCKER) pull debian:$i;)
-	#
-	$(foreach i,20.04 20.10 21.04 21.10 22.04 22.10 23.04 23.10,$(DOCKER) pull ubuntu:$i;)
-	#
-	# base images
 	$(INSTALL) download-third-party-packages.sh packages
 	#
 	(cd packages; $(DOCKER) build -f bar-centos7-x86_64.dockerfile -t bar-centos-x86_64:7  --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
@@ -737,6 +730,18 @@ docker_update update_docker:
 	$(INSTALL) bar/test/bar-sudoers ci
 	#
 	(cd ci; $(DOCKER) build -f build.dockerfile -t bar --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	#
+	# test packages images
+	$(foreach i,$(TEST_PACKAGS_CENTOS),$(DOCKER) pull centos:$i;)
+	#
+	$(foreach i,$(TEST_PACKAGS_FEDORA),$(DOCKER) pull fedora:$i;)
+	#
+	$(DOCKER) pull opensuse/tumbleweed
+	$(foreach i,$(TEST_PACKAGS_OPENSUSE_LEAP),$(DOCKER) pull opensuse/leap:$i;)
+	#
+	$(foreach i,$(TEST_PACKAGS_DEBIAN),$(DOCKER) pull debian:$i;)
+	#
+	$(foreach i,$(TEST_PACKAGS_UBUNTU),$(DOCKER) pull ubuntu:$i;)
 	#
 	$(RMF) ci/bar-sudoers
 	$(RMF) ci/download-third-party-packages.sh
@@ -981,60 +986,78 @@ install_test_rpm: \
 
 .PHONY: install_test_rpm_centos
 install_test_rpm_centos: \
-  install_test_rpm_centos8-x86_64 \
+  $(foreach i,$(TEST_PACKAGS_CENTOS),install_test_rpm_centos$i-x86_64) \
 
 .PHONY: install_test_rpm_fedora
 install_test_rpm_fedora: \
-  $(foreach i,36 37 38 39 40,install_test_rpm_fedora$i-x86_64) \
+  $(foreach i,$(TEST_PACKAGS_FEDORA),install_test_rpm_fedora$i-x86_64) \
 
 .PHONY: install_test_rpm_opensuse
 install_test_rpm_opensuse: \
   install_test_rpm_opensuse-tumbleweed-x86_64 \
-  $(foreach i,15.1 15.2 15.3 15.4 15.5,install_test_rpm_opensuse-leap$i-x86_64) \
+  $(foreach i,$(TEST_PACKAGS_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64) \
 
 # call functionInstallTestRPM,<docker image>,<architecture>,<suffix>
 functionInstallTestRPM = \
-  $(DOCKER) $(DOCKER_RUN_FLAGS) \
-      --rm \
-      --net=host \
-      -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
-      -v $(PWD):/media/home \
-      $1 `if test -n "$2"; then echo "setarch $2 --"; fi` \
-      /media/home/packages/install_test_rpm.sh \
-        $3
+  if test -f /.dockerenv; then \
+    packages/install_test_rpm.sh \
+      $3; \
+  else \
+    if test -n "$(DOCKER)"; then \
+      $(DOCKER) $(DOCKER_RUN_FLAGS) \
+        --rm \
+        --net=host \
+        -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+        -v $(PWD):/media/home \
+        $1 `if test -n "$2"; then echo "setarch $2 --"; fi` \
+        /media/home/packages/install_test_rpm.sh \
+          $3; \
+    else \
+      $(ECHO) "ERROR: no docker command available!"; \
+    fi; \
+  fi
 
 # call functionInstallTestDEB,<docker image>,<architecture>,<version>,<suffix>
 functionInstallTestDEB = \
-  $(DOCKER) $(DOCKER_RUN_FLAGS) \
-      --rm \
-      --net=host \
-      -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
-      -v $(PWD):/media/home \
-      $1 `if test -n "$2"; then echo "setarch $2 --"; fi` -- \
-      /media/home/packages/install_test_deb.sh \
-        $3
+  if test -f /.dockerenv; then \
+    packages/install_test_deb.sh \
+      $3; \
+  else \
+    if test -n "$(DOCKER)"; then \
+      $(DOCKER) $(DOCKER_RUN_FLAGS) \
+        --rm \
+        --net=host \
+        -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+        -v $(PWD):/media/home \
+        $1 `if test -n "$2"; then echo "setarch $2 --"; fi` \
+        /media/home/packages/install_test_deb.sh \
+          $3; \
+    else \
+      $(ECHO) "ERROR: no docker command available!"; \
+    fi; \
+  fi
 
 .PHONY: install_test_rpm_centos8-x86_64
-install_test_rpm_centos8-x86_64:
-	@$(call functionPrintInfo,Test install Centos 8 64bit)
-	@$(call functionInstallTestRPM,centos:8,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
+install_test_rpm_centos%-x86_64: $(DISTRIBUTION_NAME)-x86_64.rpm
+	@$(call functionPrintInfo,Test install Centos $* 64bit)
+	$(call functionInstallTestRPM,centos:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
+	$(call functionPrintResult,OK)
 
 .PHONY: install_test_rpm_fedora%-x86_64
 install_test_rpm_fedora%-x86_64:
 	@$(call functionPrintInfo,Test install Fedora $* 64bit)
-	@$(call functionInstallTestRPM,fedora:$*,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,fedora:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_rpm_opensuse-tumbleweed-x86_64
 install_test_rpm_opensuse-tumbleweed-x86_64:
 	@$(call functionPrintInfo,Test install OpenSuSE tumbleweed 64bit)
-	@$(call functionInstallTestRPM,opensuse/tumbleweed,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,opensuse/tumbleweed,,x86_64,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_rpm_opensuse-leap-x86_64
 install_test_rpm_opensuse-leap%-x86_64:
 	@$(call functionPrintInfo,Test install OpenSuSE Leap $* 64bit)
-	@$(call functionInstallTestRPM,opensuse/leap:$*,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,opensuse/leap:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_deb
@@ -1044,22 +1067,22 @@ install_test_deb: \
 
 .PHONY: install_test_deb_debian
 install_test_deb_debian: \
-  $(foreach i,10 11 12,install_test_deb_debian$i-x86_64) \
+  $(foreach i,$(TEST_PACKAGS_DEBIAN),install_test_deb_debian$i-x86_64) \
 
 .PHONY: install_test_deb_ubuntu
 install_test_deb_ubuntu: \
-  $(foreach i,20.04 20.10 21.04 21.10 22.04 22.10 23.04 23.10,install_test_deb_ubuntu$i-x86_64) \
+  $(foreach i,$(TEST_PACKAGS_UBUNTU),install_test_deb_ubuntu$i-x86_64) \
 
 .PHONY: install_test_deb_debian%-x86_64
 install_test_deb_debian%-x86_64:
 	@$(call functionPrintInfo,Test install Debian $* 64bit)
-	@$(call functionInstallTestDEB,debian:$*,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,debian:$*,x86_64,$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_deb_ubuntu%-x86_64
 install_test_deb_ubuntu%-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu $* 64bit)
-	@$(call functionInstallTestDEB,ubuntu:$*,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,ubuntu:$*,x86_64,$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 # GUI

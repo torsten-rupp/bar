@@ -1,29 +1,65 @@
 #!groovy
 
-DOCKER_IMAGE_NAME='bar'
-DOCKER_IMAGE_NAME_RPM='bar-centos-x86_64:7'
-DOCKER_IMAGE_NAME_DEB='bar-debian-x86_64:8'
-DOCKER_IMAGE_NAME_WIN32='bar-mingw32'
+DOCKER_IMAGE_NAME           = "bar"
+DOCKER_IMAGE_NAME_RPM       = "bar-centos-x86_64:7"
+DOCKER_IMAGE_NAME_DEB       = "bar-debian-x86_64:10"
+DOCKER_IMAGE_NAME_WIN32     = "bar-mingw32"
+
+TEST_PACKAGES_CENTOS        = ["8"]
+TEST_PACKAGES_FEDORA        = ["36","37","38","39","40"]
+TEST_PACKAGES_OPENSUSE_LEAP = ["15.1","15.2","15.3","15.4","15.5"]
+TEST_PACKAGES_DEBIAN        = ["10","11","12"]
+TEST_PACKAGES_UBUNTU        = ["20.04","22.04","23.04","23.10"]
 
 // build
 def build()
 {
   try
   {
-    stage("Distribution")
+    stage("Checkout")
     {
       checkout scm
+    }
+
+    stage("Configure")
+    {
       docker.image(DOCKER_IMAGE_NAME).inside
       {
-        checkout scm
         script
         {
           // configure
           sh "./download-third-party-packages.sh --local-directory /media/extern"
           sh "./download-third-party-packages.sh"
-          sh "./configure"
+//          sh "./configure"
+          sh "./configure \
+  --disable-bz2        \
+  --disable-lzma       \
+  --disable-xz         \
+  --disable-lzo        \
+  --disable-lz4        \
+  --disable-zstd       \
+  --disable-xdelta3    \
+  --disable-gcrypt     \
+  --disable-curl       \
+  --disable-ssh        \
+  --disable-tls        \
+  --disable-iso9660    \
+  --disable-smbclient  \
+  --disable-mariadb    \
+  --disable-postgresql \
+  --disable-pcre       \
+  --disable-bfd        \
+"
+        }
+      }
+    }
 
-          // make
+    stage("Distribution")
+    {
+      docker.image(DOCKER_IMAGE_NAME).inside
+      {
+        script
+        {
 //TODO
 //            sh "make -j`nproc --ignore=1`"
           sh "make"
@@ -42,31 +78,78 @@ def build()
           script
           {
             sh "make build_rpm"
-            if (params.TEST_PACKAGES)
+          }
+        }
+        if (params.TEST_PACKAGES)
+        {
+          stage("Test RPM packages")
+          {
+            for(String item : TEST_PACKAGES_CENTOS)
             {
-              sh "make install_test_rpm"
+              docker.image("centos:${item}").inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_rpm.sh *.rpm"
+                }
+              }
+            }
+            for(String item : TEST_PACKAGES_FEDORA)
+            {
+              docker.image("fedora:"+item).inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_rpm.sh *.rpm"
+                }
+              }
             }
           }
         }
       }
     }
+
     stage("DEB package")
     {
       if (params.PACKAGE_DEB)
       {
-        docker.image(DOCKER_IMAGE_NAME_DEB).inside
+        docker.image(DOCKER_IMAGE_NAME_DEB).inside('-u root --privileged')
         {
           script
           {
             sh "make build_deb"
-            if (params.TEST_PACKAGES)
+          }
+        }
+
+        if (params.TEST_PACKAGES)
+        {
+          stage("Test DEB packages")
+          {
+            for(String item : TEST_PACKAGES_DEBIAN)
             {
-              sh "make install_test_deb"
+              docker.image("debian:"+item).inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_deb.sh *.deb"
+                }
+              }
+            }
+            for(String item : TEST_PACKAGES_UBUNTU)
+            {
+              docker.image("ubuntu:"+item).inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_deb.sh *.deb"
+                }
+              }
             }
           }
         }
       }
     }
+
     stage("Win32 package")
     {
       if (params.PACKAGE_WIN32)
@@ -76,21 +159,32 @@ def build()
           script
           {
             sh "make build_win32";
-            if (params.TEST_PACKAGES)
+          }
+        }
+
+        if (params.TEST_PACKAGES)
+        {
+          stage("Test Win32 packages")
+          {
+            docker.image("bar-mingw32").inside('-u root --privileged')
             {
-              sh "make install_test_win32"
+              script
+              {
+                sh "packages/install_test_win32.sh *.exe"
+              }
             }
           }
         }
       }
     }
+
     stage("GUI package")
     {
-      docker.image(DOCKER_IMAGE_NAME).inside
+      if (params.PACKAGE_GUI)
       {
-        script
+        docker.image(DOCKER_IMAGE_NAME).inside
         {
-          if (params.PACKAGE_GUI)
+          script
           {
             sh "make gui"
           }

@@ -2322,10 +2322,8 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
                                               ServerConnectionPriorities serverConnectionPriority
                                              )
 {
-  #ifdef HAVE_ISO9660
-    AutoFreeList autoFreeList;
-    Errors       error;
-  #endif
+  AutoFreeList autoFreeList;
+  Errors       error;
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -2337,9 +2335,10 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
 
+  // init variables
+  AutoFree_init(&autoFreeList);
+
   #ifdef HAVE_ISO9660
-    // init variables
-    AutoFree_init(&autoFreeList);
     storageDirectoryListHandle->opticalDisk.pathName = String_duplicate(pathName);
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->opticalDisk.pathName,{ String_delete(storageDirectoryListHandle->opticalDisk.pathName); });
 
