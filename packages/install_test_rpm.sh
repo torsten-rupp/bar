@@ -5,7 +5,7 @@ BASE_PATH=/media/home
 #set -x
 
 # parse arugments
-suffix=""
+rpmFileSuffix=""
 debugFlag=0
 helpFlag=0
 n=0
@@ -30,7 +30,7 @@ while test $# != 0; do
     *)
       case $n in
         0)
-          suffix="$1"
+          rpmFileSuffix="$1"
           n=1
           ;;
       esac
@@ -41,14 +41,14 @@ done
 while test $# != 0; do
   case $n in
     0)
-      suffix="$1"
+      rpmFileSuffix="$1"
       n=1
       ;;
   esac
   shift
 done
 if test $helpFlag -eq 1; then
-  echo "Usage: $0 [options] <version> <suffix>"
+  echo "Usage: $0 [options] <version> <RPM file suffix>"
   echo ""
   echo "Options:  -d|--debug  enable debugging"
   echo "          -h|--help   print help"
@@ -56,25 +56,62 @@ if test $helpFlag -eq 1; then
 fi
 
 # check arguments
-if test -z "$suffix"; then
-  echo >&2 ERROR: no suffix given!
+if test -z "$rpmFileSuffix"; then
+  echo >&2 ERROR: no RPM file suffix given!
+  exit 1
+fi
+
+# get temporary file
+tmpFile=`mktemp /tmp/test_rpm-XXXXXX`
+if test -z "$tmpFile"; then
+  echo >&2 "ERROR: cannot create temporary file!"
   exit 1
 fi
 
 # install required base packages
-type yum 2>/dev/null
+type yum 1>/dev/null 2>/dev/null
 if test $? -eq 0; then
-  yum -y update
-  yum -y install initscripts
-  yum -y install openssl jre
-  yum -y install psmisc
+  echo -n "Update packages..."
+
+  # fix CentOS repositories
+  if test -f /etc/yum.repos.d/CentOS-*; then
+    sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+  fi
+
+  yum -y update 1>/dev/null 2>>$tmpFile
+  yum -y install \
+    initscripts \
+    openssl \
+    jre \
+    psmisc \
+    1>/dev/null 2>$tmpFile
+  if test $? -eq 0; then
+    echo "OK"
+  else
+    echo "FAIL"
+    cat $tmpFile
+    rm -f $tmpFile
+    exit 1
+  fi
 fi
-type zypper 2>/dev/null
+type zypper 1>/dev/null 2>/dev/null
 if test $? -eq 0; then
-  zypper -q update -y
-  zypper -q install -y initscripts
-  zypper -q install -y openssl jre
-  zypper -q install -y psmisc
+  echo -n "Update packages..."
+  zypper -q update -y  1>/dev/null 2>>$tmpFile
+  zypper -q install -y \
+    openssl \
+    jre \
+    psmisc \
+    1>/dev/null 2>$tmpFile
+  if test $? -eq 0; then
+    echo "OK"
+  else
+    echo "FAIL"
+    cat $tmpFile
+    rm -f $tmpFile
+    exit 1
+  fi
 fi
 
 # set error handler: execute bash shell
@@ -82,7 +119,7 @@ trap /bin/bash ERR
 set -e
 
 # install rpm
-rpm -i $BASE_PATH/backup-archiver-$suffix.rpm
+rpm -i $BASE_PATH/backup-archiver-$rpmFileSuffix.rpm
 
 # simple command test
 bar --version
@@ -101,3 +138,8 @@ barcontrol --list
 if test $debugFlag -eq 1; then
   /bin/bash
 fi
+
+# free resources
+rm -f $tmpFile
+
+exit 0

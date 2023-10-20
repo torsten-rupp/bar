@@ -1,9 +1,9 @@
 FROM centos:8
 ENV container docker
 
-# add user for build process
-RUN groupadd -g 1000 build
-RUN useradd -g 1000 -u 1000 build
+# fix repositories
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+RUN sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
 
 # update
 RUN yum -y update
@@ -11,49 +11,56 @@ RUN yum -y upgrade
 
 # install packages
 RUN yum -y install \
-  bc \
-  bzip2 \
-  coreutils \
-  curl \
-  e2fsprogs \
-  gettext \
-  git \
   initscripts \
-  joe \
-  less \
-  lua \
-  m4 \
-  mysql-client \
   openssl \
-  patch \
-  pkg-config \
-  postgresql \
-  psmisc \
-  rpm-build \
-  rsync \
-  socat \
-  sqlite \
-  subversion \
-  sudo \
-  tar \
-  tcl \
-  unzip \
-  wget \
-  xz \
-  ;
-RUN yum -y install \
-  gcc \
-  gcc-c++ \
-  java-1.6.0-openjdk-devel \
   jre \
-  cmake \
-  make \
-  bison \
-  flex \
-  rpm-build \
-  valgrind \
-  devtoolset-7-valgrind-devel \
   ;
+
+#RUN yum -y install \
+#  bc \
+#  less \
+#  lua \
+#  openssl \
+#  psmisc \
+#  rsync \
+#  socat \
+#  ;
+
+#RUN yum -y install \
+#  autoconf \
+#  automake \
+#  bison \
+#  bzip2 \
+#  curl \
+#  e2fsprogs \
+#  flex \
+#  gcc \
+#  gcc-c++ \
+#  gettext \
+#  git \
+#  java-1.8.0-openjdk-devel \
+#  libtool \
+#  m4 \
+#  make \
+#  mariadb \
+#  patch \
+#  pkg-config \
+#  postgresql \
+#  rpm-build \
+#  sqlite \
+#  sudo \
+#  tar \
+#  tcl \
+#  unzip \
+#  valgrind \
+#  valgrind-devel \
+#  wget \
+#  xz \
+#  ;
+
+# add user for build process
+RUN groupadd -g 1000 build
+RUN useradd -g 1000 -u 1000 build
 
 # fix systemd
 RUN (cd /lib/systemd/system/sysinit.target.wants/; \

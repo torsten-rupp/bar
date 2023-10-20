@@ -5692,33 +5692,14 @@ done
   if test -n "$JAVA"; then
 
 
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking $JAVA version" >&5
-printf %s "checking $JAVA version... " >&6; }
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking $JAVAC version" >&5
+printf %s "checking $JAVAC version... " >&6; }
 if test ${ac_cv_prog_java_version+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
-      cat << \EOF > Test.java
-class Test
-{
-  public static void main(String[] args)
-  {
-    System.out.println(System.getProperty("java.version"));
-  }
-}
-EOF
-      if { ac_try='$JAVAC $JAVAC_FLAGS Test.java'
-  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; } && test -s Test.class; then
-        ac_cv_prog_java_version=`$JAVA $JAVA_FLAGS Test`
-      else
-        ac_cv_prog_java_version=""
-      fi
+      ac_cv_prog_java_version=`$JAVAC -version 2>&1|sed 's/^.* \([^_]\+\).*/\\1/g'`
       JAVA_VERSION=$ac_cv_prog_java_version
 
       rm -f Test.java Test.class
@@ -5734,6 +5715,8 @@ printf "%s\n" "$ac_cv_prog_java_version" >&6; }
       1.7*)
         ;;
       1.8*)
+        ;;
+      11.0*)
         ;;
       *)
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: Insufficient Java version (found $JAVA_VERSION, require 1.6, 1.7 or 1.8) - disabled compile GUI" >&5

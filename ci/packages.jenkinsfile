@@ -42,6 +42,10 @@ def build()
           script
           {
             sh "make build_rpm"
+            if (params.TEST_PACKAGES)
+            {
+              sh "make install_test_rpm"
+            }
           }
         }
       }
@@ -55,6 +59,10 @@ def build()
           script
           {
             sh "make build_deb"
+            if (params.TEST_PACKAGES)
+            {
+              sh "make install_test_deb"
+            }
           }
         }
       }
@@ -68,6 +76,10 @@ def build()
           script
           {
             sh "make build_win32";
+            if (params.TEST_PACKAGES)
+            {
+              sh "make install_test_win32"
+            }
           }
         }
       }

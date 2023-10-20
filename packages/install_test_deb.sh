@@ -5,7 +5,7 @@
 BASE_PATH=/media/home
 
 # parse arugments
-suffix=""
+debFileSuffix=""
 debugFlag=0
 helpFlag=0
 n=0
@@ -30,7 +30,7 @@ while test $# != 0; do
     *)
       case $n in
         0)
-          suffix="$1"
+          debFileSuffix="$1"
           n=1
           ;;
       esac
@@ -41,14 +41,14 @@ done
 while test $# != 0; do
   case $n in
     0)
-      suffix="$1"
+      debFileSuffix="$1"
       n=1
       ;;
   esac
   shift
 done
 if test $helpFlag -eq 1; then
-  echo "Usage: $0 [options] <suffix>"
+  echo "Usage: $0 [options] <DEB file suffix>"
   echo ""
   echo "Options:  -d|--debug  enable debugging"
   echo "          -h|--help   print help"
@@ -56,24 +56,41 @@ if test $helpFlag -eq 1; then
 fi
 
 # check arguments
-if test -z "$suffix"; then
-  echo >&2 ERROR: no suffix given!
+if test -z "$debFileSuffix"; then
+  echo >&2 ERROR: no DEB file suffix given!
   exit 1
 fi
 
-set -x
-# install required base packages
-DEBIAN_FRONTEND=noninteractive apt-get -yq update
-DEBIAN_FRONTEND=noninteractive apt-get -yq install systemd
-DEBIAN_FRONTEND=noninteractive apt-get -yq install default-jre-headless
+# get temporary file
+tmpFile=`mktemp /tmp/test_rpm-XXXXXX`
+if test -z "$tmpFile"; then
+  echo >&2 "ERROR: cannot create temporary file!"
+  exit 1
+fi
 
-# install deb
-dpkg -i $BASE_PATH/backup-archiver-$suffix.deb
-dpkg -i $BASE_PATH/backup-archiver-gui-$suffix.deb
+# install required base packages
+echo -n "Update packages..."
+DEBIAN_FRONTEND=noninteractive apt-get -yq update 1>/dev/null 2>>$tmpFile
+DEBIAN_FRONTEND=noninteractive apt-get -yq install \
+  default-jre-headless \
+  systemd \
+  1>/dev/null 2>$tmpFile
+if test $? -eq 0; then
+  echo "OK"
+else
+  echo "FAIL"
+  cat $tmpFile
+  rm -f $tmpFile
+  exit 1
+fi
 
 # set error handler: execute bash shell
 trap /bin/bash ERR
 set -e
+
+# install deb
+dpkg -i $BASE_PATH/backup-archiver-$debFileSuffix.deb
+dpkg -i $BASE_PATH/backup-archiver-gui-$debFileSuffix.deb
 
 # simple command test
 bar --version
@@ -92,3 +109,8 @@ barcontrol --list
 if test $debugFlag -eq 1; then
   /bin/bash
 fi
+
+# free resources
+rm -f $tmpFile
+
+exit 0

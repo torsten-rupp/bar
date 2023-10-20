@@ -9,7 +9,7 @@ dnl --------------------------------------------------------------------
 
 dnl ----------------------- additional macros --------------------------
 
-dnl --- print compile infofg
+dnl --- print compile info
 AC_DEFUN([AC_MSG_CREATE],
 [
   _AS_ECHO_N([create $1... ])
@@ -629,30 +629,16 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
-dnl --- detect Java version
-dnl usage: AC_JAVA_VERSION(<variable>)
-AC_DEFUN([AC_JAVA_VERSION],
+dnl --- detect Java compiler version
+dnl usage: AC_JAVAC_VERSION(<variable>)
+AC_DEFUN([AC_JAVAC_VERSION],
 [
   AC_REQUIRE([AC_PROG_JAVAC])
-  AC_REQUIRE([AC_PROG_JAVA])
   AC_CACHE_CHECK(
-    [$JAVA version],
+    [$JAVAC version],
     ac_cv_prog_java_version,
     [
-      cat << \EOF > Test.java
-class Test
-{
-  public static void main(String[[]] args)
-  {
-    System.out.println(System.getProperty("java.version"));
-  }
-}
-EOF
-      if AC_TRY_COMMAND($JAVAC $JAVAC_FLAGS Test.java) && test -s Test.class; then
-        ac_cv_prog_java_version=`$JAVA $JAVA_FLAGS Test`
-      else
-        ac_cv_prog_java_version=""
-      fi
+      ac_cv_prog_java_version=`$JAVAC -version 2>&1|sed 's/^.* \([[^_]]\+\).*/\\1/g'`
       AS_VAR_SET($1,$ac_cv_prog_java_version)
 
       rm -f Test.java Test.class
@@ -1437,13 +1423,15 @@ if test "$ENABLE_GUI" = "yes"; then
   AC_PATH_PROGS(LAUNCH4J,launch4j)
 
   if test -n "$JAVA"; then
-    AC_JAVA_VERSION(JAVA_VERSION)
+    AC_JAVAC_VERSION(JAVA_VERSION)
     case "$JAVA_VERSION" in
       1.6*)
         ;;
       1.7*)
         ;;
       1.8*)
+        ;;
+      11.0*)
         ;;
       *)
         AC_MSG_WARN([Insufficient Java version (found $JAVA_VERSION, require 1.6, 1.7 or 1.8) - disabled compile GUI])

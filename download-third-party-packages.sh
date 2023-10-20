@@ -24,7 +24,6 @@ MKDIR="mkdir"
 PATCH="patch"
 RMF="rm -f"
 RMRF="rm -rf"
-SVN="svn"
 TAR="tar"
 UNZIP="unzip"
 XZ="xz"
@@ -470,11 +469,6 @@ fi
 type $GIT 1>/dev/null 2>/dev/null && $GIT --version 1>/dev/null 2>/dev/null
 if test $? -gt 0; then
   $ECHO >&2 "ERROR: command 'git' is not available"
-  exit 1
-fi
-type $SVN 1>/dev/null 2>/dev/null && $SVN --version 1>/dev/null 2>/dev/null
-if test $? -gt 0; then
-  $ECHO >&2 "ERROR: command 'svn' is not available"
   exit 1
 fi
 type $PATCH 1>/dev/null 2>/dev/null
@@ -1592,7 +1586,7 @@ if test $cleanFlag -eq 0; then
            fatalError "checkout $url -> $directoryName"
          fi
          (cd $directoryName; \
-          $GIT checkout v$LIBSMB2_VERSION; \
+          $GIT checkout v$LIBSMB2_VERSION 1>/dev/null 2>/dev/null; \
           install -d m4;
          )
          if test $? -ne 0; then

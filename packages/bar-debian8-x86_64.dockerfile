@@ -10,53 +10,59 @@ ENV DEBIAN_FRONTEND noninteractive
 # update
 RUN apt-get -y update
 
-# install packages (Note: ignore expired key with --force-yes)
+RUN apt-get -y install \
+  initscripts \
+  openssl \
+  default-jre \
+  ;
+
 RUN apt-get -y install \
   bc \
-  bzip2 \
   coreutils \
-  curl \
-  debhelper \
-  devscripts \
-  e2fsprogs \
-  gettext \
-  git \
   joe \
   less \
   lua5.1 \
+  rsync \
+  socat \
+  sudo \
+  ;
+
+# install packages (Note: ignore expired key with --force-yes)
+RUN apt-get -y install \
+  autoconf \
+  autotools-dev \
+  bison \
+  bzip2 \
+  cmake \
+  curl \
+  debhelper \
+  default-jdk \
+  devscripts \
+  dh-autoreconf \
+  e2fsprogs \
+  flex \
+  g++ \
+  gcc \
+  gettext \
+  git \
+  libc6 \
+  libc6-dev \
   m4 \
+  make \
   mariadb-client \
   patch \
   pkg-config \
   postgresql \
-  rsync \
-  socat \
   sqlite3 \
   subversion \
-  sudo \
   tar \
   tcl \
+  txt2man \
+  unoconv \
   unzip \
+  valgrind \
   wget \
   xz-utils \
-  ;
-RUN apt-get -y install \
-  autoconf \
-  autotools-dev \
-  dh-autoreconf \
-  gcc \
-  g++ \
-  libc6 \
-  libc6-dev \
-  default-jdk \
-  default-jre \
-  cmake \
-  make \
-  bison \
-  flex \
-  unoconv \
-  txt2man \
-  valgrind \
   ;
 
 # add users

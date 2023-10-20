@@ -272,10 +272,7 @@ help:
 	@$(ECHO) "  install_test"
 	@$(ECHO) ""
 	@$(ECHO) "  install_test_rpm"
-	@$(ECHO) "  install_test_rpm_centos6"
-	@$(ECHO) "  install_test_rpm_centos6-x86_64"
-	@$(ECHO) "  install_test_rpm_centos7"
-	@$(ECHO) "  install_test_rpm_centos7-x86_64"
+	@$(ECHO) "  install_test_rpm_centos8-x86_64"
 	@$(ECHO) "  install_test_rpm_fedora28-x86_64"
 	@$(ECHO) "  install_test_rpm_fedora29-x86_64"
 	@$(ECHO) "  install_test_rpm_fedora30-x86_64"
@@ -715,26 +712,16 @@ docker_update update_docker:
 	$(DOCKER) pull debian:10
 	#
 	# test images
-	$(DOCKER) pull i386/centos:7
-	$(DOCKER) pull centos:6
+	$(DOCKER) pull centos:8
 	#
-	$(DOCKER) pull fedora:28
-	$(DOCKER) pull fedora:29
-	$(DOCKER) pull fedora:30
-	$(DOCKER) pull fedora:31
+	$(foreach i,36 37 38 39 40,$(DOCKER) pull fedora:$i;)
 	#
 	$(DOCKER) pull opensuse/tumbleweed
-	$(DOCKER) pull opensuse/leap
+	$(foreach i,15.1 15.2 15.3 15.4 15.5,$(DOCKER) pull opensuse/leap:$i;)
 	#
-	$(DOCKER) pull debian:10
-	$(DOCKER) pull debian:11
-	$(DOCKER) pull debian:12
+	$(foreach i,10 11 12,$(DOCKER) pull debian:$i;)
 	#
-	$(DOCKER) pull ubuntu:18.04
-	$(DOCKER) pull ubuntu:19.04
-	$(DOCKER) pull ubuntu:19.10
-	$(DOCKER) pull ubuntu:20.04
-	$(DOCKER) pull ubuntu:22.04
+	$(foreach i,20.04 20.10 21.04 21.10 22.04 22.10 23.04 23.10,$(DOCKER) pull ubuntu:$i;)
 	#
 	# base images
 	$(INSTALL) download-third-party-packages.sh packages
@@ -742,16 +729,6 @@ docker_update update_docker:
 	(cd packages; $(DOCKER) build -f bar-centos7-x86_64.dockerfile -t bar-centos-x86_64:7  --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
 	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile -t bar-debian-x86_64:10 --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
 	(cd packages; $(DOCKER) build -f bar-ubuntu-mingw32.dockerfile -t bar-mingw32          --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
-	#
-	# test images
-	##(cd packages; $(DOCKER) build -f bar-debian9-x86_64.dockerfile     -t bar-debian-x86_64:9     .)
-	#(cd packages; $(DOCKER) build -f bar-centos7.dockerfile            -t bar-centos:7            .)
-	##(cd packages; $(DOCKER) build -f bar-fedora28-x86_64.dockerfile    -t bar-fedora-x86_64:28    .)
-	#(cd packages; $(DOCKER) build -f bar-fedora29-x86_64.dockerfile    -t bar-fedora-x86_64:29    .)
-	#
-	#(cd packages; $(DOCKER) build -f bar-ubuntu18.04-x86_64.dockerfile -t bar-ubuntu-x86_64:18.04 .)
-	#(cd packages; $(DOCKER) build -f bar-ubuntu20.04-x86_64.dockerfile -t bar-ubuntu-x86_64:20.04 .)
-	#(cd packages; $(DOCKER) build -f bar-ubuntu22.04-x86_64.dockerfile -t bar-ubuntu-x86_64:22.04 .)
 	#
 	$(RMF) packages/download-third-party-packages.sh
 	#
@@ -802,24 +779,6 @@ docker_run:
           bar \
           /bin/bash -c "echo export PS1=\'$(DOCKER_PROMPT)\' >> ~/.bashrc && /bin/bash"
 
-docker_run_win32:
-	( \
-          $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            --rm \
-            --net=host \
-            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
-            -v $(PWD):/media/home \
-            -v $(WINE_C_DRIVE):/media/wine \
-            --name=bar-win32 \
-            bar-mingw32 setarch i686 -- /media/home/packages/build_win32.sh \
-              -s \
-              $(PACKAGE_NAME) \
-              $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION) \
-              $(shell id -u):$(shell id -g) \
-              $(WINE) \
-              $(DISTRIBUTION_NAME)-setup; \
-        )
 docker_run_win32-x86_64:
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
@@ -864,22 +823,6 @@ clean_rpm:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm.log
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm.log
-
-$(DISTRIBUTION_NAME).rpm: \
-  $(DISTRIBUTION_NAME).tar.bz2
-	@$(call functionPrintInfo,Build RPM on CentOS 6 32bit)
-	( \
-          $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            --rm \
-            --net=host \
-            --user $(shell id -u):$(shell id -g) \
-            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
-            -e CFLAGS="-m32" \
-            -v $(PWD)/extern:/media/extern \
-            -v $(PWD):/media/home \
-            bar-centos:6 setarch i686 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
-        ) | tee $@.log
-	@$(call functionPrintResult,OK)
 
 $(DISTRIBUTION_NAME)-x86_64.rpm: \
   $(DISTRIBUTION_NAME).tar.bz2
@@ -948,21 +891,6 @@ clean_deb:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME_GUI)-x86_64.deb
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.deb.log
 
-$(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
-  $(DISTRIBUTION_NAME).tar.bz2
-	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 32bit)
-	( \
-          $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            --rm \
-            --net=host \
-            --user $(shell id -u):$(shell id -g) \
-            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
-            -v $(PWD)/extern:/media/extern \
-            -v $(PWD):/media/home \
-            bar-debian:10 setarch i686 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
-        ) | tee $@.log
-	@$(call functionPrintResult,OK)
-
 $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
   $(DISTRIBUTION_NAME).tar.bz2
 	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 64bit)
@@ -1020,7 +948,7 @@ $(DISTRIBUTION_NAME)-setup.exe: \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
-            bar-mingw32 setarch i686 -- /bin/bash -c "make -C /media/home build_win32 DEBUG=$(DEBUG)" \
+            bar-mingw32 setarch x86_64 -- /bin/bash -c "make -C /media/home build_win32 DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -1047,78 +975,55 @@ install_test:
 
 .PHONY: install_test_rpm
 install_test_rpm: \
-  install_test_rpm_centos6-x86_64 \
-  install_test_rpm_fedora28-x86_64 \
-  install_test_rpm_fedora29-x86_64 \
+  install_test_rpm_centos \
+  install_test_rpm_fedora \
+  install_test_rpm_opensuse \
+
+.PHONY: install_test_rpm_centos
+install_test_rpm_centos: \
+  install_test_rpm_centos8-x86_64 \
+
+.PHONY: install_test_rpm_fedora
+install_test_rpm_fedora: \
+  $(foreach i,36 37 38 39 40,install_test_rpm_fedora$i-x86_64) \
+
+.PHONY: install_test_rpm_opensuse
+install_test_rpm_opensuse: \
   install_test_rpm_opensuse-tumbleweed-x86_64 \
-  install_test_rpm_opensuse-leap-x86_64 \
+  $(foreach i,15.1 15.2 15.3 15.4 15.5,install_test_rpm_opensuse-leap$i-x86_64) \
 
 # call functionInstallTestRPM,<docker image>,<architecture>,<suffix>
 functionInstallTestRPM = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
       --rm \
       --net=host \
-      --user $(shell id -u):$(shell id -g) \
       -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
       -v $(PWD):/media/home \
-      $1 \
+      $1 `if test -n "$2"; then echo "setarch $2 --"; fi` \
       /media/home/packages/install_test_rpm.sh \
-        $?
+        $3
 
 # call functionInstallTestDEB,<docker image>,<architecture>,<version>,<suffix>
 functionInstallTestDEB = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
       --rm \
       --net=host \
-      --user $(shell id -u):$(shell id -g) \
       -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
       -v $(PWD):/media/home \
-      $1 \
+      $1 `if test -n "$2"; then echo "setarch $2 --"; fi` -- \
       /media/home/packages/install_test_deb.sh \
         $3
 
-# Note: i386 images is broken; use own image
-.PHONY: install_test_rpm_centos6
-install_test_rpm_centos6:
-	@$(call functionPrintInfo,Test install Centos 6)
-	@$(call functionInstallTestRPM,bar-centos:6,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_centos6-x86_64
-install_test_rpm_centos6-x86_64:
-	@$(call functionPrintInfo,Test install Centos 6 64bit)
-	@$(call functionInstallTestRPM,centos:6,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+.PHONY: install_test_rpm_centos8-x86_64
+install_test_rpm_centos8-x86_64:
+	@$(call functionPrintInfo,Test install Centos 8 64bit)
+	@$(call functionInstallTestRPM,centos:8,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
-.PHONY: install_test_rpm_centos7
-install_test_rpm_centos7:
-	@$(call functionPrintInfo,Test install Centos 7)
-	@$(call functionInstallTestRPM,bar-centos:7,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_centos7-x86_64
-install_test_rpm_centos7-x86_64:
-	@$(call functionPrintInfo,Test install Centos 7 64bit)
-	@$(call functionInstallTestRPM,centos:7,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-
-.PHONY: install_test_rpm_fedora28-x86_64
-install_test_rpm_fedora28-x86_64:
-	@$(call functionPrintInfo,Test install Fedora 28 64bit)
-	@$(call functionInstallTestRPM,fedora:28,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_fedora29-x86_64
-install_test_rpm_fedora29-x86_64:
-	@$(call functionPrintInfo,Test install Fedora 29 64bit)
-	@$(call functionInstallTestRPM,fedora:29,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_fedora30-x86_64
-install_test_rpm_fedora30-x86_64:
-	@$(call functionPrintInfo,Test install Fedora 30 64bit)
-	@$(call functionInstallTestRPM,fedora:30,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_fedora31-x86_64
-install_test_rpm_fedora31-x86_64:
-	@$(call functionPrintInfo,Test install Fedora 31 64bit)
-	@$(call functionInstallTestRPM,fedora:31,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+.PHONY: install_test_rpm_fedora%-x86_64
+install_test_rpm_fedora%-x86_64:
+	@$(call functionPrintInfo,Test install Fedora $* 64bit)
+	@$(call functionInstallTestRPM,fedora:$*,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_rpm_opensuse-tumbleweed-x86_64
@@ -1127,78 +1032,34 @@ install_test_rpm_opensuse-tumbleweed-x86_64:
 	@$(call functionInstallTestRPM,opensuse/tumbleweed,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_rpm_opensuse-leap-x86_64
-install_test_rpm_opensuse-leap-x86_64:
-	@$(call functionPrintInfo,Test install OpenSuSE Leap 64bit)
-	@$(call functionInstallTestRPM,opensuse/leap,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+install_test_rpm_opensuse-leap%-x86_64:
+	@$(call functionPrintInfo,Test install OpenSuSE Leap $* 64bit)
+	@$(call functionInstallTestRPM,opensuse/leap:$*,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_deb
 install_test_deb: \
-  install_test_deb_debian8 \
-  install_test_deb_debian8-x86_64 \
-  install_test_deb_debian9 \
-  install_test_deb_debian9-x86_64 \
-  install_test_deb_ubuntu18.04-x86_64 \
-  install_test_deb_ubuntu19.04-x86_64 \
-  install_test_deb_ubuntu19.10-x86_64 \
-  install_test_deb_ubuntu20.04-x86_64 \
-  install_test_deb_ubuntu22.04-x86_64 \
+  install_test_deb_debian \
+  install_test_deb_ubuntu \
 
-.PHONY: install_test_deb_debian8
-install_test_deb_debian8:
-	@$(call functionPrintInfo,Test install Debian 10)
-	@$(call functionInstallTestDEB,bar-debian:10,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_debian8-x86_64
-install_test_deb_debian8-x86_64:
-	@$(call functionPrintInfo,Test install Debian 10 64bit)
-	@$(call functionInstallTestDEB,bar-debian-x86_64:10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_debian9
-install_test_deb_debian9:
-	@$(call functionPrintInfo,Test install Debian 11)
-	@$(call functionInstallTestDEB,i386/debian:11,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_debian9-x86_64
-install_test_deb_debian9-x86_64:
-	@$(call functionPrintInfo,Test install Debian 11 64bit)
-	@$(call functionInstallTestDEB,debian:11,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_debian10
-install_test_deb_debian10:
-	@$(call functionPrintInfo,Test install Debian 12)
-	@$(call functionInstallTestDEB,i386/debian:12,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_debian10-x86_64
-install_test_deb_debian10-x86_64:
-	@$(call functionPrintInfo,Test install Debian 12 64bit)
-	@$(call functionInstallTestDEB,debian:12,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+.PHONY: install_test_deb_debian
+install_test_deb_debian: \
+  $(foreach i,10 11 12,install_test_deb_debian$i-x86_64) \
+
+.PHONY: install_test_deb_ubuntu
+install_test_deb_ubuntu: \
+  $(foreach i,20.04 20.10 21.04 21.10 22.04 22.10 23.04 23.10,install_test_deb_ubuntu$i-x86_64) \
+
+.PHONY: install_test_deb_debian%-x86_64
+install_test_deb_debian%-x86_64:
+	@$(call functionPrintInfo,Test install Debian $* 64bit)
+	@$(call functionInstallTestDEB,debian:$*,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
-.PHONY: install_test_deb_ubuntu18.04-x86_64
-install_test_deb_ubuntu18.04-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 18.10 64bit)
-	@$(call functionInstallTestDEB,ubuntu:18.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_ubuntu19.04-x86_64
-install_test_deb_ubuntu19.04-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 19.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:19.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_ubuntu19.10-x86_64
-install_test_deb_ubuntu19.10-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 19.10 64bit)
-	@$(call functionInstallTestDEB,ubuntu:19.10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_ubuntu20.04-x86_64
-install_test_deb_ubuntu20.04-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 20.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:20.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
-.PHONY: install_test_deb_ubuntu22.04-x86_64
-install_test_deb_ubuntu22.04-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 20.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:22.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
+.PHONY: install_test_deb_ubuntu%-x86_64
+install_test_deb_ubuntu%-x86_64:
+	@$(call functionPrintInfo,Test install Ubuntu $* 64bit)
+	@$(call functionInstallTestDEB,ubuntu:$*,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 # GUI
