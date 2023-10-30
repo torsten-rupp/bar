@@ -1798,6 +1798,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           ) != 0
      )
   {
+//fprintf(stderr,"%s:%d: errno=%d WSAGetLastError=%d\n",__FILE__,__LINE__,errno,WSAGetLastError());
     error = ERRORX_(BIND_FAIL,errno,"%E",errno);
     disconnectDescriptor(serverSocketHandle->handle);
     return error;

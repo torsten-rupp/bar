@@ -171,9 +171,12 @@ if test -z "$winepath"; then
   exit 1
 fi
 
+# start wine
+$wineboot --init
+
 # get ISCC
-iscc1=`$winepath "C:/Program Files/Inno Setup 5/ISCC.exe"`
-iscc2=`$winepath "C:/Program Files (x86)/Inno Setup 5/ISCC.exe"`
+iscc1=`$winepath --unix "C:/Program Files/Inno Setup 5/ISCC.exe"`
+iscc2=`$winepath --unix "C:/Program Files (x86)/Inno Setup 5/ISCC.exe"`
 if   test -f "$iscc1"; then
   iscc="$iscc1"
 elif test -f "$iscc2"; then
@@ -211,14 +214,13 @@ temporaryDirectory=`mktemp -d /tmp/win32-XXXXXX`
     projectRoot=$PWD
   fi
 
-  # build Win32
+  # build Win32 64bit
   $projectRoot/download-third-party-packages.sh \
     --local-directory /media/extern \
     --patch-directory $projectRoot/misc \
     --no-verbose \
     $ADDITIONAL_DOWNLOAD_FLAGS
 #TODO: enable smbclient
-#TODO: enable postgres
   $projectRoot/configure \
     --host=x86_64-w64-mingw32 \
     --build=x86_64-linux \
@@ -232,6 +234,7 @@ temporaryDirectory=`mktemp -d /tmp/win32-XXXXXX`
   make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows
 
   # build setup program
+#TODO: backup-archiver.iss -> backup-archiver.iss.in
   install packages/backup-archiver.iss backup-archiver.iss
   sed -i "s/@VERSION@/$version/g" backup-archiver.iss
   $wine "$iscc" \
@@ -257,6 +260,8 @@ if test $debugFlag -eq 1; then
 fi
 
 # clean-up
+$wineboot --shutdown
+$wineboot --end-session
 rm -rf $temporaryDirectory
 if test -n "$wineDir"; then
   rm -rf $wineDir;

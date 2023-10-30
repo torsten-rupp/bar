@@ -58,7 +58,7 @@ fi
 
 # install required base packages
 echo -n "Update packages..."
-DEBIAN_FRONTEND=noninteractive apt-get -yq update 1>/dev/null 2>>$tmpFile
+DEBIAN_FRONTEND=noninteractive apt-get -yq update 1>/dev/null 2>/dev/null
 DEBIAN_FRONTEND=noninteractive apt-get -yq install \
   default-jre-headless \
   systemd \
@@ -80,9 +80,9 @@ set -e
 dpkg -i $debFiles
 
 # simple command test
-bar --version
-bar --help >/dev/null
-barcontrol --help >/dev/null
+bar --version 1>/dev/null
+bar --help 1>/dev/null
+barcontrol --help 1>/dev/null
 
 # simple server test (Note: kill existing instance; systemd may not work inside docker)
 (killall bar 2>/dev/null || true)

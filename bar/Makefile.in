@@ -16,32 +16,33 @@ TESTCODE_EXITCODE       = 124
 
 #------------------------------------ paths ----------------------------------
 
-ROOT_DIR           = $(abspath @srcdir@/..)
-SOURCE_DIR         = $(abspath @srcdir@)
-CONFIG_DIR         = @CONFIG_DIR@
-TLS_DIR            = @TLS_DIR@
-BUILD_DIR          = $(CURDIR)/..
+ROOT_DIR               = $(abspath @srcdir@/..)
+SOURCE_DIR             = $(abspath @srcdir@)
+CONFIG_DIR             = @CONFIG_DIR@
+TLS_DIR                = @TLS_DIR@
+BUILD_DIR              = $(CURDIR)/..
 
 ifeq ($(DESTDIR),)
-INSTALL_DIR        = $(if $(prefix),$(prefix),@INSTALL_DIR@)
-INSTALL_BIN_DIR    = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
-INSTALL_LOCALE_DIR = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
-INSTALL_ETC_DIR    = $(if $(sysconfdir),$(sysconfdir),/etc)
-INSTALL_CONFIG_DIR = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
-INSTALL_MAN_DIR    = $(if $(mandir),$(mandir),@MAN_DIR@)
+INSTALL_DIR            = $(if $(prefix),$(prefix),@INSTALL_DIR@)
+INSTALL_BIN_DIR        = $(if $(bindir),$(bindir),@INSTALL_BIN_DIR@)
+INSTALL_LOCALE_DIR     = $(if $(datadir),$(datadir)/locale,@LOCALE_DIR@)
+INSTALL_ETC_DIR        = $(if $(sysconfdir),$(sysconfdir),/etc)
+INSTALL_CONFIG_DIR     = $(if $(sysconfdir),$(sysconfdir)/bar,@CONFIG_DIR@)
+INSTALL_MAN_DIR        = $(if $(mandir),$(mandir),@MAN_DIR@)
 else
-INSTALL_DIR        = @INSTALL_DIR@
-INSTALL_BIN_DIR    = @INSTALL_BIN_DIR@
-INSTALL_LOCALE_DIR = @LOCALE_DIR@
-INSTALL_ETC_DIR    = /etc
-INSTALL_CONFIG_DIR = @CONFIG_DIR@
-INSTALL_MAN_DIR    = @MAN_DIR@
+INSTALL_DIR            = @INSTALL_DIR@
+INSTALL_BIN_DIR        = @INSTALL_BIN_DIR@
+INSTALL_LOCALE_DIR     = @LOCALE_DIR@
+INSTALL_ETC_DIR        = /etc
+INSTALL_CONFIG_DIR     = @CONFIG_DIR@
+INSTALL_MAN_DIR        = @MAN_DIR@
 endif
-INSTALL_TLS_DIR    = @TLS_DIR@
+INSTALL_TLS_DIR        = @TLS_DIR@
+INSTALL_CONFIG_SUB_DIR = bar
 
-TEST_DATA_DIR      ?= test
+TEST_DATA_DIR          ?= test
 
-WINE_C_DRIVE       = @WINE_C_DRIVE@
+WINE_C_DRIVE           = @WINE_C_DRIVE@
 
 #--------------------------------- tool chain --------------------------------
 
@@ -106,9 +107,9 @@ endif
 LD_STATIC_PREFIX           = -Wl,-Bstatic
 LD_DYNAMIC_PREFIX          = -Wl,-Bdynamic
 
-WINDOWS_DLLS               = /usr/lib/gcc/i686-w64-mingw32/*-win32/libgcc_s_sjlj-1.dll \
-                             /usr/lib/gcc/i686-w64-mingw32/*-win32/libstdc++-6.dll \
-                             /usr/i686-w64-mingw32/lib/libwinpthread-1.dll \
+WINDOWS_DLLS               = /usr/lib/gcc/x86_64-w64-mingw32/*-win32/libgcc_s_*.dll \
+                             /usr/lib/gcc/x86_64-w64-mingw32/*-win32/libstdc++-6.dll \
+                             /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll \
                              $(BUILD_DIR)/extern/lib/libpq.dll
 
 ifneq ($(SANITIZER),)
@@ -212,6 +213,11 @@ VALGRIND_FLAGS  = --gen-suppressions=no --num-callers=32 --track-fds=yes --track
 CALLGRIND_FLAGS = -v
 
 #------------------------ specific variables/settings ------------------------
+
+# special constants
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
+COMMA := ,
 
 # major, minor version number, repository hash
 VERSION_MAJOR      := $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
@@ -2034,13 +2040,13 @@ install: \
 ifeq ($(PLATFORM),WINDOWS)
 	$(INSTALL) $(WINDOWS_DLLS) "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
-	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
-          $(INSTALL) -m 600 $(SOURCE_DIR)/bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)/$(INSTALL_CONFIG_SUB_DIR)"
+	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/$(INSTALL_CONFIG_SUB_DIR)/bar.cfg"; then \
+          $(INSTALL) -m 600 $(SOURCE_DIR)/bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)/$(INSTALL_CONFIG_SUB_DIR)"; \
         else \
-          echo "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg NOT installed - file already exists!"; \
+          echo "$(DESTDIR)$(INSTALL_CONFIG_DIR)/$(INSTALL_CONFIG_SUB_DIR)/bar.cfg NOT installed - file already exists!"; \
         fi
-	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)/jobs"
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)/$(INSTALL_CONFIG_SUB_DIR)/jobs"
 	for language in $(LANGUAGES); do \
           $(INSTALL) -d "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES"; \
           $(INSTALL) po/$$language/LC_MESSAGES/bar.mo "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES/bar.mo"; \
@@ -2056,15 +2062,15 @@ uninstall:
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
         )
-	$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"
+	$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/$(INSTALL_CONFIG_SUB_DIR)/bar.cfg"
 	$(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-ca.pem"
 	$(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-server-cert.pem"
 	$(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/private/bar-server-key.pem"
-	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.jks" \
+	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/$(INSTALL_CONFIG_SUB_DIR)/bar.jks" \
         )
 	$(RMF) "$(DESTDIR)$(INSTALL_ETC_DIR)/init.d/barserver"
 	$(RMF) "$(DESTDIR)$(INSTALL_MAN_DIR)/man7/bar.7"
-	$(RMDIR) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/jobs"
+	$(RMDIR) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/$(INSTALL_CONFIG_SUB_DIR)/jobs"
 	for language in $(LANGUAGES); do \
           $(RMF) "$(DESTDIR)$(INSTALL_LOCALE_DIR)/$$language/LC_MESSAGES/bar.mo"; \
         done

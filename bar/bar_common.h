@@ -64,6 +64,8 @@
   #endif
 #endif
 
+#define CONFIG_SUB_DIR                            "bar"
+
 #define DEFAULT_CONFIG_FILE_NAME                  "bar.cfg"
 #define DEFAULT_LOG_FORMAT                        "%Y-%m-%d %H:%M:%S"
 #define DEFAULT_FRAGMENT_SIZE                     (64LL*MB)
@@ -82,9 +84,9 @@
 #endif /* HAVE_GNU_TLS */
 #define DEFAULT_MAX_SERVER_CONNECTIONS            8
 
-#define DEFAULT_JOBS_SUB_DIRECTORY                "jobs"
-#define DEFAULT_INCREMENTAL_DATA_SUB_DIRECTORY    ""
-#define DEFAULT_PAIRING_MASTER_FILE_NAME          "pairing"
+#define DEFAULT_JOBS_SUB_DIRECTORY                CONFIG_SUB_DIR "/jobs"
+#define DEFAULT_INCREMENTAL_DATA_SUB_DIRECTORY    CONFIG_SUB_DIR
+#define DEFAULT_PAIRING_MASTER_FILE_NAME          CONFIG_SUB_DIR "/pairing"
 #define DEFAULT_PID_FILE_NAME                     "/run/bar.pid"
 
 #define DEFAULT_CD_DEVICE_NAME                    "/dev/cdrw"

@@ -158,7 +158,7 @@ def build()
         {
           script
           {
-            sh "make build_win32";
+            sh "make build_win32"
           }
         }
 
@@ -166,11 +166,13 @@ def build()
         {
           stage("Test Win32 packages")
           {
-            docker.image("bar-mingw32").inside('-u root --privileged')
+            docker.image("ubuntu:22.04").inside('-u root --privileged')
+//            docker.image("bar-mingw32").inside('-u root --privileged -v /tmp:/tmpX')
             {
               script
               {
                 sh "packages/install_test_win32.sh *.exe"
+//                sh "bash -x packages/install_test_win32.sh /tmpX/backup-archiver-23-setup.exe"
               }
             }
           }

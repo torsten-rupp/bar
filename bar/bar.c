@@ -2967,7 +2967,10 @@ LOCAL Errors runServer(void)
     error = Job_rereadAll(globalOptions.jobsDirectory);
     if (error != ERROR_NONE)
     {
-      printError("cannot read jobs",Error_getText(error));
+      printError("cannot read jobs from '%s' (error: %s)",
+                 String_cString(globalOptions.jobsDirectory),
+                 Error_getText(error)
+                );
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  _("cannot read jobs from '%s' (error: %s)!"),
@@ -4363,8 +4366,8 @@ LOCAL Errors bar(int argc, const char *argv[])
   {
     fileName = String_new();
 
-    // read default configuration from <CONFIG_DIR>/bar.cfg (ignore errors)
-    File_setFileNameCString(fileName,CONFIG_DIR);
+    // read default configuration from <CONFIG_DIR>/<CONFIG_SUB_DIR>/bar.cfg (ignore errors)
+    File_setFileNameCString(fileName,CONFIG_DIR "/" CONFIG_SUB_DIR);
     File_appendFileNameCString(fileName,DEFAULT_CONFIG_FILE_NAME);
     if (File_isFile(fileName) && File_isReadable(fileName))
     {
@@ -4672,8 +4675,8 @@ int main(int argc, const char *argv[])
           error = ERROR_RUN_DAEMON;
         }
       #elif defined(PLATFORM_WINDOWS)
-// NYI ???
-error = ERROR_STILL_NOT_IMPLEMENTED;
+        // Note: daemon mode not supported on Windows
+        error = bar(argc,argv);
       #endif /* PLATFORM_... */
     }
     else

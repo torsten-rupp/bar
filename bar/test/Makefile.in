@@ -187,6 +187,8 @@ INFO_NO_LF     = echo -n >&2
 #------------------------ specific variables/settings ------------------------
 
 # special constants
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
 COMMA := ,
 
 # quiet (no output)

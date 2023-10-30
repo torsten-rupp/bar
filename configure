@@ -1577,7 +1577,7 @@ Optional Packages:
   --with-toolchain-prefix=<prefix>
                           toolchain prefix
   --with-config-dir=<path>
-                          configuration directory (default: /etc/bar)
+                          configuration directory (default: /etc)
   --with-runtime-dir=<path>
                           runtime directory (default: /var/lib/bar)
   --with-tls-dir=<path>   TLS/SLL configuration and certificate directory
@@ -3409,7 +3409,7 @@ if test ${with_config_dir+y}
 then :
   withval=$with_config_dir; CONFIG_DIR=$withval
 else $as_nop
-  CONFIG_DIR=/etc/bar
+  CONFIG_DIR=/etc
 
 fi
 

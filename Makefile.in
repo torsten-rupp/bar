@@ -100,6 +100,11 @@ ZIP                    = zip
 
 #------------------------ specific variables/settings ------------------------
 
+# special constants
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
+COMMA := ,
+
 # shell in Makefile must be bash with pipe-fail handling
 SHELL                  = bash -o pipefail
 
@@ -275,29 +280,19 @@ help:
 	@$(ECHO) "  docker_den"
 	@$(ECHO) "  docker_win32"
 	@$(ECHO) ""
-	@$(ECHO) "  install_test"
+	@$(ECHO) "  install_test[d]"
 	@$(ECHO) ""
-	@$(ECHO) "  install_test_rpm"
-	@$(ECHO) "  install_test_rpm_centos8-x86_64"
-	@$(ECHO) "  install_test_rpm_fedora28-x86_64"
-	@$(ECHO) "  install_test_rpm_fedora29-x86_64"
-	@$(ECHO) "  install_test_rpm_fedora30-x86_64"
-	@$(ECHO) "  install_test_rpm_fedora31-x86_64"
-	@$(ECHO) "  install_test_rpm_opensuse-tumbleweed-x86_64"
-	@$(ECHO) "  install_test_rpm_opensuse-leap-x86_64"
+	@$(ECHO) "  install_test_rpm[d]"
+	@$(ECHO) "  install_test_rpm_centos8-x86_64[d]"
+	@$(ECHO) "  install_test_rpm_fedora[$(subst $(SPACE),\|,$(TEST_PACKAGS_FEDORA))]-x86_64[d]"
+	@$(ECHO) "  install_test_rpm_opensuse-tumbleweed-x86_64[d]"
+	@$(ECHO) "  install_test_rpm_opensuse-leap[$(subst $(SPACE),\|,$(TEST_PACKAGS_OPENSUSE_LEAP))]-x86_64[d]"
 	@$(ECHO) ""
-	@$(ECHO) "  install_test_deb"
-	@$(ECHO) "  install_test_deb_debian8"
-	@$(ECHO) "  install_test_deb_debian8-x86_64"
-	@$(ECHO) "  install_test_deb_debian9"
-	@$(ECHO) "  install_test_deb_debian9-x86_64"
-	@$(ECHO) "  install_test_deb_debian10"
-	@$(ECHO) "  install_test_deb_debian10-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu18.04-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu19.04-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu19.10-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu20.04-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu22.04-x86_64"
+	@$(ECHO) "  install_test_deb[d]"
+	@$(ECHO) "  install_test_deb_debian[$(subst $(SPACE),\|,$(TEST_PACKAGS_DEBIAN))]-x86_64[d]"
+	@$(ECHO) "  install_test_deb_ubuntu[$(subst $(SPACE),\|,$(TEST_PACKAGS_UBUNTU))]-x86_64[d]"
+	@$(ECHO) ""
+	@$(ECHO) "  install_test_win32[d]"
 	@$(ECHO) ""
 	@$(ECHO) "  gui"
 	@$(ECHO) "  clean_gui"
@@ -972,53 +967,49 @@ build_win32:
         )
 
 # install test
-.PHONY: install_test
-install_test:
-	@$(MAKE) QUIET=1 \
-          install_test_rpm \
-          install_test_deb
 
-.PHONY: install_test_rpm
-install_test_rpm: \
-  install_test_rpm_centos \
-  install_test_rpm_fedora \
-  install_test_rpm_opensuse \
-
-.PHONY: install_test_rpm_centos
-install_test_rpm_centos: \
-  $(foreach i,$(TEST_PACKAGS_CENTOS),install_test_rpm_centos$i-x86_64) \
-
-.PHONY: install_test_rpm_fedora
-install_test_rpm_fedora: \
-  $(foreach i,$(TEST_PACKAGS_FEDORA),install_test_rpm_fedora$i-x86_64) \
-
-.PHONY: install_test_rpm_opensuse
-install_test_rpm_opensuse: \
-  install_test_rpm_opensuse-tumbleweed-x86_64 \
-  $(foreach i,$(TEST_PACKAGS_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64) \
-
-# call functionInstallTestRPM,<docker image>,<architecture>,<suffix>
+# call functionInstallTestRPM,<docker image>,<architecture>,<RPM files>,<options>
 functionInstallTestRPM = \
   if test -f /.dockerenv; then \
     packages/install_test_rpm.sh \
-      $3; \
+      $3 $4; \
   else \
     if test -n "$(DOCKER)"; then \
       $(DOCKER) $(DOCKER_RUN_FLAGS) \
         --rm \
-        --net=host \
         -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
         -v $(PWD):/media/home \
         $1 `if test -n "$2"; then echo "setarch $2 --"; fi` \
         /media/home/packages/install_test_rpm.sh \
-          $3; \
+          $(addprefix /media/home/,$3) \
+          $4; \
     else \
       $(ECHO) "ERROR: no docker command available!"; \
     fi; \
   fi
 
-# call functionInstallTestDEB,<docker image>,<architecture>,<version>,<suffix>
+# call functionInstallTestDEB,<docker image>,<architecture>,<version>,<DEB files>,<options>
 functionInstallTestDEB = \
+  if test -f /.dockerenv; then \
+    packages/install_test_deb.sh \
+      $3 $4; \
+  else \
+    if test -n "$(DOCKER)"; then \
+      $(DOCKER) $(DOCKER_RUN_FLAGS) \
+        --rm \
+        -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+        -v $(PWD):/media/home \
+        $1 `if test -n "$2"; then echo "setarch $2 --"; fi` \
+        /media/home/packages/install_test_deb.sh \
+          $(addprefix /media/home/,$3) \
+          $4; \
+    else \
+      $(ECHO) "ERROR: no docker command available!"; \
+    fi; \
+  fi
+
+# call functionInstallTestWin32,<docker image>,<architecture>,<version>,<setup files>,<options>
+functionInstallTestWin32 = \
   if test -f /.dockerenv; then \
     packages/install_test_deb.sh \
       $3; \
@@ -1026,63 +1017,142 @@ functionInstallTestDEB = \
     if test -n "$(DOCKER)"; then \
       $(DOCKER) $(DOCKER_RUN_FLAGS) \
         --rm \
-        --net=host \
+--net=host \
         -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
         -v $(PWD):/media/home \
         $1 `if test -n "$2"; then echo "setarch $2 --"; fi` \
-        /media/home/packages/install_test_deb.sh \
-          $3; \
+        /media/home/packages/install_test_win32.sh \
+          $(addprefix /media/home/,$3) \
+          $4; \
     else \
       $(ECHO) "ERROR: no docker command available!"; \
     fi; \
   fi
 
-.PHONY: install_test_rpm_centos8-x86_64
+.PHONY: install_test
+install_test:
+	@$(MAKE) QUIET=1 \
+          install_test_rpm \
+          install_test_deb \
+          install_test_win32
+
+.PHONY: install_test_rpm install_test_rpmd
+install_test_rpm: \
+  install_test_rpm_centos \
+  install_test_rpm_fedora \
+  install_test_rpm_opensuse
+install_test_rpmd: \
+  install_test_rpm_centosd \
+  install_test_rpm_fedorad \
+  install_test_rpm_opensused
+
+.PHONY: install_test_rpm_centos install_test_rpm_centosd
+install_test_rpm_centos: \
+  $(foreach i,$(TEST_PACKAGS_CENTOS),install_test_rpm_centos$i-x86_64)
+install_test_rpm_centosd: \
+  $(foreach i,$(TEST_PACKAGS_CENTOS),install_test_rpm_centos$i-x86_64d)
+
+.PHONY: install_test_rpm_fedora install_test_rpm_fedorad
+install_test_rpm_fedora: \
+  $(foreach i,$(TEST_PACKAGS_FEDORA),install_test_rpm_fedora$i-x86_64)
+install_test_rpm_fedorad: \
+  $(foreach i,$(TEST_PACKAGS_FEDORA),install_test_rpm_fedora$i-x86_64d)
+
+.PHONY: install_test_rpm_opensuse install_test_rpm_opensused
+install_test_rpm_opensuse: \
+  install_test_rpm_opensuse-tumbleweed-x86_64 \
+  $(foreach i,$(TEST_PACKAGS_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64)
+install_test_rpm_opensused: \
+  install_test_rpm_opensuse-tumbleweed-x86_64d \
+  $(foreach i,$(TEST_PACKAGS_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64d)
+
+.PHONY: install_test_rpm_centos8-x86_64 install_test_rpm_centos8-x86_64d
 install_test_rpm_centos%-x86_64: $(DISTRIBUTION_NAME)-x86_64.rpm
 	@$(call functionPrintInfo,Test install Centos $* 64bit)
 	$(call functionInstallTestRPM,centos:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
 	$(call functionPrintResult,OK)
+install_test_rpm_centos%-x86_64d: $(DISTRIBUTION_NAME)-x86_64.rpm
+	@$(call functionPrintInfo,Test install Centos $* 64bit)
+	$(call functionInstallTestRPM,centos:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm,--debug) $(if $(QUIET),1>/dev/null)
+	$(call functionPrintResult,OK)
 
-.PHONY: install_test_rpm_fedora%-x86_64
+.PHONY: install_test_rpm_fedora%-x86_64 install_test_rpm_fedora%-x86_64d
 install_test_rpm_fedora%-x86_64:
 	@$(call functionPrintInfo,Test install Fedora $* 64bit)
 	@$(call functionInstallTestRPM,fedora:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
+install_test_rpm_fedora%-x86_64d:
+	@$(call functionPrintInfo,Test install Fedora $* 64bit)
+	@$(call functionInstallTestRPM,fedora:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm,--debug) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
 
-.PHONY: install_test_rpm_opensuse-tumbleweed-x86_64
+.PHONY: install_test_rpm_opensuse-tumbleweed-x86_64 install_test_rpm_opensuse-tumbleweed-x86_64d
 install_test_rpm_opensuse-tumbleweed-x86_64:
 	@$(call functionPrintInfo,Test install OpenSuSE tumbleweed 64bit)
 	@$(call functionInstallTestRPM,opensuse/tumbleweed,,x86_64,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_opensuse-leap-x86_64
+install_test_rpm_opensuse-tumbleweed-x86_64d:
+	@$(call functionPrintInfo,Test install OpenSuSE tumbleweed 64bit)
+	@$(call functionInstallTestRPM,opensuse/tumbleweed,,x86_64,$(DISTRIBUTION_NAME)-x86_64.rpm,--debug) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+.PHONY: install_test_rpm_opensuse-leap-x86_64 install_test_rpm_opensuse-leap%-x86_64d
 install_test_rpm_opensuse-leap%-x86_64:
 	@$(call functionPrintInfo,Test install OpenSuSE Leap $* 64bit)
 	@$(call functionInstallTestRPM,opensuse/leap:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
+install_test_rpm_opensuse-leap%-x86_64d:
+	@$(call functionPrintInfo,Test install OpenSuSE Leap $* 64bit)
+	@$(call functionInstallTestRPM,opensuse/leap:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm,--debug) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
 
-.PHONY: install_test_deb
+.PHONY: install_test_deb install_test_deb
 install_test_deb: \
   install_test_deb_debian \
-  install_test_deb_ubuntu \
+  install_test_deb_ubuntu
+install_test_debd: \
+  install_test_deb_debiand \
+  install_test_deb_ubuntud
 
-.PHONY: install_test_deb_debian
+.PHONY: install_test_deb_debian install_test_deb_debiand
 install_test_deb_debian: \
-  $(foreach i,$(TEST_PACKAGS_DEBIAN),install_test_deb_debian$i-x86_64) \
+  $(foreach i,$(TEST_PACKAGS_DEBIAN),install_test_deb_debian$i-x86_64)
+install_test_deb_debiand: \
+  $(foreach i,$(TEST_PACKAGS_DEBIAN),install_test_deb_debian$i-x86_64d)
 
-.PHONY: install_test_deb_ubuntu
+.PHONY: install_test_deb_ubuntu install_test_deb_ubuntud
 install_test_deb_ubuntu: \
-  $(foreach i,$(TEST_PACKAGS_UBUNTU),install_test_deb_ubuntu$i-x86_64) \
+  $(foreach i,$(TEST_PACKAGS_UBUNTU),install_test_deb_ubuntu$i-x86_64)
+install_test_deb_ubuntud: \
+  $(foreach i,$(TEST_PACKAGS_UBUNTU),install_test_deb_ubuntu$i-x86_64d)
 
-.PHONY: install_test_deb_debian%-x86_64
+.PHONY: install_test_deb_debian%-x86_64 install_test_deb_debian%-x86_64d
 install_test_deb_debian%-x86_64:
 	@$(call functionPrintInfo,Test install Debian $* 64bit)
 	@$(call functionInstallTestDEB,debian:$*,x86_64,$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
+install_test_deb_debian%-x86_64d:
+	@$(call functionPrintInfo,Test install Debian $* 64bit)
+	@$(call functionInstallTestDEB,debian:$*,x86_64,$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb,--debug) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
 
-.PHONY: install_test_deb_ubuntu%-x86_64
+.PHONY: install_test_deb_ubuntu%-x86_64 install_test_deb_ubuntu%-x86_64d
 install_test_deb_ubuntu%-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu $* 64bit)
 	@$(call functionInstallTestDEB,ubuntu:$*,x86_64,$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+install_test_deb_ubuntu%-x86_64d:
+	@$(call functionPrintInfo,Test install Ubuntu $* 64bit)
+	@$(call functionInstallTestDEB,ubuntu:$*,x86_64,$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb,--debug) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+.PHONY: install_test_win32 install_test_win32d
+install_test_win32:
+	@$(call functionPrintInfo,Test install Windows 64bit)
+	$(call functionInstallTestWin32,ubuntu:20.04,x86_64,$(DISTRIBUTION_NAME)-setup.exe) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+install_test_win32d:
+	@$(call functionPrintInfo,Test install Windows 64bit)
+	$(call functionInstallTestWin32,ubuntu:20.04,x86_64,$(DISTRIBUTION_NAME)-setup.exe,--debug) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 # GUI

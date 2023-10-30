@@ -4121,19 +4121,26 @@ if (false) {
    */
   private int getTerminalWidth()
   {
-    int width = 0;
+    int width = 78;
 
 /* jline 3.9.0
     try
     {
       width = TerminalBuilder.terminal().getWidth();
     }
-    catch (IOException exception)
+    catch (Throwable throwable)
     {
-      width = 78;
+      // ignored
     }
 */
-    width = jline.TerminalFactory.get().getWidth();
+    try
+    {
+      width = jline.TerminalFactory.get().getWidth();
+    }
+    catch (Throwable throwable)
+    {
+      // ignored
+    }
 
     return width;
   }

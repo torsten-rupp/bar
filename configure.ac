@@ -1080,15 +1080,15 @@ AC_ARG_WITH(
 )
 AC_ARG_WITH(
   config-dir,
-  AC_HELP_STRING([--with-config-dir=<path>],[configuration directory (default: /etc/bar)]),
+  AC_HELP_STRING([--with-config-dir=<path>],[configuration directory (default: /etc)]),
   [CONFIG_DIR=$withval],
-  [CONFIG_DIR=/etc/bar]
+  [CONFIG_DIR=/etc]
 )
 AC_ARG_WITH(
   runtime-dir,
-  AC_HELP_STRING([--with-runtime-dir=<path>],[runtime directory (default: /var/lib/bar)]),
+  AC_HELP_STRING([--with-runtime-dir=<path>],[runtime directory (default: /var/lib)]),
   [RUNTIME_DIR=$withval],
-  [RUNTIME_DIR=/var/lib/bar]
+  [RUNTIME_DIR=/var/lib]
 )
 AC_ARG_WITH(
   tls-dir,

@@ -70,7 +70,7 @@ if test $? -eq 0; then
     sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
   fi
 
-  yum -y update 1>/dev/null 2>>$tmpFile
+  yum -y update 1>/dev/null 2>/dev/null
   yum -y install \
     initscripts \
     openssl \
@@ -89,7 +89,7 @@ fi
 type zypper 1>/dev/null 2>/dev/null
 if test $? -eq 0; then
   echo -n "Update packages..."
-  zypper -q update -y  1>/dev/null 2>>$tmpFile
+  zypper -q update -y  1>/dev/null 2>/dev/null
   zypper -q install -y \
     openssl \
     jre \
@@ -113,9 +113,9 @@ set -e
 rpm -i $rpmFiles
 
 # simple command test
-bar --version
-bar --help >/dev/null
-barcontrol --help >/dev/null
+bar --version 1>/dev/null
+bar --help 1>/dev/null
+barcontrol --help 1>/dev/null
 
 # simple server test (Note: kill existing instance; systemd may not work inside docker)
 (killall bar 2>/dev/null || true)
