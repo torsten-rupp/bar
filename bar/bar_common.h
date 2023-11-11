@@ -67,6 +67,7 @@
 #define CONFIG_SUB_DIR                            "bar"
 
 #define DEFAULT_CONFIG_FILE_NAME                  "bar.cfg"
+#define DEFAULT_LOG_FILE_NAME                     "bar.log"
 #define DEFAULT_LOG_FORMAT                        "%Y-%m-%d %H:%M:%S"
 #define DEFAULT_FRAGMENT_SIZE                     (64LL*MB)
 #define DEFAULT_COMPRESS_MIN_FILE_SIZE            32
@@ -88,6 +89,8 @@
 #define DEFAULT_INCREMENTAL_DATA_SUB_DIRECTORY    CONFIG_SUB_DIR
 #define DEFAULT_PAIRING_MASTER_FILE_NAME          CONFIG_SUB_DIR "/pairing"
 #define DEFAULT_PID_FILE_NAME                     "/run/bar.pid"
+#define DEFAULT_INDEX_DATABASE_URI_TYPE           "sqlite3:"
+#define DEFAULT_INDEX_DATABASE_URI_NAME           "index.db"
 
 #define DEFAULT_CD_DEVICE_NAME                    "/dev/cdrw"
 #define DEFAULT_DVD_DEVICE_NAME                   "/dev/dvd"
@@ -914,7 +917,7 @@ typedef struct
   Server                      defaultSMBServer;
   Device                      defaultDevice;
 
-  const char                  *indexDatabaseURI;
+  String                      indexDatabaseURI;
   bool                        indexDatabaseUpdateFlag;        // TRUE for update of index database
   bool                        indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index database
   BandWidthList               indexDatabaseMaxBandWidthList;  // list of max. band width to use for index updates [bits/s]
@@ -978,7 +981,7 @@ typedef struct
   uint                        generateKeyMode;
 
   ulong                       logTypes;
-  const char                  *logFileName;
+  String                      logFileName;
   const char                  *logFormat;
   const char                  *logPostCommand;
 

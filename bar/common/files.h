@@ -52,7 +52,10 @@ typedef enum
   FILE_SYSTEM_PATH_TMP,
   FILE_SYSTEM_PATH_CONFIGURATION,
   FILE_SYSTEM_PATH_RUNTIME,
-  FILE_SYSTEM_PATH_TLS
+  FILE_SYSTEM_PATH_TLS,
+  FILE_SYSTEM_PATH_LOG,
+  FILE_SYSTEM_PATH_USER_CONFIGURATION,
+  FILE_SYSTEM_PATH_USER_HOME
 } FileSystemPathTypes;
 
 #define FILE_CAST_SIZE (sizeof(time_t)+sizeof(time_t))
@@ -248,9 +251,13 @@ typedef struct
   FILE       *file;
   uint64     index;
   uint64     size;
-  #ifndef NDEBUG
+  #if   defined(PLATFORM_LINUX)
+    #ifndef NDEBUG
+      bool deleteOnCloseFlag;
+    #endif /* not NDEBUG */
+  #elif defined(PLATFORM_WINDOWS)
     bool deleteOnCloseFlag;
-  #endif /* not NDEBUG */
+  #endif /* PLATFORM_... */
 
   StringList lineBufferList;
   #ifndef HAVE_O_NOATIME

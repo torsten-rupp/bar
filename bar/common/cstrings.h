@@ -78,7 +78,7 @@ typedef struct
 typedef struct
 {
   const char *s;
-  ulong      nextIndex;
+  size_t     nextIndex;
   Codepoint  codepoint;
 } CStringIterator;
 
@@ -321,7 +321,7 @@ static inline bool stringIsEmpty(const char *string)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringSet(char *string, ulong stringSize, const char *source)
+static inline char* stringSet(char *string, size_t stringSize, const char *source)
 {
   assert(stringSize > 0);
 
@@ -363,7 +363,7 @@ static inline char* stringSet(char *string, ulong stringSize, const char *source
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringSetBuffer(char *string, ulong stringSize, const char *buffer, ulong bufferSize)
+static inline char* stringSetBuffer(char *string, size_t stringSize, const char *buffer, size_t bufferSize)
 {
   assert(stringSize > 0);
 
@@ -461,7 +461,7 @@ static inline size_t stringInt64Length(int64 n)
 \***********************************************************************/
 
 
-static inline char* stringVFormat(char *string, ulong stringSize, const char *format, va_list arguments)
+static inline char* stringVFormat(char *string, size_t stringSize, const char *format, va_list arguments)
 {
   assert(string != NULL);
   assert(stringSize > 0);
@@ -472,7 +472,7 @@ static inline char* stringVFormat(char *string, ulong stringSize, const char *fo
   return string;
 }
 
-static inline char* stringFormat(char *string, ulong stringSize, const char *format, ...)
+static inline char* stringFormat(char *string, size_t stringSize, const char *format, ...)
 {
   va_list arguments;
 
@@ -543,9 +543,9 @@ static inline size_t stringFormatLength(const char *format, ...)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringAppend(char *string, ulong stringSize, const char *source)
+static inline char* stringAppend(char *string, size_t stringSize, const char *source)
 {
-  ulong n;
+  size_t n;
 
   assert(stringSize > 0);
 
@@ -573,9 +573,9 @@ static inline char* stringAppend(char *string, ulong stringSize, const char *sou
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringAppendChar(char *string, ulong stringSize, char ch)
+static inline char* stringAppendChar(char *string, size_t stringSize, char ch)
 {
-  ulong n;
+  size_t n;
 
   assert(stringSize > 0);
 
@@ -606,9 +606,9 @@ static inline char* stringAppendChar(char *string, ulong stringSize, char ch)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringAppendVFormat(char *string, ulong stringSize, const char *format, va_list arguments)
+static inline char* stringAppendVFormat(char *string, size_t stringSize, const char *format, va_list arguments)
 {
-  ulong n;
+  size_t n;
 
   assert(string != NULL);
   assert(stringSize > 0);
@@ -623,7 +623,7 @@ static inline char* stringAppendVFormat(char *string, ulong stringSize, const ch
   return string;
 }
 
-static inline char* stringAppendFormat(char *string, ulong stringSize, const char *format, ...)
+static inline char* stringAppendFormat(char *string, size_t stringSize, const char *format, ...)
 {
   va_list arguments;
 
@@ -651,9 +651,9 @@ static inline char* stringAppendFormat(char *string, ulong stringSize, const cha
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringFill(char *string, ulong stringSize, ulong length, char ch)
+static inline char* stringFill(char *string, size_t stringSize, size_t length, char ch)
 {
-  ulong n;
+  size_t n;
 
   assert(stringSize > 0);
 
@@ -680,9 +680,9 @@ static inline char* stringFill(char *string, ulong stringSize, ulong length, cha
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringFillAppend(char *string, ulong stringSize, ulong length, char ch)
+static inline char* stringFillAppend(char *string, size_t stringSize, size_t length, char ch)
 {
-  ulong n,m;
+  size_t n,m;
 
   assert(stringSize > 0);
 
@@ -780,7 +780,7 @@ static inline char* stringTrim(char *string)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringNew(ulong n)
+static inline char* stringNew(size_t n)
 {
   char *string;
 
@@ -805,7 +805,7 @@ static inline char* stringNew(ulong n)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringNewBuffer(const char *buffer, ulong bufferSize)
+static inline char* stringNewBuffer(const char *buffer, size_t bufferSize)
 {
   char *string;
 
@@ -878,7 +878,7 @@ static inline void stringDelete(char *string)
 * Notes  : -
 \***********************************************************************/
 
-static inline char stringAt(const char *string, ulong index)
+static inline char stringAt(const char *string, size_t index)
 {
   assert(string != NULL);
 
@@ -897,7 +897,7 @@ static inline char stringAt(const char *string, ulong index)
 * Notes  : -
 \***********************************************************************/
 
-static inline bool stringIsValidUTF8Codepointn(const char *string, size_t length, ulong index, ulong *nextIndex)
+static inline bool stringIsValidUTF8Codepointn(const char *string, size_t length, size_t index, size_t *nextIndex)
 {
   assert(index < length);
 
@@ -964,7 +964,7 @@ static inline bool stringIsValidUTF8Codepointn(const char *string, size_t length
 * Notes  : -
 \***********************************************************************/
 
-static inline bool stringIsValidUTF8Codepoint(const char *string, ulong index, ulong *nextIndex)
+static inline bool stringIsValidUTF8Codepoint(const char *string, size_t index, size_t *nextIndex)
 {
   if (string != NULL)
   {
@@ -986,9 +986,9 @@ static inline bool stringIsValidUTF8Codepoint(const char *string, ulong index, u
 * Notes  : -
 \***********************************************************************/
 
-static inline bool stringIsValidUTF8(const char *string, ulong index)
+static inline bool stringIsValidUTF8(const char *string, size_t index)
 {
-  ulong nextIndex;
+  size_t nextIndex;
 
   if (string != NULL)
   {
@@ -1024,10 +1024,10 @@ static inline bool stringIsValidUTF8(const char *string, ulong index)
 * Notes  : -
 \***********************************************************************/
 
-static inline char *stringMakeValidUTF8(char *string, ulong index)
+static inline char *stringMakeValidUTF8(char *string, size_t index)
 {
-  ulong nextIndex;
-  ulong toIndex;
+  size_t nextIndex;
+  size_t toIndex;
 
   if (string != NULL)
   {
@@ -1065,7 +1065,7 @@ static inline char *stringMakeValidUTF8(char *string, ulong index)
 * Notes  : -
 \***********************************************************************/
 
-static inline size_t stringNextUTF8n(const char *string, size_t length, ulong index)
+static inline size_t stringNextUTF8n(const char *string, size_t length, size_t index)
 {
   assert(string != NULL);
   assert(index <= length);
@@ -1104,7 +1104,7 @@ static inline size_t stringNextUTF8n(const char *string, size_t length, ulong in
 * Notes  : -
 \***********************************************************************/
 
-static inline size_t stringNextUTF8(const char *string, ulong index)
+static inline size_t stringNextUTF8(const char *string, size_t index)
 {
   assert(string != NULL);
 
@@ -1120,9 +1120,9 @@ static inline size_t stringNextUTF8(const char *string, ulong index)
 * Notes  : -
 \***********************************************************************/
 
-static inline ulong charUTF8Length(Codepoint codepoint)
+static inline size_t charUTF8Length(Codepoint codepoint)
 {
-  ulong length;
+  size_t length;
 
   if      ((codepoint & 0xFFFFFF80) == 0)
   {
@@ -1249,7 +1249,7 @@ static inline size_t stringLengthCodepointsUTF8(const char *string)
 * Notes  : -
 \***********************************************************************/
 
-static inline Codepoint stringAtUTF8n(const char *string, size_t length, ulong index, ulong *nextIndex)
+static inline Codepoint stringAtUTF8n(const char *string, size_t length, size_t index, size_t *nextIndex)
 {
   Codepoint codepoint;
 
@@ -1305,7 +1305,7 @@ static inline Codepoint stringAtUTF8n(const char *string, size_t length, ulong i
 * Notes  : -
 \***********************************************************************/
 
-static inline Codepoint stringAtUTF8(const char *string, ulong index, ulong *nextIndex)
+static inline Codepoint stringAtUTF8(const char *string, size_t index, size_t *nextIndex)
 {
   assert(string != NULL);
 
@@ -1325,12 +1325,10 @@ static inline Codepoint stringAtUTF8(const char *string, ulong index, ulong *nex
 
 static inline size_t stringVFormatLengthCodepointsUTF8(const char *format, va_list arguments)
 {
-  int  n;
-  char *s;
+  size_t n;
+  char   *s;
 
-  assert(format != NULL);
-
-  if (vasprintf(&s,format,arguments) != -1)
+  if ((format != NULL) && (vasprintf(&s,format,arguments) != -1))
   {
     n = stringLengthCodepointsUTF8(s);
     free(s);
@@ -1340,18 +1338,23 @@ static inline size_t stringVFormatLengthCodepointsUTF8(const char *format, va_li
     n = 0;
   }
 
-  return (size_t)n;
+  return n;
 }
 static inline size_t stringFormatLengthCodepointsUTF8(const char *format, ...)
 {
   va_list arguments;
   size_t  n;
 
-  assert(format != NULL);
-
-  va_start(arguments,format);
-  n = stringVFormatLengthCodepointsUTF8(format,arguments);
-  va_end(arguments);
+  if (format != NULL)
+  {
+    va_start(arguments,format);
+    n = stringVFormatLengthCodepointsUTF8(format,arguments);
+    va_end(arguments);
+  }
+  else
+  {
+    n = 0;
+  }
 
   return n;
 }
@@ -1410,7 +1413,7 @@ static inline long stringFindReverseChar(const char *string, char findChar)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringSub(char *string, ulong stringSize, const char *source, ulong index, long length)
+static inline char* stringSub(char *string, size_t stringSize, const char *source, size_t index, long length)
 {
   long n;
 
@@ -1499,10 +1502,10 @@ static inline Codepoint stringIteratorGet(CStringIterator *cStringIterator)
 * Notes  : -
 \***********************************************************************/
 
-static inline Codepoint stringIteratorAtX(CStringIterator *cStringIterator, ulong index)
+static inline Codepoint stringIteratorAtX(CStringIterator *cStringIterator, size_t index)
 {
   Codepoint codepoint;
-  ulong     nextIndex;
+  size_t     nextIndex;
 
   assert(cStringIterator != NULL);
 
@@ -1566,7 +1569,7 @@ static inline void stringIteratorNext(CStringIterator *cStringIterator)
 * Notes  : -
 \***********************************************************************/
 
-static inline void stringIteratorNextX(CStringIterator *cStringIterator, ulong n)
+static inline void stringIteratorNextX(CStringIterator *cStringIterator, size_t n)
 {
   assert(cStringIterator != NULL);
 
@@ -1650,7 +1653,10 @@ static inline bool stringGetNextToken(CStringTokenizer *cStringTokenizer, const 
   assert(token != NULL);
 
   (*token) = cStringTokenizer->nextToken;
-  cStringTokenizer->nextToken = strtok_r(NULL,cStringTokenizer->delimiters,&cStringTokenizer->p);
+  if (cStringTokenizer->nextToken != NULL)
+  {
+    cStringTokenizer->nextToken = strtok_r(NULL,cStringTokenizer->delimiters,&cStringTokenizer->p);
+  }
 
   return (*token) != NULL;
 }
@@ -1904,7 +1910,7 @@ static inline int stringScan(const char *string, const char *format, ...)
 *          arguments         - arguments
 *          ...               - optional matching strings of sub-patterns
 *                              (const char**,size_t*), last value have
-*                              to be NULL
+*                              to be NULL!
 * Output : -
 * Return : TRUE iff pattern match with string
 * Notes  : sub-match strings are _not_ copied!

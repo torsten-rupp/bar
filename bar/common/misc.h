@@ -242,6 +242,18 @@ typedef void(*ExecuteIOFunction)(ConstString line,
                                  void        *userData
                                 );
 
+/***********************************************************************\
+* Name   : ServiceCode
+* Purpose: service code
+* Input  : argc - number of arguments
+*          argv - arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*ServiceCode)(int argc, const char* argv[]);
+
 // performance values
 typedef struct
 {
@@ -1397,6 +1409,22 @@ Errors Misc_executeScript(const char       *script,
                           ExecuteIOFunction stderrExecuteIOFunction,
                           void              *stderrExecuteIOUserData
                          );
+
+/***********************************************************************\
+* Name   : Misc_runService
+* Purpose: run code as daemon/service
+* Input  : serviceCode - service code
+*          argc        - number of arguments
+*          argv        - arguments
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Misc_runService(ServiceCode serviceCode,
+                       int         argc,
+                       const char  *argv[]
+                      );
 
 /*---------------------------------------------------------------------*/
 

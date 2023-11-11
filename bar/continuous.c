@@ -1845,14 +1845,14 @@ Errors Continuous_init(const char *databaseURI)
                   CALLBACK_(NULL,NULL)  // dictionaryCompareFunction
                  );
 
-  // check number of possible notifies
-  n = getMaxNotifyWatches();
-  if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
-  n = getMaxNotifyInstances();
-  if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
-
-  // init inotify
   #if   defined(PLATFORM_LINUX)
+    // check number of possible notifies
+    n = getMaxNotifyWatches();
+    if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
+    n = getMaxNotifyInstances();
+    if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
+
+    // init inotify
     inotifyHandle = inotify_init();
     if (inotifyHandle == -1)
     {

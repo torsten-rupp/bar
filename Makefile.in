@@ -65,7 +65,7 @@ DOCKER_PROMPT          = '\[\e[0;38;5;39m\]\u\[\e[0;38;5;39m\]@\[\e[0;38;5;39m\]
 TXT2MAN                = @TXT2MAN@
 UNOCONV                = @UNOCONV@
 
-GIT                    = @GIT@
+LAUNCH4JC              = @LAUNCH4JC@
 
 #---------------------------------- commands----------------------------------
 
@@ -78,6 +78,7 @@ DIFF                   = diff
 DOCKER                 = @DOCKER@
 ECHO                   = echo
 ECHO_NO_LF             = echo -n
+GIT                    = @GIT@
 GREP                   = grep
 INSTALL                = @INSTALL@
 LN                     = ln
@@ -155,8 +156,13 @@ TARGETS              = bar/bar@EXEEXT@ \
                        bar/destroyer@EXEEXT@ \
                        bar/bar-keygen@SHELLEXT@ \
                        $(if $(findstring $(ENABLE_GUI),yes),\
-                         barcontrol/barcontrol \
-                         barcontrol/barcontrol.cmd \
+                         $(if $(findstring $(PLATFORM),LINUX),\
+                           barcontrol/barcontrol \
+                         ) \
+                         $(if $(findstring $(PLATFORM),WINDOWS),\
+                           barcontrol/barcontrol.cmd \
+                           $(if $(LAUNCH4JC),barcontrol/barcontrol@EXEEXT@) \
+                         ) \
                        ) \
 
 OTHER_SOURCES        = $(SOURCE_DIR)/errors.pl \
@@ -326,12 +332,14 @@ bar-keygen:
 	$(MAKE) -C bar bar-keygen
 
 # create barcontrol
+ifeq ($(PLATFORM),LINUX)
 .PHONY: barcontrol
-barcontrol barcontrol/barcontrol:
+barcontrol/barcontrol barcontrol:
 ifeq ($(ENABLE_GUI),yes)
 	$(MAKE) -C barcontrol barcontrol
 else
 	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+endif
 endif
 
 barcontrol/barcontrol.cmd:
@@ -339,6 +347,14 @@ ifeq ($(ENABLE_GUI),yes)
 	$(MAKE) -C barcontrol barcontrol.cmd
 else
 	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+endif
+ifneq ($(LAUNCH4JC),)
+barcontrol/barcontrol@EXEEXT@:
+ifeq ($(ENABLE_GUI),yes)
+	$(MAKE) -C barcontrol barcontrol@EXEEXT@
+else
+	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+endif
 endif
 
 barcontrol/barcontrol%.jar:
@@ -466,7 +482,7 @@ uninstall:
           $(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/bar-keygen@SHELLEXT@"; \
           $(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
                                                       "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
-                                                      "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
+                                                      "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol@EXEEXT@"; \
           ) \
           $(RMF) "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; \
           $(RMF) "$(DESTDIR)$(INSTALL_TLS_DIR)/certs/bar-ca.pem"; \
@@ -925,9 +941,9 @@ build_deb:
 # Windows setup
 .PHONY: win32 win32d clean_win32
 win32:
-	$(MAKE) $(DISTRIBUTION_NAME)-setup.exe
+	$(MAKE) $(DISTRIBUTION_NAME)-setup@EXEEXT@
 win32d:
-	$(MAKE) $(DISTRIBUTION_NAME)-setup.exe DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME)-setup@EXEEXT@ DEBUG=1
 
 clean_win32:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm
@@ -936,7 +952,7 @@ clean_win32:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm.log
 
 #TODO: remove /media/wine and move to build_win32.sh
-$(DISTRIBUTION_NAME)-setup.exe: \
+$(DISTRIBUTION_NAME)-setup@EXEEXT@: \
   $(DISTRIBUTION_NAME).tar.bz2
 	@$(call functionPrintInfo,Build Win32 on mingw32)
 	( \
@@ -1148,11 +1164,11 @@ install_test_deb_ubuntu%-x86_64d:
 .PHONY: install_test_win32 install_test_win32d
 install_test_win32:
 	@$(call functionPrintInfo,Test install Windows 64bit)
-	$(call functionInstallTestWin32,ubuntu:20.04,x86_64,$(DISTRIBUTION_NAME)-setup.exe) $(if $(QUIET),1>/dev/null)
+	$(call functionInstallTestWin32,ubuntu:20.04,x86_64,$(DISTRIBUTION_NAME)-setup@EXEEXT@) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 install_test_win32d:
 	@$(call functionPrintInfo,Test install Windows 64bit)
-	$(call functionInstallTestWin32,ubuntu:20.04,x86_64,$(DISTRIBUTION_NAME)-setup.exe,--debug) $(if $(QUIET),1>/dev/null)
+	$(call functionInstallTestWin32,ubuntu:20.04,x86_64,$(DISTRIBUTION_NAME)-setup@EXEEXT@,--debug) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 # GUI
@@ -1164,57 +1180,61 @@ gui: \
 clean_gui:
 	$(RMF) $(DISTRIBUTION_NAME_GUI).zip
 
+# TODO: how to include barcontrol.exe in GUI distribution? Always do a Windows build?
+ifeq ($(ENABLE_GUI),yes)
 $(DISTRIBUTION_NAME_GUI).zip: \
   barcontrol/barcontrol \
   barcontrol/barcontrol.cmd \
+  $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4JC),barcontrol/barcontrol@EXEEXT@)) \
   barcontrol/barcontrol-linux.jar \
   barcontrol/barcontrol-linux_64.jar \
-  barcontrol/barcontrol.cmd \
   barcontrol/barcontrol-windows.jar \
   barcontrol/barcontrol-windows_64.jar \
   barcontrol/barcontrol-solaris.jar \
   barcontrol/barcontrol-macosx.jar \
   barcontrol/barcontrol-macosx_64.jar
 	$(INSTALL) -d tmp/gui/linux
-	$(INSTALL) -m 775 \
-                   barcontrol/barcontrol \
-                   tmp/gui/linux
-	$(INSTALL) -m 664 \
+	$(INSTALL) -t tmp/gui/linux \
+	           -m 775 \
+                   barcontrol/barcontrol
+	$(INSTALL) -t tmp/gui/linux \
+	           -m 664 \
                    barcontrol/barcontrol-linux.jar \
-                   barcontrol/barcontrol-linux_64.jar \
-                   tmp/gui/linux
+                   barcontrol/barcontrol-linux_64.jar
 	#
 	$(INSTALL) -d tmp/gui/windows
-	$(INSTALL) -m 775 \
+	$(INSTALL) -t tmp/gui/windows \
+	           -m 775 \
                    barcontrol/barcontrol.cmd \
-                   tmp/gui/windows
-	$(INSTALL) -m 664 \
+	                 $(if $(LAUNCH4JC),barcontrol/barcontrol@EXEEXT@)
+	$(INSTALL) -t tmp/gui/windows \
+	           -m 664 \
                    barcontrol/barcontrol-windows.jar \
-                   barcontrol/barcontrol-windows_64.jar \
-                   tmp/gui/windows
+                   barcontrol/barcontrol-windows_64.jar
 	#
 	$(INSTALL) -d tmp/gui/solaris
-	$(INSTALL) -m 775 \
-                   barcontrol/barcontrol \
-                   tmp/gui/solaris
-	$(INSTALL) -m 664 \
-                   barcontrol/barcontrol-solaris.jar \
-                   tmp/gui/solaris
+	$(INSTALL) -t tmp/gui/solaris \
+	           -m 775 \
+                   barcontrol/barcontrol
+	$(INSTALL) -t tmp/gui/solaris \
+	           -m 664 \
+                   barcontrol/barcontrol-solaris.jar
 	#
 	$(INSTALL) -d tmp/gui/macosx
-	$(INSTALL) -m 775 \
-                   barcontrol/barcontrol \
-                   tmp/gui/macosx
-	$(INSTALL) -m 664 \
+	$(INSTALL) -t tmp/gui/macosx \
+	           -m 775 \
+                   barcontrol/barcontrol
+	$(INSTALL) -t tmp/gui/macosx \
+	           -m 664 \
                    barcontrol/barcontrol-macosx.jar \
-                   barcontrol/barcontrol-macosx_64.jar \
-                   tmp/gui/macosx
+                   barcontrol/barcontrol-macosx_64.jar
 
 	($(CD) tmp/gui; $(ZIP) -r ../../$@ linux windows solaris macosx)
 	$(RMRF) tmp/gui
 	#
 ifneq ($(MD5SUM),)
 	$(MD5SUM) $@
+endif
 endif
 
 .PHONY: setup

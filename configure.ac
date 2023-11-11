@@ -892,7 +892,10 @@ AC_SUBST(JAVAC_FLAGS)                        dnl java compiler flags
 AC_SUBST(JAVA_PATH_SEPARATOR_CHAR)           dnl java path separator (: or ;)
 
 AC_SUBST(SWT_DIR)                            dnl SWT directory
+AC_SUBST(LAUNCH4JC)                          dnl launch4jc
+# TODO: remove
 AC_SUBST(LAUNCH4J_DIR)                       dnl launch4j directory
+AC_SUBST(JRE_WINDOWS_DIR)                    dnl JRE Windows directory
 
 AC_SUBST(DUMP_SYMS)                          dnl Breakpad dump symbols tool
 
@@ -1420,7 +1423,6 @@ if test "$ENABLE_GUI" = "yes"; then
       ENABLE_GUI_I18N="no"
     fi
   fi
-  AC_PATH_PROGS(LAUNCH4J,launch4j)
 
   if test -n "$JAVA"; then
     AC_JAVAC_VERSION(JAVA_VERSION)
@@ -1451,6 +1453,11 @@ if test "$ENABLE_GUI" = "yes"; then
   fi
   if test "$ENABLE_DEBUG" = "yes"; then
     JAVAC_FLAGS="-g"
+  fi
+
+  AC_PATH_PROGS(LAUNCH4JC,launch4jc,,$LAUNCH4J_DIR $PWD/launch4j)
+  if test -d jre_windows; then
+    JRE_WINDOWS_DIR=$PWD/jre_windows
   fi
 fi
 
@@ -2453,7 +2460,7 @@ if test $ENABLE_XDELTA3 = "yes"; then
          xdelta3-cfgs.h \
          xdelta3-decode.h; \
       ) 1>$tmpFile 2>&1
-      (cd $cwd/extern/include; ln -s ../sources/xdelta3.c)
+      (cd $cwd/extern/include; ln -sf ../sources/xdelta3.c)
       AC_MSG_RESULT([done])
     fi
 

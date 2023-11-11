@@ -8,35 +8,51 @@ AppUpdatesURL=http://www.kigen.de/projects/bar/index.html
 DefaultDirName={pf}\BAR
 DefaultGroupName=BAR
 ShowLanguageDialog=yes
+SetupLogging=yes
+
+; debug only
+Compression = none
 
 [Tasks]
 ; NOTE: The following entry contains English phrases ("Create a desktop icon" and "Additional icons"). You are free to translate them into another language if required.
 Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"
 
 [Files]
-Source: "tmp\usr\bin\bar.exe";                   DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\usr\bin\bar-debug.exe";             DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\usr\bin\bar-index.exe";             DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\usr\bin\bar-index-debug.exe";       DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\usr\bin\bar-keygen.cmd";            DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\usr\bin\libgcc_s_*.dll";            DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\usr\bin\libstdc++-6.dll";           DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\usr\bin\libwinpthread-1.dll";       DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\usr\bin\libpq.dll";                 DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\etc\bar\bar.cfg";                   DestDir: "{win}"; Flags: ignoreversion
-Source: "tmp\usr\bin\barcontrol.cmd";            DestDir: "{app}"; Flags: ignoreversion
-Source: "tmp\usr\bin\barcontrol-windows_64.jar"; DestDir: "{app}"; Flags: ignoreversion
+Source: "tmp\usr\bin\bar.exe";                   DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\bar-debug.exe";             DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\bar-index.exe";             DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\bar-index-debug.exe";       DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\bar-keygen.cmd";            DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\libgcc_s_*.dll";            DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\libstdc++-6.dll";           DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\libwinpthread-1.dll";       DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\libpq.dll";                 DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\barcontrol.exe";            DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\barcontrol-windows_64.jar"; DestDir: "{app}";     Flags: ignoreversion
+Source: "tmp\usr\bin\jre\*";                     DestDir: "{app}\jre"; Flags: ignoreversion recursesubdirs
 
 [Dirs]
 Name: "{localappdata}\BAR\jobs"
+; Note: why is {sys} here the 64bit path?
+Name: "{sys}\config\systemprofile\AppData\Local\BAR"
+Name: "{sys}\config\systemprofile\AppData\Local\BAR\jobs"
 
 [Icons]
-Name: "{group}\BAR";       Filename: "{app}\bar.exe"
-Name: "{userdesktop}\BAR"; Filename: "{app}\bar.exe"; Tasks: desktopicon
+Name: "{group}\BARControl";       Filename: "{app}\barcontrol.exe"
+Name: "{userdesktop}\BARControl"; Filename: "{app}\barcontrol.exe"; Tasks: desktopicon
 
 [Run]
-; NOTE: The following entry contains an English phrase ("Launch"). You are free to translate it into another language if required.
-;Filename: "{app}\bar.exe"; Description: "Launch BAR"; Flags: nowait postinstall skipifsilent
+; create default configuration files
+Filename: {app}\bar.exe; Parameters: "--no-default-config --save-configuration={win}\bar.cfg" ; Flags: runhidden
+Filename: {app}\bar.exe; Parameters: "--no-default-config --save-configuration={syswow64}\config\systemprofile\AppData\Local\BAR\bar.cfg" ; Flags: runhidden
+; create and start service
+Filename: {sys}\sc.exe; Parameters: "create ""BAR Server"" binPath= ""\""{app}\bar.exe\"" --server --daemon"" start= auto" ; Flags: runhidden
+Filename: {sys}\sc.exe; Parameters: "start ""BAR Server""" ; Flags: runhidden
+
+[UninstallRun]
+; stop and delete service
+Filename: {sys}\sc.exe; Parameters: "stop ""BAR Server""" ;   Flags: runhidden
+Filename: {sys}\sc.exe; Parameters: "delete ""BAR Server""" ; Flags: runhidden
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"

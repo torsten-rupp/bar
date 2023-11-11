@@ -65,6 +65,9 @@ KRB5_VERSION_MINOR=2
 LIBSMB2_VERSION=4.0.0
 BINUTILS_VERSION=2.41
 PTHREAD_W32_VERSION=2-9-1
+LAUNCH4J_MAJOR_VERSION=3
+LAUNCH4J_VERSION=3.14
+JRE_VERSION=1.7.0-u40
 
 # --------------------------------- variables --------------------------------
 
@@ -117,7 +120,6 @@ icuFlag=0
 mtxFlag=0
 binutilsFlag=0
 pthreadsW32Flag=0
-breakpadFlag=0
 launch4jFlag=0
 jreWindowsFlag=0
 
@@ -273,10 +275,6 @@ while test $# != 0; do
           allFlag=0
           pthreadsW32Flag=1
           ;;
-        breakpad|minidump)
-          allFlag=0
-          breakpadFlag=1
-          ;;
         launch4j)
           allFlag=0
           launch4jFlag=1
@@ -392,10 +390,6 @@ while test $# != 0; do
       allFlag=0
       pthreadsW32Flag=1
       ;;
-    breakpad|minidump)
-      allFlag=0
-      breakpadFlag=1
-      ;;
     launch4j)
       allFlag=0
       launch4jFlag=1
@@ -450,13 +444,12 @@ if test $helpFlag -eq 1; then
   $ECHO " mtx"
   $ECHO " icu"
   $ECHO " binutils"
+  $ECHO " launch4j"
+  $ECHO " jre-windows"
   $ECHO ""
   $ECHO "Additional optional packages:"
   $ECHO ""
-  $ECHO " breakpad"
-  $ECHO " launch4j"
   $ECHO " pthreads-w32"
-  $ECHO " jre-windows"
   exit 0
 fi
 
@@ -2012,19 +2005,19 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $launch4jFlag -eq 1; then
+  if test $allFlag -eq 1 -o $launch4jFlag -eq 1; then
     (
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get launchj4..."
-     fileName="launch4j-3.1.0-beta2-linux.tgz"
+     fileName="launch4j-$LAUNCH4J_VERSION-linux-x64.tgz"
      if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/launch4j-3.1.0-beta2-linux.tgz; then
-         $LN -s $localDirectory/launch4j-3.1.0-beta2-linux.tgz $fileName
+       if test -n "$localDirectory" -a -f $localDirectory/launch4j-$LAUNCH4J_VERSION-linux-x64.tgz; then
+         $LN -s $localDirectory/launch4j-$LAUNCH4J_VERSION-linux-x64.tgz $fileName
          result=1
        else
-         url="http://downloads.sourceforge.net/project/launch4j/launch4j-3/3.1.0-beta2/$fileName"
+         url="https://sourceforge.net/projects/launch4j/files/launch4j-$LAUNCH4J_MAJOR_VERSION/$LAUNCH4J_VERSION/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -2057,16 +2050,16 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $jreWindowsFlag -eq 1; then
+  if test $allFlag -eq 1 -o $jreWindowsFlag -eq 1; then
     (
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
      $ECHO_NO_NEW_LINE "Get OpenJDK Windows..."
-     fileName="openjdk-1.6.0-unofficial-b30-windows-i586-image.zip"
+     fileName="openjdk-$JRE_VERSION-unofficial-windows-amd64-image.zip"
      if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip; then
-         $LN -s $localDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip $fileName
+       if test -n "$localDirectory" -a -f $localDirectory/openjdk-$JRE_VERSION-unofficial-windows-amd64-image.zip; then
+         $LN -s $localDirectory/openjdk-$JRE_VERSION-unofficial-windows-amd64-image.zip $fileName
          result=1
        else
          url="https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/$fileName"
@@ -2080,53 +2073,12 @@ if test $cleanFlag -eq 0; then
        result=1
      fi
      if test $noDecompressFlag -eq 0; then
-       $UNZIP -o -q $fileName 'openjdk-1.6.0-unofficial-b30-windows-i586-image/jre/*'
+       $UNZIP -o -q $fileName '*/jre/*'
        if test $? -ne 0; then
          fatalError "decompress"
        fi
 
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows)
-       if test $? -ne 0; then
-         fatalError "symbolic link"
-       fi
-     fi
-    )
-    result=$?
-    case $result in
-      1) $ECHO "ok (local)"; ;;
-      2) $ECHO "ok"; ;;
-      3) $ECHO "ok (cached)"; ;;
-      *) exit $result; ;;
-    esac
-
-    (
-     install -d "$destinationDirectory"
-     cd "$destinationDirectory"
-
-     $ECHO_NO_NEW_LINE "Get OpenJDK Windows 64bit..."
-     fileName="openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip"
-     if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip; then
-         $LN -s $localDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip
-         result=1
-       else
-         url="https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/$fileName"
-         $CURL $curlOptions --output $fileName $url
-         if test $? -ne 0; then
-           fatalError "download $url -> $fileName"
-         fi
-         result=2
-       fi
-     else
-       result=3
-     fi
-     if test $noDecompressFlag -eq 0; then
-       $UNZIP -o -q $fileName 'openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre/*'
-       if test $? -ne 0; then
-         fatalError "decompress"
-       fi
-
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64)
+       (cd "$workingDirectory"; $LN -sfT `find $destinationDirectory -maxdepth 2 -type d -name "jre"` jre_windows)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi

@@ -33,6 +33,7 @@
 #if   defined(PLATFORM_LINUX)
 #include <sys/utsname.h>
 #elif defined(PLATFORM_WINDOWS)
+#include <windows.h>
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
@@ -154,10 +155,10 @@ LOCAL void openLog(void)
 {
   SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (globalOptions.logFileName != NULL)
+    if (!String_isEmpty(globalOptions.logFileName))
     {
-      logFile = fopen(globalOptions.logFileName,"a");
-      if (logFile == NULL) printWarning("cannot open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
+      logFile = fopen(String_cString(globalOptions.logFileName),"a");
+      if (logFile == NULL) printWarning("cannot open log file '%s' (error: %s)!",String_cString(globalOptions.logFileName),strerror(errno));
     }
   }
 }
@@ -196,11 +197,11 @@ LOCAL void reopenLog(void)
 {
   SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (globalOptions.logFileName != NULL)
+    if (!String_isEmpty(globalOptions.logFileName))
     {
       fclose(logFile);
-      logFile = fopen(globalOptions.logFileName,"a");
-      if (logFile == NULL) printWarning("cannot re-open log file '%s' (error: %s)!",globalOptions.logFileName,strerror(errno));
+      logFile = fopen(String_cString(globalOptions.logFileName),"a");
+      if (logFile == NULL) printWarning("cannot re-open log file '%s' (error: %s)!",String_cString(globalOptions.logFileName),strerror(errno));
     }
   }
 }
@@ -462,6 +463,7 @@ LOCAL Errors initAll(void)
     #ifdef HAVE_SIGUSR1
       sigaction(SIGUSR1,&signalAction,NULL);
     #endif
+
     sigaction(SIGSEGV,&signalAction,NULL);
     sigaction(SIGFPE,&signalAction,NULL);
     sigaction(SIGILL,&signalAction,NULL);
@@ -1263,17 +1265,17 @@ void fatalLogMessage(const char *text, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  if (globalOptions.logFileName != NULL)
+  if (!String_isEmpty(globalOptions.logFileName))
   {
     // try to open log file if not already open
     if (logFile == NULL)
     {
-      logFile = fopen(globalOptions.logFileName,"a");
+      logFile = fopen(String_cString(globalOptions.logFileName),"a");
     }
 
     if (logFile != NULL)
     {
-      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,globalOptions.logFormat);
+      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,String_cString(globalOptions.logFormat));
 
       // append to log file
       UNUSED_RESULT(fprintf(logFile,"%s> ",String_cString(dateTime)));
@@ -3000,7 +3002,7 @@ LOCAL Errors runServer(void)
     {
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Updated configuration file fail (error: %s)",
+                 "Update configuration file fail (error: %s)",
                  Error_getText(error)
                 );
     }
@@ -3029,7 +3031,7 @@ LOCAL Errors runServer(void)
     {
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Updated configuration file fail (error: %s)",
+                 "Update configuration file fail (error: %s)",
                  Error_getText(error)
                 );
     }
@@ -3671,16 +3673,16 @@ LOCAL Errors runDebug(int argc, const char *argv[])
      )
   {
     // init index database
-    if (stringIsEmpty(globalOptions.indexDatabaseURI))
+    if (String_isEmpty(globalOptions.indexDatabaseURI))
     {
       printError("no index database!");
       AutoFree_cleanup(&autoFreeList);
       return ERROR_DATABASE;
     }
-    error = Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    error = Database_parseSpecifier(&databaseSpecifier,String_cString(globalOptions.indexDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
     if (error != ERROR_NONE)
     {
-      printError("no valid database URI '%s'",globalOptions.indexDatabaseURI);
+      printError("no valid database URI '%s'",String_cString(globalOptions.indexDatabaseURI));
       AutoFree_cleanup(&autoFreeList);
       return ERROR_DATABASE;
     }
@@ -4366,19 +4368,16 @@ LOCAL Errors bar(int argc, const char *argv[])
   {
     fileName = String_new();
 
-    // read default configuration from <CONFIG_DIR>/<CONFIG_SUB_DIR>/bar.cfg (ignore errors)
-    File_setFileNameCString(fileName,CONFIG_DIR "/" CONFIG_SUB_DIR);
-    File_appendFileNameCString(fileName,DEFAULT_CONFIG_FILE_NAME);
+    // read default global configuration from <CONFIG_DIR>/<CONFIG_SUB_DIR>/bar.cfg (ignore errors)
+    File_getSystemDirectoryCString(fileName,FILE_SYSTEM_PATH_CONFIGURATION,CONFIG_SUB_DIR FILE_SEPARATOR_STRING DEFAULT_CONFIG_FILE_NAME);
     if (File_isFile(fileName) && File_isReadable(fileName))
     {
       // add to config list
       Configuration_add(CONFIG_FILE_TYPE_AUTO,String_cString(fileName));
     }
 
-    // read default configuration from $HOME/.bar/bar.cfg (if exists)
-    File_setFileNameCString(fileName,getenv("HOME"));
-    File_appendFileNameCString(fileName,".bar");
-    File_appendFileNameCString(fileName,DEFAULT_CONFIG_FILE_NAME);
+    // read default user configuration from $HOME/.bar/bar.cfg (if exists)
+    File_getSystemDirectoryCString(fileName,FILE_SYSTEM_PATH_USER_CONFIGURATION,".bar" FILE_SEPARATOR_STRING DEFAULT_CONFIG_FILE_NAME);
     if (File_isFile(fileName))
     {
       // add to config list
@@ -4658,26 +4657,8 @@ int main(int argc, const char *argv[])
         && !globalOptions.helpInternalFlag
        )
     {
-      // run as daemon
-      #if   defined(PLATFORM_LINUX)
-        // Note: do not suppress stdin/out/err for GCOV version
-        #ifdef GCOV
-          #define DAEMON_NO_SUPPRESS_STDIO 1
-        #else /* not GCOV */
-          #define DAEMON_NO_SUPPRESS_STDIO 0
-        #endif /* GCOV */
-        if (daemon(1,DAEMON_NO_SUPPRESS_STDIO) == 0)
-        {
-          error = bar(argc,argv);
-        }
-        else
-        {
-          error = ERROR_RUN_DAEMON;
-        }
-      #elif defined(PLATFORM_WINDOWS)
-        // Note: daemon mode not supported on Windows
-        error = bar(argc,argv);
-      #endif /* PLATFORM_... */
+      // run as service
+      error = Misc_runService(bar,argc,argv);
     }
     else
     {

@@ -2321,11 +2321,11 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
           {
             if (configValueSet->value != 0)
             {
-              if (!String_isEmpty(s)) String_appendChar(s,'|');
+              if (!String_isEmpty(s)) String_appendCString(s,", ");
               String_appendCString(s,configValueSet->name);
             }
           }
-          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s,...",indent,' ',configValue->name,String_cString(s));
+          if (error == ERROR_NONE) error = File_printLine(fileHandle,"#%*C%s = %s",indent,' ',configValue->name,String_cString(s));
         }
 
         // get value

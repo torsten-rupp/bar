@@ -2,8 +2,6 @@
 
 #set -x
 
-OPENJDK_VERSION=18.0.2
-OPENJDK_URL=https://download.java.net/java/GA/jdk18.0.2/f6ad4b4450fd4d298113270ec84f30ee/9/GPL/openjdk-18.0.2_windows-x64_bin.zip
 OPENJDK_VERSION=20.0.2
 OPENJDK_URL=https://download.java.net/java/GA/jdk20.0.2/6e380f22cbe7469fa75fb448bd903d8e/9/GPL/openjdk-20.0.2_windows-x64_bin.zip
 

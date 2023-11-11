@@ -16,6 +16,7 @@ goto end
 
 :error
   echo ERROR: cannot detect data model (32/64 bit) - VM failure?
+  pause
 goto end
 
 :end

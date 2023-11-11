@@ -22,6 +22,7 @@ SOURCE_DIR             = $(abspath @srcdir@)
 
 SWT_DIR                = @SWT_DIR@
 LAUNCH4J_DIR           = @LAUNCH4J_DIR@
+JRE_WINDOWS_DIR        = @JRE_WINDOWS_DIR@
 
 ifeq ($(DESTDIR),)
 INSTALL_DIR            = $(if $(prefix),$(prefix),@INSTALL_DIR@)
@@ -60,6 +61,8 @@ XGETTEXT                 = @XGETTEXT@
 XGETTEXT_FLAGS           = -L java -k -ktr -kmarktr -ktrn:1,2 -ktrc:1c,2 -ktrnc:1c,2,3
 MSGMERGE                 = @MSGMERGE@
 MSGFMT                   = @MSGFMT@
+
+LAUNCH4JC                = @LAUNCH4JC@
 
 SWT_JAR_LINUX            = $(SOURCE_DIR)/jars/linux/swt-4.4.jar
 SWT_JAR_LINUX_64         = $(SOURCE_DIR)/jars/linux/swt-4.4_64.jar
@@ -196,7 +199,7 @@ vpath %.java $(BUILD_DIR)/barcontrol:$(SOURCE_DIR)
 
 # compile Java sources
 .NOTPARALLEL: classes/%.class
-classes/%.class: $(SOURCE_DIR)/src/%.java src/BARException.java
+classes/%.class: $(SOURCE_DIR)/src/%.java $(BUILD_DIR)/src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
@@ -223,6 +226,19 @@ else
 	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"; false
 endif
 classes/%.class: $(SOURCE_DIR)/src/widgets/%.java
+	$(INSTALL) -d classes
+ifneq ($(JAVAC),)
+	$(JAVAC) $(JAVAC_FLAGS) \
+          -d classes \
+          -classpath $(CLASSPATH) \
+          $(BUILD_DIR)/src/*.java \
+          $(SOURCE_DIR)/src/*.java \
+          $(SOURCE_DIR)/src/utils/*.java \
+          $(SOURCE_DIR)/src/widgets/*.java
+else
+	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"; false
+endif
+classes/BARException.class: $(BUILD_DIR)/src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
@@ -280,7 +296,7 @@ OBJECTS        = $(foreach z,$(SOURCES),$(addprefix classes/,$(basename $(notdir
                  \
                  $(foreach z,$(LANGUAGES),classes/app/i18n/Messages_$z.class) \
 
-INTERMEDIATE   = src/BARException.java \
+INTERMEDIATE   = $(BUILD_DIR)/barcontrol/src/BARException.java \
                  barcontrol.jar \
                  barcontrol-linux.jar \
                  barcontrol-linux_64.jar \
@@ -290,8 +306,11 @@ INTERMEDIATE   = src/BARException.java \
                  barcontrol-windows.jar \
                  barcontrol-windows_64.jar \
 
-TARGETS        = barcontrol \
-                 $(if $(LAUNCH4J),barcontrol@EXEEXT@,barcontrol.cmd) \
+TARGETS        = $(if $(findstring $(ENABLE_GUI),yes),\
+                   barcontrol \
+                   barcontrol.cmd \
+                   $(if $(LAUNCH4JC),barcontrol@EXEEXT@) \
+                  )
 
 #------------------------------ dependencies ---------------------------------
 
@@ -357,7 +376,7 @@ help:
 depend:
 
 # error definition
-src/BARException.java: $(ROOT_DIR)/errors.def $(ROOT_DIR)/errors.pl Makefile
+$(BUILD_DIR)/src/BARException.java: $(ROOT_DIR)/errors.def $(ROOT_DIR)/errors.pl Makefile
 	$(INSTALL) -d $(@D)
 	$(PERL) $(ROOT_DIR)/errors.pl < $^ -j $@ --java-class-name BARException --tr BARControl.tr
 
@@ -664,13 +683,8 @@ barcontrol: $(SOURCE_DIR)/barcontrol.in barcontrol-linux.jar barcontrol-linux_64
         ) > $@
 	$(CHMOD) 775 $@
 
-ifneq ($(LAUNCH4J),)
-# create Windows executable
-barcontrol@EXEEXT@: barcontrol-windows.jar
-	$(LAUNCH4J) barcontrol.xml
-else
-# create Windows start script
-barcontrol.cmd: $(SOURCE_DIR)/barcontrol.cmd.in barcontrol-windows.jar
+# create Windows executable/start script
+barcontrol.cmd: $(SOURCE_DIR)/barcontrol.cmd.in barcontrol-windows_64.jar
 	$(CAT) $(SOURCE_DIR)/barcontrol.cmd.in | \
         ( \
           while IFS="" read line; do \
@@ -680,6 +694,12 @@ barcontrol.cmd: $(SOURCE_DIR)/barcontrol.cmd.in barcontrol-windows.jar
           done; \
         ) > $@
 	$(CHMOD) 775 $@
+
+ifeq ($(PLATFORM),WINDOWS)
+ifneq ($(LAUNCH4JC),)
+barcontrol@EXEEXT@: barcontrol-windows_64.jar
+	$(LAUNCH4JC) barcontrol.xml
+endif
 endif
 
 # ----------------------------------------------------------------------------
@@ -867,7 +887,7 @@ endif
 install: \
   $(TARGETS) \
   $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),LINUX),barcontrol-linux.jar barcontrol-linux_64.jar) \
-                                       $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4J),barcontrol.exe) barcontrol-windows.jar barcontrol-windows_64.jar) \
+                                       $(if $(findstring $(PLATFORM),WINDOWS),barcontrol-windows.jar barcontrol-windows_64.jar) \
                                        $(if $(findstring $(PLATFORM),SOLARIS),barcontrol-solaris.jar) \
                                        $(if $(findstring $(PLATFORM),MAC_OSX),barcontrol-macosx.jar barcontrol-macosx_64.jar) \
   )
@@ -877,12 +897,6 @@ ifeq ($(PLATFORM),LINUX)
 	$(INSTALL) barcontrol \
                    barcontrol-linux.jar \
                    barcontrol-linux_64.jar \
-                   "$(DESTDIR)$(INSTALL_BIN_DIR)"
-endif
-ifeq ($(PLATFORM),WINDOWS)
-	$(INSTALL) $(if $(LAUNCH4J),barcontrol.exe, \
-                                    barcontrol.cmd barcontrol-windows.jar barcontrol-windows_64.jar \
-                    ) \
                    "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
 ifeq ($(PLATFORM),SOLARIS)
@@ -896,13 +910,28 @@ ifeq ($(PLATFORM),MAC_OSX)
                    barcontrol-macosx_64.jar \
                    "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
+ifeq ($(PLATFORM),WINDOWS)
+ifneq ($(LAUNCH4JC),)
+	$(INSTALL) -t "$(DESTDIR)$(INSTALL_BIN_DIR)" \
+	           barcontrol@EXEEXT@
+	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)/jre"
+	(cd $(JRE_WINDOWS_DIR); $(TAR) cf - bin lib LICENSE) | (cd "$(DESTDIR)$(INSTALL_BIN_DIR)/jre"; $(TAR) xf -)
+else
+	$(INSTALL) -t "$(DESTDIR)$(INSTALL_BIN_DIR)" \
+	           barcontrol.cmd
+endif
+	$(INSTALL) -t "$(DESTDIR)$(INSTALL_BIN_DIR)" \
+	           barcontrol-windows.jar \
+	           barcontrol-windows_64.jar
+endif
 endif
 
 # uninstall all
 uninstall:
 	$(if $(findstring $(ENABLE_GUI),yes),$(RMF) "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol" \
                                                     "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.jar" \
-                                                    "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.exe"; \
+                                                    "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol@EXEEXT@"; \
+                                                    "$(DESTDIR)$(INSTALL_BIN_DIR)/barcontrol.cmd"; \
         ) \
 
 # ----------------------------------------------------------------------------

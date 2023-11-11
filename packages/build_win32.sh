@@ -137,14 +137,6 @@ if test -z "$setupName"; then
   exit 1
 fi
 
-# extract wine tools (if archive exists)
-wineDir=""
-if test -f /wine.tar.bz2; then \
-  wineDir=`mktemp -d /tmp/wine-XXXXXX`; \
-  (cd $wineDir; tar xjf /wine.tar.bz2); \
-  export WINEPREFIX=$wineDir/.wine; \
-fi
-
 # get tools
 wine=`which wine`
 if test -z "$wine"; then
@@ -169,6 +161,19 @@ if test -z "$winepath"; then
     rm -rf $wineDir;
   fi
   exit 1
+fi
+
+# initialize wine
+wineDir=`mktemp -d /tmp/wine-XXXXXX`
+export WINEPREFIX=$wineDir/.wine
+$wineboot --init
+$wineboot --shutdown
+$wineboot --end-session
+
+# extract Windows tools (if archive exists)
+if test -f /windows-tools.tar.bz2; then
+#  (cd $wineDir; tar xjf /wine.tar.bz2);
+  (cd $wineDir/.wine/drive_c; tar xvf /windows-tools.tar.bz2)
 fi
 
 # start wine

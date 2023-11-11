@@ -22618,12 +22618,12 @@ Errors Server_socket(void)
   }
 
   // init index database
-  if (!stringIsEmpty(globalOptions.indexDatabaseURI))
+  if (!String_isEmpty(globalOptions.indexDatabaseURI))
   {
     DatabaseSpecifier databaseSpecifier;
     String            printableDatabaseURI;
 
-    error = Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    error = Database_parseSpecifier(&databaseSpecifier,String_cString(globalOptions.indexDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
     if (error != ERROR_NONE)
     {
       printError("no valid database URI '%s'",globalOptions.indexDatabaseURI);
@@ -23384,7 +23384,7 @@ Errors Server_socket(void)
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
-  if (!stringIsEmpty(globalOptions.indexDatabaseURI)) Index_done();
+  if (!String_isEmpty(globalOptions.indexDatabaseURI)) Index_done();
   List_done(&authorizationFailList);
   List_done(&clientList);
   Semaphore_done(&clientList.lock);
@@ -23448,15 +23448,15 @@ Errors Server_batch(int inputDescriptor,
   AUTOFREE_ADD(&autoFreeList,&newMaster.uuidHash,{ Crypt_doneHash(&newMaster.uuidHash); });
 
   // init index database
-  if (!stringIsEmpty(globalOptions.indexDatabaseURI))
+  if (!String_isEmpty(globalOptions.indexDatabaseURI))
   {
     DatabaseSpecifier databaseSpecifier;
     String            printableDatabaseURI;
 
-    error = Database_parseSpecifier(&databaseSpecifier,globalOptions.indexDatabaseURI,INDEX_DEFAULT_DATABASE_NAME);
+    error = Database_parseSpecifier(&databaseSpecifier,String_cString(globalOptions.indexDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
     if (error != ERROR_NONE)
     {
-      printError("no valid database URI '%s'",globalOptions.indexDatabaseURI);
+      printError("no valid database URI '%s'",String_cString(globalOptions.indexDatabaseURI));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -23668,7 +23668,7 @@ processCommand(&clientInfo,commandString);
   }
 
   // free resources
-  if (!stringIsEmpty(globalOptions.indexDatabaseURI)) Index_done();
+  if (!String_isEmpty(globalOptions.indexDatabaseURI)) Index_done();
   Crypt_doneHash(&newMaster.uuidHash);
   String_delete(newMaster.name);
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);

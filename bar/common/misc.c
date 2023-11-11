@@ -70,8 +70,25 @@
 
 /***************************** Datatypes *******************************/
 
+// service info
+typedef struct
+{
+  ServiceCode           serviceCode;
+  int                   argc;
+  const char            **argv;
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    SERVICE_STATUS_HANDLE serviceStatusHandle;
+    SERVICE_STATUS        serviceStatus;
+  #endif
+  Errors                error;
+} ServiceInfo;
+
 /***************************** Variables *******************************/
-LOCAL byte machineId[MISC_MACHINE_ID_LENGTH] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+LOCAL byte        machineId[MISC_MACHINE_ID_LENGTH] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+#ifdef PLATFORM_WINDOWS
+LOCAL ServiceInfo serviceInfo;
+#endif
 
 /****************************** Macros *********************************/
 
@@ -2698,6 +2715,112 @@ Errors Misc_executeScript(const char        *script,
     String_delete(tmpFileName);
     String_delete(command);
   }
+
+  return error;
+}
+
+#ifdef PLATFORM_WINDOWS
+
+/***********************************************************************\
+* Name   : serviceControlHandler
+* Purpose: Win32 service control handler
+* Input  : control - control code
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void serviceControlHandler(DWORD control)
+{
+	switch (control)
+  {
+		case SERVICE_CONTROL_PAUSE:
+			serviceInfo.serviceStatus.dwCurrentState = SERVICE_PAUSED;
+			break;
+		case SERVICE_CONTROL_CONTINUE:
+			serviceInfo.serviceStatus.dwCurrentState = SERVICE_RUNNING;
+			break;
+		case SERVICE_CONTROL_STOP:
+		case SERVICE_CONTROL_SHUTDOWN:
+			serviceInfo.serviceStatus.dwCurrentState = SERVICE_STOPPED;
+			break;
+	}
+	SetServiceStatus(serviceInfo.serviceStatusHandle,&serviceInfo.serviceStatus);
+}
+
+/***********************************************************************\
+* Name   : serviceStartCode
+* Purpose: Win32 service start code
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void serviceStartCode(void)
+{
+	serviceInfo.serviceStatus.dwServiceType             = SERVICE_WIN32_OWN_PROCESS;
+	serviceInfo.serviceStatus.dwCurrentState            = SERVICE_RUNNING;
+	serviceInfo.serviceStatus.dwControlsAccepted        = SERVICE_ACCEPT_PAUSE_CONTINUE | SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
+	serviceInfo.serviceStatus.dwWin32ExitCode           = NO_ERROR ;
+	serviceInfo.serviceStatus.dwServiceSpecificExitCode = 0;
+	serviceInfo.serviceStatus.dwCheckPoint              = 0;
+	serviceInfo.serviceStatus.dwWaitHint                = 0;
+	serviceInfo.serviceStatusHandle = RegisterServiceCtrlHandler("",serviceControlHandler);  // Note: the service name does not have to be NULL
+	if (serviceInfo.serviceStatusHandle == 0)
+  {
+    serviceInfo.error = ERROR_RUN_SERVICE;
+    return;
+  }
+
+	if (SetServiceStatus(serviceInfo.serviceStatusHandle,&serviceInfo.serviceStatus) == 0)
+  {
+    serviceInfo.error = ERROR_RUN_SERVICE;
+    return;
+  }
+
+  serviceInfo.error = serviceInfo.serviceCode(serviceInfo.argc,serviceInfo.argv);
+}
+
+#endif
+
+Errors Misc_runService(ServiceCode serviceCode,
+                       int         argc,
+                       const char  *argv[]
+                      )
+{
+  Errors error;
+
+  #if   defined(PLATFORM_LINUX)
+    // Note: do not suppress stdin/out/err for GCOV version
+    #ifdef GCOV
+      #define DAEMON_NO_SUPPRESS_STDIO 1
+    #else /* not GCOV */
+      #define DAEMON_NO_SUPPRESS_STDIO 0
+    #endif /* GCOV */
+    if (daemon(1,DAEMON_NO_SUPPRESS_STDIO) == 0)
+    {
+      error = serviceCode(argc,argv);
+    }
+    else
+    {
+      error = ERROR_RUN_SERVICE;
+    }
+  #elif defined(PLATFORM_WINDOWS)
+    serviceInfo.serviceCode = serviceCode;
+    serviceInfo.argc        = argc;
+    serviceInfo.argv        = argv;
+    serviceInfo.error       = ERROR_UNKNOWN;
+    SERVICE_TABLE_ENTRY serviceTable[] = {{"", serviceStartCode}, {NULL, NULL}};  // Note: the service name does not have to be NULL
+    if (StartServiceCtrlDispatcher(serviceTable))
+    {
+      error = serviceInfo.error;
+    }
+    else
+    {
+      error = ERROR_RUN_SERVICE;
+    }
+  #endif /* PLATFORM_... */
 
   return error;
 }

@@ -1710,7 +1710,8 @@ LOCAL Errors readKeyFile(Key *key, ConstString fileName)
 
 LOCAL void initGlobalOptions(void)
 {
-  uint i;
+  String path;
+  uint   i;
 
   memClear(&globalOptions,sizeof(GlobalOptions));
 
@@ -1737,6 +1738,16 @@ LOCAL void initGlobalOptions(void)
   Semaphore_init(&globalOptions.deviceList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&globalOptions.deviceList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
 
+  path = File_getSystemDirectoryCString(String_new(),
+                                        FILE_SYSTEM_PATH_RUNTIME,
+                                        DEFAULT_INDEX_DATABASE_URI_NAME
+                                       );
+  globalOptions.indexDatabaseURI                                = String_format(String_new(),
+                                                                                "%s%s",
+                                                                                DEFAULT_INDEX_DATABASE_URI_TYPE,
+                                                                                String_cString(path)
+                                                                               );
+  String_delete(path);
   globalOptions.indexDatabaseUpdateFlag                         = TRUE;
   globalOptions.indexDatabaseAutoUpdateFlag                     = TRUE;
   List_init(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
@@ -1790,7 +1801,11 @@ LOCAL void initGlobalOptions(void)
   globalOptions.generateKeyMode                                 = CRYPT_KEY_MODE_NONE;
 
   globalOptions.logTypes                                        = LOG_TYPE_NONE;
-  globalOptions.logFileName                                     = NULL;
+  globalOptions.logFileName                                     = File_getSystemDirectoryCString(String_new(),
+                                                                                                 FILE_SYSTEM_PATH_LOG,
+                                                                                                 DEFAULT_LOG_FILE_NAME
+                                                                                                );
+
   globalOptions.logFormat                                       = DEFAULT_LOG_FORMAT;
   globalOptions.logPostCommand                                  = NULL;
 
@@ -2120,6 +2135,8 @@ LOCAL void doneGlobalOptions(void)
   doneCertificate(&globalOptions.serverCert);
   doneCertificate(&globalOptions.serverCA);
 
+  String_delete(globalOptions.logFileName);
+
   PatternList_done(&globalOptions.excludePatternList);
   EntryList_done(&globalOptions.includeEntryList);
   String_delete(globalOptions.storageName);
@@ -2128,6 +2145,8 @@ LOCAL void doneGlobalOptions(void)
 
   List_done(&globalOptions.maintenanceList);
   Semaphore_done(&globalOptions.maintenanceList.lock);
+
+  String_delete(globalOptions.indexDatabaseURI);
 
   List_done(&globalOptions.deviceList);
   Semaphore_done(&globalOptions.deviceList.lock);
@@ -8280,10 +8299,10 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("jobs-directory",                    0,  1,1,globalOptions.jobsDirectory,                                                                                      "server job directory","path name"                                         ),
   CMD_OPTION_STRING       ("incremental-data-directory",        0,  1,1,globalOptions.incrementalDataDirectory,                                                                           "server incremental data directory","path name"                            ),
 
-  CMD_OPTION_CSTRING      ("index-database",                    0,  1,1,globalOptions.indexDatabaseURI,                                                                                   "index database URI\n"
-                                                                                                                                                                                          "  sqlite:<file name>\n"
+  CMD_OPTION_STRING       ("index-database",                    0,  1,1,globalOptions.indexDatabaseURI,                                                                                   "index database URI\n"
+                                                                                                                                                                                          "  sqlite3:<file name>\n"
                                                                                                                                                                                           "  mariadb:<host name>:<user name>:<password>\n"
-                                                                                                                                                                                          "  postgresql:<host name>:<user name>:<password>",
+                                                                                                                                                                                          "  postgresql:<host name>:<user name>:<password>\n",
                                                                                                                                                                                           "URI"                                                                      ),
   CMD_OPTION_BOOLEAN      ("index-database-update",             0,  1,1,globalOptions.indexDatabaseUpdateFlag,                                                                            "enabled update index database"                                            ),
   CMD_OPTION_BOOLEAN      ("index-database-auto-update",        0,  1,1,globalOptions.indexDatabaseAutoUpdateFlag,                                                                        "enabled automatic update index database"                                  ),
@@ -8295,7 +8314,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_INTEGER      ("continuous-min-time-delta",         0,  1,1,globalOptions.continuousMinTimeDelta,                0,MAX_INT,COMMAND_LINE_TIME_UNITS,                           "min. time between continuous backup of an entry"                          ),
 
   CMD_OPTION_SET          ("log",                               0,  1,1,globalOptions.logTypes,                              COMMAND_LINE_OPTIONS_LOG_TYPES,                              "log types","type"                                                         ),
-  CMD_OPTION_CSTRING      ("log-file",                          0,  1,1,globalOptions.logFileName,                                                                                        "log file name","file name"                                                ),
+  CMD_OPTION_STRING       ("log-file",                          0,  1,1,globalOptions.logFileName,                                                                                        "log file name","file name"                                                ),
   CMD_OPTION_CSTRING      ("log-format",                        0,  1,1,globalOptions.logFormat,                                                                                          "log format","format"                                                      ),
   CMD_OPTION_CSTRING      ("log-post-command",                  0,  1,1,globalOptions.logPostCommand,                                                                                     "log file post-process command","command"                                  ),
 
@@ -8345,7 +8364,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                                                                                          "suppress any output"                                                      ),
   CMD_OPTION_INCREMENT    ("verbose",                           'v',0,0,globalOptions.verboseLevel,                          0,6,                                                         "increment/set verbosity level"                                            ),
 
-  CMD_OPTION_BOOLEAN      ("no-default-config",                 0,  1,1,globalOptions.noDefaultConfigFlag,                                                                                "do not read configuration files " CONFIG_DIR "/" CONFIG_SUB_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
+  CMD_OPTION_BOOLEAN      ("no-default-config",                 0,  1,1,globalOptions.noDefaultConfigFlag,                                                                                "do not read default configuration files"                                  ),
   CMD_OPTION_SPECIAL      ("config",                            0,  1,2,&configFileList,                                     cmdOptionParseConfigFile,NULL,1,                             "configuration file","file name"                                           ),
   CMD_OPTION_CSTRING      ("save-configuration",                0,  1,1,globalOptions.saveConfigurationFileName,                                                                          "save formated configuration file","file name"                             ),
   CMD_OPTION_BOOLEAN      ("clean-configuration-comments",      0,  1,1,globalOptions.cleanConfigurationComments,                                                                         "clean comments when saving configuration file"                            ),
@@ -8442,7 +8461,7 @@ const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_COMMENT("  sqlite3:<filename>"),
   CONFIG_VALUE_COMMENT("  mariadb:<server>:<user>:<password>"),
   CONFIG_VALUE_COMMENT("  postgresql:<server>:<user>:<password>"),
-  CONFIG_VALUE_CSTRING           ("index-database",                   &globalOptions.indexDatabaseURI,-1,                            "<URI>"),
+  CONFIG_VALUE_STRING ("index-database",                              &globalOptions.indexDatabaseURI,-1,                            "<URI>"),
   CONFIG_VALUE_SPACE(),
   CONFIG_VALUE_COMMENT("update index if requested"),
   CONFIG_VALUE_BOOLEAN           ("index-database-update",            &globalOptions.indexDatabaseUpdateFlag,-1,                     "yes|no"),
