@@ -1355,7 +1355,9 @@ bool CmdOption_parse(const char              *argv[],
   // reset increment options
   for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
-    if (commandLineOptions[i].type == CMD_OPTION_TYPE_INCREMENT)
+    if (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INCREMENT)
+        && IS_IN_RANGE(minPriority,commandLineOptions[i].priority,maxPriority)
+       )
     {
       assert(commandLineOptions[i].variable.increment != NULL);
       (*commandLineOptions[i].variable.increment) = commandLineOptions[i].defaultValue.increment;
