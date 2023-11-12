@@ -198,8 +198,8 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
     // init macros
     TEXT_MACROS_INIT(textMacros)
     {
-      TEXT_MACRO_X_STRING ("%file",  archiveName,              NULL);
-      TEXT_MACRO_X_INT("%number",storageInfo->volumeNumber,NULL);
+      TEXT_MACRO_X_STRING("%file",  archiveName,              NULL);
+      TEXT_MACRO_X_INT   ("%number",storageInfo->volumeNumber,NULL);
     }
 
     if (!String_isEmpty(globalOptions.file.writePreProcessCommand))
@@ -237,8 +237,8 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
     // init macros
     TEXT_MACROS_INIT(textMacros)
     {
-      TEXT_MACRO_X_STRING ("%file",  archiveName,              NULL);
-      TEXT_MACRO_X_INT("%number",storageInfo->volumeNumber,NULL);
+      TEXT_MACRO_X_STRING("%file",  archiveName,              NULL);
+      TEXT_MACRO_X_INT   ("%number",storageInfo->volumeNumber,NULL);
     }
 
     if (!String_isEmpty(globalOptions.file.writePostProcessCommand))

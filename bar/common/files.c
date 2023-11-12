@@ -1432,6 +1432,18 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
     }
   #endif /* PLATFORM_... */
   if (subDirectory != NULL) File_appendFileNameCString(path,subDirectory);
+#if 0
+// TODO: remove
+{
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+  FILE *f=fopen("c:/x.log","a");
+  if (f!=NULL)
+  {
+  fprintf(f,"path %d=%s\n",fileSystemPathType,String_cString(path));
+  fclose(f);
+  }
+}
+#endif
 
   return path;
 }

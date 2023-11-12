@@ -114,13 +114,14 @@ LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
     // init macros
     TEXT_MACROS_INIT(textMacros)
     {
-      TEXT_MACRO_X_STRING ("%file",  archiveName,              NULL);
-      TEXT_MACRO_X_INT("%number",storageInfo->volumeNumber,NULL);
+      TEXT_MACRO_X_STRING("%file",  archiveName,              NULL);
+      TEXT_MACRO_X_INT   ("%number",storageInfo->volumeNumber,NULL);
     }
 
     if (!String_isEmpty(globalOptions.file.writePreProcessCommand))
     {
       printInfo(1,"Write pre-processing...");
+// TODO: .file. -> master
       error = executeTemplate(String_cString(globalOptions.file.writePreProcessCommand),
                               time,
                               textMacros.data,

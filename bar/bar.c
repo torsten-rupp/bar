@@ -1381,12 +1381,12 @@ void logPostProcess(LogHandle        *logHandle,
         // log post command for job log file
         TEXT_MACROS_INIT(textMacros)
         {
-          TEXT_MACRO_X_STRING ("%file",   logHandle->logFileName,                            TEXT_MACRO_PATTERN_STRING);
-          TEXT_MACRO_X_STRING ("%name",   jobName,                                           TEXT_MACRO_PATTERN_STRING);
-          TEXT_MACRO_X_CSTRING("%type",   Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_STRING);
-          TEXT_MACRO_X_CSTRING("%T",      Archive_archiveTypeToShortString(archiveType), ".");
-          TEXT_MACRO_X_STRING ("%text",   scheduleCustomText,                                TEXT_MACRO_PATTERN_STRING);
-          TEXT_MACRO_X_CSTRING("%state",  Job_getStateText(jobState,noStorage,dryRun),       NULL);
+          TEXT_MACRO_X_STRING ("%file",   logHandle->logFileName,                       TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_STRING ("%name",   jobName,                                      TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_CSTRING("%type",   Archive_archiveTypeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_CSTRING("%T",      Archive_archiveTypeToShortString(archiveType),".");
+          TEXT_MACRO_X_STRING ("%text",   scheduleCustomText,                           TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_CSTRING("%state",  Job_getStateText(jobState,noStorage,dryRun),  NULL);
           TEXT_MACRO_X_STRING ("%message",String_cString(message),NULL);
         }
 //TODO: macro expanded 2x!
@@ -3413,7 +3413,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             directory = String_new();
             TEXT_MACROS_INIT(textMacros)
             {
-              TEXT_MACRO_X_CSTRING("%name",    "",                                                           NULL);
+              TEXT_MACRO_X_CSTRING("%name",     "",                                                           NULL);
               TEXT_MACRO_X_STRING ("%archive",  globalOptions.storageName,                                    NULL);
               TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(globalOptions.archiveType),       NULL);
               TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(globalOptions.archiveType),  NULL);
