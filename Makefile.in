@@ -811,7 +811,7 @@ docker_run_win32-x86_64:
               $(VERSION) \
               $(shell id -u):$(shell id -g) \
               $(WINE) \
-              $(DISTRIBUTION_NAME)-setup; \
+              $(PACKAGE_NAME)-setup-$(VERSION); \
         )
 
 
@@ -941,9 +941,9 @@ build_deb:
 # Windows setup
 .PHONY: win32 win32d clean_win32
 win32:
-	$(MAKE) $(DISTRIBUTION_NAME)-setup@EXEEXT@
+	$(MAKE) $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@
 win32d:
-	$(MAKE) $(DISTRIBUTION_NAME)-setup@EXEEXT@ DEBUG=1
+	$(MAKE) $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@ DEBUG=1
 
 clean_win32:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm
@@ -952,7 +952,7 @@ clean_win32:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm.log
 
 #TODO: remove /media/wine and move to build_win32.sh
-$(DISTRIBUTION_NAME)-setup@EXEEXT@: \
+$(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@: \
   $(DISTRIBUTION_NAME).tar.bz2
 	@$(call functionPrintInfo,Build Win32 on mingw32)
 	( \
@@ -978,7 +978,7 @@ build_win32:
            ../../$(DISTRIBUTION_NAME).tar.bz2 \
            $(VERSION) \
            $(shell id -u):$(shell id -g) \
-           $(DISTRIBUTION_NAME)-setup \
+           $(PACKAGE_NAME)-setup-$(VERSION) \
            $(if $(DEBUG),--debug); \
         )
 
@@ -1164,11 +1164,11 @@ install_test_deb_ubuntu%-x86_64d:
 .PHONY: install_test_win32 install_test_win32d
 install_test_win32:
 	@$(call functionPrintInfo,Test install Windows 64bit)
-	$(call functionInstallTestWin32,ubuntu:20.04,x86_64,$(DISTRIBUTION_NAME)-setup@EXEEXT@) $(if $(QUIET),1>/dev/null)
+	$(call functionInstallTestWin32,ubuntu:20.04,x86_64,$(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 install_test_win32d:
 	@$(call functionPrintInfo,Test install Windows 64bit)
-	$(call functionInstallTestWin32,ubuntu:20.04,x86_64,$(DISTRIBUTION_NAME)-setup@EXEEXT@,--debug) $(if $(QUIET),1>/dev/null)
+	$(call functionInstallTestWin32,ubuntu:20.04,x86_64,$(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@,--debug) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 # GUI
@@ -1242,7 +1242,7 @@ setup:
 	#install packages/backup-archiver.iss backup-archiver.iss
 	$(WINE) "$(ISCC)" \
   /O$(PROJECT_ROOT) \
-  /F$(DISTRIBUTION_NAME)-setup \
+  /F$(PACKAGE_NAME)-setup-$(VERSION) \
   packages/backup-archiver.iss
 
 # end of file
