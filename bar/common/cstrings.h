@@ -382,6 +382,46 @@ static inline char* stringSetBuffer(char *string, size_t stringSize, const char 
   return string;
 }
 
+/***********************************************************************\
+* Name   : stringSet
+* Purpose: set string
+* Input  : string        - destination string
+*          stringSize    - size of string (including terminating NUL)
+*          index         - replace index
+*          length        - replace length
+*          replaceString - replace string
+* Output : -
+* Return : modified string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringReplace(char *string, size_t stringSize, size_t index, size_t length, const char *replaceString)
+{
+  size_t n,m;
+  assert(stringSize > 0);
+
+  if (string != NULL)
+  {
+    n = strlen(string);
+    if ((replaceString != NULL) && (index < n))
+    {
+      m = strlen(replaceString);
+      if (m > (stringSize-index-1)) m = stringSize-index-1;
+      if ((index+length) < n)
+      {
+        memmove(string+index+m,string+index+length,n-(index+length));
+      }
+      memcpy(string+index,replaceString,m);
+      string[n-length+m-1] = NUL;
+    }
+    else
+    {
+      string[0] = NUL;
+    }
+  }
+
+  return string;
+}
 
 /***********************************************************************\
 * Name   : stringIntLength
@@ -586,6 +626,34 @@ static inline char* stringAppendChar(char *string, size_t stringSize, char ch)
     {
       string[n]   = ch;
       string[n+1] = NUL;
+    }
+  }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : stringAppend
+* Purpose: append string
+* Input  : string       - destination string
+*          stringSize   - size of destination string (including
+*                         terminating NUL)
+*          buffer       - buffer
+*          bufferLength - buffer length
+* Output : -
+* Return : string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringAppendBuffer(char *string, size_t stringSize, const char *buffer, size_t bufferLength)
+{
+  assert(stringSize > 0);
+
+  if ((string != NULL) && (buffer != NULL))
+  {
+    if (stringSize > (bufferLength+1))
+    {
+      strncat(string,buffer,stringSize-(bufferLength+1));
     }
   }
 

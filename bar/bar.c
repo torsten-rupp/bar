@@ -1275,7 +1275,7 @@ void fatalLogMessage(const char *text, void *userData)
 
     if (logFile != NULL)
     {
-      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,String_cString(globalOptions.logFormat));
+      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,globalOptions.logFormat);
 
       // append to log file
       UNUSED_RESULT(fprintf(logFile,"%s> ",String_cString(dateTime)));

@@ -126,52 +126,55 @@ typedef struct CommandLineOption
   } defaultValue;
   struct
   {
-    bool                          rangeFlag;            // TRUE iff range should be printed in help
-    int                           min,max;              // valid range
-    const CommandLineUnit         *units;               // array with units
+    bool                          rangeFlag;               // TRUE iff range should be printed in help
+    int                           min,max;                 // valid range
+    const CommandLineUnit         *units;                  // array with units
   } integerOption;
   struct
   {
-    bool                          rangeFlag;            // TRUE iff range should be printed in help
-    int64                         min,max;              // valid range
-    const CommandLineUnit         *units;               // array with units
+    bool                          rangeFlag;               // TRUE iff range should be printed in help
+    int64                         min,max;                 // valid range
+    const CommandLineUnit         *units;                  // array with units
   } integer64Option;
   struct
   {
-    bool                          rangeFlag;            // TRUE iff range should be printed in help
-    double                        min,max;              // valid range
-    const CommandLineUnit         *units;               // array with units
+    bool                          rangeFlag;               // TRUE iff range should be printed in help
+    double                        min,max;                 // valid range
+    const CommandLineUnit         *units;                  // array with units
   } doubleOption;
   struct
   {
-    bool                          yesnoFlag;            // TRUE iff yes/no should be printed in help
+    bool                          yesnoFlag;               // TRUE iff yes/no should be printed in help
   } booleanOption;
   struct
   {
-    uint                          value;                // flag value
+    uint                          value;                   // flag value
   } flagOption;
   struct
   {
-    bool                          rangeFlag;            // TRUE iff range should be printed in help
-    int                           min,max;              // valid range
+    bool                          rangeFlag;               // TRUE iff range should be printed in help
+    int                           min,max;                 // valid range
   } incrementOption;
   struct
   {
-    uint                          enumerationValue;     // emumeration value for this enumeration
+    uint                          enumerationValue;        // emumeration value for this enumeration
   } enumOption;
   struct
   {
-    const CommandLineOptionSelect *selects;             // array with select values
-    const char                    *descriptionArgument; // optional description text argument
+    const CommandLineOptionSelect *selects;                // array with select values
+    const char                    *descriptionArgument;    // optional description text argument
+    const char                    *descriptionDefaultText; // optional description default text
   } selectOption;
   struct
   {
-    const CommandLineOptionSet    *sets;                // array with set values
-    const char                    *descriptionArgument; // optional description text argument
+    const CommandLineOptionSet    *sets;                   // array with set values
+    const char                    *descriptionArgument;    // optional description text argument
+    const char                    *descriptionDefaultText; // optional description default text
   } setOption;
   struct
   {
-    const char                    *descriptionArgument; // optional description text argument
+    const char                    *descriptionArgument;    // optional description text argument
+//    const char                    *descriptionDefaultText; // optional description default text
   } stringOption;
   struct
   {
@@ -180,12 +183,13 @@ typedef struct CommandLineOption
                         const char *option,
                         const char *value,
                         const void *defaultValue,
-                        char       *errorMessage,       // must be NUL-terminated!
+                        char       *errorMessage,          // must be NUL-terminated!
                         uint       errorMessageSize
                        );
-    void                          *userData;            // user data for parse special
-    uint                          argumentCount;        // argument count
-    const char                    *descriptionArgument; // optional description text argument
+    void                          *userData;               // user data for parse special
+    uint                          argumentCount;           // argument count
+    const char                    *descriptionArgument;    // optional description text argument
+//    const char                    *descriptionDefaultText; // optional description default text
   } specialOption;
   struct
   {
@@ -197,9 +201,9 @@ typedef struct CommandLineOption
                            char       *errorMessage,       // must be NUL-terminated!
                            uint       errorMessageSize
                           );
-    void                          *userData;            // user data for parse special
-    uint                          argumentCount;        // argument count
-    const char                    *newOptionName;       // new option name
+    void                          *userData;               // user data for parse special
+    uint                          argumentCount;           // argument count
+    const char                    *newOptionName;          // new option name
   } deprecatedOption;
   const char             *description;
 } CommandLineOption;
@@ -365,7 +369,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -409,7 +413,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -432,7 +436,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -475,7 +479,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -498,7 +502,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -538,7 +542,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -561,7 +565,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -599,7 +603,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -622,7 +626,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -662,7 +666,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -701,7 +705,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,min,max},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -740,7 +744,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {value},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -750,20 +754,21 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 /***********************************************************************\
 * Name   : CMD_OPTION_SELECT
 * Purpose: define an select command line option
-* Input  : name                - option name
-*          shortName           - option short name or NULL
-*          helpLevel           - help level (0..n)
-*          priority            - evaluation priority
-*          variable            - variable
-*          selects             - select definition array
-*          description         - description
-*          descriptionArgument - optional description argument text
+* Input  : name                   - option name
+*          shortName              - option short name or NULL
+*          helpLevel              - help level (0..n)
+*          priority               - evaluation priority
+*          variable               - variable
+*          selects                - select definition array
+*          description            - description
+*          descriptionArgument    - optional description argument text
+*          descriptionDefaultText - optional description default text
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CMD_OPTION_SELECT(name,shortName,helpLevel,priority,variable,selects,description,descriptionArgument) \
+#define CMD_OPTION_SELECT(name,shortName,helpLevel,priority,variable,selects,description,descriptionArgument,descriptionDefaultText) \
   {\
     name,\
     shortName,\
@@ -779,8 +784,8 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {0},\
     {FALSE,0,0},\
     {0},\
-    {selects,descriptionArgument},\
-    {NULL},\
+    {selects,descriptionArgument,descriptionDefaultText},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -790,20 +795,21 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
 /***********************************************************************\
 * Name   : CMD_OPTION_SET
 * Purpose: define an set (multiple values) command line option
-* Input  : name                - option name
-*          shortName           - option short name or NULL
-*          helpLevel           - help level (0..n)
-*          priority            - evaluation priority
-*          variable            - variable
-*          set                 - set definition array
-*          description         - description
-*          descriptionArgument - optional description argument text
+* Input  : name                   - option name
+*          shortName              - option short name or NULL
+*          helpLevel              - help level (0..n)
+*          priority               - evaluation priority
+*          variable               - variable
+*          set                    - set definition array
+*          description            - description
+*          descriptionArgument    - optional description argument text
+*          descriptionDefaultText - optional description default text
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define CMD_OPTION_SET(name,shortName,helpLevel,priority,variable,set,description,descriptionArgument) \
+#define CMD_OPTION_SET(name,shortName,helpLevel,priority,variable,set,description,descriptionArgument,descriptionDefaultText) \
   {\
     name,\
     shortName,\
@@ -820,7 +826,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {set,descriptionArgument},\
+    {set,descriptionArgument,descriptionDefaultText},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -860,7 +866,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {descriptionArgument},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -900,7 +906,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {descriptionArgument},\
     {NULL,NULL,0,NULL},\
     {NULL,NULL,0,NULL},\
@@ -943,7 +949,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {parseSpecial,userData,argumentCount,descriptionArgument},\
     {NULL,NULL,0,NULL},\
@@ -984,7 +990,7 @@ const CommandLineOption COMMAND_LINE_OPTIONS[] =
     {FALSE,0,0},\
     {0},\
     {NULL},\
-    {NULL},\
+    {NULL,NULL,NULL},\
     {NULL},\
     {NULL,NULL,0,NULL},\
     {parseDeprecated,userData,argumentCount,newOptionName},\
