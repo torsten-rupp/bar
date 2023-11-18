@@ -185,7 +185,7 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
                                     bool              initialFlag
                                    )
 {
-  TextMacros (textMacros,2);
+  TextMacros (textMacros,3);
   Errors     error;
 
   assert(storageInfo != NULL);
@@ -195,11 +195,15 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
 
   if (!initialFlag)
   {
+    // init variables
+    String directory = String_new();
+
     // init macros
     TEXT_MACROS_INIT(textMacros)
     {
-      TEXT_MACRO_X_STRING("%file",  archiveName,              NULL);
-      TEXT_MACRO_X_INT   ("%number",storageInfo->volumeNumber,NULL);
+      TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
+      TEXT_MACRO_X_STRING("%file",     archiveName,                                 NULL);
+      TEXT_MACRO_X_INT   ("%number",   storageInfo->volumeNumber,                   NULL);
     }
 
     if (!String_isEmpty(globalOptions.file.writePreProcessCommand))
@@ -213,6 +217,9 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
                              );
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
+
+    // free resources
+    String_delete(directory);
   }
 
   return error;
@@ -224,7 +231,7 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
                                      bool              finalFlag
                                     )
 {
-  TextMacros (textMacros,2);
+  TextMacros (textMacros,3);
   Errors     error;
 
   assert(storageInfo != NULL);
@@ -234,11 +241,15 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
 
   if (!finalFlag)
   {
+    // init variables
+    String directory = String_new();
+
     // init macros
     TEXT_MACROS_INIT(textMacros)
     {
-      TEXT_MACRO_X_STRING("%file",  archiveName,              NULL);
-      TEXT_MACRO_X_INT   ("%number",storageInfo->volumeNumber,NULL);
+      TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
+      TEXT_MACRO_X_STRING("%file",     archiveName,                                 NULL);
+      TEXT_MACRO_X_INT   ("%number",   storageInfo->volumeNumber,                   NULL);
     }
 
     if (!String_isEmpty(globalOptions.file.writePostProcessCommand))
@@ -252,6 +263,9 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
                              );
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
+
+    // free resources
+    String_delete(directory);
   }
 
   return error;

@@ -877,7 +877,7 @@ LOCAL Errors StorageSMB_preProcess(const StorageInfo *storageInfo,
 {
   Errors error;
   #ifdef HAVE_SMB2
-    TextMacros (textMacros,2);
+    TextMacros (textMacros,3);
   #endif /* HAVE_SMB2 */
 
   assert(storageInfo != NULL);
@@ -888,11 +888,15 @@ LOCAL Errors StorageSMB_preProcess(const StorageInfo *storageInfo,
   #ifdef HAVE_SMB2
     if (!initialFlag)
     {
+      // init variables
+      String directory = String_new();
+
       // init macros
       TEXT_MACROS_INIT(textMacros)
       {
-        TEXT_MACRO_X_STRING("%file",  archiveName,              NULL);
-        TEXT_MACRO_X_INT   ("%number",storageInfo->volumeNumber,NULL);
+        TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
+        TEXT_MACRO_X_STRING("%file",     archiveName,                                 NULL);
+        TEXT_MACRO_X_INT   ("%number",   storageInfo->volumeNumber,                   NULL);
       }
 
       // write pre-processing
@@ -907,6 +911,9 @@ LOCAL Errors StorageSMB_preProcess(const StorageInfo *storageInfo,
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
+
+      // free resources
+      String_delete(directory);
     }
   #else /* not HAVE_SMB2 */
     UNUSED_VARIABLE(storageInfo);
@@ -940,7 +947,7 @@ LOCAL Errors StorageSMB_postProcess(const StorageInfo *storageInfo,
 {
   Errors error;
   #ifdef HAVE_SMB2
-    TextMacros (textMacros,2);
+    TextMacros (textMacros,3);
   #endif /* HAVE_SMB2 */
 
   assert(storageInfo != NULL);
@@ -951,11 +958,15 @@ LOCAL Errors StorageSMB_postProcess(const StorageInfo *storageInfo,
   #ifdef HAVE_SMB2
     if (!finalFlag)
     {
+      // init variables
+      String directory = String_new();
+
       // init macros
       TEXT_MACROS_INIT(textMacros)
       {
-        TEXT_MACRO_X_STRING("%file",  archiveName,                NULL);
-        TEXT_MACRO_X_INT   ("%number",storageInfo->volumeNumber,NULL);
+        TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
+        TEXT_MACRO_X_STRING("%file",     archiveName,                                 NULL);
+        TEXT_MACRO_X_INT   ("%number",   storageInfo->volumeNumber,                   NULL);
       }
 
       // write post-process
@@ -970,6 +981,9 @@ LOCAL Errors StorageSMB_postProcess(const StorageInfo *storageInfo,
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
+
+      // free resources
+      String_delete(directory);
     }
   #else /* not HAVE_SMB2 */
     UNUSED_VARIABLE(storageInfo);

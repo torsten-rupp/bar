@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 11:21+0200\n"
+"POT-Creation-Date: 2023-11-18 11:38+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -77,7 +77,7 @@ msgid "function still not implemented"
 msgstr ""
 
 #: errors.def:33
-msgid "run as daemon failed"
+msgid "run as daemon/service failed"
 msgstr ""
 
 #: errors.def:34

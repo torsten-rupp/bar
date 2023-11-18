@@ -2,10 +2,10 @@ BAR - BAckup aRchiver
 
 BAR is backup archiver program. It can create compressed, encrypted
 and split archives of files and disk images which can be stored
-on a hard disk, cd, dvd, bd or directly on a server via ftp, scp or
-sftp. BAR can create full and incremental/differential archives. A
-server-mode and a scheduler is integrated for making
-automated backups in the background.
+on a hard disk, cd, dvd, bd or directly on a server via ftp, scp,
+sftp, webDAV, SMB/CIFS. BAR can create full and incremental/
+differential archives. A server-mode and a scheduler is integrated
+for making automated backups in the background.
 
 --- Features
 
@@ -54,18 +54,18 @@ optional:
 * lzma/xz library (http://tukaani.org/xz)
 * lzo library (http://www.oberhumer.com/opensource/lzo)
 * lz4 library (https://code.google.com/p/lz4)
-* zstd library (https://facebook.github.io/zstd/)
+* Zstandard library (https://facebook.github.io/zstd/)
 * xdelta library (http://xdelta.org)
-* libgpg-error (https://www.gnupg.org/software/libgpg-error/index.html)
-* gcrypt library (http://www.gnupg.org)
-* gmp (https://gmplib.org/)
-* nettle (https://www.lysator.liu.se/~nisse/nettle/)
-* gnutls library (http://www.gnu.org/software/gnutls)
 * ssh2 1.6.0 or newer library (http://www.libssh2.org)
-* curl 7.77 or newer (http://curl.haxx.se)
+* gcrypt library (http://www.gnupg.org)
+* nettle (https://www.lysator.liu.se/~nisse/nettle/)
+* gmp (https://gmplib.org/)
+* gnutls library (http://www.gnu.org/software/gnutls)
+* libcurl 7.77 or newer (http://curl.haxx.se)
 * c-areas (http://c-ares.haxx.se)
-* libidn2 2.3.4 or newer (https://ftp.gnu.org/gnu/libidn)
 * mmxml (http://www.minixml.org)
+* libgpg-error (https://www.gnupg.org/software/libgpg-error/index.html)
+* libidn2 2.3.4 or newer (https://ftp.gnu.org/gnu/libidn)
 * libiconv library (http://www.gnu.org/software/libiconv)
 * Kerberos 5 library (https://kerberos.org/dist/krb5)
 * libsmb2 (https://github.com/sahlberg/libsmb2)
@@ -74,8 +74,10 @@ optional:
 * sqlite 3.38 or newer (https://www.sqlite.org/index.html)
 * MariaDB server 10.4.22 or newer
 * PostgreSQL 9.6.4 or newer
+* bison, flex, readline library (for PostgreSQL)
 * mtx library (http://sourceforge.net/projects/mtx)
 * bfd/binutils library (http://ftp.gnu.org/gnu/binutils)
+* launch4j
 
 * external tools for DVD: mkisofs, dvdisaster, growisofs,
   eject (optional)

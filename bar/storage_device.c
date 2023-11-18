@@ -521,7 +521,8 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
                                      )
 {
   Errors     error;
-  TextMacros (textMacros,3);
+  uint       j;
+  TextMacros (textMacros,5);
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
@@ -547,11 +548,14 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
   }
 
   // init macros
+  j = Thread_getNumberOfCores();
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING("%device",storageInfo->storageSpecifier.deviceName,NULL);
     TEXT_MACRO_X_STRING("%file",  archiveName,                             NULL);
     TEXT_MACRO_X_INT   ("%number",storageInfo->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_X_INT   ("%j",     j,                                       NULL);
+    TEXT_MACRO_X_INT   ("%j1",    (j > 1) ? j-1 : 1,                       NULL);
   }
 
   // write pre-processing
@@ -576,10 +580,15 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                        bool        finalFlag
                                       )
 {
-  Errors     error;
-  String     imageFileName;
-  TextMacros (textMacros,5);
-  String     fileName;
+  Errors        error;
+  ExecuteIOInfo executeIOInfo;
+  String        imageFileName;
+  uint          j;
+  TextMacros    (textMacros,7);
+  String        fileName;
+  FileInfo      fileInfo;
+  uint          retryCount;
+  bool          retryFlag;
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
@@ -592,21 +601,37 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     printWarning("device volume size is 0 bytes!");
   }
 
+  error = ERROR_NONE;
+
   if (   (storageInfo->device.write.totalSize > storageInfo->device.write.volumeSize)
       || (finalFlag && storageInfo->device.write.totalSize > 0LL)
      )
   {
     // device size limit reached -> write to device volume and request new volume
 
+    // init variables
+// TODO:
+//    storageInfo->device.write.step = 0;
+    executeIOInfo.storageInfo      = storageInfo;
+    executeIOInfo.commandLine      = String_new();
+    StringList_init(&executeIOInfo.stderrList);
+
+    // update running info
+    storageInfo->progress.volumeDone = 0.0;
+    updateStorageRunningInfo(storageInfo);
+
     // check if new volume is required
     if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
     {
-      error = requestNewDeviceVolume(storageInfo,TRUE);
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
       {
-        return error;
+        error = requestNewDeviceVolume(storageInfo,TRUE);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        updateStorageRunningInfo(storageInfo);
       }
-      updateStorageRunningInfo(storageInfo);
     }
 
     // get temporary image file name
@@ -618,89 +643,356 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     }
 
     // init macros
+    j = Thread_getNumberOfCores();
     TEXT_MACROS_INIT(textMacros)
     {
-      TEXT_MACRO_X_STRING("%device",   storageInfo->storageSpecifier.deviceName,NULL);
-      TEXT_MACRO_X_STRING("%directory",storageInfo->device.write.directory,     NULL);
-      TEXT_MACRO_X_STRING("%image",    imageFileName,                           NULL);
-      TEXT_MACRO_X_STRING("%file",     archiveName,                             NULL);
-      TEXT_MACRO_X_INT   ("%number",   storageInfo->volumeNumber,               NULL);
+      TEXT_MACRO_X_STRING ("%device",   storageInfo->storageSpecifier.deviceName,NULL);
+      TEXT_MACRO_X_STRING ("%directory",storageInfo->device.write.directory,     NULL);
+      TEXT_MACRO_X_STRING ("%image",    imageFileName,                           NULL);
+      TEXT_MACRO_X_STRING ("%file",     archiveName,                             NULL);
+      TEXT_MACRO_X_INT    ("%number",   storageInfo->volumeNumber,               NULL);
+      TEXT_MACRO_X_INT    ("%j",        j,                                       NULL);
+      TEXT_MACRO_X_INT    ("%j1",       (j > 1) ? j-1 : 1,                       NULL);
+    }
+
+    // create image pre-processing
+    if (error == ERROR_NONE)
+    {
+      if (!String_isEmpty(storageInfo->device.write.imagePreProcessCommand))
+      {
+        printInfo(1,"Image pre-processing of volume #%u...",storageInfo->volumeNumber);
+        error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePreProcessCommand ),
+                                    textMacros.data,
+                                    textMacros.count,
+                                    NULL, // commandLine
+                                    CALLBACK_(executeIOOutput,NULL),
+                                    CALLBACK_(executeIOOutput,NULL)
+                                   );
+        if (error == ERROR_NONE)
+        {
+          printInfo(1,"OK\n");
+        }
+        else
+        {
+          printInfo(1,"FAIL\n");
+          logMessage(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Image pre-processing of volume #%u fail: %s",
+                     storageInfo->volumeNumber,
+                     Error_getText(error)
+                    );
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+          logLines(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "  ",
+                   &executeIOInfo.stderrList
+                  );
+        }
+      }
     }
 
     // create image
     if (error == ERROR_NONE)
     {
-      printInfo(1,"Make image pre-processing of volume #%d...",storageInfo->volumeNumber);
-      error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePreProcessCommand ),
-                                  textMacros.data,
-                                  textMacros.count,
-                                  NULL, // commandLine
-                                  CALLBACK_(executeIOOutput,NULL),
-                                  CALLBACK_(executeIOOutput,NULL)
-                                 );
-      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+      if (!String_isEmpty(storageInfo->device.write.imageCommand))
+      {
+        printInfo(1,"Create image volume #%u...",storageInfo->volumeNumber);
+        error = Misc_executeCommand(String_cString(storageInfo->device.write.imageCommand),
+                                    textMacros.data,
+                                    textMacros.count,
+                                    NULL, // commandLine
+                                    CALLBACK_(executeIOOutput,NULL),
+                                    CALLBACK_(executeIOOutput,NULL)
+                                   );
+        if (error == ERROR_NONE)
+        {
+          printInfo(1,"OK\n");
+
+          File_getInfo(&fileInfo,imageFileName);
+        }
+        else
+        {
+          printInfo(1,"FAIL\n");
+
+          memClear(&fileInfo,sizeof(fileInfo));
+
+          logMessage(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Create image volume #%u fail: %s",
+                     storageInfo->volumeNumber,
+                     Error_getText(error)
+                    );
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+          logLines(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "  ",
+                   &executeIOInfo.stderrList
+                  );
+        }
+      }
     }
+
+    // error-correction codes
+    if (storageInfo->jobOptions->errorCorrectionCodesFlag)
+    {
+      // error-correction codes pre-processing
+      if (error == ERROR_NONE)
+      {
+        if (!String_isEmpty(storageInfo->device.write.eccPreProcessCommand))
+        {
+          printInfo(1,"Add ECC pre-processing to image of volume #%u...",storageInfo->volumeNumber);
+          error = Misc_executeCommand(String_cString(storageInfo->device.write.eccPreProcessCommand ),
+                                      textMacros.data,
+                                      textMacros.count,
+                                      NULL, // commandLine
+                                      CALLBACK_(executeIOOutput,NULL),
+                                      CALLBACK_(executeIOOutput,NULL)
+                                     );
+          if (error == ERROR_NONE)
+          {
+            printInfo(1,"OK\n");
+          }
+          else
+          {
+            printInfo(1,"FAIL\n");
+            logMessage(storageInfo->logHandle,
+                       LOG_TYPE_ERROR,
+                       "Add ECC pre-processing to image of volume #%u fail: %s",
+                       storageInfo->volumeNumber,
+                       Error_getText(error)
+                      );
+            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            logLines(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "  ",
+                     &executeIOInfo.stderrList
+                    );
+          }
+        }
+      }
+
+      // add error-correction codes to medium image
+      if (error == ERROR_NONE)
+      {
+        if (!String_isEmpty(storageInfo->device.write.eccCommand))
+        {
+          printInfo(1,"Add ECC to image of volume #%u...",storageInfo->volumeNumber);
+          String_clear(executeIOInfo.commandLine);
+          StringList_clear(&executeIOInfo.stderrList);
+          error = Misc_executeCommand(String_cString(storageInfo->device.write.eccCommand),
+                                      textMacros.data,
+                                      textMacros.count,
+                                      executeIOInfo.commandLine,
+                                      CALLBACK_(executeIOdvdisasterStdout,&executeIOInfo),
+                                      CALLBACK_(executeIOdvdisasterStderr,&executeIOInfo)
+                                     );
+          if (error == ERROR_NONE)
+          {
+            printInfo(1,"OK\n");
+          }
+          else
+          {
+            printInfo(1,"FAIL\n");
+            logMessage(storageInfo->logHandle,
+                       LOG_TYPE_ERROR,
+                       "Add ECC to image of volume #%u fail: %s",
+                       storageInfo->volumeNumber,
+                       Error_getText(error)
+                      );
+            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            logLines(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "  ",
+                     &executeIOInfo.stderrList
+                    );
+          }
+        }
+      }
+
+      // error-correction codes post-processing
+      if (error == ERROR_NONE)
+      {
+        if (!String_isEmpty(storageInfo->device.write.eccPostProcessCommand))
+        {
+          printInfo(1,"Add ECC post-processing to image of volume #%u...",storageInfo->volumeNumber);
+          error = Misc_executeCommand(String_cString(storageInfo->device.write.eccPostProcessCommand ),
+                                      textMacros.data,
+                                      textMacros.count,
+                                      NULL, // commandLine
+                                      CALLBACK_(executeIOOutput,NULL),
+                                      CALLBACK_(executeIOOutput,NULL)
+                                     );
+          if (error == ERROR_NONE)
+          {
+            printInfo(1,"OK\n");
+          }
+          else
+          {
+            printInfo(1,"FAIL\n");
+
+            logMessage(storageInfo->logHandle,
+                       LOG_TYPE_ERROR,
+                       "Add ECC post-processing to image of volume #%u fail: %s",
+                       storageInfo->volumeNumber,
+                       Error_getText(error)
+                      );
+            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            logLines(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "  ",
+                     &executeIOInfo.stderrList
+                    );
+          }
+        }
+      }
+    }
+
+    // create image post-processing
     if (error == ERROR_NONE)
     {
-      printInfo(1,"Make image volume #%d...",storageInfo->volumeNumber);
-      error = Misc_executeCommand(String_cString(storageInfo->device.write.imageCommand),
-                                  textMacros.data,
-                                  textMacros.count,
-                                  NULL, // commandLine
-                                  CALLBACK_(executeIOOutput,NULL),
-                                  CALLBACK_(executeIOOutput,NULL)
-                                 );
-      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+      if (!String_isEmpty(storageInfo->device.write.imagePostProcessCommand))
+      {
+      printInfo(1,"Image post-processing of volume #%u...",storageInfo->volumeNumber);
+        error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePostProcessCommand),
+                                    textMacros.data,
+                                    textMacros.count,
+                                    NULL, // commandLine
+                                    CALLBACK_(executeIOOutput,NULL),
+                                    CALLBACK_(executeIOOutput,NULL)
+                                   );
+        if (error == ERROR_NONE)
+        {
+          printInfo(1,"OK\n");
+        }
+        else
+        {
+          printInfo(1,"FAIL\n");
+          logMessage(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Image post-processing of volume #%u fail: %s",
+                     storageInfo->volumeNumber,
+                     Error_getText(error)
+                    );
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+          logLines(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "  ",
+                   &executeIOInfo.stderrList
+                  );
+        }
+      }
     }
-    if (error == ERROR_NONE)
+
+    // blank mediuam
+    if (storageInfo->jobOptions->blankFlag)
     {
-      printInfo(1,"Make image post-processing of volume #%d...",storageInfo->volumeNumber);
-      error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePostProcessCommand),
-                                  textMacros.data,
-                                  textMacros.count,
-                                  NULL, // commandLine
-                                  CALLBACK_(executeIOOutput,NULL),
-                                  CALLBACK_(executeIOOutput,NULL)
-                                 );
-      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+      if (error == ERROR_NONE)
+      {
+        if (!String_isEmpty(storageInfo->device.write.blankCommand))
+        {
+          printInfo(1,"Blank volume #%u...",storageInfo->device.write.number);
+          String_clear(executeIOInfo.commandLine);
+          StringList_clear(&executeIOInfo.stderrList);
+          error = Misc_executeCommand(String_cString(storageInfo->device.write.blankCommand),
+                                      textMacros.data,
+                                      textMacros.count,
+                                      executeIOInfo.commandLine,
+                                      CALLBACK_(executeIOblankStdout,&executeIOInfo),
+                                      CALLBACK_(executeIOblankStderr,&executeIOInfo)
+                                     );
+          if (error == ERROR_NONE)
+          {
+            printInfo(1,"OK\n");
+            logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked volume #%u",storageInfo->volumeNumber);
+            logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            storageInfo->opticalDisk.write.step++;
+          }
+          else
+          {
+            printInfo(1,"FAIL\n");
+
+            logMessage(storageInfo->logHandle,
+                       LOG_TYPE_ERROR,
+                       "Blank volume #%u fail: %s",
+                       storageInfo->volumeNumber,
+                       Error_getText(error)
+                      );
+            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            logLines(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "  ",
+                     &executeIOInfo.stderrList
+                    );
+          }
+        }
+      }
     }
 
     // write to device
     if (error == ERROR_NONE)
     {
-      if (!String_isEmpty(storageInfo->device.write.writePreProcessCommand))
+      retryCount = 3;
+      retryFlag  = TRUE;
+      do
       {
-        printInfo(1,"Write device pre-processing of volume #%d...",storageInfo->volumeNumber);
-        error = executeTemplate(String_cString(storageInfo->device.write.writePreProcessCommand),
-                                timestamp,
-                                textMacros.data,
-                                textMacros.count,
-                                CALLBACK_(executeIOOutput,NULL)
-                               );
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+        retryFlag = FALSE;
+
+        printInfo(1,"Write device volume #%u...",storageInfo->volumeNumber);
+        error = Misc_executeCommand(String_cString(storageInfo->device.write.writeCommand),
+                                    textMacros.data,
+                                    textMacros.count,
+                                    NULL, // commandLine
+                                    CALLBACK_(executeIOOutput,NULL),
+                                    CALLBACK_(executeIOOutput,NULL)
+                                   );
+        if (error == ERROR_NONE)
+        {
+          printInfo(1,"OK\n");
+          retryFlag = FALSE;
+        }
+        else
+        {
+          printInfo(1,"FAIL\n");
+          logMessage(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Write image to volume #%u fail: %s",
+                     storageInfo->volumeNumber,
+                     Error_getText(error)
+                    );
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+          logLines(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "  ",
+                   &executeIOInfo.stderrList
+                  );
+
+          retryCount--;
+          if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+          {
+            retryFlag = Misc_getYesNo("Retry write image to volume?");
+          }
+          else
+          {
+            retryFlag = (requestNewOpticalMedium(storageInfo,Error_getText(error),TRUE) == ERROR_NONE);
+          }
+        }
+      }
+      while ((error != ERROR_NONE) && (retryCount > 0) && retryFlag);
+      if (error == ERROR_NONE)
+      {
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written image volume #%u",storageInfo->volumeNumber);
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
+        storageInfo->opticalDisk.write.step++;
       }
     }
-    if (error == ERROR_NONE)
-    {
-      printInfo(1,"Write device volume #%d...",storageInfo->volumeNumber);
-      error = Misc_executeCommand(String_cString(storageInfo->device.write.writeCommand),
-                                  textMacros.data,
-                                  textMacros.count,
-                                  NULL, // commandLine
-                                  CALLBACK_(executeIOOutput,NULL),
-                                  CALLBACK_(executeIOOutput,NULL)
-                                 );
-      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-    }
 
-    if (error != ERROR_NONE)
-    {
-      File_delete(imageFileName,FALSE);
-      String_delete(imageFileName);
-      return error;
-    }
+    // delete image
     File_delete(imageFileName,FALSE);
     String_delete(imageFileName);
+
+    // update running info
+    storageInfo->progress.volumeDone = 100.0;
+    updateStorageRunningInfo(storageInfo);
 
     // delete stored files
     fileName = String_new();
@@ -714,14 +1006,22 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       }
     }
     String_delete(fileName);
+
+    // handle error
     if (error != ERROR_NONE)
     {
+      String_delete(executeIOInfo.commandLine);
+      StringList_done(&executeIOInfo.stderrList);
       return error;
     }
 
     // reset
     storageInfo->device.write.newVolumeFlag = TRUE;
     storageInfo->device.write.totalSize     = 0;
+
+    // free resources
+    String_delete(executeIOInfo.commandLine);
+    StringList_done(&executeIOInfo.stderrList);
 
     // write post-processing
     if (!String_isEmpty(storageInfo->device.write.writePostProcessCommand))
@@ -730,7 +1030,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       if (!String_isEmpty(storageInfo->device.write.writePostProcessCommand))
       {
         // get script
-        printInfo(1,"Write device post-processing of volume #%d...",storageInfo->volumeNumber);
+        printInfo(1,"Write device post-processing of volume #%u...",storageInfo->volumeNumber);
         error = executeTemplate(String_cString(storageInfo->device.write.writePostProcessCommand),
                                 timestamp,
                                 textMacros.data,

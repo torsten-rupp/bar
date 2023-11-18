@@ -1492,14 +1492,14 @@ LOCAL bool StorageWebDAV_isServerAllocationPending(const StorageInfo *storageInf
 }
 
 LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
-                                      ConstString       fileName,
+                                      ConstString       archiveName,
                                       time_t            timestamp,
                                       bool              initialFlag
                                      )
 {
   Errors error;
   #ifdef HAVE_CURL
-    TextMacros (textMacros,2);
+    TextMacros (textMacros,3);
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
@@ -1512,11 +1512,15 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
   #ifdef HAVE_CURL
     if (!initialFlag)
     {
+      // init variables
+      String directory = String_new();
+
       // init macros
       TEXT_MACROS_INIT(textMacros)
       {
-        TEXT_MACRO_X_STRING("%file",  fileName,                 NULL);
-        TEXT_MACRO_X_INT   ("%number",storageInfo->volumeNumber,NULL);
+        TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
+        TEXT_MACRO_X_STRING("%file",     archiveName,                                 NULL);
+        TEXT_MACRO_X_INT   ("%number",   storageInfo->volumeNumber,                   NULL);
       }
 
       // write pre-processing
@@ -1531,6 +1535,9 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
+
+      // free resources
+      String_delete(directory);
     }
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageInfo);
@@ -1552,7 +1559,7 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
 {
   Errors error;
   #ifdef HAVE_CURL
-    TextMacros (textMacros,2);
+    TextMacros (textMacros,3);
   #endif /* HAVE_CURL */
 
   assert(storageInfo != NULL);
@@ -1565,11 +1572,15 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
   #ifdef HAVE_CURL
     if (!finalFlag)
     {
+      // init variables
+      String directory = String_new();
+
       // init macros
       TEXT_MACROS_INIT(textMacros)
       {
-        TEXT_MACRO_X_STRING("%file",  archiveName,              NULL);
-        TEXT_MACRO_X_INT   ("%number",storageInfo->volumeNumber,NULL);
+        TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
+        TEXT_MACRO_X_STRING("%file",     archiveName,                                 NULL);
+        TEXT_MACRO_X_INT   ("%number",   storageInfo->volumeNumber,                   NULL);
       }
 
       // write post-process
@@ -1584,6 +1595,9 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
+
+      // free resources
+      String_delete(directory);
     }
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageInfo);
