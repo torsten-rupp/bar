@@ -1003,6 +1003,7 @@ gprof/errors.o: errors.c errors.h
 valgrind/errors.o: errors.c errors.h
 
 # archive format definition
+.NOTPARALLEL: archive_format.h archive_format_const.h archive_format.c
 archive_format.h: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
 	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -h $@
 archive_format_const.h: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
@@ -1016,6 +1017,7 @@ gprof/archive_format.o: archive_format.c archive_format.h
 valgrind/archive_format.o: archive_format.c archive_format.h
 
 # index database definition
+.NOTPARALLEL: index_definition.c index_definition.h
 index_definition.c index_definition.h: \
   $(SOURCE_DIR)/index/index_definition.pl \
   $(SOURCE_DIR)/index/index_common.def \

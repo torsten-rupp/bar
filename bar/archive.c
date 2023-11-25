@@ -4842,7 +4842,7 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
   // create hard link name chunks
   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
   {
-    String_set(archiveEntryInfo->hardLink.chunkHardLinkName.name,fileName);
+    convertSystemToUTF8Encoding(archiveEntryInfo->hardLink.chunkHardLinkName.name,fileName);
 
     error = Chunk_create(&archiveEntryInfo->hardLink.chunkHardLinkName.info);
     if (error != ERROR_NONE)
@@ -7276,7 +7276,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->file.chunkFileEntry.userId          = fileInfo->userId;
   archiveEntryInfo->file.chunkFileEntry.groupId         = fileInfo->groupId;
   archiveEntryInfo->file.chunkFileEntry.permissions     = fileInfo->permissions;
-  String_set(archiveEntryInfo->file.chunkFileEntry.name,fileName);
+  convertSystemToUTF8Encoding(archiveEntryInfo->file.chunkFileEntry.name,fileName);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFileEntry.info,{ Chunk_done(&archiveEntryInfo->file.chunkFileEntry.info); });
 
   error = Chunk_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.info,
@@ -7676,7 +7676,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->image.chunkImageEntry.fileSystemType = fileSystemType;
   archiveEntryInfo->image.chunkImageEntry.size           = deviceInfo->size;
   archiveEntryInfo->image.chunkImageEntry.blockSize      = deviceInfo->blockSize;
-  String_set(archiveEntryInfo->image.chunkImageEntry.name,deviceName);
+  convertSystemToUTF8Encoding(archiveEntryInfo->image.chunkImageEntry.name,deviceName);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageEntry.info,{ Chunk_done(&archiveEntryInfo->image.chunkImageEntry.info); });
 
   if (Compress_isCompressed(archiveEntryInfo->image.deltaCompressAlgorithm))
@@ -7931,7 +7931,9 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->directory.chunkDirectoryEntry.userId          = fileInfo->userId;
   archiveEntryInfo->directory.chunkDirectoryEntry.groupId         = fileInfo->groupId;
   archiveEntryInfo->directory.chunkDirectoryEntry.permissions     = fileInfo->permissions;
-  String_set(archiveEntryInfo->directory.chunkDirectoryEntry.name,directoryName);
+  String utf8DirectoryName = convertSystemToUTF8Encoding(String_new(),directoryName);
+  String_set(archiveEntryInfo->directory.chunkDirectoryEntry.name,utf8DirectoryName);
+  String_delete(utf8DirectoryName);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectoryEntry.info,{ Chunk_done(&archiveEntryInfo->directory.chunkDirectoryEntry.info); });
 
   error = Chunk_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,
@@ -8184,8 +8186,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->link.chunkLinkEntry.userId          = fileInfo->userId;
   archiveEntryInfo->link.chunkLinkEntry.groupId         = fileInfo->groupId;
   archiveEntryInfo->link.chunkLinkEntry.permissions     = fileInfo->permissions;
-  String_set(archiveEntryInfo->link.chunkLinkEntry.name,linkName);
-  String_set(archiveEntryInfo->link.chunkLinkEntry.destinationName,destinationName);
+  convertSystemToUTF8Encoding(archiveEntryInfo->link.chunkLinkEntry.name,linkName);
+  convertSystemToUTF8Encoding(archiveEntryInfo->link.chunkLinkEntry.destinationName,destinationName);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLinkEntry.info,{ Chunk_done(&archiveEntryInfo->link.chunkLinkEntry.info); });
 
   error = Chunk_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,
@@ -8703,7 +8705,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                             Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkData.info, &archiveEntryInfo->hardLink.chunkHardLinkData, 0);
   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
   {
-    String_set(archiveEntryInfo->hardLink.chunkHardLinkName.name,fileName);
+    convertSystemToUTF8Encoding(archiveEntryInfo->hardLink.chunkHardLinkName.name,fileName);
 
     archiveEntryInfo->hardLink.headerLength += Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkName.info,
                                                              &archiveEntryInfo->hardLink.chunkHardLinkName,
@@ -8893,7 +8895,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->special.chunkSpecialEntry.permissions     = fileInfo->permissions;
   archiveEntryInfo->special.chunkSpecialEntry.major           = fileInfo->major;
   archiveEntryInfo->special.chunkSpecialEntry.minor           = fileInfo->minor;
-  String_set(archiveEntryInfo->special.chunkSpecialEntry.name,specialName);
+  convertSystemToUTF8Encoding(archiveEntryInfo->special.chunkSpecialEntry.name,specialName);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecialEntry.info,{ Chunk_done(&archiveEntryInfo->special.chunkSpecialEntry.info); });
 
   error = Chunk_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,
@@ -10331,7 +10333,7 @@ NULL//                             password
             // get file meta data
             if (fileName != NULL)
             {
-              String_set(fileName,archiveEntryInfo->file.chunkFileEntry.name);
+              convertUTF8ToSystemEncoding(fileName,archiveEntryInfo->file.chunkFileEntry.name);
             }
             if (fileInfo != NULL)
             {
@@ -10408,6 +10410,7 @@ NULL//                             password
               error = ERROR_INVALID_COMPRESS_ALGORITHM;
               break;
             }
+// TODO: encoding
             if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->file.chunkFileDelta.name);
             if (deltaSourceSize != NULL) (*deltaSourceSize) = archiveEntryInfo->file.chunkFileDelta.size;
 

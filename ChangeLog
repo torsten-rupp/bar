@@ -4,12 +4,16 @@
   * added pre/post command macro %nextScheduleDateTime
   * added execute ECC commands for device
   * experimental Windows support!
+  * convert character encoding of file names always to
+    UTF-8 (required on Windows)
+  * always store names UTF-8 encoded
   * upgrade zlib 1.3
   * upgrade libidn2 2.3.4
   * upgrade nettle 3.9.1
   * upgrade c-ares 1.20.1
   * upgrade build pipeline for Debian 10
   * upgrade RPM build environment to CentOS 7
+  * upgrade ICU 61.1
   * fixed image pre/post commands for CD/DVD/BD
   * fixed image pre/post commands for device
   * fixed bar-index --pipe

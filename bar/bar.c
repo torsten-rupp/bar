@@ -882,9 +882,17 @@ void outputConsole(FILE *file, ConstString string)
         UNUSED_RESULT(fwrite(String_cString(outputLine),1,String_length(outputLine),file));
       }
 
+#if 0
       // output new string
       UNUSED_RESULT(fwrite(String_cString(string),1,String_length(string),file));
+#else
+      String consoleString = convertSystemToConsoleEncoding(String_new(),string);
 
+      // output new string
+      UNUSED_RESULT(fwrite(String_cString(consoleString),1,String_length(consoleString),file));
+
+      String_delete(consoleString);
+#endif
       // store output string
       STRING_CHAR_ITERATE(string,i,ch)
       {
@@ -4305,6 +4313,13 @@ LOCAL Errors runDebug(int argc, const char *argv[])
 * Notes  : -
 \***********************************************************************/
 
+#include "unicode/utypes.h"
+#include "unicode/ustring.h"
+#include "unicode/uclean.h"
+
+#include "unicode/ucnv.h"
+#include "unicode/udat.h"
+#include "unicode/ucal.h"
 LOCAL Errors bar(int argc, const char *argv[])
 {
   String fileName;
@@ -4490,6 +4505,16 @@ LOCAL Errors bar(int argc, const char *argv[])
     return error;
   }
 
+  // init encoding converter
+  error = initEncodingConverter(globalOptions.systemEncoding,globalOptions.consoleEncoding);
+  if (error != ERROR_NONE)
+  {
+    printError(_("cannot initialize encoding (error: %s)!"),
+               Error_getText(error)
+              );
+    return error;
+  }
+
   // create client+worker thread pools
   if (!ThreadPool_init(&clientThreadPool,
                        "BAR client",
@@ -4499,6 +4524,7 @@ LOCAL Errors bar(int argc, const char *argv[])
                       )
      )
   {
+    doneEncodingConverter();
     (void)File_delete(tmpDirectory,TRUE);
     printError(_("cannot initialize client thread pool!"));
     return ERROR_INIT;
@@ -4532,6 +4558,7 @@ LOCAL Errors bar(int argc, const char *argv[])
       printf("\n");
 
       ThreadPool_done(&clientThreadPool);
+      doneEncodingConverter();
       (void)File_delete(tmpDirectory,TRUE);
       return ERROR_NONE;
     }
@@ -4581,6 +4608,9 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   // umounts
   purgeMounts(TRUE);
+
+  // done encoding converter
+  doneEncodingConverter();
 
   // delete temporary directory
   (void)File_delete(tmpDirectory,TRUE);

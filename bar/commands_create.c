@@ -1793,6 +1793,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         }
         else
         {
+// TODO: root path File_getRootName()?
           File_setFileNameChar(basePath,FILE_PATH_SEPARATOR_CHAR);
         }
       }
@@ -2860,7 +2861,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         {
           if (createInfo->jobOptions->skipUnreadableFlag)
           {
-            printWarning("x2Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
+            printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
             logMessage(createInfo->logHandle,
                        LOG_TYPE_ENTRY_ACCESS_DENIED,
                        "Access denied '%s' (error: %s)",

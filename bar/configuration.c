@@ -1700,7 +1700,7 @@ LOCAL Errors readKeyFile(Key *key, ConstString fileName)
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : Configuration_initGlobalOptions
+* Name   : initGlobalOptions
 * Purpose: initialize global option values
 * Input  : -
 * Output : -
@@ -1984,6 +1984,9 @@ LOCAL void initGlobalOptions(void)
   globalOptions.skipUnreadableFlag                              = FALSE;
   globalOptions.errorCorrectionCodesFlag                        = FALSE;
   globalOptions.waitFirstVolumeFlag                             = FALSE;
+
+  globalOptions.systemEncoding                                  = NULL;
+  globalOptions.consoleEncoding                                 = NULL;
 
   globalOptions.saveConfigurationFileName                       = NULL;
   globalOptions.cleanConfigurationComments                      = FALSE;
@@ -7337,10 +7340,16 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
   {
     if ((fileInfo.permissions & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
     {
-      printWarning(_("Configuration file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600)"),
-                   String_cString(fileName),
-                   fileInfo.permissions & FILE_PERMISSION_MASK
-                  );
+      #if   defined(PLATFORM_LINUX)
+        printWarning(_("Configuration file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600)"),
+                     String_cString(fileName),
+                     fileInfo.permissions & FILE_PERMISSION_MASK
+                    );
+      #elif defined(PLATFORM_WINDOWS)
+        printWarning(_("Configuration file '%s' has wrong file permission. Please make sure read permissions are limited to file owner"),
+                     String_cString(fileName)
+                    );
+      #endif /* PLATFORM_... */
     }
   }
 
@@ -8360,6 +8369,9 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("dry-run",                           0,  1,2,globalOptions.dryRun,                                                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
 
   CMD_OPTION_SPECIAL      ("new-entity-uuid",                   0,  0,2,&globalOptions.newEntityUUID,                        cmdOptionParseNewEntiryUUID,NULL,0,                          "new entity uuid","uuid"                                                   ),
+
+  CMD_OPTION_CSTRING      ("system-encoding",                   0,  1,2,globalOptions.systemEncoding,                                                                                     "system encoding","encoding"                                               ),
+  CMD_OPTION_CSTRING      ("console-encoding",                  0,  1,2,globalOptions.consoleEncoding,                                                                                    "console encoding","encoding"                                              ),
 
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                                                                                          "suppress any output"                                                      ),
   CMD_OPTION_INCREMENT    ("verbose",                           'v',0,0,globalOptions.verboseLevel,                          0,6,                                                         "increment/set verbosity level"                                            ),

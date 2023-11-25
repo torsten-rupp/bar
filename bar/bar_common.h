@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+// TODO: ifdef
+#include <unicode/ucnv.h>
 #include <assert.h>
 
 #include "forward.h"         // required for JobOptions
@@ -896,7 +898,7 @@ typedef struct
   uint                        niceLevel;                      // nice level 0..19
   uint                        maxThreads;                     // max. number of concurrent compress/encryption threads or 0
 
-  String                      tmpDirectory;                   // directory for temporary files
+  String                      tmpDirectory;                   // base directory for temporary files
   uint64                      maxTmpSize;                     // max. size of temporary files
 
   String                      jobsDirectory;                  // jobs directory
@@ -1099,6 +1101,9 @@ typedef struct
   bool                        errorCorrectionCodesFlag;       // TRUE iff error correction codes should be added
   bool                        waitFirstVolumeFlag;            // TRUE for wait for first volume
 
+  const char                  *systemEncoding;                // system encoding to use or NULL
+  const char                  *consoleEncoding;               // console encoding to use or NULL
+
   String                      newEntityUUID;                  // new entity UUID for covnert
 
   const char                  *saveConfigurationFileName;     // configuration save file name
@@ -1196,7 +1201,7 @@ typedef bool(*IsPauseFunction)(void *userData);
 typedef bool(*IsAbortedFunction)(void *userData);
 
 /***************************** Variables *******************************/
-extern String tmpDirectory;           // temporary directory
+extern String tmpDirectory;           // global temporary directory
 
 /****************************** Macros *********************************/
 
@@ -1429,6 +1434,69 @@ ulong getBandWidth(BandWidthList *bandWidthList);
 \***********************************************************************/
 
 bool isInTimeRange(uint hour, uint minute, int beginHour, int beginMinute, int endHour, int endMinute);
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
+* Name   : initEncodingConverter
+* Purpose: initialize encoding converter
+* Input  : systemEncoding  - system encoding to use or NULL
+*          consoleEncoding - console encoding to use or NULL
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors initEncodingConverter(const char *systemEncoding,
+                             const char *consoleEncoding
+                            );
+
+/***********************************************************************\
+* Name   : doneEncodingConverter
+* Purpose: done encoding converter
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void doneEncodingConverter(void);
+
+/***********************************************************************\
+* Name   : convertSystemToUTF8Encoding
+* Purpose: convert character encoding from system to UTF-8
+* Input  : destination - destination string variable
+*          source      - source string (system encoded)
+* Output : -
+* Return : destination string (UTF-8 encoded)
+* Notes  : -
+\***********************************************************************/
+
+String convertSystemToUTF8Encoding(String destination, ConstString source);
+
+/***********************************************************************\
+* Name   : convertUTF8ToSystemEncoding
+* Purpose: convert character encoding from UTF-8 to system
+* Input  : destination - destination string variable
+*          source      - source string (UTF-8 encoded)
+* Output : -
+* Return : destination string (system encoded)
+* Notes  : -
+\***********************************************************************/
+
+String convertUTF8ToSystemEncoding(String destination, ConstString source);
+
+/***********************************************************************\
+* Name   : convertSystemToConsoleEncoding
+* Purpose: convert character encoding from system to console
+* Input  : destination - destination string variable
+*          source      - source string (UTF-8 encoded)
+* Output : -
+* Return : destination string (system encoded)
+* Notes  : -
+\***********************************************************************/
+
+String convertSystemToConsoleEncoding(String destination, ConstString source);
 
 #ifdef __cplusplus
   }

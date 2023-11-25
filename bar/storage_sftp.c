@@ -1333,8 +1333,8 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
 LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
   bool   existsFlag;
-  Errors error;
   #ifdef HAVE_SSH2
+    Errors       error;
     SocketHandle socketHandle;
   #endif /* HAVE_SSH2 */
 

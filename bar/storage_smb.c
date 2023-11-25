@@ -334,6 +334,8 @@ LOCAL void StorageSMB_getPrintableName(String                 string,
   }
 }
 
+#ifdef HAVE_SMB2
+
 /***********************************************************************\
 * Name   : initSMBLogin
 * Purpose: init SMB/CIFS login
@@ -425,8 +427,6 @@ LOCAL bool initSMBLogin(ConstString             hostName,
 
   return initFlag;
 }
-
-#ifdef HAVE_SMB2
 
 /***********************************************************************\
 * Name   : smb2InitSharePath

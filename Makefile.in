@@ -102,29 +102,29 @@ ZIP                    = zip
 #------------------------ specific variables/settings ------------------------
 
 # special constants
-EMPTY :=
-SPACE := $(EMPTY) $(EMPTY)
-COMMA := ,
+EMPTY                       :=
+SPACE                       := $(EMPTY) $(EMPTY)
+COMMA                       := ,
 
 # shell in Makefile must be bash with pipe-fail handling
-SHELL                  = bash -o pipefail
+SHELL                       = bash -o pipefail
+											      
+VERSION_MAJOR               := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
+VERSION_MINOR               := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
+VERSION_PATCH               := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
+VERSION                     := $(VERSION_MAJOR)$(if $(VERSION_MINOR),.$(VERSION_MINOR))$(VERSION_PATCH)
+											      
+PACKAGE_NAME                = backup-archiver
+PACKAGE_NAME_GUI            = backup-archiver-gui
+DISTRIBUTION_NAME           = $(PACKAGE_NAME)-$(VERSION)
+DISTRIBUTION_NAME_ORIG      = $(PACKAGE_NAME)_$(VERSION).orig
+DISTRIBUTION_NAME_GUI       = $(PACKAGE_NAME_GUI)-$(VERSION)
 
-VERSION_MAJOR          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
-VERSION_MINOR          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
-VERSION_PATCH          := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
-VERSION                := $(VERSION_MAJOR)$(if $(VERSION_MINOR),.$(VERSION_MINOR))$(VERSION_PATCH)
-
-PACKAGE_NAME           = backup-archiver
-PACKAGE_NAME_GUI       = backup-archiver-gui
-DISTRIBUTION_NAME      = $(PACKAGE_NAME)-$(VERSION)
-DISTRIBUTION_NAME_ORIG = $(PACKAGE_NAME)_$(VERSION).orig
-DISTRIBUTION_NAME_GUI  = $(PACKAGE_NAME_GUI)-$(VERSION)
-
-TEST_PACKAGS_CENTOS="8"
-TEST_PACKAGS_FEDORA="36 37 38 39 40"
-TEST_PACKAGS_OPENSUSE_LEAP="15.1 15.2 15.3 15.4 15.5"
-TEST_PACKAGS_DEBIAN="10 11 12"
-TEST_PACKAGS_UBUNTU="20.04 22.04 23.04 23.10"
+TEST_PACKAGES_CENTOS        := "8"
+TEST_PACKAGES_FEDORA        := "37 38 39 40"
+TEST_PACKAGES_OPENSUSE_LEAP := "15.1 15.2 15.3 15.4 15.5"
+TEST_PACKAGES_DEBIAN        := "10 11 12"
+TEST_PACKAGES_UBUNTU        := "20.04 22.04 23.04 23.10"
 
 #-------------------------------- functions ----------------------------------
 
@@ -290,13 +290,13 @@ help:
 	@$(ECHO) ""
 	@$(ECHO) "  install_test_rpm[d]"
 	@$(ECHO) "  install_test_rpm_centos8-x86_64[d]"
-	@$(ECHO) "  install_test_rpm_fedora[$(subst $(SPACE),\|,$(TEST_PACKAGS_FEDORA))]-x86_64[d]"
+	@$(ECHO) "  install_test_rpm_fedora[$(subst $(SPACE),\|,$(TEST_PACKAGES_FEDORA))]-x86_64[d]"
 	@$(ECHO) "  install_test_rpm_opensuse-tumbleweed-x86_64[d]"
-	@$(ECHO) "  install_test_rpm_opensuse-leap[$(subst $(SPACE),\|,$(TEST_PACKAGS_OPENSUSE_LEAP))]-x86_64[d]"
+	@$(ECHO) "  install_test_rpm_opensuse-leap[$(subst $(SPACE),\|,$(TEST_PACKAGES_OPENSUSE_LEAP))]-x86_64[d]"
 	@$(ECHO) ""
 	@$(ECHO) "  install_test_deb[d]"
-	@$(ECHO) "  install_test_deb_debian[$(subst $(SPACE),\|,$(TEST_PACKAGS_DEBIAN))]-x86_64[d]"
-	@$(ECHO) "  install_test_deb_ubuntu[$(subst $(SPACE),\|,$(TEST_PACKAGS_UBUNTU))]-x86_64[d]"
+	@$(ECHO) "  install_test_deb_debian[$(subst $(SPACE),\|,$(TEST_PACKAGES_DEBIAN))]-x86_64[d]"
+	@$(ECHO) "  install_test_deb_ubuntu[$(subst $(SPACE),\|,$(TEST_PACKAGES_UBUNTU))]-x86_64[d]"
 	@$(ECHO) ""
 	@$(ECHO) "  install_test_win32[d]"
 	@$(ECHO) ""
@@ -332,14 +332,12 @@ bar-keygen:
 	$(MAKE) -C bar bar-keygen
 
 # create barcontrol
-ifeq ($(PLATFORM),LINUX)
 .PHONY: barcontrol
 barcontrol/barcontrol barcontrol:
 ifeq ($(ENABLE_GUI),yes)
 	$(MAKE) -C barcontrol barcontrol
 else
 	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
-endif
 endif
 
 barcontrol/barcontrol.cmd:
@@ -348,12 +346,14 @@ ifeq ($(ENABLE_GUI),yes)
 else
 	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
 endif
+ifeq ($(PLATFORM),WINDOWS)
 ifneq ($(LAUNCH4JC),)
 barcontrol/barcontrol@EXEEXT@:
 ifeq ($(ENABLE_GUI),yes)
 	$(MAKE) -C barcontrol barcontrol@EXEEXT@
 else
 	@$(ECHO) "ERROR: GUI components not configured - cannot be build."
+endif
 endif
 endif
 
@@ -743,16 +743,16 @@ docker_update update_docker:
 	(cd ci; $(DOCKER) build -f build.dockerfile -t bar --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
 	#
 	# test packages images
-	$(foreach i,$(TEST_PACKAGS_CENTOS),$(DOCKER) pull centos:$i;)
+	$(foreach i,$(TEST_PACKAGES_CENTOS),$(DOCKER) pull centos:$i;)
 	#
-	$(foreach i,$(TEST_PACKAGS_FEDORA),$(DOCKER) pull fedora:$i;)
+	$(foreach i,$(TEST_PACKAGES_FEDORA),$(DOCKER) pull fedora:$i;)
 	#
 	$(DOCKER) pull opensuse/tumbleweed
-	$(foreach i,$(TEST_PACKAGS_OPENSUSE_LEAP),$(DOCKER) pull opensuse/leap:$i;)
+	$(foreach i,$(TEST_PACKAGES_OPENSUSE_LEAP),$(DOCKER) pull opensuse/leap:$i;)
 	#
-	$(foreach i,$(TEST_PACKAGS_DEBIAN),$(DOCKER) pull debian:$i;)
+	$(foreach i,$(TEST_PACKAGES_DEBIAN),$(DOCKER) pull debian:$i;)
 	#
-	$(foreach i,$(TEST_PACKAGS_UBUNTU),$(DOCKER) pull ubuntu:$i;)
+	$(foreach i,$(TEST_PACKAGES_UBUNTU),$(DOCKER) pull ubuntu:$i;)
 	#
 	$(RMF) ci/bar-sudoers
 	$(RMF) ci/download-third-party-packages.sh
@@ -1064,23 +1064,23 @@ install_test_rpmd: \
 
 .PHONY: install_test_rpm_centos install_test_rpm_centosd
 install_test_rpm_centos: \
-  $(foreach i,$(TEST_PACKAGS_CENTOS),install_test_rpm_centos$i-x86_64)
+  $(foreach i,$(TEST_PACKAGES_CENTOS),install_test_rpm_centos$i-x86_64)
 install_test_rpm_centosd: \
-  $(foreach i,$(TEST_PACKAGS_CENTOS),install_test_rpm_centos$i-x86_64d)
+  $(foreach i,$(TEST_PACKAGES_CENTOS),install_test_rpm_centos$i-x86_64d)
 
 .PHONY: install_test_rpm_fedora install_test_rpm_fedorad
 install_test_rpm_fedora: \
-  $(foreach i,$(TEST_PACKAGS_FEDORA),install_test_rpm_fedora$i-x86_64)
+  $(foreach i,$(TEST_PACKAGES_FEDORA),install_test_rpm_fedora$i-x86_64)
 install_test_rpm_fedorad: \
-  $(foreach i,$(TEST_PACKAGS_FEDORA),install_test_rpm_fedora$i-x86_64d)
+  $(foreach i,$(TEST_PACKAGES_FEDORA),install_test_rpm_fedora$i-x86_64d)
 
 .PHONY: install_test_rpm_opensuse install_test_rpm_opensused
 install_test_rpm_opensuse: \
   install_test_rpm_opensuse-tumbleweed-x86_64 \
-  $(foreach i,$(TEST_PACKAGS_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64)
+  $(foreach i,$(TEST_PACKAGES_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64)
 install_test_rpm_opensused: \
   install_test_rpm_opensuse-tumbleweed-x86_64d \
-  $(foreach i,$(TEST_PACKAGS_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64d)
+  $(foreach i,$(TEST_PACKAGES_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64d)
 
 .PHONY: install_test_rpm_centos8-x86_64 install_test_rpm_centos8-x86_64d
 install_test_rpm_centos%-x86_64: $(DISTRIBUTION_NAME)-x86_64.rpm
@@ -1131,15 +1131,15 @@ install_test_debd: \
 
 .PHONY: install_test_deb_debian install_test_deb_debiand
 install_test_deb_debian: \
-  $(foreach i,$(TEST_PACKAGS_DEBIAN),install_test_deb_debian$i-x86_64)
+  $(foreach i,$(TEST_PACKAGES_DEBIAN),install_test_deb_debian$i-x86_64)
 install_test_deb_debiand: \
-  $(foreach i,$(TEST_PACKAGS_DEBIAN),install_test_deb_debian$i-x86_64d)
+  $(foreach i,$(TEST_PACKAGES_DEBIAN),install_test_deb_debian$i-x86_64d)
 
 .PHONY: install_test_deb_ubuntu install_test_deb_ubuntud
 install_test_deb_ubuntu: \
-  $(foreach i,$(TEST_PACKAGS_UBUNTU),install_test_deb_ubuntu$i-x86_64)
+  $(foreach i,$(TEST_PACKAGES_UBUNTU),install_test_deb_ubuntu$i-x86_64)
 install_test_deb_ubuntud: \
-  $(foreach i,$(TEST_PACKAGS_UBUNTU),install_test_deb_ubuntu$i-x86_64d)
+  $(foreach i,$(TEST_PACKAGES_UBUNTU),install_test_deb_ubuntu$i-x86_64d)
 
 .PHONY: install_test_deb_debian%-x86_64 install_test_deb_debian%-x86_64d
 install_test_deb_debian%-x86_64:

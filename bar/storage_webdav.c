@@ -1541,7 +1541,7 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
     }
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageInfo);
-    UNUSED_VARIABLE(fileName);
+    UNUSED_VARIABLE(archiveName);
     UNUSED_VARIABLE(timestamp);
     UNUSED_VARIABLE(initialFlag);
 

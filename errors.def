@@ -18,7 +18,7 @@ INCLUDE "libssh2.h"
 IMPORT java.lang.System
 
 NONE    "none"
-DEFAULT "unknownx"
+DEFAULT "unknown"
 
 // --- general ----------------------------------------------------------
 ERROR INSUFFICIENT_MEMORY              TR("insufficient memory")
@@ -38,6 +38,7 @@ ERROR NO_PASSWORD                      TR("no password given")
 ERROR INVALID_PASSWORD_                TR("invalid password")
 ERROR PROCESS                          TR("process data failed")
 ERROR ERROR_INVALID_ENCODING           TR("invalid encoding")
+ERROR CONVERT_CHARS                    TR("convert characters")
 
 // --- patterns ---------------------------------------------------------
 // patterns

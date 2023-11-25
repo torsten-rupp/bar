@@ -852,7 +852,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     {
       if (!String_isEmpty(storageInfo->device.write.imagePostProcessCommand))
       {
-      printInfo(1,"Image post-processing of volume #%u...",storageInfo->volumeNumber);
+        printInfo(1,"Image post-processing of volume #%u...",storageInfo->volumeNumber);
         error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePostProcessCommand),
                                     textMacros.data,
                                     textMacros.count,

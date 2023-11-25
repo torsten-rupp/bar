@@ -285,8 +285,10 @@ LOCAL void vprintInfo(const char *prefix, const char *format, va_list arguments)
   if (prefix != NULL) String_appendCString(line,prefix);
   String_appendVFormat(line,format,arguments);
 
+  String consoleEncodedLine = convertSystemToConsoleEncoding(String_new(),line);
+
   // output
-  UNUSED_RESULT(fwrite(String_cString(line),1,String_length(line),stdout)); fflush(stdout);
+  UNUSED_RESULT(fwrite(String_cString(consoleEncodedLine),1,String_length(consoleEncodedLine),stdout)); fflush(stdout);
 
   String_delete(line);
 }

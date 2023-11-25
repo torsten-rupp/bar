@@ -13,6 +13,7 @@
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "common/global.h"
 
