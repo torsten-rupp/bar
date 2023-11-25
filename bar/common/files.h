@@ -40,10 +40,17 @@
 // max. length of a path
 #define FILE_MAX_PATH_LENGTH PATH_MAX
 
+// TODO:
 // Note: always use '/' and never brain dead '\'
-#define FILE_PATH_SEPARATOR_CHAR   '/'
-#define FILE_PATH_SEPARATOR_CHARS  "/"
-#define FILE_PATH_SEPARATOR_STRING "/"
+#if   defined(PLATFORM_LINUX)
+  #define FILE_PATH_SEPARATOR_CHAR   '/'
+  #define FILE_PATH_SEPARATOR_CHARS  "/"
+  #define FILE_PATH_SEPARATOR_STRING "/"
+#elif defined(PLATFORM_WINDOWS)
+  #define FILE_PATH_SEPARATOR_CHAR   '\\'
+  #define FILE_PATH_SEPARATOR_CHARS  "\\"
+  #define FILE_PATH_SEPARATOR_STRING "\\"
+#endif /* PLATFORM_... */
 
 // system directories
 typedef enum

@@ -735,11 +735,9 @@ LOCAL Errors doneFileHandle(const char  *__fileName__,
   #elif defined(PLATFORM_WINDOWS)
     if (fileHandle->deleteOnCloseFlag && (fileHandle->name != NULL))
     {
-fprintf(stderr,"%s:%d: n=%s\n",__FILE__,__LINE__,String_cString(fileHandle->name));
       if (unlink(String_cString(fileHandle->name)) != 0)
       {
         if (error == ERROR_NONE) error = getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       }
     }
   #endif /* PLATFORM_... */
@@ -1304,8 +1302,6 @@ String File_getAbsoluteFileNameCString(String absoluteFileName, const char *file
   #elif defined(PLATFORM_WINDOWS)
     buffer = _fullpath(NULL,fileName,0);
     String_setCString(absoluteFileName,buffer);
-    // replace brain dead '\'
-    String_replaceAllChar(absoluteFileName,STRING_BEGIN,'\\',FILE_PATH_SEPARATOR_CHAR);
     free(buffer);
   #endif /* PLATFORM_... */
 
@@ -1416,8 +1412,7 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
         {
           String_setBuffer(path,buffer,bufferLength);
           // discard trailing \ if Windows added it (Note: Windows should not try to be smart - it cannot...)
-          String_trimEnd(path,"\\");
-          String_replaceAllChar(path,STRING_BEGIN,'\\',FILE_PATH_SEPARATOR_CHAR);
+          String_trimEnd(path,FILE_PATH_SEPARATOR_CHARS);
         }
         else
         {
@@ -1438,18 +1433,16 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
           bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
           CoTaskMemFree(data);
           String_setBuffer(path,buffer,bufferLength);
-          // discard trailing \ if Windows added it (Note: Windows should not try to be smart - it cannot...)
-          String_trimEnd(path,"\\");
-          String_replaceAllChar(path,STRING_BEGIN,'\\',FILE_PATH_SEPARATOR_CHAR);
-          String_appendCString(path,"/SysWOW64/config/systemprofile/AppData/Local");
+          // discard trailing \ if Windows added it
+          String_trimEnd(path,FILE_PATH_SEPARATOR_CHARS);
+          String_appendCString(path,FILE_PATH_SEPARATOR_STRING"SysWOW64"FILE_PATH_SEPARATOR_STRING"config"FILE_PATH_SEPARATOR_STRING"systemprofile"FILE_PATH_SEPARATOR_STRING"AppData"FILE_PATH_SEPARATOR_STRING"Local");
         #else
           SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &data);
           bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
           CoTaskMemFree(data);
           String_setBuffer(path,buffer,bufferLength);
-          // discard trailing \ if Windows added it (Note: Windows should not try to be smart - it cannot...)
-          String_trimEnd(path,"\\");
-          String_replaceAllChar(path,STRING_BEGIN,'\\',FILE_PATH_SEPARATOR_CHAR);
+          // discard trailing \ if Windows added it
+          String_trimEnd(path,FILE_PATH_SEPARATOR_CHARS);
         #endif
         break;
       case FILE_SYSTEM_PATH_USER_HOME:
@@ -1457,9 +1450,8 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
         bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
         CoTaskMemFree(data);
         String_setBuffer(path,buffer,bufferLength);
-        // discard trailing \ if Windows added it (Note: Windows should not try to be smart - it cannot...)
+        // discard trailing \ if Windows added it
         String_trimEnd(path,"\\");
-        String_replaceAllChar(path,STRING_BEGIN,'\\',FILE_PATH_SEPARATOR_CHAR);
         break;
       default:
         #ifndef NDEBUG
@@ -1469,18 +1461,6 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
     }
   #endif /* PLATFORM_... */
   if (subDirectory != NULL) File_appendFileNameCString(path,subDirectory);
-#if 0
-// TODO: remove
-{
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-  FILE *f=fopen("c:/x.log","a");
-  if (f!=NULL)
-  {
-  fprintf(f,"path %d=%s\n",fileSystemPathType,String_cString(path));
-  fclose(f);
-  }
-}
-#endif
 
   return path;
 }

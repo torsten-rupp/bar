@@ -1350,7 +1350,7 @@ void debugDumpStackTrace(FILE                           *handle,
 {
   #ifdef HAVE_BFD_INIT
     char                 executableName[PATH_MAX];
-    int                  n;
+    ssize_t              n;
     StackTraceOutputInfo stackTraceOutputInfo;
   #elif HAVE_BACKTRACE_SYMBOLS
     const char **functionNames;
@@ -1364,11 +1364,10 @@ void debugDumpStackTrace(FILE                           *handle,
   #ifdef HAVE_BFD_INIT
     // get executable name
     n = readlink("/proc/self/exe",executableName,sizeof(executableName)-1);
-    if (n == -1)
+    if ((n == -1) || (n >= sizeof(executableName)))
     {
       return;
     }
-    assert((size_t)n < sizeof(executableName));
     executableName[n] = '\0';
 
     // output stack trace
