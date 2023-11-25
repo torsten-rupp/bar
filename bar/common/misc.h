@@ -1019,6 +1019,19 @@ INLINE void Misc_mdelay(uint64 time)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : Misc_getProgramFilePath
+* Purpose: get program file path
+* Input  : path - program path variable
+* Output : -
+* Return : program path
+* Notes  : -
+\***********************************************************************/
+
+String Misc_getProgramFilePath(String path);
+
+/*---------------------------------------------------------------------*/
+
+/***********************************************************************\
 * Name   : Misc_userNameToUserId
 * Purpose: convert user name to user id
 * Input  : name - user name

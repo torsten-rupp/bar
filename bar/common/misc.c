@@ -1440,6 +1440,46 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
 
 /*---------------------------------------------------------------------*/
 
+String Misc_getProgramFilePath(String path)
+{
+  #if   defined(PLATFORM_LINUX)
+    char    buffer[PATH_MAX];
+    ssize_t bufferLength;
+  #elif defined(PLATFORM_WINDOWS)
+    char  buffer[MAX_PATH];
+    DWORD bufferLength;
+  #endif /* PLATFORM_... */
+
+  assert(path != NULL);
+
+  String_clear(path);
+
+  #if   defined(PLATFORM_LINUX)
+    bufferLength = readlink("/proc/self/exe",buffer,sizeof(buffer));
+    if ((bufferLength == -1) || (bufferLength >= (ssize_t)sizeof(buffer)))
+    {
+      return path;
+    }
+
+    String_setBuffer(path,buffer,(ulong)bufferLength);
+  #elif defined(PLATFORM_WINDOWS)
+    bufferLength = GetModuleFileName(NULL,buffer,MAX_PATH);
+    if ((bufferLength == -1) || (bufferLength >= (ssize_t)sizeof(buffer)))
+    {
+      return path;
+    }
+
+    String_setBuffer(path,buffer,(ulong)bufferLength);
+
+    // replace brain dead '\'
+    String_replaceAllChar(path,STRING_BEGIN,'\\',FILE_PATH_SEPARATOR_CHAR);
+  #endif /* PLATFORM_... */
+
+  return path;
+}
+
+/*---------------------------------------------------------------------*/
+
 uint32 Misc_userNameToUserId(const char *name)
 {
   #define BUFFER_DELTA_SIZE 1024
