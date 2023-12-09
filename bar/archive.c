@@ -2779,7 +2779,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
   String_set(chunkMetaEntry.entityUUID,archiveHandle->entityUUID);
   chunkMetaEntry.archiveType     = archiveHandle->archiveType;
   chunkMetaEntry.createdDateTime = Misc_getCurrentDateTime();
-  String_set(chunkMetaEntry.comment,archiveHandle->storageInfo->jobOptions->comment);
+  convertSystemToUTF8Encoding(chunkMetaEntry.comment,archiveHandle->storageInfo->jobOptions->comment);
 
   // write meta chunks
   error = Chunk_create(&chunkMeta.info);
@@ -9024,7 +9024,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                               const char       *entityUUID,
                               ArchiveTypes     archiveType,
                               uint64           createdDateTime,
-                              const char       *comment
+                              ConstString      comment
                              )
 #else /* not NDEBUG */
   Errors __Archive_newMetaEntry(const char       *__fileName__,
@@ -9040,7 +9040,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                 const char       *entityUUID,
                                 ArchiveTypes     archiveType,
                                 uint64           createdDateTime,
-                                const char       *comment
+                                ConstString      comment
                                )
 #endif /* NDEBUG */
 {
@@ -9141,7 +9141,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   String_setCString(archiveEntryInfo->meta.chunkMetaEntry.entityUUID,entityUUID);
   archiveEntryInfo->meta.chunkMetaEntry.archiveType     = archiveType;
   archiveEntryInfo->meta.chunkMetaEntry.createdDateTime = createdDateTime;
-  String_setCString(archiveEntryInfo->meta.chunkMetaEntry.comment,comment);
+  convertSystemToUTF8Encoding(archiveEntryInfo->meta.chunkMetaEntry.comment,comment);
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->meta.chunkMetaEntry.info,{ Chunk_done(&archiveEntryInfo->meta.chunkMetaEntry.info); });
 
   // calculate header size
@@ -9825,7 +9825,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
             if (entityUUID      != NULL) String_set(entityUUID,archiveEntryInfo->meta.chunkMetaEntry.entityUUID);
             if (archiveType     != NULL) (*archiveType) = archiveEntryInfo->meta.chunkMetaEntry.archiveType;
             if (createdDateTime != NULL) (*createdDateTime) = archiveEntryInfo->meta.chunkMetaEntry.createdDateTime;
-            if (comment         != NULL) String_set(comment,archiveEntryInfo->meta.chunkMetaEntry.comment);
+            if (comment         != NULL) convertUTF8ToSystemEncoding(comment,archiveEntryInfo->meta.chunkMetaEntry.comment);
 
             foundMetaEntryFlag = TRUE;
             break;
@@ -10932,7 +10932,7 @@ NULL//                             password
             // get image meta data
             if (deviceName != NULL)
             {
-              String_set(deviceName,archiveEntryInfo->image.chunkImageEntry.name);
+              convertUTF8ToSystemEncoding(deviceName,archiveEntryInfo->image.chunkImageEntry.name);
             }
             if (fileSystemType != NULL)
             {
@@ -11399,7 +11399,7 @@ NULL//                             password
             // get directory meta data
             if (directoryName != NULL)
             {
-              String_set(directoryName,archiveEntryInfo->directory.chunkDirectoryEntry.name);
+              convertUTF8ToSystemEncoding(directoryName,archiveEntryInfo->directory.chunkDirectoryEntry.name);
             }
             if (fileInfo != NULL)
             {
@@ -11820,11 +11820,11 @@ NULL//                             password
             // get link meta data
             if (linkName != NULL)
             {
-              String_set(linkName,archiveEntryInfo->link.chunkLinkEntry.name);
+              convertUTF8ToSystemEncoding(linkName,archiveEntryInfo->link.chunkLinkEntry.name);
             }
             if (destinationName != NULL)
             {
-              String_set(destinationName,archiveEntryInfo->link.chunkLinkEntry.destinationName);
+              convertUTF8ToSystemEncoding(destinationName,archiveEntryInfo->link.chunkLinkEntry.destinationName);
             }
             if (fileInfo != NULL)
             {
@@ -12427,7 +12427,9 @@ NULL//                             password
 
             if (fileNameList != NULL)
             {
-              StringList_append(fileNameList,archiveEntryInfo->hardLink.chunkHardLinkName.name);
+              String fileName = convertUTF8ToSystemEncoding(String_new(),archiveEntryInfo->hardLink.chunkHardLinkName.name);
+              StringList_append(fileNameList,fileName);
+              String_delete(fileName);
             }
 
             // close hard link name chunk
@@ -12927,7 +12929,7 @@ NULL//                             password
             // get special meta data
             if (specialName != NULL)
             {
-              String_set(specialName,archiveEntryInfo->special.chunkSpecialEntry.name);
+              convertUTF8ToSystemEncoding(specialName,archiveEntryInfo->special.chunkSpecialEntry.name);
             }
             if (fileInfo != NULL)
             {

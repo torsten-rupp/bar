@@ -616,8 +616,8 @@ LOCAL void printFileInfo(uint               prefixWidth,
     TEXT_MACRO_X_CSTRING  ("%user",           userName,                                                             NULL);
     TEXT_MACRO_X_CSTRING  ("%group",          groupName,                                                            NULL);
     TEXT_MACRO_X_CSTRING  ("%permission",     permissionString,                                                     NULL);
-    TEXT_MACRO_X_INT64("%partFrom",       fragmentOffset,                                                       NULL);
-    TEXT_MACRO_X_INT64("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
+    TEXT_MACRO_X_INT64    ("%partFrom",       fragmentOffset,                                                       NULL);
+    TEXT_MACRO_X_INT64    ("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
     TEXT_MACRO_X_STRING   ("%compress",       compressString,                                                       NULL);
     TEXT_MACRO_X_DOUBLE   ("%ratio",          ratio,                                                                NULL);
     TEXT_MACRO_X_STRING   ("%crypt",          cryptString,                                                          NULL);
@@ -800,8 +800,8 @@ LOCAL void printImageInfo(uint               prefixWidth,
     TEXT_MACRO_X_STRING   ("%storageName",    storageName,                                                                                    NULL);
     TEXT_MACRO_X_CSTRING  ("%type",           "IMAGE",                                                                                        NULL);
     TEXT_MACRO_X_CSTRING  ("%size",           sizeString,                                                                                     NULL);
-    TEXT_MACRO_X_INT64("%partFrom",       fragmentOffset,                                                       NULL);
-    TEXT_MACRO_X_INT64("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
+    TEXT_MACRO_X_INT64    ("%partFrom",       fragmentOffset,                                                       NULL);
+    TEXT_MACRO_X_INT64    ("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
     TEXT_MACRO_X_STRING   ("%compress",       compressString,                                                                                 NULL);
     TEXT_MACRO_X_DOUBLE   ("%ratio",          ratio,                                                                                          NULL);
     TEXT_MACRO_X_STRING   ("%crypt",          cryptString,                                                                                    NULL);
@@ -1268,8 +1268,8 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
     TEXT_MACRO_X_CSTRING  ("%user",           userName,                                                             NULL);
     TEXT_MACRO_X_CSTRING  ("%group",          groupName,                                                            NULL);
     TEXT_MACRO_X_CSTRING  ("%permission",     permissionString,                                                     NULL);
-    TEXT_MACRO_X_INT64("%partFrom",       fragmentOffset,                                                       NULL);
-    TEXT_MACRO_X_INT64("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
+    TEXT_MACRO_X_INT64    ("%partFrom",       fragmentOffset,                                                       NULL);
+    TEXT_MACRO_X_INT64    ("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
     TEXT_MACRO_X_STRING   ("%compress",       compressString,                                                       NULL);
     TEXT_MACRO_X_DOUBLE   ("%ratio",          ratio,                                                                NULL);
     TEXT_MACRO_X_STRING   ("%crypt",          cryptString,                                                          NULL);

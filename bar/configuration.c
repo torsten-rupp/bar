@@ -1987,6 +1987,7 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.systemEncoding                                  = NULL;
   globalOptions.consoleEncoding                                 = NULL;
+  globalOptions.forceConsoleEncodingFlag                        = FALSE;
 
   globalOptions.saveConfigurationFileName                       = NULL;
   globalOptions.cleanConfigurationComments                      = FALSE;
@@ -8370,8 +8371,9 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
   CMD_OPTION_SPECIAL      ("new-entity-uuid",                   0,  0,2,&globalOptions.newEntityUUID,                        cmdOptionParseNewEntiryUUID,NULL,0,                          "new entity uuid","uuid"                                                   ),
 
-  CMD_OPTION_CSTRING      ("system-encoding",                   0,  1,2,globalOptions.systemEncoding,                                                                                     "system encoding","encoding"                                               ),
-  CMD_OPTION_CSTRING      ("console-encoding",                  0,  1,2,globalOptions.consoleEncoding,                                                                                    "console encoding","encoding"                                              ),
+  CMD_OPTION_CSTRING      ("system-encoding",                   0,  1,0,globalOptions.systemEncoding,                                                                                     "system encoding","encoding"                                               ),
+  CMD_OPTION_CSTRING      ("console-encoding",                  0,  1,0,globalOptions.consoleEncoding,                                                                                    "console encoding","encoding"                                              ),
+  CMD_OPTION_BOOLEAN      ("force-console-encoding",            0,  0,2,globalOptions.forceConsoleEncodingFlag,                                                                           "force output via console encoding"                                        ),
 
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                                                                                          "suppress any output"                                                      ),
   CMD_OPTION_INCREMENT    ("verbose",                           'v',0,0,globalOptions.verboseLevel,                          0,6,                                                         "increment/set verbosity level"                                            ),

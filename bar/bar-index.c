@@ -130,6 +130,10 @@ LOCAL bool       pipeFlag                             = FALSE;
 LOCAL bool       verboseFlag                          = TRUE;
 LOCAL bool       timeFlag                             = FALSE;
 LOCAL bool       explainQueryPlanFlag                 = FALSE;
+LOCAL const char *systemEncoding                      = NULL;
+LOCAL const char *consoleEncoding                     = NULL;
+// TODO: use
+LOCAL bool       forceConsoleEncodingFlag             = FALSE;
 LOCAL const char *jobUUID                             = NULL;
 LOCAL const char *toFileName                          = NULL;
 // TODO:
@@ -244,6 +248,8 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --force                                      - force operation\n");
   printf("          --pipe|-                                     - read data from stdin and pipe into database\n");
   printf("          --tmp-directory [<path>]                     - temporary files directory\n");
+  printf("          --system-encoding [<encoding>]               - system character encoding to use\n");
+  printf("          --console-encoding [<encoding>]              - console character encoding to use\n");
   printf("          -v|--verbose                                 - verbose output (default: ON; deprecated)\n");
   printf("          -q|--quiet                                   - no output\n");
   printf("          -t|--time                                    - print execution time\n");
@@ -285,7 +291,7 @@ LOCAL void vprintInfo(const char *prefix, const char *format, va_list arguments)
   if (prefix != NULL) String_appendCString(line,prefix);
   String_appendVFormat(line,format,arguments);
 
-  String consoleEncodedLine = convertSystemToConsoleEncoding(String_new(),line);
+  String consoleEncodedLine = convertSystemToConsoleEncodingAppend(String_new(),line);
 
   // output
   UNUSED_RESULT(fwrite(String_cString(consoleEncodedLine),1,String_length(consoleEncodedLine),stdout)); fflush(stdout);
@@ -11173,6 +11179,11 @@ uint xxxShow=0;
       consoleEncoding = argv[i];
       i++;
     }
+    else if (stringEquals(argv[i],"--force-console-encoding"))
+    {
+      forceConsoleEncodingFlag = TRUE;
+      i++;
+    }
     else if (stringEquals(argv[i],"--version"))
     {
       printf("BAR index version %s\n",VERSION_REVISION_STRING);
@@ -11291,10 +11302,28 @@ else if (stringEquals(argv[i],"--xxx"))
     }
   }
 
+  // init encoding converter
+  error = initEncodingConverter(systemEncoding,consoleEncoding);
+  if (error != ERROR_NONE)
+  {
+    printError(_("cannot initialize encoding (error: %s)!"),
+               Error_getText(error)
+              );
+    Array_done(&storageIds);
+    Array_done(&entityIds);
+    Array_done(&uuIds);
+    Array_done(&uuidIds);
+    String_delete(command);
+    String_delete(storageName);
+    String_delete(entryName);
+    exit(EXITCODE_FATAL_ERROR);
+  }
+
   // check arguments
   if (databaseURI == NULL)
   {
     printError("no database URI given!");
+    doneEncodingConverter();
     Array_done(&storageIds);
     Array_done(&entityIds);
     Array_done(&uuIds);
@@ -11314,6 +11343,7 @@ else if (stringEquals(argv[i],"--xxx"))
                  changeToDirectory,
                  Error_getText(error)
                 );
+      doneEncodingConverter();
       Array_done(&storageIds);
       Array_done(&entityIds);
       Array_done(&uuIds);
@@ -11329,6 +11359,7 @@ else if (stringEquals(argv[i],"--xxx"))
   error = openDatabase(&databaseHandle,databaseURI,createFlag);
   if (error != ERROR_NONE)
   {
+    doneEncodingConverter();
     Array_done(&storageIds);
     Array_done(&entityIds);
     Array_done(&uuIds);
@@ -11343,6 +11374,7 @@ else if (stringEquals(argv[i],"--xxx"))
   {
     printError("cannot set foreign key support (error: %s)",Error_getText(error));
     closeDatabase(&databaseHandle);
+    doneEncodingConverter();
     Array_done(&storageIds);
     Array_done(&entityIds);
     Array_done(&uuIds);
@@ -11361,6 +11393,7 @@ else if (stringEquals(argv[i],"--xxx"))
     {
       printError("%s",Error_getText(error));
       closeDatabase(&databaseHandle);
+      doneEncodingConverter();
       Array_done(&storageIds);
       Array_done(&entityIds);
       Array_done(&uuIds);
@@ -12021,6 +12054,7 @@ if (xxxId != DATABASE_ID_NONE)
       if (error != ERROR_NONE)
       {
         printError("SQL command '%s' fail: %s!",String_cString(command),Error_getText(error));
+        doneEncodingConverter();
         Array_done(&storageIds);
         Array_done(&entityIds);
         Array_done(&uuIds);
@@ -12110,6 +12144,7 @@ if (xxxId != DATABASE_ID_NONE)
   closeDatabase(&databaseHandle);
 
   // free resources
+  doneEncodingConverter();
   Array_done(&storageIds);
   Array_done(&entityIds);
   Array_done(&uuIds);

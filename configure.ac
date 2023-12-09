@@ -2697,6 +2697,7 @@ if test $ENABLE_SSH = "yes"; then
               (cd openssl; ./Configure \
                 --prefix=$cwd/extern \
                 no-shared \
+                no-tests \
                 linux-x86_64 \
                 -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
@@ -2710,6 +2711,7 @@ if test $ENABLE_SSH = "yes"; then
                 --prefix=$cwd/extern \
                 linux-generic32 \
                 no-shared \
+                no-tests \
                 -Wa,--noexecstack \
               ) 1>$tmpFile 2>&1
               if test $? -ne 0; then
@@ -2725,6 +2727,7 @@ if test $ENABLE_SSH = "yes"; then
                 --prefix=$cwd/extern \
                 --cross-compile-prefix=x86_64-w64-mingw32- \
                 no-shared \
+                no-tests \
                 mingw64 \
               ) 1>$tmpFile 2>&1
             else
@@ -2732,6 +2735,7 @@ if test $ENABLE_SSH = "yes"; then
                 --prefix=$cwd/extern \
                 --cross-compile-prefix=x86_64-w64-mingw32- \
                 no-shared \
+                no-tests \
                 mingw \
               ) 1>$tmpFile 2>&1
             fi

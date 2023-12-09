@@ -112,7 +112,7 @@ def tests()
               // configure
               sh "(cd win32; \
                    ../configure \
-                     --host=i686-w64-mingw32 \
+                     --host=x86_64-w64-mingw32 \
                      --build=x86_64-linux \
                      --enable-link-static \
                      --disable-link-dynamic \

@@ -1103,6 +1103,7 @@ typedef struct
 
   const char                  *systemEncoding;                // system encoding to use or NULL
   const char                  *consoleEncoding;               // console encoding to use or NULL
+  bool                        forceConsoleEncodingFlag;       // force output with console encoding
 
   String                      newEntityUUID;                  // new entity UUID for covnert
 
@@ -1487,16 +1488,16 @@ String convertSystemToUTF8Encoding(String destination, ConstString source);
 String convertUTF8ToSystemEncoding(String destination, ConstString source);
 
 /***********************************************************************\
-* Name   : convertSystemToConsoleEncoding
-* Purpose: convert character encoding from system to console
-* Input  : destination - destination string variable
-*          source      - source string (UTF-8 encoded)
+* Name   : convertSystemToConsoleEncodingAppend
+* Purpose: convert character encoding from system to console and append
+* Input  : destination - destination string
+*          source      - source string to append (UTF-8 encoded)
 * Output : -
 * Return : destination string (system encoded)
 * Notes  : -
 \***********************************************************************/
 
-String convertSystemToConsoleEncoding(String destination, ConstString source);
+String convertSystemToConsoleEncodingAppend(String destination, ConstString source);
 
 #ifdef __cplusplus
   }

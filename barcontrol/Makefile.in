@@ -287,7 +287,7 @@ SOURCES        = src/BARControl.java \
 
 OTHER_SOURCES  = barcontrol.in \
                  barcontrol.cmd.in \
-                 barcontrol.xml \
+                 barcontrol.xml.in \
                  jar.txt \
 
 OBJECTS        = $(foreach z,$(SOURCES),$(addprefix classes/,$(basename $(notdir $z)).class)) \
@@ -305,6 +305,7 @@ INTERMEDIATE   = $(BUILD_DIR)/barcontrol/src/BARException.java \
                  barcontrol-macos_64.jar \
                  barcontrol-windows.jar \
                  barcontrol-windows_64.jar \
+                 barcontrol.xml \
 
 TARGETS        = $(if $(findstring $(ENABLE_GUI),yes),\
                    barcontrol \
@@ -695,9 +696,17 @@ barcontrol.cmd: $(SOURCE_DIR)/barcontrol.cmd.in barcontrol-windows_64.jar
         ) > $@
 	$(CHMOD) 775 $@
 
+barcontrol.xml: $(SOURCE_DIR)/barcontrol.xml.in
+	$(CAT) $(SOURCE_DIR)/barcontrol.xml.in | \
+        ( \
+          while IFS="" read line; do \
+            $(ECHO) "$$line"; \
+          done; \
+        ) > $@
+
 ifeq ($(PLATFORM),WINDOWS)
 ifneq ($(LAUNCH4JC),)
-barcontrol@EXEEXT@: barcontrol-windows_64.jar
+barcontrol@EXEEXT@: barcontrol.xml barcontrol-windows_64.jar
 	$(LAUNCH4JC) barcontrol.xml
 endif
 endif

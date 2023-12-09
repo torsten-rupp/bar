@@ -1044,7 +1044,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle);
                               const char       *entityUUID,
                               ArchiveTypes     archiveType,
                               uint64           createdDateTime,
-                              const char       *comment
+                              ConstString      comment
                              );
 #else /* not NDEBUG */
   Errors __Archive_newMetaEntry(const char       *__fileName__,
@@ -1060,7 +1060,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle);
                                 const char       *entityUUID,
                                 ArchiveTypes     archiveType,
                                 uint64           createdDateTime,
-                                const char       *comment
+                                ConstString      comment
                                );
 #endif /* NDEBUG */
 

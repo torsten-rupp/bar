@@ -74,6 +74,104 @@ String tmpDirectory;
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : convertToUnicode
+* Purpose: convert to unicode characters
+* Input  : converter - converter to use
+*          source    - string in system encoding to convert
+* Output : -
+* Return : length of unicode string or -1 on error
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int32_t convertToUnicode(UConverter *converter, ConstString source)
+{
+  assert(converter != NULL);
+  assert(source != NULL);
+
+  // extend Unicode buffer if needed
+  if ((2*String_length(source)) > encodingConverter.unicodeCharSize)
+  {
+    size_t newUnicodeCharsSize = ALIGN(2*String_length(source),64);
+    UChar  *newUnicodeChars    = (UChar*)realloc(encodingConverter.unicodeChars,newUnicodeCharsSize);
+    if (newUnicodeChars == NULL)
+    {
+      return -1;
+    }
+    encodingConverter.unicodeChars    = newUnicodeChars;
+    encodingConverter.unicodeCharSize = newUnicodeCharsSize;
+  }
+
+  // convert to Unicode encoding
+  UErrorCode errorCode = U_ZERO_ERROR;
+  int32_t unicodeLength = ucnv_toUChars(converter,
+                                        encodingConverter.unicodeChars,
+                                        encodingConverter.unicodeCharSize,
+                                        String_cString(source),
+                                        String_length(source),
+                                        &errorCode
+                                       );
+  if ((unicodeLength < 0) || !U_SUCCESS(errorCode))
+  {
+    return -1;
+  }
+  assert(unicodeLength <= (int32_t)encodingConverter.unicodeCharSize);
+
+  return unicodeLength;
+}
+
+/***********************************************************************\
+* Name   : convertFromUnicode
+* Purpose: convert from unicode characters
+* Input  : destination   - destination string
+*          converter     - converter to use
+*          unicodeLength - unicode length
+*          maxCharSize   - convert max. char size
+* Output : destination - converted string
+* Return : length of string or -1 on error
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int32_t convertFromUnicode(String destination, UConverter *converter, int32_t unicodeLength, uint8_t maxCharSize)
+{
+  assert(destination != NULL);
+  assert(converter != NULL);
+
+  // extend buffer if needed
+  if (encodingConverter.bufferSize < (size_t)UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize))
+  {
+    size_t newBufferSize = ALIGN(UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize),64);
+    char   *newBuffer    = (char*)realloc(encodingConverter.buffer,newBufferSize);
+    if (newBuffer == NULL)
+    {
+      return -1;
+    }
+    encodingConverter.buffer     = newBuffer;
+    encodingConverter.bufferSize = newBufferSize;
+  }
+
+  // convert to destination encoding
+  UErrorCode errorCode = U_ZERO_ERROR;
+  int32_t length = ucnv_fromUChars(converter,
+                                   encodingConverter.buffer,
+                                   encodingConverter.bufferSize,
+                                   encodingConverter.unicodeChars,
+                                   unicodeLength,
+                                   &errorCode
+                                  );
+  if ((length < 0) || !U_SUCCESS(errorCode))
+  {
+    return -1;
+  }
+  assert(length <= (int32_t)encodingConverter.bufferSize);
+
+  String_appendBuffer(destination,encodingConverter.buffer,(ulong)length);
+
+  return length;
+}
+
+// ---------------------------------------------------------------------
+
 Errors Common_initAll(void)
 {
   // init variables
@@ -708,7 +806,8 @@ Errors initEncodingConverter(const char *systemEncoding, const char *consoleEnco
   #endif // HAVE_ICU
 
   #ifdef HAVE_ICU
-    encodingConverter.isUTF8System = stringEquals((systemEncoding != NULL) ? systemEncoding : ucnv_getDefaultName(),"UTF-8");
+    encodingConverter.isUTF8System =    stringEqualsIgnoreCase((systemEncoding != NULL) ? systemEncoding : ucnv_getDefaultName(),"UTF-8")
+                                     && ((consoleEncoding == NULL) || stringEqualsIgnoreCase(consoleEncoding,"UTF-8"));
     if (!encodingConverter.isUTF8System)
     {
       Semaphore_init(&encodingConverter.lock, SEMAPHORE_TYPE_BINARY);
@@ -740,6 +839,7 @@ Errors initEncodingConverter(const char *systemEncoding, const char *consoleEnco
       if (encodingConverter.consoleConverter == NULL)
       {
         Semaphore_done(&encodingConverter.lock);
+        ucnv_close(encodingConverter.systemConverter);
         return ERRORX_(CONVERT_CHARS,errorCode,"%s",u_errorName(errorCode));
       }
       encodingConverter.consoleMaxCharSize = ucnv_getMaxCharSize(encodingConverter.consoleConverter);
@@ -798,141 +898,50 @@ void doneEncodingConverter(void)
   #endif // HAVE_ICU
 }
 
-/***********************************************************************\
-* Name   : convertToUnicode
-* Purpose: convert to unicode characters
-* Input  : converter - converter to use
-*          source    - string in system encoding to convert
-* Output : -
-* Return : length of unicode string or -1 on error
-* Notes  : -
-\***********************************************************************/
-LOCAL int32_t convertToUnicode(UConverter *converter, ConstString source)
-{
-  assert(converter != NULL);
-  assert(source != NULL);
-
-  // extend Unicode buffer if needed
-  if ((2*String_length(source)) > encodingConverter.unicodeCharSize)
-  {
-    size_t newUnicodeCharsSize = ALIGN(2*String_length(source),64);
-    UChar  *newUnicodeChars    = (UChar*)realloc(encodingConverter.unicodeChars,newUnicodeCharsSize);
-    if (newUnicodeChars == NULL)
-    {
-      return -1;
-    }
-    encodingConverter.unicodeChars    = newUnicodeChars;
-    encodingConverter.unicodeCharSize = newUnicodeCharsSize;
-  }
-
-  // convert to Unicode encoding
-  UErrorCode errorCode = U_ZERO_ERROR;
-  int32_t unicodeLength = ucnv_toUChars(converter,
-                                        encodingConverter.unicodeChars,
-                                        encodingConverter.unicodeCharSize,
-                                        String_cString(source),
-                                        String_length(source),
-                                        &errorCode
-                                       );
-  if ((unicodeLength < 0) || !U_SUCCESS(errorCode))
-  {
-    return -1;
-  }
-  assert(unicodeLength <= (int32_t)encodingConverter.unicodeCharSize);
-
-  return unicodeLength;
-}
-
-/***********************************************************************\
-* Name   : convertFromUnicode
-* Purpose: convert from unicode characters
-* Input  : destination   - destination string
-*          converter     - converter to use
-*          unicodeLength - unicode length
-*          maxCharSize   - convert max. char size
-* Output : destination - converted string
-* Return : length of string or -1 on error
-* Notes  : -
-\***********************************************************************/
-
-LOCAL int32_t convertFromUnicode(String destination, UConverter *converter, int32_t unicodeLength, uint8_t maxCharSize)
-{
-  assert(destination != NULL);
-  assert(converter != NULL);
-
-  // extend buffer if needed
-  if (encodingConverter.bufferSize < (size_t)UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize))
-  {
-    size_t newBufferSize = ALIGN(UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize),64);
-    char   *newBuffer    = (char*)realloc(encodingConverter.buffer,newBufferSize);
-    if (newBuffer == NULL)
-    {
-      return -1;
-    }
-    encodingConverter.buffer     = newBuffer;
-    encodingConverter.bufferSize = newBufferSize;
-  }
-
-  // convert to destination encoding
-  UErrorCode errorCode = U_ZERO_ERROR;
-  int32_t length = ucnv_fromUChars(converter,
-                                   encodingConverter.buffer,
-                                   encodingConverter.bufferSize,
-                                   encodingConverter.unicodeChars,
-                                   unicodeLength,
-                                   &errorCode
-                                  );
-  if ((length < 0) || !U_SUCCESS(errorCode))
-  {
-    return -1;
-  }
-  assert(length <= (int32_t)encodingConverter.bufferSize);
-
-  String_setBuffer(destination,encodingConverter.buffer,(ulong)length);
-
-  return length;
-}
-
-// ---------------------------------------------------------------------
-
 String convertSystemToUTF8Encoding(String destination, ConstString source)
 {
   assert(destination != NULL);
-  assert(source != NULL);
 
-  #ifdef HAVE_ICU
-    if (!encodingConverter.isUTF8System)
-    {
-      SEMAPHORE_LOCKED_DO(&encodingConverter.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  if (source != NULL)
+  {
+    #ifdef HAVE_ICU
+      if (!encodingConverter.isUTF8System)
       {
-        // convert to Unicode encoding
-        int32_t unicodeLength = convertToUnicode(encodingConverter.systemConverter,source);
-        if (unicodeLength < 0)
+        SEMAPHORE_LOCKED_DO(&encodingConverter.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          Semaphore_unlock(&encodingConverter.lock);
-          String_clear(destination);
-          return destination;
-        }
+          // convert to Unicode encoding
+          int32_t unicodeLength = convertToUnicode(encodingConverter.systemConverter,source);
+          if (unicodeLength < 0)
+          {
+            Semaphore_unlock(&encodingConverter.lock);
+            String_clear(destination);
+            return destination;
+          }
 
-        // convert to UTF-8 encoding
-        int32_t length = convertFromUnicode(destination,encodingConverter.utf8Converter,unicodeLength,encodingConverter.utf8MaxCharSize);
-        if (length < 0)
-        {
-          Semaphore_unlock(&encodingConverter.lock);
-          String_clear(destination);
-          return destination;
-        }
+          // convert to UTF-8 encoding
+          int32_t length = convertFromUnicode(destination,encodingConverter.utf8Converter,unicodeLength,encodingConverter.utf8MaxCharSize);
+          if (length < 0)
+          {
+            Semaphore_unlock(&encodingConverter.lock);
+            String_clear(destination);
+            return destination;
+          }
 
-        String_setBuffer(destination,encodingConverter.buffer,length);
+          String_setBuffer(destination,encodingConverter.buffer,length);
+        }
       }
-    }
-    else
-    {
+      else
+      {
+        String_set(destination,source);
+      }
+    #else
       String_set(destination,source);
-    }
-  #else
-    String_set(destination,source);
-  #endif
+    #endif
+  }
+  else
+  {
+    String_clear(destination);
+  }
 
   return destination;
 }
@@ -940,83 +949,91 @@ String convertSystemToUTF8Encoding(String destination, ConstString source)
 String convertUTF8ToSystemEncoding(String destination, ConstString source)
 {
   assert(destination != NULL);
-  assert(source != NULL);
 
-  #ifdef HAVE_ICU
-    if (!encodingConverter.isUTF8System)
-    {
-      SEMAPHORE_LOCKED_DO(&encodingConverter.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  if (source != NULL)
+  {
+    #ifdef HAVE_ICU
+      if (!encodingConverter.isUTF8System)
       {
-        // convert to Unicode encoding
-        int32_t unicodeLength = convertToUnicode(encodingConverter.utf8Converter,source);
-        if (unicodeLength < 0)
+        SEMAPHORE_LOCKED_DO(&encodingConverter.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          Semaphore_unlock(&encodingConverter.lock);
-          String_clear(destination);
-          return destination;
-        }
+          // convert to Unicode encoding
+          int32_t unicodeLength = convertToUnicode(encodingConverter.utf8Converter,source);
+          if (unicodeLength < 0)
+          {
+            Semaphore_unlock(&encodingConverter.lock);
+            String_clear(destination);
+            return destination;
+          }
 
-        // convert to system encoding
-        int32_t length = convertFromUnicode(destination,encodingConverter.systemConverter,unicodeLength,encodingConverter.systemMaxCharSize);
-        if (length < 0)
-        {
-          Semaphore_unlock(&encodingConverter.lock);
-          String_clear(destination);
-          return destination;
+          // convert to system encoding
+          int32_t length = convertFromUnicode(destination,encodingConverter.systemConverter,unicodeLength,encodingConverter.systemMaxCharSize);
+          if (length < 0)
+          {
+            Semaphore_unlock(&encodingConverter.lock);
+            String_clear(destination);
+            return destination;
+          }
         }
-
-        String_setBuffer(destination,encodingConverter.buffer,length);
       }
-    }
-    else
-    {
+      else
+      {
+        String_set(destination,source);
+      }
+    #else
       String_set(destination,source);
-    }
-  #else
-    String_set(destination,source);
-  #endif
+    #endif
+  }
+  else
+  {
+    String_clear(destination);
+  }
 
   return destination;
 }
 
-String convertSystemToConsoleEncoding(String destination, ConstString source)
+String convertSystemToConsoleEncodingAppend(String destination, ConstString source)
 {
   assert(destination != NULL);
-  assert(source != NULL);
 
-  #ifdef HAVE_ICU
-    if (!encodingConverter.isUTF8System)
-    {
-      SEMAPHORE_LOCKED_DO(&encodingConverter.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  if (source != NULL)
+  {
+    #ifdef HAVE_ICU
+      if (!encodingConverter.isUTF8System)
       {
-        // convert to Unicode encoding
-        int32_t unicodeLength = convertToUnicode(encodingConverter.systemConverter,source);
-        if (unicodeLength < 0)
+        SEMAPHORE_LOCKED_DO(&encodingConverter.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          Semaphore_unlock(&encodingConverter.lock);
-          String_clear(destination);
-          return destination;
-        }
+          // convert to Unicode encoding
+          int32_t unicodeLength = convertToUnicode(encodingConverter.systemConverter,source);
+          if (unicodeLength < 0)
+          {
+            Semaphore_unlock(&encodingConverter.lock);
+            String_clear(destination);
+            return destination;
+          }
 
-        // convert to console encoding
-        int32_t length = convertFromUnicode(destination,encodingConverter.consoleConverter,unicodeLength,encodingConverter.consoleMaxCharSize);
-        if (length < 0)
-        {
-          Semaphore_unlock(&encodingConverter.lock);
-          String_clear(destination);
-          return destination;
+          // convert to console encoding
+          int32_t length = convertFromUnicode(destination,encodingConverter.consoleConverter,unicodeLength,encodingConverter.consoleMaxCharSize);
+          if (length < 0)
+          {
+            Semaphore_unlock(&encodingConverter.lock);
+            String_clear(destination);
+            return destination;
+          }
         }
-
-        String_setBuffer(destination,encodingConverter.buffer,length);
       }
-    }
-    else
-    {
-      String_set(destination,source);
-    }
-  #else
-    String_set(destination,source);
-  #endif
+      else
+      {
+        String_append(destination,source);
+      }
+    #else
+      String_append(destination,source);
+    #endif
+  }
+  else
+  {
+    String_clear(destination);
+  }
 
   return destination;
 }

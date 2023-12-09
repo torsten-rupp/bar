@@ -1831,7 +1831,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                                String_cString(entityUUID),
                                archiveType,
                                createdDateTime,
-                               String_cString(comment)
+                               comment
                               );
   if (error != ERROR_NONE)
   {

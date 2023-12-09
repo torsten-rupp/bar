@@ -848,7 +848,7 @@ void outputConsole(FILE *file, ConstString string)
 {
   String outputLine;
   ulong  i;
-  char   ch;
+  long   j;
 
   assert(file != NULL);
   assert(Semaphore_isLocked(&consoleLock));
@@ -856,9 +856,9 @@ void outputConsole(FILE *file, ConstString string)
   outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
   if (outputLine != NULL)
   {
-    if (File_isTerminal(file))
+    if (File_isTerminal(file) || globalOptions.forceConsoleEncodingFlag)
     {
-      // restore output line if different to current line
+      // wipe out if new output line is different to last line
       if (outputLine != lastOutputLine)
       {
         // wipe-out last line
@@ -878,38 +878,27 @@ void outputConsole(FILE *file, ConstString string)
           }
         }
 
-        // restore line
-        UNUSED_RESULT(fwrite(String_cString(outputLine),1,String_length(outputLine),file));
+        // get new output line
+        i = STRING_BEGIN;
+        convertSystemToConsoleEncodingAppend(outputLine,string);
       }
-
-#if 0
-      // output new string
-      UNUSED_RESULT(fwrite(String_cString(string),1,String_length(string),file));
-#else
-      String consoleString = convertSystemToConsoleEncoding(String_new(),string);
-
-      // output new string
-      UNUSED_RESULT(fwrite(String_cString(consoleString),1,String_length(consoleString),file));
-
-      String_delete(consoleString);
-#endif
-      // store output string
-      STRING_CHAR_ITERATE(string,i,ch)
+      else
       {
-        switch (ch)
-        {
-          case '\n':
-            String_clear(outputLine);
-            break;
-          case '\b':
-            String_remove(outputLine,STRING_END,1);
-            break;
-          default:
-            String_appendChar(outputLine,ch);
-            break;
-        }
+        i = String_length(outputLine);
+        convertSystemToConsoleEncodingAppend(outputLine,string);
       }
 
+      // output line part
+      UNUSED_RESULT(fwrite(String_cString(outputLine)+i,1,String_length(outputLine)-i,file));
+
+      // store new output line
+      j = String_findLastChar(outputLine,STRING_END,'\n');
+      if (j >= 0)
+      {
+        String_remove(outputLine,STRING_BEGIN,(ulong)(j+1));
+      }
+
+      // save last output line
       lastOutputLine = outputLine;
     }
     else
@@ -1035,7 +1024,6 @@ void printWarning(const char *text, ...)
 {
   va_list arguments;
   String  line;
-  String  saveLine;
 
   assert(text != NULL);
 
@@ -1054,9 +1042,7 @@ void printWarning(const char *text, ...)
 
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    saveConsole(stderr,&saveLine);
-    UNUSED_RESULT(fwrite(String_cString(line),1,String_length(line),stderr));
-    restoreConsole(stderr,&saveLine);
+    outputConsole(stderr,line);
   }
   String_delete(line);
 }
@@ -1065,7 +1051,6 @@ void printError(const char *text, ...)
 {
   va_list arguments;
   String  line;
-  String  saveLine;
 
   assert(text != NULL);
 
@@ -1084,9 +1069,7 @@ void printError(const char *text, ...)
 
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    saveConsole(stderr,&saveLine);
-    UNUSED_RESULT(fwrite(String_cString(line),1,String_length(line),stderr));
-    restoreConsole(stderr,&saveLine);
+    outputConsole(stderr,line);
   }
   String_delete(line);
 }
@@ -4505,16 +4488,6 @@ LOCAL Errors bar(int argc, const char *argv[])
     return error;
   }
 
-  // init encoding converter
-  error = initEncodingConverter(globalOptions.systemEncoding,globalOptions.consoleEncoding);
-  if (error != ERROR_NONE)
-  {
-    printError(_("cannot initialize encoding (error: %s)!"),
-               Error_getText(error)
-              );
-    return error;
-  }
-
   // create client+worker thread pools
   if (!ThreadPool_init(&clientThreadPool,
                        "BAR client",
@@ -4524,9 +4497,8 @@ LOCAL Errors bar(int argc, const char *argv[])
                       )
      )
   {
-    doneEncodingConverter();
-    (void)File_delete(tmpDirectory,TRUE);
     printError(_("cannot initialize client thread pool!"));
+    (void)File_delete(tmpDirectory,TRUE);
     return ERROR_INIT;
   }
   if (!ThreadPool_init(&workerThreadPool,
@@ -4537,9 +4509,9 @@ LOCAL Errors bar(int argc, const char *argv[])
                       )
      )
   {
+    printError(_("cannot initialize worker thread pool!"));
     ThreadPool_done(&clientThreadPool);
     (void)File_delete(tmpDirectory,TRUE);
-    printError(_("cannot initialize worker thread pool!"));
     return ERROR_INIT;
   }
 
@@ -4558,8 +4530,8 @@ LOCAL Errors bar(int argc, const char *argv[])
       printf("\n");
 
       ThreadPool_done(&clientThreadPool);
-      doneEncodingConverter();
       (void)File_delete(tmpDirectory,TRUE);
+
       return ERROR_NONE;
     }
 
@@ -4609,11 +4581,10 @@ LOCAL Errors bar(int argc, const char *argv[])
   // umounts
   purgeMounts(TRUE);
 
-  // done encoding converter
-  doneEncodingConverter();
-
   // delete temporary directory
   (void)File_delete(tmpDirectory,TRUE);
+
+  // free resources
 
   return error;
 }
@@ -4660,6 +4631,15 @@ int main(int argc, const char *argv[])
     }
   }
 
+  // init encoding converter
+  error = initEncodingConverter(globalOptions.systemEncoding,globalOptions.consoleEncoding);
+  if (error != ERROR_NONE)
+  {
+    printError(_("cannot initialize encoding (error: %s)!"),
+               Error_getText(error)
+              );
+  }
+
   // change working directory
   if (error == ERROR_NONE)
   {
@@ -4698,6 +4678,7 @@ int main(int argc, const char *argv[])
   }
 
   // free resources
+  doneEncodingConverter();
   doneAll();
   #ifndef NDEBUG
     debugResourceDone();

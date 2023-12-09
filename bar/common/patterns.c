@@ -108,13 +108,8 @@ LOCAL void getRegularExpression(String       regexString,
             i++;
             break;
           case '\\':
-            String_appendChar(regexString,'\\');
+            String_appendCString(regexString,"\\\\");
             i++;
-            if (string[i] != NUL)
-            {
-              String_appendChar(regexString,string[i]);
-              i++;
-            }
             break;
           case '[':
           case ']':
