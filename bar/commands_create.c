@@ -1762,7 +1762,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   else
   {
     StringList          nameList;
-    String              basePath;
+    String              path;
     String              fileName;
     EntryNode           *includeEntryNode;
     StringTokenizer     fileNameTokenizer;
@@ -1770,11 +1770,11 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     DirectoryListHandle directoryListHandle;
 
     StringList_init(&nameList);
-    basePath = String_new();
+    path     = String_new();
     fileName = String_new();
 
     // process include entries
-    includeEntryNode = createInfo->includeEntryList->head;
+    includeEntryNode = LIST_HEAD(createInfo->includeEntryList);
     while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
            && (includeEntryNode != NULL)
@@ -1789,22 +1789,22 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
       {
         if (!String_isEmpty(token))
         {
-          File_setFileName(basePath,token);
+          File_setFileName(path,token);
         }
         else
         {
 // TODO: root path File_getRootName()?
-          File_setFileNameChar(basePath,FILE_PATH_SEPARATOR_CHAR);
+          File_setFileNameChar(path,FILE_PATH_SEPARATOR_CHAR);
         }
       }
       while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
       {
-        File_appendFileName(basePath,token);
+        File_appendFileName(path,token);
       }
       File_doneSplitFileName(&fileNameTokenizer);
 
-      // find files
-      StringList_append(&nameList,basePath);
+      // find files starting from base path
+      StringList_append(&nameList,path);
       while (   (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
              && !StringList_isEmpty(&nameList)
@@ -1819,7 +1819,15 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         StringList_removeLast(&nameList,name);
 
         // read file info
-        error = File_getInfo(&fileInfo,name);
+        if (!String_isEmpty(name))
+        {
+          String_set(path,name);
+        }
+        else
+        {
+          File_getCurrentDirectory(path);
+        }
+        error = File_getInfo(&fileInfo,path);
         if (error != ERROR_NONE)
         {
           continue;
@@ -2380,7 +2388,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
     // free resoures
     String_delete(fileName);
-    String_delete(basePath);
+    String_delete(path);
     StringList_done(&nameList);
   }
 
@@ -2433,7 +2441,6 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
     StringList_done(&hardLinkInfo->nameList);
   }
 
-  AutoFreeList       autoFreeList;
   Dictionary         duplicateNamesDictionary;
   DatabaseId         databaseId;
   String             name;
@@ -2451,7 +2458,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   assert(createInfo->jobOptions != NULL);
 
   // initialize variables
-  AutoFree_init(&autoFreeList);
   if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL)))
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -2461,9 +2467,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  AUTOFREE_ADD(&autoFreeList,&duplicateNamesDictionary,{ Dictionary_done(&duplicateNamesDictionary); });
-  AUTOFREE_ADD(&autoFreeList,name,{ String_delete(name); });
-  AUTOFREE_ADD(&autoFreeList,&hardLinksDictionary,{ Dictionary_done(&hardLinksDictionary); });
 
   if (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS)
   {
@@ -2473,328 +2476,327 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     {
       // open continuous database
       error = Continuous_open(&continuousDatabaseHandle);
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
       {
-        printError("cannot initialize continuous database (error: %s)!",
-                   Error_getText(error)
-                  );
-        AutoFree_freeAll(&autoFreeList);
-        return;
-      }
-      AUTOFREE_ADD(&autoFreeList,&continuousDatabaseHandle,{ Continuous_close(&continuousDatabaseHandle); });
-
-      // process entries from continuous database
-      databaseId = DATABASE_ID_NONE;
-      do
-      {
-        // pause
-        pauseCreate(createInfo);
-
-        // get next entry
-        error = Continuous_getEntry(&continuousDatabaseHandle,
-                                    createInfo->jobUUID,
-                                    createInfo->scheduleUUID,
-                                    &databaseId,
-                                    name
-                                   );
-        if (error != ERROR_NONE)
+        // process entries from continuous database
+        databaseId = DATABASE_ID_NONE;
+        do
         {
-          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
-          continue;
-        }
+          // pause
+          pauseCreate(createInfo);
 
-        // check if file still exists
-        if ((databaseId == DATABASE_ID_NONE) || !File_exists(name))
-        {
-          continue;
-        }
-
-        // read file info
-        error = File_getInfo(&fileInfo,name);
-        if (error != ERROR_NONE)
-        {
-          if (createInfo->jobOptions->skipUnreadableFlag)
+          // get next entry
+          error = Continuous_getEntry(&continuousDatabaseHandle,
+                                      createInfo->jobUUID,
+                                      createInfo->scheduleUUID,
+                                      &databaseId,
+                                      name
+                                     );
+          if (error != ERROR_NONE)
           {
-            printWarning("x1Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
-            logMessage(createInfo->logHandle,
-                       LOG_TYPE_ENTRY_ACCESS_DENIED,
-                       "Access denied '%s' (error: %s)",
-                       String_cString(name),
-                       Error_getText(error)
-                      );
-          }
-          else
-          {
-            printError("cannot get info for '%s' (error: %s)",
-                       String_cString(name),
-                       Error_getText(error)
-                      );
+            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+            continue;
           }
 
-          STATUS_INFO_UPDATE(createInfo,name,NULL)
+          // check if file still exists
+          if ((databaseId == DATABASE_ID_NONE) || !File_exists(name))
           {
-            createInfo->runningInfo.progress.error.count++;
+            continue;
           }
 
-          continue;
-        }
-
-        // collect entry for storage
-        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
-        {
-          switch (fileInfo.type)
+          // read file info
+          error = File_getInfo(&fileInfo,name);
+          if (error != ERROR_NONE)
           {
-            case FILE_TYPE_FILE:
-              if (   isInIncludedList(createInfo->includeEntryList,name)
-                  && !isInExcludedList(createInfo->excludePatternList,name)
-                 )
-              {
-                if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
+            if (createInfo->jobOptions->skipUnreadableFlag)
+            {
+              printWarning("x1Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
+              logMessage(createInfo->logHandle,
+                         LOG_TYPE_ENTRY_ACCESS_DENIED,
+                         "Access denied '%s' (error: %s)",
+                         String_cString(name),
+                         Error_getText(error)
+                        );
+            }
+            else
+            {
+              printError("cannot get info for '%s' (error: %s)",
+                         String_cString(name),
+                         Error_getText(error)
+                        );
+            }
+
+            STATUS_INFO_UPDATE(createInfo,name,NULL)
+            {
+              createInfo->runningInfo.progress.error.count++;
+            }
+
+            continue;
+          }
+
+          // collect entry for storage
+          if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
+          {
+            switch (fileInfo.type)
+            {
+              case FILE_TYPE_FILE:
+                if (   isInIncludedList(createInfo->includeEntryList,name)
+                    && !isInExcludedList(createInfo->excludePatternList,name)
+                   )
                 {
-                  // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
-
-                  if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
+                  if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                   {
+                    // add to known names history
+                    Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+
+                    if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
+                    {
+                      // add to entry list
+                      if (createInfo->partialFlag && isPrintInfo(2))
+                      {
+                        printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
+                      }
+                      appendFileToEntryList(&createInfo->entryMsgQueue,
+                                            ENTRY_TYPE_FILE,
+                                            name,
+                                            &fileInfo,
+                                            !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
+                                           );
+                    }
+                    else
+                    {
+                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'",String_cString(name));
+
+                      STATUS_INFO_UPDATE(createInfo,name,NULL)
+                      {
+                        createInfo->runningInfo.progress.skipped.count++;
+                        createInfo->runningInfo.progress.skipped.size += fileInfo.size;
+                      }
+                    }
+                  }
+                }
+                else
+                {
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
+
+                  STATUS_INFO_UPDATE(createInfo,name,NULL)
+                  {
+                    createInfo->runningInfo.progress.skipped.count++;
+                    createInfo->runningInfo.progress.skipped.size += fileInfo.size;
+                  }
+                }
+                break;
+              case FILE_TYPE_DIRECTORY:
+                // add to known names history
+                Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+
+                // add to entry list
+                if (createInfo->partialFlag && isPrintInfo(2))
+                {
+                  printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
+                }
+                appendDirectoryToEntryList(&createInfo->entryMsgQueue,
+                                           ENTRY_TYPE_FILE,
+                                           name,
+                                           &fileInfo
+                                          );
+                break;
+              case FILE_TYPE_LINK:
+                if (   isInIncludedList(createInfo->includeEntryList,name)
+                    && !isInExcludedList(createInfo->excludePatternList,name)
+                   )
+                {
+                  if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
+                  {
+                    // add to known names history
+                    Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+
                     // add to entry list
                     if (createInfo->partialFlag && isPrintInfo(2))
                     {
                       printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                     }
-                    appendFileToEntryList(&createInfo->entryMsgQueue,
+                    appendLinkToEntryList(&createInfo->entryMsgQueue,
                                           ENTRY_TYPE_FILE,
                                           name,
-                                          &fileInfo,
-                                          !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
+                                          &fileInfo
                                          );
                   }
-                  else
-                  {
-                    logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'",String_cString(name));
+                }
+                else
+                {
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-                    STATUS_INFO_UPDATE(createInfo,name,NULL)
-                    {
-                      createInfo->runningInfo.progress.skipped.count++;
-                      createInfo->runningInfo.progress.skipped.size += fileInfo.size;
-                    }
+                  STATUS_INFO_UPDATE(createInfo,name,NULL)
+                  {
+                    createInfo->runningInfo.progress.skipped.count++;
+                    createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                   }
                 }
-              }
-              else
-              {
-                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
-
-                STATUS_INFO_UPDATE(createInfo,name,NULL)
+                break;
+              case FILE_TYPE_HARDLINK:
+                if (   isInIncludedList(createInfo->includeEntryList,name)
+                    && !isInExcludedList(createInfo->excludePatternList,name)
+                   )
                 {
-                  createInfo->runningInfo.progress.skipped.count++;
-                  createInfo->runningInfo.progress.skipped.size += fileInfo.size;
-                }
-              }
-              break;
-            case FILE_TYPE_DIRECTORY:
-              // add to known names history
-              Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
-
-              // add to entry list
-              if (createInfo->partialFlag && isPrintInfo(2))
-              {
-                printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
-              }
-              appendDirectoryToEntryList(&createInfo->entryMsgQueue,
-                                         ENTRY_TYPE_FILE,
-                                         name,
-                                         &fileInfo
-                                        );
-              break;
-            case FILE_TYPE_LINK:
-              if (   isInIncludedList(createInfo->includeEntryList,name)
-                  && !isInExcludedList(createInfo->excludePatternList,name)
-                 )
-              {
-                if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
-                {
-                  // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
-
-                  // add to entry list
-                  if (createInfo->partialFlag && isPrintInfo(2))
+                  if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                   {
-                    printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
-                  }
-                  appendLinkToEntryList(&createInfo->entryMsgQueue,
-                                        ENTRY_TYPE_FILE,
-                                        name,
-                                        &fileInfo
-                                       );
-                }
-              }
-              else
-              {
-                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
+                    union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                    HardLinkInfo                                       hardLinkInfo;
 
-                STATUS_INFO_UPDATE(createInfo,name,NULL)
-                {
-                  createInfo->runningInfo.progress.skipped.count++;
-                  createInfo->runningInfo.progress.skipped.size += fileInfo.size;
-                }
-              }
-              break;
-            case FILE_TYPE_HARDLINK:
-              if (   isInIncludedList(createInfo->includeEntryList,name)
-                  && !isInExcludedList(createInfo->excludePatternList,name)
-                 )
-              {
-                if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
-                {
-                  union { void *value; HardLinkInfo *hardLinkInfo; } data;
-                  HardLinkInfo                                       hardLinkInfo;
+                    // add to known names history
+                    Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                  // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
-
-                  if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
-                  {
-                    if (Dictionary_find(&hardLinksDictionary,
-                                        &fileInfo.id,
-                                        sizeof(fileInfo.id),
-                                        &data.value,
-                                        NULL
-                                       )
-                        )
+                    if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                     {
-                      // append name to hard link name list
-                      StringList_append(&data.hardLinkInfo->nameList,name);
-
-                      if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
-                      {
-                        // found last hardlink -> add to entry list
-                        appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                  ENTRY_TYPE_FILE,
-                                                  &data.hardLinkInfo->nameList,
-                                                  &data.hardLinkInfo->fileInfo,
-                                                  !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
-                                                 );
-
-                        // clear entry
-                        Dictionary_remove(&hardLinksDictionary,
+                      if (Dictionary_find(&hardLinksDictionary,
                                           &fileInfo.id,
-                                          sizeof(fileInfo.id)
-                                         );
+                                          sizeof(fileInfo.id),
+                                          &data.value,
+                                          NULL
+                                         )
+                          )
+                      {
+                        // append name to hard link name list
+                        StringList_append(&data.hardLinkInfo->nameList,name);
+
+                        if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
+                        {
+                          // found last hardlink -> add to entry list
+                          appendHardLinkToEntryList(&createInfo->entryMsgQueue,
+                                                    ENTRY_TYPE_FILE,
+                                                    &data.hardLinkInfo->nameList,
+                                                    &data.hardLinkInfo->fileInfo,
+                                                    !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
+                                                   );
+
+                          // clear entry
+                          Dictionary_remove(&hardLinksDictionary,
+                                            &fileInfo.id,
+                                            sizeof(fileInfo.id)
+                                           );
+                        }
+                      }
+                      else
+                      {
+                        // create hard link name list
+                        if (createInfo->partialFlag && isPrintInfo(2))
+                        {
+                          printIncrementalInfo(&createInfo->namesDictionary,
+                                               name,
+                                               &fileInfo.cast
+                                              );
+                        }
+
+                        hardLinkInfo.count = fileInfo.linkCount;
+                        StringList_init(&hardLinkInfo.nameList);
+                        StringList_append(&hardLinkInfo.nameList,name);
+                        memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
+
+                        if (!Dictionary_add(&hardLinksDictionary,
+                                            &fileInfo.id,
+                                            sizeof(fileInfo.id),
+                                            &hardLinkInfo,
+                                            sizeof(hardLinkInfo)
+                                           )
+                            )
+                        {
+                          HALT_INSUFFICIENT_MEMORY();
+                        }
                       }
                     }
                     else
                     {
-                      // create hard link name list
-                      if (createInfo->partialFlag && isPrintInfo(2))
-                      {
-                        printIncrementalInfo(&createInfo->namesDictionary,
-                                             name,
-                                             &fileInfo.cast
-                                            );
-                      }
+                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'",String_cString(name));
 
-                      hardLinkInfo.count = fileInfo.linkCount;
-                      StringList_init(&hardLinkInfo.nameList);
-                      StringList_append(&hardLinkInfo.nameList,name);
-                      memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
-
-                      if (!Dictionary_add(&hardLinksDictionary,
-                                          &fileInfo.id,
-                                          sizeof(fileInfo.id),
-                                          &hardLinkInfo,
-                                          sizeof(hardLinkInfo)
-                                         )
-                          )
+                      STATUS_INFO_UPDATE(createInfo,name,NULL)
                       {
-                        HALT_INSUFFICIENT_MEMORY();
+                        createInfo->runningInfo.progress.skipped.count++;
+                        createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                       }
                     }
                   }
-                  else
-                  {
-                    logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'",String_cString(name));
+                }
+                else
+                {
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-                    STATUS_INFO_UPDATE(createInfo,name,NULL)
+                  STATUS_INFO_UPDATE(createInfo,name,NULL)
+                  {
+                    createInfo->runningInfo.progress.skipped.count++;
+                    createInfo->runningInfo.progress.skipped.size += fileInfo.size;
+                  }
+                }
+                break;
+              case FILE_TYPE_SPECIAL:
+                if (   isInIncludedList(createInfo->includeEntryList,name)
+                    && !isInExcludedList(createInfo->excludePatternList,name)
+                   )
+                {
+                  if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
+                  {
+                    // add to known names history
+                    Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+
+                    // add to entry list
+                    if (createInfo->partialFlag && isPrintInfo(2))
                     {
-                      createInfo->runningInfo.progress.skipped.count++;
-                      createInfo->runningInfo.progress.skipped.size += fileInfo.size;
+                      printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                     }
+                    appendSpecialToEntryList(&createInfo->entryMsgQueue,
+                                             ENTRY_TYPE_FILE,
+                                             name,
+                                             &fileInfo,
+                                             NULL  // deviceInfo
+                                            );
                   }
                 }
-              }
-              else
-              {
-                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
-
-                STATUS_INFO_UPDATE(createInfo,name,NULL)
+                else
                 {
-                  createInfo->runningInfo.progress.skipped.count++;
-                  createInfo->runningInfo.progress.skipped.size += fileInfo.size;
-                }
-              }
-              break;
-            case FILE_TYPE_SPECIAL:
-              if (   isInIncludedList(createInfo->includeEntryList,name)
-                  && !isInExcludedList(createInfo->excludePatternList,name)
-                 )
-              {
-                if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
-                {
-                  // add to known names history
-                  Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-                  // add to entry list
-                  if (createInfo->partialFlag && isPrintInfo(2))
+                  STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-                    printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
+                    createInfo->runningInfo.progress.skipped.count++;
+                    createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                   }
-                  appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                           ENTRY_TYPE_FILE,
-                                           name,
-                                           &fileInfo,
-                                           NULL  // deviceInfo
-                                          );
                 }
-              }
-              else
-              {
-                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
+                break;
+              default:
+                printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'",String_cString(name));
 
                 STATUS_INFO_UPDATE(createInfo,name,NULL)
                 {
-                  createInfo->runningInfo.progress.skipped.count++;
-                  createInfo->runningInfo.progress.skipped.size += fileInfo.size;
+                  createInfo->runningInfo.progress.error.count++;
+                  createInfo->runningInfo.progress.error.size += (uint64)fileInfo.size;
                 }
-              }
-              break;
-            default:
-              printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
-              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'",String_cString(name));
-
-              STATUS_INFO_UPDATE(createInfo,name,NULL)
-              {
-                createInfo->runningInfo.progress.error.count++;
-                createInfo->runningInfo.progress.error.size += (uint64)fileInfo.size;
-              }
-              break;
+                break;
+            }
           }
+
+          // free resources
         }
+        while (   (createInfo->failError == ERROR_NONE)
+               && !isAborted(createInfo)
+               && (databaseId != DATABASE_ID_NONE)
+              );
 
-        // free resources
+        // close continuous database
+        Continuous_close(&continuousDatabaseHandle);
       }
-      while (   (createInfo->failError == ERROR_NONE)
-             && !isAborted(createInfo)
-             && (databaseId != DATABASE_ID_NONE)
-            );
-
-      // close continuous database
-      Continuous_close(&continuousDatabaseHandle);
+      else
+      {
+        printError("cannot initialize continuous database (error: %s)!",
+                   Error_getText(error)
+                  );
+      }
     }
   }
   else
   {
     StringList          nameList;
-    String              basePath;
+    String              path;
     String              fileName;
     EntryNode           *includeEntryNode;
     StringTokenizer     fileNameTokenizer;
@@ -2803,13 +2805,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
     // initialize variables
     StringList_init(&nameList);
-    basePath = String_new();
+    path     = String_new();
     fileName = String_new();
-    AUTOFREE_ADD(&autoFreeList,&nameList,{ StringList_done(&nameList); });
-    AUTOFREE_ADD(&autoFreeList,basePath,{ String_delete(basePath); });
 
     // process include entries
-    includeEntryNode = createInfo->includeEntryList->head;
+    includeEntryNode = LIST_HEAD(createInfo->includeEntryList);
     while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
            && (includeEntryNode != NULL)
@@ -2826,22 +2826,22 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       {
         if (!String_isEmpty(token))
         {
-          File_setFileName(basePath,token);
+          File_setFileName(path,token);
         }
         else
         {
-          File_getSystemDirectory(basePath,FILE_SYSTEM_PATH_ROOT,NULL);
+          File_getSystemDirectory(path,FILE_SYSTEM_PATH_ROOT,NULL);
         }
       }
       while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
       {
-        File_appendFileName(basePath,token);
+        File_appendFileName(path,token);
       }
       File_doneSplitFileName(&fileNameTokenizer);
 
-      // find files
+      // find files starting from base path
+      StringList_append(&nameList,path);
       n = 0;
-      StringList_append(&nameList,basePath);
       while (   (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
              && !StringList_isEmpty(&nameList)
@@ -2856,23 +2856,31 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         StringList_removeLast(&nameList,name);
 
         // read file info
-        error = File_getInfo(&fileInfo,name);
+        if (!String_isEmpty(name))
+        {
+          String_set(path,name);
+        }
+        else
+        {
+          File_getCurrentDirectory(path);
+        }
+        error = File_getInfo(&fileInfo,path);
         if (error != ERROR_NONE)
         {
           if (createInfo->jobOptions->skipUnreadableFlag)
           {
-            printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
+            printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(path),Error_getText(error));
             logMessage(createInfo->logHandle,
                        LOG_TYPE_ENTRY_ACCESS_DENIED,
                        "Access denied '%s' (error: %s)",
-                       String_cString(name),
+                       String_cString(path),
                        Error_getText(error)
                       );
           }
           else
           {
             printError("cannot get info for '%s' (error: %s)",
-                       String_cString(name),
+                       String_cString(path),
                        Error_getText(error)
                       );
           }
@@ -3721,7 +3729,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
     // free resoures
     String_delete(fileName);
-    String_delete(basePath);
+    String_delete(path);
     StringList_done(&nameList);
   }
 
@@ -3748,7 +3756,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   Dictionary_done(&hardLinksDictionary);
   String_delete(name);
   Dictionary_done(&duplicateNamesDictionary);
-  AutoFree_done(&autoFreeList);
 }
 
 /*---------------------------------------------------------------------*/
