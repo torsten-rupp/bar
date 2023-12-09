@@ -3223,7 +3223,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
     #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
   #elif defined(PLATFORM_WINDOWS)
     // Note: on Windows <drive>: and <drive>:/ are different, but <path> and <path>/ are the same...
-    s = String_newCString(directoryName);
+    s = !stringIsEmpty(directoryName) ? String_newCString(directoryName) : String_newCString(".");
     if (!String_endsWithChar(s,FILE_PATH_SEPARATOR_CHAR)) String_appendChar(s,FILE_PATH_SEPARATOR_CHAR);
     directoryListHandle->dir = opendir(String_cString(s));
     String_delete(s);
