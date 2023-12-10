@@ -1362,7 +1362,7 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
     switch (fileSystemPathType)
     {
       case FILE_SYSTEM_PATH_ROOT:
-        String_appendCString(path,"/");
+        String_setCString(path,"/");
         break;
       case FILE_SYSTEM_PATH_TMP:
         String_setCString(path,getenv("TMPDIR"));
