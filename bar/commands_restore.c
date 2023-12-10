@@ -3772,8 +3772,8 @@ Errors Command_restore(const StringList                *storageNameList,
         if (error != ERROR_NONE)
         {
           if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
-          someStorageFound = TRUE;
         }
+        someStorageFound = TRUE;
       }
     }
 
