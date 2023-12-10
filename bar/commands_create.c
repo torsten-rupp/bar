@@ -1797,6 +1797,10 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
           File_setFileNameChar(path,FILE_PATH_SEPARATOR_CHAR);
         }
       }
+      else
+      {
+        String_clear(path);
+      }
       while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
       {
         File_appendFileName(path,token);
@@ -2832,6 +2836,10 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         {
           File_getSystemDirectory(path,FILE_SYSTEM_PATH_ROOT,NULL);
         }
+      }
+      else
+      {
+        String_clear(path);
       }
       while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
       {
