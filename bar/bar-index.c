@@ -560,7 +560,7 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
   DatabaseOpenModes openMode;
   Errors            error;
 
-  // parse URI and fill int default values
+  // parse URI and fill default values
   error = Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
   if (error != ERROR_NONE)
   {
@@ -11127,6 +11127,52 @@ uint xxxShow=0;
       explainQueryPlanFlag = TRUE;
       i++;
     }
+    else if (stringStartsWith(argv[i],"--system-encoding="))
+    {
+      systemEncoding = &argv[i][18];
+      i++;
+    }
+    else if (stringEquals(argv[i],"--system-encoding"))
+    {
+      i++;
+      if ((i+1) >= (uint)argc)
+      {
+        printError("expected path name for option --system-encoding!");
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuIds);
+        Array_done(&uuidIds);
+        String_delete(command);
+        String_delete(storageName);
+        String_delete(entryName);
+        exit(EXITCODE_INVALID_ARGUMENT);
+      }
+      systemEncoding = argv[i];
+      i++;
+    }
+    else if (stringStartsWith(argv[i],"--console-encoding="))
+    {
+      consoleEncoding = &argv[i][19];
+      i++;
+    }
+    else if (stringEquals(argv[i],"--console-encoding"))
+    {
+      i++;
+      if ((i+1) >= (uint)argc)
+      {
+        printError("expected path name for option --console-encoding!");
+        Array_done(&storageIds);
+        Array_done(&entityIds);
+        Array_done(&uuIds);
+        Array_done(&uuidIds);
+        String_delete(command);
+        String_delete(storageName);
+        String_delete(entryName);
+        exit(EXITCODE_INVALID_ARGUMENT);
+      }
+      consoleEncoding = argv[i];
+      i++;
+    }
     else if (stringEquals(argv[i],"--version"))
     {
       printf("BAR index version %s\n",VERSION_REVISION_STRING);
@@ -11432,7 +11478,7 @@ else if (stringEquals(argv[i],"--xxx"))
   }
 
   // create tables/views/indices/triggers
-  if (createFlag)
+  if (createFlag && !pipeFlag)
   {
     if (error == ERROR_NONE) error = createTablesViewsIndicesTriggers(&databaseHandle);
   }
@@ -11953,13 +11999,6 @@ if (xxxId != DATABASE_ID_NONE)
       if (error == ERROR_NONE)
       {
         t0 = Misc_getTimestamp();
-#if 0
-        error = Database_execute(&databaseHandle,
-                                 NULL,  // changedRowCound
-                                 DATABASE_FLAG_NONE,
-                                 String_cString(s)
-                                );
-#else
         error = Database_get(&databaseHandle,
                              CALLBACK_(printRow,&printRowData),
                              NULL,  // changedRowCount
@@ -11975,11 +12014,9 @@ if (xxxId != DATABASE_ID_NONE)
                              0LL,
                              DATABASE_UNLIMITED
                             );
-#endif
         t1 = Misc_getTimestamp();
       }
       freeColumnsWidth(printRowData.widths);
-
       String_delete(s);
       if (error != ERROR_NONE)
       {

@@ -6245,11 +6245,16 @@ test_index_operations_server: \
 	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
 	@#
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
+ifeq ($(TEST_INDEX_DATABASE),$(TEST_INDEX_DATABASE_SQLITE))
 	@$(call functionCleanTestFiles)
 	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE))
 	for i in 1 2 3 4 6 7; do \
           $(ECHO) "Import $(UP_DIR)/archive/index$$i.sql" $(LOG); \
-          $(RMF) $(TEST_INDEX_DATABASE); $(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) - < archive/index$$i.sql; \
+          $(RMF) $(TEST_INDEX_DATABASE); $(TEST_BAR_INDEX) $(TEST_INDEX_DATABASE) --create - < archive/index$$i.sql; \
+          rc=$$?; \
+          if test $$rc -ne 0; then \
+            exit $$rc; \
+          fi; \
           ( \
             $(CD) $(UP_DIR); \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -6259,10 +6264,15 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
               --index-database=$(TEST_INDEX_DATABASE) \
               --debug-index-wait-operations \
               $(ADDITIONAL_OPTIONS); \
+            rc=$$?; \
+              if test $$rc -ne 0; then \
+              exit $$rc; \
+            fi; \
           ) $(LOG); \
         done
 	@#
 	@$(call functionDoneTestFiles)
+endif
 else
 	@$(ECHO) "server index test: debug functions not available in $(TEST_BAR) - skipped"
 endif

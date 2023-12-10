@@ -20,6 +20,8 @@
   * fixed reserved keyword in MariaDB: offset
   * fixed undefined value when update aggregates
   * fixed format .bid filename
+  * fixed bar-index pipe: do not create tables/indizes
+    if --create and pipe option is given
 
 2023-07-01 0.22h
   * fixed wrong database entry for special files (type)
