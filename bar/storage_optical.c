@@ -1274,8 +1274,9 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
     if (error != ERROR_NONE)
     {
-      String_delete(executeIOInfo.commandLine);
+      String_delete(imageFileName);
       StringList_done(&executeIOInfo.stderrList);
+      String_delete(executeIOInfo.commandLine);
       return error;
     }
 
@@ -1557,8 +1558,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           {
             File_delete(imageFileName,FALSE);
             String_delete(imageFileName);
-            String_delete(executeIOInfo.commandLine);
             StringList_done(&executeIOInfo.stderrList);
+            String_delete(executeIOInfo.commandLine);
             return error;
           }
           updateStorageRunningInfo(storageInfo);
@@ -1666,12 +1667,6 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           storageInfo->opticalDisk.write.step++;
         }
       }
-
-      // free resources
-      File_delete(imageFileName,FALSE);
-      String_delete(imageFileName);
-      String_delete(executeIOInfo.commandLine);
-      StringList_done(&executeIOInfo.stderrList);
     }
     else
     {
@@ -1685,8 +1680,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           {
             File_delete(imageFileName,FALSE);
             String_delete(imageFileName);
-            String_delete(executeIOInfo.commandLine);
             StringList_done(&executeIOInfo.stderrList);
+            String_delete(executeIOInfo.commandLine);
             return error;
           }
           updateStorageRunningInfo(storageInfo);
@@ -1822,8 +1817,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     // handle error
     if (error != ERROR_NONE)
     {
-      String_delete(executeIOInfo.commandLine);
       StringList_done(&executeIOInfo.stderrList);
+      String_delete(executeIOInfo.commandLine);
       return error;
     }
 
