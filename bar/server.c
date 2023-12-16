@@ -5724,7 +5724,7 @@ LOCAL void jobThreadCode(void)
   StaticString     (entityUUID,MISC_UUID_STRING_LENGTH);
   uint64           executeStartDateTime,executeEndDateTime;
   StringList       storageNameList;
-  TextMacros       (textMacros,10);
+  TextMacros       (textMacros,11);
   StaticString     (s,64);
   IndexHandle      indexHandle;
   bool             isIndexOpened;
@@ -5938,6 +5938,9 @@ LOCAL void jobThreadCode(void)
             TEXT_MACRO_X_CSTRING("%T",                   Archive_archiveTypeToShortString(archiveType),                NULL);
             TEXT_MACRO_X_STRING ("%directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
             TEXT_MACRO_X_STRING ("%file",                storageSpecifier.archiveName,                                 NULL);
+            TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
+                                                           ? nextScheduleDateTime-executeStartDateTime
+                                                           : 0,                                                        NULL);
             TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                         NULL);
           }
           error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
@@ -6203,6 +6206,9 @@ LOCAL void jobThreadCode(void)
           TEXT_MACRO_X_CSTRING("%state",               Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),NULL);
           TEXT_MACRO_X_UINT   ("%error",               Error_getCode(jobNode->runningInfo.error),                             NULL);
           TEXT_MACRO_X_CSTRING("%message",             Error_getText(jobNode->runningInfo.error),                             NULL);
+          TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
+                                                         ? nextScheduleDateTime-executeStartDateTime
+                                                         : 0,                                                                 NULL);
           TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                                  NULL);
         }
         error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),

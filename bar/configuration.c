@@ -10403,7 +10403,6 @@ Errors Configuration_update(void)
     String_delete(configFileName);
     return ERROR_NO_WRITABLE_CONFIG;
   }
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(configFileName));
 
   error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL,TRUE);
   if (error != ERROR_NONE)
