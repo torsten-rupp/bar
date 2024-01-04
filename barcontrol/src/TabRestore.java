@@ -2619,7 +2619,7 @@ Dprintf.dprintf("");
                                      long         entityId            = valueMap.getLong  ("entityId"                      );
                                      String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
                                      String       hostName            = valueMap.getString("hostName"                      );
-                                     long         createdDateTime     = valueMap.getLong  ("createdDateTime"               ,0L); // TODO remove default
+                                     long         createdDateTime     = valueMap.getLong  ("createdDateTime"               );
                                      ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
                                      String       name                = valueMap.getString("name"                          );
                                      long         dateTime            = valueMap.getLong  ("dateTime"                      );
@@ -2975,7 +2975,7 @@ Dprintf.dprintf("");
                                                                   String       jobName             = valueMap.getString("jobName"                                           );
                                                                   long         entityId            = valueMap.getLong  ("entityId"                                          );
                                                                   String       hostName            = valueMap.getString("hostName"                                          );
-                                                                  long         createdDateTime     = valueMap.getLong  ("createdDateTime"                                   ,0L); // TODO remove default
+                                                                  long         createdDateTime     = valueMap.getLong  ("createdDateTime"                                   );
                                                                   ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class,ArchiveTypes.NORMAL);
                                                                   String       name                = valueMap.getString("name"                                              );
                                                                   long         dateTime            = valueMap.getLong  ("dateTime"                                          );
@@ -3728,8 +3728,8 @@ Dprintf.dprintf("");
                                    1,  // debugLevel
                                    valueMap
                                   );
-          totalEntryCount = valueMap.getLong("totalEntryCount",0L);
-          totalEntrySize  = valueMap.getLong("totalEntrySize", 0L);
+          totalEntryCount = valueMap.getLong("totalEntryCount");
+          totalEntrySize  = valueMap.getLong("totalEntrySize" );
           assert(totalEntryCount >= 0);
           assert(totalEntrySize >= 0);
         }
@@ -7251,7 +7251,7 @@ Dprintf.dprintf("");
                                              @Override
                                              public void handle(int i, ValueMap valueMap)
                                              {
-                                               long storageId = valueMap.getLong("storageId",0L);
+                                               long storageId = valueMap.getLong("storageId");
 
                                                indexIdSet.set(storageId,checked);
 
@@ -8758,10 +8758,10 @@ Dprintf.dprintf("");
                                        @Override
                                        public void handle(int i, ValueMap valueMap)
                                        {
-                                         long   storageId  = valueMap.getLong  ("storageId", 0L);
-                                         String name       = valueMap.getString("name",      "");
-                                         long   doneCount  = valueMap.getLong  ("doneCount", 0L);
-                                         long   totalCount = valueMap.getLong  ("totalCount",0L);
+                                         long   storageId  = valueMap.getLong  ("storageId" );
+                                         String name       = valueMap.getString("name"      );
+                                         long   doneCount  = valueMap.getLong  ("doneCount" );
+                                         long   totalCount = valueMap.getLong  ("totalCount");
 
                                          if      ((storageId != 0) && (!name.isEmpty()))
                                          {
@@ -9264,10 +9264,10 @@ Dprintf.dprintf("");
                                    2,  // debugLevel
                                    valueMap
                                   );
-          totalStorageCount = valueMap.getLong("totalStorageCount",0L);
-          totalStorageSize  = valueMap.getLong("totalStorageSize", 0L);
-          totalEntryCount   = valueMap.getLong("totalEntryCount",  0L);
-          totalEntrySize    = valueMap.getLong("totalEntrySize",   0L);
+          totalStorageCount = valueMap.getLong("totalStorageCount");
+          totalStorageSize  = valueMap.getLong("totalStorageSize" );
+          totalEntryCount   = valueMap.getLong("totalEntryCount"  );
+          totalEntrySize    = valueMap.getLong("totalEntrySize"   );
           assert(totalStorageCount >= 0);
           assert(totalStorageSize >= 0);
           assert(totalEntryCount >= 0);
@@ -9995,11 +9995,11 @@ Dprintf.dprintf("");
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
-                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount",    0L);
-                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize",     0L);
-                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount",      0L);
-                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize",       0L);
-                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize",0L);
+                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
+                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
+                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
+                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
+                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
                                            }
                                          }
                                         );
@@ -10075,11 +10075,11 @@ Dprintf.dprintf("");
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
-                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount",    0L);
-                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize",     0L);
-                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount",      0L);
-                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize",       0L);
-                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize",0L);
+                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
+                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
+                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
+                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
+                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
                                            }
                                          }
                                         );
@@ -10419,18 +10419,18 @@ Dprintf.dprintf("");
                                        @Override
                                        public void handle(int i, ValueMap valueMap)
                                        {
-                                         RestoreStates  state            = valueMap.getEnum  ("state",RestoreStates.class);
-                                         long           doneCount        = valueMap.getLong  ("doneCount",0L);
-                                         long           doneSize         = valueMap.getLong  ("doneSize",0L);
+                                         RestoreStates  state            = valueMap.getEnum  ("state",           RestoreStates.class);
+                                         long           doneCount        = valueMap.getLong  ("doneCount"                           );
+                                         long           doneSize         = valueMap.getLong  ("doneSize"                            );
 // TODO: use
-//                                         long           totalCount       = valueMap.getLong  ("totalCount",0L);
-//                                         long           totalSize        = valueMap.getLong  ("totalSize",0L);
-                                         String         storageName      = valueMap.getString("storageName","");
-                                         long           storageDoneSize  = valueMap.getLong  ("storageDoneSize",0L);
-                                         long           storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
-                                         String         entryName        = valueMap.getString("entryName","");
-                                         long           entryDoneSize    = valueMap.getLong  ("entryDoneSize",0L);
-                                         long           entryTotalSize   = valueMap.getLong  ("entryTotalSize",0L);
+//                                         long           totalCount       = valueMap.getLong  ("totalCount");
+//                                         long           totalSize        = valueMap.getLong  ("totalSize");
+                                         String         storageName      = valueMap.getString("storageName"                         );
+                                         long           storageDoneSize  = valueMap.getLong  ("storageDoneSize"                     );
+                                         long           storageTotalSize = valueMap.getLong  ("storageTotalSize"                    );
+                                         String         entryName        = valueMap.getString("entryName"                           );
+                                         long           entryDoneSize    = valueMap.getLong  ("entryDoneSize"                       );
+                                         long           entryTotalSize   = valueMap.getLong  ("entryTotalSize"                      );
 
 //                                         storageCount[0]++;
                                          switch (state)

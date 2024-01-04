@@ -160,6 +160,17 @@ typedef enum
   JOB_STATE_DISCONNECTED
 } JobStates;
 
+typedef Set JobStateSet;
+
+#define JOB_STATESET_ALL \
+    SET_VALUE(JOB_STATE_NONE) \
+  | SET_VALUE(JOB_STATE_WAITING) \
+  | SET_VALUE(JOB_STATE_RUNNING) \
+  | SET_VALUE(JOB_STATE_DONE) \
+  | SET_VALUE(JOB_STATE_ERROR) \
+  | SET_VALUE(JOB_STATE_ABORTED) \
+  | SET_VALUE(JOB_STATE_DISCONNECTED)
+
 // slave states
 typedef enum
 {
@@ -169,6 +180,15 @@ typedef enum
   SLAVE_STATE_WRONG_PROTOCOL_VERSION,
   SLAVE_STATE_PAIRED
 } SlaveStates;
+
+typedef Set SlaveStateSet;
+
+#define SLAVE_STATESET_ALL \
+    SET_VALUE(SLAVE_STATE_OFFLINE) \
+  | SET_VALUE(SLAVE_STATE_ONLINE) \
+  | SET_VALUE(SLAVE_STATE_WRONG_MODE) \
+  | SET_VALUE(SLAVE_STATE_WRONG_PROTOCOL_VERSION) \
+  | SET_VALUE(SLAVE_STATE_PAIRED)
 
 // job node
 typedef struct JobNode
@@ -544,9 +564,9 @@ extern JobList   jobList;
 \***********************************************************************/
 
 #define JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,timeout) \
-  for (ConnectorInfo *connectorInfo = Job_connectorLock(jobNode,timeout); \
+  for (connectorInfo = Job_connectorLock(jobNode,timeout); \
        connectorInfo != NULL; \
-       Job_connectorUnlock(connectorInfo), connectorInfo = NULL \
+       Job_connectorUnlock(connectorInfo,timeout), connectorInfo = NULL \
       )
 
 /***************************** Forwards ********************************/
@@ -1670,12 +1690,13 @@ ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout);
 * Name   : Job_connectorUnlock
 * Purpose: unlock connector info
 * Input  : connectorInfo - connector info
+*          timeout       - timeout or NO_WAIT/WAIT_FOREVER
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_connectorUnlock(ConnectorInfo *connectorInfo);
+void Job_connectorUnlock(ConnectorInfo *connectorInfo, long timeout);
 
 /***********************************************************************\
 * Name   : Job_updateNotifies

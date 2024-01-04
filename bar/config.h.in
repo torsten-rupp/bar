@@ -34,6 +34,9 @@
 /* file separator string */
 #undef FILE_SEPARATOR_STRING
 
+/* AFS_SUPER_MAGIC available */
+#undef HAVE_AFS_SUPER_MAGIC
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 
@@ -78,6 +81,9 @@
 
 /* chown() available */
 #undef HAVE_CHOWN
+
+/* CODA_SUPER_MAGIC available */
+#undef HAVE_CODA_SUPER_MAGIC
 
 /* crypto installed */
 #undef HAVE_CRYPTO
@@ -385,6 +391,9 @@
 /* newlocale() available */
 #undef HAVE_NEWLOCALE
 
+/* NFS_SUPER_MAGIC available */
+#undef HAVE_NFS_SUPER_MAGIC
+
 /* smb2_opendir() available */
 #undef HAVE_OPENDIR
 
@@ -501,6 +510,9 @@
 
 /* smb2_parse_url() available */
 #undef HAVE_SMB2_PARSE_URL
+
+/* SMB_SUPER_MAGIC available */
+#undef HAVE_SMB_SUPER_MAGIC
 
 /* SSH2 installed */
 #undef HAVE_SSH2
@@ -672,6 +684,9 @@
 
 /* TASN.1 installed */
 #undef HAVE_TASN1
+
+/* TCP_NODELAY available */
+#undef HAVE_TCP_NODELAY
 
 /* Define to 1 if you have the <termios.h> header file. */
 #undef HAVE_TERMIOS_H

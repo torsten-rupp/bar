@@ -759,8 +759,10 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
           #if   defined(PLATFORM_LINUX)
             if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
-              n = 1;
-              setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(void*)&n,sizeof(int));
+              #ifdef HAVE_TCP_NODELAY
+                n = 1;
+                setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(void*)&n,sizeof(int));
+              #endif
             }
             if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
@@ -770,8 +772,10 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
           #elif defined(PLATFORM_WINDOWS)
             if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
-              n = 1;
-              setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(char*)&n,sizeof(int));
+              #ifdef HAVE_TCP_NODELAY
+                n = 1;
+                setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(char*)&n,sizeof(int));
+              #endif
             }
             if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
@@ -1196,8 +1200,8 @@ Errors Network_connect(SocketHandle *socketHandle,
                         sizeof(buffer),
                         &hostAddressEntry,
                         &getHostByNameError
-                       ) != 0)
-
+                       ) != 0
+       )
     {
       hostAddressEntry = NULL;
     }
@@ -1245,8 +1249,8 @@ Errors Network_connect(SocketHandle *socketHandle,
         }
 
         socketAddress.sin_family      = AF_INET;
-        socketAddress.sin_addr.s_addr = ipAddress;
         socketAddress.sin_port        = htons(hostPort);
+        socketAddress.sin_addr.s_addr = ipAddress;
         if (   (connect(socketDescriptor,
                         (struct sockaddr*)&socketAddress,
                         sizeof(socketAddress)
@@ -1289,8 +1293,8 @@ Errors Network_connect(SocketHandle *socketHandle,
 
         // connect
         socketAddress.sin_family      = AF_INET;
-        socketAddress.sin_addr.s_addr = ipAddress;
         socketAddress.sin_port        = htons(hostPort);
+        socketAddress.sin_addr.s_addr = ipAddress;
         if (connect(socketDescriptor,
                     (struct sockaddr*)&socketAddress,
                     sizeof(socketAddress)
@@ -1790,15 +1794,14 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
 
   // bind and listen socket
   socketAddress.sin_family      = AF_INET;
-  socketAddress.sin_addr.s_addr = INADDR_ANY;
   socketAddress.sin_port        = htons(serverPort);
+  socketAddress.sin_addr.s_addr = INADDR_ANY;
   if (bind(serverSocketHandle->handle,
            (struct sockaddr*)&socketAddress,
            sizeof(socketAddress)
           ) != 0
      )
   {
-//fprintf(stderr,"%s:%d: errno=%d WSAGetLastError=%d\n",__FILE__,__LINE__,errno,WSAGetLastError());
     error = ERRORX_(BIND_FAIL,errno,"%E",errno);
     disconnectDescriptor(serverSocketHandle->handle);
     return error;

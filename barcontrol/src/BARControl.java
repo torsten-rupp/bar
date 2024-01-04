@@ -1810,6 +1810,567 @@ public class BARControl
     }
   };
 
+  /** schedule info
+   */
+  class ScheduleInfo
+  {
+    final static int NONE = 0;
+    final static int ANY  = -1;
+    final static int MON  = 0;
+    final static int TUE  = 1;
+    final static int WED  = 2;
+    final static int THU  = 3;
+    final static int FRI  = 4;
+    final static int SAT  = 5;
+    final static int SUN  = 6;
+
+    String       jobName;
+    String       uuid;
+    int          year,month,day;
+    int          weekDays;
+    int          hour,minute;
+    ArchiveTypes archiveType;
+    int          interval;
+    int          beginHour,beginMinute;
+    int          endHour,endMinute;
+    String       customText;
+    boolean      testCreatedArchives;
+    boolean      noStorage;
+    boolean      enabled;
+    long         lastExecutedDateTime;
+    long         nextExecutedDateTime;
+    long         totalEntities,totalEntryCount,totalEntrySize;
+
+    /** create schedule data
+     * @param jobName job name
+     * @param uuid schedule UUID
+     * @param year year
+     * @param month month [1..12]
+     * @param day day [1..31]
+     * @param weekDays week days
+     * @param hour hour [0..23]
+     * @param minute minute [0..59]
+     * @param archiveType archive type string
+     * @param interval continuous interval [min]
+     * @param customText custom text
+     * @param testCreatedArchives true to test created archives
+     * @param noStorage true to skip storage
+     * @param enabled true iff enabled
+     * @param lastExecutedDateTime date/time of last execution
+     * @param nextExecutedDateTime date/time of next execution
+     * @param totalEntities total number of existing entities for schedule
+     * @param totalEntryCount total number of existing entries for schedule
+     * @param totalEntrySize total size of existing entries for schedule [bytes]
+     */
+    ScheduleInfo(String       jobName,
+                 String       uuid,
+                 int          year,
+                 int          month,
+                 int          day,
+                 int          weekDays,
+                 int          hour,
+                 int          minute,
+                 ArchiveTypes archiveType,
+                 int          interval,
+                 int          beginHour,
+                 int          beginMinute,
+                 int          endHour,
+                 int          endMinute,
+                 String       customText,
+                 boolean      testCreatedArchives,
+                 boolean      noStorage,
+                 boolean      enabled,
+                 long         lastExecutedDateTime,
+                 long         nextExecutedDateTime,
+                 long         totalEntities,
+                 long         totalEntryCount,
+                 long         totalEntrySize
+                )
+    {
+      this.jobName              = jobName;
+      this.uuid                 = uuid;
+      this.year                 = year;
+      this.month                = month;
+      this.day                  = day;
+      this.weekDays             = weekDays;
+      this.hour                 = hour;
+      this.minute               = minute;
+      this.archiveType          = archiveType;
+      this.interval             = interval;
+      this.beginHour            = beginHour;
+      this.beginMinute          = beginMinute;
+      this.endHour              = endHour;
+      this.endMinute            = endMinute;
+      this.customText           = customText;
+      this.testCreatedArchives  = testCreatedArchives;
+      this.noStorage            = noStorage;
+      this.enabled              = enabled;
+      this.lastExecutedDateTime = lastExecutedDateTime;
+      this.nextExecutedDateTime = nextExecutedDateTime;
+      this.totalEntities        = totalEntities;
+      this.totalEntryCount      = totalEntryCount;
+      this.totalEntrySize       = totalEntrySize;
+    }
+
+    /** create schedule data
+     * @param jobName job name
+     * @param uuid schedule UUID
+     * @param date date string (<year>-<month>-<day>)
+     * @param weekDays week days string; values separated by ','
+     * @param time time string (<hour>:<minute>)
+     * @param archiveType archive type string
+     * @param interval continuous interval [min]
+     * @param beginTime,endTime continous begin/end time
+     * @param customText custom text
+     * @param testCreatedArchives true to test created archives
+     * @param noStorage true to skip storage
+     * @param enabled true iff enabled
+     * @param lastExecutedDateTime date/time of last execution
+     * @param nextExecutedDateTime date/time of next execution
+     * @param totalEntities total number of existing entities for schedule
+     * @param totalEntryCount total number of existing entries for schedule
+     * @param totalEntrySize total size of existing entries for schedule [bytes]
+     */
+    ScheduleInfo(String       jobName,
+                 String       uuid,
+                 String       date,
+                 String       weekDays,
+                 String       time,
+                 ArchiveTypes archiveType,
+                 int          interval,
+                 String       beginTime,
+                 String       endTime,
+                 String       customText,
+                 boolean      testCreatedArchives,
+                 boolean      noStorage,
+                 boolean      enabled,
+                 long         lastExecutedDateTime,
+                 long         nextExecutedDateTime,
+                 long         totalEntities,
+                 long         totalEntryCount,
+                 long         totalEntrySize
+                )
+    {
+      this.jobName              = jobName;
+      this.uuid                 = uuid;
+      setDate(date);
+      setWeekDays(weekDays);
+      setTime(time);
+      this.archiveType          = archiveType;
+      this.interval             = interval;
+      setBeginTime(beginTime);
+      setEndTime(endTime);
+      this.customText           = customText;
+      this.testCreatedArchives  = testCreatedArchives;
+      this.noStorage            = noStorage;
+      this.enabled              = enabled;
+      this.lastExecutedDateTime = lastExecutedDateTime;
+      this.nextExecutedDateTime = nextExecutedDateTime;
+      this.totalEntities        = totalEntities;
+      this.totalEntryCount      = totalEntryCount;
+      this.totalEntrySize       = totalEntrySize;
+    }
+
+    /** get date value
+     * @return date string
+     */
+    String getDate()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getYear());
+      buffer.append('-');
+      buffer.append(getMonth());
+      buffer.append('-');
+      buffer.append(getDay());
+
+      return buffer.toString();
+    }
+
+    /** set date
+     * @param year year value
+     * @param month month value
+     * @param day day value
+     */
+    private void setDate(String year, String month, String day)
+    {
+      this.year  = !year.equals ("*") ? Integer.parseInt(year ) : ANY;
+      this.month = !month.equals("*") ? Integer.parseInt(month) : ANY;
+      this.day   = !day.equals  ("*") ? Integer.parseInt(day  ) : ANY;
+      assert (this.year == ANY) || (this.year >= 0) : this.hour;
+      assert (this.month == ANY) || ((this.month >= 1) && (this.month <= 12)) : this.hour;
+      assert (this.day == ANY) || ((this.day >= 1) && (this.day <= 31)) : this.hour;
+    }
+
+    /** set date
+     * @param date date string
+     */
+    private void setDate(String date)
+    {
+      String[] parts = date.split("-");
+      setDate(parts[0],parts[1],parts[2]);
+    }
+
+    /** get year value
+     * @return year string
+     */
+    String getYear()
+    {
+      assert (year == ANY) || (year >= 1) : year;
+
+      return (year != ANY) ? String.format("%04d",year) : "*";
+    }
+
+    /** get month value
+     * @return month string
+     */
+    String getMonth()
+    {
+      assert (month == ANY) || ((month >= 1) && (month <= 12)) : month;
+
+      return (month != ANY) ? String.format("%02d",month) : "*";
+    }
+
+    /** get day value
+     * @return day string
+     */
+    String getDay()
+    {
+      assert (day == ANY) || ((day >= 1) && (day <= 31)) : day;
+
+      return (day != ANY) ? String.format("%02d",day) : "*";
+    }
+
+    /** get week days value
+     * @return week days string
+     */
+    String getWeekDays()
+    {
+      assert    (weekDays == ANY)
+             || ((weekDays & ~(  (1 << ScheduleInfo.MON)
+                               | (1 << ScheduleInfo.TUE)
+                               | (1 << ScheduleInfo.WED)
+                               | (1 << ScheduleInfo.THU)
+                               | (1 << ScheduleInfo.FRI)
+                               | (1 << ScheduleInfo.SAT)
+                               | (1 << ScheduleInfo.SUN)
+                              )) == 0
+                ) : weekDays;
+
+      if (weekDays == ANY)
+      {
+        return "*";
+      }
+      else
+      {
+        StringBuilder buffer = new StringBuilder();
+
+        if ((weekDays & (1 << ScheduleInfo.MON)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Mon")); }
+        if ((weekDays & (1 << ScheduleInfo.TUE)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Tue")); }
+        if ((weekDays & (1 << ScheduleInfo.WED)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Wed")); }
+        if ((weekDays & (1 << ScheduleInfo.THU)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Thu")); }
+        if ((weekDays & (1 << ScheduleInfo.FRI)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Fri")); }
+        if ((weekDays & (1 << ScheduleInfo.SAT)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Sat")); }
+        if ((weekDays & (1 << ScheduleInfo.SUN)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append(BARControl.tr("Sun")); }
+
+        return buffer.toString();
+      }
+    }
+
+    /** set week days
+     * @param weekDays week days string; values separated by ','
+     */
+    void setWeekDays(String weekDays)
+    {
+      if (weekDays.equals("*"))
+      {
+        this.weekDays = ScheduleInfo.ANY;
+      }
+      else
+      {
+        this.weekDays = ScheduleInfo.NONE;
+        for (String name : weekDays.split(","))
+        {
+          if      (name.toLowerCase().equals("mon")) this.weekDays |= (1 << ScheduleInfo.MON);
+          else if (name.toLowerCase().equals("tue")) this.weekDays |= (1 << ScheduleInfo.TUE);
+          else if (name.toLowerCase().equals("wed")) this.weekDays |= (1 << ScheduleInfo.WED);
+          else if (name.toLowerCase().equals("thu")) this.weekDays |= (1 << ScheduleInfo.THU);
+          else if (name.toLowerCase().equals("fri")) this.weekDays |= (1 << ScheduleInfo.FRI);
+          else if (name.toLowerCase().equals("sat")) this.weekDays |= (1 << ScheduleInfo.SAT);
+          else if (name.toLowerCase().equals("sun")) this.weekDays |= (1 << ScheduleInfo.SUN);
+        }
+      }
+    }
+
+    /** set week days
+     * @param monFlag true for Monday
+     * @param tueFlag true for Tuesday
+     * @param wedFlag true for Wednesday
+     * @param thuFlag true for Thursday
+     * @param friFlag true for Friday
+     * @param satFlag true for Saturday
+     * @param sunFlag true for Sunday
+     */
+    void setWeekDays(boolean monFlag,
+                     boolean tueFlag,
+                     boolean wedFlag,
+                     boolean thuFlag,
+                     boolean friFlag,
+                     boolean satFlag,
+                     boolean sunFlag
+                    )
+    {
+
+      if (   monFlag
+          && tueFlag
+          && wedFlag
+          && thuFlag
+          && friFlag
+          && satFlag
+          && sunFlag
+         )
+      {
+        this.weekDays = ScheduleInfo.ANY;
+      }
+      else
+      {
+        this.weekDays = ScheduleInfo.NONE;
+        if (monFlag) this.weekDays |= (1 << ScheduleInfo.MON);
+        if (tueFlag) this.weekDays |= (1 << ScheduleInfo.TUE);
+        if (wedFlag) this.weekDays |= (1 << ScheduleInfo.WED);
+        if (thuFlag) this.weekDays |= (1 << ScheduleInfo.THU);
+        if (friFlag) this.weekDays |= (1 << ScheduleInfo.FRI);
+        if (satFlag) this.weekDays |= (1 << ScheduleInfo.SAT);
+        if (sunFlag) this.weekDays |= (1 << ScheduleInfo.SUN);
+      }
+    }
+
+    /** get hour value
+     * @return hour string
+     */
+    String getHour()
+    {
+      assert (hour == ANY) || ((hour >= 0) && (hour <= 23)) : hour;
+
+      return (hour != ANY) ? String.format("%02d",hour) : "*";
+    }
+
+    /** get minute value
+     * @return minute string
+     */
+    String getMinute()
+    {
+      assert (minute == ANY) || ((minute >= 0) && (minute <= 59)) : minute;
+
+      return (minute != ANY) ? String.format("%02d",minute) : "*";
+    }
+
+    /** get time value
+     * @return time string
+     */
+    String getTime()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getHour());
+      buffer.append(':');
+      buffer.append(getMinute());
+
+      return buffer.toString();
+    }
+
+    /** set time
+     * @param hour hour value
+     * @param minute minute value
+     */
+    void setTime(String hour, String minute)
+    {
+      this.hour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      assert (this.hour == ANY) || ((this.hour >= 0) && (this.hour <= 23)) : this.hour;
+      assert (this.minute == ANY) || ((this.minute >= 0) && (this.minute <= 59)) : this.minute;
+    }
+
+    /** set time
+     * @param time time string
+     */
+    void setTime(String time)
+    {
+      String[] parts = time.split(":");
+      setTime(parts[0],parts[1]);
+    }
+
+    /** get archive type
+     * @return archive type
+     */
+    ArchiveTypes getArchiveType()
+    {
+      return archiveType;
+    }
+
+    /** get begin hour value
+     * @return begin hour string
+     */
+    String getBeginHour()
+    {
+      assert (beginHour == ANY) || ((beginHour >= 0) && (beginHour <= 23)) : beginHour;
+
+      return (beginHour != ANY) ? String.format("%02d",beginHour) : "*";
+    }
+
+    /** get begin minute value
+     * @return begin minute string
+     */
+    String getBeginMinute()
+    {
+      assert (endMinute == ANY) || ((endMinute >= 0) && (endMinute <= 59)) : endMinute;
+
+      return (endMinute != ANY) ? String.format("%02d",endMinute) : "*";
+    }
+
+    /** get begin time value
+     * @return begin time string
+     */
+    String getBeginTime()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getBeginHour());
+      buffer.append(':');
+      buffer.append(getBeginMinute());
+
+      return buffer.toString();
+    }
+
+    /** set begin time
+     * @param hour hour value
+     * @param minute minute value
+     */
+    void setBeginTime(String hour, String minute)
+    {
+      this.beginHour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.beginMinute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      assert (beginHour == ANY) || ((beginHour >= 0) && (beginHour <= 23)) : beginHour;
+      assert (beginMinute == ANY) || ((beginMinute >= 0) && (beginMinute <= 59)) : beginMinute;
+    }
+
+    /** set beginn time
+     * @param time time string
+     */
+    void setBeginTime(String time)
+    {
+      String[] parts = time.split(":");
+      setBeginTime(parts[0],parts[1]);
+    }
+
+    /** get end hour value
+     * @return end hour string
+     */
+    String getEndHour()
+    {
+      assert (endHour == ANY) || ((endHour >= 0) && (endHour <= 23)) : endHour;
+
+      return (endHour != ANY) ? String.format("%02d",endHour) : "*";
+    }
+
+    /** get end minute value
+     * @return end minute string
+     */
+    String getEndMinute()
+    {
+      assert (endMinute == ANY) || ((endMinute >= 0) && (endMinute <= 59)) : endMinute;
+
+      return (endMinute != ANY) ? String.format("%02d",endMinute) : "*";
+    }
+
+    /** get end time value
+     * @return end time string
+     */
+    String getEndTime()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getEndHour());
+      buffer.append(':');
+      buffer.append(getEndMinute());
+
+      return buffer.toString();
+    }
+
+    /** set end time
+     * @param hour hour value
+     * @param minute minute value
+     */
+    void setEndTime(String hour, String minute)
+    {
+      this.endHour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.endMinute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      assert (endHour == ANY) || ((endHour >= 0) && (endHour <= 23)) : endHour;
+      assert (endMinute == ANY) || ((endMinute >= 0) && (endMinute <= 59)) : endMinute;
+    }
+
+
+    /** set end time
+     * @param time time string
+     */
+    void setEndTime(String time)
+    {
+      String[] parts = time.split(":");
+      setEndTime(parts[0],parts[1]);
+    }
+
+    /** set date
+     * @param year year value
+     * @param month month value
+     * @param day day value
+     * @param hour hour value
+     * @param minute minute value
+     */
+    private void setLastExecutedDateTime(String year, String month, String day, String hour, String minute)
+    {
+      this.year  = !year.equals ("*") ? Integer.parseInt(year ) : ANY;
+      this.month = !month.equals("*") ? Integer.parseInt(month) : ANY;
+      this.day   = !day.equals  ("*") ? Integer.parseInt(day  ) : ANY;
+      assert (this.year == ANY) || (this.year >= 0) : this.hour;
+      assert (this.month == ANY) || ((this.month >= 1) && (this.month <= 12)) : this.hour;
+      assert (this.day == ANY) || ((this.day >= 1) && (this.day <= 31)) : this.hour;
+
+      this.hour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      assert (this.hour == ANY) || ((this.hour >= 0) && (this.hour <= 23)) : this.hour;
+      assert (this.minute == ANY) || ((this.minute >= 0) && (this.minute <= 59)) : this.minute;
+    }
+
+    /** set date
+     * @param year year value
+     * @param month month value
+     * @param day day value
+     * @param hour hour value
+     * @param minute minute value
+     */
+    private void setNextExecutedDateTime(String year, String month, String day, String hour, String minute)
+    {
+      this.year  = !year.equals ("*") ? Integer.parseInt(year ) : ANY;
+      this.month = !month.equals("*") ? Integer.parseInt(month) : ANY;
+      this.day   = !day.equals  ("*") ? Integer.parseInt(day  ) : ANY;
+      assert (this.year == ANY) || (this.year >= 0) : this.hour;
+      assert (this.month == ANY) || ((this.month >= 1) && (this.month <= 12)) : this.hour;
+      assert (this.day == ANY) || ((this.day >= 1) && (this.day <= 31)) : this.hour;
+
+      this.hour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      assert (this.hour == ANY) || ((this.hour >= 0) && (this.hour <= 23)) : this.hour;
+      assert (this.minute == ANY) || ((this.minute >= 0) && (this.minute <= 59)) : this.minute;
+    }
+
+    /** convert data to string
+     */
+    public String toString()
+    {
+      return "ScheduleInfo {"+jobName+", "+uuid+", "+getDate()+", "+getWeekDays()+", "+getTime()+", "+archiveType+", "+noStorage+", "+enabled+", "+lastExecutedDateTime+", "+nextExecutedDateTime+"}";
+    }
+  }
+
   /** list local directory
    */
   public static ListDirectory<File> listDirectory = new ListDirectory<File>()
@@ -2182,7 +2743,10 @@ public class BARControl
     new Option("--ping",                         "-i",Options.Types.BOOLEAN,    "pingFlag"),
     new Option("--suspend",                      "-s",Options.Types.BOOLEAN,    "suspendFlag"),
     new Option("--continue",                     "-c",Options.Types.BOOLEAN,    "continueFlag"),
-    new Option("--list",                         "-l",Options.Types.BOOLEAN,    "listFlag"),
+// TODO: deprecated. remove
+    new Option("--list",                         null,Options.Types.BOOLEAN,    "listJobsFlag"),
+    new Option("--list-jobs",                    "-l",Options.Types.BOOLEAN,    "listJobsFlag"),
+    new Option("--list-schedules",               null,Options.Types.BOOLEAN,    "listSchedulesFlag"),
     new Option("--info",                         null,Options.Types.STRING,     "infoJobName"),
 
     new Option("--index-database-info",          null,Options.Types.BOOLEAN,    "indexDatabaseInfo"),
@@ -2616,7 +3180,8 @@ public class BARControl
     System.out.println("         -t|--pause=<n>[s|m|h]                      - pause job execution for <n> seconds/minutes/hours");
     System.out.println("         -m|--maintenance=<n>[s|m|h]                - set intermediate maintenance for <n> seconds/minutes/hours");
     System.out.println("         -i|--ping                                  - check connection to server");
-    System.out.println("         -l|--list                                  - list jobs");
+    System.out.println("         -l|--list-jobs                             - list jobs");
+    System.out.println("         --list-schedules                           - list schedules");
     System.out.println("");
     System.out.println("         --index-database-info                      - print index info");
     System.out.println("         --index-database-add=<name|directory>      - add storage archive <name> or all .bar files to index");
@@ -5303,7 +5868,8 @@ if (false) {
           || Settings.pingFlag
           || Settings.suspendFlag
           || Settings.continueFlag
-          || Settings.listFlag
+          || Settings.listJobsFlag
+          || Settings.listSchedulesFlag
           || (Settings.infoJobName != null)
           || Settings.indexDatabaseInfo
           || (Settings.indexDatabaseAddStorageName != null)
@@ -5549,7 +6115,7 @@ if (false) {
           }
         }
 
-        if (Settings.listFlag)
+        if (Settings.listJobsFlag)
         {
           // get server state
           final BARServer.States serverState[] = {BARServer.States.RUNNING};
@@ -5689,6 +6255,137 @@ if (false) {
           }
         }
 
+        if (Settings.listSchedulesFlag)
+        {
+          final ArrayList<ScheduleInfo> nextScheduleList = new ArrayList<ScheduleInfo>();
+          try
+          {
+            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST"),
+                                     1,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         // get data
+                                         String       jobName              = valueMap.getString ("jobName"                       );
+                                         String       jobUUID              = valueMap.getString ("jobUUID"                       );
+                                         String       scheduleUUID         = valueMap.getString ("scheduleUUID"                  );
+                                         String       date                 = valueMap.getString ("date"                          );
+                                         String       weekDays             = valueMap.getString ("weekDays"                      );
+                                         String       time                 = valueMap.getString ("time"                          );
+                                         ArchiveTypes archiveType          = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
+                                         int          interval             = valueMap.getInt    ("interval"                      );
+                                         String       customText           = valueMap.getString ("customText"                    );
+                                         String       beginTime            = valueMap.getString ("beginTime"                     );
+                                         String       endTime              = valueMap.getString ("endTime"                       );
+                                         boolean      testCreatedArchives  = valueMap.getBoolean("testCreatedArchives"           );
+                                         boolean      noStorage            = valueMap.getBoolean("noStorage"                     );
+                                         boolean      enabled              = valueMap.getBoolean("enabled"                       );
+                                         long         lastExecutedDateTime = valueMap.getLong   ("lastExecutedDateTime"          );
+                                         long         nextExecutedDateTime = valueMap.getLong   ("nextExecutedDateTime"          );
+                                         long         totalEntities        = valueMap.getLong   ("totalEntities"                 );
+                                         long         totalEntryCount      = valueMap.getLong   ("totalEntryCount"               );
+                                         long         totalEntrySize       = valueMap.getLong   ("totalEntrySize"                );
+
+                                         nextScheduleList.add(new ScheduleInfo(jobName,
+                                                                               scheduleUUID,
+                                                                               date,
+                                                                               weekDays,
+                                                                               time,
+                                                                               archiveType,
+                                                                               interval,
+                                                                               beginTime,
+                                                                               endTime,
+                                                                               customText,
+                                                                               testCreatedArchives,
+                                                                               noStorage,
+                                                                               enabled,
+                                                                               lastExecutedDateTime,
+                                                                               nextExecutedDateTime,
+                                                                               totalEntities,
+                                                                               totalEntryCount,
+                                                                               totalEntrySize
+                                                                              )
+                                                             );
+                                       }
+                                     }
+                                    );
+
+            Collections.sort(nextScheduleList,new Comparator<ScheduleInfo>()
+            {
+              @Override
+              public int compare(ScheduleInfo scheduleInfo1, ScheduleInfo scheduleInfo2)
+              {
+                int result = 0;
+
+                if (result == 0)
+                {
+                  result = scheduleInfo1.jobName.compareTo(scheduleInfo2.jobName);
+                }
+                if (result == 0)
+                {
+                  if      (scheduleInfo1.lastExecutedDateTime < scheduleInfo2.lastExecutedDateTime) result = -1;
+                  else if (scheduleInfo1.lastExecutedDateTime > scheduleInfo2.lastExecutedDateTime) result =  1;
+                }
+
+                return result;
+              }
+            });
+
+            System.out.println(String.format("%-20s %-36s %-10s %-23s %-5s %-11s %-8s %-15s %-5s %-5s %-3s %-3s %-3s %-19s %-19s",
+                                             BARControl.tr("Job"),
+                                             BARControl.tr("UUID"),
+                                             BARControl.tr("Date"),
+                                             BARControl.tr("Week days"),
+                                             BARControl.tr("Time"),
+                                             BARControl.tr("Type"),
+                                             BARControl.tr("Interval"),
+                                             BARControl.tr("Text"),
+                                             BARControl.tr("Begin"),
+                                             BARControl.tr("End"),
+                                             BARControl.tr("T"),
+                                             BARControl.tr("S"),
+                                             BARControl.tr("E"),
+                                             BARControl.tr("Last"),
+                                             BARControl.tr("Next")
+                                            )
+                              );
+
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            for (ScheduleInfo scheduleInfo : nextScheduleList)
+            {
+              System.out.println(String.format("%-20s %-36s %-10s %-23s %-5s %-11s %8d %-15s %-5s %-5s %-3s %-3s %-3s %-19s %-19s",
+                                               scheduleInfo.jobName,
+                                               scheduleInfo.uuid,
+                                               scheduleInfo.getDate(),
+                                               scheduleInfo.getWeekDays(),
+                                               scheduleInfo.getTime(),
+                                               scheduleInfo.getArchiveType(),
+                                               scheduleInfo.interval,
+                                               scheduleInfo.customText,
+                                               scheduleInfo.getBeginTime(),
+                                               scheduleInfo.getEndTime(),
+                                               scheduleInfo.testCreatedArchives ? "yes" : "no",
+                                               scheduleInfo.noStorage ? "yes" : "no",
+                                               scheduleInfo.enabled ? "yes" : "no",
+                                               (scheduleInfo.lastExecutedDateTime > 0) ? DATE_FORMAT.format(new Date(scheduleInfo.lastExecutedDateTime*1000)) : "-",
+                                               (scheduleInfo.nextExecutedDateTime > 0) ? DATE_FORMAT.format(new Date(scheduleInfo.nextExecutedDateTime*1000)) : "-"
+                                              )
+                               );
+            }
+            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            System.out.println(BARControl.tr("{0} {0,choice,0#jobs|1#schedule|1<schedules}",nextScheduleList.size()));
+          }
+          catch (Exception exception)
+          {
+            printError(BARControl.tr("cannot get schedule list (error: {0})",exception.getMessage()));
+            BARServer.disconnect();
+            System.exit(ExitCodes.FAIL);
+          }
+        }
+
         if (Settings.infoJobName != null)
         {
           // get job UUID
@@ -5753,40 +6450,40 @@ if (false) {
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long   totalEntityCount            = valueMap.getLong  ("totalEntityCount"           , 0L);
-                                         long   totalDeletedEntityCount     = valueMap.getLong  ("totalDeletedEntityCount"    , 0L);
+                                         long   totalEntityCount            = valueMap.getLong  ("totalEntityCount"           );
+                                         long   totalDeletedEntityCount     = valueMap.getLong  ("totalDeletedEntityCount"    );
 
-                                         long   totalEntryCount             = valueMap.getLong  ("totalEntryCount"            , 0L);
-                                         long   totalEntrySize              = valueMap.getLong  ("totalEntrySize"             , 0L);
-                                         long   totalEntryContentSize       = valueMap.getLong  ("totalEntryContentSize"      , 0L);
-                                         long   totalFileCount              = valueMap.getLong  ("totalFileCount"             , 0L);
-                                         long   totalFileSize               = valueMap.getLong  ("totalFileSize"              , 0L);
-                                         long   totalImageCount             = valueMap.getLong  ("totalImageCount"            , 0L);
-                                         long   totalImageSize              = valueMap.getLong  ("totalImageSize"             , 0L);
-                                         long   totalDirectoryCount         = valueMap.getLong  ("totalDirectoryCount"        , 0L);
-                                         long   totalLinkCount              = valueMap.getLong  ("totalLinkCount"             , 0L);
-                                         long   totalHardlinkCount          = valueMap.getLong  ("totalHardlinkCount"         , 0L);
-                                         long   totalHardlinkSize           = valueMap.getLong  ("totalHardlinkSize"          , 0L);
-                                         long   totalSpecialCount           = valueMap.getLong  ("totalSpecialCount"          , 0L);
+                                         long   totalEntryCount             = valueMap.getLong  ("totalEntryCount"            );
+                                         long   totalEntrySize              = valueMap.getLong  ("totalEntrySize"             );
+                                         long   totalEntryContentSize       = valueMap.getLong  ("totalEntryContentSize"      );
+                                         long   totalFileCount              = valueMap.getLong  ("totalFileCount"             );
+                                         long   totalFileSize               = valueMap.getLong  ("totalFileSize"              );
+                                         long   totalImageCount             = valueMap.getLong  ("totalImageCount"            );
+                                         long   totalImageSize              = valueMap.getLong  ("totalImageSize"             );
+                                         long   totalDirectoryCount         = valueMap.getLong  ("totalDirectoryCount"        );
+                                         long   totalLinkCount              = valueMap.getLong  ("totalLinkCount"             );
+                                         long   totalHardlinkCount          = valueMap.getLong  ("totalHardlinkCount"         );
+                                         long   totalHardlinkSize           = valueMap.getLong  ("totalHardlinkSize"          );
+                                         long   totalSpecialCount           = valueMap.getLong  ("totalSpecialCount"          );
 
-                                         long   totalEntryCountNewest       = valueMap.getLong  ("totalEntryCountNewest"      , 0L);
-                                         long   totalEntrySizeNewest        = valueMap.getLong  ("totalEntrySizeNewest"       , 0L);
-                                         long   totalEntryContentSizeNewest = valueMap.getLong  ("totalEntryContentSizeNewest", 0L);
-                                         long   totalFileCountNewest        = valueMap.getLong  ("totalFileCountNewest"       , 0L);
-                                         long   totalFileSizeNewest         = valueMap.getLong  ("totalFileSizeNewest"        , 0L);
-                                         long   totalImageCountNewest       = valueMap.getLong  ("totalImageCountNewest"      , 0L);
-                                         long   totalImageSizeNewest        = valueMap.getLong  ("totalImageSizeNewest"       , 0L);
-                                         long   totalDirectoryCountNewest   = valueMap.getLong  ("totalDirectoryCountNewest"  , 0L);
-                                         long   totalLinkCountNewest        = valueMap.getLong  ("totalLinkCountNewest"       , 0L);
-                                         long   totalHardlinkCountNewest    = valueMap.getLong  ("totalHardlinkCountNewest"   , 0L);
-                                         long   totalHardlinkSizeNewest     = valueMap.getLong  ("totalHardlinkSizeNewest"    , 0L);
-                                         long   totalSpecialCountNewest     = valueMap.getLong  ("totalSpecialCountNewest"    , 0L);
+                                         long   totalEntryCountNewest       = valueMap.getLong  ("totalEntryCountNewest"      );
+                                         long   totalEntrySizeNewest        = valueMap.getLong  ("totalEntrySizeNewest"       );
+                                         long   totalEntryContentSizeNewest = valueMap.getLong  ("totalEntryContentSizeNewest");
+                                         long   totalFileCountNewest        = valueMap.getLong  ("totalFileCountNewest"       );
+                                         long   totalFileSizeNewest         = valueMap.getLong  ("totalFileSizeNewest"        );
+                                         long   totalImageCountNewest       = valueMap.getLong  ("totalImageCountNewest"      );
+                                         long   totalImageSizeNewest        = valueMap.getLong  ("totalImageSizeNewest"       );
+                                         long   totalDirectoryCountNewest   = valueMap.getLong  ("totalDirectoryCountNewest"  );
+                                         long   totalLinkCountNewest        = valueMap.getLong  ("totalLinkCountNewest"       );
+                                         long   totalHardlinkCountNewest    = valueMap.getLong  ("totalHardlinkCountNewest"   );
+                                         long   totalHardlinkSizeNewest     = valueMap.getLong  ("totalHardlinkSizeNewest"    );
+                                         long   totalSpecialCountNewest     = valueMap.getLong  ("totalSpecialCountNewest"    );
 
-                                         long   totalSkippedEntryCount      = valueMap.getLong  ("totalSkippedEntryCount"     , 0L);
+                                         long   totalSkippedEntryCount      = valueMap.getLong  ("totalSkippedEntryCount"     );
 
-                                         long   totalStorageCount           = valueMap.getLong  ("totalStorageCount"          , 0L);
-                                         long   totalStorageSize            = valueMap.getLong  ("totalStorageSize"           , 0L);
-                                         long   totalDeletedStorageCount    = valueMap.getLong  ("totalDeletedStorageCount"   , 0L);
+                                         long   totalStorageCount           = valueMap.getLong  ("totalStorageCount"          );
+                                         long   totalStorageSize            = valueMap.getLong  ("totalStorageSize"           );
+                                         long   totalDeletedStorageCount    = valueMap.getLong  ("totalDeletedStorageCount"   );
 
                                          System.out.println("Entities");
                                          System.out.println(String.format("  total             : %d",totalEntityCount                                                                       ));
@@ -6110,9 +6807,9 @@ if (false) {
                                            case IMAGE:
                                              {
                                                String imageName       = valueMap.getString("name"          );
-                                               long   size            = valueMap.getLong  ("size",0L       );
+                                               long   size            = valueMap.getLong  ("size",       0L);
                                                long   blockOffset     = valueMap.getLong  ("blockOffset",0L);
-                                               long   blockCount      = valueMap.getLong  ("blockCount",0L );
+                                               long   blockCount      = valueMap.getLong  ("blockCount", 0L);
 
                                                System.out.println(String.format("%8d %-8s %14d %-19s %s",
                                                                                 getDatabaseId(entryId),
@@ -6143,9 +6840,9 @@ if (false) {
                                              break;
                                            case LINK:
                                              {
-                                               String linkName        = valueMap.getString("name"           );
-                                               String destinationName = valueMap.getString("destinationName");
-                                               long   dateTime        = valueMap.getLong  ("dateTime",0L    );
+                                               String linkName        = valueMap.getString("name"             );
+                                               String destinationName = valueMap.getString("destinationName"  );
+                                               long   dateTime        = valueMap.getLong  ("dateTime",      0L);
 
                                                System.out.println(String.format("%8d %-8s %14s %-19s %s -> %s",
                                                                                 getDatabaseId(entryId),
@@ -6361,14 +7058,14 @@ if (false) {
                                          {
                                            if (valueMap.containsKey("action"))
                                            {
-                                             Actions       action       = valueMap.getEnum  ("action",Actions.class);
+                                             Actions       action       = valueMap.getEnum  ("action",      Actions.class                         );
                                              PasswordTypes passwordType = valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
-                                             String        passwordText = valueMap.getString("passwordText","");
-                                             String        volume       = valueMap.getString("volume","");
-                                             int           error        = valueMap.getInt   ("error",BARException.NONE);
-                                             String        errorMessage = valueMap.getString("errorMessage","");
-                                             String        storage      = valueMap.getString("storage","");
-                                             String        entry        = valueMap.getString("entry","");
+                                             String        passwordText = valueMap.getString("passwordText",""                                    );
+                                             String        volume       = valueMap.getString("volume",      ""                                    );
+                                             int           error        = valueMap.getInt   ("error",       BARException.NONE);
+                                             String        errorMessage = valueMap.getString("errorMessage",""                                    );
+                                             String        storage      = valueMap.getString("storage",     ""                                    );
+                                             String        entry        = valueMap.getString("entry",       ""                                    );
 
                                              switch (action)
                                              {
@@ -6442,16 +7139,16 @@ Dprintf.dprintf("still not supported");
                                            }
                                            else
                                            {
-                                             RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
-                                             long          doneCount        = valueMap.getLong  ("entryDoneSize",0L);
-                                             long          doneSize         = valueMap.getLong  ("doneSize",0L);
-                                             long          totalCount       = valueMap.getLong  ("totalCount",0L);
-                                             long          totalSize        = valueMap.getLong  ("totalSize",0L);
-                                             String        entryName        = valueMap.getString("entryName","");
-                                             long          entryDoneSize    = valueMap.getLong  ("entryDoneSize",0L);
-                                             long          entryTotalSize   = valueMap.getLong  ("entryTotalSize",0L);
-                                             String        storageName      = valueMap.getString("storageName","");
-                                             long          storageDoneSize  = valueMap.getLong  ("storageDoneSize",0L);
+                                             RestoreStates state            = valueMap.getEnum  ("state",           RestoreStates.class);
+                                             long          doneCount        = valueMap.getLong  ("entryDoneSize",   0L);
+                                             long          doneSize         = valueMap.getLong  ("doneSize",        0L);
+                                             long          totalCount       = valueMap.getLong  ("totalCount",      0L);
+                                             long          totalSize        = valueMap.getLong  ("totalSize",       0L);
+                                             String        entryName        = valueMap.getString("entryName",       "");
+                                             long          entryDoneSize    = valueMap.getLong  ("entryDoneSize",   0L);
+                                             long          entryTotalSize   = valueMap.getLong  ("entryTotalSize",  0L);
+                                             String        storageName      = valueMap.getString("storageName",     "");
+                                             long          storageDoneSize  = valueMap.getLong  ("storageDoneSize", 0L);
                                              long          storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
 
                                              switch (state)

@@ -285,10 +285,12 @@ LOCAL_INLINE char *debugGetEmulateBlockDevice(void)
 * Notes  : -
 \***********************************************************************/
 
+#ifdef HAVE_MKNOD
 LOCAL_INLINE bool debugIsEmulateMknod(void)
 {
   return getenv(FILE_DEBUG_EMULATE_MKNOD) != NULL;
 }
+#endif
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -4108,10 +4110,18 @@ bool File_isNetworkFileSystemCString(const char *fileName)
   #if   defined(PLATFORM_LINUX)
     if (statfs(fileName,&fileSystemStat) == 0)
     {
-      isNetworkFileSystem =    (fileSystemStat.f_type == AFS_SUPER_MAGIC)
-                            || (fileSystemStat.f_type == CODA_SUPER_MAGIC)
-                            || (fileSystemStat.f_type == NFS_SUPER_MAGIC)
-                            || (fileSystemStat.f_type == SMB_SUPER_MAGIC);
+      #ifdef HAVE_AFS_SUPER_MAGIC
+        isNetworkFileSystem |= (fileSystemStat.f_type == AFS_SUPER_MAGIC);
+      #endif
+      #ifdef HAVE_CODA_SUPER_MAGIC
+        isNetworkFileSystem |= (fileSystemStat.f_type == CODA_SUPER_MAGIC);
+      #endif
+      #ifdef HAVE_NFS_SUPER_MAGIC
+        isNetworkFileSystem |= (fileSystemStat.f_type == NFS_SUPER_MAGIC);
+      #endif
+      #ifdef HAVE_SMB_SUPER_MAGIC
+        isNetworkFileSystem |= (fileSystemStat.f_type == SMB_SUPER_MAGIC);
+      #endif
     }
   #elif defined(PLATFORM_WINDOWS)
     UNUSED_VARIABLE(fileName);

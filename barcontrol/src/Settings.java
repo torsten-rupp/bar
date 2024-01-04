@@ -573,7 +573,8 @@ public class Settings
   public static boolean                        pingFlag                        = false;
   public static boolean                        suspendFlag                     = false;
   public static boolean                        continueFlag                    = false;
-  public static boolean                        listFlag                        = false;
+  public static boolean                        listJobsFlag                    = false;
+  public static boolean                        listSchedulesFlag               = false;
   public static String                         infoJobName                     = null;
 
   public static boolean                        indexDatabaseInfo               = false;

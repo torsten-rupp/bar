@@ -1364,7 +1364,7 @@ void debugDumpStackTrace(FILE                           *handle,
   #ifdef HAVE_BFD_INIT
     // get executable name
     n = readlink("/proc/self/exe",executableName,sizeof(executableName)-1);
-    if ((n == -1) || (n >= sizeof(executableName)))
+    if ((n == -1) || ((size_t)n >= sizeof(executableName)))
     {
       return;
     }

@@ -204,6 +204,13 @@ typedef enum
 
 typedef Set ArchiveTypeSet;
 
+#define ARCHIVE_TYPESET_ALL \
+    SET_VALUE(ARCHIVE_TYPE_NORMAL) \
+  | SET_VALUE(ARCHIVE_TYPE_FULL) \
+  | SET_VALUE(ARCHIVE_TYPE_INCREMENTAL) \
+  | SET_VALUE(ARCHIVE_TYPE_DIFFERENTIAL) \
+  | SET_VALUE(ARCHIVE_TYPE_CONTINUOUS)
+
 // date/time
 /*
 #define WEEKDAY_ANY_MONTH \
@@ -355,6 +362,7 @@ typedef struct
   String            lastErrorData;
 
   uint64            lastExecutedDateTime;             // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
+  uint64            nextExecutedDateTime;             // next execution date/time
 
   PerformanceFilter entriesPerSecondFilter;
   PerformanceFilter bytesPerSecondFilter;
@@ -541,9 +549,10 @@ typedef struct ScheduleNode
   bool               testCreatedArchives;                     // TRUE for simple test created archives
   bool               noStorage;                               // TRUE to skip storage, only create incremental data
   bool               enabled;                                 // TRUE iff enabled
+  uint64             lastExecutedDateTime;                    // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
 
   // running info
-  uint64             lastExecutedDateTime;                    // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
+  bool               active;                                  // TRUE iff scheduled is active
 
   // cached statistics info
   ulong              totalEntityCount;                        // total number of entities of last execution

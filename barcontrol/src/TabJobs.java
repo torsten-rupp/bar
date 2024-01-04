@@ -1157,11 +1157,11 @@ public class TabJobs
     /** create schedule data
      * @param uuid schedule UUID
      * @param year year
-     * @param month month
-     * @param day day
+     * @param month month [1..12]
+     * @param day day [1..31]
      * @param weekDays week days
-     * @param hour hour
-     * @param minute minute
+     * @param hour hour [0..23]
+     * @param minute minute [0..59]
      * @param archiveType archive type string
      * @param interval continuous interval [min]
      * @param customText custom text
@@ -1371,6 +1371,46 @@ public class TabJobs
       return uuid.compareTo(other.uuid);
     }
 
+    /** get date value
+     * @return date string
+     */
+    String getDate()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getYear());
+      buffer.append('-');
+      buffer.append(getMonth());
+      buffer.append('-');
+      buffer.append(getDay());
+
+      return buffer.toString();
+    }
+
+    /** set date
+     * @param year year value
+     * @param month month value
+     * @param day day value
+     */
+    private void setDate(String year, String month, String day)
+    {
+      this.year  = !year.equals ("*") ? Integer.parseInt(year ) : ANY;
+      this.month = !month.equals("*") ? Integer.parseInt(month) : ANY;
+      this.day   = !day.equals  ("*") ? Integer.parseInt(day  ) : ANY;
+      assert (this.year == ANY) || (this.year >= 0) : this.hour;
+      assert (this.month == ANY) || ((this.month >= 1) && (this.month <= 12)) : this.hour;
+      assert (this.day == ANY) || ((this.day >= 1) && (this.day <= 31)) : this.hour;
+    }
+
+    /** set date
+     * @param date date string
+     */
+    private void setDate(String date)
+    {
+      String[] parts = date.split("-");
+      setDate(parts[0],parts[1],parts[2]);
+    }
+
     /** get year value
      * @return year string
      */
@@ -1435,106 +1475,6 @@ public class TabJobs
 
         return buffer.toString();
       }
-    }
-
-    /** get date value
-     * @return date string
-     */
-    String getDate()
-    {
-      StringBuilder buffer = new StringBuilder();
-
-      buffer.append(getYear());
-      buffer.append('-');
-      buffer.append(getMonth());
-      buffer.append('-');
-      buffer.append(getDay());
-
-      return buffer.toString();
-    }
-
-    /** get hour value
-     * @return hour string
-     */
-    String getHour()
-    {
-      assert (hour == ANY) || ((hour >= 0) && (hour <= 23)) : hour;
-
-      return (hour != ANY) ? String.format("%02d",hour) : "*";
-    }
-
-    /** get minute value
-     * @return minute string
-     */
-    String getMinute()
-    {
-      assert (minute == ANY) || ((minute >= 0) && (minute <= 59)) : minute;
-
-      return (minute != ANY) ? String.format("%02d",minute) : "*";
-    }
-
-    /** get time value
-     * @return time string
-     */
-    String getTime()
-    {
-      StringBuilder buffer = new StringBuilder();
-
-      buffer.append(getHour());
-      buffer.append(':');
-      buffer.append(getMinute());
-
-      return buffer.toString();
-    }
-
-    /** set time
-     * @param hour hour value
-     * @param minute minute value
-     */
-    void setTime(String hour, String minute)
-    {
-      this.hour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
-      this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
-      assert (this.hour == ANY) || ((this.hour >= 0) && (this.hour <= 23)) : this.hour;
-      assert (this.minute == ANY) || ((this.minute >= 0) && (this.minute <= 59)) : this.minute;
-    }
-
-    /** set time
-     * @param time time string
-     */
-    void setTime(String time)
-    {
-      String[] parts = time.split(":");
-      setTime(parts[0],parts[1]);
-    }
-
-    /** get archive type
-     * @return archive type
-     */
-    ArchiveTypes getArchiveType()
-    {
-      return archiveType;
-    }
-
-    /** set date
-     * @param year year value
-     * @param month month value
-     * @param day day value
-     */
-    private void setDate(String year, String month, String day)
-    {
-      this.year  = !year.equals ("*") ? Integer.parseInt(year ) : ANY;
-      this.month = !month.equals("*") ? Integer.parseInt(month) : ANY;
-      this.day   = !day.equals  ("*") ? Integer.parseInt(day  ) : ANY;
-    }
-
-    /** set date
-     * @param date date string
-     */
-    private void setDate(String date)
-    {
-      String[] parts = date.split("-");
-      setDate(parts[0],parts[1],parts[2]);
     }
 
     /** set week days
@@ -1613,6 +1553,69 @@ public class TabJobs
       assert (beginHour == ANY) || ((beginHour >= 0) && (beginHour <= 23)) : beginHour;
 
       return (beginHour != ANY) ? String.format("%02d",beginHour) : "*";
+    }
+
+    /** get hour value
+     * @return hour string
+     */
+    String getHour()
+    {
+      assert (hour == ANY) || ((hour >= 0) && (hour <= 23)) : hour;
+
+      return (hour != ANY) ? String.format("%02d",hour) : "*";
+    }
+
+    /** get minute value
+     * @return minute string
+     */
+    String getMinute()
+    {
+      assert (minute == ANY) || ((minute >= 0) && (minute <= 59)) : minute;
+
+      return (minute != ANY) ? String.format("%02d",minute) : "*";
+    }
+
+    /** get time value
+     * @return time string
+     */
+    String getTime()
+    {
+      StringBuilder buffer = new StringBuilder();
+
+      buffer.append(getHour());
+      buffer.append(':');
+      buffer.append(getMinute());
+
+      return buffer.toString();
+    }
+
+    /** set time
+     * @param hour hour value
+     * @param minute minute value
+     */
+    void setTime(String hour, String minute)
+    {
+      this.hour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      this.minute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      assert (this.hour == ANY) || ((this.hour >= 0) && (this.hour <= 23)) : this.hour;
+      assert (this.minute == ANY) || ((this.minute >= 0) && (this.minute <= 59)) : this.minute;
+    }
+
+    /** set time
+     * @param time time string
+     */
+    void setTime(String time)
+    {
+      String[] parts = time.split(":");
+      setTime(parts[0],parts[1]);
+    }
+
+    /** get archive type
+     * @return archive type
+     */
+    ArchiveTypes getArchiveType()
+    {
+      return archiveType;
     }
 
     /** get begin minute value
@@ -13975,12 +13978,14 @@ throw new Error("NYI");
                                    public void handle(int i, ValueMap valueMap)
                                    {
                                      // get data
+                                     String       jobName              = valueMap.getString ("jobName"                       );
+                                     String       jobUUID              = valueMap.getString ("jobUUID"                       );
                                      String       scheduleUUID         = valueMap.getString ("scheduleUUID"                  );
                                      String       date                 = valueMap.getString ("date"                          );
                                      String       weekDays             = valueMap.getString ("weekDays"                      );
                                      String       time                 = valueMap.getString ("time"                          );
                                      ArchiveTypes archiveType          = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
-                                     int          interval             = valueMap.getInt    ("interval",0                    );
+                                     int          interval             = valueMap.getInt    ("interval"                      );
                                      String       customText           = valueMap.getString ("customText"                    );
                                      String       beginTime            = valueMap.getString ("beginTime"                     );
                                      String       endTime              = valueMap.getString ("endTime"                       );
@@ -13988,6 +13993,8 @@ throw new Error("NYI");
                                      boolean      noStorage            = valueMap.getBoolean("noStorage"                     );
                                      boolean      enabled              = valueMap.getBoolean("enabled"                       );
                                      long         lastExecutedDateTime = valueMap.getLong   ("lastExecutedDateTime"          );
+                                     long         nextExecutedDateTime = valueMap.getLong   ("nextExecutedDateTime"          );
+// TODO: needed?
                                      long         totalEntities        = valueMap.getLong   ("totalEntities"                 );
                                      long         totalEntryCount      = valueMap.getLong   ("totalEntryCount"               );
                                      long         totalEntrySize       = valueMap.getLong   ("totalEntrySize"                );
@@ -14029,7 +14036,7 @@ throw new Error("NYI");
                                                                        totalEntities,
                                                                        totalEntryCount,
                                                                        totalEntrySize
-                                                                       );
+                                                                      );
                                      }
                                      newScheduleDataMap.put(scheduleUUID,scheduleData);
                                    }
@@ -14795,27 +14802,18 @@ throw new Error("NYI");
                                  @Override
                                  public void handle(int i, ValueMap valueMap)
                                  {
-                                   int          persistenceId   = valueMap.getInt    ("persistenceId",                 0                   );
-                                   long         entityId        = valueMap.getLong   ("entityId",                      0L                  );
-                                   ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",ArchiveTypes.class,ArchiveTypes.UNKNOWN);
-                                   int          minKeep         = (!valueMap.getString("minKeep","*").equals("*"))
-                                                                    ? valueMap.getInt("minKeep")
-                                                                    : Keep.ALL;
-                                   int          maxKeep         = (!valueMap.getString("maxKeep","*").equals("*"))
-                                                                    ? valueMap.getInt("maxKeep")
-                                                                    : Keep.ALL;
-                                   int          maxAge          = (!valueMap.getString("maxAge","*").equals("*"))
-                                                                    ? valueMap.getInt("maxAge")
-                                                                    : Age.FOREVER;
-                                   String       moveTo          = valueMap.getString ("moveTo",                        ""                  );
-                                   long         createdDateTime = valueMap.getLong   ("createdDateTime",               0L                  );
-                                   long         totalSize       = valueMap.getLong   ("size",                          0L                  );
-                                   long         totalEntryCount = valueMap.getLong   ("totalEntryCount",               0L                  );
-                                   long         totalEntrySize  = valueMap.getLong   ("totalEntrySize",                0L                  );
-                                   boolean      inTransit       = valueMap.getBoolean("inTransit",                     false               );
+                                   int  persistenceId = valueMap.getInt    ("persistenceId",0);
+                                   long entityId      = valueMap.getLong   ("entityId",0L    );
 
                                    if      (entityId != 0L)
                                    {
+                                     ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",  ArchiveTypes.class,ArchiveTypes.UNKNOWN);
+                                     long         createdDateTime = valueMap.getLong   ("createdDateTime"                                      );
+                                     long         totalSize       = valueMap.getLong   ("size"                                                 );
+                                     long         totalEntryCount = valueMap.getLong   ("totalEntryCount"                                      );
+                                     long         totalEntrySize  = valueMap.getLong   ("totalEntrySize"                                       );
+                                     boolean      inTransit       = valueMap.getBoolean("inTransit"                                            );
+
                                      EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                                            "", // scheuduleUUID
                                                                                            createdDateTime,
@@ -14828,6 +14826,18 @@ throw new Error("NYI");
                                    }
                                    else if (persistenceId != 0L)
                                    {
+                                     ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",  ArchiveTypes.class,ArchiveTypes.UNKNOWN);
+                                     int          minKeep         = (!valueMap.getString("minKeep","*").equals("*"))
+                                                                      ? valueMap.getInt("minKeep")
+                                                                      : Keep.ALL;
+                                     int          maxKeep         = (!valueMap.getString("maxKeep","*").equals("*"))
+                                                                      ? valueMap.getInt("maxKeep")
+                                                                      : Keep.ALL;
+                                     int          maxAge          = (!valueMap.getString("maxAge","*").equals("*"))
+                                                                      ? valueMap.getInt("maxAge")
+                                                                      : Age.FOREVER;
+                                     String       moveTo          = valueMap.getString ("moveTo"                                               );
+
                                      PersistenceData persistenceData = new PersistenceData(persistenceId,
                                                                                            archiveType,
                                                                                            minKeep,

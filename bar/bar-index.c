@@ -3768,7 +3768,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
   Errors error;
   uint   fileEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
   uint   fileEntryNewestCount,directoryEntryNewestCount,linkEntryNewestCount,hardlinkEntryNewestCount,specialEntryNewestCount;
-  uint   entityCount;
   uint   totalCount;
   ulong  n;
 
@@ -3936,19 +3935,6 @@ LOCAL Errors createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, co
                              ",
                              "COUNT(entriesNewest.id)",
                              "entriesNewest.id IS NOT NULL",
-                             DATABASE_FILTERS
-                             (
-                             ),
-                             NULL  // group
-                            );
-  }
-  if (error == ERROR_NONE)
-  {
-    error = Database_getUInt(databaseHandle,
-                             &entityCount,
-                             "entities",
-                             "COUNT(id)",
-                             "id IS NOT NULL",
                              DATABASE_FILTERS
                              (
                              ),

@@ -561,7 +561,7 @@ bool Array_contains(const Array *array,
                    )
 {
   ulong index;
-  
+
   assert(array != NULL);
 
   if (array->arrayCompareFunction != NULL)
@@ -596,7 +596,7 @@ long Array_find(const Array          *array,
                )
 {
   long i;
-  
+
   assert(array != NULL);
 
   switch (arrayFindMode)

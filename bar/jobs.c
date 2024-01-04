@@ -220,7 +220,9 @@ ScheduleNode *Job_newScheduleNode(ConstString scheduleUUID)
   scheduleNode->maxKeep                   = 0;
   scheduleNode->maxAge                    = AGE_FOREVER;
 
+  scheduleNode->active                    = FALSE;
   scheduleNode->lastExecutedDateTime      = 0LL;
+
   scheduleNode->totalEntityCount          = 0L;
   scheduleNode->totalStorageCount         = 0L;
   scheduleNode->totalStorageSize          = 0LL;
@@ -271,6 +273,7 @@ ScheduleNode *Job_duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   scheduleNode->noStorage                 = fromScheduleNode->noStorage;
   scheduleNode->enabled                   = fromScheduleNode->enabled;
 
+  scheduleNode->active                    = fromScheduleNode->active;
   scheduleNode->lastExecutedDateTime      = fromScheduleNode->lastExecutedDateTime;
 
   scheduleNode->totalEntityCount          = 0L;
@@ -1617,11 +1620,12 @@ void Job_setModified(JobNode *jobNode)
   assert(Semaphore_isLocked(&jobList.lock));
 
   // force reconnect slave
-  connectorInfo = Job_connectorLock(jobNode,1000);
-  if (connectorInfo != NULL)
+  JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
   {
-    if (Connector_isConnected(connectorInfo)) Connector_shutdown(connectorInfo);
-    Job_connectorUnlock(connectorInfo);
+    if (connectorInfo != NULL)
+    {
+      if (Connector_isConnected(connectorInfo)) Connector_shutdown(connectorInfo);
+    }
   }
 
   jobNode->modifiedFlag = TRUE;
@@ -1875,10 +1879,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
 Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 executeEndDateTime)
 {
   ScheduleNode *scheduleNode;
-  String       fileName,baseName;
-  FileHandle   fileHandle;
   Errors       error;
-  uint64       lastExecutedDateTime;
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -1895,13 +1896,15 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
   if (!String_isEmpty(jobNode->fileName))
   {
     // get filename
+    String fileName;
     fileName = String_new();
-    baseName = String_new();
+    String baseName = String_new();
     File_splitFileName(jobNode->fileName,fileName,baseName);
     File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
     String_delete(baseName);
 
     // create file .name
+    FileHandle fileHandle;
     error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
@@ -1909,7 +1912,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
       return error;
     }
 
-    // write file: last execution time stamp+state+error code+error data
+    // write last execution time stamp+state+error code+error data
     error = File_printLine(&fileHandle,
                            "%"PRIu64" %s %s %u %s",
                            executeEndDateTime,
@@ -1925,11 +1928,11 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
       return error;
     }
 
-    // write file: last execution time stamp+type+state+message
+    // write for archive types: last execution time stamp+type+state+message
     for (archiveType = ARCHIVE_TYPE_MIN; archiveType <= ARCHIVE_TYPE_MAX; archiveType++)
     {
       // get last executed date/time
-      lastExecutedDateTime = 0LL;
+      uint64 lastExecutedDateTime = 0LL;
       LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
       {
         if ((scheduleNode->archiveType == archiveType) && (scheduleNode->lastExecutedDateTime > lastExecutedDateTime))
@@ -2690,6 +2693,7 @@ void Job_abort(JobNode *jobNode, const char *abortedByInfo)
     else
     {
       // abort slave job
+      ConnectorInfo *connectorInfo;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
         jobNode->runningInfo.error = Connector_jobAbort(connectorInfo,
@@ -3081,10 +3085,10 @@ ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout)
   JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,timeout)
   {
     slaveNode = LIST_FIND(&slaveList,
-                              slaveNode,
-                                 (slaveNode->port == jobNode->job.slaveHost.port)
-                              && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
-                             );
+                          slaveNode,
+                             (slaveNode->port == jobNode->job.slaveHost.port)
+                          && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
+                         );
     if (slaveNode != NULL)
     {
       connectorInfo = &slaveNode->connectorInfo;
@@ -3095,22 +3099,23 @@ ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout)
   return connectorInfo;
 }
 
-void Job_connectorUnlock(ConnectorInfo *connectorInfo)
+void Job_connectorUnlock(ConnectorInfo *connectorInfo, long timeout)
 {
   SlaveNode *slaveNode;
 
-  assert(connectorInfo != NULL);
-
-//TODO: timeout
-  JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,5*MS_PER_SECOND)
+  if (connectorInfo != NULL)
   {
-    slaveNode = LIST_FIND(&slaveList,
-                          slaveNode,
-                          &slaveNode->connectorInfo == connectorInfo
-                         );
-    if (slaveNode != NULL)
+    JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,timeout)
     {
-      slaveNode->lockCount--;
+      slaveNode = LIST_FIND(&slaveList,
+                            slaveNode,
+                            &slaveNode->connectorInfo == connectorInfo
+                           );
+      if (slaveNode != NULL)
+      {
+        assert(slaveNode->lockCount > 0);
+        slaveNode->lockCount--;
+      }
     }
   }
 }

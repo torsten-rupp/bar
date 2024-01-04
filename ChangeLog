@@ -1,5 +1,5 @@
 2023-09-01 23
-  * changed version number scheme 
+  * changed version number scheme
   * added support for storing on Samba/CIFS server
   * added pre/post command macro %nextScheduleDateTime
   * added execute ECC commands for device
@@ -9,6 +9,9 @@
   * always store names UTF-8 encoded
   * added options --system-encoding, --console-encoding,
     --force-console-encoding
+  * added macro %nextJobName, %nextJobUUID,
+    %nextScheduleUUID, %nextSchedule,
+    %nextScheduleDateTime, %nextScheduleUUID
   * upgrade zlib 1.3
   * upgrade libidn2 2.3.4
   * upgrade nettle 3.9.1
@@ -16,6 +19,8 @@
   * upgrade build pipeline for Debian 10
   * upgrade RPM build environment to CentOS 7
   * upgrade ICU 61.1
+  * BARControl: renamed option --list -> --list-jobs
+  * BARControl: added option --list-schedules
   * fixed image pre/post commands for CD/DVD/BD
   * fixed image pre/post commands for device
   * fixed bar-index --pipe
