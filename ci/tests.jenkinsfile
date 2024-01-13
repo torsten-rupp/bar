@@ -215,7 +215,7 @@ sh "echo binaryExtension="+binaryExtension
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                    sh "bash -o pipefail -c 'ulimit -c unlimited && (cd host; make test_smoke-"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test.log'"
+                    sh "bash -o pipefail -c 'ulimit -c unlimited && (cd host; make tests_smoke-"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test.log'"
 
                     // stop services
                     sh "sudo -n /etc/init.d/smbd stop || true"
@@ -239,7 +239,7 @@ sh "echo binaryExtension="+binaryExtension
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                    TEST_STEPS.each { step -> sh "bash -o pipefail -c 'ulimit -c unlimited && (cd host; make test_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test.log'" }
+                    TEST_STEPS.each { step -> sh "bash -o pipefail -c 'ulimit -c unlimited && (cd host; make tests_${step}"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test.log'" }
 
                     // stop services
                     sh "sudo -n /etc/init.d/smbd stop || true"
@@ -277,7 +277,7 @@ sh "echo binaryExtension="+binaryExtension
 
                 sh "rm -f bar-test-valgrind.log"
                 // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                sh "bash -o pipefail -c '(cd host; make test_smoke-valgrind "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test-valgrind.log'"
+                sh "bash -o pipefail -c '(cd host; make tests_smoke-valgrind "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test-valgrind.log'"
 
                 // stop services
                 sh "sudo -n /etc/init.d/smbd stop || true"

@@ -21,16 +21,16 @@ ROOT_DIR      = $(abspath @srcdir@/../..)
 SOURCE_DIR    = $(abspath @srcdir@)
 BAR_DIR       = $(CURDIR)/..
 #SUB_DIR       = $(subst $(abspath $(BAR_DIR))/,,$(abspath $(BAR_DIR)))
-SUB_DIR       = test
+SUB_DIR       = tests
 #UP_DIR        = $(subst $() $(),/,$(foreach i,$(subst /,$() $(),$(SUB_DIR)),..))
 UP_DIR        = ..
 BUILD_DIR     = $(CURDIR)/../..
 
-# test intermediate files directory
-TEST_BUILD_DIR           ?=
+# tests build directory
+TESTS_BUILD_DIR          ?=
 
-# test data directory
-TEST_DATA_DIR           ?= test
+# tests data directory
+TESTS_DATA_DIR           ?= tests
 
 # test flags
 ifeq ($(CONTAINER),docker)
@@ -315,7 +315,7 @@ endif
 EXT_BLOCK_SIZES ?= default 1024 2048 4096
 
 # intermediate files directory
-INTERMEDIATE_DIR := $(abspath $(addprefix $(if $(TEST_BUILD_DIR),$(TEST_BUILD_DIR)/),intermediate))
+INTERMEDIATE_DIR := $(abspath $(addprefix $(if $(TESTS_BUILD_DIR),$(TESTS_BUILD_DIR)/),intermediate))
 
 # test settings
 TEST_CONFIG                          = $(INTERMEDIATE_DIR)/bar.cfg
@@ -560,63 +560,63 @@ help:
 	@$(MAKE) help_output
 
 help_output:
-	@$(ECHO) "  test[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test1[$(HELP_SUFFIXES)], test_basic[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test2[$(HELP_SUFFIXES)], test_compress[$(HELP_SUFFIXES)], test_delta_compress[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test3[$(HELP_SUFFIXES)], test_crypt[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test4[$(HELP_SUFFIXES)], test_asymmetric_crypt[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test5[$(HELP_SUFFIXES)], test_signatures[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test6[$(HELP_SUFFIXES)], test_split[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test7[$(HELP_SUFFIXES)], test_convert[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test8[$(HELP_SUFFIXES)], test_image[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test9[$(HELP_SUFFIXES)], test_storage[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav|smb|optical|device)[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test10[$(HELP_SUFFIXES)], test_huge[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test11[$(HELP_SUFFIXES)], test_index[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test12[$(HELP_SUFFIXES)], test_server[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test13_master[$(HELP_SUFFIXES)], test_master[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test13_slave[$(HELP_SUFFIXES)], test_slave[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test13_master_slave[$(HELP_SUFFIXES)], test_master_slave[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_combined[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_arguments[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_config[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_miscellaneous[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_all[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_smoke[$(HELP_SUFFIXES)]"
-	@$(ECHO) "  test_data"
-	@$(ECHO) "  test_hugedata"
-	@$(ECHO) "  test_data_clean"
-	@$(ECHO) "  test_data_dist_clean"
+	@$(ECHO) "  tests[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests1[$(HELP_SUFFIXES)], tests_basic[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests2[$(HELP_SUFFIXES)], tests_compress[$(HELP_SUFFIXES)], tests_delta_compress[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests3[$(HELP_SUFFIXES)], tests_crypt[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests4[$(HELP_SUFFIXES)], tests_asymmetric_crypt[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests5[$(HELP_SUFFIXES)], tests_signatures[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests6[$(HELP_SUFFIXES)], tests_split[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests7[$(HELP_SUFFIXES)], tests_convert[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests8[$(HELP_SUFFIXES)], tests_image[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests9[$(HELP_SUFFIXES)], tests_storage[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests_storage_(file|ftp|scp|sftp|webdav|smb|optical|device)[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests10[$(HELP_SUFFIXES)], tests_huge[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests11[$(HELP_SUFFIXES)], tests_index[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests12[$(HELP_SUFFIXES)], tests_server[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests13_master[$(HELP_SUFFIXES)], tests_master[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests13_slave[$(HELP_SUFFIXES)], tests_slave[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests13_master_slave[$(HELP_SUFFIXES)], tests_master_slave[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests_combined[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests_arguments[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests_config[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests_miscellaneous[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests_all[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests_smoke[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests_data"
+	@$(ECHO) "  tests_hugedata"
+	@$(ECHO) "  tests_data_clean"
+	@$(ECHO) "  tests_data_dist_clean"
 	@$(ECHO) ""
-	@$(ECHO) "  test_file_operations"
-	@$(ECHO) "  test_file_operations_dryrun"
+	@$(ECHO) "  tests_file_operations"
+	@$(ECHO) "  tests_file_operations_dryrun"
 	@$(ECHO) ""
-	@$(ECHO) "  test_image_operations"
-	@$(ECHO) "  test_image_operations_raw"
-	@$(ECHO) "  test_image_operations_ext"
-	@$(ECHO) "  test_image_operations_ext(2|3|4)"
-	@$(ECHO) "  test_image_operations_fat"
-	@$(ECHO) "  test_image_operations_fat(12|16|32)"
-	@$(ECHO) "  test_image_operations_reiser"
-	@$(ECHO) "  test_image_operations_reiser(fs3)"
-	@$(ECHO) "  test_image_operations_dryrun"
+	@$(ECHO) "  tests_image_operations"
+	@$(ECHO) "  tests_image_operations_raw"
+	@$(ECHO) "  tests_image_operations_ext"
+	@$(ECHO) "  tests_image_operations_ext(2|3|4)"
+	@$(ECHO) "  tests_image_operations_fat"
+	@$(ECHO) "  tests_image_operations_fat(12|16|32)"
+	@$(ECHO) "  tests_image_operations_reiser"
+	@$(ECHO) "  tests_image_operations_reiser(fs3)"
+	@$(ECHO) "  tests_image_operations_dryrun"
 	@$(ECHO) ""
-	@$(ECHO) "  test_file_operations_huge"
+	@$(ECHO) "  tests_file_operations_huge"
 	@$(ECHO) ""
-	@$(ECHO) "  test_optical_operations"
+	@$(ECHO) "  tests_optical_operations"
 	@$(ECHO) ""
-	@$(ECHO) "  test_device_operations"
+	@$(ECHO) "  tests_device_operations"
 	@$(ECHO) ""
-	@$(ECHO) "  test_index[$(HELP_SUFFIXES)]"
+	@$(ECHO) "  tests_index[$(HELP_SUFFIXES)]"
 	@$(ECHO) ""
-	@$(ECHO) "  test_keys"
-	@$(ECHO) "  test_keys_clean"
-	@$(ECHO) "  test_keys_distclean"
+	@$(ECHO) "  tests_keys"
+	@$(ECHO) "  tests_keys_clean"
+	@$(ECHO) "  tests_keys_distclean"
 	@$(ECHO) ""
 	@$(ECHO) "Variables:"
 	@$(ECHO) ""
-	@$(ECHO) "  TEST_BUILD_DIR=<test base directory>"
-	@$(ECHO) "  TEST_DATA_DIR=<test data directory>"
+	@$(ECHO) "  TESTS_BUILD_DIR=<test base directory>"
+	@$(ECHO) "  TESTS_DATA_DIR=<test data directory>"
 	@$(ECHO) ""
 	@$(ECHO) "  TEST_COMPRESS_NAMES"
         ifeq (@HAVE_BZ2@,1)
@@ -647,10 +647,10 @@ help_output:
 	@$(ECHO) "    postgresql:$(TEST_POSTGRESQL_SERVER):$(TEST_POSTGRESQL_USER):$(TEST_POSTGRESQL_PASSWORD)"
         endif
 	@$(ECHO) ""
-	@$(ECHO) "TEST_LOGIN_NAME"
-	@$(ECHO) "TEST_PASSWORD"
-	@$(ECHO) "TEST_(FTP|SSH|SCP|SFTP|WEBDAV)_LOGIN_NAME"
-	@$(ECHO) "TEST_(FTP|SSH|SCP|SFTP|WEBDAV)_PASSWORD"
+	@$(ECHO) "  TEST_LOGIN_NAME"
+	@$(ECHO) "  TEST_PASSWORD"
+	@$(ECHO) "  TEST_(FTP|SSH|SCP|SFTP|WEBDAV)_LOGIN_NAME"
+	@$(ECHO) "  TEST_(FTP|SSH|SCP|SFTP|WEBDAV)_PASSWORD"
 
 # ----------------------------------------------------------------------------
 
@@ -916,7 +916,7 @@ functionWaitProcess = \
 #  sudo dd <loop device> <file>
 #  sudo diff -r <mount point> <mount point>
 
-# test files
+# simple test files
 TEST_FILE_NAMES_SIMPLE = \
   zero0.dat \
   zero128.dat \
@@ -953,12 +953,11 @@ TEST_FILE_NAMES_SIMPLE = \
   delta1/hardlink.dat delta1/hardlink1.dat delta1/hardlink2.dat \
   delta2/hardlink.dat delta2/hardlink1.dat delta2/hardlink2.dat \
 
-# special files only on Linux
 ifeq ($(PLATFORM),LINUX)
 TEST_FILE_NAMES_SIMPLE += \
   link_not_existing_file.dat \
   fifo \
-  fifo.ext \
+  fifo.ext  \
   character_device \
   block_device
 
@@ -988,14 +987,14 @@ TEST_FILE_NAMES_SIMPLE += \
 endif
 endif
 
-endif
+endif # platform
 
-# special files only on Windows
 ifeq ($(PLATFORM),WINDOWS)
 endif
 
 TEST_FILES_SIMPLE = $(addprefix data/,$(TEST_FILE_NAMES_SIMPLE))
 
+# complex files
 TEST_FILE_NAMES_COMPLEX = \
   name\'.dat \
   name%d%f%s%p.dat \
@@ -1003,7 +1002,6 @@ TEST_FILE_NAMES_COMPLEX = \
   encodingUTF8-$(UMLAUTE_UTF8) \
   encodingCP1252-$(UMLAUTE_CP1252) \
 
-# special files only on Linux
 ifeq ($(PLATFORM),LINUX)
 TEST_FILE_NAMES_COMPLEX += \
   name\".dat \
@@ -1011,7 +1009,6 @@ TEST_FILE_NAMES_COMPLEX += \
   'name'$$'\n''.dat'
 endif
 
-# special files only on Windows
 ifeq ($(PLATFORM),WINDOWS)
 endif
 
@@ -1106,97 +1103,97 @@ TEST_ENVIRONMENT = DISPLAY= SSH_ASKPASS= DEBUG_EMULATE_MKNOD=1
 #TEST_TIMEOUT            = $(TIMEOUT) --signal=KILL 1200 $(TIMEOUT) --signal=ABRT 800 $(TIMEOUT) --signal=QUIT 600
 TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foreground --signal=ABRT 800 $(TIMEOUT) --foreground --signal=QUIT 600
 
-.PHONY: test test_win
-.PHONY: test-debug test_win-debug
-.PHONY: $(call functionTestNames,test_basic            test1 )
-.PHONY: $(call functionTestNames,test_compress         test2 )
-.PHONY: $(call functionTestNames,test_crypt            test3 )
-.PHONY: $(call functionTestNames,test_asymmetric_crypt test4 )
-.PHONY: $(call functionTestNames,test_signatures       test5 )
-.PHONY: $(call functionTestNames,test_split            test6 )
-.PHONY: $(call functionTestNames,test_convert          test7 )
-.PHONY: $(call functionTestNames,test_image            test8 )
-.PHONY: $(call functionTestNames,test_storage          test9 )
-.PHONY: $(call functionTestNames,test_storage_file           )
-.PHONY: $(call functionTestNames,test_storage_ftp            )
-.PHONY: $(call functionTestNames,test_storage_scp            )
-.PHONY: $(call functionTestNames,test_storage_sftp           )
-.PHONY: $(call functionTestNames,test_storage_webdav         )
-.PHONY: $(call functionTestNames,test_storage_webdavs        )
-.PHONY: $(call functionTestNames,test_storage_smb            )
-.PHONY: $(call functionTestNames,test_storage_optical        )
-.PHONY: $(call functionTestNames,test_storage_device         )
-.PHONY: $(call functionTestNames,test_huge             test10)
-.PHONY: $(call functionTestNames,test_index            test11)
-.PHONY: $(call functionTestNames,test_server           test12)
-.PHONY: $(addsuffix _master,$(call functionTestNames,test13))
-.PHONY: $(addsuffix _slave, $(call functionTestNames,test13))
-.PHONY: $(call functionTestNames,test_combined)
-.PHONY: $(call functionTestNames,test_arguments)
-.PHONY: $(call functionTestNames,test_config)
-.PHONY: $(call functionTestNames,test_miscellaneous) $(call functionTestNames,test_misc)
-.PHONY: $(call functionTestNames,test_all)
-.PHONY: $(call functionTestNames,test_smoke)
-.PHONY: test_keys test_keys_clean test_keys_distclean
-.PHONY: test_data test_data_large test_data_huge test_data_clean test_data_distclean
+.PHONY: tests tests_win
+.PHONY: tests-debug tests_win-debug
+.PHONY: $(call functionTestNames,tests_basic            tests1 )
+.PHONY: $(call functionTestNames,tests_compress         tests2 )
+.PHONY: $(call functionTestNames,tests_crypt            tests3 )
+.PHONY: $(call functionTestNames,tests_asymmetric_crypt tests4 )
+.PHONY: $(call functionTestNames,tests_signatures       tests5 )
+.PHONY: $(call functionTestNames,tests_split            tests6 )
+.PHONY: $(call functionTestNames,tests_convert          tests7 )
+.PHONY: $(call functionTestNames,tests_image            tests8 )
+.PHONY: $(call functionTestNames,tests_storage          tests9 )
+.PHONY: $(call functionTestNames,tests_storage_file            )
+.PHONY: $(call functionTestNames,tests_storage_ftp             )
+.PHONY: $(call functionTestNames,tests_storage_scp             )
+.PHONY: $(call functionTestNames,tests_storage_sftp            )
+.PHONY: $(call functionTestNames,tests_storage_webdav          )
+.PHONY: $(call functionTestNames,tests_storage_webdavs         )
+.PHONY: $(call functionTestNames,tests_storage_smb             )
+.PHONY: $(call functionTestNames,tests_storage_optical         )
+.PHONY: $(call functionTestNames,tests_storage_device          )
+.PHONY: $(call functionTestNames,tests_huge             tests10)
+.PHONY: $(call functionTestNames,tests_index            tests11)
+.PHONY: $(call functionTestNames,tests_server           tests12)
+.PHONY: $(addsuffix _master,$(call functionTestNames,tests13))
+.PHONY: $(addsuffix _slave, $(call functionTestNames,tests13))
+.PHONY: $(call functionTestNames,tests_combined)
+.PHONY: $(call functionTestNames,tests_arguments)
+.PHONY: $(call functionTestNames,tests_config)
+.PHONY: $(call functionTestNames,tests_miscellaneous) $(call functionTestNames,tests_misc)
+.PHONY: $(call functionTestNames,tests_all)
+.PHONY: $(call functionTestNames,tests_smoke)
+.PHONY: tests_keys tests_keys_clean tests_keys_distclean
+.PHONY: tests_data tests_data_large tests_data_huge tests_data_clean tests_data_distclean
 test:
 	@$(MAKE) --no-print-directory \
-          test_basic \
-          test_compress \
-          test_crypt \
-          test_asymmetric_crypt \
-          test_signatures \
-          test_split \
-          test_convert \
-          test_image \
-          test_index \
-          test_server \
-          test_combined \
-          test_arguments \
-          test_config \
-          test_miscellaneous
+          tests_basic \
+          tests_compress \
+          tests_crypt \
+          tests_asymmetric_crypt \
+          tests_signatures \
+          tests_split \
+          tests_convert \
+          tests_image \
+          tests_index \
+          tests_server \
+          tests_combined \
+          tests_arguments \
+          tests_config \
+          tests_miscellaneous
 
-test-debug: \
+tests-debug: \
   $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test
 
-test-gcov: \
+tests-gcov: \
   $(TEST_BAR_GCOV)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test
 
-test-gprof: \
+tests-gprof: \
   $(TEST_BAR_GPROF)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test
 
-test-valgrind: \
+tests-valgrind: \
   $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_VALGRIND)" test
 
-test_win: \
+tests_win: \
   $(TEST_BAR)
 	$(call functionExec,$(TEST_BAR)) -o -c c:\\tmp\\x.bar -# c:\\users\\torsten
 	$(call functionExec,$(TEST_BAR)) -L c:\\tmp\\x.bar
 
-test-win-debug: \
+tests_win-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test-win
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_win
 
-test_keys: \
+tests_keys: \
   $(TEST_KEYS)
 
-test_keys_clean:
+tests_keys_clean:
 	$(RMF) $(TEST_KEYS)
 
-test_data: \
+tests_data: \
   $(TEST_FILES)
 
-test_data_large: \
+tests_data_large: \
   $(TEST_FILES_LARGE)
 
-test_data_huge: \
+tests_data_huge: \
   $(TEST_FILES_HUGE)
 
-test_data_clean:
+tests_data_clean:
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(RMF)  $(TEST_CONFIGS)
 	$(RMRF) $(TEST_JOBS_DIRECTORY)
@@ -1211,13 +1208,13 @@ test_data_clean:
 	$(RMF)  $(TEST_SLAVE_INDEX_DATABASE)
 	$(RMF)  $(TEST_SLAVE_LOG_FILE)
 
-test_data_distclean: \
-  test_data_clean
+tests_data_distclean: \
+  tests_data_clean
 	if test -f data/append-only.dat; then $(SUDO) -n $(CHATTR) -a data/append-only.dat; fi
 	if test -f data/immutable.dat; then $(SUDO) -n $(CHATTR) -i data/immutable.dat; fi
 	$(RMRF) data
 
-test1 test_basic: \
+tests1 tests_basic: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 1: basic)
 	@$(MAKE) \
@@ -1225,39 +1222,39 @@ test1 test_basic: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=$(TEST_INDEX_DATABASE) --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations \
+          tests_file_operations \
           ;
 	@$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=$(TEST_INDEX_DATABASE) --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations \
+          tests_file_operations \
           ;
 	@$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=$(TEST_INDEX_DATABASE) --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations_dryrun \
+          tests_file_operations_dryrun \
           ;
 	@$(call functionInfoEnd,OK)
 
-test1-debug test_basic-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_basic
+tests1-debug tests_basic-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_basic
 
-test1-gcov test_basic-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_basic
+tests1-gcov tests_basic-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_basic
 
-test1-gprof test_basic-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_basic
+tests1-gprof tests_basic-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_basic
 
-test1-valgrind test_basic-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_basic
+tests1-valgrind tests_basic-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_basic
 
 # Note: limit computation effort with min. compress names for some operations
-# TODO: split into test_compress test_compress_large
-test2 test_compress: \
+# TODO: split into tests_compress tests_compress_large
+tests2 tests_compress: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: compress)
 	for compress in $(TEST_MIN_COMPRESS_NAMES); do \
@@ -1266,7 +1263,7 @@ test2 test_compress: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-            test_file_operations \
+            tests_file_operations \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1279,7 +1276,7 @@ test2 test_compress: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-            test_file_operations \
+            tests_file_operations \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1290,7 +1287,7 @@ test2 test_compress: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-            test_file_operations_dryrun \
+            tests_file_operations_dryrun \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1303,7 +1300,7 @@ test2 test_compress: \
             BAR_FILE="test-####" \
             BAR_PATTERN="test-*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=4M --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-            test_file_operations_large \
+            tests_file_operations_large \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1314,7 +1311,7 @@ test2 test_compress: \
             BAR_FILE="test-####" \
             BAR_PATTERN="test-*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=4M --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-            test_file_operations_large \
+            tests_file_operations_large \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1323,19 +1320,19 @@ test2 test_compress: \
         done
 	@$(call functionInfoEnd,OK)
 
-test2-debug test_compress-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_compress
+tests2-debug tests_compress-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_compress
 
-test2-gcov test_compress-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_compress
+tests2-gcov tests_compress-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_compress
 
-test2-gprof test_compress-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_compress
+tests2-gprof tests_compress-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_compress
 
-test2-valgrind test_compress-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_compress
+tests2-valgrind tests_compress-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_compress
 
-test_delta_compress: \
+tests_delta_compress: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 2: delta compress)
 	for compress in $(TEST_COMPRESS_NAMES); do \
@@ -1344,7 +1341,7 @@ test_delta_compress: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-            test_file_operations_delta \
+            tests_file_operations_delta \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1355,7 +1352,7 @@ test_delta_compress: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress+xdelta9 --crypt-algorithm=none $(OPTIONS)" \
-            test_file_operations_delta \
+            tests_file_operations_delta \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1364,19 +1361,19 @@ test_delta_compress: \
         done
 	@$(call functionInfoEnd,OK)
 
-test_delta_compress-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_delta_compress
+tests_delta_compress-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_delta_compress
 
-test_delta_compress-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_delta_compress
+tests_delta_compress-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_delta_compress
 
-test_delta_compress-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_delta_compress
+tests_delta_compress-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_delta_compress
 
-test_delta_compress-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_delta_compress
+tests_delta_compress-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_delta_compress
 
-test3 test_crypt: \
+tests3 tests_crypt: \
   $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test 3: crypt)
@@ -1386,7 +1383,7 @@ test3 test_crypt: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password='$(TEST_PASSWORD_CRYPT)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-            test_file_operations \
+            tests_file_operations \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1397,7 +1394,7 @@ test3 test_crypt: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-            test_file_operations \
+            tests_file_operations \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1408,7 +1405,7 @@ test3 test_crypt: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-password=$(TEST_PASSWORD_CRYPT) --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-            test_file_operations_dryrun \
+            tests_file_operations_dryrun \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1422,22 +1419,22 @@ test3 test_crypt: \
 #          BAR_FILE="test" \
 #          BAR_PATTERN="test*" \
 #          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=3DES+CAST5+AES256+CAMELLIA256 --crypt-password='$(TEST_PASSWORD_CRYPT)' --max-threads=1 $(OPTIONS)" \
-#          test_file_operations \
+#          tests_file_operations \
 #          ;
 
-test3-debug test_crypt-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_crypt
+tests3-debug tests_crypt-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_crypt
 
-test3-gcov test_crypt-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV)" test_crypt
+tests3-gcov tests_crypt-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV)" tests_crypt
 
-test3-gprof test_crypt-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF) test_crypt
+tests3-gprof tests_crypt-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF) tests_crypt
 
-test3-valgrind test_crypt-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_crypt
+tests3-valgrind tests_crypt-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_crypt
 
-test4 test_asymmetric_crypt: \
+tests4 tests_asymmetric_crypt: \
   $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test 4: asymmetric crypt)
@@ -1447,7 +1444,7 @@ test4 test_asymmetric_crypt: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-            test_file_operations \
+            tests_file_operations \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1458,7 +1455,7 @@ test4 test_asymmetric_crypt: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-            test_file_operations \
+            tests_file_operations \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1469,7 +1466,7 @@ test4 test_asymmetric_crypt: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-            test_file_operations_dryrun \
+            tests_file_operations_dryrun \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -1494,19 +1491,19 @@ test4 test_asymmetric_crypt: \
         done
 	@$(call functionInfoEnd,OK)
 
-test4-debug test_asymmetric_crypt-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_asymmetric_crypt
+tests4-debug tests_asymmetric_crypt-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_asymmetric_crypt
 
-test4-gcov test_asymmetric_crypt-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_asymmetric_crypt
+tests4-gcov tests_asymmetric_crypt-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_asymmetric_crypt
 
-test4-gprof test_asymmetric_crypt-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_asymmetric_crypt
+tests4-gprof tests_asymmetric_crypt-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_asymmetric_crypt
 
-test4-valgrind test_asymmetric_crypt-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_asymmetric_crypt
+tests4-valgrind tests_asymmetric_crypt-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_asymmetric_crypt
 
-test5 test_signatures: \
+tests5 tests_signatures: \
   $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test 5: signatures)
@@ -1515,21 +1512,21 @@ test5 test_signatures: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --max-threads=1 $(OPTIONS)" \
-          test_file_operations \
+          tests_file_operations \
           ;
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) $(OPTIONS)" \
-          test_file_operations \
+          tests_file_operations \
           ;
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) $(OPTIONS)" \
-          test_file_operations_dryrun \
+          tests_file_operations_dryrun \
           ;
 	# wrong signature key, no signature key
 	@$(call functionCleanTestFiles)
@@ -1556,19 +1553,19 @@ test5 test_signatures: \
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoEnd,OK)
 
-test5-debug test_signatures-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_signatures
+tests5-debug tests_signatures-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_signatures
 
-test5-gcov test_signatures-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_signatures
+tests5-gcov tests_signatures-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_signatures
 
-test5-gprof test_signatures-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_signatures
+tests5-gprof tests_signatures-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_signatures
 
-test5-valgrind test_signatures-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_signatures
+tests5-valgrind tests_signatures-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_signatures
 
-test6 test_split: \
+tests6 tests_split: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 6: split)
 	$(MAKE) \
@@ -1576,21 +1573,21 @@ test6 test_split: \
           BAR_FILE="test-####" \
           BAR_PATTERN="test-*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations \
+          tests_file_operations \
           ;
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test-####" \
           BAR_PATTERN="test-*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations \
+          tests_file_operations \
           ;
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test-####" \
           BAR_PATTERN="test-*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations_dryrun \
+          tests_file_operations_dryrun \
           ;
 	@#
 	# test fail on insufficient split digits
@@ -1604,19 +1601,19 @@ test6 test_split: \
         )
 	@$(call functionInfoEnd,OK)
 
-test6-debug test_split-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_split
+tests6-debug tests_split-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_split
 
-test6-gcov test_split-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_split
+tests6-gcov tests_split-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_split
 
-test6-gprof test_split-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_split
+tests6-gprof tests_split-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_split
 
-test6-valgrind test_split-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_split
+tests6-valgrind tests_split-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_split
 
-test7 test_convert: \
+tests7 tests_convert: \
   $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test 7: convert)
@@ -1625,23 +1622,23 @@ test7 test_convert: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --max-threads=1 --skip-unreadable $(OPTIONS)" \
-          test_convert_operations \
+          tests_convert_operations \
           ;
 	@$(call functionInfoEnd,OK)
 
-test7-debug test_convert-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_convert
+tests7-debug tests_convert-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_convert
 
-test7-gcov test_convert-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_convert
+tests7-gcov tests_convert-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_convert
 
-test7-gprof test_convert-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_convert
+tests7-gprof tests_convert-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_convert
 
-test7-valgrind test_convert-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_convert
+tests7-valgrind tests_convert-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_convert
 
-test8 test_image: \
+tests8 tests_image: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 8: image)
 	for compress in $(IMAGE_TEST_COMPRESS_NAMES); do \
@@ -1650,7 +1647,7 @@ test8 test_image: \
               BAR_FILE="test" \
               BAR_PATTERN="test*" \
               BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-              test_image_operations \
+              tests_image_operations \
               ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
@@ -1661,7 +1658,7 @@ test8 test_image: \
               BAR_FILE="test" \
               BAR_PATTERN="test*" \
               BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-              test_image_operations \
+              tests_image_operations \
               ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
@@ -1670,78 +1667,78 @@ test8 test_image: \
           done; \
           $(call functionInfoEnd,OK)
 
-test8-debug test_image-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_image
+tests8-debug tests_image-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_image
 
-test8-gcov test_image-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_image
+tests8-gcov tests_image-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_image
 
-test8-gprof test_image-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_image
+tests8-gprof tests_image-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_image
 
-test8-valgrind test_image-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_image
+tests8-valgrind tests_image-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_image
 
-test9 test_storage: \
+tests9 tests_storage: \
   $(TEST_BAR)
 	@$(ECHO_NO_LF) "Test 9: storage..."
-	@$(MAKE) test_storage_file \
-           test_storage_ftp \
-           test_storage_scp \
-           test_storage_sftp \
-           test_storage_webdav \
-           test_storage_webdavs \
-           test_storage_smb \
-           test_storage_optical
+	@$(MAKE) tests_storage_file \
+           tests_storage_ftp \
+           tests_storage_scp \
+           tests_storage_sftp \
+           tests_storage_webdav \
+           tests_storage_webdavs \
+           tests_storage_smb \
+           tests_storage_optical
 
-test9-debug test_storage-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage
+tests9-debug tests_storage-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_storage
 
-test9-gcov test_storage-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage
+tests9-gcov tests_storage-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_storage
 
-test9-gprof test_storage-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage
+tests9-gprof tests_storage-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_storage
 
-test9-valgrind test_storage-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage
+tests9-valgrind tests_storage-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_storage
 
-test_storage_file: \
+tests_storage_file: \
   $(TEST_BAR)
 	$(MAKE) \
           BAR_STORAGE="file://$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="file://$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="file://$(INTERMEDIATE_DIR)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_directory_operations \
+          tests_directory_operations \
           ;
 # delta test?
 
-test_storage_file-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_file
+tests_storage_file-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_storage_file
 
-test_storage_file-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_file
+tests_storage_file-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_storage_file
 
-test_storage_file-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_file
+tests_storage_file-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_storage_file
 
-test_storage_file-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_file
+tests_storage_file-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_storage_file
 
-test_storage_ftp: \
+tests_storage_ftp: \
   $(TEST_BAR)
 	@$(ECHO) Info : TEST_FTP_HOST=$(TEST_FTP_HOST)
 	@$(call functionVerifyParameter,TEST_FTP_HOST,parameter TEST_FTP_HOST nor TEST_HOST set)
@@ -1752,36 +1749,36 @@ test_storage_ftp: \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-login-name='$(TEST_FTP_LOGIN_NAME)' --ftp-password='$(TEST_FTP_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="ftp://$(TEST_FTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ftp-login-name='$(TEST_FTP_LOGIN_NAME)' --ftp-password='$(TEST_FTP_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="ftp://$(TEST_FTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --ftp-login-name='$(TEST_FTP_LOGIN_NAME)' --ftp-password='$(TEST_FTP_PASSWORD)' $(OPTIONS)" \
-          test_directory_operations \
+          tests_directory_operations \
           ;
 
-test_storage_ftp-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_ftp
+tests_storage_ftp-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_storage_ftp
 
-test_storage_ftp-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_ftp
+tests_storage_ftp-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_storage_ftp
 
-test_storage_ftp-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_ftp
+tests_storage_ftp-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_storage_ftp
 
-test_storage_ftp-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_ftp
+tests_storage_ftp-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_storage_ftp
 
-test_storage_scp: \
+tests_storage_scp: \
   $(TEST_BAR)
 	@$(ECHO) Info : TEST_SCP_HOST=$(TEST_SCP_HOST)
 	@$(call functionVerifyParameter,TEST_SCP_HOST,parameter TEST_SCP_HOST nor TEST_HOST set)
@@ -1796,14 +1793,14 @@ test_storage_scp: \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SCP_PORT) --ssh-login-name='$(TEST_SCP_LOGIN_NAME)' --ssh-password='$(TEST_SCP_PASSWORD)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_SCP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SCP_PORT) --ssh-login-name='$(TEST_SCP_LOGIN_NAME)' --ssh-password='$(TEST_SCP_PASSWORD)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	@# with keys
 	$(MAKE) \
@@ -1811,29 +1808,29 @@ test_storage_scp: \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SCP_PORT) --ssh-public-key=$(TEST_SCP_PUBLIC_KEY) --ssh-private-key=$(TEST_SCP_PRIVATE_KEY) --ssh-login-name='$(TEST_SCP_LOGIN_NAME)' --ssh-password='$(TEST_SCP_PASSWORD)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="scp://$(TEST_SCP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SCP_PORT) --ssh-public-key=$(TEST_SCP_PUBLIC_KEY) --ssh-private-key=$(TEST_SCP_PRIVATE_KEY) --ssh-login-name='$(TEST_SCP_LOGIN_NAME)' --ssh-password='$(TEST_SCP_PASSWORD)' --remote-bar-executable='$(shell $(READLINK) -f $(TEST_BAR))' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 
-test_storage_scp-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_scp
+tests_storage_scp-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_storage_scp
 
-test_storage_scp-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_scp
+tests_storage_scp-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_storage_scp
 
-test_storage_scp-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_scp
+tests_storage_scp-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_storage_scp
 
-test_storage_scp-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_scp
+tests_storage_scp-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_storage_scp
 
-test_storage_sftp: \
+tests_storage_sftp: \
   $(TEST_BAR)
 	@$(ECHO) Info : TEST_SFTP_HOST=$(TEST_SFTP_HOST)
 	@$(call functionVerifyParameter,TEST_SFTP_HOST,parameter TEST_SFTP_HOST nor TEST_HOST set)
@@ -1847,21 +1844,21 @@ test_storage_sftp: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SFTP_PORT) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 --verbose=4 $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	echo $(MAKE) \
           BAR_STORAGE="sftp://$(TEST_SFTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SFTP_PORT) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="sftp://$(TEST_SFTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --ssh-port=$(TEST_SFTP_PORT) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' $(OPTIONS)" \
-          test_directory_operations \
+          tests_directory_operations \
           ;
 	@# with keys
 	$(MAKE) \
@@ -1869,36 +1866,36 @@ test_storage_sftp: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SFTP_PORT) --ssh-public-key=$(TEST_SFTP_PUBLIC_KEY) --ssh-private-key=$(TEST_SFTP_PRIVATE_KEY) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	echo $(MAKE) \
           BAR_STORAGE="sftp://$(TEST_SFTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --ssh-port=$(TEST_SFTP_PORT) --ssh-public-key=$(TEST_SFTP_PUBLIC_KEY) --ssh-private-key=$(TEST_SFTP_PRIVATE_KEY) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="sftp://$(TEST_SFTP_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --ssh-port=$(TEST_SFTP_PORT) --ssh-public-key=$(TEST_SFTP_PUBLIC_KEY) --ssh-private-key=$(TEST_SFTP_PRIVATE_KEY) --ssh-login-name='$(TEST_SFTP_LOGIN_NAME)' --ssh-password='$(TEST_SFTP_PASSWORD)' $(OPTIONS)" \
-          test_directory_operations \
+          tests_directory_operations \
           ;
 
-test_storage_sftp-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_sftp
+tests_storage_sftp-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_storage_sftp
 
-test_storage_sftp-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_sftp
+tests_storage_sftp-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_storage_sftp
 
-test_storage_sftp-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_sftp
+tests_storage_sftp-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_storage_sftp
 
-test_storage_sftp-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_sftp
+tests_storage_sftp-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_storage_sftp
 
-test_storage_webdav: \
+tests_storage_webdav: \
   $(TEST_BAR)
 	@$(ECHO) Info : TEST_WEBDAV_HOST=$(TEST_WEBDAV_HOST)
 	@$(call functionVerifyParameter,TEST_WEBDAV_HOST,parameter TEST_WEBDAV_HOST nor TEST_HOST set)
@@ -1909,36 +1906,36 @@ test_storage_webdav: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	echo $(MAKE) \
           BAR_STORAGE="webdav://$(TEST_WEBDAV_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="webdav://$(TEST_WEBDAV_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' $(OPTIONS)" \
-          test_directory_operations \
+          tests_directory_operations \
           ;
 
-test_storage_webdav-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_webdav
+tests_storage_webdav-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_storage_webdav
 
-test_storage_webdav-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_webdav
+tests_storage_webdav-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_storage_webdav
 
-test_storage_webdav-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_webdav
+tests_storage_webdav-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_storage_webdav
 
-test_storage_webdav-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_webdav
+tests_storage_webdav-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_storage_webdav
 
-test_storage_webdavs: \
+tests_storage_webdavs: \
   $(TEST_BAR)
 	@$(ECHO) Info : TEST_WEBDAV_HOST=$(TEST_WEBDAV_HOST)
 	@$(call functionVerifyParameter,TEST_WEBDAV_HOST,parameter TEST_WEBDAV_HOST nor TEST_HOST set)
@@ -1949,36 +1946,36 @@ test_storage_webdavs: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	echo $(MAKE) \
           BAR_STORAGE="webdavs://$(TEST_WEBDAV_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="webdavs://$(TEST_WEBDAV_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --webdav-login-name='$(TEST_WEBDAV_LOGIN_NAME)' --webdav-password='$(TEST_WEBDAV_PASSWORD)' $(OPTIONS)" \
-          test_directory_operations \
+          tests_directory_operations \
           ;
 
-test_storage_webdavs-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_webdavs
+tests_storage_webdavs-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_storage_webdavs
 
-test_storage_webdavs-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_webdavs
+tests_storage_webdavs-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_storage_webdavs
 
-test_storage_webdavs-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_webdavs
+tests_storage_webdavs-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_storage_webdavs
 
-test_storage_webdavs-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_webdav
+tests_storage_webdavs-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_storage_webdav
 
-test_storage_smb: \
+tests_storage_smb: \
   $(TEST_BAR)
 	@$(ECHO) Info : TEST_SMB_HOST=$(TEST_SMB_HOST)
 	@$(call functionVerifyParameter,TEST_SMB_HOST,parameter TEST_SMB_HOST nor TEST_HOST set)
@@ -1989,14 +1986,14 @@ test_storage_smb: \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 	$(MAKE) \
           BAR_STORAGE="smb://$(TEST_SMB_HOST):$(if $(TEST_SMB_SHARE),$(TEST_SMB_SHARE))/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' --skip-unreadable --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-          test_file_operations_base \
+          tests_file_operations_base \
           ;
 # Note: it seems libsmb2 or the Samba server is not able to operate reliable with multiple threads
 #	$(MAKE) \
@@ -2004,65 +2001,65 @@ test_storage_smb: \
 #          BAR_FILE="test" \
 #          BAR_PATTERN="test" \
 #          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-#          test_file_operations_base \
+#          tests_file_operations_base \
 #          ;
 #	$(MAKE) \
 #          BAR_STORAGE="smb://$(TEST_SMB_HOST):$(if $(TEST_SMB_SHARE),$(TEST_SMB_SHARE))/intermediate" \
 #          BAR_FILE="test" \
 #          BAR_PATTERN="test" \
 #          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-#          test_file_operations_base \
+#          tests_file_operations_base \
 #          ;
 	$(MAKE) \
           BAR_STORAGE="smb://$(TEST_SMB_HOST)/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(if $(TEST_SMB_SHARE),--smb-share='$(TEST_SMB_SHARE)') $(OPTIONS)" \
-          test_directory_operations \
+          tests_directory_operations \
           ;
 	$(MAKE) \
           BAR_STORAGE="smb://$(TEST_SMB_HOST):$(if $(TEST_SMB_SHARE),$(TEST_SMB_SHARE))/intermediate" \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --smb-login-name='$(TEST_SMB_LOGIN_NAME)' --smb-password='$(TEST_SMB_PASSWORD)' $(OPTIONS)" \
-          test_directory_operations \
+          tests_directory_operations \
           ;
 
-test_storage_smb-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_smb
+tests_storage_smb-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_storage_smb
 
-test_storage_smb-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_smb
+tests_storage_smb-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_storage_smb
 
-test_storage_smb-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_smb
+tests_storage_smb-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_storage_smb
 
-test_storage_smb-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_smb
+tests_storage_smb-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_storage_smb
 
-test_storage_optical: \
+tests_storage_optical: \
   $(TEST_BAR)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_optical_operations \
+          tests_optical_operations \
           ;
 
-test_storage_optical-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_optical
+tests_storage_optical-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_storage_optical
 
-test_storage_optical-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_optical
+tests_storage_optical-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_storage_optical
 
-test_storage_optical-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_optical
+tests_storage_optical-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_storage_optical
 
-test_storage_optical-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_optical
+tests_storage_optical-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_storage_optical
 
-test_storage_device: \
+tests_storage_device: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 11: device)
 	$(MAKE) \
@@ -2070,22 +2067,22 @@ test_storage_device: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_device_operations \
+          tests_device_operations \
           ;
 
-test_storage_device-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_storage_device
+tests_storage_device-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_storage_device
 
-test_storage_device-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_storage_device
+tests_storage_device-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_storage_device
 
-test_storage_device-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_storage_device
+tests_storage_device-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_storage_device
 
-test_storage_device-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_storage_device
+tests_storage_device-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_storage_device
 
-test10 test_huge: \
+tests10 tests_huge: \
   $(TEST_BAR)
 	for compress in $(TEST_COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
@@ -2093,7 +2090,7 @@ test10 test_huge: \
             BAR_FILE="test" \
             BAR_PATTERN="test*" \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-            test_file_operations_huge \
+            tests_file_operations_huge \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -2102,19 +2099,19 @@ test10 test_huge: \
         done
 	@$(call functionInfoEnd,OK)
 
-test10-debug test_huge-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_huge
+tests10-debug tests_huge-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_huge
 
-test10-gcov test_huge-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_huge
+tests10-gcov tests_huge-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_huge
 
-test10-gprof test_huge-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_huge
+tests10-gprof tests_huge-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_huge
 
-test10-valgrind test_huge-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_huge
+tests10-valgrind tests_huge-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_huge
 
-test11 test_index: \
+tests11 tests_index: \
   $(TEST_BAR) \
   $(TEST_BAR_INDEX)
 	@$(call functionInfoBegin,Test 13: index)
@@ -2126,7 +2123,7 @@ test11 test_index: \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
             TEST_INDEX_DATABASE=$$testIndexDatabase \
             TEST_INDEX_DATABASE_IMPORT=$(SOURCE_DIR)/archive/index.sql \
-            test_index_operations \
+            tests_index_operations \
             ; \
           rc=$$?; \
           if test $$rc -ne 0; then \
@@ -2135,19 +2132,19 @@ test11 test_index: \
         done
 	@$(call functionInfoEnd,OK)
 
-test11-debug test_index-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index
+tests11-debug tests_index-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" tests_index
 
-test11-gcov test_index-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index
+tests11-gcov tests_index-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" tests_index
 
-test11-gprof test_index-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index
+tests11-gprof tests_index-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" tests_index
 
-test11-valgrind test_index-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_DEBUG="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" test_index
+tests11-valgrind tests_index-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_DEBUG="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" tests_index
 
-test12 test_server: \
+tests12 tests_server: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Test 14: server)
 	$(MAKE) \
@@ -2156,7 +2153,7 @@ test12 test_server: \
           BAR_PATTERN="test*" \
           BAR_JOBS_DIRECTORY=$(TEST_MASTER_JOBS_DIRECTORY) \
           BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=master --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_server_operations \
+          tests_server_operations \
           ;
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -2164,23 +2161,23 @@ test12 test_server: \
           BAR_PATTERN="test*" \
           BAR_JOBS_DIRECTORY=$(TEST_SLAVE_JOBS_DIRECTORY) \
           BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=slave --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_server_operations \
+          tests_server_operations \
           ;
 	@$(call functionInfoEnd,OK)
 
-test12-debug test_server-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_server
+tests12-debug tests_server-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_server
 
-test12-gcov test_server-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_server
+tests12-gcov tests_server-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_server
 
-test12-gprof test_server-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_server
+tests12-gprof tests_server-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_server
 
-test12-valgrind test_server-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_server
+tests12-valgrind tests_server-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_server
 
-test13_master_slave test_master_slave: \
+tests13_master_slave tests_master_slave: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
@@ -2190,23 +2187,23 @@ test13_master_slave test_master_slave: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_master_slave_operations \
+          tests_master_slave_operations \
           ;
 	@$(call functionInfoEnd,OK)
 
-test13_master_slave-debug test_master_slave-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_master_slave
+tests13_master_slave-debug tests_master_slave-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_master_slave
 
-test13_master_slave-gcov test_master_slave-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_master_slave
+tests13_master_slave-gcov tests_master_slave-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_master_slave
 
-test13_master_slave-gprof test_master_slave-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_master_slave
+tests13_master_slave-gprof tests_master_slave-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_master_slave
 
-test13_master_slave-valgrind test_master_slave-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_master_slave
+tests13_master_slave-valgrind tests_master_slave-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_master_slave
 
-test13_master test_master: \
+tests13_master tests_master: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
@@ -2216,23 +2213,23 @@ test13_master test_master: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_master_slave_operations_master \
+          tests_master_slave_operations_master \
           ;
 	@$(call functionInfoEnd,OK)
 
-test13_master-debug test_master-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_master
+tests13_master-debug tests_master-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_master
 
-test13_master-gcov test_master-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_master
+tests13_master-gcov tests_master-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_master
 
-test13_master-gprof test_master-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_master
+tests13_master-gprof tests_master-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_master
 
-test13_master-valgrind test_master-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_master
+tests13_master-valgrind tests_master-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_master
 
-test13_slave test_slave: \
+tests13_slave tests_slave: \
   $(TEST_BAR) \
   $(TEST_SLAVE_CONFIG) \
   $(TEST_SLAVE_JOBS_DIRECTORY)
@@ -2242,23 +2239,23 @@ test13_slave test_slave: \
           BAR_FILE="test" \
           BAR_PATTERN="test*" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
-          test_master_slave_operations_slave \
+          tests_master_slave_operations_slave \
           ;
 	@$(call functionInfoEnd,OK)
 
-test13_slave-debug test_slave-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_slave
+tests13_slave-debug tests_slave-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_slave
 
-test13_slave-gcov test_slave-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_slave
+tests13_slave-gcov tests_slave-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_slave
 
-test13_slave-gprof test_slave-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_slave
+tests13_slave-gprof tests_slave-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_slave
 
-test13_slave-valgrind test_slave-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_slave
+tests13_slave-valgrind tests_slave-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_slave
 
-test_combined: \
+tests_combined: \
   $(TEST_BAR) \
   $(TEST_KEYS)
 	@$(call functionInfoBegin,Test combined)
@@ -2269,7 +2266,7 @@ test_combined: \
               BAR_FILE=test-#### \
               BAR_PATTERN="test-*" \
               BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-unreadable --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=100K $(OPTIONS)" \
-              test_file_operations \
+              tests_file_operations \
               ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
@@ -2280,7 +2277,7 @@ test_combined: \
               BAR_FILE=test-#### \
               BAR_PATTERN="test-*" \
               BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(TEST_KEY_CRYPT_PRIVATE) --skip-unreadable --signature-public-key=$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
-              test_image_operations_raw \
+              tests_image_operations_raw \
               ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
@@ -2298,19 +2295,19 @@ test_combined: \
         fi
 	@$(call functionInfoEnd,OK)
 
-test_combined-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_combined
+tests_combined-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_combined
 
-test_combined-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_combined
+tests_combined-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_combined
 
-test_combined-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_combined
+tests_combined-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_combined
 
-test_combined-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_combined
+tests_combined-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_combined
 
-test_arguments: \
+tests_arguments: \
   $(TEST_BAR) \
   $(TEST_CONFIGS) \
   $(TEST_JOBS_DIRECTORY) \
@@ -2840,19 +2837,19 @@ endif
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoEnd,OK)
 
-test_arguments-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_arguments
+tests_arguments-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_arguments
 
-test_arguments-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_arguments
+tests_arguments-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_arguments
 
-test_arguments-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_arguments
+tests_arguments-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_arguments
 
-test_arguments-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_arguments
+tests_arguments-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_arguments
 
-test_config: \
+tests_config: \
   $(TEST_BAR) \
   $(TEST_CONFIGS) \
   $(TEST_KEYS)
@@ -2862,14 +2859,14 @@ test_config: \
 	@#
 	# format configuration file
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(TEST_CONFIG) --save-configuration=$(INTERMEDIATE_DIR)/test.cfg) $(LOG)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(TEST_CONFIG) --save-configuration=$(INTERMEDIATE_DIR)/test1.cfg) $(LOG)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test1.cfg --save-configuration=$(INTERMEDIATE_DIR)/test2.cfg) $(LOG)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test1.cfg --save-configuration=$(INTERMEDIATE_DIR)/test2.cfg --clean-configuration-comments) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(TEST_CONFIG) --save-configuration=$(INTERMEDIATE_DIR)/tests1.cfg) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/tests1.cfg --save-configuration=$(INTERMEDIATE_DIR)/tests2.cfg) $(LOG)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/tests1.cfg --save-configuration=$(INTERMEDIATE_DIR)/tests2.cfg --clean-configuration-comments) $(LOG)
 #TODO
 #	$(call functionTestCheckExitcode,0,0,set -x; test \
-#	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test1.cfg --debug-print-configuration-sha256)` \
+#	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/tests1.cfg --debug-print-configuration-sha256)` \
 #	  = \
-#	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/test2.cfg --debug-print-configuration-sha256)`\
+#	  `($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) $(TEST_OPTIONS) --config $(INTERMEDIATE_DIR)/tests2.cfg --debug-print-configuration-sha256)`\
 #	 )
 	@#
 	# test configuration data
@@ -2888,19 +2885,19 @@ test_config: \
 	$(call functionDoneTestFiles)
 	$(call functionInfoEnd,OK)
 
-test_config-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_config
+tests_config-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_config
 
-test_config-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_config
+tests_config-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_config
 
-test_config-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_config
+tests_config-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_config
 
-test_config-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_config
+tests_config-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_config
 
-test_miscellaneous test_misc:
+tests_miscellaneous tests_misc:
 	@$(call functionInfoBegin,Test miscellaneous)
 	@$(call functionCleanTestFiles)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
@@ -2979,40 +2976,40 @@ endif
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoEnd,OK)
 
-test_miscellaneous-debug test_misc-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" test_miscellaneous
+tests_miscellaneous-debug tests_misc-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" tests_miscellaneous
 
-test_miscellaneous-gcov test_misc-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" test_miscellaneous
+tests_miscellaneous-gcov tests_misc-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" tests_miscellaneous
 
-test_miscellaneous-gprof test_misc-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" test_miscellaneous
+tests_miscellaneous-gprof tests_misc-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" tests_miscellaneous
 
-test_miscellaneous-valgrind test_misc-valgrind:
+tests_miscellaneous-valgrind tests_misc-valgrind:
 	#Note: do not use VALGRIND_FLAGS, because of exit code
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck --gen-suppressions=no --track-fds=yes --track-origins=yes --suppressions=$(ROOT_DIR)/bar/valgrind.supp --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" test_miscellaneous
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck --gen-suppressions=no --track-fds=yes --track-origins=yes --suppressions=$(ROOT_DIR)/bar/valgrind.supp --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_miscellaneous
 
-test_all:
+tests_all:
 	@$(MAKE) --no-print-directory \
 	  QUIET=1 \
-          test_basic \
-          test_compress \
-          test_crypt \
-          test_asymmetric_crypt \
-          test_split \
-          test_image \
-          test_storage \
-          test_huge \
-          test_combined \
-          test_arguments \
-          test_server \
-          test_master_slave \
-          test_config \
-          test_miscellaneous
+          tests_basic \
+          tests_compress \
+          tests_crypt \
+          tests_asymmetric_crypt \
+          tests_split \
+          tests_image \
+          tests_storage \
+          tests_huge \
+          tests_combined \
+          tests_arguments \
+          tests_server \
+          tests_master_slave \
+          tests_config \
+          tests_miscellaneous
 
 #	  QUIET=1 \
 
-test_smoke: \
+tests_smoke: \
   $(TEST_BAR)
 	@$(MAKE) --no-print-directory \
     TEST_CRYPT_NAMES="$(SMOKE_TEST_CRYPT_NAMES)" \
@@ -3020,28 +3017,28 @@ test_smoke: \
     TEST_COMPRESS_NAMES="$(SMOKE_TEST_COMPRESS_NAMES)" \
     TEST_INDEX_DATABASES="$(SMOKE_TEST_INDEX_DATABASES)" \
           $(addsuffix $(TEST_BINARY_EXTENSION), \
-                      test_basic \
-                      test_compress \
-                      test_crypt \
-                      test_asymmetric_crypt \
-                      test_split \
-                      test_index \
-                      test_arguments \
-                      test_config \
-                      test_miscellaneous \
+                      tests_basic \
+                      tests_compress \
+                      tests_crypt \
+                      tests_asymmetric_crypt \
+                      tests_split \
+                      tests_index \
+                      tests_arguments \
+                      tests_config \
+                      tests_miscellaneous \
           )
 
-test_smoke-debug:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BINARY_EXTENSION=-debug test_smoke
+tests_smoke-debug:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BINARY_EXTENSION=-debug tests_smoke
 
-test_smoke-gcov:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV)" TEST_BINARY_EXTENSION=-gcov test_smoke
+tests_smoke-gcov:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV)" TEST_BINARY_EXTENSION=-gcov tests_smoke
 
-test_smoke-gprof:
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF) TEST_BINARY_EXTENSION=-gprof test_smoke
+tests_smoke-gprof:
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF) TEST_BINARY_EXTENSION=-gprof tests_smoke
 
-test_smoke-valgrind:
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BINARY_EXTENSION=-valgrind test_smoke
+tests_smoke-valgrind:
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BINARY_EXTENSION=-valgrind tests_smoke
 
 # ----------------------------------------------------------------------------
 
@@ -3326,7 +3323,7 @@ endif
 #   1C+2+3+4: incremental+list+diff+extract
 
 TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
-                     -c $(INTERMEDIATE_DIR)/test-\#\#\#.bar $(TEST_DATA_DIR)/data \
+                     -c $(INTERMEDIATE_DIR)/test-\#\#\#.bar $(TESTS_DATA_DIR)/data \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
@@ -3341,7 +3338,7 @@ TESTCODE_COMMAND1A=$(TEST_BAR_DEBUG) \
                      --full \
                      --log-post-command='true'
 TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
-                     -c $(INTERMEDIATE_DIR)/test-\#\#\#.bar $(TEST_DATA_DIR)/data \
+                     -c $(INTERMEDIATE_DIR)/test-\#\#\#.bar $(TESTS_DATA_DIR)/data \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
@@ -3357,7 +3354,7 @@ TESTCODE_COMMAND1B=$(TEST_BAR_DEBUG) \
                      --incremental-list-file=$(INTERMEDIATE_DIR)/test.bid \
                      --log-post-command='true'
 TESTCODE_COMMAND1C=$(TEST_BAR_DEBUG) \
-                     -c $(INTERMEDIATE_DIR)/test-\#\#\#.bar $(TEST_DATA_DIR)/data \
+                     -c $(INTERMEDIATE_DIR)/test-\#\#\#.bar $(TESTS_DATA_DIR)/data \
                      --compress-algorithm=lzma9 \
                      --crypt-algorithm=AES256 \
                      --crypt-password=$(TEST_PASSWORD_CRYPT) \
@@ -3553,7 +3550,7 @@ testcode_diff:
 
 # ----------------------------------------------------------------------------
 
-show_debug_test_code test_code:
+show_debug_tests_code tests_code:
 	@$(FIND) . -maxdepth 1 -type f -a \( -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \) -print | \
           ( \
             while read fileName; do \
@@ -3561,7 +3558,7 @@ show_debug_test_code test_code:
             done; \
           )
 
-run_debug_test_code:
+run_debug_tests_code:
 	$(call functionTestCheckExitcode,125,125,initAll1=1 $(call functionExec,$(TEST_BAR)))
 	$(call functionTestCheckExitcode,125,125,initAll2=1 $(call functionExec,$(TEST_BAR)))
 	$(call functionTestCheckExitcode,125,125,initAll3=1 $(call functionExec,$(TEST_BAR)))
@@ -4058,16 +4055,16 @@ functionIndexQuery = \
 functionIndexQueryEmpty = \
   test -z "`$(call functionIndexQuery,$1)`"
 
-.PHONY: test_file_operations
-test_file_operations: \
-  test_file_operations_base \
-  test_file_operations_delta \
-  test_file_operations_incremental \
-  test_file_operations_differential \
-  test_file_operations_destroyed
+.PHONY: tests_file_operations
+tests_file_operations: \
+  tests_file_operations_base \
+  tests_file_operations_delta \
+  tests_file_operations_incremental \
+  tests_file_operations_differential \
+  tests_file_operations_destroyed
 
-.PHONY: test_file_operations_base test_file_operations_delta test_file_operations_dryrun test_file_operations_incremental test_file_operations_differential test_file_operations_destroyed
-test_file_operations_base: \
+.PHONY: tests_file_operations_base tests_file_operations_delta tests_file_operations_dryrun tests_file_operations_incremental tests_file_operations_differential tests_file_operations_destroyed
+tests_file_operations_base: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	@#
@@ -4097,7 +4094,7 @@ test_file_operations_base: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/$(BAR_PATTERN).bar   $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) --human-format --verbose=0 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	$(DIFF) -r \
           -x unreadable.dat \
           -x link_not_existing_file.dat \
@@ -4141,7 +4138,7 @@ endif
 	$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-test_file_operations_delta: \
+tests_file_operations_delta: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
@@ -4161,7 +4158,7 @@ ifeq (@HAVE_XDELTA3@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -c $(BAR_STORAGE)/$(BAR_FILE)-B.bar random512k.dat hardlink.dat hardlink1.dat hardlink2.dat --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --force-delta-compression --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -d '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	$(DIFF) data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
 	$(DIFF) data/delta2/hardlink.dat   $(INTERMEDIATE_DIR)/restore/hardlink.dat
 	$(DIFF) data/delta2/hardlink1.dat  $(INTERMEDIATE_DIR)/restore/hardlink1.dat
@@ -4173,7 +4170,7 @@ ifeq (@HAVE_BZ2@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -c $(BAR_STORAGE)/$(BAR_FILE)-B.bar --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' random512k.dat hardlink.dat hardlink1.dat hardlink2.dat $(BAR_OPTIONS) --force-delta-compression --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -d '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	$(DIFF) data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
 	$(DIFF) data/delta2/hardlink.dat   $(INTERMEDIATE_DIR)/restore/hardlink.dat
 	$(DIFF) data/delta2/hardlink1.dat  $(INTERMEDIATE_DIR)/restore/hardlink1.dat
@@ -4186,7 +4183,7 @@ ifeq (@HAVE_LZMA@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -c $(BAR_STORAGE)/$(BAR_FILE)-B.bar --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' random512k.dat hardlink.dat hardlink1.dat hardlink2.dat $(BAR_OPTIONS) --force-delta-compression --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -d '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	$(DIFF) data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
 	$(DIFF) data/delta2/hardlink.dat $(INTERMEDIATE_DIR)/restore/hardlink.dat
 	$(DIFF) data/delta2/hardlink1.dat $(INTERMEDIATE_DIR)/restore/hardlink1.dat
@@ -4197,8 +4194,8 @@ endif
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_file_operations_large
-test_file_operations_large: \
+.PHONY: tests_file_operations_large
+tests_file_operations_large: \
   $(TEST_BAR) \
   $(TEST_FILES_LARGE)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
@@ -4214,7 +4211,7 @@ test_file_operations_large: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -l '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	for z in $(TEST_FILES_LARGE); do \
           $(DIFF) $$z $(INTERMEDIATE_DIR)/restore/$$z; \
           rc=$$?; \
@@ -4226,8 +4223,8 @@ test_file_operations_large: \
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_file_operations_huge
-test_file_operations_huge: \
+.PHONY: tests_file_operations_huge
+tests_file_operations_huge: \
   $(TEST_BAR) \
   $(TEST_FILES_HUGE)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
@@ -4244,18 +4241,18 @@ test_file_operations_huge: \
           ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -l '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG)); \
           ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG)); \
           ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG)); \
-          ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG)); \
+          ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG)); \
         done; \
         ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES_HUGE2) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --tmp-directory=$(BAR_STORAGE)/tmp --verbose=1 $(LOG)); \
         ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -l '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG)); \
         ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG)); \
         ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG)); \
-        ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG)); \
+        ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG)); \
 	@#
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-test_file_operations_dryrun: \
+tests_file_operations_dryrun: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	@#
@@ -4271,7 +4268,7 @@ test_file_operations_dryrun: \
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-test_file_operations_incremental: \
+tests_file_operations_incremental: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
@@ -4288,12 +4285,12 @@ test_file_operations_incremental: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-incremental.bar --incremental --incremental-list-file=$(BAR_STORAGE)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=2 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-incremental.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-incremental.bar' $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-incremental.bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-incremental.bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	@#
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-test_file_operations_differential: \
+tests_file_operations_differential: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
@@ -4310,13 +4307,13 @@ test_file_operations_differential: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-differential.bar --differential --incremental-list-file=$(BAR_STORAGE)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-differential.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-differential.bar' $(BAR_OPTIONS) $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-differential.bar' $(BAR_OPTIONS) --destination $(INTERMEDIATE_DIR)/restore $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-differential.bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	@#
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_file_operations_destroyed
-test_file_operations_destroyed: \
+.PHONY: tests_file_operations_destroyed
+tests_file_operations_destroyed: \
   $(TEST_BAR) \
   $(TEST_DESTROYER) \
   $(TEST_FILES)
@@ -4347,8 +4344,8 @@ endif
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_directory_operations
-test_directory_operations: \
+.PHONY: tests_directory_operations
+tests_directory_operations: \
   $(TEST_BAR)
 	@$(call functionInfoHeader,test directory operations)
 	@$(call functionVerifyParameter,BAR_STORAGE)
@@ -4359,8 +4356,8 @@ test_directory_operations: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)  $(BAR_STORAGE)/not_existing $(BAR_OPTIONS) $(LOG)))
 	@$(call functionInfoFooter)
 
-.PHONY: test_convert_operations
-test_convert_operations: \
+.PHONY: tests_convert_operations
+tests_convert_operations: \
   $(TEST_BAR) \
   $(TEST_FILES) \
   $(TEST_KEYS)
@@ -4515,12 +4512,12 @@ endif
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_image_operations
-test_image_operations: \
-  $(foreach fileSystem,$(IMAGE_FILESYSTEM_NAMES),test_image_operations_$(fileSystem))
+.PHONY: tests_image_operations
+tests_image_operations: \
+  $(foreach fileSystem,$(IMAGE_FILESYSTEM_NAMES),tests_image_operations_$(fileSystem))
 
-.PHONY: test_image_operations_raw
-test_image_operations_raw:  \
+.PHONY: tests_image_operations_raw
+tests_image_operations_raw:  \
   $(TEST_CONFIGS)
 	# raw
 	@$(call functionTestDeviceReset)
@@ -4534,7 +4531,7 @@ test_image_operations_raw:  \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_base
+          tests_image_operations_base
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4547,8 +4544,8 @@ test_image_operations_raw:  \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_base \
-          test_image_operations_diff_image
+          tests_image_operations_base \
+          tests_image_operations_diff_image
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4562,20 +4559,20 @@ test_image_operations_raw:  \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta \
-          test_image_operations_diff_image
+          tests_image_operations_delta \
+          tests_image_operations_diff_image
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 
-.PHONY: test_image_ext test_image_ext2 test_image_ext3 test_image_ext4
-test_image_operations_ext: \
-  test_image_operations_ext2 \
-  test_image_operations_ext3 \
-  test_image_operations_ext4
+.PHONY: tests_image_ext tests_image_ext2 tests_image_ext3 tests_image_ext4
+tests_image_operations_ext: \
+  tests_image_operations_ext2 \
+  tests_image_operations_ext3 \
+  tests_image_operations_ext4
 
 # Ext2
-test_image_operations_ext2: \
+tests_image_operations_ext2: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_EXT2@,)
 	# ext2 (Note: ext2 filesystems cannot be compared on binary level, thus no image diff)
@@ -4596,8 +4593,8 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4614,8 +4611,8 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4633,7 +4630,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
@@ -4655,8 +4652,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4673,8 +4670,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4692,7 +4689,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
@@ -4715,8 +4712,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4733,8 +4730,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4752,7 +4749,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
@@ -4773,8 +4770,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4791,8 +4788,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4810,7 +4807,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 endif
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -4818,7 +4815,7 @@ endif
 endif
 
 # Ext3
-test_image_operations_ext3: \
+tests_image_operations_ext3: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_EXT3@,)
 	# ext3 (Note: ext filesystems cannot be compared on binary level, thus no image diff)
@@ -4839,8 +4836,8 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4857,8 +4854,8 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4876,7 +4873,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
@@ -4897,8 +4894,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4915,8 +4912,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4934,7 +4931,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
@@ -4955,8 +4952,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -4973,8 +4970,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -4992,7 +4989,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
@@ -5013,8 +5010,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5031,8 +5028,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -5050,7 +5047,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 endif
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -5058,7 +5055,7 @@ endif
 endif
 
 # Ext4
-test_image_operations_ext4: \
+tests_image_operations_ext4: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_EXT4@,)
 	# ext4 (Note: ext filesystems cannot be compared on binary level, thus no image diff)
@@ -5079,8 +5076,8 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5097,8 +5094,8 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -5116,7 +5113,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
@@ -5137,8 +5134,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5155,8 +5152,8 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -5174,7 +5171,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
@@ -5195,8 +5192,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5213,8 +5210,8 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -5232,7 +5229,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
@@ -5253,8 +5250,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5271,8 +5268,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5280,7 +5277,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	#$(call functionCreateSparse,$(IMAGE1),512G)
 	#@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
 	#@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096)
-	#$(MAKE) test_image_operations_base \
+	#$(MAKE) tests_image_operations_base \
         #   DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
@@ -5299,21 +5296,21 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 endif
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
 
-.PHONY: test_image_fat test_image_fat12 test_image_fat16 test_image_fat32
-test_image_operations_fat: \
-  test_image_operations_fat12 \
-  test_image_operations_fat16 \
-  test_image_operations_fat32
+.PHONY: tests_image_fat tests_image_fat12 tests_image_fat16 tests_image_fat32
+tests_image_operations_fat: \
+  tests_image_operations_fat12 \
+  tests_image_operations_fat16 \
+  tests_image_operations_fat32
 
 # FAT 12
-test_image_operations_fat12: \
+tests_image_operations_fat12: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_MSDOS@,)
 	# FAT12
@@ -5332,9 +5329,9 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          tests_image_operations_base \
+          tests_image_operations_check \
+          tests_image_operations_diff_image
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5351,8 +5348,8 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -5368,14 +5365,14 @@ ifneq (@MKFS_MSDOS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
 
 # FAT 16
-test_image_operations_fat16: \
+tests_image_operations_fat16: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_MSDOS@,)
 	# FAT16
@@ -5394,9 +5391,9 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          tests_image_operations_base \
+          tests_image_operations_check \
+          tests_image_operations_diff_image
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5413,8 +5410,8 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -5432,14 +5429,14 @@ ifneq (@MKFS_MSDOS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
 
 # FAT 32
-test_image_operations_fat32: \
+tests_image_operations_fat32: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_MSDOS@,)
 	# FAT32
@@ -5458,9 +5455,9 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          tests_image_operations_base \
+          tests_image_operations_check \
+          tests_image_operations_diff_image
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5477,8 +5474,8 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -5496,29 +5493,29 @@ ifneq (@MKFS_MSDOS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
 
-.PHONY: test_image_reiser test_image_reiserfs1 test_image_reiserfs2 test_image_reiserfs3 test_image_reiser4
-test_image_operations_reiser: \
-  test_image_operations_reiserfs1 \
-  test_image_operations_reiserfs2 \
-  test_image_operations_reiserfs3 \
-  test_image_operations_reiser4
+.PHONY: tests_image_reiser tests_image_reiserfs1 tests_image_reiserfs2 tests_image_reiserfs3 tests_image_reiser4
+tests_image_operations_reiser: \
+  tests_image_operations_reiserfs1 \
+  tests_image_operations_reiserfs2 \
+  tests_image_operations_reiserfs3 \
+  tests_image_operations_reiser4
 
-test_image_operations_reiserfs1:
+tests_image_operations_reiserfs1:
 ifneq (@MKFS_REISERFS@,)
 endif
 
-test_image_operations_reiserfs2:
+tests_image_operations_reiserfs2:
 ifneq (@MKFS_REISERFS@,)
 endif
 
 # ReiserFS version 3 (Note: Linux only support block size 4096)
-test_image_operations_reiserfs3: \
+tests_image_operations_reiserfs3: \
   $(TEST_CONFIGS)
 ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3
@@ -5537,9 +5534,9 @@ ifneq (@MKFS_REISERFS@,)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          tests_image_operations_base \
+          tests_image_operations_check \
+          tests_image_operations_diff_image
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5556,8 +5553,8 @@ ifneq (@MKFS_REISERFS@,)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5574,9 +5571,9 @@ ifneq (@MKFS_REISERFS@,)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
-          test_image_operations_base \
-          test_image_operations_check \
-          test_image_operations_diff_image
+          tests_image_operations_base \
+          tests_image_operations_check \
+          tests_image_operations_diff_image
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5593,8 +5590,8 @@ ifneq (@MKFS_REISERFS@,)
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
           FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
-          test_image_operations_base \
-          test_image_operations_check
+          tests_image_operations_base \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -5612,20 +5609,20 @@ ifneq (@MKFS_REISERFS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          test_image_operations_delta
+          tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
 	$(RMF) $(IMAGE0A)
 endif
 
 # Reiser4 (Note: not supported anymore)
-test_image_operations_reiser4:
+tests_image_operations_reiser4:
 ifneq (@MKFS_REISER4@,)
 endif
 
 # image dry-run
-.PHONY: test_image_operations_dryrun
-test_image_operations_dryrun: \
+.PHONY: tests_image_operations_dryrun
+tests_image_operations_dryrun: \
   $(TEST_CONFIGS)
 	# delta tests
 	@$(call functionInfoHeader,test image operation dryrun)
@@ -5641,7 +5638,7 @@ test_image_operations_dryrun: \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images --dry-run,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run) $(OPTIONS)" \
-          test_image_operations_create
+          tests_image_operations_create
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
@@ -5654,13 +5651,13 @@ test_image_operations_dryrun: \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images --dry-run,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images --dry-run $(OPTIONS)run)" \
-          test_image_operations_create
+          tests_image_operations_create
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@$(call functionInfoFooter)
 
-.PHONY: test_image_operations_base test_image_operations_check test_image_operations_diff_image test_image_operations_create
-test_image_operations_base: \
+.PHONY: tests_image_operations_base tests_image_operations_check tests_image_operations_diff_image tests_image_operations_create
+tests_image_operations_base: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# normal tests
@@ -5684,12 +5681,12 @@ test_image_operations_base: \
 #TODO: support archive-part-size
 #	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) --compress-algorithm=zip9 $(LOG))
 	@#
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/test*.bar $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(DEVICE1) $(LOG))
 	@#
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-test_image_operations_delta: \
+tests_image_operations_delta: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# delta tests
@@ -5712,7 +5709,7 @@ ifeq (@HAVE_XDELTA3@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
 endif
 	@#
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(DEVICE1) $(LOG))
 	@#
 	@$(call functionCleanTestFiles)
 	@#
@@ -5724,10 +5721,10 @@ ifeq (@HAVE_XDELTA3@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
 endif
 	@#
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(DEVICE1) $(LOG))
 	@$(call functionInfoFooter)
 
-test_image_operations_check:
+tests_image_operations_check:
 	# check file systems and compare file content
 	@$(call functionInfoHeader,test image operation check)
 	@$(call functionVerifyParameter,IMAGE0)
@@ -5749,7 +5746,7 @@ ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 endif
 	@$(call functionInfoFooter)
 
-test_image_operations_diff_image:
+tests_image_operations_diff_image:
 	# compare devices
 	@$(call functionInfoHeader,test image operation diff image)
 	@$(call functionVerifyParameter,IMAGE0)
@@ -5760,7 +5757,7 @@ test_image_operations_diff_image:
 	@#
 	@$(call functionInfoFooter)
 
-test_image_operations_create: \
+tests_image_operations_create: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# normal tests
@@ -5777,8 +5774,8 @@ test_image_operations_create: \
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_optical_operations
-test_optical_operations: \
+.PHONY: tests_optical_operations
+tests_optical_operations: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# create optical
@@ -5821,8 +5818,8 @@ test_optical_operations: \
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_device_operations
-test_device_operations: \
+.PHONY: tests_device_operations
+tests_device_operations: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# create device
@@ -5847,14 +5844,14 @@ test_device_operations: \
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_index_operations
-test_index_operations: \
-  test_index_operations_tool \
-  test_index_operations_base \
-  test_index_operations_server
+.PHONY: tests_index_operations
+tests_index_operations: \
+  tests_index_operations_tool \
+  tests_index_operations_base \
+  tests_index_operations_server
 
-.PHONY: test_index_operations_tool
-test_index_operations_tool: \
+.PHONY: tests_index_operations_tool
+tests_index_operations_tool: \
   $(TEST_BAR) \
   $(TEST_BAR_DEBUG) \
   $(TEST_BAR_INDEX) \
@@ -6032,8 +6029,8 @@ test_index_operations_tool: \
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_index_operations_base
-test_index_operations_base: \
+.PHONY: tests_index_operations_base
+tests_index_operations_base: \
   $(TEST_BAR) \
   $(TEST_BAR_INDEX) \
   $(TEST_FILES_SIMPLE)
@@ -6255,8 +6252,8 @@ endif
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
 
-.PHONY: test_index_operations_server
-test_index_operations_server: \
+.PHONY: tests_index_operations_server
+tests_index_operations_server: \
   $(TEST_BAR) \
   $(TEST_BAR_INDEX) \
   $(TEST_SERVER_JOBS_DIRECTORY) \
@@ -6299,29 +6296,29 @@ else
 endif
 	@$(call functionInfoFooter)
 
-.PHONY: test_index_operations-debug
-test_index_operations-debug: \
+.PHONY: tests_index_operations-debug
+tests_index_operations-debug: \
   $(TEST_BAR_DEBUG) \
   $(TEST_BAR_INDEX_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_DEBUG)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_DEBUG)" tests_index_operations
 
-.PHONY: test_index_operations-gcov
-test_index_operations-gcov: \
+.PHONY: tests_index_operations-gcov
+tests_index_operations-gcov: \
   $(TEST_BAR_DEBUG) \
   $(TEST_BAR_INDEX_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GCOV)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GCOV)" tests_index_operations
 
-.PHONY: test_index_operations-gprof
-test_index_operations-gprof: \
+.PHONY: tests_index_operations-gprof
+tests_index_operations-gprof: \
   $(TEST_BAR_DEBUG) \
   $(TEST_BAR_INDEX_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR="$(TEST_BAR_GPROF)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_GPROF)" tests_index_operations
 
-.PHONY: test_index_operations-valgrind
-test_index_operations-valgrind: \
+.PHONY: tests_index_operations-valgrind
+tests_index_operations-valgrind: \
   $(TEST_BAR_DEBUG) \
   $(TEST_BAR_INDEX_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" test_index_operations
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" TEST_BAR_INDEX="$(TEST_BAR_INDEX_VALGRIND)" tests_index_operations
 
 # send command to server via socket: <host>,<port>,<command>
 functionServerCommandSocket = \
@@ -6340,14 +6337,14 @@ functionSlaveCommandSocket = \
   ($(ECHO) $$id $3|$(SOCAT) -t60 STDIO TCP:$1:$2|$(TAIL) -n +2|while read id_ doneFlag errorCode s; do $(ECHO) $$id_ $$doneFlag $$errorCode $$s; if test $$errorCode -ne 0; then exit 1; fi; done); \
   test $$?
 
-.PHONY: test_server_operations test_server_operations_batch test_server_operations_socket test_master_slave_operations
-test_server_operations: \
-  test_server_operations_basic \
-  test_server_operations_batch \
-  test_server_operations_socket \
-  test_master_slave_operations
+.PHONY: tests_server_operations tests_server_operations_batch tests_server_operations_socket tests_master_slave_operations
+tests_server_operations: \
+  tests_server_operations_basic \
+  tests_server_operations_batch \
+  tests_server_operations_socket \
+  tests_master_slave_operations
 
-test_server_operations_basic: \
+tests_server_operations_basic: \
   $(TEST_BAR) \
   $(TEST_CONFIGS) \
   $(TEST_FILES) \
@@ -6414,7 +6411,7 @@ test_server_operations_basic: \
 	@#
 	@$(call functionDoneTestFiles)
 
-test_server_operations_batch: \
+tests_server_operations_batch: \
   $(TEST_BAR) \
   $(TEST_CONFIGS) \
   $(TEST_SERVER_JOBS_DIRECTORY) \
@@ -6644,7 +6641,7 @@ test_server_operations_batch: \
 	@#
 	@$(call functionDoneTestFiles)
 
-test_server_operations_socket_server: \
+tests_server_operations_socket_server: \
   $(TEST_BAR) \
   $(TEST_CONFIGS) \
   $(TEST_SERVER_JOBS_DIRECTORY) \
@@ -6688,7 +6685,7 @@ test_server_operations_socket_server: \
           $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
         fi
 
-test_server_operations_socket_client: \
+tests_server_operations_socket_client: \
   $(TEST_BAR)
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
@@ -6914,7 +6911,7 @@ else
 	@$(ECHO) Command 'socat' not available. Cannot execute server tests.
 endif
 
-test_server_operations_socket: \
+tests_server_operations_socket: \
   $(TEST_BAR) \
   $(TEST_FILES) \
   parallel$(EXE_SUFFIX)
@@ -6929,8 +6926,8 @@ test_server_operations_socket: \
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@#
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) ./parallel$(EXE_SUFFIX) \
-          "$(MAKE) test_server_operations_socket_server" \
-          "$(MAKE) test_server_operations_socket_client"
+          "$(MAKE) tests_server_operations_socket_server" \
+          "$(MAKE) tests_server_operations_socket_client"
 	$(call functionWaitProcess,$(TEST_SERVER_PID_FILE),60)
 	@#
 	$(RMF) $(IMAGE0)
@@ -6940,8 +6937,8 @@ test_server_operations_socket: \
 	@#
 	$(call functionDoneTestFiles)
 
-.PHONY: test_master_slave_operations_master test_master_slave_operations_slave test_master_slave_operations_create test_master_slave_operations
-test_master_slave_operations_master: \
+.PHONY: tests_master_slave_operations_master tests_master_slave_operations_slave tests_master_slave_operations_create tests_master_slave_operations
+tests_master_slave_operations_master: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
@@ -6986,7 +6983,7 @@ test_master_slave_operations_master: \
           $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
         fi
 
-test_master_slave_operations_slave: \
+tests_master_slave_operations_slave: \
   $(TEST_BAR) \
   $(TEST_SLAVE_CONFIG) \
   $(TEST_SLAVE_JOBS_DIRECTORY) \
@@ -7060,7 +7057,7 @@ test_master_slave_operations_slave: \
           $(ECHO) Warning: skipped $@ - BAR with debug functions required; \
         fi
 
-test_master_slave_operations_create: \
+tests_master_slave_operations_create: \
   $(TEST_BAR)
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
@@ -7131,7 +7128,7 @@ endif
 	@#
 	@$(call functionDoneTestFiles)
 
-test_master_slave_operations: \
+tests_master_slave_operations: \
   $(TEST_BAR) \
   parallel$(EXE_SUFFIX)
 	@$(call functionCleanTestFiles)
@@ -7139,9 +7136,9 @@ test_master_slave_operations: \
 	@$(KILLALL) -w -9 $(shell basename $(call functionExec,$(TEST_BAR))) 2>/dev/null || true
 	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE_SQLITE))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) ./parallel$(EXE_SUFFIX) \
-          "$(MAKE) test_master_slave_operations_master" \
-          "$(MAKE) test_master_slave_operations_slave" \
-          "$(MAKE) test_master_slave_operations_create"
+          "$(MAKE) tests_master_slave_operations_master" \
+          "$(MAKE) tests_master_slave_operations_slave" \
+          "$(MAKE) tests_master_slave_operations_create"
 	@#
 	@$(call functionDoneTestFiles)
 
@@ -7152,14 +7149,14 @@ test_master_slave_operations: \
 dist: \
   $(TEST_FILES)
 ifneq ($(DIRECTORY),)
-	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)
+	$(INSTALL) -d $(DIRECTORY)/bar/$(TESTS_DATA_DIR)
 	$(INSTALL) -m 664 $(SOURCE_DIR)/Makefile.in \
                           $(SOURCE_DIR)/parallel.c \
-                          $(DIRECTORY)/bar/$(TEST_DATA_DIR)
-	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/archive
-	$(INSTALL) -t $(DIRECTORY)/bar/$(TEST_DATA_DIR)/archive \
+                          $(DIRECTORY)/bar/$(TESTS_DATA_DIR)
+	$(INSTALL) -d $(DIRECTORY)/bar/$(TESTS_DATA_DIR)/archive
+	$(INSTALL) -t $(DIRECTORY)/bar/$(TESTS_DATA_DIR)/archive \
     $(SOURCE_DIR)/archive/*
-	$(INSTALL) -d $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
+	$(INSTALL) -d $(DIRECTORY)/bar/$(TESTS_DATA_DIR)/data
 	$(INSTALL) -m 664 data/zero0.dat \
                           data/zero128.dat \
                           data/zero1024.dat \
@@ -7169,7 +7166,7 @@ ifneq ($(DIRECTORY),)
                           data/random512k.dat \
                           data/zero-random512k.dat \
                           data/smallfile.dat \
-                          $(DIRECTORY)/bar/$(TEST_DATA_DIR)/data
+                          $(DIRECTORY)/bar/$(TESTS_DATA_DIR)/data
 else
 	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
 endif

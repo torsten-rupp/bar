@@ -108,12 +108,12 @@ COMMA                       := ,
 
 # shell in Makefile must be bash with pipe-fail handling
 SHELL                       = bash -o pipefail
-											      
+
 VERSION_MAJOR               := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR               := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 VERSION_PATCH               := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
 VERSION                     := $(VERSION_MAJOR)$(if $(VERSION_MINOR),.$(VERSION_MINOR))$(VERSION_PATCH)
-											      
+
 PACKAGE_NAME                = backup-archiver
 PACKAGE_NAME_GUI            = backup-archiver-gui
 DISTRIBUTION_NAME           = $(PACKAGE_NAME)-$(VERSION)
@@ -239,20 +239,25 @@ help:
 	@$(ECHO) ""
 	@$(ECHO) "  install"
 	@$(ECHO) ""
-	@$(ECHO) "  test"
-	@$(ECHO) "  test1[-debug|-valgrind], test_basic"
-	@$(ECHO) "  test2[-debug|-valgrind], test_compress"
-	@$(ECHO) "  test3[-debug|-valgrind], test_crypt"
-	@$(ECHO) "  test4[-debug|-valgrind], test_asymmetric_crypt"
-	@$(ECHO) "  test5[-debug|-valgrind], test_signatures"
-	@$(ECHO) "  test6[-debug|-valgrind], test_split"
-	@$(ECHO) "  test7[-debug|-valgrind], test_image"
-	@$(ECHO) "  test8[-debug|-valgrind], test_storage"
-	@$(ECHO) "  test9[-debug|-valgrind], test_largefile"
-	@$(ECHO) "  test10[-debug|-valgrind], test_dvd"
-	@$(ECHO) "  test_parameters"
-	@$(ECHO) "  test_combined"
-	@$(ECHO) "  test_misc"
+	@$(ECHO) "  tests"
+	@$(ECHO) "  tests1[-debug|-valgrind], test_basic"
+	@$(ECHO) "  tests2[-debug|-valgrind], test_compress"
+	@$(ECHO) "  tests3[-debug|-valgrind], test_crypt"
+	@$(ECHO) "  tests4[-debug|-valgrind], test_asymmetric_crypt"
+	@$(ECHO) "  tests5[-debug|-valgrind], test_signatures"
+	@$(ECHO) "  tests6[-debug|-valgrind], test_split"
+	@$(ECHO) "  tests7[-debug|-valgrind], test_convert"
+	@$(ECHO) "  tests8[-debug|-valgrind], test_image"
+	@$(ECHO) "  tests9[-debug|-valgrind], test_storage"
+	@$(ECHO) "  tests10[-debug|-valgrind], test_huge"
+	@$(ECHO) "  tests11[-debug|-valgrind], test_index"
+	@$(ECHO) "  tests12[-debug|-valgrind], test_server"
+	@$(ECHO) "  tests13[-debug|-valgrind], test_master_slave"
+	@$(ECHO) "  tests_combined"
+	@$(ECHO) "  tests_arguments"
+	@$(ECHO) "  tests_config"
+	@$(ECHO) "  tests_miscellaneous"
+	@$(ECHO) "  tests_smoke"
 	@$(ECHO) ""
 	@$(ECHO) "  memcheck"
 	@$(ECHO) "  memcheck_extended"
@@ -507,8 +512,8 @@ barserver_ssl:
 	@$(MAKE) -C bar barserver_ssl
 
 # do tests
-.PHONY: test test% test%-debug test%-gcov test%-gprof test%-valgrind
-test:
+.PHONY: tests test test% test%-debug test%-gcov test%-gprof test%-valgrind
+tests test:
 	@$(MAKE) -C bar $@
 test%:
 	@$(MAKE) -C bar $@
@@ -558,7 +563,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   $(SOURCE_DIR)/bin/config.guess \
   \
   $(SOURCE_DIR)/bar/Makefile.in \
-  $(SOURCE_DIR)/bar/test/Makefile.in \
+  $(SOURCE_DIR)/bar/tests/Makefile.in \
   $(SOURCE_DIR)/barcontrol/Makefile.in \
   \
   $(SOURCE_DIR)/ssl/certtool/*.tmpl \
@@ -738,7 +743,7 @@ docker_update update_docker:
 	#
 	# build image
 	$(INSTALL) download-third-party-packages.sh ci
-	$(INSTALL) bar/test/bar-sudoers ci
+	$(INSTALL) bar/tests/bar-sudoers ci
 	#
 	(cd ci; $(DOCKER) build -f build.dockerfile -t bar --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
 	#

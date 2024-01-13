@@ -658,6 +658,15 @@ INTERMEDIATE_HEADERS        = errors.h \
                               archive_format_const.h \
                               index_definition.h \
 
+DEPEND_FILTER_FILES =         $(SOURCE_DIR)/errors.h \
+                              errors.h \
+                              $(SOURCE_DIR)/archive_format.h \
+                              archive_format.h \
+                              $(SOURCE_DIR)/archive_format_const.h \
+                              archive_format_const.h \
+                              $(SOURCE_DIR)/index_definition.h \
+                              index_definition.h
+
 ALL_SOURCES                 = $(BAR_SOURCES) \
                               $(BAR_HEADERS) \
                               $(BAR_SOURCES_OTHER) \
@@ -699,7 +708,7 @@ all: $(TARGETS)
 # clean
 clean: \
   gcov_clean \
-  test_clean
+  tests_clean
 	$(RMF) bar.tags
 	$(RMF) $(BAR_OBJECTS_RELEASE)
 	$(RMF) $(BAR_OBJECTS_DEBUG)
@@ -720,7 +729,7 @@ clean: \
 
 distclean: \
   clean \
-  test_distclean
+  tests_distclean
 	$(RMF) Makefile Makefile.depend
 	$(RMF) config.h
 	$(RMRF) release debug valgrind
@@ -769,7 +778,7 @@ help:
 	@$(ECHO) "  rundev_ssl"
 	@$(ECHO) "  rundev_test"
 	@$(ECHO) ""
-	@$(MAKE) -C test -j1 --no-print-directory -s help_output
+	@$(MAKE) -C tests -j1 --no-print-directory -s help_output
 	@$(ECHO) ""
 	@$(ECHO) "  show_debug_test_code"
 	@$(ECHO) "  run_debug_test_code"
@@ -814,32 +823,47 @@ Makefile.depend: $(SOURCE_DIR)/Makefile.in
 	$(ECHO) >Makefile.depend
 	for source in $(addprefix $(SOURCE_DIR)/,$(BAR_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_INDEX_SOURCES)) $(EXTERN_SOURCES); do \
           $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
+            $(foreach i,$(DEPEND_FILTER_FILES),$(SED) 's| $i | |g' |) \
             $(SED) 's|\(.*\.o:\)|release/\1|g' | \
             $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
+            $(foreach i,$(DEPEND_FILTER_FILES),$(SED) 's| $i | |g' |) \
             $(SED) 's|\(.*\.o:\)|debug/\1|g' | \
             $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
+            $(foreach i,$(DEPEND_FILTER_FILES),$(SED) 's| $i | |g' |) \
             $(SED) 's|\(.*\.o:\)|gcov/\1|g' | \
             $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
+            $(foreach i,$(DEPEND_FILTER_FILES),$(SED) 's| $i | |g' |) \
             $(SED) 's|\(.*\.o:\)|gprof/\1|g' | \
             $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
+            $(foreach i,$(DEPEND_FILTER_FILES),$(SED) 's| $i | |g' |) \
             $(SED) 's|\(.*\.o:\)|valgrind/\1|g' | \
             $(CAT) >> Makefile.depend; \
         done;
 	for source in $(addprefix $(SOURCE_DIR)/,$(COMMON_SOURCES)); do \
           $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
-            $(SED) 's|\(.*\.o:\)|release/common/\1|g' >> Makefile.depend; \
+            $(foreach i,$(DEPEND_FILTER_FILES),$(SED) 's| $i | |g' |) \
+            $(SED) 's|\(.*\.o:\)|release/common/\1|g' | \
+            $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
-            $(SED) 's|\(.*\.o:\)|debug/common/\1|g' >> Makefile.depend; \
+            $(foreach i,$(DEPEND_FILTER_FILES),$(SED) 's| $i | |g' |) \
+            $(SED) 's|\(.*\.o:\)|debug/common/\1|g' | \
+            $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
-            $(SED) 's|\(.*\.o:\)|gcov/common/\1|g' >> Makefile.depend; \
+            $(foreach i,$(DEPEND_FILTER_FILES),$(SED) 's| $i | |g' |) \
+            $(SED) 's|\(.*\.o:\)|gcov/common/\1|g' | \
+            $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
-            $(SED) 's|\(.*\.o:\)|gprof/common/\1|g' >> Makefile.depend; \
+            $(foreach i,$(DEPEND_FILTER_FILES),$(SED) 's| $i | |g' |) \
+            $(SED) 's|\(.*\.o:\)|gprof/common/\1|g' | \
+            $(CAT) >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(foreach i,$(CC_DEFINES),-D$i) $(CC_WARN_FLAGS) $(foreach i,$(CC_INCLUDES),-I$i) -MM $$source 2>/dev/null | \
-            $(SED) 's|\(.*\.o:\)|valgrind/common/\1|g' >> Makefile.depend; \
+            $(foreach i,$(DEPEND_FILTER_FILES),$(SED) 's| $i | |g' |) \
+            $(SED) 's|\(.*\.o:\)|valgrind/common/\1|g' | \
+            $(CAT) >> Makefile.depend; \
         done;
 
 # create tags file
@@ -996,28 +1020,26 @@ errors.c: \
   $(ROOT_DIR)/errors.def \
   $(ROOT_DIR)/errors.pl
 	$(PERL) $(ROOT_DIR)/errors.pl < $(ROOT_DIR)/errors.def -c $@
-release/errors.o: errors.c errors.h
-debug/errors.o: errors.c errors.h
-gcov/errors.o: errors.c errors.h
-gprof/errors.o: errors.c errors.h
-valgrind/errors.o: errors.c errors.h
+release/errors.o: | errors.c errors.h
+debug/errors.o: | errors.c errors.h
+gcov/errors.o: | errors.c errors.h
+gprof/errors.o: | errors.c errors.h
+valgrind/errors.o: | errors.c errors.h
 
 # archive format definition
-.NOTPARALLEL: archive_format.h archive_format_const.h archive_format.c
 archive_format.h: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
 	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -h $@
 archive_format_const.h: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
 	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -n $@
 archive_format.c: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
 	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -c $@ -i archive.h -i archive_format.h
-release/archive_format.o: archive_format.c archive_format.h
-debug/archive_format.o: archive_format.c archive_format.h
-gcov/archive_format.o: archive_format.c archive_format.h
-gprof/archive_format.o: archive_format.c archive_format.h
-valgrind/archive_format.o: archive_format.c archive_format.h
+release/archive_format.o: | archive_format.c archive_format.h
+debug/archive_format.o: | archive_format.c archive_format.h
+gcov/archive_format.o: | archive_format.c archive_format.h
+gprof/archive_format.o: | archive_format.c archive_format.h
+valgrind/archive_format.o: | archive_format.c archive_format.h
 
 # index database definition
-.NOTPARALLEL: index_definition.c index_definition.h
 index_definition.c index_definition.h: \
   $(SOURCE_DIR)/index/index_definition.pl \
   $(SOURCE_DIR)/index/index_common.def \
@@ -1557,65 +1579,66 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
 # ----------------------------------------------------------------------------
 
 # tests
-.PHONY: test_smoke* test_min* test* test_clean* test_distclean*
-test_smoke: \
+.PHONY: tests_smoke* tests_min* tests*
+tests_smoke: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
   bar-gcov@EXEEXT@ \
   bar-gprof@EXEEXT@ \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test_smoke TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_smoke-debug: \
+	@$(MAKE) -C tests -j1 tests_smoke TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+tests_smoke-debug: \
   bar-debug@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test_smoke-debug TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_smoke-gcov: \
+	@$(MAKE) -C tests -j1 tests_smoke-debug TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+tests_smoke-gcov: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test_smoke-gcov TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_smoke-gprof: \
+	@$(MAKE) -C tests -j1 tests_smoke-gcov TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+tests_smoke-gprof: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test_smoke-gprof TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_smoke-valgrind: \
+	@$(MAKE) -C tests -j1 tests_smoke-gprof TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+tests_smoke-valgrind: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test_smoke-valgrind TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+	@$(MAKE) -C tests -j1 tests_smoke-valgrind TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 
-test_min tests_min: \
+tests_min: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
   bar-gcov@EXEEXT@ \
   bar-gprof@EXEEXT@ \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_min-debug tests_min-debug: \
+	@$(MAKE) -C tests -j1 test TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+tests_min-debug: \
   bar-debug@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test-debug TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_min-gcov tests_min-gcov: \
+	@$(MAKE) -C tests -j1 test-debug TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+tests_min-gcov: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test-gcov TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_min-gprof tests_min-gprof: \
+	@$(MAKE) -C tests -j1 test-gcov TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+tests_min-gprof: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test-gprof TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
-test_min-valgrind tests_min-valgrind: \
+	@$(MAKE) -C tests -j1 test-gprof TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+tests_min-valgrind: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 test-valgrind TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+	@$(MAKE) -C tests -j1 test-valgrind TEST_EMULATION=1 COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)" IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 
-test tests: \
+.PHONY: tests test test*
+tests test: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
   bar-gcov@EXEEXT@ \
   bar-gprof@EXEEXT@ \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 $@ TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
+	@$(MAKE) -C tests -j1 $@ TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g'
 test% tests%: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
@@ -1623,29 +1646,30 @@ test% tests%: \
   bar-gprof@EXEEXT@ \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 $@
+	@$(MAKE) -C tests -j1 $@
 test%-debug tests%-debug: \
   bar-debug@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 $@
+	@$(MAKE) -C tests -j1 $@
 test%-gcov test%-gcov: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 $@
+	@$(MAKE) -C tests -j1 $@
 test%-gprof tests%-gprof: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 $@
+	@$(MAKE) -C tests -j1 $@
 test%-valgrind tests%-valgrind: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test -j1 $@
+	@$(MAKE) -C tests -j1 $@
 
-test_clean tests_clean:
-	@$(MAKE) -C test clean
+.PHONY: tests_clean tests_distclean
+tests_clean:
+	@$(MAKE) -C tests clean
 
-test_distclean tests_distclean:
-	@$(MAKE) -C test distclean
+tests_distclean:
+	@$(MAKE) -C tests distclean
 
 # ----------------------------------------------------------------------------
 
@@ -1661,7 +1685,7 @@ BAR_VALGRIND = ./bar-valgrind@EXEEXT@
 # test environment variables
 TEST_ENVIRONMENT = DISPLAY= SSH_ASKPASS=
 
-run_debug_test_code:
+run_debug_tests_code:
 	$(call functionTestCheckExitcode,125,125,initAll1=1 $(TEST_BAR))
 	$(call functionTestCheckExitcode,125,125,initAll2=1 $(TEST_BAR))
 	$(call functionTestCheckExitcode,125,125,initAll3=1 $(TEST_BAR))
@@ -1821,12 +1845,12 @@ gcov%: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	$(MAKE) \
-    -C test \
+    -C tests \
     -j1 \
-    TEST_BAR=$(BUILD_DIR)/bar/bar-gcov \
+    TEST_BAR=$(BUILD_DIR)/bar/bar-gcov@EXEEXT@ \
     COMPRESS_NAMES="`if test -z "$(COMPRESS_NAMES)"; then $(ECHO) $(COMPRESS_NAMES); else $(ECHO) $(MIN_COMPRESS_NAMES); fi`" \
     CRYPT_NAMES="`if test -z "$(CRYPT_NAMES)"; then $(ECHO) $(CRYPT_NAMES); else $(ECHO) $(MIN_CRYPT_NAMES); fi`" \
-    $(subst gcov,test,$@)
+    $(subst gcov,tests,$@)
 
 gcov_clean:
 	$(INSTALL) -d gcov
@@ -1857,7 +1881,13 @@ gprof_clean:
 gprof%: \
   bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	$(MAKE) -C test -j1 $(subst gprof,test,$@) TEST_BAR=$(BUILD_DIR)/bar/bar-gprof@EXEEXT@ COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" CRYPT_NAMES="$(MIN_CRYPT_NAMES)"
+	$(MAKE) \
+    -C tests \
+    -j1 \
+    TEST_BAR=$(BUILD_DIR)/bar/bar-gprof@EXEEXT@ \
+    COMPRESS_NAMES="`if test -z "$(COMPRESS_NAMES)"; then $(ECHO) $(COMPRESS_NAMES); else $(ECHO) $(MIN_COMPRESS_NAMES); fi`" \
+    CRYPT_NAMES="`if test -z "$(CRYPT_NAMES)"; then $(ECHO) $(CRYPT_NAMES); else $(ECHO) $(MIN_CRYPT_NAMES); fi`" \
+    $(subst gprof,tests,$@)
 
 # ----------------------------------------------------------------------------
 
@@ -2100,7 +2130,7 @@ ifneq ($(DIRECTORY),)
                           $(SOURCE_DIR)/po/*.pot \
                           $(SOURCE_DIR)/po/*.po \
                    )
-	$(MAKE) -C test dist DIRECTORY=../$(DIRECTORY)
+	$(MAKE) -C tests dist DIRECTORY=../$(DIRECTORY)
 else
 	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
 endif

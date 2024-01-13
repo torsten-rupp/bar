@@ -430,28 +430,32 @@ poeditjp:
 # ----------------------------------------------------------------------------
 
 # tests
-.PHONY: test
-.PHONY: test
-test: compile
-	@$(ECHO_NO_LF) "Test 1: basic..."
+.PHONY: tests test
+.PHONY: tests test
+tests test: compile
+	@$(ECHO_NO_LF) "Test 1: arguments..."
 	@$(MAKE) \
           BARCONTROL_OPTIONS="$(TEST_OPTIONS) localhost --port=$(TEST_SERVER_PORT) --tls-port=0" \
-	  test_basic \
+          test_arguments \
           ;
 
-test_basic:
+test_arguments:
 ifneq ($(JAVA),)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --help $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --version $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --ping $(LOG)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --list $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --list-jobs $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --list-schedules $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-info $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-entities-list $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-entities-list home $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -n home $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-storages-list $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-storages-list home $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -a home $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-entries-list $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --index-database-entries-list home $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -e home $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --suspend $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --continue $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 -s $(LOG)
@@ -465,6 +469,12 @@ ifneq ($(JAVA),)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --maintenance=60h $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --maintenance=60m $(LOG)
 	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --maintenance=60s $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --ping --no-tls $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --ping --insecure-tls $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --ping --role basic $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --ping --role normal $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --ping --role expert $(LOG)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --ping --geometry=800x600+0+0 $(LOG)
 	$(call functionTestCheckExitcode,1,1,$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --port=$(TEST_SERVER_PORT) --tls-port=0 --not-existing-option) $(LOG)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
