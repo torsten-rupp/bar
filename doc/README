@@ -3,9 +3,9 @@ BAR - BAckup aRchiver
 BAR is backup archiver program. It can create compressed, encrypted
 and split archives of files and disk images which can be stored
 on a hard disk, cd, dvd, bd or directly on a server via ftp, scp,
-sftp, webDAV, SMB/CIFS. BAR can create full and incremental/
-differential archives. A server-mode and a scheduler is integrated
-for making automated backups in the background.
+sftp, webDAV/webDAVs, or SMB/CIFS. BAR can create full and
+incremental/differential archives. A server-mode and a scheduler is
+integrated for making automated backups in the background.
 
 --- Features
 
@@ -87,9 +87,6 @@ for graphical frontend:
 * SWT 3.6 or newer
 * ANT and launch4j
 
-optional for graphical frontend:
-* EPM
-
 for compiling:
 * m4
 * bison
@@ -97,7 +94,7 @@ for compiling:
 * perl
 * tclsh
 
-for building packages:
+for building:
 * docker
 
 Note: use the docker file to build a working build environment.
@@ -105,12 +102,12 @@ Note: use the docker file to build a working build environment.
 --- Installation
 
 There are pre-compiled binary packages available for several
-system. You can download them from
+systems. You can download them from
 
   http://www.kigen.de/projects/bar/index.html
 
 If there is no binary package available for your system, you
-can compile bar by yourself.
+can compile BAR by yourself.
 
 1)
 
@@ -125,18 +122,17 @@ Install the following development packages (or newer versions):
   icu
   perl
   tclsh (tcl package)
-  epm
 
 2)
 
-Download the additional packages with supplied script
-'download-third-party-packages.sh' (wget, svn, patch, unzip, xz
-utilities are required):
+Download the additional packages with the supplied script
+'download-third-party-packages.sh' (wget, git, svn, patch, unzip,
+xz utilities are required):
 
   download-third-party-packages.sh
 
-Note: bar configure will build the additional packages into a temporary
-      directory and link the libraries statically.
+Note: BAR configure will build the additional packages into a
+      temporary directory and link the libraries statically.
 
 3)
 
@@ -172,7 +168,7 @@ Notes:
 --- Compression
 
 For compression zip, bzip2, lzma, lzo, lz4, or zstd can be used. The
-compression algorithms offer different levels of compression ration and
+compression algorithms offer different levels of compression ratio and
 time. The following values give a rough impression for compression of
 some arbitary data:
 
@@ -214,7 +210,7 @@ passphrase used for encryption can read the contents of the
 files nor the file meta data, e. g. file names (as long as the
 used encryption algorithm is not broken by someone).
 
-For asymmetric encryption a pair of keys with hybrit
+For asymmetric encryption a pair of keys with hybrid
 encryption is used: the file meta data and file data is
 encrypted with a symmetric algorithm, e. g. AES or Twofish.
 The key for symmetric encryption is chosen from random data,
@@ -229,16 +225,16 @@ knowledge of the password needed for decryption.
 For storing archive files on DVD an external program like
 "growisofs" is needed which is actually writing data to a DVD.
 BAR create the archive files in a temporary directory and then
-call the external tool for burning the DVD. The tool
+call the external tool for writing the DVD. The tool
 "growisofs" is recommented for storing archive files directly
 on DVD. An ISO image can also be created first e. g. with
 mkisofs. BAR support external pre- and post-processing
-commands when creating an ISO-image and burning a DVD. With
+commands when creating an ISO-image and writing to a DVD. With
 these commands e. g. dvdisaster can be integrated into BAR to
 create RS-protected backup DVDs.
 
 The following external tools are needed with the default
-settings of BAR to create an DVD:
+settings of BAR to create a DVD:
 
 - growisofs
 - mkisofs
@@ -249,13 +245,11 @@ settings of BAR to create an DVD:
 --- Graphical frontend
 
 BARControl is a graphical user interface for BAR. It is
-written in Java with SWT (Note: the former version used
-TclTk). To run the graphical user interface a Java
-runtime environment V1.8 (JRE8) or newer or Java
+written in Java with SWT. To run the graphical user interface
+a Java runtime environment V1.8 (JRE8) or newer or Java
 development kit V1.8 (JDK8) or newer is required.
 
-To start the graphical user interface (for 32bit
-systems) type in
+To start the graphical user interface type in
 
 On Linux:
 
@@ -264,19 +258,21 @@ On Linux:
 resp.
 
   java -jar barcontrol-linux.jar
+  java -jar barcontrol-linux_64.jar
 
 On Windows:
 
-If jar is packed with launch4j into an .exe:
+If the jar is packed with launch4j into an .exe:
 
   barcontrol.exe
 
 resp.
 
   java -jar barcontrol-windows.jar
+  java -jar barcontrol-windows_64.jar
 
 
-BARControl ask for server name where BAR is running and the
+BARControl ask for a server name where BAR is running and the
 login password and then connect to the running BAR server
 either via TLS or a plain socket connection. BARControl can
 edit jobs on a server, display the current status of jobs
@@ -289,7 +285,7 @@ startet first. Either enter
 
 or use the start-script 'barserver' from /etc/init.d.
 
-Please note that for a TLS connection the TSL keys and
+Please note that for a TLS connection the TLS keys and
 cerificate files have to be available.
 
 Note: If you want to use a ssh tunnel to connect to the bar
@@ -303,9 +299,9 @@ Install Java, SWT, launch4j:
 * Install Java
 
 In case you do not want to use the included SWT 3.6
-in barcontrol-linux.jar or barcontrol-windows.jar and
+in barcontrol-linux*.jar or barcontrol-windows*.jar
 use instead barcontrol.jar (which does not include the
-SWT files) SWT have to be installed:
+SWT files). SWT have to be installed:
 
 * Download SWT from http://www.eclipse.org/swt
 * Install SWT to some directory

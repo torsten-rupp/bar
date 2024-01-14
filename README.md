@@ -4,9 +4,9 @@ Backup ARchiver
 BAR is backup archiver program. It can create compressed, encrypted
 and split archives of files and disk images which can be stored
 on a hard disk, cd, dvd, bd or directly on a server via ftp, scp,
-sftp, or webDAV. BAR can create full and incremental/differential
-archives. A server-mode and a scheduler is integrated for making
-automated backups in the background.
+sftp, webDAV/webDAVs, or SMB/CIFS. BAR can create full and
+incremental/differential archives. A server-mode and a scheduler is
+integrated for making automated backups in the background.
 
 Features
 
@@ -25,7 +25,7 @@ Features
   TWOFISH, AES, a. o.),
 * asymmetric encryption with RSA,
 * store archives directly on external server via ftp or scp,
-  sftp, webdav, webdavs,
+  sftp, webDAV, webDAVs, SMB/CIFS,
 * with external tools: store archives on CD/DVD/BD including
   error correction codes,
 * support storage on a generic device,

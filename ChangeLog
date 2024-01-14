@@ -1,16 +1,15 @@
-2023-09-01 23
-  * changed version number scheme
+2024-01-14 23
+  * changed version number scheme: single number
   * added support for storing on Samba/CIFS server
-  * added pre/post command macro %nextScheduleDateTime
   * added execute ECC commands for device
   * experimental Windows support!
   * convert character encoding of file names always to
-    UTF-8 (required on Windows)
-  * always store names UTF-8 encoded
+    UTF-8 (required on Windows and none UTF-8 systems)
+  * always store text UTF-8 encoded
   * added options --system-encoding, --console-encoding,
     --force-console-encoding
-  * added macro %nextJobName, %nextJobUUID,
-    %nextScheduleUUID, %nextSchedule,
+  * added macro pre/post command macros %nextJobName,
+    %nextJobUUID, %nextScheduleUUID, %nextSchedule,
     %nextScheduleDateTime, %nextScheduleUUID
   * upgrade zlib 1.3
   * upgrade libidn2 2.3.4
