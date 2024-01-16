@@ -120,11 +120,11 @@ DISTRIBUTION_NAME           = $(PACKAGE_NAME)-$(VERSION)
 DISTRIBUTION_NAME_ORIG      = $(PACKAGE_NAME)_$(VERSION).orig
 DISTRIBUTION_NAME_GUI       = $(PACKAGE_NAME_GUI)-$(VERSION)
 
-TEST_PACKAGES_CENTOS        := "8"
-TEST_PACKAGES_FEDORA        := "37 38 39 40"
-TEST_PACKAGES_OPENSUSE_LEAP := "15.1 15.2 15.3 15.4 15.5"
-TEST_PACKAGES_DEBIAN        := "10 11 12"
-TEST_PACKAGES_UBUNTU        := "20.04 22.04 23.04 23.10"
+TEST_PACKAGES_CENTOS        := 8
+TEST_PACKAGES_FEDORA        := 37 38 39 40
+TEST_PACKAGES_OPENSUSE_LEAP := 15.1 15.2 15.3 15.4 15.5
+TEST_PACKAGES_DEBIAN        := 10 11 12
+TEST_PACKAGES_UBUNTU        := 20.04 22.04 23.04 23.10
 
 #-------------------------------- functions ----------------------------------
 
@@ -302,6 +302,8 @@ help:
 	@$(ECHO) "  install_test_deb[d]"
 	@$(ECHO) "  install_test_deb_debian[$(subst $(SPACE),\|,$(TEST_PACKAGES_DEBIAN))]-x86_64[d]"
 	@$(ECHO) "  install_test_deb_ubuntu[$(subst $(SPACE),\|,$(TEST_PACKAGES_UBUNTU))]-x86_64[d]"
+	@$(ECHO) ""
+	@$(ECHO) "  install_test_gentoo-stage3-x86_64[d]"
 	@$(ECHO) ""
 	@$(ECHO) "  install_test_win32[d]"
 	@$(ECHO) ""
@@ -759,6 +761,8 @@ docker_update update_docker:
 	#
 	$(foreach i,$(TEST_PACKAGES_UBUNTU),$(DOCKER) pull ubuntu:$i;)
 	#
+	$(DOCKER) pull gentoo/stage3
+	#
 	$(RMF) ci/bar-sudoers
 	$(RMF) ci/download-third-party-packages.sh
 
@@ -1087,7 +1091,7 @@ install_test_rpm_opensused: \
   install_test_rpm_opensuse-tumbleweed-x86_64d \
   $(foreach i,$(TEST_PACKAGES_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64d)
 
-.PHONY: install_test_rpm_centos8-x86_64 install_test_rpm_centos8-x86_64d
+.PHONY: install_test_rpm_centos%-x86_64 install_test_rpm_centos%-x86_64d
 install_test_rpm_centos%-x86_64: $(DISTRIBUTION_NAME)-x86_64.rpm
 	@$(call functionPrintInfo,Test install Centos $* 64bit)
 	$(call functionInstallTestRPM,centos:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
@@ -1164,6 +1168,11 @@ install_test_deb_ubuntu%-x86_64:
 install_test_deb_ubuntu%-x86_64d:
 	@$(call functionPrintInfo,Test install Ubuntu $* 64bit)
 	@$(call functionInstallTestDEB,ubuntu:$*,x86_64,$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb,--debug) $(if $(QUIET),1>/dev/null)
+	@$(call functionPrintResult,OK)
+
+install_test_rpm_gentoo-stage3-x86_64d:
+	@$(call functionPrintInfo,Test install gentoo stage3 64bit)
+	@$(call functionInstallTestRPM,gentoo/stage3,,x86_64,$(DISTRIBUTION_NAME)-x86_64.rpm,--debug) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_win32 install_test_win32d
