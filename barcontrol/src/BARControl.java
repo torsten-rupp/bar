@@ -2371,6 +2371,185 @@ public class BARControl
     }
   }
 
+  /** entry info
+   */
+  static class EntryInfo
+  {
+    // file
+    class File
+    {
+      String name;
+      long   size;
+      long   dateTime;
+      long   fragmentCount;
+    };
+
+    // image
+    class Image
+    {
+      String name;
+      long   size;
+      long   blockOffset;
+      long   blockCount;
+    };
+
+    // directory
+    class Directory
+    {
+      String name;
+      long   dateTime;
+    };
+
+    // link
+    class Link
+    {
+      String name;
+      String destinationName;
+      long   dateTime;
+    };
+
+    // hardlink
+    class HardLink
+    {
+      String name;
+      long   size;
+      long   dateTime;
+      long   fragmentCount;
+    };
+
+    // special
+    class Special
+    {
+      String name;
+      long   dateTime;
+    };
+
+    EntryTypes entryType;
+    long       entryId;
+    String     storageName;
+
+    File       file;
+    Image      image;
+    Directory  directory;
+    Link       link;
+    HardLink   hardLink;
+    Special    special;
+
+    public static EntryInfo newFile(long   entryId,
+                                    String storageName,
+                                    String fileName,
+                                    long   size,
+                                    long   dateTime,
+                                    long   fragmentCount
+                                   )
+    {
+      EntryInfo entryInfo = new EntryInfo();
+      entryInfo.entryType          = EntryTypes.FILE;
+      entryInfo.entryId            = entryId;
+      entryInfo.storageName        = storageName;
+      entryInfo.file = entryInfo.new File();
+      entryInfo.file.name          = fileName;
+      entryInfo.file.size          = size;
+      entryInfo.file.dateTime      = dateTime;
+      entryInfo.file.fragmentCount = fragmentCount;
+
+      return entryInfo;
+    };
+
+    public static EntryInfo newImage(long   entryId,
+                                     String storageName,
+                                     String imageName,
+                                     long   size,
+                                     long   blockOffset,
+                                     long   blockCount
+                                    )
+    {
+      EntryInfo entryInfo = new EntryInfo();
+      entryInfo.entryType         = EntryTypes.IMAGE;
+      entryInfo.entryId           = entryId;
+      entryInfo.storageName       = storageName;
+      entryInfo.image = entryInfo.new Image();
+      entryInfo.image.name        = imageName;
+      entryInfo.image.size        = size;
+      entryInfo.image.blockOffset = blockOffset;
+      entryInfo.image.blockCount  = blockCount;
+
+      return entryInfo;
+    }
+
+    public static EntryInfo newDirectory(long   entryId,
+                                         String storageName,
+                                         String directoryName,
+                                         long   dateTime
+                                        )
+    {
+      EntryInfo entryInfo = new EntryInfo();
+      entryInfo.entryType          = EntryTypes.DIRECTORY;
+      entryInfo.entryId            = entryId;
+      entryInfo.storageName        = storageName;
+      entryInfo.directory = entryInfo.new Directory();
+      entryInfo.directory.name     = directoryName;
+      entryInfo.directory.dateTime = dateTime;
+
+      return entryInfo;
+    }
+
+    public static EntryInfo newLink(long   entryId,
+                                    String storageName,
+                                    String linkName,
+                                    String destinationName
+                                   )
+    {
+      EntryInfo entryInfo = new EntryInfo();
+      entryInfo.entryType            = EntryTypes.LINK;
+      entryInfo.entryId              = entryId;
+      entryInfo.storageName          = storageName;
+      entryInfo.link = entryInfo.new Link();
+      entryInfo.link.name            = linkName;
+      entryInfo.link.destinationName = destinationName;
+
+      return entryInfo;
+    }
+
+    public static EntryInfo newHardLink(long   entryId,
+                                        String storageName,
+                                        String fileName,
+                                        long   size,
+                                        long   dateTime,
+                                        long   fragmentCount
+                                       )
+    {
+      EntryInfo entryInfo = new EntryInfo();
+      entryInfo.entryType              = EntryTypes.HARDLINK;
+      entryInfo.entryId                = entryId;
+      entryInfo.storageName            = storageName;
+      entryInfo.hardLink = entryInfo.new HardLink();
+      entryInfo.hardLink.name          = fileName;
+      entryInfo.hardLink.size          = size;
+      entryInfo.hardLink.dateTime      = dateTime;
+      entryInfo.hardLink.fragmentCount = fragmentCount;
+
+      return entryInfo;
+    }
+
+    public static EntryInfo newSpecial(long   entryId,
+                                       String storageName,
+                                       String name,
+                                       long   dateTime
+                                      )
+    {
+      EntryInfo entryInfo = new EntryInfo();
+      entryInfo.entryType        = EntryTypes.SPECIAL;
+      entryInfo.entryId          = entryId;
+      entryInfo.storageName      = storageName;
+      entryInfo.special = entryInfo.new Special();
+      entryInfo.special.name     = name;
+      entryInfo.special.dateTime = dateTime;
+
+      return entryInfo;
+    }
+  };
+
   /** list local directory
    */
   public static ListDirectory<File> listDirectory = new ListDirectory<File>()
@@ -2766,6 +2945,9 @@ public class BARControl
     new Option("--role",                         null,Options.Types.ENUMERATION,"role",ROLE_ENUMERATION),
 
     new Option("--geometry",                     null,Options.Types.SPECIAL,    "geometry",OPTION_GEOMETRY),
+
+    new Option("--long-format",                  "-L",Options.Types.BOOLEAN,    "longFormatFlag"),
+    new Option("--no-header-footer",             null,Options.Types.BOOLEAN,    "noHeaderFooterFlag"),
 
     new Option("--version",                      null,Options.Types.BOOLEAN,    "versionFlag"),
     new Option("--help",                         "-h",Options.Types.BOOLEAN,    "helpFlag"),
@@ -3196,6 +3378,9 @@ public class BARControl
     System.out.println("         --restore=<name>                           - restore storage <name>");
     System.out.println("         --destination=<directory>                  - destination to restore entries");
     System.out.println("         --overwrite-entries                        - overwrite existing entries on restore");
+    System.out.println("");
+    System.out.println("         -L|--long-format                           - list in long format");
+    System.out.println("         --no-header-footer                         - no header/footer output in list");
     System.out.println("");
     System.out.println("         --role=<role>                              - select role:");
     System.out.println("                                                        basic (default)");
@@ -6212,7 +6397,10 @@ if (false) {
                                             )
                               );
 
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            }
             for (JobInfo jobInfo : jobInfoList)
             {
               String compressAlgorithms;
@@ -6244,8 +6432,11 @@ if (false) {
                                              )
                                );
             }
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(BARControl.tr("{0} {0,choice,0#jobs|1#job|1<jobs}",jobInfoList.size()));
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+              System.out.println(BARControl.tr("{0} {0,choice,0#jobs|1#job|1<jobs}",jobInfoList.size()));
+            }
           }
           catch (Exception exception)
           {
@@ -6353,7 +6544,10 @@ if (false) {
                                             )
                               );
 
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            }
             for (ScheduleInfo scheduleInfo : nextScheduleList)
             {
               System.out.println(String.format("%-20s %-36s %-10s %-23s %-5s %-11s %8d %-15s %-5s %-5s %-3s %-3s %-3s %-19s %-19s",
@@ -6375,8 +6569,11 @@ if (false) {
                                               )
                                );
             }
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(BARControl.tr("{0} {0,choice,0#jobs|1#schedule|1<schedules}",nextScheduleList.size()));
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+              System.out.println(BARControl.tr("{0} {0,choice,0#jobs|1#schedule|1<schedules}",nextScheduleList.size()));
+            }
           }
           catch (Exception exception)
           {
@@ -6617,7 +6814,7 @@ if (false) {
             final int n[] = new int[]{0};
 
             System.out.println(String.format("%-8s %-8s %-12s %-14s %-14s %-14s %-19s %s",
-                                             BARControl.tr("Id"),
+                                             BARControl.tr("Entity id"),
                                              BARControl.tr("Job id"),
                                              BARControl.tr("Type"),
                                              BARControl.tr("Size"),
@@ -6627,7 +6824,10 @@ if (false) {
                                              BARControl.tr("Job")
                                             )
                               );
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            }
             BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S sortMode=JOB_UUID ordering=ASCENDING",
                                                          !Settings.indexDatabaseEntitiesListName.isEmpty() ? Settings.indexDatabaseEntitiesListName : ""
                                                         ),
@@ -6663,8 +6863,11 @@ if (false) {
                                        }
                                      }
                                     );
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(BARControl.tr("{0} entities",n[0]));
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+              System.out.println(BARControl.tr("{0} entities",n[0]));
+            }
           }
           catch (Exception exception)
           {
@@ -6685,7 +6888,7 @@ if (false) {
             final int n[] = new int[]{0};
 
             System.out.println(String.format("%-8s %-8s %-14s %-19s %-16s %-6s %s",
-                                             BARControl.tr("Id"),
+                                             BARControl.tr("Storage id"),
                                              BARControl.tr("Entity"),
                                              BARControl.tr("Size"),
                                              BARControl.tr("Date/Time"),
@@ -6694,7 +6897,10 @@ if (false) {
                                              BARControl.tr("Name")
                                             )
                               );
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            }
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S sortMode=NAME ordering=ASCENDING",
                                                          Settings.indexDatabaseStoragesListName
                                                         ),
@@ -6727,8 +6933,11 @@ if (false) {
                                        }
                                      }
                                     );
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(BARControl.tr("{0} {0,choice,0#storages|1#storage|1<storages}",n[0]));
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+              System.out.println(BARControl.tr("{0} {0,choice,0#storages|1#storage|1<storages}",n[0]));
+            }
           }
           catch (Exception exception)
           {
@@ -6743,18 +6952,6 @@ if (false) {
           // list storage index
           try
           {
-            final int n[] = new int[]{0};
-
-            System.out.println(String.format("%-8s %-8s %-14s %-19s %s",
-                                             BARControl.tr("Id"),
-                                             BARControl.tr("Type"),
-                                             BARControl.tr("Size"),
-                                             BARControl.tr("Date/Time"),
-                                             BARControl.tr("Name")
-                                            )
-                              );
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-//TODO: add storage names
             BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO entryType=* name=%'S newestOnly=%y  selectedOnly=no fragmentsCount=no",
                                                          Settings.indexDatabaseEntriesListName,
                                                          Settings.indexDatabaseEntriesNewestOnly
@@ -6770,6 +6967,7 @@ if (false) {
                                      }
                                     );
 
+            final ArrayList<EntryInfo> entryInfoList = new ArrayList<EntryInfo>();
             BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryType=* name=%'S newestOnly=%y limit=1024",
                                                          Settings.indexDatabaseEntriesListName,
                                                          Settings.indexDatabaseEntriesNewestOnly
@@ -6781,8 +6979,9 @@ if (false) {
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long       entryId   = valueMap.getLong("entryId",0L                );
-                                         EntryTypes entryType = valueMap.getEnum("entryType",EntryTypes.class);
+                                         String     storageName = valueMap.getString("storageName"               );
+                                         long       entryId     = valueMap.getLong  ("entryId",0L                );
+                                         EntryTypes entryType   = valueMap.getEnum  ("entryType",EntryTypes.class);
 
                                          switch (entryType)
                                          {
@@ -6793,15 +6992,14 @@ if (false) {
                                                long   dateTime        = valueMap.getLong  ("dateTime",0L     );
                                                long   fragmentCount   = valueMap.getLong  ("fragmentCount",0L);
 
-                                               System.out.println(String.format("%8d %-8s %14d %-19s %s",
-                                                                                getDatabaseId(entryId),
-                                                                                "FILE",
-                                                                                size,
-                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                fileName
-                                                                               )
-                                                                 );
-                                               n[0]++;
+                                               entryInfoList.add(EntryInfo.newFile(entryId,
+                                                                                   storageName,
+                                                                                   fileName,
+                                                                                   size,
+                                                                                   dateTime,
+                                                                                   fragmentCount
+                                                                                  )
+                                                                );
                                              }
                                              break;
                                            case IMAGE:
@@ -6811,15 +7009,14 @@ if (false) {
                                                long   blockOffset     = valueMap.getLong  ("blockOffset",0L);
                                                long   blockCount      = valueMap.getLong  ("blockCount", 0L);
 
-                                               System.out.println(String.format("%8d %-8s %14d %-19s %s",
-                                                                                getDatabaseId(entryId),
-                                                                                "IMAGE",
-                                                                                size,
-                                                                                "",
-                                                                                imageName
-                                                                               )
-                                                                 );
-                                               n[0]++;
+                                               entryInfoList.add(EntryInfo.newImage(entryId,
+                                                                                    storageName,
+                                                                                    imageName,
+                                                                                    size,
+                                                                                    blockOffset,
+                                                                                    blockCount
+                                                                                   )
+                                                                );
                                              }
                                              break;
                                            case DIRECTORY:
@@ -6827,33 +7024,27 @@ if (false) {
                                                String directoryName   = valueMap.getString("name"       );
                                                long   dateTime        = valueMap.getLong  ("dateTime",0L);
 
-                                               System.out.println(String.format("%8d %-8s %14s %-19s %s",
-                                                                                getDatabaseId(entryId),
-                                                                                "DIR",
-                                                                                "",
-                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                directoryName
-                                                                               )
-                                                                 );
-                                               n[0]++;
+                                               entryInfoList.add(EntryInfo.newDirectory(entryId,
+                                                                                        storageName,
+                                                                                        directoryName,
+                                                                                        dateTime
+                                                                                       )
+                                                                );
                                              }
                                              break;
                                            case LINK:
                                              {
                                                String linkName        = valueMap.getString("name"             );
                                                String destinationName = valueMap.getString("destinationName"  );
+// TODO: datetime for link?
                                                long   dateTime        = valueMap.getLong  ("dateTime",      0L);
 
-                                               System.out.println(String.format("%8d %-8s %14s %-19s %s -> %s",
-                                                                                getDatabaseId(entryId),
-                                                                                "LINK",
-                                                                                "",
-                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                linkName,
-                                                                                destinationName
-                                                                               )
-                                                                 );
-                                               n[0]++;
+                                               entryInfoList.add(EntryInfo.newLink(entryId,
+                                                                                   storageName,
+                                                                                   linkName,
+                                                                                   destinationName
+                                                                                  )
+                                                                );
                                              }
                                              break;
                                            case HARDLINK:
@@ -6863,39 +7054,234 @@ if (false) {
                                                long   dateTime        = valueMap.getLong  ("dateTime",0L     );
                                                long   fragmentCount   = valueMap.getLong  ("fragmentCount",0L);
 
-                                               System.out.println(String.format("%8d %-8s %14d %-19s %s",
-                                                                                getDatabaseId(entryId),
-                                                                                "HARDLINK",
-                                                                                size,
-                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                fileName
-                                                                               )
-                                                                 );
-                                               n[0]++;
+                                               entryInfoList.add(EntryInfo.newHardLink(entryId,
+                                                                                       storageName,
+                                                                                       fileName,
+                                                                                       size,
+                                                                                       dateTime,
+                                                                                       fragmentCount
+                                                                                      )
+                                                                );
                                              }
                                              break;
                                            case SPECIAL:
                                              {
-                                               String name            = valueMap.getString("name"       );
-                                               long   dateTime        = valueMap.getLong  ("dateTime",0L);
+                                               String name     = valueMap.getString("name"       );
+                                               long   dateTime = valueMap.getLong  ("dateTime",0L);
 
-                                               System.out.println(String.format("%8d %-8s %14s %-19s %s",
-                                                                                getDatabaseId(entryId),
-                                                                                "SPECIAL",
-                                                                                "",
-                                                                                DATE_FORMAT.format(new Date(dateTime*1000)),
-                                                                                name
-                                                                               )
-                                                                 );
-                                               n[0]++;
+                                               entryInfoList.add(EntryInfo.newSpecial(entryId,
+                                                                                      storageName,
+                                                                                      name,
+                                                                                      dateTime
+                                                                                     )
+                                                                );
                                              }
                                              break;
                                          }
                                        }
                                      }
                                     );
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(BARControl.tr("{0} entries (max. 1024 shown)",n[0]));
+
+
+            int maxStorageNameWidth = 0;
+            for (EntryInfo entryInfo : entryInfoList)
+            {
+              maxStorageNameWidth = Math.max(entryInfo.storageName.length(),maxStorageNameWidth);
+            }
+
+            if (!Settings.noHeaderFooterFlag)
+            {
+              if (Settings.longFormatFlag)
+              {
+                System.out.println(String.format("%-16s %-8s %-14s %-19s %-"+Integer.toString(maxStorageNameWidth)+"s %s",
+                                                 BARControl.tr("Entry id"),
+                                                 BARControl.tr("Type"),
+                                                 BARControl.tr("Size"),
+                                                 BARControl.tr("Date/Time"),
+                                                 BARControl.tr("Storage"),
+                                                 BARControl.tr("Name")
+                                                )
+                                  );
+              }
+              else
+              {
+                System.out.println(String.format("%-16s %-8s %-14s %-19s %s",
+                                                 BARControl.tr("Entry id"),
+                                                 BARControl.tr("Type"),
+                                                 BARControl.tr("Size"),
+                                                 BARControl.tr("Date/Time"),
+                                                 BARControl.tr("Name")
+                                                )
+                                  );
+              }
+
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            }
+
+            for (EntryInfo entryInfo : entryInfoList)
+            {
+              switch (entryInfo.entryType)
+              {
+               case FILE:
+                 if (Settings.longFormatFlag)
+                 {
+                   System.out.println(String.format("%16d %-8s %14d %-19s %-"+Integer.toString(maxStorageNameWidth)+"s %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "FILE",
+                                                    entryInfo.file.size,
+                                                    DATE_FORMAT.format(new Date(entryInfo.file.dateTime*1000)),
+                                                    entryInfo.storageName,
+                                                    entryInfo.file.name
+                                                   )
+                                     );
+                 }
+                 else
+                 {
+                   System.out.println(String.format("%16d %-8s %14d %-19s %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "FILE",
+                                                    entryInfo.file.size,
+                                                    DATE_FORMAT.format(new Date(entryInfo.file.dateTime*1000)),
+                                                    entryInfo.file.name
+                                                   )
+                                     );
+                 }
+                 break;
+               case IMAGE:
+                 if (Settings.longFormatFlag)
+                 {
+                   System.out.println(String.format("%8d %-8s %14d %-19s %-"+Integer.toString(maxStorageNameWidth)+"s %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "IMAGE",
+                                                    entryInfo.image.size,
+                                                    "",
+                                                    entryInfo.storageName,
+                                                    entryInfo.image.name
+                                                   )
+                                     );
+                 }
+                 else
+                 {
+                   System.out.println(String.format("%8d %-8s %14d %-19s %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "IMAGE",
+                                                    entryInfo.image.size,
+                                                    "",
+                                                    entryInfo.image.name
+                                                   )
+                                     );
+                 }
+                 break;
+               case DIRECTORY:
+                 if (Settings.longFormatFlag)
+                 {
+                   System.out.println(String.format("%16d %-8s %14s %-19s %-"+Integer.toString(maxStorageNameWidth)+"s %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "DIR",
+                                                    "",
+                                                    DATE_FORMAT.format(new Date(entryInfo.directory.dateTime*1000)),
+                                                    entryInfo.storageName,
+                                                    entryInfo.directory.name
+                                                   )
+                                     );
+                 }
+                 else
+                 {
+                   System.out.println(String.format("%16d %-8s %14s %-19s %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "DIR",
+                                                    "",
+                                                    DATE_FORMAT.format(new Date(entryInfo.directory.dateTime*1000)),
+                                                    entryInfo.directory.name
+                                                   )
+                                     );
+                 }
+                 break;
+               case LINK:
+                 if (Settings.longFormatFlag)
+                 {
+                   System.out.println(String.format("%16d %-8s %14s %-19s %-"+Integer.toString(maxStorageNameWidth)+"s %s -> %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "LINK",
+                                                    "",
+                                                    DATE_FORMAT.format(new Date(entryInfo.link.dateTime*1000)),
+                                                    entryInfo.storageName,
+                                                    entryInfo.link.name,
+                                                    entryInfo.link.destinationName
+                                                   )
+                                     );
+                 }
+                 else
+                 {
+                   System.out.println(String.format("%16d %-8s %14s %-19s %s -> %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "LINK",
+                                                    "",
+                                                    DATE_FORMAT.format(new Date(entryInfo.link.dateTime*1000)),
+                                                    entryInfo.link.name,
+                                                    entryInfo.link.destinationName
+                                                   )
+                                     );
+                 }
+                 break;
+               case HARDLINK:
+                 if (Settings.longFormatFlag)
+                 {
+                   System.out.println(String.format("%16d %-8s %14d %-19s %-"+Integer.toString(maxStorageNameWidth)+"s %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "HARDLINK",
+                                                    entryInfo.hardLink.size,
+                                                    DATE_FORMAT.format(new Date(entryInfo.hardLink.dateTime*1000)),
+                                                    entryInfo.storageName,
+                                                    entryInfo.hardLink.name
+                                                   )
+                                     );
+                 }
+                 else
+                 {
+                   System.out.println(String.format("%16d %-8s %14d %-19s %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "HARDLINK",
+                                                    entryInfo.hardLink.size,
+                                                    DATE_FORMAT.format(new Date(entryInfo.hardLink.dateTime*1000)),
+                                                    entryInfo.hardLink.name
+                                                   )
+                                     );
+                 }
+                 break;
+               case SPECIAL:
+                 if (Settings.longFormatFlag)
+                 {
+                   System.out.println(String.format("%16d %-8s %14s %-19s %-"+Integer.toString(maxStorageNameWidth)+"s %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "SPECIAL",
+                                                    "",
+                                                    DATE_FORMAT.format(new Date(entryInfo.special.dateTime*1000)),
+                                                    entryInfo.storageName,
+                                                    entryInfo.special.name
+                                                   )
+                                     );
+                 }
+                 else
+                 {
+                   System.out.println(String.format("%16d %-8s %14s %-19s %s",
+                                                    getDatabaseId(entryInfo.entryId),
+                                                    "SPECIAL",
+                                                    "",
+                                                    DATE_FORMAT.format(new Date(entryInfo.special.dateTime*1000)),
+                                                    entryInfo.special.name
+                                                   )
+                                     );
+                 }
+                 break;
+               }
+            }
+
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+              System.out.println(BARControl.tr("{0} entries (max. 1024 shown)",entryInfoList.size()));
+            }
           }
           catch (Exception exception)
           {
@@ -6925,7 +7311,10 @@ if (false) {
                                              BARControl.tr("Message")
                                             )
                               );
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+            }
             BARServer.executeCommand(StringParser.format("INDEX_HISTORY_LIST"
                                                         ),
                                      1,  // debug level
@@ -6972,8 +7361,11 @@ if (false) {
                                        }
                                      }
                                     );
-            System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            System.out.println(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}",n[0]));
+            if (!Settings.noHeaderFooterFlag)
+            {
+              System.out.println(StringUtils.repeat("-",getTerminalWidth()));
+              System.out.println(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}",n[0]));
+            }
           }
           catch (Exception exception)
           {

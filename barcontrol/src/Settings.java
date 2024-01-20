@@ -607,6 +607,9 @@ public class Settings
   @SettingValue
   public static Boolean                        showSlaveDisconnected           = new Boolean(true);
 
+  public static boolean                        longFormatFlag                  = false;
+  public static boolean                        noHeaderFooterFlag              = false;
+
   // version, help
   public static boolean                        versionFlag                     = false;
   public static boolean                        helpFlag                        = false;

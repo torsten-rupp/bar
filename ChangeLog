@@ -1,3 +1,8 @@
+2024-01-31 23a
+  * BARControl: fixed option --index-database-entries-list:
+    also list storages
+  * BARControl: added options --long-format, --no-header-footer
+
 2024-01-14 23
   * changed version number scheme: single number
   * added support for storing on Samba/CIFS server
