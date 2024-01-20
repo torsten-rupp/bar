@@ -935,7 +935,7 @@ INLINE Codepoint String_atUTF8(ConstString string, size_t index, size_t *nextInd
 
   if (string != NULL)
   {
-    codepoint = stringAtUTF8n(string->data,string->length,index,nextIndex);
+    codepoint = stringAtUTF8N(string->data,string->length,index,nextIndex);
   }
   else
   {
