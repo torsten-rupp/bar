@@ -9892,6 +9892,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_appendFormat(entityIdsString,"%"PRIi64,entityId);
   }
+fprintf(stderr,"%s:%d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
 
   ftsMatchString = getFTSMatchString(String_new(),databaseHandle,"FTS_entries","name",name);
 
@@ -10040,7 +10041,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                        (
                          "entities"
                        ),
-                       DATABASE_FLAG_FETCH_ALL,
+DATABASE_FLAG_DEBUG|                       DATABASE_FLAG_FETCH_ALL,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_KEY("id"),

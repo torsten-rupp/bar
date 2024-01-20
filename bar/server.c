@@ -18407,14 +18407,15 @@ totalEntryContentSize=0;
 
 LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  #define SEND_FILE_ENTRY(jobName,archiveType,hostName,entryId,name,size,dateTime,userId,groupId,permission,fragmentCount) \
+  #define SEND_FILE_ENTRY(jobName,archiveType,hostName,storageName,entryId,name,size,dateTime,userId,groupId,permission,fragmentCount) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S entryId=%"PRIindexId" entryType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentCount=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S entryId=%"PRIindexId" entryType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentCount=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType), \
                           hostName, \
+                          storageName, \
                           entryId, \
                           name, \
                           size, \
@@ -18426,14 +18427,15 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_IMAGE_ENTRY(jobName,archiveType,hostName,entryId,name,fileSystemType,size,fragmentCount) \
+  #define SEND_IMAGE_ENTRY(jobName,archiveType,hostName,storageName,entryId,name,fileSystemType,size,fragmentCount) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S entryId=%"PRIindexId" entryType=IMAGE name=%'S fileSystemType=%s size=%"PRIu64" fragmentCount=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S entryId=%"PRIindexId" entryType=IMAGE name=%'S fileSystemType=%s size=%"PRIu64" fragmentCount=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType), \
                           hostName, \
+                          storageName, \
                           entryId, \
                           name, \
                           FileSystem_fileSystemTypeToString(fileSystemType,NULL), \
@@ -18442,14 +18444,15 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_DIRECTORY_ENTRY(jobName,archiveType,hostName,entryId,name,size,dateTime,userId,groupId,permission) \
+  #define SEND_DIRECTORY_ENTRY(jobName,archiveType,hostName,storageName,entryId,name,size,dateTime,userId,groupId,permission) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S entryId=%"PRIindexId" entryType=DIRECTORY name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S entryId=%"PRIindexId" entryType=DIRECTORY name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType), \
                           hostName, \
+                          storageName, \
                           entryId, \
                           name, \
                           size, \
@@ -18460,14 +18463,15 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_LINK_ENTRY(jobName,archiveType,hostName,entryId,name,destinationName,dateTime,userId,groupId,permission) \
+  #define SEND_LINK_ENTRY(jobName,archiveType,hostName,storageName,entryId,name,destinationName,dateTime,userId,groupId,permission) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S entryId=%"PRIindexId" entryType=LINK name=%'S destinationName=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S entryId=%"PRIindexId" entryType=LINK name=%'S destinationName=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType), \
                           hostName, \
+                          storageName, \
                           entryId, \
                           name, \
                           destinationName, \
@@ -18478,14 +18482,15 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_HARDLINK_ENTRY(jobName,archiveType,hostName,entryId,name,size,dateTime,userId,groupId,permission,fragmentCount) \
+  #define SEND_HARDLINK_ENTRY(jobName,archiveType,hostName,storageName,entryId,name,size,dateTime,userId,groupId,permission,fragmentCount) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S entryId=%"PRIindexId" entryType=HARDLINK name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentCount=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S entryId=%"PRIindexId" entryType=HARDLINK name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentCount=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType), \
                           hostName, \
+                          storageName, \
                           entryId, \
                           name, \
                           size, \
@@ -18497,14 +18502,15 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_SPECIAL_ENTRY(jobName,archiveType,hostName,entryId,name,dateTime,userId,groupId,permission) \
+  #define SEND_SPECIAL_ENTRY(jobName,archiveType,hostName,storageName,entryId,name,dateTime,userId,groupId,permission) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S entryId=%"PRIindexId" entryType=SPECIAL name=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S entryId=%"PRIindexId" entryType=SPECIAL name=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType), \
                           hostName, \
+                          storageName, \
                           entryId, \
                           name, \
                           dateTime, \
@@ -18527,6 +18533,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   IndexId             prevUUIDId;
   String              jobName;
   String              hostName;
+  String              storageName;
   String              entryName;
   FileSystemTypes     fileSystemType;
   String              destinationName;
@@ -18580,6 +18587,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   prevUUIDId      = INDEX_ID_NONE;
   jobName         = String_new();
   hostName        = String_new();
+  storageName     = String_new();
   entryName       = String_new();
   destinationName = String_new();
   error = Index_initListEntries(&indexQueryHandle,
@@ -18602,6 +18610,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init list entries fail");
     String_delete(destinationName);
     String_delete(entryName);
+    String_delete(storageName);
     String_delete(hostName);
     String_delete(jobName);
     String_delete(name);
@@ -18620,7 +18629,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                &entryId,
                                entryName,
                                NULL,  // storageId
-                               NULL,  // storageName
+                               storageName,
                                &size,
                                &timeModified,
                                &userId,
@@ -18656,22 +18665,22 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     switch (INDEX_TYPE(entryId))
     {
       case INDEX_TYPE_FILE:
-        SEND_FILE_ENTRY(jobName,archiveType,hostName,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentCount);
+        SEND_FILE_ENTRY(jobName,archiveType,hostName,storageName,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentCount);
         break;
       case INDEX_TYPE_IMAGE:
-        SEND_IMAGE_ENTRY(jobName,archiveType,hostName,entryId,entryName,fileSystemType,size,fragmentCount);
+        SEND_IMAGE_ENTRY(jobName,archiveType,hostName,storageName,entryId,entryName,fileSystemType,size,fragmentCount);
         break;
       case INDEX_TYPE_DIRECTORY:
-        SEND_DIRECTORY_ENTRY(jobName,archiveType,hostName,entryId,entryName,size,timeModified,userId,groupId,permission);
+        SEND_DIRECTORY_ENTRY(jobName,archiveType,hostName,storageName,entryId,entryName,size,timeModified,userId,groupId,permission);
         break;
       case INDEX_TYPE_LINK:
-        SEND_LINK_ENTRY(jobName,archiveType,hostName,entryId,entryName,destinationName,timeModified,userId,groupId,permission);
+        SEND_LINK_ENTRY(jobName,archiveType,hostName,storageName,entryId,entryName,destinationName,timeModified,userId,groupId,permission);
         break;
       case INDEX_TYPE_HARDLINK:
-        SEND_HARDLINK_ENTRY(jobName,archiveType,hostName,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentCount);
+        SEND_HARDLINK_ENTRY(jobName,archiveType,hostName,storageName,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentCount);
         break;
       case INDEX_TYPE_SPECIAL:
-        SEND_SPECIAL_ENTRY(jobName,archiveType,hostName,entryId,entryName,timeModified,userId,groupId,permission);
+        SEND_SPECIAL_ENTRY(jobName,archiveType,hostName,storageName,entryId,entryName,timeModified,userId,groupId,permission);
         break;
       default:
         // ignored
@@ -18684,6 +18693,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   // free resources
   String_delete(destinationName);
   String_delete(entryName);
+  String_delete(storageName);
   String_delete(hostName);
   String_delete(jobName);
   String_delete(name);

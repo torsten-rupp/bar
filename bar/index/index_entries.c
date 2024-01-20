@@ -2455,6 +2455,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                "entriesNewest \
                                   LEFT JOIN entities         ON entities.id=entriesNewest.entityid \
                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
                                   LEFT JOIN fileEntries      ON fileEntries.entryId=entriesNewest.entryId \
                                   LEFT JOIN imageEntries     ON imageEntries.entryId=entriesNewest.entryId \
                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
@@ -2535,7 +2536,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               NULL,  // groupBy
+                               "entries.id",
                                NULL,  // orderby
                                offset,
                                limit
@@ -2548,6 +2549,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                "entries \
                                   LEFT JOIN entities         ON entities.id=entries.entityId \
                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
                                   LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
                                   LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
@@ -2626,7 +2628,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               NULL,  // groupBy
+                               "entries.id",
                                NULL,  // orderby
                                offset,
                                limit
@@ -2662,6 +2664,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                   LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
                                   LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
                                   LEFT JOIN fileEntries      ON fileEntries.entryId=entriesNewest.entryId \
                                   LEFT JOIN imageEntries     ON imageEntries.entryId=entriesNewest.entryId \
                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
@@ -2742,7 +2745,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               NULL,  // groupBy
+                               "entries.id",
                                NULL,  // orderby
                                offset,
                                limit
@@ -2762,6 +2765,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                   LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
                                   LEFT JOIN entities         ON entities.id=entries.entityId \
                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                  LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
                                   LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
                                   LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
@@ -2789,21 +2793,21 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT64  ("entries.size"),
                                  DATABASE_COLUMN_UINT    (fragmentsCount ? "(SELECT COUNT(id) FROM entryFragments WHERE entryId=entries.id)" : "0"),
                                  DATABASE_COLUMN_KEY     ("CASE entries.type \
-                                                             WHEN ? THEN 0 \
-                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN entryFragments.storageId \
+                                                             WHEN ? THEN entryFragments.storageId \
                                                              WHEN ? THEN directoryEntries.storageId \
                                                              WHEN ? THEN linkEntries.storageId \
-                                                             WHEN ? THEN 0 \
+                                                             WHEN ? THEN entryFragments.storageId \
                                                              WHEN ? THEN specialEntries.storageId \
                                                            END \
                                                           "
                                                          ),
                                  DATABASE_COLUMN_STRING  ("(SELECT name FROM storages WHERE id=CASE entries.type \
-                                                                                                 WHEN ? THEN 0 \
-                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN entryFragments.storageId \
+                                                                                                 WHEN ? THEN entryFragments.storageId \
                                                                                                  WHEN ? THEN directoryEntries.storageId \
                                                                                                  WHEN ? THEN linkEntries.storageId \
-                                                                                                 WHEN ? THEN 0 \
+                                                                                                 WHEN ? THEN entryFragments.storageId \
                                                                                                  WHEN ? THEN specialEntries.storageId \
                                                                                                END \
                                                            ) \
@@ -2841,7 +2845,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               NULL,  // groupBy
+                               "entries.id",
                                NULL,  // orderby
                                offset,
                                limit
