@@ -374,6 +374,7 @@ class JobDataComparator implements Comparator<JobData>
   {
     NAME,
     STATE,
+    SLAVE,
     TYPE,
     PARTSIZE,
     COMPRESS,
@@ -392,12 +393,13 @@ class JobDataComparator implements Comparator<JobData>
   {
     if      (table.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
     else if (table.getColumn(1) == sortColumn) sortMode = SortModes.STATE;
-    else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TYPE;
-    else if (table.getColumn(3) == sortColumn) sortMode = SortModes.PARTSIZE;
-    else if (table.getColumn(4) == sortColumn) sortMode = SortModes.COMPRESS;
-    else if (table.getColumn(5) == sortColumn) sortMode = SortModes.CRYPT;
-    else if (table.getColumn(6) == sortColumn) sortMode = SortModes.LAST_EXECUTED_DATETIME;
-    else if (table.getColumn(7) == sortColumn) sortMode = SortModes.ESTIMATED_TIME;
+    else if (table.getColumn(2) == sortColumn) sortMode = SortModes.SLAVE;
+    else if (table.getColumn(3) == sortColumn) sortMode = SortModes.TYPE;
+    else if (table.getColumn(4) == sortColumn) sortMode = SortModes.PARTSIZE;
+    else if (table.getColumn(5) == sortColumn) sortMode = SortModes.COMPRESS;
+    else if (table.getColumn(6) == sortColumn) sortMode = SortModes.CRYPT;
+    else if (table.getColumn(7) == sortColumn) sortMode = SortModes.LAST_EXECUTED_DATETIME;
+    else if (table.getColumn(8) == sortColumn) sortMode = SortModes.ESTIMATED_TIME;
     else                                       sortMode = SortModes.NAME;
   }
 
@@ -410,12 +412,13 @@ class JobDataComparator implements Comparator<JobData>
 
     if      (table.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
     else if (table.getColumn(1) == sortColumn) sortMode = SortModes.STATE;
-    else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TYPE;
-    else if (table.getColumn(3) == sortColumn) sortMode = SortModes.PARTSIZE;
-    else if (table.getColumn(4) == sortColumn) sortMode = SortModes.COMPRESS;
-    else if (table.getColumn(5) == sortColumn) sortMode = SortModes.CRYPT;
-    else if (table.getColumn(6) == sortColumn) sortMode = SortModes.LAST_EXECUTED_DATETIME;
-    else if (table.getColumn(7) == sortColumn) sortMode = SortModes.ESTIMATED_TIME;
+    else if (table.getColumn(2) == sortColumn) sortMode = SortModes.SLAVE;
+    else if (table.getColumn(3) == sortColumn) sortMode = SortModes.TYPE;
+    else if (table.getColumn(4) == sortColumn) sortMode = SortModes.PARTSIZE;
+    else if (table.getColumn(5) == sortColumn) sortMode = SortModes.COMPRESS;
+    else if (table.getColumn(6) == sortColumn) sortMode = SortModes.CRYPT;
+    else if (table.getColumn(7) == sortColumn) sortMode = SortModes.LAST_EXECUTED_DATETIME;
+    else if (table.getColumn(8) == sortColumn) sortMode = SortModes.ESTIMATED_TIME;
     else                                       sortMode = SortModes.NAME;
   }
 
@@ -434,6 +437,8 @@ class JobDataComparator implements Comparator<JobData>
         return jobData1.name.compareTo(jobData2.name);
       case STATE:
         return jobData1.state.compareTo(jobData2.state);
+      case SLAVE:
+        return jobData1.slaveHostName.compareTo(jobData2.slaveHostName);
       case TYPE:
         return jobData1.archiveType.compareTo(jobData2.archiveType);
       case PARTSIZE:
@@ -443,10 +448,10 @@ class JobDataComparator implements Comparator<JobData>
       case COMPRESS:
         int result = jobData1.deltaCompressAlgorithm.compareTo(jobData2.deltaCompressAlgorithm);
         if (result == 0) result = jobData1.byteCompressAlgorithm.compareTo(jobData2.byteCompressAlgorithm);
+        return result;
       case CRYPT:
         String crypt1 = jobData1.cryptAlgorithm+(jobData1.cryptType.equals("ASYMMETRIC") ?"*" : "");
         String crypt2 = jobData2.cryptAlgorithm+(jobData2.cryptType.equals("ASYMMETRIC") ?"*" : "");
-
         return crypt1.compareTo(crypt2);
       case LAST_EXECUTED_DATETIME:
         if      (jobData1.lastExecutedDateTime < jobData2.lastExecutedDateTime) return -1;

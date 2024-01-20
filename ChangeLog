@@ -2,6 +2,7 @@
   * BARControl: fixed option --index-database-entries-list:
     also list storages
   * BARControl: added options --long-format, --no-header-footer
+  * BARControl: fixed sort job list
 
 2024-01-14 23
   * changed version number scheme: single number
