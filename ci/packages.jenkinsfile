@@ -84,7 +84,27 @@ def build()
         {
           stage("Test RPM packages")
           {
-            sh "make install_test_rpm"
+            for(String item : TEST_PACKAGES_CENTOS)
+            {
+              docker.image("centos:${item}").inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_rpm.sh *.rpm"
+                }
+              }
+            }
+            for(String item : TEST_PACKAGES_FEDORA)
+            {
+              docker.image("fedora:"+item).inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_rpm.sh *.rpm"
+                }
+              }
+            }
+//TODO: call            sh "make install_test_rpm"
           }
         }
       }
@@ -106,7 +126,27 @@ def build()
         {
           stage("Test DEB packages")
           {
-            sh "make install_test_rpm"
+            for(String item : TEST_PACKAGES_DEBIAN)
+            {
+              docker.image("debian:"+item).inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_deb.sh *.deb"
+                }
+              }
+            }
+            for(String item : TEST_PACKAGES_UBUNTU)
+            {
+              docker.image("ubuntu:"+item).inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_deb.sh *.deb"
+                }
+              }
+            }
+//TODO: call            sh "make install_test_deb"
           }
         }
       }
