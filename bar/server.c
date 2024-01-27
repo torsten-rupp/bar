@@ -87,8 +87,7 @@
 
 // sleep times [s]
 #define SLEEP_TIME_PAIRING_THREAD                ( 1*S_PER_MINUTE)
-// TODO: revert #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*S_PER_MINUTE)
-#define SLEEP_TIME_SCHEDULER_THREAD ( 10)
+#define SLEEP_TIME_SCHEDULER_THREAD              ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*S_PER_MINUTE)
@@ -2061,6 +2060,7 @@ LOCAL void schedulerThreadCode(void)
         getJobScheduleList(&jobScheduleList,
                            jobNode,
                              SET_VALUE(JOB_STATE_NONE)
+                           | SET_VALUE(JOB_STATE_DONE)
                            | SET_VALUE(JOB_STATE_ERROR)
                            | SET_VALUE(JOB_STATE_ABORTED)
                            | SET_VALUE(JOB_STATE_DISCONNECTED),

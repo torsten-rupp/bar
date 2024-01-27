@@ -1,4 +1,6 @@
-2024-01-31 23a
+2024-01-27 23a
+  * fixed scheduler trigger job, check time (1min instead every
+    10s)
   * BARControl: fixed option --index-database-entries-list:
     also list storages
   * BARControl: added options --long-format, --no-header-footer
