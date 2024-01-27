@@ -880,7 +880,7 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   if ((jobOptions != NULL) && !jobOptions->noBAROnMediumFlag)
   {
     // store a copy of BAR executable on medium (ignore errors)
-    fileBaseName = File_getBaseName(String_new(),globalOptions.barExecutable);
+    fileBaseName = File_getBaseName(String_new(),globalOptions.barExecutable,TRUE);
     destinationFileName = File_appendFileName(String_duplicate(storageInfo->opticalDisk.write.directory),fileBaseName);
     error = File_copy(globalOptions.barExecutable,destinationFileName);
     if (error == ERROR_NONE)
@@ -2280,7 +2280,7 @@ LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString arc
 
   #ifdef HAVE_ISO9660
     pathName = File_getDirectoryName(String_new(),archiveName);
-    fileName = File_getBaseName(String_new(),archiveName);
+    fileName = File_getBaseName(String_new(),archiveName,TRUE);
 
     iso9660Handle = iso9660_open_ext(String_cString(storageInfo->storageSpecifier.deviceName),
                                      ISO_EXTENSION_ALL

@@ -227,17 +227,17 @@ VERSION            := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
 VERSION_REPOSITORY = $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
 ifneq   ($(wildcard ../.git),)
   ifneq ($(GIT),)
-		VERSION_REPOSITORY = $(shell ($(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE= || $(GIT) rev-parse HEAD 2>/dev/null)|$(SED) 's/RELEASE=//g')
-	else
-		VERSION_REPOSITORY = $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
-	endif
+    VERSION_REPOSITORY = $(shell ($(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE= || $(GIT) rev-parse HEAD 2>/dev/null)|$(SED) 's/RELEASE=//g')
+  else
+    VERSION_REPOSITORY = $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
+  endif
 endif
 ifneq ($(wildcard ../.svn),)
   ifneq ($(SVNVERSION),)
-	  VERSION_REPOSITORY = $(shell ($(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE= || $(SVNVERSION) . 2>/dev/null)|$(SED) 's/RELEASE=//g')
-	else
-		VERSION_REPOSITORY = $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
-	endif
+    VERSION_REPOSITORY = $(shell ($(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE= || $(SVNVERSION) . 2>/dev/null)|$(SED) 's/RELEASE=//g')
+  else
+    VERSION_REPOSITORY = $(shell $(CAT) $(ROOT_DIR)/version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
+  endif
 endif
 
 # supported min. compress algorithms
@@ -443,6 +443,7 @@ BAR_SOURCES                 = bar.c \
                               server.c \
                               server_io.c \
                               connector.c \
+                              par2.cpp \
 
 BAR_SOURCES_OTHER           = forward.h \
                               \

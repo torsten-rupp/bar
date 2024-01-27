@@ -64,6 +64,7 @@ LIBCDIO_VERSION=2.1.0
 KRB5_VERSION=1.21
 KRB5_VERSION_MINOR=2
 LIBSMB2_VERSION=4.0.0
+PAR2_VERSION=0.8.1
 BINUTILS_VERSION=2.41
 PTHREAD_W32_VERSION=2-9-1
 LAUNCH4J_MAJOR_VERSION=3
@@ -119,6 +120,7 @@ mariaDBFlag=0
 postgreSQLFlag=0
 icuFlag=0
 mtxFlag=0
+par2Flag=0
 binutilsFlag=0
 pthreadsW32Flag=0
 launch4jFlag=0
@@ -268,6 +270,10 @@ while test $# != 0; do
           allFlag=0
           icuFlag=1
           ;;
+        par2)
+          allFlag=0;
+          par2Flag=1;
+          ;;
         binutils|bfd)
           allFlag=0
           binutilsFlag=1
@@ -383,6 +389,10 @@ while test $# != 0; do
       allFlag=0
       icuFlag=1
       ;;
+    par2)
+      allFlag=0;
+      par2Flag=1;
+      ;;
     binutils|bfd)
       allFlag=0
       binutilsFlag=1
@@ -444,6 +454,7 @@ if test $helpFlag -eq 1; then
   $ECHO " postgresql"
   $ECHO " mtx"
   $ECHO " icu"
+  $ECHO " par2"
   $ECHO " binutils"
   $ECHO " launch4j"
   $ECHO " jre-windows"
@@ -1908,6 +1919,55 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
+  if test $allFlag -eq 1 -o $par2Flag -eq 1; then
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get par2 ($PAR2_VERSION)..."
+     directoryName="par2cmdline-$PAR2_VERSION"
+     if test ! -d $directoryName; then
+       if test -n "$localDirectory" -a -d $localDirectory/par2cmdline-$PAR2_VERSION; then
+         # Note: make a copy to get usable file permissions (source may be owned by root)
+         $CP -r $localDirectory/par2cmdline-$PAR2_VERSION $directoryName
+         result=1
+       else
+         url="https://github.com/Parchive/par2cmdline"
+         $GIT clone $url $directoryName 1>/dev/null 2>/dev/null
+         if test $? -ne 0; then
+           fatalError "checkout $url -> $directoryName"
+         fi
+         (cd $directoryName; \
+          $GIT checkout v$PAR2_VERSION 1>/dev/null 2>/dev/null; \
+          install -d m4;
+         )
+         if test $? -ne 0; then
+           fatalError "checkout tag v$PAR2_VERSION"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+
+     if test $noDecompressFlag -eq 0; then
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/par2cmdline-$PAR2_VERSION par2cmdline)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+  fi
+
   if test $allFlag -eq 1 -o $binutilsFlag -eq 1; then
     (
      install -d "$destinationDirectory"
@@ -2355,6 +2415,16 @@ else
       $RMRF icu
     ) 2>/dev/null
     $RMF $workingDirectory/icu
+  fi
+
+  if test $allFlag -eq 1 -o $par2Flag -eq 1; then
+    # binutils
+    (
+      cd "$destinationDirectory"
+      $RMRF par2cmdline-*
+      $RMRF par2cmdline
+    ) 2>/dev/null
+    $RMF $workingDirectory/par2cmdline
   fi
 
   if test $allFlag -eq 1 -o $binutilsFlag -eq 1; then

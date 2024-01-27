@@ -504,15 +504,29 @@ String File_getDirectoryNameCString(String path, const char *fileName);
 /***********************************************************************\
 * Name   : File_getBaseName, File_getBaseNameCString
 * Purpose: get basename of file (name without directory)
-* Input  : baseName - basename variable
-*          fileName - file name
-* Output : -
+* Input  : baseName  - basename variable
+*          fileName  - file name
+*          withExtension - TRUE to get basename with extension
+* Output : baseName  - basename
 * Return : base name variable
 * Notes  : -
 \***********************************************************************/
 
-String File_getBaseName(String baseName, ConstString fileName);
-String File_getBaseNameCString(String baseName, const char *fileName);
+String File_getBaseName(String baseName, ConstString fileName, bool withExtension);
+String File_getBaseNameCString(String baseName, const char *fileName, bool withExtension);
+
+/***********************************************************************\
+* Name   : File_getBaseName, File_getBaseNameCString
+* Purpose: get basename of file (name without directory)
+* Input  : extension - extension variable
+*          fileName  - file name
+* Output : extension - extension
+* Return : base name variable
+* Notes  : -
+\***********************************************************************/
+
+String File_getExtension(String extension, ConstString fileName);
+String File_getExtensionCString(String extension, const char *fileName);
 
 /***********************************************************************\
 * Name   : File_getRootName, File_getRootNameCString
@@ -569,16 +583,18 @@ String File_getAbsoluteFileName(String absoluteFileName, ConstString fileName);
 String File_getAbsoluteFileNameCString(String absoluteFileName, const char *fileName);
 
 /***********************************************************************\
-* Name   : File_splitFileName
+* Name   : File_splitFileName, File_splitFileNameCString
 * Purpose: split file name into path name and base name
 * Input  : fileName - file name
 * Output : directoryPath - directory path (can be NULL)
 *          baseName      - base name (can be NULL)
+*          extension     - extension (can be NULL)
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void File_splitFileName(ConstString fileName, String directoryPath, String baseName);
+void File_splitFileName(ConstString fileName, String directoryPath, String baseName, String extension);
+void File_splitFileNameCString(const char *fileName, String directoryPath, String baseName, String extension);
 
 /***********************************************************************\
 * Name   : File_initSplitFileName, File_doneSplitFileName
@@ -1731,7 +1747,7 @@ Errors File_readLink(String      fileName,
                     );
 
 /***********************************************************************\
-* Name   : File_makeLink
+* Name   : File_makeLink, File_makeLinkCString
 * Purpose: create (symbolic) link linkName -> fileName
 * Input  : linkName - link name
 *          fileName - file name
@@ -1743,9 +1759,12 @@ Errors File_readLink(String      fileName,
 Errors File_makeLink(ConstString linkName,
                      ConstString fileName
                     );
+Errors File_makeLinkCString(const char *linkName,
+                            const char *fileName
+                           );
 
 /***********************************************************************\
-* Name   : File_makeHardLink
+* Name   : File_makeHardLink, File_makeHardLinkCString
 * Purpose: create hard link linkName -> fileName
 * Input  : linkName - link name
 *          fileName - file name
@@ -1757,9 +1776,12 @@ Errors File_makeLink(ConstString linkName,
 Errors File_makeHardLink(ConstString linkName,
                          ConstString fileName
                         );
+Errors File_makeHardLinkCString(const char *linkName,
+                                const char * fileName
+                               );
 
 /***********************************************************************\
-* Name   : File_makeSpecial
+* Name   : File_makeSpecial, File_makeSpecialCString
 * Purpose: make special node
 * Input  : name  - name
 *          type  - special type
@@ -1775,6 +1797,11 @@ Errors File_makeSpecial(ConstString      name,
                         ulong            major,
                         ulong            minor
                        );
+Errors File_makeSpecialCString(const char       *name,
+                               FileSpecialTypes type,
+                               ulong            major,
+                               ulong            minor
+                              );
 
 /***********************************************************************\
 * Name   : File_getFileSystemInfo

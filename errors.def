@@ -1092,6 +1092,9 @@ ERROR SLAVE_DISCONNECTED               TR("slave disconnected")
 ERROR NOT_PAIRED                       TR("slave is not paired")
 ERROR NOT_A_SLAVE                      TR("instance is not a slave")
 
+// --- PAR2 ------------------------------------------------------------
+ERROR PAR2                             TR("create PAR2 checksums fail")
+
 // --- debugging only ---------------------------------------------------
 ERROR TESTCODE
   stringSet(errorText,sizeof(errorText),"test code");

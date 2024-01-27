@@ -94,6 +94,10 @@
 #define DEFAULT_INDEX_DATABASE_URI_TYPE           "sqlite3:"
 #define DEFAULT_INDEX_DATABASE_URI_NAME           "index.db"
 
+#define DEFAULT_PAR2_BLOCK_SIZE                   2264
+#define DEFAULT_PAR2_FILE_COUNT                   1
+#define DEFAULT_PAR2_BLOCK_COUNT                  128
+
 #define DEFAULT_CD_DEVICE_NAME                    "/dev/cdrw"
 #define DEFAULT_DVD_DEVICE_NAME                   "/dev/dvd"
 #define DEFAULT_BD_DEVICE_NAME                    "/dev/bd"
@@ -1092,6 +1096,14 @@ typedef struct
   Key                         signaturePublicKey;             // signature public key (not encrypted)
   Key                         signaturePrivateKey;            // signature private key (not encrypted)
 #endif
+
+#ifdef HAVE_PAR2
+  const char                  *par2Directory;                 // PAR2 checksum output directory or NULL
+  uint                        par2BlockSize;                  // PAR2 block size [bytes]
+  uint                        par2FileCount;                  // number of PAR2 checksum files to create
+  uint                        par2BlockCount;                 // number of PAR2 error correction blocks
+#endif // HAVE_PAR2
+
   Server                      *fileServer;                    // current selected file server
   Server                      *ftpServer;                     // current selected FTP server
   Server                      *sshServer;                     // current selected SSH server
