@@ -112,7 +112,7 @@ SHELL                       = bash -o pipefail
 VERSION_MAJOR               := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR               := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 VERSION_PATCH               := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
-VERSION                     := $(VERSION_MAJOR)$(if $(VERSION_MINOR),.$(VERSION_MINOR))$(VERSION_PATCH)
+VERSION                     := $(VERSION_MAJOR)$(if $(VERSION_MINOR),$(if $(VERSION_MAJOR),.)$(VERSION_MINOR))$(VERSION_PATCH)
 
 PACKAGE_NAME                = backup-archiver
 PACKAGE_NAME_GUI            = backup-archiver-gui
