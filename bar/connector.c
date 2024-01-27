@@ -571,6 +571,13 @@ UNUSED_VARIABLE(scheduleCustomText);
   SET_OPTION_STRING   ("pre-command",               jobOptions->slavePreProcessScript       );
   SET_OPTION_STRING   ("post-command",              jobOptions->slavePostProcessScript      );
 
+#ifdef HAVE_PAR2
+  SET_OPTION_STRING   ("par2-directory",            jobOptions->par2Directory               );
+  SET_OPTION_INTEGER  ("par2-block-size",           jobOptions->par2BlockSize               );
+  SET_OPTION_INTEGER  ("par2-file-count",           jobOptions->par2FileCount               );
+  SET_OPTION_INTEGER  ("par2-block-count",          jobOptions->par2BlockCount              );
+#endif // HAVE_PAR2
+
   SET_OPTION_BOOLEAN  ("storage-on-master",         jobOptions->storageOnMasterFlag);
 
   SET_OPTION_STRING   ("ftp-login-name",            jobOptions->ftpServer.loginName         );

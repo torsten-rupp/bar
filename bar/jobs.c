@@ -1088,6 +1088,13 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   String_clear(jobOptions->slavePreProcessScript );
   String_clear(jobOptions->slavePostProcessScript);
 
+#ifdef HAVE_PAR2
+  String_clear(jobOptions->par2Directory );
+  jobOptions->par2BlockSize  = DEFAULT_PAR2_BLOCK_SIZE;
+  jobOptions->par2FileCount  = DEFAULT_PAR2_FILE_COUNT;
+  jobOptions->par2BlockCount = DEFAULT_PAR2_BLOCK_COUNT;
+#endif // HAVE_PAR2
+
   jobOptions->storageOnMasterFlag            = TRUE;
   clearOptionsFileServer(&jobOptions->fileServer);
   clearOptionsFTPServer(&jobOptions->ftpServer);
@@ -1382,7 +1389,7 @@ JobNode *Job_copy(const JobNode *jobNode,
 
   // init job node
   Job_initDuplicate(&newJobNode->job,&jobNode->job);
-  newJobNode->name                             = File_getBaseName(String_new(),fileName);
+  newJobNode->name                             = File_getBaseName(String_new(),fileName,TRUE);
   newJobNode->jobType                          = jobNode->jobType;
 
   newJobNode->modifiedFlag                     = TRUE;
@@ -1727,7 +1734,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
   // get filename
   fileName = String_new();
   baseName = String_new();
-  File_splitFileName(jobNode->fileName,fileName,baseName);
+  File_splitFileName(jobNode->fileName,fileName,baseName,NULL);
   File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
   String_delete(baseName);
 
@@ -1891,7 +1898,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
     String fileName;
     fileName = String_new();
     String baseName = String_new();
-    File_splitFileName(jobNode->fileName,fileName,baseName);
+    File_splitFileName(jobNode->fileName,fileName,baseName,NULL);
     File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
     String_delete(baseName);
 
@@ -2381,7 +2388,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
     }
 
     // get base name
-    File_getBaseName(baseName,fileName);
+    File_getBaseName(baseName,fileName,TRUE);
 
     // check if readable file and not ".*"
     if (File_isFile(fileName) && File_isReadable(fileName) && !String_startsWithChar(baseName,'.'))
@@ -2779,6 +2786,13 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->slavePreProcessScript                     = String_new();
   jobOptions->slavePostProcessScript                    = String_new();
 
+#ifdef HAVE_PAR2
+  jobOptions->par2Directory                             = String_new();
+  jobOptions->par2BlockSize                             = DEFAULT_PAR2_BLOCK_SIZE;
+  jobOptions->par2FileCount                             = DEFAULT_PAR2_FILE_COUNT;
+  jobOptions->par2BlockCount                            = DEFAULT_PAR2_BLOCK_COUNT;
+#endif // HAVE_PAR2
+
   jobOptions->storageOnMasterFlag                       = TRUE;
   initOptionsFileServer(&jobOptions->fileServer);
   initOptionsFTPServer(&jobOptions->ftpServer);
@@ -2911,6 +2925,13 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   jobOptions->slavePreProcessScript                     = String_duplicate(fromJobOptions->slavePreProcessScript);
   jobOptions->slavePostProcessScript                    = String_duplicate(fromJobOptions->slavePostProcessScript);
 
+#ifdef HAVE_PAR2
+  jobOptions->par2Directory                             = String_duplicate(fromJobOptions->par2Directory);
+  jobOptions->par2BlockSize                             = fromJobOptions->par2BlockSize;
+  jobOptions->par2FileCount                             = fromJobOptions->par2FileCount;
+  jobOptions->par2BlockCount                            = fromJobOptions->par2BlockCount;
+#endif // HAVE_PAR2
+
   jobOptions->storageOnMasterFlag                       = fromJobOptions->storageOnMasterFlag;
   duplicateOptionsFileServer(&jobOptions->fileServer,&fromJobOptions->fileServer);
   duplicateOptionsFTPServer(&jobOptions->ftpServer,&fromJobOptions->ftpServer);
@@ -2973,6 +2994,10 @@ void Job_doneOptions(JobOptions *jobOptions)
   doneOptionsSSHServer(&jobOptions->sshServer);
   doneOptionsFTPServer(&jobOptions->ftpServer);
   doneOptionsFileServer(&jobOptions->fileServer);
+
+#ifdef HAVE_PAR2
+  String_delete(jobOptions->par2Directory);
+#endif // HAVE_PAR2
 
   String_delete(jobOptions->slavePostProcessScript);
   String_delete(jobOptions->slavePreProcessScript);

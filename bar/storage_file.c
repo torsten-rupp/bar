@@ -334,7 +334,7 @@ LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *stora
 
   directoryPath = String_new();
   baseName      = String_new();
-  File_splitFileName(archiveName,directoryPath,baseName);
+  File_splitFileName(archiveName,directoryPath,baseName,NULL);
   result = File_getTmpFileName(archiveName,
                                String_cString(baseName),
                                !String_isEmpty(directoryPath) ? directoryPath : tmpDirectory

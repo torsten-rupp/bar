@@ -175,6 +175,25 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
+dnl --- check for C++ header
+dnl usage: AC_CHECK_CXX_HEADER(<header>)
+dnl
+dnl Note: it seems
+dnl
+dnl AC_LANG_PUSH(C++)
+dnl AC_CHECK_HEADER(...)
+dnl AC_LANG_POP()
+dnl
+dnl find the header, but does not create a AC_SUBST()?
+AC_DEFUN([AC_CHECK_CXX_HEADER],
+[
+  AC_REQUIRE([AC_PROG_CXX])
+  AC_LANG_PUSH(C++)
+  AC_CHECK_HEADER($1,[AC_DEFINE(AS_TR_CPP(HAVE_$1),1,[Define to 1 if you have the <$1> header file.])])
+  AC_LANG_POP()
+  AC_PROVIDE([$0])dnl
+])
+
 dnl --- get constant (define)
 dnl usage: AC_CONSTANT_VALUE(<text>,<variable>,<includes>,<source>,<include search path>,[<trim characters>])
 AC_DEFUN([AC_CONSTANT_VALUE],
@@ -830,6 +849,7 @@ AC_SUBST(HAVE_SMB2)                          dnl "1" for SMB2 support, "" otherw
 AC_SUBST(HAVE_PCRE)                          dnl "1" for pcre support, "" otherwise
 AC_SUBST(HAVE_MARIADB)                       dnl "1" for MariaDB support, "" otherwise
 AC_SUBST(HAVE_POSTGRESQL)                    dnl "1" for PostgreSQL support, "" otherwise
+AC_SUBST(HAVE_PAR2)                          dnl "1" for PAR2 support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                  dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BFD)                           dnl "1" for BFD support, "" otherwise
 
@@ -996,6 +1016,7 @@ ENABLE_PCRE="yes"
 ENABLE_MARIADB="yes"
 ENABLE_POSTGRESQL="yes"
 ENABLE_PTHREADS_W32="yes"
+ENABLE_PAR2="yes"
 ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
@@ -1217,6 +1238,11 @@ AC_ARG_ENABLE(
   pcre,
   AC_HELP_STRING([--disable-pcre],[disable PCRE support]),
   [ENABLE_PCRE=$enableval]
+)
+AC_ARG_ENABLE(
+  par2,
+  AC_HELP_STRING([--disable-par2],[disable PAR2 support]),
+  [ENABLE_PAR2=$enableval]
 )
 AC_ARG_ENABLE(
   bfd,
@@ -1537,7 +1563,7 @@ AC_CC_OPTION(-Wfloat-equal,                   CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_CC_OPTION(-Wbad-function-cast,             CC_WARN_FLAGS)
 AC_CC_OPTION(-Wsign-compare,                  CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_CC_OPTION(-Wstrict-prototypes,             CC_WARN_FLAGS)
-AC_CC_OPTION(-Wno-declaration-after-statement,CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wno-declaration-after-statement,CC_WARN_FLAGS)
 AC_CC_OPTION(-Wno-unknown-pragmas,            CC_WARN_FLAGS CXX_WARN_FLAGS)
 case $host_os in
   linux-*)
@@ -4540,6 +4566,119 @@ if test $ENABLE_PCRE = "yes"; then
   fi
 fi
 
+# compile/use PAR2 library
+if test $ENABLE_PAR2 = "yes"; then
+  if test -d par2cmdline -o -d "`readlink par2cmdline`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+      dnl compile PAR2 library
+
+      cwd=`pwd`
+
+      AC_MSG_COMPILE([PAR2])
+      result=1
+      if test $result -eq 1; then
+        (cd par2cmdline; ./automake.sh) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (automake)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            (cd par2cmdline; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            (cd par2cmdline; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+            ) 1>$tmpFile 2>&1
+            ;;
+        esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd par2cmdline; \
+         make -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd par2cmdline; \
+         cp src/libpar2.h $cwd/extern/include; \
+         cp libpar2.a $cwd/extern/lib; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES par2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES par2"
+      fi
+      HAVE_PAR2=1
+      AC_DEFINE(HAVE_PAR2,1,[PAR2 installed (local)])
+    fi
+  else
+    dnl search for installed PAR2 library
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(par2create,par2,[HAVE_PAR2=1;LIBRARIES="par2 $LIBRARIES";AC_DEFINE(HAVE_PAR2,1,[PAR2 installed])])
+    else
+      if test -z "$HAVE_PAR2"; then
+        AC_SEARCH_STATIC_LIBRARIES(par2create,par2,[HAVE_PAR2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES par2";AC_DEFINE(HAVE_PAR2,1,[PAR2 installed])])
+      fi
+      if test -z "$HAVE_PAR2"; then
+        AC_SEARCH_LIBRARIES(par2create,par2,[HAVE_PAR2=1;LIBRARIES="par2 $LIBRARIES";AC_DEFINE(HAVE_PAR2,1,[PAR2 installed])])
+      fi
+    fi
+  fi
+
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
+  if test -z "$HAVE_PAR2"; then
+    if test ! \( -d par2cmdline -o -d "`readlink par2cmdline`" \); then
+      AC_MSG_WARN([PAR2 not compiled: PAR2 package missing])
+    fi
+  fi
+fi
+
+# compile pthreads-w32
 case $host_os in
   linux-*)
     ;;
@@ -4738,11 +4877,12 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_SSL       ,,AC_MSG_ERROR([ssl missing]))
    AS_IF(test $HAVE_SSH2      ,,AC_MSG_ERROR([ssh2 missing]))
    AS_IF(test $HAVE_GNU_TLS   ,,AC_MSG_ERROR([GNU TLS missing]))
+   AS_IF(test $HAVE_MARIADB   ,,AC_MSG_ERROR([MariaDB missing]))
+   AS_IF(test $HAVE_POSTGRESQL,,AC_MSG_ERROR([PostgreSQL missing]))
    AS_IF(test $HAVE_ISO9660   ,,AC_MSG_ERROR([ISO9660 missing]))
    AS_IF(test $HAVE_SMB2      ,,AC_MSG_ERROR([smb2 missing]))
    AS_IF(test $HAVE_PCRE      ,,AC_MSG_ERROR([PCRE missing]))
-   AS_IF(test $HAVE_MARIADB   ,,AC_MSG_ERROR([MariaDB missing]))
-   AS_IF(test $HAVE_POSTGRESQL,,AC_MSG_ERROR([PostgreSQL missing]))
+   AS_IF(test $HAVE_PAR2      ,,AC_MSG_ERROR([PAR2 missing]))
   ]
 )
 
@@ -4805,6 +4945,7 @@ AC_CHECK_HEADERS(\
                  uuid/uuid.h \
                  valgrind/callgrind.h
                 )
+AC_CHECK_CXX_HEADER(libpar2.h)
 AC_CHECK_HEADER(sqlite3.h,,AC_ERROR([mandatory sqlite3.h is not available]))
 
 # defines, constants, types, variables
@@ -5379,6 +5520,20 @@ else
   AC_DEFINE_UNQUOTED(VERSION_PCRE,"",[pcre version])
 fi
 
+if test "$HAVE_PAR2"; then
+  AC_CONSTANT_VALUE([PAR2 version],
+                    VERSION_PAR2,
+                    [#include "par2cmdline/config.h"
+                    ],
+                    [VERSION],
+                    [],
+                    [ "]
+                   )
+  AC_DEFINE_UNQUOTED(VERSION_PCRE,"$VERSION_PAR2",[PAR2 version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_PCRE,"",[PAR2 version])
+fi
+
 dnl ------------ autoheader: top/bottom include for config.h -----------
 
 AC_CONFIG_HEADERS(bar/config.h)
@@ -5465,6 +5620,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  SQLite               : yes ($VERSION_SQLITE)";
                     echo "  MariaDB support      : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
                     echo "  PostgreSQL support   : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
+                    echo "  PAR2 support         : `if test "$HAVE_PAR2"; then echo "yes ($VERSION_PAR2)"; else echo no; fi`";
                     echo "  GUI support          : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support     : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                  : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
@@ -5496,11 +5652,12 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_SSL" \
                             -o ! "$HAVE_SSH2" \
                             -o ! "$HAVE_GNU_TLS" \
+                            -o ! "$HAVE_MARIDDB" \
+                            -o ! "$HAVE_POSTGRESQL" \
                             -o ! "$HAVE_ISO9660" \
                             -o ! "$HAVE_SMB2" \
-                            -o ! "$HAVE_PCRE"\
-                            -o ! "$HAVE_MARIDDB" \
-                            -o ! "$HAVE_POSTGRESQL"; then
+                            -o ! "$HAVE_PCRE" \
+                            -o ! "$HAVE_PAR2"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."
@@ -5528,11 +5685,12 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_MXML=$HAVE_MXML
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
+                   HAVE_MARIADB=$HAVE_MARIADB
+                   HAVE_POSTGRESQL=$HAVE_POSTGRESQL
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_SMB2=$HAVE_SMB2
                    HAVE_PCRE=$HAVE_PCRE
-                   HAVE_MARIADB=$HAVE_MARIADB
-                   HAVE_POSTGRESQL=$HAVE_POSTGRESQL
+                   HAVE_PAR2=$HAVE_PAR2
                    HAVE_BFD=$HAVE_BFD
 
                    ENABLE_DEBUG=$ENABLE_DEBUG
@@ -5566,12 +5724,13 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_LIBSSH2="$VERSION_LIBSSH2"
                    VERSION_GMP="$VERSION_GMP"
                    VERSION_GNUTLS="$VERSION_GNUTLS"
+                   VERSION_MARIADB="$VERSION_MARIADB"
+                   VERSION_POSTGRESQL="$VERSION_POSTGRESQL"
                    VERSION_CDIO="$VERSION_CDIO"
                    VERSION_LIBSMB2="$VERSION_LIBSMB2"
                    VERSION_PCRE="$VERSION_PCRE"
                    VERSION_SQLITE="$VERSION_SQLITE"
-                   VERSION_MARIADB="$VERSION_MARIADB"
-                   VERSION_POSTGRESQL="$VERSION_POSTGRESQL"
+                   VERSION_PAR2="$VERSION_PAR2"
                   )
 
 AC_OUTPUT

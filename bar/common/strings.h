@@ -366,6 +366,9 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
+#ifdef __cplusplus
+extern "C"
+#endif
 INLINE void __ensureStringLength(struct __String *string, size_t newLength);
 
 /***************************** Functions *******************************/

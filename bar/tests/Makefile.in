@@ -1068,6 +1068,7 @@ TEST_FILES_INTERMEDIATE = \
   $(INTERMEDIATE_DIR)/master/jobs/* \
   $(INTERMEDIATE_DIR)/slave/jobs/* \
   $(INTERMEDIATE_DIR)/tmp \
+  $(INTERMEDIATE_DIR)/*.par2 \
 
 TEST_FILES_RESTORE = \
   $(INTERMEDIATE_DIR)/restore \
@@ -2906,6 +2907,14 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	$(call functionTestCheckExitcode,1,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --overwrite-archive-files 2>/dev/null $(LOG)))
 endif
 	@#
+ifeq (@HAVE_PAR2@,1)
+	# PAR2
+	@$(call functionCleanTestFiles)
+	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) 1>/dev/null 2>/dev/null $(LOG)))
+	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --overwrite-archive-files 1>/dev/null 2>/dev/null $(LOG)))
+	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --overwrite-archive-files --par2-block-size=1024 1>/dev/null 2>/dev/null $(LOG)))
+	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --overwrite-archive-files --par2-block-size=1024 --par2-files=2 --par2-blocks=123 1>/dev/null 2>/dev/null $(LOG)))
+endif
 ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	# mount
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)

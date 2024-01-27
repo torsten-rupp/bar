@@ -75,6 +75,11 @@ struct JobOptions
   String                      slavePreProcessScript;         // script to execute before start of job on slave
   String                      slavePostProcessScript;        // script to execute after after termination of job on slave
 
+  String                      par2Directory;                 // PAR2 checksum output directory or NULL
+  uint                        par2BlockSize;                 // PAR2 block size [bytes]
+  uint                        par2FileCount;                 // number of PAR2 checksum files to create
+  uint                        par2BlockCount;                // number of PAR2 error correction blocks
+
   bool                        storageOnMasterFlag;           // TRUE for storage operation on master
   FileServer                  fileServer;                    // job specific file server settings
   FTPServer                   ftpServer;                     // job specific FTP server settings

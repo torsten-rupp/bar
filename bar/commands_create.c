@@ -49,6 +49,7 @@
 #include "archive.h"
 #include "deltasources.h"
 #include "crypt.h"
+#include "par2.h"
 #include "storage.h"
 #include "continuous.h"
 #include "index/index_storages.h"
@@ -102,6 +103,7 @@ typedef struct
   const char                  *customText;                           // custom text or NULL
   const EntryList             *includeEntryList;                     // list of included entries
   const PatternList           *excludePatternList;                   // list of exclude patterns
+// TODO: already in storageInfo
   JobOptions                  *jobOptions;
   uint64                      createdDateTime;                       // date/time of created [s]
 
@@ -4803,27 +4805,19 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName)
          )
       {
-        String directoryPath,baseName;
+        String directoryPath,baseName,extension;
         String prefixFileName,postfixFileName;
-        long   index;
         uint   n;
 
         // rename new archive
         directoryPath   = String_new();
         baseName        = String_new();
+        extension       = String_new();
         prefixFileName  = String_new();
         postfixFileName = String_new();
-        File_splitFileName(storageMsg.archiveName,directoryPath,baseName);
-        index = String_findLastChar(baseName,STRING_END,'.');
-        if (index >= 0)
-        {
-          String_sub(prefixFileName,baseName,STRING_BEGIN,index);
-          String_sub(postfixFileName,baseName,index,STRING_END);
-        }
-        else
-        {
-          String_set(prefixFileName,baseName);
-        }
+        File_splitFileName(storageMsg.archiveName,directoryPath,baseName,extension);
+        String_set(prefixFileName,baseName);
+        String_set(postfixFileName,extension);
         n = 0;
         do
         {
@@ -5076,6 +5070,35 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         }
         printInfo(1,"OK (%"PRIu64" bytes)\n",fileInfo.size);
       }
+
+#ifdef HAVE_PAR2
+      if (   !stringIsEmpty(globalOptions.par2Directory)
+          || !String_isEmpty(createInfo->jobOptions->par2Directory)
+         )
+      {
+        printInfo(1,"Create PAR2 files for '%s'...",String_cString(printableStorageName));
+        error = PAR2_create(storageMsg.intermediateFileName,
+                            storageMsg.archiveName,
+                            !String_isEmpty(createInfo->jobOptions->par2Directory)
+                              ? String_cString(createInfo->jobOptions->par2Directory)
+                              : globalOptions.par2Directory,
+                            createInfo->storageInfo.jobOptions->archiveFileMode
+                           );
+        if (error != ERROR_NONE)
+        {
+          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+          printInfo(0,"FAIL!\n");
+          printError("cannot create PAR2 files for '%s' (error: %s)!",
+                     String_cString(printableStorageName),
+                     Error_getText(createInfo->failError)
+                    );
+          AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+          break;
+        }
+        printInfo(1,"OK\n");
+      }
+#endif // HAVE_PAR2
 
       // update index database and set state
       if (   (createInfo->indexHandle != NULL)

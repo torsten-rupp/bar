@@ -1644,10 +1644,6 @@ bool Crypt_verifyMAC(const CryptMAC *cryptMAC,
                      uint           macLength
                     );
 
-#ifdef __cplusplus
-  }
-#endif
-
 #ifndef NDEBUG
 /***********************************************************************\
 * Name   : Crypt_dumpKey, Crypt_dumpSalt, Crypt_dumpHash, Crypt_dumpMAC

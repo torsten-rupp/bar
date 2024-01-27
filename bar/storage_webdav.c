@@ -1924,7 +1924,7 @@ UNUSED_VARIABLE(forceFlag);
 
     // get directory name, base name
     directoryName = File_getDirectoryName(String_new(),fileName);
-    baseName      = File_getBaseName(String_new(),fileName);
+    baseName      = File_getBaseName(String_new(),fileName,TRUE);
 
     // get base URL
     baseURL = getWebDAVURL(storageHandle->storageInfo->storageSpecifier.type,
@@ -2994,7 +2994,7 @@ LOCAL Errors StorageWebDAV_getInfo(const StorageInfo *storageInfo,
 
     // get directory name, base name
     directoryName = File_getDirectoryNameCString(String_new(),infoFileName);
-    baseName      = File_getBaseName(String_new(),infoFileName);
+    baseName      = File_getBaseName(String_new(),infoFileName,TRUE);
 
     // get URL
     url = String_duplicate(baseURL);

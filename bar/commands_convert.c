@@ -2252,7 +2252,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   AUTOFREE_ADD(&autoFreeList,&convertInfo->destinationStorageInfo,{ (void)Storage_done(&convertInfo->destinationStorageInfo); });
 
   // create destination archive name
-  baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
+  baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName,TRUE);
   if (!String_isEmpty(convertInfo->newJobOptions->destination))
   {
     File_setFileName(convertInfo->archiveName,convertInfo->newJobOptions->destination);

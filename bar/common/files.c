@@ -1091,32 +1091,45 @@ String File_getDirectoryNameCString(String directoryPath, const char *fileName)
   return directoryPath;
 }
 
-String File_getBaseName(String baseName, ConstString fileName)
+String File_getBaseName(String baseName, ConstString fileName, bool withExtension)
 {
   assert(baseName != NULL);
 
-  return File_getBaseNameCString(baseName,String_cString(fileName));
+  return File_getBaseNameCString(baseName,String_cString(fileName),withExtension);
 }
 
-String File_getBaseNameCString(String baseName, const char *fileName)
+String File_getBaseNameCString(String baseName, const char *fileName, bool withExtension)
 {
-  long i;
-
   assert(baseName != NULL);
 
   if (fileName != NULL)
   {
-    // find last path separator
-    i = stringFindReverseChar(fileName,FILE_PATH_SEPARATOR_CHAR);
+    // find last path separator+.
+    long i = stringFindReverseChar(fileName,FILE_PATH_SEPARATOR_CHAR);
+    long j = stringFindReverseChar(fileName,'.');
 
     // get path
     if (i >= 0L)
     {
-      String_setCString(baseName,fileName+i+1);
+      if (withExtension || (j < i))
+      {
+        String_setCString(baseName,fileName+i+1);
+      }
+      else
+      {
+        String_setBuffer(baseName,fileName+i+1,j-i-1);
+      }
     }
     else
     {
-      String_setCString(baseName,fileName);
+      if (withExtension || (j < 0))
+      {
+        String_setCString(baseName,fileName);
+      }
+      else
+      {
+        String_setBuffer(baseName,fileName,j);
+      }
     }
   }
   else
@@ -1125,6 +1138,30 @@ String File_getBaseNameCString(String baseName, const char *fileName)
   }
 
   return baseName;
+}
+
+String File_getExtension(String extension, ConstString fileName)
+{
+  assert(extension != NULL);
+
+  return File_getExtensionCString(extension,String_cString(fileName));
+}
+
+String File_getExtensionCString(String extension, const char *fileName)
+{
+  assert(extension != NULL);
+
+  long i = stringFindReverseChar(fileName,'.');
+  if (i >= 0)
+  {
+    String_setBuffer(extension,fileName+i,stringLength(fileName)-i);
+  }
+  else
+  {
+    String_clear(extension);
+  }
+
+  return extension;
 }
 
 String File_getRootName(String rootName, ConstString fileName)
@@ -1310,13 +1347,22 @@ String File_getAbsoluteFileNameCString(String absoluteFileName, const char *file
   return absoluteFileName;
 }
 
-void File_splitFileName(ConstString fileName, String directoryPath, String baseName)
+void File_splitFileName(ConstString fileName, String directoryPath, String baseName, String extension)
 {
   assert(fileName != NULL);
 
-  if (directoryPath != NULL) File_getDirectoryName(directoryPath,fileName);
-  if (baseName      != NULL) File_getBaseName(baseName,fileName);
+  File_splitFileNameCString(String_cString(fileName),directoryPath,baseName,extension);
 }
+
+void File_splitFileNameCString(const char *fileName, String directoryPath, String baseName, String extension)
+{
+  assert(fileName != NULL);
+
+  if (directoryPath != NULL) File_getDirectoryNameCString(directoryPath,fileName);
+  if (baseName      != NULL) File_getBaseNameCString(baseName,fileName,(extension == NULL));
+  if (extension     != NULL) File_getExtensionCString(extension,fileName);
+}
+
 
 void File_initSplitFileName(StringTokenizer *stringTokenizer, ConstString fileName)
 {
@@ -5279,11 +5325,25 @@ Errors File_makeLink(ConstString linkName,
   assert(fileName != NULL);
   assert(!String_isEmpty(fileName));
 
+  return File_makeLinkCString(String_cString(linkName),
+                              String_cString(fileName)
+                             );
+}
+
+Errors File_makeLinkCString(const char *linkName,
+                            const char *fileName
+                           )
+{
+  assert(linkName != NULL);
+  assert(!stringIsEmpty(linkName));
+  assert(fileName != NULL);
+  assert(!stringIsEmpty(fileName));
+
   #ifdef HAVE_SYMLINK
-    unlink(String_cString(linkName));
-    if (symlink(String_cString(fileName),String_cString(linkName)) != 0)
+    unlink(linkName);
+    if (symlink(fileName,linkName) != 0)
     {
-      return getLastError(ERROR_CODE_IO,String_cString(fileName));
+      return getLastError(ERROR_CODE_IO,fileName);
     }
 
     return ERROR_NONE;
@@ -5302,11 +5362,23 @@ Errors File_makeHardLink(ConstString linkName,
   assert(linkName != NULL);
   assert(fileName != NULL);
 
+  return File_makeHardLinkCString(String_cString(linkName),
+                                  String_cString(fileName)
+                                 );
+}
+
+Errors File_makeHardLinkCString(const char *linkName,
+                                const char *fileName
+                               )
+{
+  assert(linkName != NULL);
+  assert(fileName != NULL);
+
   #ifdef HAVE_LINK
-    unlink(String_cString(linkName));
-    if (link(String_cString(fileName),String_cString(linkName)) != 0)
+    unlink(linkName);
+    if (link(fileName,linkName) != 0)
     {
-      return getLastError(ERROR_CODE_IO,String_cString(fileName));
+      return getLastError(ERROR_CODE_IO,fileName);
     }
 
     return ERROR_NONE;
@@ -5324,6 +5396,22 @@ Errors File_makeSpecial(ConstString      name,
                         ulong            minor
                        )
 {
+  assert(name != NULL);
+  assert(!String_isEmpty(name));
+
+  return File_makeSpecialCString(String_cString(name),
+                                 type,
+                                 major,
+                                 minor
+                                );
+}
+
+Errors File_makeSpecialCString(const char       *name,
+                               FileSpecialTypes type,
+                               ulong            major,
+                               ulong            minor
+                              )
+{
   #ifdef HAVE_MKNOD
     Errors error;
     String directoryName;
@@ -5333,11 +5421,11 @@ Errors File_makeSpecial(ConstString      name,
   #endif /* HAVE_MKNOD */
 
   assert(name != NULL);
-  assert(!String_isEmpty(name));
+  assert(!stringIsEmpty(name));
 
   #ifdef HAVE_MKNOD
     // create directory if needed
-    directoryName = File_getDirectoryName(File_newFileName(),name);
+    directoryName = File_getDirectoryNameCString(File_newFileName(),name);
     if (!String_isEmpty(directoryName) && !File_exists(directoryName))
     {
       error = File_makeDirectory(directoryName,
@@ -5354,7 +5442,7 @@ Errors File_makeSpecial(ConstString      name,
     }
     File_deleteFileName(directoryName);
 
-    unlink(String_cString(name));
+    unlink(name);
     switch (type)
     {
       case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
@@ -5362,24 +5450,24 @@ Errors File_makeSpecial(ConstString      name,
           if (debugIsEmulateMknod())
           {
             // create simple file
-            fileDescriptor = open(String_cString(name),O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0666);
+            fileDescriptor = open(name,O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0666);
             if (fileDescriptor == -1)
             {
-              return getLastError(ERROR_CODE_IO,String_cString(name));
+              return getLastError(ERROR_CODE_IO,name);
             }
             close(fileDescriptor);
           }
           else
           {
-            if (mknod(String_cString(name),S_IFCHR|0600,makedev(major,minor)) != 0)
+            if (mknod(name,S_IFCHR|0600,makedev(major,minor)) != 0)
             {
-              return getLastError(ERROR_CODE_IO,String_cString(name));
+              return getLastError(ERROR_CODE_IO,name);
             }
           }
         #else /* NDEBUG */
-          if (mknod(String_cString(name),S_IFCHR|0600,makedev(major,minor)) != 0)
+          if (mknod(name,S_IFCHR|0600,makedev(major,minor)) != 0)
           {
-            return getLastError(ERROR_CODE_IO,String_cString(name));
+            return getLastError(ERROR_CODE_IO,name);
           }
         #endif /* not NDEBUG */
         break;
@@ -5388,37 +5476,37 @@ Errors File_makeSpecial(ConstString      name,
           if (debugIsEmulateMknod())
           {
             // create simple file
-            fileDescriptor = open(String_cString(name),O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0666);
+            fileDescriptor = open(name,O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0666);
             if (fileDescriptor == -1)
             {
-              return getLastError(ERROR_CODE_IO,String_cString(name));
+              return getLastError(ERROR_CODE_IO,name);
             }
             close(fileDescriptor);
           }
           else
           {
-            if (mknod(String_cString(name),S_IFBLK|0600,makedev(major,minor)) != 0)
+            if (mknod(name,S_IFBLK|0600,makedev(major,minor)) != 0)
             {
-              return getLastError(ERROR_CODE_IO,String_cString(name));
+              return getLastError(ERROR_CODE_IO,name);
             }
           }
         #else /* NDEBUG */
-          if (mknod(String_cString(name),S_IFBLK|0600,makedev(major,minor)) != 0)
+          if (mknod(name,S_IFBLK|0600,makedev(major,minor)) != 0)
           {
-            return getLastError(ERROR_CODE_IO,String_cString(name));
+            return getLastError(ERROR_CODE_IO,name);
           }
         #endif /* not NDEBUG */
         break;
       case FILE_SPECIAL_TYPE_FIFO:
-        if (mknod(String_cString(name),S_IFIFO|0666,0) != 0)
+        if (mknod(name,S_IFIFO|0666,0) != 0)
         {
-          return getLastError(ERROR_CODE_IO,String_cString(name));
+          return getLastError(ERROR_CODE_IO,name);
         }
         break;
       case FILE_SPECIAL_TYPE_SOCKET:
-        if (mknod(String_cString(name),S_IFSOCK|0600,0) != 0)
+        if (mknod(name,S_IFSOCK|0600,0) != 0)
         {
-          return getLastError(ERROR_CODE_IO,String_cString(name));
+          return getLastError(ERROR_CODE_IO,name);
         }
         break;
       case FILE_SPECIAL_TYPE_OTHER:

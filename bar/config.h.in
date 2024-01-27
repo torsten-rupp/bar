@@ -286,6 +286,9 @@
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
+/* Define to 1 if you have the <libpar2.h> header file. */
+#undef HAVE_LIBPAR2_H
+
 /* Define to 1 if you have the <libpq-fe.h> header file. */
 #undef HAVE_LIBPQ_FE_H
 
@@ -411,6 +414,9 @@
 
 /* O_NONBLOCK available */
 #undef HAVE_O_NONBLOCK
+
+/* PAR2 installed */
+#undef HAVE_PAR2
 
 /* pcre installed */
 #undef HAVE_PCRE
@@ -867,7 +873,7 @@
 /* openssl version */
 #undef VERSION_OPENSSL
 
-/* pcre version */
+/* PAR2 version */
 #undef VERSION_PCRE
 
 /* PostgreSQL version */
