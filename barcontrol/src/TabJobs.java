@@ -2595,6 +2595,10 @@ public class TabJobs
   private WidgetVariable               cryptPasswordMode         = new WidgetVariable<String>            ("crypt-password-mode",new String[]{"default","ask","config"},"default");
   private WidgetVariable               cryptPassword             = new WidgetVariable<String>            ("crypt-password","");
   private WidgetVariable               incrementalListFileName   = new WidgetVariable<String>            ("incremental-list-file","");
+  private WidgetVariable               par2Directory             = new WidgetVariable<String>            ("par2-directory","");
+  private WidgetVariable               par2BlockSize             = new WidgetVariable<String>            ("par2-block-size",0);
+  private WidgetVariable               par2FileCount             = new WidgetVariable<String>            ("par2-file-count",0);
+  private WidgetVariable               par2BlockCount            = new WidgetVariable<String>            ("par2-block-count",0);
   private WidgetVariable               storageOnMasterFlag       = new WidgetVariable<Boolean>           ("storage-on-master",true);
   private WidgetVariable               storageType               = new WidgetVariable<Enum>              ("storage-type",
                                                                                                           new StorageTypes[]{StorageTypes.FILESYSTEM,
@@ -3106,6 +3110,7 @@ public class TabJobs
     Widgets.setEnabled(widgetTabFolder,false);
     Widgets.layout(widgetTabFolder,2,0,TableLayoutData.NSWE);
     {
+      // entries
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Entries"));
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
@@ -3718,6 +3723,7 @@ public class TabJobs
         }
       }
 
+      // images
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Images"),Settings.hasExpertRole());
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
@@ -3884,6 +3890,7 @@ public class TabJobs
         }
       }
 
+      // filters & mounts
       tab = Widgets.addTab(widgetTabFolder,Settings.hasNormalRole() ? BARControl.tr("Filters && Mounts") : BARControl.tr("Filters"));
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
@@ -4847,8 +4854,10 @@ public class TabJobs
         }
       }
 
-      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Storage"));
-      tab.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,Settings.hasNormalRole() ? 1.0 : 0.0,0.0,0.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
+//Settings.hasNormalRole() ? 1.0 : 0.0
+      // compress & crypt
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Compress && Crypt"));
+      tab.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,1.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
       {
         // part size
@@ -6376,13 +6385,19 @@ public class TabJobs
             }
           });
         }
+      }
 
+      // storage
+      tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Storage"));
+      tab.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,0.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
+      Widgets.layout(tab,0,0,TableLayoutData.NSWE);
+      {
         // archive type
         label = Widgets.newLabel(tab,BARControl.tr("Mode")+":",Settings.hasNormalRole());
-        Widgets.layout(label,7,0,TableLayoutData.W);
+        Widgets.layout(label,1,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab,Settings.hasNormalRole());
         composite.setLayout(new TableLayout(1.0,new double[]{0.0,0.0,0.0,0.0,0.0,1.0,0.0}));
-        Widgets.layout(composite,7,1,TableLayoutData.WE);
+        Widgets.layout(composite,1,1,TableLayoutData.WE);
         {
           button = Widgets.newRadio(composite,BARControl.tr("normal"));
           button.setToolTipText(BARControl.tr("Normal mode: do not create incremental data files."));
@@ -6515,10 +6530,10 @@ public class TabJobs
 
         // file name
         label = Widgets.newLabel(tab,BARControl.tr("File name")+":");
-        Widgets.layout(label,8,0,TableLayoutData.W);
+        Widgets.layout(label,2,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
-        Widgets.layout(composite,8,1,TableLayoutData.WE);
+        Widgets.layout(composite,2,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite);
           text.setToolTipText(BARControl.tr("Name of storage files to create. Several macros are supported. Click on button to the right to open storage file name editor."));
@@ -6677,10 +6692,10 @@ public class TabJobs
 
         // incremental file name
         label = Widgets.newLabel(tab,BARControl.tr("Incremental file name")+":",Settings.hasExpertRole());
-        Widgets.layout(label,9,0,TableLayoutData.W);
+        Widgets.layout(label,3,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab,Settings.hasExpertRole());
         composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
-        Widgets.layout(composite,9,1,TableLayoutData.WE);
+        Widgets.layout(composite,3,1,TableLayoutData.WE);
         {
           text = Widgets.newText(composite);
           text.setToolTipText(BARControl.tr("Name of incremental data file. If no file name is given a name is derived automatically from the storage file name."));
@@ -6790,12 +6805,475 @@ public class TabJobs
           });
         }
 
+        // PAR2
+        label = Widgets.newLabel(tab,BARControl.tr("PAR2")+":",Settings.hasExpertRole());
+        Widgets.layout(label,4,0,TableLayoutData.NW);
+        composite = Widgets.newComposite(tab,Settings.hasExpertRole());
+        composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
+        Widgets.layout(composite,4,1,TableLayoutData.WE);
+        {
+          label = Widgets.newLabel(composite,BARControl.tr("Directory")+":",Settings.hasExpertRole());
+          Widgets.layout(label,0,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,Settings.hasExpertRole());
+          subComposite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0,0.0}));
+          Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+          {
+            text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("Name of the directory to store PAR2 checksum files. If no directory is given no PAR2 checksum files are created."));
+            Widgets.layout(text,0,1,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              @Override
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
+                if (incrementalListFileName.getString().equals(string)) color = null;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text   widget = (Text)selectionEvent.widget;
+                String string = widget.getText();
+
+Dprintf.dprintf("_");
+                try
+                {
+                  par2Directory.set(string);
+                  BARServer.setJobOption(selectedJobData.uuid,par2Directory);
+                  widget.setBackground(null);
+                }
+                catch (Exception exception)
+                {
+Dprintf.dprintf("_"+exception);
+                  // ignored
+                }
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              @Override
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              @Override
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text   widget = (Text)focusEvent.widget;
+                String string = widget.getText();
+
+                try
+                {
+                  par2Directory.set(string);
+                  BARServer.setJobOption(selectedJobData.uuid,par2Directory);
+                  widget.setBackground(null);
+                }
+                catch (Exception exception)
+                {
+                  // ignored
+                }
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(text,par2Directory));
+
+            button = Widgets.newButton(subComposite,IMAGE_EDIT);
+            Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                if (selectedJobData != null)
+                {
+                  try
+                  {
+                    String fileName = fileNameEdit(par2Directory.getString());
+                    if (fileName != null)
+                    {
+                      par2Directory.set(fileName);
+                      BARServer.setJobOption(selectedJobData.uuid,par2Directory);
+                    }
+                  }
+                  catch (Exception exception)
+                  {
+                    // ignored
+                  }
+                }
+              }
+            });
+
+            button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            button.setToolTipText(BARControl.tr("Select PAR2 directory. CTRL+click to select local file."));
+            Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                if (selectedJobData != null)
+                {
+                  String fileName = Dialogs.file(shell,
+                                                 Dialogs.FileDialogTypes.DIRECTORY,
+                                                 BARControl.tr("Select PAR2 checksums directory"),
+                                                 storageFileName.getString(),
+                                                 new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                             },
+                                                 "*",
+                                                 ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                                   ? BARServer.remoteListDirectory(selectedJobData.uuid)
+                                                   : BARControl.listDirectory
+                                                );
+                  if (fileName != null)
+                  {
+                    try
+                    {
+                      par2Directory.set(fileName);
+                      BARServer.setJobOption(selectedJobData.uuid,par2Directory);
+                    }
+                    catch (Exception exception)
+                    {
+                      // ignored
+                    }
+                  }
+                }
+              }
+            });
+          }
+
+          label = Widgets.newLabel(composite,BARControl.tr("Block size")+":",Settings.hasExpertRole());
+          Widgets.layout(label,1,0,TableLayoutData.W);
+          spinner = Widgets.newSpinner(composite);
+          spinner.setToolTipText(BARControl.tr("PAR2 block size."));
+          spinner.setMinimum(512);
+          spinner.setMaximum(65535);
+          spinner.setEnabled(false);
+          Widgets.layout(spinner,1,1,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT);
+          Widgets.addEventListener(new WidgetEventListener(spinner,selectJobEvent)
+          {
+            @Override
+            public void trigger(Control control)
+            {
+              Widgets.setEnabled(control,(selectedJobData != null) && !par2Directory.getString().isEmpty());
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2Directory)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable par2Directory)
+            {
+              Widgets.setEnabled(control,!par2Directory.getString().isEmpty());
+            }
+          });
+          spinner.addModifyListener(new ModifyListener()
+          {
+            @Override
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Spinner widget = (Spinner)modifyEvent.widget;
+              int     n      = widget.getSelection();
+              Color   color  = COLOR_MODIFIED;
+
+              if (par2BlockSize.getInteger() == n) color = null;
+              widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
+            }
+          });
+          spinner.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockSize.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,slaveHostPort);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockSize.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2BlockSize);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          spinner.addFocusListener(new FocusListener()
+          {
+            @Override
+            public void focusGained(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              widget.setData("showedErrorDialog",false);
+            }
+            @Override
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockSize.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2BlockSize);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2BlockSize));
+
+          label = Widgets.newLabel(composite,BARControl.tr("File count")+":",Settings.hasExpertRole());
+          Widgets.layout(label,2,0,TableLayoutData.W);
+          spinner = Widgets.newSpinner(composite);
+          spinner.setToolTipText(BARControl.tr("PAR2 file count."));
+          spinner.setMinimum(1);
+          spinner.setMaximum(65535);
+          spinner.setEnabled(false);
+          Widgets.layout(spinner,2,1,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT);
+          Widgets.addEventListener(new WidgetEventListener(spinner,selectJobEvent)
+          {
+            @Override
+            public void trigger(Control control)
+            {
+              Widgets.setEnabled(control,(selectedJobData != null) && !par2Directory.getString().isEmpty());
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2Directory)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable par2Directory)
+            {
+              Widgets.setEnabled(control,!par2Directory.getString().isEmpty());
+            }
+          });
+          spinner.addModifyListener(new ModifyListener()
+          {
+            @Override
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Spinner widget = (Spinner)modifyEvent.widget;
+              int     n      = widget.getSelection();
+              Color   color  = COLOR_MODIFIED;
+
+              if (par2FileCount.getInteger() == n) color = null;
+              widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
+            }
+          });
+          spinner.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2FileCount.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2FileCount);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2FileCount.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2FileCount);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          spinner.addFocusListener(new FocusListener()
+          {
+            @Override
+            public void focusGained(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              widget.setData("showedErrorDialog",false);
+            }
+            @Override
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                slaveHostPort.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,slaveHostPort);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2FileCount));
+
+          label = Widgets.newLabel(composite,BARControl.tr("Block count")+":",Settings.hasExpertRole());
+          Widgets.layout(label,3,0,TableLayoutData.W);
+          spinner = Widgets.newSpinner(composite);
+          spinner.setToolTipText(BARControl.tr("PAR2 block count."));
+          spinner.setMinimum(1);
+          spinner.setMaximum(65535);
+          spinner.setEnabled(false);
+          Widgets.layout(spinner,3,1,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT);
+          Widgets.addEventListener(new WidgetEventListener(spinner,selectJobEvent)
+          {
+            @Override
+            public void trigger(Control control)
+            {
+              Widgets.setEnabled(control,(selectedJobData != null) && !par2Directory.getString().isEmpty());
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2Directory)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable par2Directory)
+            {
+              Widgets.setEnabled(control,!par2Directory.getString().isEmpty());
+            }
+          });
+          spinner.addModifyListener(new ModifyListener()
+          {
+            @Override
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Spinner widget = (Spinner)modifyEvent.widget;
+              int     n      = widget.getSelection();
+              Color   color  = COLOR_MODIFIED;
+
+              if (par2BlockCount.getInteger() == n) color = null;
+              widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
+            }
+          });
+          spinner.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockCount.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2BlockCount);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockCount.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2BlockCount);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          spinner.addFocusListener(new FocusListener()
+          {
+            @Override
+            public void focusGained(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              widget.setData("showedErrorDialog",false);
+            }
+            @Override
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockCount.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2BlockCount);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2BlockCount));
+        }
+
         // destination
         label = Widgets.newLabel(tab,BARControl.tr("Destination")+":");
-        Widgets.layout(label,10,0,TableLayoutData.W);
+        Widgets.layout(label,5,0,TableLayoutData.W);
         composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
-        Widgets.layout(composite,10,1,TableLayoutData.W);
+        Widgets.layout(composite,5,1,TableLayoutData.W);
         {
           combo = Widgets.newOptionMenu(composite);
           combo.setToolTipText(BARControl.tr("Storage destination type:\n"+
@@ -7004,7 +7482,7 @@ public class TabJobs
                                                          maxStorageSize,
                                                          archiveFileMode
                                                         );
-        Widgets.layout(widgetFile,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(widgetFile,6,1,TableLayoutData.WE|TableLayoutData.N);
         {
           Widgets.addModifyListener(new WidgetModifyListener(widgetFile.maxStorageSize,maxStorageSize)
           {
@@ -7059,7 +7537,7 @@ public class TabJobs
                                                       storageLoginPassword,
                                                       archiveFileMode
                                                      );
-        Widgets.layout(widgetFTP,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(widgetFTP,6,1,TableLayoutData.WE|TableLayoutData.N);
         {
           Widgets.addModifyListener(new WidgetModifyListener(widgetFTP.hostName,storageHostName)
           {
@@ -7141,7 +7619,7 @@ public class TabJobs
                                                          sshPrivateKeyFileName,
                                                          archiveFileMode
                                                         );
-        Widgets.layout(widgetSFTP,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(widgetSFTP,6,1,TableLayoutData.WE|TableLayoutData.N);
         {
           Widgets.addModifyListener(new WidgetModifyListener(widgetSFTP.hostName,storageHostName)
           {
@@ -7271,7 +7749,7 @@ public class TabJobs
                                                                sshPrivateKeyFileName,
                                                                archiveFileMode
                                                               );
-        Widgets.layout(widgetWebDAV,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(widgetWebDAV,6,1,TableLayoutData.WE|TableLayoutData.N);
         {
           Widgets.addModifyListener(new WidgetModifyListener(widgetWebDAV.hostName,storageHostName)
           {
@@ -7399,7 +7877,7 @@ public class TabJobs
                                                       storageShareName,
                                                       archiveFileMode
                                                      );
-        Widgets.layout(widgetSMB,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(widgetSMB,6,1,TableLayoutData.WE|TableLayoutData.N);
         {
           Widgets.addModifyListener(new WidgetModifyListener(widgetSMB.hostName,storageHostName)
           {
@@ -7496,7 +7974,7 @@ public class TabJobs
                                                                   archivePartSizeFlag,
                                                                   archivePartSize
                                                                  );
-        Widgets.layout(widgetOptical,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(widgetOptical,6,1,TableLayoutData.WE|TableLayoutData.N);
         {
           Widgets.addModifyListener(new WidgetModifyListener(widgetOptical.deviceName,storageDeviceName)
           {
@@ -7591,7 +8069,7 @@ public class TabJobs
                                                                storageDeviceName,
                                                                volumeSize
                                                               );
-        Widgets.layout(widgetDevice,11,1,TableLayoutData.WE|TableLayoutData.N);
+        Widgets.layout(widgetDevice,6,1,TableLayoutData.WE|TableLayoutData.N);
         {
           Widgets.addModifyListener(new WidgetModifyListener(widgetDevice.deviceName,storageDeviceName)
           {
@@ -7651,6 +8129,7 @@ public class TabJobs
         }
       });
 
+      // scripts
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Scripts"),Settings.hasExpertRole());
       tab.setLayout(new TableLayout(1.0,1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
@@ -8087,6 +8566,7 @@ public class TabJobs
         }
       }
 
+      // schedule
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Schedule"));
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
@@ -8462,6 +8942,7 @@ public class TabJobs
         }
       }
 
+      // persistence
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Persistence"),Settings.hasExpertRole());
       tab.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
@@ -8863,6 +9344,7 @@ TODO: implement delete entity
         }
       }
 
+      // comment
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Comment"),Settings.hasNormalRole());
       tab.setLayout(new TableLayout(1.0,1.0));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);

@@ -1800,6 +1800,13 @@ LOCAL void initGlobalOptions(void)
   globalOptions.generateKeyBits                                 = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
   globalOptions.generateKeyMode                                 = CRYPT_KEY_MODE_NONE;
 
+#ifdef HAVE_PAR2
+  globalOptions.par2Directory                                   = NULL;
+  globalOptions.par2BlockSize                                   = DEFAULT_PAR2_BLOCK_SIZE;
+  globalOptions.par2FileCount                                   = DEFAULT_PAR2_FILE_COUNT;
+  globalOptions.par2BlockCount                                  = DEFAULT_PAR2_BLOCK_COUNT;
+#endif // HAVE_PAR2
+
   globalOptions.logTypes                                        = LOG_TYPE_NONE;
   globalOptions.logFileName                                     = File_getSystemDirectoryCString(String_new(),
                                                                                                  FILE_SYSTEM_PATH_LOG,
@@ -8157,6 +8164,13 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_SPECIAL      ("signature-public-key",              0,  0,1,&globalOptions.signaturePublicKey,                   cmdOptionParseKey,NULL,1,                                    "public key for signature check","file name|data"                          ),
   CMD_OPTION_SPECIAL      ("signature-private-key",             0,  0,2,&globalOptions.signaturePrivateKey,                  cmdOptionParseKey,NULL,1,                                    "private key for signature generation","file name|data"                    ),
 
+#ifdef HAVE_PAR2
+  CMD_OPTION_CSTRING      ("par2-directory",                    0,  1,2,globalOptions.par2Directory,                                                                                      "PAR2 checksum directory","path"                                           ),
+  CMD_OPTION_INTEGER      ("par2-block-size",                   0,  1,2,globalOptions.par2BlockSize,                         0,MAX_INT,NULL,                                              "PAR2 block size (default: %default%)"                                     ),
+  CMD_OPTION_INTEGER      ("par2-files",                        0,  1,2,globalOptions.par2FileCount,                         0,MAX_INT,NULL,                                              "number of PAR2 checksum files to create (default: %default%)"             ),
+  CMD_OPTION_INTEGER      ("par2-blocks",                       0,  1,2,globalOptions.par2BlockCount,                        0,MAX_INT,NULL,                                              "number of PAR2 error correction blocks (default: %default%)"              ),
+#endif // HAVE_PAR2
+
 //TODO
 //  CMD_OPTION_INTEGER64    ("file-max-storage-size",              0,  0,2,defaultFileServer.maxStorageSize,                 0,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on file server"                             ),
 
@@ -9005,6 +9019,13 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING      ("post-command",              JobNode,job.options.postProcessScript            ,"<command>"),
   CONFIG_STRUCT_VALUE_STRING      ("slave-pre-command",         JobNode,job.options.slavePreProcessScript        ,"<command>"),
   CONFIG_STRUCT_VALUE_STRING      ("slave-post-command",        JobNode,job.options.slavePostProcessScript       ,"<command>"),
+
+  CONFIG_VALUE_SPACE(),
+
+  CONFIG_STRUCT_VALUE_STRING      ("par2-directory",            JobNode,job.options.par2Directory                ,"<directory>"),
+  CONFIG_STRUCT_VALUE_INTEGER     ("par2-block-size",           JobNode,job.options.par2BlockSize,               0,MAX_INT,NULL,"<n>"),
+  CONFIG_STRUCT_VALUE_INTEGER     ("par2-file-count",           JobNode,job.options.par2FileCount,               0,MAX_INT,NULL,"<n>"),
+  CONFIG_STRUCT_VALUE_INTEGER     ("par2-block-count",          JobNode,job.options.par2BlockCount,              0,MAX_INT,NULL,"<n>"),
 
   CONFIG_VALUE_SPACE(),
 

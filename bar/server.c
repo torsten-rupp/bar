@@ -3858,7 +3858,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
         if (error == ERROR_NONE)
         {
           // get new archive name
-          File_splitFileName(storageSpecifier.archiveName,directoryPath,baseName);
+          File_splitFileName(storageSpecifier.archiveName,directoryPath,baseName,NULL);
           File_setFileName(moveToArchivePath,moveToPath);
           File_appendFileName(moveToArchivePath,baseName);
 
@@ -4271,7 +4271,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                 }
 
                 // get path
-                File_splitFileName(storageSpecifier.archiveName,directoryPath,baseName);
+                File_splitFileName(storageSpecifier.archiveName,directoryPath,baseName,NULL);
 
                 // get move-to path name (expand macros)
                 error = Archive_formatName(moveToPath,
@@ -12189,7 +12189,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
       // delete job schedule state file
       fileName = String_new();
       baseName = String_new();
-      File_splitFileName(jobNode->fileName,fileName,baseName);
+      File_splitFileName(jobNode->fileName,fileName,baseName,NULL);
       File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
       (void)File_delete(fileName,FALSE);
       String_delete(baseName);

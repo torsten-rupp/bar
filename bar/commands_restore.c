@@ -303,7 +303,7 @@ LOCAL String getDestinationFileName(String      destinationFileName,
   }
 
   // get original name
-  File_splitFileName(fileName,directoryPath,baseName);
+  File_splitFileName(fileName,directoryPath,baseName,NULL);
 
   // strip directory
   if (directoryStripCount != DIRECTORY_STRIP_NONE)
@@ -641,7 +641,7 @@ LOCAL String getUniqName(String destinationFileName)
   directoryPath = String_new();
   baseName      = String_new();
 
-  File_splitFileName(destinationFileName,directoryPath,baseName);
+  File_splitFileName(destinationFileName,directoryPath,baseName,NULL);
   prefixFileName  = String_new();
   postfixFileName = String_new();
   index = String_findLastChar(baseName,STRING_END,'.');

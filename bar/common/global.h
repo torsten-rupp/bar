@@ -1940,7 +1940,7 @@ static inline uint getStackTrace(void const * stackTrace[], uint maxStackTraceSi
   #endif
 
   #ifdef HAVE_BACKTRACE
-    stackTraceSize = (uint)backtrace((void*)stackTrace,maxStackTraceSize);
+    stackTraceSize = (uint)backtrace((void**)stackTrace,maxStackTraceSize);
     for (i = 0; i < stackTraceSize; i++)
     {
       stackTrace[i] = (void const **)((const byte*)stackTrace[i]-1);

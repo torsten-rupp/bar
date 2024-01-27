@@ -1351,7 +1351,7 @@ LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archive
 
     // get directory name, base name
     directoryName = File_getDirectoryName(String_new(),archiveName);
-    baseName      = File_getBaseName(String_new(),archiveName);
+    baseName      = File_getBaseName(String_new(),archiveName,TRUE);
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
@@ -1540,7 +1540,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
 
     // get directory name, base name
     directoryName = File_getDirectoryName(String_new(),fileName);
-    baseName      = File_getBaseName(String_new(),fileName);
+    baseName      = File_getBaseName(String_new(),fileName,TRUE);
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
@@ -1756,7 +1756,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
 
     // get pathname, basename
     directoryName = File_getDirectoryName(String_new(),archiveName);
-    baseName      = File_getBaseName(String_new(),archiveName);
+    baseName      = File_getBaseName(String_new(),archiveName,TRUE);
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
@@ -2537,7 +2537,7 @@ LOCAL Errors StorageFTP_delete(const StorageInfo *storageInfo,
     {
       // get directory name, base name
       directoryName = File_getDirectoryName(String_new(),archiveName);
-      baseName      = File_getBaseName(String_new(),archiveName);
+      baseName      = File_getBaseName(String_new(),archiveName,TRUE);
 
       // get URL
       url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
@@ -2668,7 +2668,7 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
 
     // get directory name, base name
     directoryName = File_getDirectoryName(String_new(),infoFileName);
-    baseName      = File_getBaseName(String_new(),infoFileName);
+    baseName      = File_getBaseName(String_new(),infoFileName,TRUE);
 
     // get URL
     url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-01-27 04:33+0100\n"
+"POT-Creation-Date: 2024-01-28 10:04+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -21,40 +21,40 @@ msgstr ""
 msgid "filesystem"
 msgstr ""
 
-#: src/BARControl.java:218 src/TabJobs.java:6826 src/TabRestore.java:8567
+#: src/BARControl.java:218 src/TabJobs.java:7304 src/TabRestore.java:8567
 msgid "device"
 msgstr ""
 
-#: src/BARControl.java:1055 src/TabJobs.java:6387 src/TabJobs.java:14177
-#: src/TabJobs.java:14963 src/TabRestore.java:5902 src/TabRestore.java:7535
+#: src/BARControl.java:1055 src/TabJobs.java:6402 src/TabJobs.java:14659
+#: src/TabJobs.java:15445 src/TabRestore.java:5902 src/TabRestore.java:7535
 #: src/TabStatus.java:1337 src/TabStatus.java:3679
 msgid "normal"
 msgstr ""
 
-#: src/BARControl.java:1056 src/TabJobs.java:6419 src/TabJobs.java:14182
-#: src/TabJobs.java:14968 src/TabRestore.java:5918 src/TabRestore.java:7546
+#: src/BARControl.java:1056 src/TabJobs.java:6434 src/TabJobs.java:14664
+#: src/TabJobs.java:15450 src/TabRestore.java:5918 src/TabRestore.java:7546
 #: src/TabStatus.java:1367 src/TabStatus.java:3680
 msgid "full"
 msgstr ""
 
-#: src/BARControl.java:1057 src/TabJobs.java:6451 src/TabJobs.java:14187
-#: src/TabJobs.java:14973 src/TabRestore.java:5934 src/TabRestore.java:7557
+#: src/BARControl.java:1057 src/TabJobs.java:6466 src/TabJobs.java:14669
+#: src/TabJobs.java:15455 src/TabRestore.java:5934 src/TabRestore.java:7557
 #: src/TabStatus.java:1397 src/TabStatus.java:3681
 msgid "incremental"
 msgstr ""
 
-#: src/BARControl.java:1058 src/TabJobs.java:6483 src/TabJobs.java:14192
-#: src/TabJobs.java:14978 src/TabRestore.java:5950 src/TabRestore.java:7569
+#: src/BARControl.java:1058 src/TabJobs.java:6498 src/TabJobs.java:14674
+#: src/TabJobs.java:15460 src/TabRestore.java:5950 src/TabRestore.java:7569
 #: src/TabStatus.java:1427 src/TabStatus.java:3682
 msgid "differential"
 msgstr ""
 
-#: src/BARControl.java:1059 src/TabJobs.java:14197 src/TabJobs.java:14983
+#: src/BARControl.java:1059 src/TabJobs.java:14679 src/TabJobs.java:15465
 #: src/TabRestore.java:5966 src/TabRestore.java:7580 src/TabStatus.java:3683
 msgid "continuous"
 msgstr ""
 
-#: src/BARControl.java:1060 src/BARException.java:299
+#: src/BARControl.java:1060 src/BARException.java:300
 msgid "unknown"
 msgstr ""
 
@@ -84,7 +84,7 @@ msgstr ""
 
 #: src/BARControl.java:1161 src/ServerSettings.java:1110
 #: src/ServerSettings.java:1190 src/ServerSettings.java:1234
-#: src/TabJobs.java:5064 src/TabStatus.java:1788 src/TabStatus.java:1802
+#: src/TabJobs.java:5073 src/TabStatus.java:1788 src/TabStatus.java:1802
 #: src/TabStatus.java:1803 src/TabStatus.java:1877 src/TabStatus.java:1891
 #: src/TabStatus.java:1892 src/TabStatus.java:1973 src/TabStatus.java:1987
 #: src/TabStatus.java:1988 src/TabStatus.java:2016 src/TabStatus.java:2030
@@ -117,7 +117,7 @@ msgid "h"
 msgstr ""
 
 #: src/BARControl.java:1328 src/BARControl.java:1423 src/BARWidgets.java:1119
-#: src/TabJobs.java:14995
+#: src/TabJobs.java:15477
 msgid "min"
 msgstr ""
 
@@ -150,7 +150,7 @@ msgstr ""
 msgid "seconds"
 msgstr ""
 
-#: src/BARControl.java:1580 src/TabJobs.java:15043
+#: src/BARControl.java:1580 src/TabJobs.java:15525
 msgid "forever"
 msgstr ""
 
@@ -179,43 +179,43 @@ msgid "encryption"
 msgstr ""
 
 #: src/BARControl.java:2068 src/ServerSettings.java:230
-#: src/ServerSettings.java:3745 src/TabJobs.java:1468 src/TabJobs.java:14235
+#: src/ServerSettings.java:3745 src/TabJobs.java:1468 src/TabJobs.java:14717
 #: src/TabStatus.java:633
 msgid "Mon"
 msgstr ""
 
 #: src/BARControl.java:2069 src/ServerSettings.java:231
-#: src/ServerSettings.java:3750 src/TabJobs.java:1469 src/TabJobs.java:14240
+#: src/ServerSettings.java:3750 src/TabJobs.java:1469 src/TabJobs.java:14722
 #: src/TabStatus.java:634
 msgid "Tue"
 msgstr ""
 
 #: src/BARControl.java:2070 src/ServerSettings.java:232
-#: src/ServerSettings.java:3755 src/TabJobs.java:1470 src/TabJobs.java:14245
+#: src/ServerSettings.java:3755 src/TabJobs.java:1470 src/TabJobs.java:14727
 #: src/TabStatus.java:635
 msgid "Wed"
 msgstr ""
 
 #: src/BARControl.java:2071 src/ServerSettings.java:233
-#: src/ServerSettings.java:3760 src/TabJobs.java:1471 src/TabJobs.java:14250
+#: src/ServerSettings.java:3760 src/TabJobs.java:1471 src/TabJobs.java:14732
 #: src/TabStatus.java:636
 msgid "Thu"
 msgstr ""
 
 #: src/BARControl.java:2072 src/ServerSettings.java:234
-#: src/ServerSettings.java:3765 src/TabJobs.java:1472 src/TabJobs.java:14255
+#: src/ServerSettings.java:3765 src/TabJobs.java:1472 src/TabJobs.java:14737
 #: src/TabStatus.java:637
 msgid "Fri"
 msgstr ""
 
 #: src/BARControl.java:2073 src/ServerSettings.java:235
-#: src/ServerSettings.java:3770 src/TabJobs.java:1473 src/TabJobs.java:14260
+#: src/ServerSettings.java:3770 src/TabJobs.java:1473 src/TabJobs.java:14742
 #: src/TabStatus.java:638
 msgid "Sat"
 msgstr ""
 
 #: src/BARControl.java:2074 src/ServerSettings.java:236
-#: src/ServerSettings.java:3775 src/TabJobs.java:1474 src/TabJobs.java:14265
+#: src/ServerSettings.java:3775 src/TabJobs.java:1474 src/TabJobs.java:14747
 #: src/TabStatus.java:639
 msgid "Sun"
 msgstr ""
@@ -299,7 +299,7 @@ msgstr ""
 msgid "Pause"
 msgstr ""
 
-#: src/BARControl.java:4251 src/TabJobs.java:14323
+#: src/BARControl.java:4251 src/TabJobs.java:14805
 msgid "10 min"
 msgstr ""
 
@@ -423,9 +423,10 @@ msgstr ""
 #: src/ServerSettings.java:2709 src/ServerSettings.java:2721
 #: src/ServerSettings.java:3192 src/ServerSettings.java:3211
 #: src/ServerSettings.java:4060 src/ServerSettings.java:4128
-#: src/TabJobs.java:5448 src/TabJobs.java:6011 src/TabJobs.java:6654
-#: src/TabJobs.java:6770 src/TabJobs.java:10852 src/TabJobs.java:11319
-#: src/TabJobs.java:12456 src/TabJobs.java:13185 src/TabRestore.java:8371
+#: src/TabJobs.java:5457 src/TabJobs.java:6020 src/TabJobs.java:6669
+#: src/TabJobs.java:6785 src/TabJobs.java:6937 src/TabJobs.java:11334
+#: src/TabJobs.java:11801 src/TabJobs.java:12938 src/TabJobs.java:13667
+#: src/TabRestore.java:8371
 msgid "All files"
 msgstr ""
 
@@ -448,10 +449,10 @@ msgstr ""
 #: src/BARControl.java:4594 src/BARControl.java:4913 src/BARControl.java:5208
 #: src/BARControl.java:5562 src/BARControl.java:5836 src/BARControl.java:5913
 #: src/ServerSettings.java:3226 src/ServerSettings.java:3843
-#: src/ServerSettings.java:4225 src/TabJobs.java:9128 src/TabJobs.java:9270
-#: src/TabJobs.java:9426 src/TabJobs.java:10929 src/TabJobs.java:11356
-#: src/TabJobs.java:11855 src/TabJobs.java:12480 src/TabJobs.java:13854
-#: src/TabJobs.java:14407 src/TabJobs.java:15277 src/TabRestore.java:8607
+#: src/ServerSettings.java:4225 src/TabJobs.java:9610 src/TabJobs.java:9752
+#: src/TabJobs.java:9908 src/TabJobs.java:11411 src/TabJobs.java:11838
+#: src/TabJobs.java:12337 src/TabJobs.java:12962 src/TabJobs.java:14336
+#: src/TabJobs.java:14889 src/TabJobs.java:15759 src/TabRestore.java:8607
 #: src/TabRestore.java:9950 src/TabStatus.java:3286 src/TabStatus.java:3458
 msgid "Cancel"
 msgstr ""
@@ -489,19 +490,19 @@ msgstr ""
 msgid "Server"
 msgstr ""
 
-#: src/BARControl.java:5123 src/TabJobs.java:3051
+#: src/BARControl.java:5123 src/TabJobs.java:3055
 msgid "TLS"
 msgstr ""
 
-#: src/BARControl.java:5127 src/BARServer.java:1628 src/TabJobs.java:3055
+#: src/BARControl.java:5127 src/BARServer.java:1628 src/TabJobs.java:3059
 msgid "none"
 msgstr ""
 
-#: src/BARControl.java:5128 src/TabJobs.java:3056
+#: src/BARControl.java:5128 src/TabJobs.java:3060
 msgid "try"
 msgstr ""
 
-#: src/BARControl.java:5129 src/TabJobs.java:3057
+#: src/BARControl.java:5129 src/TabJobs.java:3061
 msgid "force"
 msgstr ""
 
@@ -658,8 +659,8 @@ msgstr ""
 #: src/BARControl.java:6386 src/BARControl.java:6897 src/BARControl.java:7102
 #: src/BARControl.java:7113 src/BARControl.java:7471
 #: src/ServerSettings.java:1771 src/ServerSettings.java:3938
-#: src/TabJobs.java:2737 src/TabJobs.java:4546 src/TabJobs.java:9112
-#: src/TabJobs.java:9253 src/TabJobs.java:11747 src/TabRestore.java:4281
+#: src/TabJobs.java:2741 src/TabJobs.java:4553 src/TabJobs.java:9594
+#: src/TabJobs.java:9735 src/TabJobs.java:12229 src/TabRestore.java:4281
 #: src/TabRestore.java:4853 src/TabRestore.java:5148 src/TabRestore.java:5631
 #: src/TabRestore.java:6502 src/TabRestore.java:9754 src/TabRestore.java:9759
 #: src/TabStatus.java:1081 src/TabStatus.java:1140
@@ -678,24 +679,24 @@ msgstr ""
 
 #: src/BARControl.java:6389 src/BARControl.java:6534 src/BARControl.java:6819
 #: src/BARControl.java:7098 src/BARControl.java:7110 src/BARControl.java:7304
-#: src/ServerSettings.java:1768 src/TabJobs.java:10867 src/TabJobs.java:14171
-#: src/TabJobs.java:14957 src/TabRestore.java:4819 src/TabRestore.java:4863
+#: src/ServerSettings.java:1768 src/TabJobs.java:11349 src/TabJobs.java:14653
+#: src/TabJobs.java:15439 src/TabRestore.java:4819 src/TabRestore.java:4863
 #: src/TabRestore.java:6505 src/TabRestore.java:9760 src/TabStatus.java:1099
 #: src/TabStatus.java:1188 src/TabStatus.java:3676
 msgid "Type"
 msgstr ""
 
-#: src/BARControl.java:6390 src/TabJobs.java:4855 src/TabStatus.java:1105
+#: src/BARControl.java:6390 src/TabJobs.java:4864 src/TabStatus.java:1105
 #: src/TabStatus.java:1204
 msgid "Part size"
 msgstr ""
 
-#: src/BARControl.java:6391 src/TabJobs.java:5091 src/TabStatus.java:1111
+#: src/BARControl.java:6391 src/TabJobs.java:5100 src/TabStatus.java:1111
 #: src/TabStatus.java:1220
 msgid "Compress"
 msgstr ""
 
-#: src/BARControl.java:6392 src/TabJobs.java:5713 src/TabStatus.java:1117
+#: src/BARControl.java:6392 src/TabJobs.java:5722 src/TabStatus.java:1117
 #: src/TabStatus.java:1236
 msgid "Crypt"
 msgstr ""
@@ -704,7 +705,7 @@ msgstr ""
 msgid "Crypt type"
 msgstr ""
 
-#: src/BARControl.java:6394 src/BARControl.java:6896 src/TabJobs.java:6381
+#: src/BARControl.java:6394 src/BARControl.java:6896 src/TabJobs.java:6396
 msgid "Mode"
 msgstr ""
 
@@ -742,21 +743,21 @@ msgid "UUID"
 msgstr ""
 
 #: src/BARControl.java:6531 src/ServerSettings.java:1497
-#: src/ServerSettings.java:3713 src/TabJobs.java:8118 src/TabJobs.java:14203
+#: src/ServerSettings.java:3713 src/TabJobs.java:8598 src/TabJobs.java:14685
 msgid "Date"
 msgstr ""
 
 #: src/BARControl.java:6532 src/ServerSettings.java:1500
-#: src/ServerSettings.java:3739 src/TabJobs.java:8121 src/TabJobs.java:14229
+#: src/ServerSettings.java:3739 src/TabJobs.java:8601 src/TabJobs.java:14711
 msgid "Week days"
 msgstr ""
 
-#: src/BARControl.java:6533 src/ServerSettings.java:3800 src/TabJobs.java:8125
-#: src/TabJobs.java:14290
+#: src/BARControl.java:6533 src/ServerSettings.java:3800 src/TabJobs.java:8605
+#: src/TabJobs.java:14772
 msgid "Time"
 msgstr ""
 
-#: src/BARControl.java:6535 src/TabJobs.java:14311
+#: src/BARControl.java:6535 src/TabJobs.java:14793
 msgid "Interval"
 msgstr ""
 
@@ -764,11 +765,11 @@ msgstr ""
 msgid "Text"
 msgstr ""
 
-#: src/BARControl.java:6537 src/ServerSettings.java:1503 src/TabJobs.java:8131
+#: src/BARControl.java:6537 src/ServerSettings.java:1503 src/TabJobs.java:8611
 msgid "Begin"
 msgstr ""
 
-#: src/BARControl.java:6538 src/ServerSettings.java:1506 src/TabJobs.java:8134
+#: src/BARControl.java:6538 src/ServerSettings.java:1506 src/TabJobs.java:8614
 msgid "End"
 msgstr ""
 
@@ -822,7 +823,7 @@ msgstr ""
 msgid "cannot remove index for storage ''{0}'' from index (error: {1})"
 msgstr ""
 
-#: src/BARControl.java:6817 src/TabJobs.java:15599 src/TabRestore.java:4399
+#: src/BARControl.java:6817 src/TabJobs.java:16081 src/TabRestore.java:4399
 #: src/TabRestore.java:4572
 msgid "Entity id"
 msgstr ""
@@ -885,7 +886,7 @@ msgstr ""
 msgid "Entry id"
 msgstr ""
 
-#: src/BARControl.java:7101 src/TabJobs.java:4850 src/TabRestore.java:4593
+#: src/BARControl.java:7101 src/TabJobs.java:6391 src/TabRestore.java:4593
 #: src/TabRestore.java:5054 src/TabStatus.java:2129
 msgid "Storage"
 msgstr ""
@@ -979,1002 +980,1006 @@ msgstr ""
 msgid "communication: {0}"
 msgstr ""
 
-#: src/BARException.java:302
+#: src/BARException.java:303
 msgid "insufficient memory"
 msgstr ""
 
-#: src/BARException.java:305
+#: src/BARException.java:306
 msgid "initialize failed"
 msgstr ""
 
-#: src/BARException.java:308
+#: src/BARException.java:309
 msgid "invalid argument"
 msgstr ""
 
-#: src/BARException.java:311
+#: src/BARException.java:312
 msgid "configuration error"
 msgstr ""
 
-#: src/BARException.java:314
+#: src/BARException.java:315
 msgid "no writable configuration file"
 msgstr ""
 
-#: src/BARException.java:317 src/TabStatus.java:93
+#: src/BARException.java:318 src/TabStatus.java:93
 msgid "aborted"
 msgstr ""
 
-#: src/BARException.java:320
+#: src/BARException.java:321
 msgid "interrupted"
 msgstr ""
 
-#: src/BARException.java:323
+#: src/BARException.java:324
 msgid "function not supported"
 msgstr ""
 
-#: src/BARException.java:326
+#: src/BARException.java:327
 msgid "function still not implemented"
 msgstr ""
 
-#: src/BARException.java:329
+#: src/BARException.java:330
 msgid "run as daemon/service failed"
 msgstr ""
 
-#: src/BARException.java:332
+#: src/BARException.java:333
 msgid "inter-process communication failed"
 msgstr ""
 
-#: src/BARException.java:335
+#: src/BARException.java:336
 msgid "initialize password failed"
 msgstr ""
 
-#: src/BARException.java:338 src/BARException.java:399
+#: src/BARException.java:339 src/BARException.java:400
 msgid "no password given"
 msgstr ""
 
-#: src/BARException.java:341
+#: src/BARException.java:342
 msgid "invalid password"
 msgstr ""
 
-#: src/BARException.java:344
+#: src/BARException.java:345
 msgid "process data failed"
 msgstr ""
 
-#: src/BARException.java:347 src/BARException.java:763
+#: src/BARException.java:348 src/BARException.java:764
 msgid "invalid encoding"
 msgstr ""
 
-#: src/BARException.java:350
+#: src/BARException.java:351
 msgid "convert characters"
 msgstr ""
 
-#: src/BARException.java:353
+#: src/BARException.java:354
 msgid "invalid pattern"
 msgstr ""
 
-#: src/BARException.java:360
+#: src/BARException.java:361
 msgid "no host name given"
 msgstr ""
 
-#: src/BARException.java:369
+#: src/BARException.java:370
 msgid "host not found"
 msgstr ""
 
-#: src/BARException.java:373
+#: src/BARException.java:374
 msgid "bind failed"
 msgstr ""
 
-#: src/BARException.java:380
+#: src/BARException.java:381
 msgid "connect failed"
 msgstr ""
 
-#: src/BARException.java:387
+#: src/BARException.java:388
 msgid "connect timeout"
 msgstr ""
 
-#: src/BARException.java:390 src/BARServer.java:1206 src/TabStatus.java:94
+#: src/BARException.java:391 src/BARServer.java:1206 src/TabStatus.java:94
 msgid "disconnected"
 msgstr ""
 
-#: src/BARException.java:393
+#: src/BARException.java:394
 msgid "too many concurrent connections"
 msgstr ""
 
-#: src/BARException.java:396
+#: src/BARException.java:397
 msgid "no login name given"
 msgstr ""
 
-#: src/BARException.java:402
+#: src/BARException.java:403
 msgid "sending data failed"
 msgstr ""
 
-#: src/BARException.java:409
+#: src/BARException.java:410
 msgid "receiving data failed"
 msgstr ""
 
-#: src/BARException.java:412
+#: src/BARException.java:413
 msgid "execute command failed"
 msgstr ""
 
-#: src/BARException.java:415
+#: src/BARException.java:416
 msgid "timeout send data"
 msgstr ""
 
-#: src/BARException.java:418
+#: src/BARException.java:419
 msgid "timeout receive data"
 msgstr ""
 
-#: src/BARException.java:421
+#: src/BARException.java:422
 msgid "no response from remote"
 msgstr ""
 
-#: src/BARException.java:424
+#: src/BARException.java:425
 msgid "invalid response from remote"
 msgstr ""
 
-#: src/BARException.java:427
+#: src/BARException.java:428
 msgid "bad request"
 msgstr ""
 
-#: src/BARException.java:430
+#: src/BARException.java:431
 msgid "initialize (TLS/SSL) failed"
 msgstr ""
 
-#: src/BARException.java:433
+#: src/BARException.java:434
 msgid "no (TLS/SSL) certificate authority file"
 msgstr ""
 
-#: src/BARException.java:436
+#: src/BARException.java:437
 msgid "no (TLS/SSL) certificate file"
 msgstr ""
 
-#: src/BARException.java:439
+#: src/BARException.java:440
 msgid "no (TLS/SSL) key file"
 msgstr ""
 
-#: src/BARException.java:442
+#: src/BARException.java:443
 msgid "invalid (TLS/SSL) certificate authority"
 msgstr ""
 
-#: src/BARException.java:445
+#: src/BARException.java:446
 msgid "invalid (TLS/SSL) certificate"
 msgstr ""
 
-#: src/BARException.java:448
+#: src/BARException.java:449
 msgid "read (TLS/SSL) certificate fail"
 msgstr ""
 
-#: src/BARException.java:451
+#: src/BARException.java:452
 msgid "corrupt (TLS/SSL) certificate"
 msgstr ""
 
-#: src/BARException.java:454
+#: src/BARException.java:455
 msgid "TLS (SSL) certificate expired"
 msgstr ""
 
-#: src/BARException.java:461
+#: src/BARException.java:462
 msgid "TLS (SSL) certificate is still not active"
 msgstr ""
 
-#: src/BARException.java:468
+#: src/BARException.java:469
 msgid "TLS (SSL) handshake failedure"
 msgstr ""
 
-#: src/BARException.java:475
+#: src/BARException.java:476
 msgid "invalid SSH specifier"
 msgstr ""
 
-#: src/BARException.java:478
+#: src/BARException.java:479
 msgid "no SSH public key"
 msgstr ""
 
-#: src/BARException.java:481
+#: src/BARException.java:482
 msgid "no SSH private key"
 msgstr ""
 
-#: src/BARException.java:484
+#: src/BARException.java:485
 msgid "no SSH password given"
 msgstr ""
 
-#: src/BARException.java:488 src/BARException.java:496
-#: src/BARException.java:531 src/BARException.java:549
-#: src/BARException.java:636 src/BARException.java:1118
+#: src/BARException.java:489 src/BARException.java:497
+#: src/BARException.java:532 src/BARException.java:550
+#: src/BARException.java:637 src/BARException.java:1119
 #, java-format
 msgid "for ''{0}''"
 msgstr ""
 
-#: src/BARException.java:492
+#: src/BARException.java:493
 msgid "invalid SSH password"
 msgstr ""
 
-#: src/BARException.java:500
+#: src/BARException.java:501
 msgid "invalid SSH private key"
 msgstr ""
 
-#: src/BARException.java:507
+#: src/BARException.java:508
 msgid "initialize SSH session failed"
 msgstr ""
 
-#: src/BARException.java:510
+#: src/BARException.java:511
 msgid "SSH authentication failed"
 msgstr ""
 
-#: src/BARException.java:517
+#: src/BARException.java:518
 msgid "ssh protocol error"
 msgstr ""
 
-#: src/BARException.java:524
+#: src/BARException.java:525
 msgid "invalid SMB/CIFS specifier"
 msgstr ""
 
-#: src/BARException.java:527
+#: src/BARException.java:528
 msgid "no SMB/CIFS password given"
 msgstr ""
 
-#: src/BARException.java:535
+#: src/BARException.java:536
 msgid "initialize SMB/CIFS session failed"
 msgstr ""
 
-#: src/BARException.java:538
+#: src/BARException.java:539
 msgid "SMB/CIFS authentication failed"
 msgstr ""
 
-#: src/BARException.java:545
+#: src/BARException.java:546
 msgid "invalid SMB/CIFS password"
 msgstr ""
 
-#: src/BARException.java:553
+#: src/BARException.java:554
 msgid "SMB/CIFS protocol error"
 msgstr ""
 
-#: src/BARException.java:560
+#: src/BARException.java:561
 #, java-format
 msgid "job ''{0}'' already exists"
 msgstr ""
 
-#: src/BARException.java:563
+#: src/BARException.java:564
 #, java-format
 msgid "job ''{0}'' running"
 msgstr ""
 
-#: src/BARException.java:566
+#: src/BARException.java:567
 msgid "create job failed"
 msgstr ""
 
-#: src/BARException.java:573
+#: src/BARException.java:574
 msgid "delete job failed"
 msgstr ""
 
-#: src/BARException.java:580
+#: src/BARException.java:581
 msgid "rename job failed"
 msgstr ""
 
-#: src/BARException.java:587
+#: src/BARException.java:588
 msgid "initialize storage failed"
 msgstr ""
 
-#: src/BARException.java:594
+#: src/BARException.java:595
 msgid "no storage name given"
 msgstr ""
 
-#: src/BARException.java:597
+#: src/BARException.java:598
 msgid "invalid storage"
 msgstr ""
 
-#: src/BARException.java:600
+#: src/BARException.java:601
 msgid "invalid FTP specifier"
 msgstr ""
 
-#: src/BARException.java:603
+#: src/BARException.java:604
 msgid "initialize FTP session failed"
 msgstr ""
 
-#: src/BARException.java:610
+#: src/BARException.java:611
 msgid "no FTP password given"
 msgstr ""
 
-#: src/BARException.java:613
+#: src/BARException.java:614
 msgid "invalid FTP password"
 msgstr ""
 
-#: src/BARException.java:616
+#: src/BARException.java:617
 msgid "invalid FTP user/password"
 msgstr ""
 
-#: src/BARException.java:623
+#: src/BARException.java:624
 msgid "get FTP file size failed"
 msgstr ""
 
-#: src/BARException.java:626
+#: src/BARException.java:627
 msgid "invalid WebDAV specifier"
 msgstr ""
 
-#: src/BARException.java:629
+#: src/BARException.java:630
 msgid "initialize WebDAV session failed"
 msgstr ""
 
-#: src/BARException.java:632
+#: src/BARException.java:633
 msgid "no WebDAV password given"
 msgstr ""
 
-#: src/BARException.java:640
+#: src/BARException.java:641
 msgid "invalid WebDAV password"
 msgstr ""
 
-#: src/BARException.java:643
+#: src/BARException.java:644
 msgid "invalid WebDAV user/password"
 msgstr ""
 
-#: src/BARException.java:650
+#: src/BARException.java:651
 msgid "get WebDAV file size"
 msgstr ""
 
-#: src/BARException.java:656
+#: src/BARException.java:657
 msgid "failed"
 msgstr ""
 
-#: src/BARException.java:659
+#: src/BARException.java:660
 msgid "WebDAV upload failed"
 msgstr ""
 
-#: src/BARException.java:666
+#: src/BARException.java:667
 msgid "WebDAV download failed"
 msgstr ""
 
-#: src/BARException.java:673
+#: src/BARException.java:674
 msgid "WebDAV failed"
 msgstr ""
 
-#: src/BARException.java:680
+#: src/BARException.java:681
 msgid "initialize compress failed"
 msgstr ""
 
-#: src/BARException.java:687
+#: src/BARException.java:688
 msgid "initialize decompress failed"
 msgstr ""
 
-#: src/BARException.java:694
+#: src/BARException.java:695
 msgid "end of compressed file"
 msgstr ""
 
-#: src/BARException.java:697 src/BARException.java:1416
+#: src/BARException.java:698 src/BARException.java:1417
 msgid "delta source not found"
 msgstr ""
 
-#: src/BARException.java:704
+#: src/BARException.java:705
 msgid "invalid compress algorithm"
 msgstr ""
 
-#: src/BARException.java:707
+#: src/BARException.java:708
 msgid "unknown compress algorithm"
 msgstr ""
 
-#: src/BARException.java:710
+#: src/BARException.java:711
 msgid "compress algorithm not supported"
 msgstr ""
 
-#: src/BARException.java:713
+#: src/BARException.java:714
 msgid "compress failed"
 msgstr ""
 
-#: src/BARException.java:720
+#: src/BARException.java:721
 msgid "decompress failed"
 msgstr ""
 
-#: src/BARException.java:727
+#: src/BARException.java:728
 msgid "unsupported block length"
 msgstr ""
 
-#: src/BARException.java:730
+#: src/BARException.java:731
 msgid "initialize crypt failed"
 msgstr ""
 
-#: src/BARException.java:737
+#: src/BARException.java:738
 msgid "no crypt key for cipher"
 msgstr ""
 
-#: src/BARException.java:740
+#: src/BARException.java:741
 msgid "no password given for cipher"
 msgstr ""
 
-#: src/BARException.java:743
+#: src/BARException.java:744
 msgid "invalid decryption password"
 msgstr ""
 
-#: src/BARException.java:746
+#: src/BARException.java:747
 msgid "encryption passwords mismatch"
 msgstr ""
 
-#: src/BARException.java:749
+#: src/BARException.java:750
 msgid "initialize cipher failed"
 msgstr ""
 
-#: src/BARException.java:756
+#: src/BARException.java:757
 msgid "create public/private key failed"
 msgstr ""
 
-#: src/BARException.java:766
+#: src/BARException.java:767
 msgid "initialize key failed"
 msgstr ""
 
-#: src/BARException.java:773
+#: src/BARException.java:774
 msgid "public/private key not found"
 msgstr ""
 
-#: src/BARException.java:780
+#: src/BARException.java:781
 msgid "read public/private key failed"
 msgstr ""
 
-#: src/BARException.java:787
+#: src/BARException.java:788
 msgid "invalid key"
 msgstr ""
 
-#: src/BARException.java:794
+#: src/BARException.java:795
 msgid "corrupt key"
 msgstr ""
 
-#: src/BARException.java:801
+#: src/BARException.java:802
 msgid "invalid key length"
 msgstr ""
 
-#: src/BARException.java:804
+#: src/BARException.java:805
 msgid "invalid block length"
 msgstr ""
 
-#: src/BARException.java:807
+#: src/BARException.java:808
 msgid "invalid salt length"
 msgstr ""
 
-#: src/BARException.java:810
+#: src/BARException.java:811
 msgid "no public encryption key"
 msgstr ""
 
-#: src/BARException.java:813
+#: src/BARException.java:814
 msgid "no private encryption key"
 msgstr ""
 
-#: src/BARException.java:816
+#: src/BARException.java:817
 msgid "key is not a public encryption key"
 msgstr ""
 
-#: src/BARException.java:823
+#: src/BARException.java:824
 msgid "key is not a private encryption key"
 msgstr ""
 
-#: src/BARException.java:830
+#: src/BARException.java:831
 msgid "no public signature key"
 msgstr ""
 
-#: src/BARException.java:833
+#: src/BARException.java:834
 msgid "no private signature key"
 msgstr ""
 
-#: src/BARException.java:836
+#: src/BARException.java:837
 msgid "key is not a public signature key"
 msgstr ""
 
-#: src/BARException.java:843
+#: src/BARException.java:844
 msgid "key is not a private signature key"
 msgstr ""
 
-#: src/BARException.java:850
+#: src/BARException.java:851
 msgid "key encryption failed"
 msgstr ""
 
-#: src/BARException.java:857
+#: src/BARException.java:858
 msgid "key decryption failed"
 msgstr ""
 
-#: src/BARException.java:864
+#: src/BARException.java:865
 msgid "wrong private decryption key"
 msgstr ""
 
-#: src/BARException.java:867
+#: src/BARException.java:868
 msgid "invalid encryption algorithm"
 msgstr ""
 
-#: src/BARException.java:870
+#: src/BARException.java:871
 msgid "unknown encryption algorithm"
 msgstr ""
 
-#: src/BARException.java:873
+#: src/BARException.java:874
 msgid "encrypt failed"
 msgstr ""
 
-#: src/BARException.java:880
+#: src/BARException.java:881
 msgid "decrypt failed"
 msgstr ""
 
-#: src/BARException.java:887
+#: src/BARException.java:888
 msgid "initialize hash failed"
 msgstr ""
 
-#: src/BARException.java:890
+#: src/BARException.java:891
 msgid "invalid hash algorithm"
 msgstr ""
 
-#: src/BARException.java:893
+#: src/BARException.java:894
 msgid "unknown hash algorithm"
 msgstr ""
 
-#: src/BARException.java:896
+#: src/BARException.java:897
 msgid "initialize message authentication code failed"
 msgstr ""
 
-#: src/BARException.java:899
+#: src/BARException.java:900
 msgid "invalid message authentication code algorithm"
 msgstr ""
 
-#: src/BARException.java:902
+#: src/BARException.java:903
 msgid "unknown message authentication code algorithm"
 msgstr ""
 
-#: src/BARException.java:905
+#: src/BARException.java:906
 msgid "directory not found"
 msgstr ""
 
-#: src/BARException.java:912
+#: src/BARException.java:913
 msgid "no file name given"
 msgstr ""
 
-#: src/BARException.java:915
+#: src/BARException.java:916
 msgid "create file failed"
 msgstr ""
 
-#: src/BARException.java:928
+#: src/BARException.java:929
 msgid "open file failed"
 msgstr ""
 
-#: src/BARException.java:932
+#: src/BARException.java:933
 msgid "create directory failed"
 msgstr ""
 
-#: src/BARException.java:939
+#: src/BARException.java:940
 msgid "read file failed"
 msgstr ""
 
-#: src/BARException.java:946
+#: src/BARException.java:947
 msgid "end of file"
 msgstr ""
 
-#: src/BARException.java:953
+#: src/BARException.java:954
 msgid "write file failed"
 msgstr ""
 
-#: src/BARException.java:960
+#: src/BARException.java:961
 msgid "delete file failed"
 msgstr ""
 
-#: src/BARException.java:967
+#: src/BARException.java:968
 msgid "open directory"
 msgstr ""
 
-#: src/BARException.java:974
+#: src/BARException.java:975
 msgid "read directory failed"
 msgstr ""
 
-#: src/BARException.java:979
+#: src/BARException.java:980
 #, java-format
 msgid "file ''{0}'' already exists"
 msgstr ""
 
-#: src/BARException.java:983
+#: src/BARException.java:984
 msgid "file already exists"
 msgstr ""
 
-#: src/BARException.java:987
+#: src/BARException.java:988
 msgid "file not found"
 msgstr ""
 
-#: src/BARException.java:994
+#: src/BARException.java:995
 msgid "access denied"
 msgstr ""
 
-#: src/BARException.java:1001
+#: src/BARException.java:1002
 msgid "not a directory"
 msgstr ""
 
-#: src/BARException.java:1008
+#: src/BARException.java:1009
 msgid "end of directory list"
 msgstr ""
 
-#: src/BARException.java:1011
+#: src/BARException.java:1012
 msgid "init file notify failed"
 msgstr ""
 
-#: src/BARException.java:1018
+#: src/BARException.java:1019
 msgid "insufficient file notify entries"
 msgstr ""
 
-#: src/BARException.java:1021
+#: src/BARException.java:1022
 msgid "i/o error"
 msgstr ""
 
-#: src/BARException.java:1028
+#: src/BARException.java:1029
 msgid "CD/DVD/BD device not found"
 msgstr ""
 
-#: src/BARException.java:1035
+#: src/BARException.java:1036
 msgid "open CD/DVD/BD disk failed"
 msgstr ""
 
-#: src/BARException.java:1042
+#: src/BARException.java:1043
 msgid "open ISO 9660 image failed"
 msgstr ""
 
-#: src/BARException.java:1049
+#: src/BARException.java:1050
 msgid "no device name given"
 msgstr ""
 
-#: src/BARException.java:1052
+#: src/BARException.java:1053
 msgid "not a device"
 msgstr ""
 
-#: src/BARException.java:1055
+#: src/BARException.java:1056
 msgid "open device failed"
 msgstr ""
 
-#: src/BARException.java:1062
+#: src/BARException.java:1063
 msgid "invalid device block size"
 msgstr ""
 
-#: src/BARException.java:1065
+#: src/BARException.java:1066
 msgid "read device failed"
 msgstr ""
 
-#: src/BARException.java:1068
+#: src/BARException.java:1069
 msgid "write device failed"
 msgstr ""
 
-#: src/BARException.java:1071
+#: src/BARException.java:1072
 msgid "error parsing device list"
 msgstr ""
 
-#: src/BARException.java:1074
+#: src/BARException.java:1075
 msgid "mount failed"
 msgstr ""
 
-#: src/BARException.java:1081
+#: src/BARException.java:1082
 msgid "unmount failed"
 msgstr ""
 
-#: src/BARException.java:1088
+#: src/BARException.java:1089
 msgid "no archive file name given"
 msgstr ""
 
-#: src/BARException.java:1091
+#: src/BARException.java:1092
 msgid "not an archive file"
 msgstr ""
 
-#: src/BARException.java:1098
+#: src/BARException.java:1099
 msgid "archive not found"
 msgstr ""
 
-#: src/BARException.java:1105
+#: src/BARException.java:1106
 msgid "end of archive"
 msgstr ""
 
-#: src/BARException.java:1108
+#: src/BARException.java:1109
 msgid "no meta entry"
 msgstr ""
 
-#: src/BARException.java:1111
+#: src/BARException.java:1112
 msgid "no file entry"
 msgstr ""
 
-#: src/BARException.java:1114
+#: src/BARException.java:1115
 msgid "no file data entry"
 msgstr ""
 
-#: src/BARException.java:1122
+#: src/BARException.java:1123
 msgid "no directory entry"
 msgstr ""
 
-#: src/BARException.java:1125
+#: src/BARException.java:1126
 msgid "no link entry"
 msgstr ""
 
-#: src/BARException.java:1128
+#: src/BARException.java:1129
 msgid "no hard link entry"
 msgstr ""
 
-#: src/BARException.java:1131
+#: src/BARException.java:1132
 msgid "no special entry"
 msgstr ""
 
-#: src/BARException.java:1134
+#: src/BARException.java:1135
 msgid "no image entry"
 msgstr ""
 
-#: src/BARException.java:1137
+#: src/BARException.java:1138
 msgid "no image data entry"
 msgstr ""
 
-#: src/BARException.java:1140
+#: src/BARException.java:1141
 msgid "end of data"
 msgstr ""
 
-#: src/BARException.java:1143
+#: src/BARException.java:1144
 msgid "incomplete archive"
 msgstr ""
 
-#: src/BARException.java:1146
+#: src/BARException.java:1147
 msgid "insufficient split number digits in name"
 msgstr ""
 
-#: src/BARException.java:1149
+#: src/BARException.java:1150
 msgid "wrong CRC"
 msgstr ""
 
-#: src/BARException.java:1153
+#: src/BARException.java:1154
 msgid "at offset"
 msgstr ""
 
-#: src/BARException.java:1166
+#: src/BARException.java:1167
 msgid "entry is incomplete"
 msgstr ""
 
-#: src/BARException.java:1173
+#: src/BARException.java:1174
 msgid "wrong entry type"
 msgstr ""
 
-#: src/BARException.java:1180
+#: src/BARException.java:1181
 msgid "entries differ"
 msgstr ""
 
-#: src/BARException.java:1187
+#: src/BARException.java:1188
 msgid "corrupt data or invalid password"
 msgstr ""
 
-#: src/BARException.java:1194
+#: src/BARException.java:1195
 msgid "invalid chunk size"
 msgstr ""
 
-#: src/BARException.java:1197
+#: src/BARException.java:1198
 msgid "unknown chunk"
 msgstr ""
 
-#: src/BARException.java:1204
+#: src/BARException.java:1205
 msgid "invalid signature"
 msgstr ""
 
-#: src/BARException.java:1207
+#: src/BARException.java:1208
 msgid "invalid incremental file"
 msgstr ""
 
-#: src/BARException.java:1210
+#: src/BARException.java:1211
 msgid "wrong incremental file version"
 msgstr ""
 
-#: src/BARException.java:1213
+#: src/BARException.java:1214
 msgid "corrupt incremental file"
 msgstr ""
 
-#: src/BARException.java:1216
+#: src/BARException.java:1217
 msgid "invalid device specifier"
 msgstr ""
 
-#: src/BARException.java:1219
+#: src/BARException.java:1220
 msgid "load volume failed"
 msgstr ""
 
-#: src/BARException.java:1222
+#: src/BARException.java:1223
 msgid "parse command failed"
 msgstr ""
 
-#: src/BARException.java:1229
+#: src/BARException.java:1230
 msgid "expand command template failed"
 msgstr ""
 
-#: src/BARException.java:1232
+#: src/BARException.java:1233
 msgid "i/o redirect failed"
 msgstr ""
 
-#: src/BARException.java:1239
+#: src/BARException.java:1240
 msgid "execute external program failed"
 msgstr ""
 
-#: src/BARException.java:1246
+#: src/BARException.java:1247
 msgid "terminated external program"
 msgstr ""
 
-#: src/BARException.java:1253
+#: src/BARException.java:1254
 msgid "parsing data failed"
 msgstr ""
 
-#: src/BARException.java:1260
+#: src/BARException.java:1261
 msgid "parsing date failed"
 msgstr ""
 
-#: src/BARException.java:1267
+#: src/BARException.java:1268
 msgid "parsing time failed"
 msgstr ""
 
-#: src/BARException.java:1274
+#: src/BARException.java:1275
 msgid "parsing weekdays failed"
 msgstr ""
 
-#: src/BARException.java:1281
+#: src/BARException.java:1282
 msgid "parsing maintenance failed"
 msgstr ""
 
-#: src/BARException.java:1288
+#: src/BARException.java:1289
 msgid "parsing schedule failed"
 msgstr ""
 
-#: src/BARException.java:1295
+#: src/BARException.java:1296
 msgid "unknown command"
 msgstr ""
 
-#: src/BARException.java:1302
+#: src/BARException.java:1303
 msgid "expected parameter"
 msgstr ""
 
-#: src/BARException.java:1315
+#: src/BARException.java:1316
 msgid "unknown value"
 msgstr ""
 
-#: src/BARException.java:1319
+#: src/BARException.java:1320
 msgid "invalid value"
 msgstr ""
 
-#: src/BARException.java:1326
+#: src/BARException.java:1327
 msgid "deprecated or ignored value"
 msgstr ""
 
-#: src/BARException.java:1333
+#: src/BARException.java:1334
 msgid "authorization failed"
 msgstr ""
 
-#: src/BARException.java:1336
+#: src/BARException.java:1337
 msgid "job not found"
 msgstr ""
 
-#: src/BARException.java:1343
+#: src/BARException.java:1344
 msgid "schedule not found"
 msgstr ""
 
-#: src/BARException.java:1356
+#: src/BARException.java:1357
 msgid "persistence not found"
 msgstr ""
 
-#: src/BARException.java:1366
+#: src/BARException.java:1367
 msgid "maintenance not found"
 msgstr ""
 
-#: src/BARException.java:1376
+#: src/BARException.java:1377
 msgid "server not found"
 msgstr ""
 
-#: src/BARException.java:1386
+#: src/BARException.java:1387
 msgid "entry not found"
 msgstr ""
 
-#: src/BARException.java:1396
+#: src/BARException.java:1397
 msgid "pattern not found"
 msgstr ""
 
-#: src/BARException.java:1406
+#: src/BARException.java:1407
 msgid "mount not found"
 msgstr ""
 
-#: src/BARException.java:1420
+#: src/BARException.java:1421
 msgid "database"
 msgstr ""
 
-#: src/BARException.java:1427
+#: src/BARException.java:1428
 msgid "invalid database URI"
 msgstr ""
 
-#: src/BARException.java:1434
+#: src/BARException.java:1435
 msgid "database type not supported"
 msgstr ""
 
-#: src/BARException.java:1437
+#: src/BARException.java:1438
 msgid "database already exists"
 msgstr ""
 
-#: src/BARException.java:1440
+#: src/BARException.java:1441
 msgid "database not found"
 msgstr ""
 
-#: src/BARException.java:1443
+#: src/BARException.java:1444
 msgid "connect to database failed"
 msgstr ""
 
-#: src/BARException.java:1446
+#: src/BARException.java:1447
 msgid "database connection lost"
 msgstr ""
 
-#: src/BARException.java:1449
+#: src/BARException.java:1450
 msgid "database authorization failed"
 msgstr ""
 
-#: src/BARException.java:1452
+#: src/BARException.java:1453
 msgid "insufficient database version"
 msgstr ""
 
-#: src/BARException.java:1459
+#: src/BARException.java:1460
 msgid "unknown version of index"
 msgstr ""
 
-#: src/BARException.java:1462
+#: src/BARException.java:1463
 msgid "missing table"
 msgstr ""
 
-#: src/BARException.java:1469
+#: src/BARException.java:1470
 msgid "missing column"
 msgstr ""
 
-#: src/BARException.java:1476
+#: src/BARException.java:1477
 msgid "obsolete table"
 msgstr ""
 
-#: src/BARException.java:1483
+#: src/BARException.java:1484
 msgid "obsolete column"
 msgstr ""
 
-#: src/BARException.java:1490
+#: src/BARException.java:1491
 msgid "database bind failed"
 msgstr ""
 
-#: src/BARException.java:1497
+#: src/BARException.java:1498
 msgid "type mismatch"
 msgstr ""
 
-#: src/BARException.java:1504
+#: src/BARException.java:1505
 msgid "error creating index"
 msgstr ""
 
-#: src/BARException.java:1507
+#: src/BARException.java:1508
 msgid "index not found"
 msgstr ""
 
-#: src/BARException.java:1510
+#: src/BARException.java:1511
 msgid "index still not initialized"
 msgstr ""
 
-#: src/BARException.java:1513
+#: src/BARException.java:1514
 msgid "invalid index"
 msgstr ""
 
-#: src/BARException.java:1520
+#: src/BARException.java:1521
 msgid "parse index id failed"
 msgstr ""
 
-#: src/BARException.java:1527
+#: src/BARException.java:1528
 msgid "database is locked"
 msgstr ""
 
-#: src/BARException.java:1534
+#: src/BARException.java:1535
 msgid "database busy"
 msgstr ""
 
-#: src/BARException.java:1537
+#: src/BARException.java:1538
 msgid "database operation interrupted"
 msgstr ""
 
-#: src/BARException.java:1540
+#: src/BARException.java:1541
 msgid "timeout accessing index"
 msgstr ""
 
-#: src/BARException.java:1547
+#: src/BARException.java:1548
 msgid "database entry not found"
 msgstr ""
 
-#: src/BARException.java:1550
+#: src/BARException.java:1551
 msgid "master disconnected"
 msgstr ""
 
-#: src/BARException.java:1553
+#: src/BARException.java:1554
 msgid "slave disconnected"
 msgstr ""
 
-#: src/BARException.java:1556
+#: src/BARException.java:1557
 msgid "slave is not paired"
 msgstr ""
 
-#: src/BARException.java:1559
+#: src/BARException.java:1560
 msgid "instance is not a slave"
+msgstr ""
+
+#: src/BARException.java:1563
+msgid "create PAR2 checksums fail"
 msgstr ""
 
 #: src/BARServer.java:1041
@@ -2018,7 +2023,7 @@ msgstr ""
 msgid "Enter password"
 msgstr ""
 
-#: src/BARServer.java:1550 src/TabJobs.java:2868 src/TabJobs.java:7848
+#: src/BARServer.java:1550 src/TabJobs.java:2872 src/TabJobs.java:8327
 #: src/TabStatus.java:1093 src/TabStatus.java:1172
 msgid "Slave"
 msgstr ""
@@ -2146,7 +2151,7 @@ msgid "Invalid response from server: parameters"
 msgstr ""
 
 #: src/BARWidgets.java:814 src/BARWidgets.java:854 src/BARWidgets.java:902
-#: src/TabJobs.java:4982 src/TabJobs.java:5009 src/TabJobs.java:5045
+#: src/TabJobs.java:4991 src/TabJobs.java:5018 src/TabJobs.java:5054
 #, java-format
 msgid ""
 "''{0}'' is not a valid size!\n"
@@ -2189,8 +2194,8 @@ msgid "Storage size limit."
 msgstr ""
 
 #: src/BARWidgets.java:1834 src/ServerSettings.java:1090
-#: src/ServerSettings.java:1213 src/TabJobs.java:4860 src/TabJobs.java:15000
-#: src/TabJobs.java:15022 src/TabStatus.java:2590 src/TabStatus.java:2620
+#: src/ServerSettings.java:1213 src/TabJobs.java:4869 src/TabJobs.java:15482
+#: src/TabJobs.java:15504 src/TabStatus.java:2590 src/TabStatus.java:2620
 msgid "unlimited"
 msgstr ""
 
@@ -2256,7 +2261,7 @@ msgstr ""
 
 #: src/BARWidgets.java:2644 src/BARWidgets.java:3883
 #: src/ServerSettings.java:1706 src/ServerSettings.java:3983
-#: src/TabJobs.java:2946
+#: src/TabJobs.java:2950
 msgid "Port"
 msgstr ""
 
@@ -2288,8 +2293,8 @@ msgid ""
 msgstr ""
 
 #: src/BARWidgets.java:2939 src/BARWidgets.java:3054 src/BARWidgets.java:4178
-#: src/BARWidgets.java:4293 src/TabJobs.java:5422 src/TabJobs.java:5978
-#: src/TabJobs.java:6634 src/TabJobs.java:6752 src/TabJobs.java:13167
+#: src/BARWidgets.java:4293 src/TabJobs.java:5431 src/TabJobs.java:5987
+#: src/TabJobs.java:6649 src/TabJobs.java:6767 src/TabJobs.java:13649
 msgid "Select remote file. CTRL+click to select local file."
 msgstr ""
 
@@ -2407,7 +2412,7 @@ msgstr ""
 
 #: src/BARWidgets.java:4566 src/BARWidgets.java:4937
 #: src/ServerSettings.java:2000 src/ServerSettings.java:2186
-#: src/ServerSettings.java:2373 src/TabJobs.java:4549 src/TabJobs.java:11789
+#: src/ServerSettings.java:2373 src/TabJobs.java:4556 src/TabJobs.java:12271
 msgid "Device"
 msgstr ""
 
@@ -2429,7 +2434,7 @@ msgid ""
 "to leave some free space for error-correction codes."
 msgstr ""
 
-#: src/BARWidgets.java:4715 src/TabJobs.java:4729 src/TabJobs.java:14377
+#: src/BARWidgets.java:4715 src/TabJobs.java:4736 src/TabJobs.java:14859
 msgid "Options"
 msgstr ""
 
@@ -2536,7 +2541,7 @@ msgstr ""
 msgid "PostgreSQL index database"
 msgstr ""
 
-#: src/ServerSettings.java:1324 src/TabJobs.java:6517 src/TabJobs.java:12961
+#: src/ServerSettings.java:1324 src/TabJobs.java:6532 src/TabJobs.java:13443
 msgid "File name"
 msgstr ""
 
@@ -2588,23 +2593,23 @@ msgstr ""
 msgid "Index database keep time for not existing storages."
 msgstr ""
 
-#: src/ServerSettings.java:1476 src/TabJobs.java:15044
+#: src/ServerSettings.java:1476 src/TabJobs.java:15526
 msgid "1 day"
 msgstr ""
 
-#: src/ServerSettings.java:1477 src/TabJobs.java:15046
+#: src/ServerSettings.java:1477 src/TabJobs.java:15528
 msgid "3 days"
 msgstr ""
 
-#: src/ServerSettings.java:1478 src/TabJobs.java:15050
+#: src/ServerSettings.java:1478 src/TabJobs.java:15532
 msgid "1 week"
 msgstr ""
 
-#: src/ServerSettings.java:1479 src/TabJobs.java:15051
+#: src/ServerSettings.java:1479 src/TabJobs.java:15533
 msgid "2 weeks"
 msgstr ""
 
-#: src/ServerSettings.java:1480 src/TabJobs.java:15052
+#: src/ServerSettings.java:1480 src/TabJobs.java:15534
 msgid "3 weeks"
 msgstr ""
 
@@ -2635,14 +2640,14 @@ msgstr ""
 #: src/ServerSettings.java:1515 src/ServerSettings.java:1525
 #: src/ServerSettings.java:1621 src/ServerSettings.java:1787
 #: src/ServerSettings.java:1798 src/ServerSettings.java:1904
-#: src/TabJobs.java:3947 src/TabJobs.java:4009 src/TabJobs.java:4125
-#: src/TabJobs.java:4187 src/TabJobs.java:4596 src/TabJobs.java:4658
-#: src/TabJobs.java:5525 src/TabJobs.java:5638 src/TabJobs.java:8321
-#: src/TabJobs.java:8399 src/TabJobs.java:8639 src/TabJobs.java:8800
-#: src/TabJobs.java:9124 src/TabJobs.java:11118 src/TabJobs.java:11162
-#: src/TabJobs.java:11516 src/TabJobs.java:11558 src/TabJobs.java:12075
-#: src/TabJobs.java:12121 src/TabJobs.java:12636 src/TabJobs.java:14515
-#: src/TabJobs.java:14645 src/TabJobs.java:15492 src/TabJobs.java:15533
+#: src/TabJobs.java:3954 src/TabJobs.java:4016 src/TabJobs.java:4132
+#: src/TabJobs.java:4194 src/TabJobs.java:4603 src/TabJobs.java:4665
+#: src/TabJobs.java:5534 src/TabJobs.java:5647 src/TabJobs.java:8801
+#: src/TabJobs.java:8879 src/TabJobs.java:9120 src/TabJobs.java:9281
+#: src/TabJobs.java:9606 src/TabJobs.java:11600 src/TabJobs.java:11644
+#: src/TabJobs.java:11998 src/TabJobs.java:12040 src/TabJobs.java:12557
+#: src/TabJobs.java:12603 src/TabJobs.java:13118 src/TabJobs.java:14997
+#: src/TabJobs.java:15127 src/TabJobs.java:15974 src/TabJobs.java:16015
 #: src/TabRestore.java:8603
 msgid "Add"
 msgstr ""
@@ -2660,10 +2665,10 @@ msgid ""
 msgstr ""
 
 #: src/ServerSettings.java:1559 src/ServerSettings.java:1837
-#: src/TabJobs.java:3961 src/TabJobs.java:4025 src/TabJobs.java:4139
-#: src/TabJobs.java:4203 src/TabJobs.java:4610 src/TabJobs.java:4674
-#: src/TabJobs.java:5662 src/TabJobs.java:8335 src/TabJobs.java:8415
-#: src/TabJobs.java:8653 src/TabJobs.java:8816
+#: src/TabJobs.java:3968 src/TabJobs.java:4032 src/TabJobs.java:4146
+#: src/TabJobs.java:4210 src/TabJobs.java:4617 src/TabJobs.java:4681
+#: src/TabJobs.java:5671 src/TabJobs.java:8815 src/TabJobs.java:8895
+#: src/TabJobs.java:9134 src/TabJobs.java:9297
 msgid "Edit"
 msgstr ""
 
@@ -2672,9 +2677,9 @@ msgid "Edit maintenance time"
 msgstr ""
 
 #: src/ServerSettings.java:1574 src/ServerSettings.java:1852
-#: src/ServerSettings.java:3223 src/TabJobs.java:11137 src/TabJobs.java:11534
-#: src/TabJobs.java:12102 src/TabJobs.java:12655 src/TabJobs.java:13851
-#: src/TabJobs.java:14584 src/TabJobs.java:15512
+#: src/ServerSettings.java:3223 src/TabJobs.java:11619 src/TabJobs.java:12016
+#: src/TabJobs.java:12584 src/TabJobs.java:13137 src/TabJobs.java:14333
+#: src/TabJobs.java:15066 src/TabJobs.java:15994
 msgid "Save"
 msgstr ""
 
@@ -2687,10 +2692,10 @@ msgid ""
 msgstr ""
 
 #: src/ServerSettings.java:1605 src/ServerSettings.java:1888
-#: src/TabJobs.java:2779 src/TabJobs.java:3975 src/TabJobs.java:4041
-#: src/TabJobs.java:4153 src/TabJobs.java:4219 src/TabJobs.java:4624
-#: src/TabJobs.java:4690 src/TabJobs.java:8349 src/TabJobs.java:8431
-#: src/TabJobs.java:8667 src/TabJobs.java:8832 src/TabJobs.java:9266
+#: src/TabJobs.java:2783 src/TabJobs.java:3982 src/TabJobs.java:4048
+#: src/TabJobs.java:4160 src/TabJobs.java:4226 src/TabJobs.java:4631
+#: src/TabJobs.java:4697 src/TabJobs.java:8829 src/TabJobs.java:8911
+#: src/TabJobs.java:9148 src/TabJobs.java:9313 src/TabJobs.java:9748
 #: src/TabStatus.java:1641
 msgid "Clone"
 msgstr ""
@@ -2700,10 +2705,10 @@ msgid "Clone maintenance time"
 msgstr ""
 
 #: src/ServerSettings.java:1657 src/ServerSettings.java:1945
-#: src/TabJobs.java:3989 src/TabJobs.java:4057 src/TabJobs.java:4167
-#: src/TabJobs.java:4235 src/TabJobs.java:4638 src/TabJobs.java:4706
-#: src/TabJobs.java:5618 src/TabJobs.java:5686 src/TabJobs.java:8363
-#: src/TabJobs.java:8447 src/TabJobs.java:8681 src/TabJobs.java:8848
+#: src/TabJobs.java:3996 src/TabJobs.java:4064 src/TabJobs.java:4174
+#: src/TabJobs.java:4242 src/TabJobs.java:4645 src/TabJobs.java:4713
+#: src/TabJobs.java:5627 src/TabJobs.java:5695 src/TabJobs.java:8843
+#: src/TabJobs.java:8927 src/TabJobs.java:9162 src/TabJobs.java:9329
 msgid "Remove"
 msgstr ""
 
@@ -2760,11 +2765,11 @@ msgstr ""
 msgid "Storage servers"
 msgstr ""
 
-#: src/ServerSettings.java:1769 src/TabJobs.java:3137
+#: src/ServerSettings.java:1769 src/TabJobs.java:3142
 msgid "Click to sort by type."
 msgstr ""
 
-#: src/ServerSettings.java:1772 src/TabJobs.java:3134
+#: src/ServerSettings.java:1772 src/TabJobs.java:3139
 msgid "Click to sort by name."
 msgstr ""
 
@@ -3256,42 +3261,42 @@ msgstr ""
 msgid "Save server options fail (error: {0})"
 msgstr ""
 
-#: src/ServerSettings.java:3720 src/TabJobs.java:14210
+#: src/ServerSettings.java:3720 src/TabJobs.java:14692
 msgid "Year to execute job. Leave to '*' for each year."
 msgstr ""
 
-#: src/ServerSettings.java:3727 src/TabJobs.java:14217
+#: src/ServerSettings.java:3727 src/TabJobs.java:14699
 msgid "Month to execute job. Leave to '*' for each month."
 msgstr ""
 
-#: src/ServerSettings.java:3733 src/TabJobs.java:14223
+#: src/ServerSettings.java:3733 src/TabJobs.java:14705
 msgid "Day to execute job. Leave to '*' for each day."
 msgstr ""
 
 #: src/ServerSettings.java:3746 src/ServerSettings.java:3751
 #: src/ServerSettings.java:3756 src/ServerSettings.java:3761
 #: src/ServerSettings.java:3766 src/ServerSettings.java:3771
-#: src/ServerSettings.java:3776 src/TabJobs.java:14236 src/TabJobs.java:14241
-#: src/TabJobs.java:14246 src/TabJobs.java:14251 src/TabJobs.java:14256
-#: src/TabJobs.java:14261 src/TabJobs.java:14266
+#: src/ServerSettings.java:3776 src/TabJobs.java:14718 src/TabJobs.java:14723
+#: src/TabJobs.java:14728 src/TabJobs.java:14733 src/TabJobs.java:14738
+#: src/TabJobs.java:14743 src/TabJobs.java:14748
 msgid "Week days to execute job."
 msgstr ""
 
-#: src/ServerSettings.java:3781 src/TabJobs.java:14271
+#: src/ServerSettings.java:3781 src/TabJobs.java:14753
 msgid "Toggle week days set."
 msgstr ""
 
 #: src/ServerSettings.java:3807 src/ServerSettings.java:3822
-#: src/TabJobs.java:14298
+#: src/TabJobs.java:14780
 msgid "Hour to execute job. Leave to '*' for every hour."
 msgstr ""
 
 #: src/ServerSettings.java:3813 src/ServerSettings.java:3828
-#: src/TabJobs.java:14305
+#: src/TabJobs.java:14787
 msgid "Minute to execute job. Leave to '*' for every minute."
 msgstr ""
 
-#: src/ServerSettings.java:3883 src/TabJobs.java:14487
+#: src/ServerSettings.java:3883 src/TabJobs.java:14969
 msgid "No weekdays specified!"
 msgstr ""
 
@@ -3314,7 +3319,7 @@ msgstr ""
 msgid "Set initial or new password. Note: existing password is not shown."
 msgstr ""
 
-#: src/ServerSettings.java:4023 src/TabJobs.java:5894 src/TabJobs.java:6010
+#: src/ServerSettings.java:4023 src/TabJobs.java:5903 src/TabJobs.java:6019
 msgid "Public key"
 msgstr ""
 
@@ -3326,7 +3331,7 @@ msgstr ""
 msgid "Load"
 msgstr ""
 
-#: src/ServerSettings.java:4055 src/TabJobs.java:6008
+#: src/ServerSettings.java:4055 src/TabJobs.java:6017
 msgid "Select public key file"
 msgstr ""
 
@@ -3379,69 +3384,69 @@ msgstr ""
 msgid "Total size limit for storage."
 msgstr ""
 
-#: src/TabJobs.java:2728 src/TabRestore.java:5079
+#: src/TabJobs.java:2732 src/TabRestore.java:5079
 msgid "Jobs"
 msgstr ""
 
-#: src/TabJobs.java:2741
+#: src/TabJobs.java:2745
 msgid "Existing job entries."
 msgstr ""
 
-#: src/TabJobs.java:2763 src/TabStatus.java:1627
+#: src/TabJobs.java:2767 src/TabStatus.java:1627
 msgid "New"
 msgstr ""
 
-#: src/TabJobs.java:2764
+#: src/TabJobs.java:2768
 msgid "Create new job entry."
 msgstr ""
 
-#: src/TabJobs.java:2780
+#: src/TabJobs.java:2784
 msgid "Clone an existing job entry."
 msgstr ""
 
-#: src/TabJobs.java:2807 src/TabJobs.java:9422 src/TabStatus.java:1658
+#: src/TabJobs.java:2811 src/TabJobs.java:9904 src/TabStatus.java:1658
 msgid "Rename"
 msgstr ""
 
-#: src/TabJobs.java:2808
+#: src/TabJobs.java:2812
 msgid "Rename a job entry."
 msgstr ""
 
-#: src/TabJobs.java:2835 src/TabJobs.java:8737 src/TabRestore.java:6124
+#: src/TabJobs.java:2839 src/TabJobs.java:9218 src/TabRestore.java:6124
 #: src/TabStatus.java:1675
 msgid "Delete"
 msgstr ""
 
-#: src/TabJobs.java:2836
+#: src/TabJobs.java:2840
 msgid "Delete a job entry."
 msgstr ""
 
-#: src/TabJobs.java:2872
+#: src/TabJobs.java:2876
 msgid ""
 "Hostname of slave to run job. Leave empty to run on host where BAR is "
 "executed."
 msgstr ""
 
-#: src/TabJobs.java:2950
+#: src/TabJobs.java:2954
 msgid ""
 "Port number. Set to 0 to use default port number from configuration file."
 msgstr ""
 
-#: src/TabJobs.java:3109 src/TabJobs.java:4262 src/TabRestore.java:4618
+#: src/TabJobs.java:3114 src/TabJobs.java:4269 src/TabRestore.java:4618
 #: src/TabRestore.java:6446 src/TabRestore.java:9745 src/TabRestore.java:9755
 #: src/TabStatus.java:3641
 msgid "Entries"
 msgstr ""
 
-#: src/TabJobs.java:3140
+#: src/TabJobs.java:3145
 msgid "Click to sort by size."
 msgstr ""
 
-#: src/TabJobs.java:3143
+#: src/TabJobs.java:3148
 msgid "Click to sort by modification time."
 msgstr ""
 
-#: src/TabJobs.java:3281
+#: src/TabJobs.java:3286
 msgid ""
 "Tree representation of files, directories, links and special entries.\n"
 "Double-click to open sub-directories, right-click to open context menu.\n"
@@ -3449,448 +3454,498 @@ msgid ""
 "progress."
 msgstr ""
 
-#: src/TabJobs.java:3331
+#: src/TabJobs.java:3336
 msgid "Open/Close"
 msgstr ""
 
-#: src/TabJobs.java:3368 src/TabJobs.java:3599 src/TabJobs.java:3753
-#: src/TabJobs.java:3820
+#: src/TabJobs.java:3373 src/TabJobs.java:3604 src/TabJobs.java:3759
+#: src/TabJobs.java:3826
 msgid "Include"
 msgstr ""
 
-#: src/TabJobs.java:3398 src/TabJobs.java:3627 src/TabJobs.java:3774
-#: src/TabJobs.java:3841
+#: src/TabJobs.java:3403 src/TabJobs.java:3632 src/TabJobs.java:3780
+#: src/TabJobs.java:3847
 msgid "Exclude"
 msgstr ""
 
-#: src/TabJobs.java:3428
+#: src/TabJobs.java:3433
 msgid "Exclude by .nobackup"
 msgstr ""
 
-#: src/TabJobs.java:3458
+#: src/TabJobs.java:3463
 msgid "Exclude by no dump"
 msgstr ""
 
-#: src/TabJobs.java:3488 src/TabJobs.java:3655 src/TabJobs.java:3793
-#: src/TabJobs.java:3862
+#: src/TabJobs.java:3493 src/TabJobs.java:3660 src/TabJobs.java:3799
+#: src/TabJobs.java:3868
 msgid "None"
 msgstr ""
 
-#: src/TabJobs.java:3520
+#: src/TabJobs.java:3525
 msgid "Add mount"
 msgstr ""
 
-#: src/TabJobs.java:3538
+#: src/TabJobs.java:3543
 msgid "Remove mount"
 msgstr ""
 
-#: src/TabJobs.java:3558
+#: src/TabJobs.java:3563
 msgid "Directory/File size"
 msgstr ""
 
-#: src/TabJobs.java:3600
+#: src/TabJobs.java:3605
 msgid "Include entry in archive."
 msgstr ""
 
-#: src/TabJobs.java:3628
+#: src/TabJobs.java:3633
 msgid "Exclude entry from archive."
 msgstr ""
 
-#: src/TabJobs.java:3656
+#: src/TabJobs.java:3661
 msgid "Do not include/exclude entry in/from archive."
 msgstr ""
 
-#: src/TabJobs.java:3687
+#: src/TabJobs.java:3692
 msgid "Open all included directories."
 msgstr ""
 
-#: src/TabJobs.java:3702
+#: src/TabJobs.java:3707
 msgid "directory size"
 msgstr ""
 
-#: src/TabJobs.java:3703
+#: src/TabJobs.java:3708
 msgid "Show directory sizes (sum of file sizes)."
 msgstr ""
 
-#: src/TabJobs.java:3721 src/TabJobs.java:4353
+#: src/TabJobs.java:3727 src/TabJobs.java:4360
 msgid "Images"
 msgstr ""
 
-#: src/TabJobs.java:3727
+#: src/TabJobs.java:3733
 msgid ""
 "List of existing devices for image storage.\n"
 "Right-click to open context menu."
 msgstr ""
 
-#: src/TabJobs.java:3821
+#: src/TabJobs.java:3827
 msgid "Include selected device for image storage."
 msgstr ""
 
-#: src/TabJobs.java:3842
+#: src/TabJobs.java:3848
 msgid "Exclude selected device from image storage."
 msgstr ""
 
-#: src/TabJobs.java:3863
+#: src/TabJobs.java:3869
 msgid "Remove selected device from image storage."
 msgstr ""
 
-#: src/TabJobs.java:3887
+#: src/TabJobs.java:3894
 msgid "Filters && Mounts"
 msgstr ""
 
-#: src/TabJobs.java:3887
+#: src/TabJobs.java:3894
 msgid "Filters"
 msgstr ""
 
-#: src/TabJobs.java:3895
+#: src/TabJobs.java:3902
 msgid "Included"
 msgstr ""
 
-#: src/TabJobs.java:3900
+#: src/TabJobs.java:3907
 msgid "List of include patterns, right-click for context menu."
 msgstr ""
 
-#: src/TabJobs.java:4010
+#: src/TabJobs.java:4017
 msgid "Add entry to included list."
 msgstr ""
 
-#: src/TabJobs.java:4026
+#: src/TabJobs.java:4033
 msgid "Edit entry in included list."
 msgstr ""
 
-#: src/TabJobs.java:4042
+#: src/TabJobs.java:4049
 msgid "Clone entry in included list."
 msgstr ""
 
-#: src/TabJobs.java:4058
+#: src/TabJobs.java:4065
 msgid "Remove entry from included list."
 msgstr ""
 
-#: src/TabJobs.java:4076
+#: src/TabJobs.java:4083
 msgid "Excluded"
 msgstr ""
 
-#: src/TabJobs.java:4081
+#: src/TabJobs.java:4088
 msgid "List of exclude patterns, right-click for context menu."
 msgstr ""
 
-#: src/TabJobs.java:4188
+#: src/TabJobs.java:4195
 msgid "Add entry to excluded list."
 msgstr ""
 
-#: src/TabJobs.java:4204
+#: src/TabJobs.java:4211
 msgid "Edit entry in excluded list."
 msgstr ""
 
-#: src/TabJobs.java:4220
+#: src/TabJobs.java:4227
 msgid "Clone entry in excluded list."
 msgstr ""
 
-#: src/TabJobs.java:4236
+#: src/TabJobs.java:4243
 msgid "Remove entry from excluded list."
 msgstr ""
 
-#: src/TabJobs.java:4254
+#: src/TabJobs.java:4261
 msgid "Include command"
 msgstr ""
 
-#: src/TabJobs.java:4266
+#: src/TabJobs.java:4273
 msgid "Command or script to execute to get a list of entries to include."
 msgstr ""
 
-#: src/TabJobs.java:4332 src/TabJobs.java:4423 src/TabJobs.java:4513
-#: src/TabJobs.java:7739 src/TabJobs.java:7830 src/TabJobs.java:7944
-#: src/TabJobs.java:8062 src/TabJobs.java:8140
+#: src/TabJobs.java:4339 src/TabJobs.java:4430 src/TabJobs.java:4520
+#: src/TabJobs.java:8218 src/TabJobs.java:8309 src/TabJobs.java:8423
+#: src/TabJobs.java:8541 src/TabJobs.java:8620
 msgid "Test"
 msgstr ""
 
-#: src/TabJobs.java:4333 src/TabJobs.java:4424 src/TabJobs.java:4514
-#: src/TabJobs.java:7740 src/TabJobs.java:7831 src/TabJobs.java:7945
-#: src/TabJobs.java:8063
+#: src/TabJobs.java:4340 src/TabJobs.java:4431 src/TabJobs.java:4521
+#: src/TabJobs.java:8219 src/TabJobs.java:8310 src/TabJobs.java:8424
+#: src/TabJobs.java:8542
 msgid "Test script."
 msgstr ""
 
-#: src/TabJobs.java:4357
+#: src/TabJobs.java:4364
 msgid "Command or script to execute to get a list of images to include."
 msgstr ""
 
-#: src/TabJobs.java:4442
+#: src/TabJobs.java:4449
 msgid "Exclude command"
 msgstr ""
 
-#: src/TabJobs.java:4447
+#: src/TabJobs.java:4454
 msgid ""
 "Command or script to execute to get a list of entries/images to exclude."
 msgstr ""
 
-#: src/TabJobs.java:4531
+#: src/TabJobs.java:4538
 msgid "Mounts"
 msgstr ""
 
-#: src/TabJobs.java:4544
+#: src/TabJobs.java:4551
 msgid "List of devices to mount, right-click for context menu."
 msgstr ""
 
-#: src/TabJobs.java:4659
+#: src/TabJobs.java:4666
 msgid "Add entry to mount list."
 msgstr ""
 
-#: src/TabJobs.java:4675
+#: src/TabJobs.java:4682
 msgid "Edit entry in mount list."
 msgstr ""
 
-#: src/TabJobs.java:4691
+#: src/TabJobs.java:4698
 msgid "Clone entry in mount list."
 msgstr ""
 
-#: src/TabJobs.java:4707
+#: src/TabJobs.java:4714
 msgid "Remove entry from mount list."
 msgstr ""
 
-#: src/TabJobs.java:4735
+#: src/TabJobs.java:4742
 msgid "skip unreadable entries"
 msgstr ""
 
-#: src/TabJobs.java:4736
+#: src/TabJobs.java:4743
 msgid ""
 "If enabled then skip not readable entries (write information to log file).\n"
 "If disabled stop job with an error."
 msgstr ""
 
-#: src/TabJobs.java:4763
+#: src/TabJobs.java:4770
 msgid "no stop on owner error"
 msgstr ""
 
-#: src/TabJobs.java:4764
+#: src/TabJobs.java:4771
 msgid "If enabled then do not stop if the owner of an entry cannot be set."
 msgstr ""
 
-#: src/TabJobs.java:4791
+#: src/TabJobs.java:4798
 msgid "no stop on attribute error"
 msgstr ""
 
-#: src/TabJobs.java:4792
+#: src/TabJobs.java:4799
 msgid ""
 "If enabled then do not stop if there is an attribute error when reading a "
 "file."
 msgstr ""
 
-#: src/TabJobs.java:4819
+#: src/TabJobs.java:4826
 msgid "raw images"
 msgstr ""
 
-#: src/TabJobs.java:4820
+#: src/TabJobs.java:4827
 msgid ""
 "If enabled then store all data of a device into an image.\n"
 "If disabled try to detect file system and only store used blocks to image."
 msgstr ""
 
-#: src/TabJobs.java:4861
+#: src/TabJobs.java:4859
+msgid "Compress && Crypt"
+msgstr ""
+
+#: src/TabJobs.java:4870
 msgid ""
 "Create storage files with an unlimited size. Do not split storage files."
 msgstr ""
 
-#: src/TabJobs.java:4886
+#: src/TabJobs.java:4895
 msgid ""
 "When writing to a CD/DVD/BD without splitting enabled\n"
 "the resulting archive file may not fit on medium."
 msgstr ""
 
-#: src/TabJobs.java:4905
+#: src/TabJobs.java:4914
 msgid "limit to"
 msgstr ""
 
-#: src/TabJobs.java:4906
+#: src/TabJobs.java:4915
 msgid "Limit size of storage files to specified value."
 msgstr ""
 
-#: src/TabJobs.java:4930
+#: src/TabJobs.java:4939
 msgid "Size limit for one storage file part."
 msgstr ""
 
-#: src/TabJobs.java:5102
+#: src/TabJobs.java:5111
 msgid "Delta"
 msgstr ""
 
-#: src/TabJobs.java:5106
+#: src/TabJobs.java:5115
 msgid "Delta compression method to use."
 msgstr ""
 
-#: src/TabJobs.java:5148
+#: src/TabJobs.java:5157
 msgid "Byte"
 msgstr ""
 
-#: src/TabJobs.java:5152
+#: src/TabJobs.java:5161
 msgid "Byte compression method to use."
 msgstr ""
 
-#: src/TabJobs.java:5196
+#: src/TabJobs.java:5205
 msgid "Byte compression level to use."
 msgstr ""
 
-#: src/TabJobs.java:5358 src/TabRestore.java:8541
+#: src/TabJobs.java:5367 src/TabRestore.java:8541
 msgid "Source"
 msgstr ""
 
-#: src/TabJobs.java:5445 src/TabJobs.java:13182
+#: src/TabJobs.java:5454 src/TabJobs.java:13664
 msgid "Select source file"
 msgstr ""
 
-#: src/TabJobs.java:5447 src/TabJobs.java:6653 src/TabJobs.java:13184
+#: src/TabJobs.java:5456 src/TabJobs.java:6668 src/TabJobs.java:13666
 msgid "BAR files"
 msgstr ""
 
-#: src/TabJobs.java:5466
+#: src/TabJobs.java:5475
 msgid "Compress exclude"
 msgstr ""
 
-#: src/TabJobs.java:5474
+#: src/TabJobs.java:5483
 msgid ""
 "List of compress exclude patterns. Entries which match to one of these "
 "patterns will not be compressed.\n"
 "Right-click for context menu."
 msgstr ""
 
-#: src/TabJobs.java:5539
+#: src/TabJobs.java:5548
 msgid "Add most used compressed file suffixes"
 msgstr ""
 
-#: src/TabJobs.java:5567
+#: src/TabJobs.java:5576
 msgid "Add most used multi-media file suffixes"
 msgstr ""
 
-#: src/TabJobs.java:5597
+#: src/TabJobs.java:5606
 msgid "Add most used package file suffixes"
 msgstr ""
 
-#: src/TabJobs.java:5639
+#: src/TabJobs.java:5648
 msgid "Add entry to compress exclude list."
 msgstr ""
 
-#: src/TabJobs.java:5663
+#: src/TabJobs.java:5672
 msgid "Edit entry in compress exclude list."
 msgstr ""
 
-#: src/TabJobs.java:5687
+#: src/TabJobs.java:5696
 msgid "Remove entry from compress exclude list."
 msgstr ""
 
-#: src/TabJobs.java:5723
+#: src/TabJobs.java:5732
 msgid "Encryption methods to use."
 msgstr ""
 
-#: src/TabJobs.java:5809
+#: src/TabJobs.java:5818
 msgid "symmetric"
 msgstr ""
 
-#: src/TabJobs.java:5810
+#: src/TabJobs.java:5819
 msgid "Use symmetric encryption with pass-phrase."
 msgstr ""
 
-#: src/TabJobs.java:5850
+#: src/TabJobs.java:5859
 msgid "asymmetric"
 msgstr ""
 
-#: src/TabJobs.java:5851
+#: src/TabJobs.java:5860
 msgid ""
 "Use asymmetric hybrid-encryption with pass-phrase and public/private key."
 msgstr ""
 
-#: src/TabJobs.java:5897
+#: src/TabJobs.java:5906
 msgid "Public key file used for asymmetric encryption."
 msgstr ""
 
-#: src/TabJobs.java:6035 src/TabStatus.java:3244 src/TabStatus.java:3247
+#: src/TabJobs.java:6044 src/TabStatus.java:3244 src/TabStatus.java:3247
 msgid "Crypt password"
 msgstr ""
 
-#: src/TabJobs.java:6041
+#: src/TabJobs.java:6050
 msgid "default"
 msgstr ""
 
-#: src/TabJobs.java:6042
+#: src/TabJobs.java:6051
 msgid "Use default password from configuration file for encryption."
 msgstr ""
 
-#: src/TabJobs.java:6089
+#: src/TabJobs.java:6098
 msgid "ask"
 msgstr ""
 
-#: src/TabJobs.java:6090
+#: src/TabJobs.java:6099
 msgid "Input password for encryption."
 msgstr ""
 
-#: src/TabJobs.java:6137
+#: src/TabJobs.java:6146
 msgid "this"
 msgstr ""
 
-#: src/TabJobs.java:6138
+#: src/TabJobs.java:6147
 msgid "Use specified password for encryption."
 msgstr ""
 
-#: src/TabJobs.java:6181 src/TabJobs.java:6280
+#: src/TabJobs.java:6190 src/TabJobs.java:6289
 msgid "Password used for encryption."
 msgstr ""
 
-#: src/TabJobs.java:6276
+#: src/TabJobs.java:6285
 msgid "Repeat"
 msgstr ""
 
-#: src/TabJobs.java:6361
+#: src/TabJobs.java:6370
 msgid "Crypt passwords are not equal!"
 msgstr ""
 
-#: src/TabJobs.java:6388
+#: src/TabJobs.java:6403
 msgid "Normal mode: do not create incremental data files."
 msgstr ""
 
-#: src/TabJobs.java:6420
+#: src/TabJobs.java:6435
 msgid "Full mode: store all entries and create incremental data files."
 msgstr ""
 
-#: src/TabJobs.java:6452
+#: src/TabJobs.java:6467
 msgid ""
 "Incremental mode: store only modified entries since last full or incremental "
 "storage."
 msgstr ""
 
-#: src/TabJobs.java:6484
+#: src/TabJobs.java:6499
 msgid "Differential mode: store only modified entries since last full storage."
 msgstr ""
 
-#: src/TabJobs.java:6524
+#: src/TabJobs.java:6539
 msgid ""
 "Name of storage files to create. Several macros are supported. Click on "
 "button to the right to open storage file name editor."
 msgstr ""
 
-#: src/TabJobs.java:6651
+#: src/TabJobs.java:6666
 msgid "Select storage file name"
 msgstr ""
 
-#: src/TabJobs.java:6679
+#: src/TabJobs.java:6694
 msgid "Incremental file name"
 msgstr ""
 
-#: src/TabJobs.java:6686
+#: src/TabJobs.java:6701
 msgid ""
 "Name of incremental data file. If no file name is given a name is derived "
 "automatically from the storage file name."
 msgstr ""
 
-#: src/TabJobs.java:6767
+#: src/TabJobs.java:6782
 msgid "Select incremental file"
 msgstr ""
 
-#: src/TabJobs.java:6769
+#: src/TabJobs.java:6784
 msgid "BAR incremental data"
 msgstr ""
 
-#: src/TabJobs.java:6794 src/TabJobs.java:15143
+#: src/TabJobs.java:6809
+msgid "PAR2"
+msgstr ""
+
+#: src/TabJobs.java:6815
+msgid "Directory"
+msgstr ""
+
+#: src/TabJobs.java:6822
+msgid ""
+"Name of the directory to store PAR2 checksum files. If no directory is given "
+"no PAR2 checksum files are created."
+msgstr ""
+
+#: src/TabJobs.java:6920
+msgid "Select PAR2 directory. CTRL+click to select local file."
+msgstr ""
+
+#: src/TabJobs.java:6935
+msgid "Select PAR2 checksums directory"
+msgstr ""
+
+#: src/TabJobs.java:6961
+msgid "Block size"
+msgstr ""
+
+#: src/TabJobs.java:6964
+msgid "PAR2 block size."
+msgstr ""
+
+#: src/TabJobs.java:7064
+msgid "File count"
+msgstr ""
+
+#: src/TabJobs.java:7067
+msgid "PAR2 file count."
+msgstr ""
+
+#: src/TabJobs.java:7167
+msgid "Block count"
+msgstr ""
+
+#: src/TabJobs.java:7170
+msgid "PAR2 block count."
+msgstr ""
+
+#: src/TabJobs.java:7272 src/TabJobs.java:15625
 msgid "Destination"
 msgstr ""
 
-#: src/TabJobs.java:6801
+#: src/TabJobs.java:7279
 msgid ""
 "Storage destination type:\n"
 "  into file system\n"
@@ -3905,17 +3960,17 @@ msgid ""
 "  on generic device\n"
 msgstr ""
 
-#: src/TabJobs.java:6816 src/TabJobs.java:15160 src/TabRestore.java:8558
+#: src/TabJobs.java:7294 src/TabJobs.java:15642 src/TabRestore.java:8558
 msgid "file system"
 msgstr ""
 
-#: src/TabJobs.java:6852
+#: src/TabJobs.java:7330
 msgid ""
 "When writing to a CD without setting medium size\n"
 "the resulting archive file may not fit on medium."
 msgstr ""
 
-#: src/TabJobs.java:6864
+#: src/TabJobs.java:7342
 msgid ""
 "When writing to a CD with error-correction codes enabled\n"
 "some free space should be available on medium for error-correction codes "
@@ -3929,13 +3984,13 @@ msgid ""
 "- part size 240M, size 720M, medium 900\n"
 msgstr ""
 
-#: src/TabJobs.java:6882
+#: src/TabJobs.java:7360
 msgid ""
 "When writing to a DVD without setting medium size\n"
 "the resulting archive file may not fit on medium."
 msgstr ""
 
-#: src/TabJobs.java:6897
+#: src/TabJobs.java:7375
 msgid ""
 "When writing to a DVD with error-correction codes enabled\n"
 "some free space should be available on medium for error-correction codes "
@@ -3949,13 +4004,13 @@ msgid ""
 "- part size 850M, size 13.6G,\tmedium 17G"
 msgstr ""
 
-#: src/TabJobs.java:6916
+#: src/TabJobs.java:7394
 msgid ""
 "When writing to a BD without setting medium size\n"
 "the resulting archive file may not fit on medium."
 msgstr ""
 
-#: src/TabJobs.java:6931
+#: src/TabJobs.java:7409
 msgid ""
 "When writing to a BD with error-correction codes enabled\n"
 "some free space should be available on medium for error-correction codes "
@@ -3968,27 +4023,27 @@ msgid ""
 "- part size 6.4G,\tsize 102.4G,\tmedium 128G\n"
 msgstr ""
 
-#: src/TabJobs.java:6956
+#: src/TabJobs.java:7434
 msgid "on master"
 msgstr ""
 
-#: src/TabJobs.java:6957
+#: src/TabJobs.java:7435
 msgid "Enable for storage through master."
 msgstr ""
 
-#: src/TabJobs.java:7654
+#: src/TabJobs.java:8133
 msgid "Scripts"
 msgstr ""
 
-#: src/TabJobs.java:7661
+#: src/TabJobs.java:8140
 msgid "Local"
 msgstr ""
 
-#: src/TabJobs.java:7666 src/TabJobs.java:7853
+#: src/TabJobs.java:8145 src/TabJobs.java:8332
 msgid "Pre-script"
 msgstr ""
 
-#: src/TabJobs.java:7674
+#: src/TabJobs.java:8153
 #, java-printf-format
 msgid ""
 "Command or script to execute before start of job.\n"
@@ -4004,11 +4059,11 @@ msgid ""
 "Additional time macros are available."
 msgstr ""
 
-#: src/TabJobs.java:7757 src/TabJobs.java:7971
+#: src/TabJobs.java:8236 src/TabJobs.java:8450
 msgid "Post-script"
 msgstr ""
 
-#: src/TabJobs.java:7765
+#: src/TabJobs.java:8244
 msgid ""
 "Command or script to execute after termination of job.\n"
 "\n"
@@ -4028,7 +4083,7 @@ msgid ""
 "Additional time macros are available."
 msgstr ""
 
-#: src/TabJobs.java:7861
+#: src/TabJobs.java:8340
 #, java-printf-format
 msgid ""
 "Command or script to execute before start of job on slave.\n"
@@ -4044,7 +4099,7 @@ msgid ""
 "Additional time macros are available."
 msgstr ""
 
-#: src/TabJobs.java:7979
+#: src/TabJobs.java:8458
 msgid ""
 "Command or script to execute after termination of job on slave.\n"
 "\n"
@@ -4063,141 +4118,141 @@ msgid ""
 "Additional time macros are available."
 msgstr ""
 
-#: src/TabJobs.java:8090
+#: src/TabJobs.java:8570
 msgid "Schedule"
 msgstr ""
 
-#: src/TabJobs.java:8128 src/TabJobs.java:8473
+#: src/TabJobs.java:8608 src/TabJobs.java:8954
 msgid "Archive type"
 msgstr ""
 
-#: src/TabJobs.java:8137 src/TabJobs.java:14369 src/TabJobs.java:14373
+#: src/TabJobs.java:8617 src/TabJobs.java:14851 src/TabJobs.java:14855
 msgid "Custom text"
 msgstr ""
 
-#: src/TabJobs.java:8248
+#: src/TabJobs.java:8728
 msgid "Last created"
 msgstr ""
 
-#: src/TabJobs.java:8258
+#: src/TabJobs.java:8738
 msgid "Total entities"
 msgstr ""
 
-#: src/TabJobs.java:8268 src/TabJobs.java:15640 src/TabRestore.java:4347
+#: src/TabJobs.java:8748 src/TabJobs.java:16122 src/TabRestore.java:4347
 #: src/TabRestore.java:4461
 msgid "Total entries"
 msgstr ""
 
-#: src/TabJobs.java:8278 src/TabJobs.java:8479 src/TabJobs.java:15630
+#: src/TabJobs.java:8758 src/TabJobs.java:8960 src/TabJobs.java:16112
 #: src/TabRestore.java:4337 src/TabRestore.java:4451
 msgid "Total size"
 msgstr ""
 
-#: src/TabJobs.java:8283
+#: src/TabJobs.java:8763
 #, java-format
 msgid "{0} {0,choice,0#bytes|1#byte|1<bytes} ({1})"
 msgstr ""
 
-#: src/TabJobs.java:8379
+#: src/TabJobs.java:8859
 msgid "Trigger now"
 msgstr ""
 
-#: src/TabJobs.java:8400
+#: src/TabJobs.java:8880
 msgid "Add new schedule entry."
 msgstr ""
 
-#: src/TabJobs.java:8416
+#: src/TabJobs.java:8896
 msgid "Edit schedule entry."
 msgstr ""
 
-#: src/TabJobs.java:8432
+#: src/TabJobs.java:8912
 msgid "Clone schedule entry."
 msgstr ""
 
-#: src/TabJobs.java:8448
+#: src/TabJobs.java:8928
 msgid "Remove schedule entry."
 msgstr ""
 
-#: src/TabJobs.java:8465
+#: src/TabJobs.java:8946
 msgid "Persistence"
 msgstr ""
 
-#: src/TabJobs.java:8474
+#: src/TabJobs.java:8955
 msgid "min. keep"
 msgstr ""
 
-#: src/TabJobs.java:8475
+#: src/TabJobs.java:8956
 msgid "max. keep"
 msgstr ""
 
-#: src/TabJobs.java:8476
+#: src/TabJobs.java:8957
 msgid "max. age"
 msgstr ""
 
-#: src/TabJobs.java:8477 src/TabJobs.java:15620 src/TabRestore.java:4430
+#: src/TabJobs.java:8958 src/TabJobs.java:16102 src/TabRestore.java:4430
 #: src/TabRestore.java:4839 src/TabRestore.java:5156
 msgid "Created"
 msgstr ""
 
-#: src/TabJobs.java:8478
+#: src/TabJobs.java:8959
 msgid "Age [days]"
 msgstr ""
 
-#: src/TabJobs.java:8700
+#: src/TabJobs.java:9181
 msgid "Refresh"
 msgstr ""
 
-#: src/TabJobs.java:8714 src/TabRestore.java:6012
+#: src/TabJobs.java:9195 src/TabRestore.java:6012
 msgid "Remove from index"
 msgstr ""
 
-#: src/TabJobs.java:8725
+#: src/TabJobs.java:9206
 #, java-format
 msgid ""
 "Remove entity from index with {0} {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 
-#: src/TabJobs.java:8748
+#: src/TabJobs.java:9229
 #, java-format
 msgid ""
 "Delete entity with {0} {0,choice,0#entries|1#entry|1<entries}, {1} ({2} "
 "{2,choice,0#bytes|1#byte|1<bytes})?"
 msgstr ""
 
-#: src/TabJobs.java:8764 src/TabRestore.java:6140 src/TabRestore.java:6715
+#: src/TabJobs.java:9245 src/TabRestore.java:6140 src/TabRestore.java:6715
 #: src/TabStatus.java:1694
 msgid "Info"
 msgstr ""
 
-#: src/TabJobs.java:8801
+#: src/TabJobs.java:9282
 msgid "Add new persistence entry."
 msgstr ""
 
-#: src/TabJobs.java:8817
+#: src/TabJobs.java:9298
 msgid "Edit persistence entry."
 msgstr ""
 
-#: src/TabJobs.java:8833
+#: src/TabJobs.java:9314
 msgid "Clone persistence entry."
 msgstr ""
 
-#: src/TabJobs.java:8849
+#: src/TabJobs.java:9330
 msgid "Remove persistence entry."
 msgstr ""
 
-#: src/TabJobs.java:8866
+#: src/TabJobs.java:9348
 msgid "Comment"
 msgstr ""
 
-#: src/TabJobs.java:8871
+#: src/TabJobs.java:9353
 msgid "Free text comment for job."
 msgstr ""
 
-#: src/TabJobs.java:9103
+#: src/TabJobs.java:9585
 msgid "New job"
 msgstr ""
 
-#: src/TabJobs.java:9200 src/TabJobs.java:9206
+#: src/TabJobs.java:9682 src/TabJobs.java:9688
 #, java-format
 msgid ""
 "Cannot create new job:\n"
@@ -4205,11 +4260,11 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:9244
+#: src/TabJobs.java:9726
 msgid "Clone job"
 msgstr ""
 
-#: src/TabJobs.java:9346 src/TabJobs.java:9356
+#: src/TabJobs.java:9828 src/TabJobs.java:9838
 #, java-format
 msgid ""
 "Cannot clone job ''{0}'':\n"
@@ -4217,19 +4272,19 @@ msgid ""
 "{1}"
 msgstr ""
 
-#: src/TabJobs.java:9394
+#: src/TabJobs.java:9876
 msgid "Rename job"
 msgstr ""
 
-#: src/TabJobs.java:9403
+#: src/TabJobs.java:9885
 msgid "Old name"
 msgstr ""
 
-#: src/TabJobs.java:9409
+#: src/TabJobs.java:9891
 msgid "New name"
 msgstr ""
 
-#: src/TabJobs.java:9498 src/TabJobs.java:9509
+#: src/TabJobs.java:9980 src/TabJobs.java:9991
 #, java-format
 msgid ""
 "Cannot rename job ''{0}'':\n"
@@ -4237,12 +4292,12 @@ msgid ""
 "{1}"
 msgstr ""
 
-#: src/TabJobs.java:9536
+#: src/TabJobs.java:10018
 #, java-format
 msgid "Delete job ''{0}''?"
 msgstr ""
 
-#: src/TabJobs.java:9544 src/TabJobs.java:9550
+#: src/TabJobs.java:10026 src/TabJobs.java:10032
 #, java-format
 msgid ""
 "Cannot delete job ''{0}'':\n"
@@ -4250,47 +4305,47 @@ msgid ""
 "{1}"
 msgstr ""
 
-#: src/TabJobs.java:9945 src/TabJobs.java:9953 src/TabJobs.java:9958
+#: src/TabJobs.java:10427 src/TabJobs.java:10435 src/TabJobs.java:10440
 #, java-format
 msgid "Cannot get root list (error: {0})"
 msgstr ""
 
-#: src/TabJobs.java:10516 src/TabJobs.java:10524 src/TabJobs.java:10529
+#: src/TabJobs.java:10998 src/TabJobs.java:11006 src/TabJobs.java:11011
 #, java-format
 msgid "Cannot get file list (error: {0})"
 msgstr ""
 
-#: src/TabJobs.java:10653 src/TabJobs.java:10661 src/TabJobs.java:10666
+#: src/TabJobs.java:11135 src/TabJobs.java:11143 src/TabJobs.java:11148
 #, java-format
 msgid "Cannot get device list (error: {0})"
 msgstr ""
 
-#: src/TabJobs.java:10822 src/TabJobs.java:11293 src/TabJobs.java:12430
+#: src/TabJobs.java:11304 src/TabJobs.java:11775 src/TabJobs.java:12912
 msgid "Pattern"
 msgstr ""
 
-#: src/TabJobs.java:10830
+#: src/TabJobs.java:11312
 msgid "Include pattern. Use * and ? as wildcards."
 msgstr ""
 
-#: src/TabJobs.java:10835 src/TabJobs.java:11302 src/TabJobs.java:11760
-#: src/TabJobs.java:11802 src/TabJobs.java:12439
+#: src/TabJobs.java:11317 src/TabJobs.java:11784 src/TabJobs.java:12242
+#: src/TabJobs.java:12284 src/TabJobs.java:12921
 msgid "Select remote path. CTRL+click to select local path."
 msgstr ""
 
-#: src/TabJobs.java:10850 src/TabJobs.java:11317 src/TabJobs.java:12454
+#: src/TabJobs.java:11332 src/TabJobs.java:11799 src/TabJobs.java:12936
 msgid "Select entry"
 msgstr ""
 
-#: src/TabJobs.java:10874 src/TabRestore.java:3153
+#: src/TabJobs.java:11356 src/TabRestore.java:3153
 msgid "file"
 msgstr ""
 
-#: src/TabJobs.java:10889 src/TabRestore.java:3154
+#: src/TabJobs.java:11371 src/TabRestore.java:3154
 msgid "image"
 msgstr ""
 
-#: src/TabJobs.java:10998
+#: src/TabJobs.java:11480
 #, java-format
 msgid ""
 "Cannot add include entry:\n"
@@ -4298,7 +4353,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:11068
+#: src/TabJobs.java:11550
 #, java-format
 msgid ""
 "Cannot remove include entry:\n"
@@ -4306,28 +4361,28 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:11118
+#: src/TabJobs.java:11600
 msgid "Add new include pattern"
 msgstr ""
 
-#: src/TabJobs.java:11137
+#: src/TabJobs.java:11619
 msgid "Edit include pattern"
 msgstr ""
 
-#: src/TabJobs.java:11162
+#: src/TabJobs.java:11644
 msgid "Clone include pattern"
 msgstr ""
 
-#: src/TabJobs.java:11189
+#: src/TabJobs.java:11671
 #, java-format
 msgid "Remove {0} include {0,choice,0#patterns|1#pattern|1<patterns}?"
 msgstr ""
 
-#: src/TabJobs.java:11297
+#: src/TabJobs.java:11779
 msgid "Exclude pattern. Use * and ? as wildcards."
 msgstr ""
 
-#: src/TabJobs.java:11423
+#: src/TabJobs.java:11905
 #, java-format
 msgid ""
 "Cannot add exclude entry:\n"
@@ -4335,7 +4390,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:11488
+#: src/TabJobs.java:11970
 #, java-format
 msgid ""
 "Cannot remove exclude entry:\n"
@@ -4343,40 +4398,40 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:11516
+#: src/TabJobs.java:11998
 msgid "Add new exclude pattern"
 msgstr ""
 
-#: src/TabJobs.java:11534
+#: src/TabJobs.java:12016
 msgid "Edit exclude pattern"
 msgstr ""
 
-#: src/TabJobs.java:11558
+#: src/TabJobs.java:12040
 msgid "Clone exclude pattern"
 msgstr ""
 
-#: src/TabJobs.java:11581
+#: src/TabJobs.java:12063
 #, java-format
 msgid "Remove {0} exclude {0,choice,0#patterns|1#pattern|1<patterns}?"
 msgstr ""
 
-#: src/TabJobs.java:11755
+#: src/TabJobs.java:12237
 msgid "Mount name."
 msgstr ""
 
-#: src/TabJobs.java:11775
+#: src/TabJobs.java:12257
 msgid "Select name"
 msgstr ""
 
-#: src/TabJobs.java:11797
+#: src/TabJobs.java:12279
 msgid "Mount device (optional)."
 msgstr ""
 
-#: src/TabJobs.java:11817
+#: src/TabJobs.java:12299
 msgid "Select device"
 msgstr ""
 
-#: src/TabJobs.java:11927
+#: src/TabJobs.java:12409
 #, java-format
 msgid ""
 "Cannot add mount data:\n"
@@ -4384,7 +4439,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:11979
+#: src/TabJobs.java:12461
 #, java-format
 msgid ""
 "Cannot update mount data:\n"
@@ -4392,7 +4447,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:12027
+#: src/TabJobs.java:12509
 #, java-format
 msgid ""
 "Cannot remove mount data:\n"
@@ -4400,24 +4455,24 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:12075
+#: src/TabJobs.java:12557
 msgid "Add new mount"
 msgstr ""
 
-#: src/TabJobs.java:12102
+#: src/TabJobs.java:12584
 msgid "Edit mount"
 msgstr ""
 
-#: src/TabJobs.java:12121
+#: src/TabJobs.java:12603
 msgid "Clone mount"
 msgstr ""
 
-#: src/TabJobs.java:12138
+#: src/TabJobs.java:12620
 #, java-format
 msgid "Remove {0} {0,choice,0#mounts|1#mount|1<mounts}?"
 msgstr ""
 
-#: src/TabJobs.java:12224
+#: src/TabJobs.java:12706
 #, java-format
 msgid ""
 "Cannot set/remove .nobackup for {0}:\n"
@@ -4425,7 +4480,7 @@ msgid ""
 "{1}"
 msgstr ""
 
-#: src/TabJobs.java:12264
+#: src/TabJobs.java:12746
 #, java-format
 msgid ""
 "Cannot set/clear no-dump attribute for {0}:\n"
@@ -4433,7 +4488,7 @@ msgid ""
 "{1}"
 msgstr ""
 
-#: src/TabJobs.java:12309
+#: src/TabJobs.java:12791
 #, java-format
 msgid ""
 "Cannot add source pattern:\n"
@@ -4441,7 +4496,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:12362
+#: src/TabJobs.java:12844
 #, java-format
 msgid ""
 "Cannot remove source pattern:\n"
@@ -4449,7 +4504,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:12396
+#: src/TabJobs.java:12878
 #, java-format
 msgid ""
 "Cannot clear source patterns:\n"
@@ -4457,11 +4512,11 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:12434
+#: src/TabJobs.java:12916
 msgid "Compress exclude pattern. Use * and ? as wildcards."
 msgstr ""
 
-#: src/TabJobs.java:12561 src/TabJobs.java:12615
+#: src/TabJobs.java:13043 src/TabJobs.java:13097
 #, java-format
 msgid ""
 "Cannot add compress exclude entry:\n"
@@ -4469,15 +4524,15 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:12636
+#: src/TabJobs.java:13118
 msgid "Add new compress exclude pattern"
 msgstr ""
 
-#: src/TabJobs.java:12655
+#: src/TabJobs.java:13137
 msgid "Edit compress exclude pattern"
 msgstr ""
 
-#: src/TabJobs.java:12709
+#: src/TabJobs.java:13191
 #, java-format
 msgid ""
 "Cannot remove compress exclude entry:\n"
@@ -4485,46 +4540,46 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:12739
+#: src/TabJobs.java:13221
 #, java-format
 msgid ""
 "Remove {0} selected compress exclude "
 "{0,choice,0#patterns|1#pattern|1<patterns}?"
 msgstr ""
 
-#: src/TabJobs.java:12965
+#: src/TabJobs.java:13447
 msgid "Drag to trashcan icon to the right to remove name part."
 msgstr ""
 
-#: src/TabJobs.java:13103
+#: src/TabJobs.java:13585
 msgid "Use drag&drop to remove name parts."
 msgstr ""
 
-#: src/TabJobs.java:13142
+#: src/TabJobs.java:13624
 msgid "Example"
 msgstr ""
 
-#: src/TabJobs.java:13150 src/TabJobs.java:13160
+#: src/TabJobs.java:13632 src/TabJobs.java:13642
 msgid "Use drag&drop to add name parts."
 msgstr ""
 
-#: src/TabJobs.java:13201
+#: src/TabJobs.java:13683
 msgid "part number 1 digit"
 msgstr ""
 
-#: src/TabJobs.java:13202
+#: src/TabJobs.java:13684
 msgid "part number 2 digits"
 msgstr ""
 
-#: src/TabJobs.java:13203
+#: src/TabJobs.java:13685
 msgid "part number 3 digits"
 msgstr ""
 
-#: src/TabJobs.java:13204
+#: src/TabJobs.java:13686
 msgid "part number 4 digits"
 msgstr ""
 
-#: src/TabJobs.java:13206
+#: src/TabJobs.java:13688
 msgid ""
 "archive type: full\n"
 ",incremental\n"
@@ -4532,261 +4587,261 @@ msgid ""
 ",continuous"
 msgstr ""
 
-#: src/TabJobs.java:13207
+#: src/TabJobs.java:13689
 msgid "archive type short: F, I, D, C"
 msgstr ""
 
-#: src/TabJobs.java:13208
+#: src/TabJobs.java:13690
 msgid "universally unique identifier"
 msgstr ""
 
-#: src/TabJobs.java:13209
+#: src/TabJobs.java:13691
 msgid "schedule custom text"
 msgstr ""
 
-#: src/TabJobs.java:13212
+#: src/TabJobs.java:13694
 msgid "day 01..31"
 msgstr ""
 
-#: src/TabJobs.java:13213
+#: src/TabJobs.java:13695
 msgid "day of year 001..366"
 msgstr ""
 
-#: src/TabJobs.java:13214
+#: src/TabJobs.java:13696
 msgid "month 01..12"
 msgstr ""
 
-#: src/TabJobs.java:13215
+#: src/TabJobs.java:13697
 msgid "month name"
 msgstr ""
 
-#: src/TabJobs.java:13216
+#: src/TabJobs.java:13698
 msgid "full month name"
 msgstr ""
 
-#: src/TabJobs.java:13217
+#: src/TabJobs.java:13699
 msgid "hour 00..23"
 msgstr ""
 
-#: src/TabJobs.java:13218
+#: src/TabJobs.java:13700
 msgid "hour 00..12"
 msgstr ""
 
-#: src/TabJobs.java:13219
+#: src/TabJobs.java:13701
 msgid "minute 00..59"
 msgstr ""
 
-#: src/TabJobs.java:13220
+#: src/TabJobs.java:13702
 msgid "seconds 00..59"
 msgstr ""
 
-#: src/TabJobs.java:13221
+#: src/TabJobs.java:13703
 msgid "'AM' or 'PM'"
 msgstr ""
 
-#: src/TabJobs.java:13222
+#: src/TabJobs.java:13704
 msgid "'am' or 'pm'"
 msgstr ""
 
-#: src/TabJobs.java:13223
+#: src/TabJobs.java:13705
 msgid "week day name"
 msgstr ""
 
-#: src/TabJobs.java:13224
+#: src/TabJobs.java:13706
 msgid "full week day name"
 msgstr ""
 
-#: src/TabJobs.java:13225
+#: src/TabJobs.java:13707
 msgid "day of week 1..7"
 msgstr ""
 
-#: src/TabJobs.java:13226
+#: src/TabJobs.java:13708
 msgid "day of week 0..6"
 msgstr ""
 
-#: src/TabJobs.java:13227
+#: src/TabJobs.java:13709
 msgid "week number 00..53 starting with Sunday"
 msgstr ""
 
-#: src/TabJobs.java:13228
+#: src/TabJobs.java:13710
 msgid "week number 1 or 2 starting with Sunday"
 msgstr ""
 
-#: src/TabJobs.java:13229
+#: src/TabJobs.java:13711
 msgid "week number 1, 2, 3, 4 starting with Sunday"
 msgstr ""
 
-#: src/TabJobs.java:13230
+#: src/TabJobs.java:13712
 msgid "week number 00..53 starting with Monday"
 msgstr ""
 
-#: src/TabJobs.java:13231
+#: src/TabJobs.java:13713
 msgid "week number 1 or 2 starting with Monday"
 msgstr ""
 
-#: src/TabJobs.java:13232
+#: src/TabJobs.java:13714
 msgid "week number 1, 2, 3, 4 starting with Monday"
 msgstr ""
 
-#: src/TabJobs.java:13233
+#: src/TabJobs.java:13715
 msgid "century two digits"
 msgstr ""
 
-#: src/TabJobs.java:13234
+#: src/TabJobs.java:13716
 msgid "year two digits"
 msgstr ""
 
-#: src/TabJobs.java:13235
+#: src/TabJobs.java:13717
 msgid "year four digits"
 msgstr ""
 
-#: src/TabJobs.java:13236
+#: src/TabJobs.java:13718
 msgid "seconds since 1.1.1970 00:00"
 msgstr ""
 
-#: src/TabJobs.java:13237
+#: src/TabJobs.java:13719
 msgid "time-zone abbreviation"
 msgstr ""
 
-#: src/TabJobs.java:13244
+#: src/TabJobs.java:13726
 msgid "Date YYYY-MM-DD"
 msgstr ""
 
-#: src/TabJobs.java:13245
+#: src/TabJobs.java:13727
 msgid "Time hh:mm:ss"
 msgstr ""
 
-#: src/TabJobs.java:13836
+#: src/TabJobs.java:14318
 msgid "Edit storage file name"
 msgstr ""
 
-#: src/TabJobs.java:13896
+#: src/TabJobs.java:14378
 msgid "Test script results"
 msgstr ""
 
-#: src/TabJobs.java:14120 src/TabJobs.java:14562 src/TabJobs.java:14622
-#: src/TabJobs.java:14691
+#: src/TabJobs.java:14602 src/TabJobs.java:15044 src/TabJobs.java:15104
+#: src/TabJobs.java:15173
 msgid "yes"
 msgstr ""
 
-#: src/TabJobs.java:14120 src/TabJobs.java:14562 src/TabJobs.java:14622
-#: src/TabJobs.java:14691
+#: src/TabJobs.java:14602 src/TabJobs.java:15044 src/TabJobs.java:15104
+#: src/TabJobs.java:15173
 msgid "no"
 msgstr ""
 
-#: src/TabJobs.java:14135
+#: src/TabJobs.java:14617
 #, java-format
 msgid "Cannot get schedule list (error: {0})"
 msgstr ""
 
-#: src/TabJobs.java:14178 src/TabJobs.java:14964
+#: src/TabJobs.java:14660 src/TabJobs.java:15446
 msgid "Execute job as normal backup (no incremental data)."
 msgstr ""
 
-#: src/TabJobs.java:14183 src/TabJobs.java:14969
+#: src/TabJobs.java:14665 src/TabJobs.java:15451
 msgid "Execute job as full backup."
 msgstr ""
 
-#: src/TabJobs.java:14188 src/TabJobs.java:14974
+#: src/TabJobs.java:14670 src/TabJobs.java:15456
 msgid "Execute job as incremental backup."
 msgstr ""
 
-#: src/TabJobs.java:14193 src/TabJobs.java:14979
+#: src/TabJobs.java:14675 src/TabJobs.java:15461
 msgid "Execute job as differential backup."
 msgstr ""
 
-#: src/TabJobs.java:14198 src/TabJobs.java:14984
+#: src/TabJobs.java:14680 src/TabJobs.java:15466
 msgid "Execute job as continuous backup."
 msgstr ""
 
-#: src/TabJobs.java:14319
+#: src/TabJobs.java:14801
 msgid "Interval time for continuous storage."
 msgstr ""
 
-#: src/TabJobs.java:14321
+#: src/TabJobs.java:14803
 msgid "1 min"
 msgstr ""
 
-#: src/TabJobs.java:14322
+#: src/TabJobs.java:14804
 msgid "5 min"
 msgstr ""
 
-#: src/TabJobs.java:14324
+#: src/TabJobs.java:14806
 msgid "30 min"
 msgstr ""
 
-#: src/TabJobs.java:14325
+#: src/TabJobs.java:14807
 msgid "1 h"
 msgstr ""
 
-#: src/TabJobs.java:14326
+#: src/TabJobs.java:14808
 msgid "2 h"
 msgstr ""
 
-#: src/TabJobs.java:14327
+#: src/TabJobs.java:14809
 msgid "4 h"
 msgstr ""
 
-#: src/TabJobs.java:14328
+#: src/TabJobs.java:14810
 msgid "8 h"
 msgstr ""
 
-#: src/TabJobs.java:14334
+#: src/TabJobs.java:14816
 msgid "Active time"
 msgstr ""
 
-#: src/TabJobs.java:14339
+#: src/TabJobs.java:14821
 msgid "Begin hour where continuous storage is active."
 msgstr ""
 
-#: src/TabJobs.java:14346
+#: src/TabJobs.java:14828
 msgid "Begin minute where continuous storage is active."
 msgstr ""
 
-#: src/TabJobs.java:14356
+#: src/TabJobs.java:14838
 msgid "End hour where continuous storage is active."
 msgstr ""
 
-#: src/TabJobs.java:14363
+#: src/TabJobs.java:14845
 msgid "End minute where continuous storage is active."
 msgstr ""
 
-#: src/TabJobs.java:14383
+#: src/TabJobs.java:14865
 msgid "test created archives"
 msgstr ""
 
-#: src/TabJobs.java:14384
+#: src/TabJobs.java:14866
 msgid "Test created archives."
 msgstr ""
 
-#: src/TabJobs.java:14388
+#: src/TabJobs.java:14870
 msgid "do no create storages"
 msgstr ""
 
-#: src/TabJobs.java:14389
+#: src/TabJobs.java:14871
 msgid "Do not create storage files. Only update incremental data."
 msgstr ""
 
-#: src/TabJobs.java:14393
+#: src/TabJobs.java:14875
 msgid "enabled"
 msgstr ""
 
-#: src/TabJobs.java:14480
+#: src/TabJobs.java:14962
 msgid "No specific time set. Really execute job every minute?"
 msgstr ""
 
-#: src/TabJobs.java:14493
+#: src/TabJobs.java:14975
 msgid ""
 "The job may not be triggered if the specified day is not in the set of "
 "specified weekdays.\n"
 "Really keep this setting?"
 msgstr ""
 
-#: src/TabJobs.java:14515
+#: src/TabJobs.java:14997
 msgid "New schedule"
 msgstr ""
 
-#: src/TabJobs.java:14543
+#: src/TabJobs.java:15025
 #, java-format
 msgid ""
 "Cannot create new schedule:\n"
@@ -4794,11 +4849,11 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:14584
+#: src/TabJobs.java:15066
 msgid "Edit schedule"
 msgstr ""
 
-#: src/TabJobs.java:14604
+#: src/TabJobs.java:15086
 #, java-format
 msgid ""
 "Cannot update schedule entry:\n"
@@ -4806,11 +4861,11 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:14645
+#: src/TabJobs.java:15127
 msgid "Clone schedule"
 msgstr ""
 
-#: src/TabJobs.java:14672
+#: src/TabJobs.java:15154
 #, java-format
 msgid ""
 "Cannot clone new schedule:\n"
@@ -4818,12 +4873,12 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:14711
+#: src/TabJobs.java:15193
 #, java-format
 msgid "Delete {0} selected schedule {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 
-#: src/TabJobs.java:14732
+#: src/TabJobs.java:15214
 #, java-format
 msgid ""
 "Cannot delete schedule:\n"
@@ -4831,7 +4886,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:14765 src/TabStatus.java:2773
+#: src/TabJobs.java:15247 src/TabStatus.java:2773
 #, java-format
 msgid ""
 "Cannot trigger schedule of job ''{0}'':\n"
@@ -4839,105 +4894,105 @@ msgid ""
 "{1}"
 msgstr ""
 
-#: src/TabJobs.java:14989
+#: src/TabJobs.java:15471
 msgid "Keep"
 msgstr ""
 
-#: src/TabJobs.java:14999
+#: src/TabJobs.java:15481
 msgid "Min. number of archives to keep."
 msgstr ""
 
-#: src/TabJobs.java:15017
+#: src/TabJobs.java:15499
 msgid "max"
 msgstr ""
 
-#: src/TabJobs.java:15021
+#: src/TabJobs.java:15503
 msgid "Max. number of archives to keep."
 msgstr ""
 
-#: src/TabJobs.java:15038
+#: src/TabJobs.java:15520
 msgid "age"
 msgstr ""
 
-#: src/TabJobs.java:15042
+#: src/TabJobs.java:15524
 msgid "Max. age of archives to keep."
 msgstr ""
 
-#: src/TabJobs.java:15045
+#: src/TabJobs.java:15527
 msgid "2 days"
 msgstr ""
 
-#: src/TabJobs.java:15047
+#: src/TabJobs.java:15529
 msgid "4 days"
 msgstr ""
 
-#: src/TabJobs.java:15048
+#: src/TabJobs.java:15530
 msgid "5 days"
 msgstr ""
 
-#: src/TabJobs.java:15049
+#: src/TabJobs.java:15531
 msgid "6 days"
 msgstr ""
 
-#: src/TabJobs.java:15053
+#: src/TabJobs.java:15535
 msgid "1 month"
 msgstr ""
 
-#: src/TabJobs.java:15054
+#: src/TabJobs.java:15536
 msgid "2 months"
 msgstr ""
 
-#: src/TabJobs.java:15055
+#: src/TabJobs.java:15537
 msgid "3 months"
 msgstr ""
 
-#: src/TabJobs.java:15056
+#: src/TabJobs.java:15538
 msgid "6 months"
 msgstr ""
 
-#: src/TabJobs.java:15057
+#: src/TabJobs.java:15539
 msgid "1 year"
 msgstr ""
 
-#: src/TabJobs.java:15058
+#: src/TabJobs.java:15540
 msgid "18 months"
 msgstr ""
 
-#: src/TabJobs.java:15059
+#: src/TabJobs.java:15541
 msgid "2 years"
 msgstr ""
 
-#: src/TabJobs.java:15060
+#: src/TabJobs.java:15542
 msgid "3 years"
 msgstr ""
 
-#: src/TabJobs.java:15061
+#: src/TabJobs.java:15543
 msgid "4 years"
 msgstr ""
 
-#: src/TabJobs.java:15062
+#: src/TabJobs.java:15544
 msgid "5 years"
 msgstr ""
 
-#: src/TabJobs.java:15070 src/TabRestore.java:5982
+#: src/TabJobs.java:15552 src/TabRestore.java:5982
 msgid "Move to"
 msgstr ""
 
-#: src/TabJobs.java:15078
+#: src/TabJobs.java:15560
 msgid ""
 "Name of directory to move storages to. Several macros are supported. Click "
 "on button to the right to open storage file name editor."
 msgstr ""
 
-#: src/TabJobs.java:15112
+#: src/TabJobs.java:15594
 msgid "Select remote directory. CTRL+click to select local directory."
 msgstr ""
 
-#: src/TabJobs.java:15127
+#: src/TabJobs.java:15609
 msgid "Select storage directory"
 msgstr ""
 
-#: src/TabJobs.java:15149
+#: src/TabJobs.java:15631
 msgid ""
 "Storage destination type:\n"
 "  into file system\n"
@@ -4949,15 +5004,15 @@ msgid ""
 "  on SMB/CIFS server\n"
 msgstr ""
 
-#: src/TabJobs.java:15328
+#: src/TabJobs.java:15810
 msgid "No max. keep set!"
 msgstr ""
 
-#: src/TabJobs.java:15334
+#: src/TabJobs.java:15816
 msgid "No max. age set!"
 msgstr ""
 
-#: src/TabJobs.java:15404
+#: src/TabJobs.java:15886
 #, java-format
 msgid ""
 "Cannot add persistence entry:\n"
@@ -4965,7 +5020,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15441
+#: src/TabJobs.java:15923
 #, java-format
 msgid ""
 "Cannot update persistence data:\n"
@@ -4973,7 +5028,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15473
+#: src/TabJobs.java:15955
 #, java-format
 msgid ""
 "Cannot remove persistence data:\n"
@@ -4981,46 +5036,46 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15492
+#: src/TabJobs.java:15974
 msgid "Add new persistence"
 msgstr ""
 
-#: src/TabJobs.java:15512
+#: src/TabJobs.java:15994
 msgid "Edit persistence"
 msgstr ""
 
-#: src/TabJobs.java:15533
+#: src/TabJobs.java:16015
 msgid "Clone persistence"
 msgstr ""
 
-#: src/TabJobs.java:15550
+#: src/TabJobs.java:16032
 #, java-format
 msgid "Remove {0} persistence {0,choice,0#entries|1#entry|1<entries}?"
 msgstr ""
 
-#: src/TabJobs.java:15609 src/TabRestore.java:4419
+#: src/TabJobs.java:16091 src/TabRestore.java:4419
 msgid "Schedule UUID"
 msgstr ""
 
-#: src/TabJobs.java:15634 src/TabJobs.java:15654 src/TabRestore.java:4341
+#: src/TabJobs.java:16116 src/TabJobs.java:16136 src/TabRestore.java:4341
 #: src/TabRestore.java:4361 src/TabRestore.java:4455 src/TabRestore.java:4475
 #: src/TabRestore.java:4632 src/TabRestore.java:4877
 #, java-format
 msgid "{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})"
 msgstr ""
 
-#: src/TabJobs.java:15644 src/TabRestore.java:4351 src/TabRestore.java:4465
+#: src/TabJobs.java:16126 src/TabRestore.java:4351 src/TabRestore.java:4465
 #: src/TabRestore.java:4622 src/TabStatus.java:3619 src/TabStatus.java:3629
 #: src/TabStatus.java:3645
 #, java-format
 msgid "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15650 src/TabRestore.java:4357 src/TabRestore.java:4471
+#: src/TabJobs.java:16132 src/TabRestore.java:4357 src/TabRestore.java:4471
 msgid "Total entries size"
 msgstr ""
 
-#: src/TabJobs.java:15737
+#: src/TabJobs.java:16219
 #, java-format
 msgid ""
 "Cannot refresh entity index data:\n"
@@ -5028,7 +5083,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15769
+#: src/TabJobs.java:16251
 #, java-format
 msgid ""
 "Cannot remove entity index data:\n"
@@ -5036,7 +5091,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabJobs.java:15805
+#: src/TabJobs.java:16287
 #, java-format
 msgid ""
 "Cannot delete entity:\n"
