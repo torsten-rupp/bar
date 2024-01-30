@@ -363,8 +363,6 @@ LOCAL void initCreateInfo(CreateInfo          *createInfo,
   // set partial flag
   createInfo->partialFlag =    (createInfo->archiveType == ARCHIVE_TYPE_INCREMENTAL)
                             || (createInfo->archiveType == ARCHIVE_TYPE_DIFFERENTIAL);
-//TODO
-//                            || (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS);
 
   // init entry name queue, storage queue
   if (!MsgQueue_init(&createInfo->entryMsgQueue,
@@ -1664,63 +1662,58 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       // add to known names history
                       Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                      if (  !createInfo->partialFlag
-                          || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                      if (Dictionary_find(&hardLinksDictionary,
+                                          &fileInfo.id,
+                                          sizeof(fileInfo.id),
+                                          &data.value,
+                                          NULL
+                                         )
                           )
                       {
-                        if (Dictionary_find(&hardLinksDictionary,
+                        // append name to hard link name list
+                        StringList_append(&data.hardLinkInfo->nameList,name);
+
+                        if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
+                        {
+                          // found last hardlink -> clear entry
+                          Dictionary_remove(&hardLinksDictionary,
+                                            &fileInfo.id,
+                                            sizeof(fileInfo.id)
+                                           );
+                        }
+                      }
+                      else
+                      {
+                        // create hard link name list
+                        if (isPrintInfo(2))
+                        {
+                          printIncrementalInfo(&createInfo->namesDictionary,
+                                               name,
+                                               &fileInfo.cast
+                                              );
+                        }
+
+                        hardLinkInfo.count = fileInfo.linkCount;
+                        StringList_init(&hardLinkInfo.nameList);
+                        StringList_append(&hardLinkInfo.nameList,name);
+                        memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
+
+                        if (!Dictionary_add(&hardLinksDictionary,
                                             &fileInfo.id,
                                             sizeof(fileInfo.id),
-                                            &data.value,
-                                            NULL
+                                            &hardLinkInfo,
+                                            sizeof(hardLinkInfo)
                                            )
                             )
                         {
-                          // append name to hard link name list
-                          StringList_append(&data.hardLinkInfo->nameList,name);
-
-                          if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
-                          {
-                            // found last hardlink -> clear entry
-                            Dictionary_remove(&hardLinksDictionary,
-                                              &fileInfo.id,
-                                              sizeof(fileInfo.id)
-                                             );
-                          }
+                          HALT_INSUFFICIENT_MEMORY();
                         }
-                        else
+
+                        // update status
+                        STATUS_INFO_UPDATE(createInfo,name,NULL)
                         {
-                          // create hard link name list
-                          if (createInfo->partialFlag && isPrintInfo(2))
-                          {
-                            printIncrementalInfo(&createInfo->namesDictionary,
-                                                 name,
-                                                 &fileInfo.cast
-                                                );
-                          }
-
-                          hardLinkInfo.count = fileInfo.linkCount;
-                          StringList_init(&hardLinkInfo.nameList);
-                          StringList_append(&hardLinkInfo.nameList,name);
-                          memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
-
-                          if (!Dictionary_add(&hardLinksDictionary,
-                                              &fileInfo.id,
-                                              sizeof(fileInfo.id),
-                                              &hardLinkInfo,
-                                              sizeof(hardLinkInfo)
-                                             )
-                              )
-                          {
-                            HALT_INSUFFICIENT_MEMORY();
-                          }
-
-                          // update status
-                          STATUS_INFO_UPDATE(createInfo,name,NULL)
-                          {
-                            createInfo->runningInfo.progress.total.count++;
-                            createInfo->runningInfo.progress.total.size += fileInfo.size;
-                          }
+                          createInfo->runningInfo.progress.total.count++;
+                          createInfo->runningInfo.progress.total.size += fileInfo.size;
                         }
                       }
                     }
@@ -2556,7 +2549,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                     {
                       // add to entry list
-                      if (createInfo->partialFlag && isPrintInfo(2))
+                      if (isPrintInfo(2))
                       {
                         printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                       }
@@ -2595,7 +2588,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                 // add to entry list
-                if (createInfo->partialFlag && isPrintInfo(2))
+                if (isPrintInfo(2))
                 {
                   printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                 }
@@ -2616,7 +2609,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                     // add to entry list
-                    if (createInfo->partialFlag && isPrintInfo(2))
+                    if (isPrintInfo(2))
                     {
                       printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                     }
@@ -2684,7 +2677,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       else
                       {
                         // create hard link name list
-                        if (createInfo->partialFlag && isPrintInfo(2))
+                        if (isPrintInfo(2))
                         {
                           printIncrementalInfo(&createInfo->namesDictionary,
                                                name,
@@ -2743,7 +2736,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
                     // add to entry list
-                    if (createInfo->partialFlag && isPrintInfo(2))
+                    if (isPrintInfo(2))
                     {
                       printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                     }
