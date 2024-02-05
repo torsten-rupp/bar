@@ -9854,7 +9854,7 @@ uint Configuration_initWebDAVServerSettings(WebDAVServer     *webDAVServer,
                           );
 
     // get WebDAV server settings
-    webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                )
+    webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0)                )
                               ? jobOptions->webDAVServer.port
                               : ((serverNode != NULL)
                                    ? serverNode->server.webDAV.port
@@ -9931,7 +9931,7 @@ uint Configuration_initWebDAVSServerSettings(WebDAVServer     *webDAVServer,
                           );
 
     // get WebDAV server settings
-    webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->sshServer.port != 0)                )
+    webDAVServer->port       = ((jobOptions != NULL) && (jobOptions->webDAVServer.port != 0)                )
                               ? jobOptions->webDAVServer.port
                               : ((serverNode != NULL)
                                    ? serverNode->server.webDAV.port
