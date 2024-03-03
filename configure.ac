@@ -5438,9 +5438,6 @@ AC_CONFIG_FILES(bar/po/Makefile)
 AC_CONFIG_FILES(barcontrol/Makefile)
 AC_CONFIG_FILES(doc/Makefile)
 
-dnl config files
-AC_CONFIG_FILES(barcontrol/src/Config.java)
-
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";
                     echo "Configuration $VERSION_MAJOR.$VERSION_MINOR$VERSION_PATCH ($VERSION_REVISION):";

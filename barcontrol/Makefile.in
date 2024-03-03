@@ -154,7 +154,6 @@ VERSION       := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
 
 # languages
 LANGUAGES = de jp
-
 # ----------------------------------------------------------------------------
 
 TEST_SERVER_PORT                 = 39909
@@ -199,7 +198,10 @@ vpath %.java $(BUILD_DIR)/barcontrol:$(SOURCE_DIR)
 
 # compile Java sources
 .NOTPARALLEL: classes/%.class
-classes/%.class: $(SOURCE_DIR)/src/%.java $(BUILD_DIR)/src/BARException.java
+classes/%.class: \
+  $(SOURCE_DIR)/src/%.java \
+  $(BUILD_DIR)/src/Config.java \
+  $(BUILD_DIR)/src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
@@ -226,6 +228,19 @@ else
 	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"; false
 endif
 classes/%.class: $(SOURCE_DIR)/src/widgets/%.java
+	$(INSTALL) -d classes
+ifneq ($(JAVAC),)
+	$(JAVAC) $(JAVAC_FLAGS) \
+          -d classes \
+          -classpath $(CLASSPATH) \
+          $(BUILD_DIR)/src/*.java \
+          $(SOURCE_DIR)/src/*.java \
+          $(SOURCE_DIR)/src/utils/*.java \
+          $(SOURCE_DIR)/src/widgets/*.java
+else
+	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"; false
+endif
+classes/Config.class: $(BUILD_DIR)/src/Config.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
@@ -291,12 +306,13 @@ OTHER_SOURCES  = barcontrol.in \
                  jar.txt \
 
 OBJECTS        = $(foreach z,$(SOURCES),$(addprefix classes/,$(basename $(notdir $z)).class)) \
-                 classes/BARException.class \
                  classes/Config.class \
+                 classes/BARException.class \
                  \
                  $(foreach z,$(LANGUAGES),classes/app/i18n/Messages_$z.class) \
 
-INTERMEDIATE   = $(BUILD_DIR)/barcontrol/src/BARException.java \
+INTERMEDIATE   = $(BUILD_DIR)/src/Config.java \
+                 $(BUILD_DIR)/src/BARException.java \
                  barcontrol.jar \
                  barcontrol-linux.jar \
                  barcontrol-linux_64.jar \
@@ -329,7 +345,6 @@ clean: \
 distclean: \
   clean
 	$(RMF) Makefile
-	$(RMF) $(SOURCE_DIR)/src/Config.java
 	$(RMF) barcontrol
 	$(RMF) barcontrol@EXEEXT@ barcontrol@SHELLEXT@
 
@@ -375,6 +390,22 @@ help:
 # create dependencies
 .PHONY: depend
 depend:
+
+# configuration
+$(BUILD_DIR)/src/Config.java: $(ROOT_DIR)/barcontrol/src/Config.java.in $(ROOT_DIR)/version
+	$(CAT) $(ROOT_DIR)/barcontrol/src/Config.java.in | \
+        ( \
+          while IFS="" read line; do \
+            line=`$(ECHO) "$$line"|$(SED) 's|\@VERSION_MAJOR\@|$(VERSION_MAJOR)|g'`; \
+            line=`$(ECHO) "$$line"|$(SED) 's|\@VERSION_MINOR\@|$(VERSION_MINOR)|g'`; \
+            line=`$(ECHO) "$$line"|$(SED) 's|\@VERSION_PATCH\@|$(VERSION_PATCH)|g'`; \
+            line=`$(ECHO) "$$line"|$(SED) 's|\@VERSION_REVISION\@|$(VERSION_REVISION)|g'`; \
+            line=`$(ECHO) "$$line"|$(SED) 's|\@INSTALL_DIR\@|$(INSTALL_DIR)|g'`; \
+            line=`$(ECHO) "$$line"|$(SED) 's|\@CONFIG_DIR\@|$(CONFIG_DIR)|g'`; \
+            line=`$(ECHO) "$$line"|$(SED) 's|\@TLS_DIR\@|$(TLS_DIR)|g'`; \
+            $(ECHO) "$$line"; \
+          done; \
+        ) > $@
 
 # error definition
 $(BUILD_DIR)/src/BARException.java: $(ROOT_DIR)/errors.def $(ROOT_DIR)/errors.pl Makefile
