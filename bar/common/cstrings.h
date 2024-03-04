@@ -142,7 +142,7 @@ static inline char *stringClear(char *s)
 * Purpose: get string length
 * Input  : s - string
 * Output : -
-* Return : string length or 0 [bytes[
+* Return : string length or 0 [bytes]
 * Notes  : -
 \***********************************************************************/
 
@@ -163,8 +163,8 @@ static inline size_t stringLength(const char *s)
 static inline int stringCompare(const char *s1, const char *s2)
 {
   if      ((s1 != NULL) && (s2 != NULL)) return strcmp(s1,s2);
-  else if (s1 == NULL)                   return -1;
-  else if (s2 == NULL)                   return  1;
+  else if ((s1 != NULL) && (s2 == NULL)) return -1;
+  else if ((s1 == NULL) && (s2 != NULL)) return  1;
   else                                   return  0;
 }
 
@@ -188,7 +188,7 @@ static inline bool stringEquals(const char *s1, const char *s2)
 * Input  : s1, s2 - strings
 *          n      - prefix length
 * Output : -
-* Return : TRUE iff equals
+* Return : TRUE iff prefix equals
 * Notes  : -
 \***********************************************************************/
 
@@ -217,7 +217,7 @@ static inline bool stringEqualsIgnoreCase(const char *s1, const char *s2)
 * Input  : s1, s2 - strings
 *          n      - prefix length
 * Output : -
-* Return : TRUE iff equals
+* Return : TRUE iff prefix equals
 * Notes  : -
 \***********************************************************************/
 
@@ -232,7 +232,7 @@ static inline bool stringEqualsPrefixIgnoreCase(const char *s1, const char *s2, 
 * Input  : string - string
 *          prefix - prefix
 * Output : -
-* Return : TRUE iff s start with prefix
+* Return : TRUE iff string start with prefix
 * Notes  : -
 \***********************************************************************/
 
@@ -243,11 +243,11 @@ static inline bool stringStartsWith(const char *string, const char *prefix)
 
 /***********************************************************************\
 * Name   : stringStartsWithIgnoreCase
-* Purpose: check if string starts with prefix
+* Purpose: check if string starts with prefix and ignore case
 * Input  : string - string
 *          prefix - prefix
 * Output : -
-* Return : TRUE iff s start with prefix
+* Return : TRUE iff string start with prefix
 * Notes  : -
 \***********************************************************************/
 
@@ -262,7 +262,7 @@ static inline bool stringStartsWithIgnoreCase(const char *string, const char *pr
 * Input  : string - string
 *          suffix - suffix
 * Output : -
-* Return : TRUE iff s start with suffix
+* Return : TRUE iff string start with suffix
 * Notes  : -
 \***********************************************************************/
 
@@ -272,16 +272,16 @@ static inline bool stringEndsWith(const char *string, const char *suffix)
   size_t m = strlen(suffix);
 
   return    (n >= m)
-         && strncmp(string+n-m,suffix,m) == 0;
+         && strncmp(&string[n-m],suffix,m) == 0;
 }
 
 /***********************************************************************\
 * Name   : stringEndsWithIgnoreCase
-* Purpose: check if string ends with suffix
+* Purpose: check if string ends with suffix and ignore case
 * Input  : string - string
 *          suffix - suffix
 * Output : -
-* Return : TRUE iff s start with suffix
+* Return : TRUE iff string start with suffix
 * Notes  : -
 \***********************************************************************/
 
@@ -291,7 +291,7 @@ static inline bool stringEndsWithIgnoreCase(const char *string, const char *suff
   size_t m = strlen(suffix);
 
   return    (n >= m)
-         && strncasecmp(string+n-m,suffix,m) == 0;
+         && strncasecmp(&string[n-m],suffix,m) == 0;
 }
 
 /***********************************************************************\
@@ -337,7 +337,8 @@ static inline char* stringSet(char *string, size_t stringSize, const char *sourc
       */
       #pragma GCC diagnostic push
       #pragma GCC diagnostic ignored "-Wstringop-overflow"
-      strncpy(string,source,stringSize-1); string[stringSize-1] = NUL;
+      strncpy(string,source,stringSize-1);
+      string[stringSize-1] = NUL;
       #pragma GCC diagnostic pop
     }
     else
@@ -355,7 +356,7 @@ static inline char* stringSet(char *string, size_t stringSize, const char *sourc
 * Input  : string     - destination string
 *          stringSize - size of string (including terminating NUL)
 *          buffer     - buffer
-*          bufferSize - buffer size
+*          bufferSize - buffer size [bytes]
 * Output : -
 * Return : string
 * Notes  : string is always NULL or NUL-terminated
@@ -385,43 +386,15 @@ static inline char* stringSetBuffer(char *string, size_t stringSize, const char 
 * Purpose: replace string
 * Input  : string        - destination string
 *          stringSize    - size of string (including terminating NUL)
-*          index         - replace index
-*          length        - replace length
+*          index         - replace start index
+*          replaceLength - number of characters to replace
 *          replaceString - replace string
 * Output : -
 * Return : modified string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringReplace(char *string, size_t stringSize, size_t index, size_t length, const char *replaceString)
-{
-  assert(stringSize > 0);
-
-  if (string != NULL)
-  {
-    size_t n = strlen(string);
-    if (index < n)
-    {
-      if (replaceString != NULL)
-      {
-        size_t m = strlen(replaceString);
-        if (m > (stringSize-index-1)) m = stringSize-index-1;
-        if ((index+length) < n)
-        {
-          memmove(string+index+m,string+index+length,n-(index+length));
-        }
-        memcpy(string+index,replaceString,m);
-        string[n-length+m] = NUL;
-      }
-      else
-      {
-        string[0] = NUL;
-      }
-    }
-  }
-
-  return string;
-}
+char* stringReplace(char *string, size_t stringSize, size_t index, size_t replaceLength, const char *replaceString);
 
 /***********************************************************************\
 * Name   : stringIntLength
@@ -456,7 +429,7 @@ static inline size_t stringInt64Length(int64 n)
 * Purpose: format string
 * Input  : string     - string
 *          stringSize - size of string (including terminating NUL)
-*          format     - format string
+*          format     - printf-like format string
 *          ...        - optional arguments
 *          arguments  - arguments
 * Output : -
@@ -493,7 +466,7 @@ static inline char* stringFormat(char *string, size_t stringSize, const char *fo
 /***********************************************************************\
 * Name   : stringVFormatLength, stringFormatLength
 * Purpose: get length of formated string
-* Input  : format    - format string
+* Input  : format    - printf-like format string
 *          ...       - optional arguments
 *          arguments - arguments
 * Output : -
@@ -525,7 +498,7 @@ static inline size_t stringFormatLength(const char *format, ...)
 * Input  : string     - destination string
 *          stringSize - size of destination string (including
 *                       terminating NUL)
-*          source     - source string
+*          source     - string to append
 * Output : -
 * Return : string
 * Notes  : string is always NULL or NUL-terminated
@@ -553,7 +526,7 @@ static inline char* stringAppend(char *string, size_t stringSize, const char *so
 * Input  : string     - destination string
 *          stringSize - size of destination string (including
 *                       terminating NUL)
-*          ch         - character
+*          ch         - character to append
 * Output : -
 * Return : string
 * Notes  : string is always NULL or NUL-terminated
@@ -612,7 +585,7 @@ static inline char* stringAppendBuffer(char *string, size_t stringSize, const ch
 * Input  : string     - string
 *          stringSize - size of destination string (including terminating
 *                       NUL)
-*          format     - format string
+*          format     - printf-like format string
 *          ...        - optional arguments
 *          arguments  - arguments
 * Output : -
@@ -656,7 +629,7 @@ static inline char* stringAppendFormat(char *string, size_t stringSize, const ch
 * Input  : string     - destination string
 *          stringSize - size of destination string (including
 *                       terminating NUL)
-*          length     - length
+*          length     - length [characters]
 *          ch         - character to fill string with
 * Output : -
 * Return : string
@@ -685,7 +658,7 @@ static inline char* stringFill(char *string, size_t stringSize, size_t length, c
 * Input  : string     - destination string
 *          stringSize - size of destination string (including
 *                       terminating NUL)
-*          length     - total length
+*          length     - total length of string
 *          ch         - character to append to string
 * Output : -
 * Return : string
@@ -745,7 +718,7 @@ static inline char* stringTrimEnd(char *string)
 {
   char *s;
 
-  s = string+strlen(string)-1;
+  s = &string[strlen(string)-1];
   while ((s >= string) && isspace(*s))
   {
     s--;
@@ -773,7 +746,7 @@ static inline char* stringTrim(char *string)
     string++;
   }
 
-  s = string+strlen(string)-1;
+  s = &string[strlen(string)-1];
   while ((s >= string) && isspace(*s))
   {
     s--;
@@ -785,7 +758,7 @@ static inline char* stringTrim(char *string)
 
 /***********************************************************************\
 * Name   : stringNew
-* Purpose: new (emtpy) string
+* Purpose: allocate new (emtpy) string
 * Input  : n - string size (including terminating NUL)
 * Output : -
 * Return : new string
@@ -809,7 +782,7 @@ static inline char* stringNew(size_t n)
 
 /***********************************************************************\
 * Name   : stringNewBuffer
-* Purpose: new string from buffer
+* Purpose: allocate new string from buffer
 * Input  : buffer     - buffer (can be NULL)
 *          bufferSize - buffer size
 * Output : -
@@ -865,7 +838,7 @@ static inline char* stringDuplicate(const char *source)
 /***********************************************************************\
 * Name   : stringDelete
 * Purpose: delete string
-* Input  : string - string
+* Input  : string - string to delete
 * Output : -
 * Return : -
 * Notes  : -
@@ -1266,6 +1239,11 @@ static inline Codepoint stringAtUTF8N(const char *string, size_t length, size_t 
   assert(string != NULL);
   assert(index <= length);
 
+  /* Note: gcc 11.x generate a false positive warning "array out of depends"
+           even the if-statement checks the bounds?
+   */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
   if      (((index+4) <= length) && ((string[index] & 0xF8) == 0xF0))
   {
     // 4 byte UTF8 codepoint
@@ -1300,6 +1278,7 @@ static inline Codepoint stringAtUTF8N(const char *string, size_t length, size_t 
   {
     codepoint = CODE_POINT_NUL;
   }
+#pragma GCC diagnostic pop
 
   return codepoint;
 }

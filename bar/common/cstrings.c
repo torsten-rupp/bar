@@ -202,6 +202,52 @@ LOCAL bool vmatchString(const char *string,
 
 // ----------------------------------------------------------------------
 
+char* stringReplace(char *string, size_t stringSize, size_t index, size_t replaceLength, const char *replaceString)
+{
+  assert(stringSize > 0);
+
+  if ((string != NULL) && (replaceLength > 0))
+  {
+    size_t n = strlen(string);
+    if (index < n)
+    {
+      if (replaceString != NULL)
+      {
+        // replace sub-string
+        size_t insertLength = strlen(replaceString);
+        if (insertLength > (stringSize - index - 1)) { insertLength = stringSize - index - 1; }
+        if ((index + replaceLength) > n) n = replaceLength - index;
+        if ((index + replaceLength) < n)
+        {
+          // some characters after replacement index have to be moved
+          size_t m = MIN(stringSize - (index + insertLength),
+                         stringSize - (index + replaceLength)
+                        );
+          memmove(&string[index + insertLength],
+                  &string[index + replaceLength],
+                  MIN(m,
+                      stringSize - (index + insertLength - replaceLength) - 1
+                     )
+                 );
+        }
+        memcpy(&string[index], replaceString, insertLength);
+        string[MIN(n + insertLength - replaceLength, stringSize - 1)] = NUL;
+      }
+      else
+      {
+        // just remove sub-string
+        if ((index+replaceLength) < n)
+        {
+          memmove(&string[index],&string[index+replaceLength],n-(index+replaceLength));
+        }
+        string[n-replaceLength] = NUL;
+      }
+    }
+  }
+
+  return string;
+}
+
 bool stringVScan(const char *string, const char *format, va_list arguments)
 {
   bool scannedFlag;
