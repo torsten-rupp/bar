@@ -239,70 +239,6 @@ void doneRunningInfo(RunningInfo *runningInfo)
   String_delete(runningInfo->progress.entry.name);
 }
 
-void setRunningInfo(RunningInfo *runningInfo, const RunningInfo *fromRunningInfo)
-{
-  double  entriesPerSecondAverage,bytesPerSecondAverage,storageBytesPerSecondAverage;
-  ulong   restFiles;
-  uint64  restBytes;
-  uint64  restStorageBytes;
-  ulong   estimatedRestTime;
-
-  assert(runningInfo != NULL);
-  assert(runningInfo->progress.entry.name != NULL);
-  assert(runningInfo->progress.storage.name != NULL);
-  assert(fromRunningInfo != NULL);
-  assert(fromRunningInfo->progress.entry.name != NULL);
-  assert(fromRunningInfo->progress.storage.name != NULL);
-
-  runningInfo->progress.done.count          = fromRunningInfo->progress.done.count;
-  runningInfo->progress.done.size           = fromRunningInfo->progress.done.size;
-  runningInfo->progress.total.count         = fromRunningInfo->progress.total.count;
-  runningInfo->progress.total.size          = fromRunningInfo->progress.total.size;
-  runningInfo->progress.collectTotalSumDone = fromRunningInfo->progress.collectTotalSumDone;
-  runningInfo->progress.skipped.count       = fromRunningInfo->progress.skipped.count;
-  runningInfo->progress.skipped.size        = fromRunningInfo->progress.skipped.size;
-  runningInfo->progress.error.count         = fromRunningInfo->progress.error.count;
-  runningInfo->progress.error.size          = fromRunningInfo->progress.error.size;
-  runningInfo->progress.archiveSize         = fromRunningInfo->progress.archiveSize;
-  runningInfo->progress.compressionRatio    = fromRunningInfo->progress.compressionRatio;
-  String_set(runningInfo->progress.entry.name,fromRunningInfo->progress.entry.name);
-  runningInfo->progress.entry.doneSize      = fromRunningInfo->progress.entry.doneSize;
-  runningInfo->progress.entry.totalSize     = fromRunningInfo->progress.entry.totalSize;
-  String_set(runningInfo->progress.storage.name,fromRunningInfo->progress.storage.name);
-  runningInfo->progress.storage.doneSize    = fromRunningInfo->progress.storage.doneSize;
-  runningInfo->progress.storage.totalSize   = fromRunningInfo->progress.storage.totalSize;
-  runningInfo->progress.volume.number       = fromRunningInfo->progress.volume.number;
-  runningInfo->progress.volume.done         = fromRunningInfo->progress.volume.done;
-
-  runningInfo->message.code        = fromRunningInfo->message.code;
-  String_set(runningInfo->message.data,fromRunningInfo->message.data);
-
-  // calculate statics values
-  Misc_performanceFilterAdd(&runningInfo->entriesPerSecondFilter,     runningInfo->progress.done.count);
-  Misc_performanceFilterAdd(&runningInfo->bytesPerSecondFilter,       runningInfo->progress.done.size);
-  Misc_performanceFilterAdd(&runningInfo->storageBytesPerSecondFilter,runningInfo->progress.storage.doneSize);
-  entriesPerSecondAverage      = Misc_performanceFilterGetAverageValue(&runningInfo->entriesPerSecondFilter     );
-  bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&runningInfo->bytesPerSecondFilter       );
-  storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&runningInfo->storageBytesPerSecondFilter);
-
-  // calculate rest values
-  restFiles         = (runningInfo->progress.total.count       > runningInfo->progress.done.count      ) ? runningInfo->progress.total.count      -runningInfo->progress.done.count       : 0L;
-  restBytes         = (runningInfo->progress.total.size        > runningInfo->progress.done.size       ) ? runningInfo->progress.total.size       -runningInfo->progress.done.size        : 0LL;
-  restStorageBytes  = (runningInfo->progress.storage.totalSize > runningInfo->progress.storage.doneSize) ? runningInfo->progress.storage.totalSize-runningInfo->progress.storage.doneSize : 0LL;
-
-  // calculate estimated rest time
-  estimatedRestTime = 0L;
-  if (entriesPerSecondAverage      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecondAverage     )); }
-  if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }
-  if (storageBytesPerSecondAverage > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecondAverage)); }
-
-  // calulcate performance values
-  runningInfo->entriesPerSecond      = Misc_performanceFilterGetValue(&runningInfo->entriesPerSecondFilter     ,10);
-  runningInfo->bytesPerSecond        = Misc_performanceFilterGetValue(&runningInfo->bytesPerSecondFilter       ,10);
-  runningInfo->storageBytesPerSecond = Misc_performanceFilterGetValue(&runningInfo->storageBytesPerSecondFilter,10);
-  runningInfo->estimatedRestTime     = estimatedRestTime;
-}
-
 void resetRunningInfo(RunningInfo *runningInfo)
 {
   assert(runningInfo != NULL);
@@ -353,7 +289,12 @@ const char *messageCodeToString(MessageCodes messageCode)
   {
     "NONE",
     "WAIT_FOR_TEMPORARY_SPACE",
-    "WAIT_FOR_VOLUME",
+    "REQUEST_FTP_PASSWORD",
+    "REQUEST_SSH_PASSWORD",
+    "REQUEST_WEBDAV_PASSWORD",
+    "REQUEST_CRYPT_PASSWORD",
+    "REQUEST_VOLUME",
+    "REQUEST_REPLACEMENT_VOLUME",
     "ADD_ERROR_CORRECTION_CODES",
     "BLANK_VOLUME",
     "WRITE_VOLUME"
@@ -361,6 +302,7 @@ const char *messageCodeToString(MessageCodes messageCode)
 
   assert(messageCode >= MESSAGE_CODE_MIN);
   assert(messageCode <= MESSAGE_CODE_MAX);
+  assert((MESSAGE_CODE_MAX-MESSAGE_CODE_MIN+1) <= SIZE_OF_ARRAY(MESSAGE_CODE_TEXT));
 
   return MESSAGE_CODE_TEXT[(uint)messageCode];
 }

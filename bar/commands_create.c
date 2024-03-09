@@ -3831,6 +3831,7 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
       {
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
+          assert(createInfo->runningInfo.message.code == MESSAGE_CODE_NONE);
           createInfo->runningInfo.message.code = MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE;
         }
 
@@ -3846,6 +3847,7 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
+          assert(createInfo->runningInfo.message.code != MESSAGE_CODE_NONE);
           createInfo->runningInfo.message.code = MESSAGE_CODE_NONE;
         }
       }
