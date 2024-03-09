@@ -1,3 +1,6 @@
+2024-03-05 23b
+  * BARControl: fixed request CD/DVD/BD volume
+
 2024-01-27 23a
   * fixed scheduler trigger job, check time (1min instead every
     10s)

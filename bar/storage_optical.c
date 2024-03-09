@@ -900,11 +900,11 @@ LOCAL Errors StorageOptical_loadVolume(const StorageInfo *storageInfo)
                              );
   if (error == ERROR_NONE)
   {
+    logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
     logMessage(storageInfo->logHandle,
                LOG_TYPE_ERROR,
                "Loaded medium"
               );
-    logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
   }
   else
   {
@@ -956,11 +956,11 @@ LOCAL Errors StorageOptical_unloadVolume(const StorageInfo *storageInfo)
                              );
   if (error == ERROR_NONE)
   {
+    logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
     logMessage(storageInfo->logHandle,
                LOG_TYPE_ERROR,
                "Unloaded medium"
               );
-    logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
   }
   else
   {
@@ -1584,14 +1584,13 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           if (error == ERROR_NONE)
           {
             printInfo(1,"OK\n");
-            logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked volume #%u",storageInfo->volumeNumber);
             logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked volume #%u",storageInfo->volumeNumber);
             storageInfo->opticalDisk.write.step++;
           }
           else
           {
             printInfo(1,"FAIL\n");
-
             logMessage(storageInfo->logHandle,
                        LOG_TYPE_ERROR,
                        "Blank volume #%u fail: %s",

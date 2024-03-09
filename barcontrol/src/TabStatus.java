@@ -119,7 +119,8 @@ class JobData implements Comparable<JobData>
     REQUEST_SSH_PASSWORD,
     REQUEST_WEBDAV_PASSWORD,
     REQUEST_CRYPT_PASSWORD,
-    WAIT_FOR_VOLUME,
+    REQUEST_VOLUME,
+    REQUEST_REPLACEMENT_VOLUME,
     ADD_ERROR_CORRECTION_CODES,
     BLANK_VOLUME,
     WRITE_VOLUME;
@@ -133,7 +134,8 @@ class JobData implements Comparable<JobData>
       {
         case NONE:                       return "";
         case WAIT_FOR_TEMPORARY_SPACE:   return BARControl.tr("waiting for temporary space");
-        case WAIT_FOR_VOLUME:            return BARControl.tr("waiting for volumn");
+        case REQUEST_VOLUME:
+        case REQUEST_REPLACEMENT_VOLUME: return BARControl.tr("waiting for volumn");
         case ADD_ERROR_CORRECTION_CODES: return BARControl.tr("adding error correction codes");
         case BLANK_VOLUME:               return BARControl.tr("blanking volumn");
         case WRITE_VOLUME:               return BARControl.tr("writing volumn");
@@ -1601,7 +1603,9 @@ public class TabStatus
         public void handle(Widget widget, JobData jobData)
         {
           MenuItem menuItem = (MenuItem)widget;
-          menuItem.setEnabled(jobData.messageCode == JobData.MessageCodes.WAIT_FOR_VOLUME);
+          menuItem.setEnabled(   (jobData.messageCode == JobData.MessageCodes.REQUEST_VOLUME)
+                              || (jobData.messageCode == JobData.MessageCodes.REQUEST_REPLACEMENT_VOLUME)
+                             );
         }
       });
 
@@ -2341,7 +2345,9 @@ public class TabStatus
         public void handle(Widget widget, JobData jobData)
         {
           Button button = (Button)widget;
-          button.setEnabled(jobData.messageCode == JobData.MessageCodes.WAIT_FOR_VOLUME);
+          button.setEnabled(   (jobData.messageCode == JobData.MessageCodes.REQUEST_VOLUME)
+                            || (jobData.messageCode == JobData.MessageCodes.REQUEST_REPLACEMENT_VOLUME)
+                           );
         }
       });
 
@@ -2641,7 +2647,8 @@ public class TabStatus
                       case REQUEST_SSH_PASSWORD:
                       case REQUEST_WEBDAV_PASSWORD:
                       case REQUEST_CRYPT_PASSWORD:
-                      case WAIT_FOR_VOLUME:
+                      case REQUEST_VOLUME:
+                      case REQUEST_REPLACEMENT_VOLUME:
                         tableItem.setBackground(COLOR_REQUEST);
                         break;
                       default:
@@ -3042,33 +3049,44 @@ public class TabStatus
               case RUNNING:
               case NO_STORAGE:
               case DRY_RUNNING:
-                if      (!messageData.isEmpty())
+                switch (messageCode)
                 {
-                  message.set(messageData);
-                }
-                else if (messageCode != JobData.MessageCodes.NONE)
-                {
-                  switch (messageCode)
-                  {
-                    case WAIT_FOR_VOLUME:
-// TODO: proper format of message without message.getString()
-                      if (message.getString().isEmpty())
-                      {
-                        message.set(BARControl.tr("Please insert volume #{0}",requestedVolumeNumber.getInteger()));
-                      }
-                      else
-                      {
-                        message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",requestedVolumeNumber.getInteger(),message.getString()));
-                      }
-                      break;
-                    default:
+                  case NONE:
+                    message.set("");
+                    break;
+                  case REQUEST_VOLUME:
+                    message.set(BARControl.tr("Please insert volume #{0}",
+                                              requestedVolumeNumber.getInteger()
+                                             )
+                               );
+                    break;
+                  case REQUEST_REPLACEMENT_VOLUME:
+                    if (!messageData.isEmpty())
+                    {
+                      message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",
+                                                requestedVolumeNumber.getInteger(),
+                                                messageData
+                                               )
+                                 );
+                    }
+                    else
+                    {
+                      message.set(BARControl.tr("Please insert replacement volume #{0}",
+                                                requestedVolumeNumber.getInteger()
+                                               )
+                                 );
+                    }
+                    break;
+                  default:
+                    if      (!messageData.isEmpty())
+                    {
+                      message.set(messageCode.getText()+": "+messageData);
+                    }
+                    else
+                    {
                       message.set(messageCode.getText());
-                      break;
-                  }
-                }
-                else
-                {
-                  message.set("");
+                    }
+                    break;
                 }
                 break;
               case DONE:

@@ -58,8 +58,8 @@
   #endif
 #else
   #ifdef VERSION_PATCH
-    #define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_PATCH_STRING
-    #define VERSION_REVISION_STRING VERSION_MAJOR_STRING "." VERSION_PATCH_STRING " (rev. " VERSION_REPOSITORY_STRING ")"
+    #define VERSION_STRING VERSION_MAJOR_STRING VERSION_PATCH_STRING
+    #define VERSION_REVISION_STRING VERSION_MAJOR_STRING VERSION_PATCH_STRING " (rev. " VERSION_REPOSITORY_STRING ")"
   #else
     #define VERSION_STRING VERSION_MAJOR_STRING
     #define VERSION_REVISION_STRING VERSION_MAJOR_STRING " (rev. " VERSION_REPOSITORY_STRING ")"
@@ -294,7 +294,12 @@ typedef enum
 {
   MESSAGE_CODE_NONE,
   MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE,
+  MESSAGE_CODE_REQUEST_FTP_PASSWORD,
+  MESSAGE_CODE_REQUEST_SSH_PASSWORD,
+  MESSAGE_CODE_REQUEST_WEBDAV_PASSWORD,
+  MESSAGE_CODE_REQUEST_CRYPT_PASSWORD,
   MESSAGE_CODE_REQUEST_VOLUME,
+  MESSAGE_CODE_REQUEST_REPLACEMENT_VOLUME,
   MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES,
   MESSAGE_CODE_BLANK_VOLUME,
   MESSAGE_CODE_WRITE_VOLUME
@@ -1156,9 +1161,9 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*RunningInfoFunction)(Errors             error,
-                                   const RunningInfo *runningInfo,
-                                   void              *userData
+typedef void(*RunningInfoFunction)(Errors      error,
+                                   RunningInfo *runningInfo,
+                                   void        *userData
                                   );
 
 /***********************************************************************\

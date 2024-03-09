@@ -1866,7 +1866,6 @@ Errors IndexStorage_cleanUp(IndexHandle *indexHandle)
   error = ERROR_NONE;
 
   if (error == ERROR_NONE) error = cleanUpStorageNoName(indexHandle);
-  if (error == ERROR_NONE) error = cleanUpStorageNoName(indexHandle);
   if (error == ERROR_NONE) error = cleanUpStorageNoEntity(indexHandle);
   if (error == ERROR_NONE) error = cleanUpStorageInvalidState(indexHandle);
 

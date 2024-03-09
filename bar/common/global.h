@@ -1385,15 +1385,24 @@ typedef byte* BitSet;
 * Notes  : for debugging only!
 \***********************************************************************/
 
+#define __B() do { } while (0)
 #if defined(__x86_64__) || defined(__i386)
+  #undef __B
   #define __B() \
     do \
     { \
-      fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm(" int3"); \
+      fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3"); \
     } \
     while (0)
-#else
-  #define __B() do { } while (0)
+#endif
+#if defined(__arm)
+  #undef __B
+  #define __B() \
+    do \
+    { \
+      fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("bkpt 0"); \
+    } \
+    while (0)
 #endif
 
 /***********************************************************************\
