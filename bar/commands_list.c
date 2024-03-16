@@ -4516,6 +4516,7 @@ Errors Command_list(StringList              *storageNameList,
   StringNode                 *stringNode;
   Errors                     failError;
   bool                       someStorageFound;
+  Errors                     listError;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
   String                     fileName;
@@ -4549,7 +4550,8 @@ Errors Command_list(StringList              *storageNameList,
       continue;
     }
 
-    error = ERROR_UNKNOWN;
+    listError = ERROR_NONE;
+    error     = ERROR_UNKNOWN;
 
     // try list archive content
     if (error != ERROR_NONE)
@@ -4570,6 +4572,10 @@ Errors Command_list(StringList              *storageNameList,
         if (error == ERROR_NONE)
         {
           someStorageFound = TRUE;
+        }
+        else
+        {
+          if (listError == ERROR_NONE) listError = error;
         }
       }
     }
@@ -4594,7 +4600,14 @@ Errors Command_list(StringList              *storageNameList,
                                        includeEntryList,
                                        excludePatternList
                                       );
-          someStorageFound = TRUE;
+          if (error == ERROR_NONE)
+          {
+            someStorageFound = TRUE;
+          }
+          else
+          {
+            if (listError == ERROR_NONE) listError = error;
+          }
         }
         else
         {
@@ -4628,7 +4641,14 @@ Errors Command_list(StringList              *storageNameList,
                                        CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                        logHandle
                                       );
-            someStorageFound = TRUE;
+            if (error == ERROR_NONE)
+            {
+              someStorageFound = TRUE;
+            }
+            else
+            {
+              if (listError == ERROR_NONE) listError = error;
+            }
           }
           String_delete(fileName);
         }
@@ -4638,11 +4658,13 @@ Errors Command_list(StringList              *storageNameList,
 
     if (error != ERROR_NONE)
     {
+      assert(listError != ERROR_NONE);
+
       printError("cannot read storage '%s' (error: %s)!",
                  String_cString(storageName),
-                 Error_getText(error)
+                 Error_getText(listError)
                 );
-      if (failError == ERROR_NONE) failError = error;
+      if (failError == ERROR_NONE) failError = listError;
     }
   }
   if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
