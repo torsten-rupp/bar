@@ -906,6 +906,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
             logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked volume #%u",storageInfo->volumeNumber);
             logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
             storageInfo->opticalDisk.write.step++;
+            updateVolumeDone(storageInfo,0);
           }
           else
           {
@@ -983,6 +984,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written image volume #%u",storageInfo->volumeNumber);
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
         storageInfo->opticalDisk.write.step++;
+        updateVolumeDone(storageInfo,0);
       }
     }
 
@@ -991,8 +993,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     String_delete(imageFileName);
 
     // update running info
-    storageInfo->progress.volumeDone = 100.0;
-    updateStorageRunningInfo(storageInfo);
+    updateVolumeDone(storageInfo,100.0);
 
     // delete stored files
     fileName = String_new();

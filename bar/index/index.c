@@ -51,7 +51,8 @@
 
 /****************** Conditional compilation switches *******************/
 // switch off for debugging only!
-#define INDEX_INTIIAL_CLEANUP
+// TODO:
+#define _INDEX_INTIIAL_CLEANUP
 #define INDEX_IMPORT_OLD_DATABASE
 #define INDEX_SUPPORT_DELETE
 
@@ -3283,13 +3284,11 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
               "Done initial clean-up index database"
              );
 
-  #ifdef INDEX_INTIIAL_CLEANUP
-    // start clean-up thread
-    if (!Thread_init(&indexThread,"Index",0,indexThreadCode,NULL))
-    {
-      HALT_FATAL_ERROR("Cannot initialize index thread!");
-    }
-  #endif /* INDEX_INTIIAL_CLEANUP */
+  // start clean-up thread
+  if (!Thread_init(&indexThread,"Index",0,indexThreadCode,NULL))
+  {
+    HALT_FATAL_ERROR("Cannot initialize index thread!");
+  }
 
   // free resources
   String_delete(printableDatabaseURI);
@@ -3299,19 +3298,15 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
 
 void Index_done(void)
 {
-  #ifdef INDEX_INTIIAL_CLEANUP
-    // stop threads
-    indexQuitFlag = TRUE;
-    if (!Thread_join(&indexThread))
-    {
-      HALT_INTERNAL_ERROR("Cannot stop index thread!");
-    }
-  #endif /* INDEX_INTIIAL_CLEANUP */
+  // stop threads
+  indexQuitFlag = TRUE;
+  if (!Thread_join(&indexThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop index thread!");
+  }
 
   // free resources
-  #ifdef INDEX_INTIIAL_CLEANUP
-    Thread_done(&indexThread);
-  #endif /* INDEX_INTIIAL_CLEANUP */
+  Thread_done(&indexThread);
   Database_deleteSpecifier(indexDatabaseSpecifier);
   indexDatabaseSpecifier = NULL;
 }

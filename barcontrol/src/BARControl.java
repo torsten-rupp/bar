@@ -4547,6 +4547,7 @@ if (false) {
                                                       BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                      },
                                          "*.pem",
+                                         Dialogs.FILE_NONE,
                                          BARControl.listDirectory
                                         );
           if (fileName != null)

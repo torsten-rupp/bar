@@ -9,6 +9,7 @@
 \***********************************************************************/
 
 /****************************** Imports ********************************/
+import java.io.File;
 import java.util.EnumSet;
 
 import org.eclipse.swt.events.DisposeEvent;
@@ -1610,6 +1611,7 @@ public class BARWidgets
                                     text.getText(),
                                     fileExtensions,
                                     defaultFileExtension,
+                                    Dialogs.FILE_NONE,
                                     BARServer.remoteListDirectory
                                    );
           }
@@ -2957,6 +2959,7 @@ public class BARWidgets
                                                    BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
+                                      Dialogs.FILE_NONE,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory
                                         : BARControl.listDirectory
@@ -3071,6 +3074,7 @@ public class BARWidgets
                                       new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
+                                      Dialogs.FILE_NONE,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory
                                         : BARControl.listDirectory
@@ -4196,6 +4200,7 @@ public class BARWidgets
                                                    BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
+                                      Dialogs.FILE_NONE,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory
                                         : BARControl.listDirectory
@@ -4310,6 +4315,7 @@ public class BARWidgets
                                       new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
+                                      Dialogs.FILE_NONE,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory
                                         : BARControl.listDirectory
@@ -4506,7 +4512,7 @@ public class BARWidgets
       ARCHIVE_PART_SIZE
     };
 
-    // max. size of volume data with ECC [%]
+    // max. size of volume data with ECC [%/100]
     private final double MAX_VOLUME_SIZE_ECC = 0.8;
 
     Text   deviceName;
@@ -4654,6 +4660,8 @@ public class BARWidgets
                                     new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                 },
                                     "*",
+                                    Dialogs.FILE_NONE,
+
                                     ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                       ? BARServer.remoteListDirectory
                                       : BARControl.listDirectory
@@ -5025,6 +5033,7 @@ public class BARWidgets
                                     new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                 },
                                     "*",
+                                    Dialogs.FILE_NONE,
                                     ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                       ? BARServer.remoteListDirectory
                                       : BARControl.listDirectory

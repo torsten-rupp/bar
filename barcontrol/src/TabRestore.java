@@ -8371,6 +8371,7 @@ Dprintf.dprintf("");
                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                        },
                                            "*",
+                                           Dialogs.FILE_NONE,
                                            BARServer.remoteListDirectory(selectedEntityIndexData.jobUUID)
                                           );
           if (moveToPath != null)
@@ -8739,6 +8740,8 @@ Dprintf.dprintf("");
                                           data.deviceName,
                                           data.archiveName
                                          );
+Dprintf.dprintf("addURIParts=%s",addURIParts);
+Dprintf.dprintf("addURIParts.getURI()=%s",addURIParts.getURI());
 
       Background.run(new BackgroundRunnable(busyDialog,addURIParts)
       {
