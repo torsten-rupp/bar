@@ -1,4 +1,6 @@
 2024-03-05 23b
+  * fixed write CD/DVD/BD
+  * added verify CD/DVD/BD
   * BARControl: fixed request CD/DVD/BD volume
 
 2024-01-27 23a

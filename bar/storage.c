@@ -177,6 +177,25 @@ LOCAL bool updateStorageRunningInfo(const StorageInfo *storageInfo)
   return result;
 }
 
+/***********************************************************************\
+* Name   : updateStorageRunningInfo
+* Purpose: update storage running info
+* Input  : storageInfo - storage info
+*          percentage  - percentage [0..100]
+* Output : -
+* Return : TRUE to continue, FALSE to abort
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool updateVolumeDone(StorageInfo *storageInfo, double percentage)
+{
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+
+  storageInfo->progress.volumeDone = ((double)storageInfo->opticalDisk.write.step*100.0+percentage)/(double)(storageInfo->opticalDisk.write.steps);
+  return updateStorageRunningInfo(storageInfo);
+}
+
 #ifdef HAVE_CURL
 /***********************************************************************\
 * Name   : curlNopDataCallback
@@ -4980,13 +4999,18 @@ UNUSED_VARIABLE(skipUnreadableFlag);
   }
 
   // get total number of files (if possible)
-  if (File_getFileSystemInfo(&fileSystemInfo,(directory != NULL) ? directory : storageSpecifier->archiveName) == ERROR_NONE)
+  totalCount = 0L;
+  if ((directory != NULL) || !String_isEmpty(storageSpecifier->archiveName))
   {
-    totalCount = fileSystemInfo.totalFiles;
-  }
-  else
-  {
-    totalCount = 0L;
+    if (File_getFileSystemInfo(&fileSystemInfo,
+                               (directory != NULL)
+                                 ? directory
+                                 : storageSpecifier->archiveName
+                              ) == ERROR_NONE
+       )
+    {
+      totalCount = fileSystemInfo.totalFiles;
+    }
   }
 
   // read directory and scan all sub-directories
@@ -5005,7 +5029,6 @@ UNUSED_VARIABLE(skipUnreadableFlag);
                                       &jobOptions,
                                       SERVER_CONNECTION_PRIORITY_LOW
                                      );
-
     if (error == ERROR_NONE)
     {
       // read directory

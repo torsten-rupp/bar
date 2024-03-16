@@ -4878,9 +4878,9 @@ LOCAL void updateIndexThreadCode(void)
           }
 
           // collect possible login passwords for server
+          List_clear(&loginList);
           login.name     = storageSpecifier.loginName;
           login.password = storageSpecifier.loginPassword;
-          List_clear(&loginList);
           JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
             JOB_LIST_ITERATE(jobNode)
@@ -4903,6 +4903,20 @@ LOCAL void updateIndexThreadCode(void)
           endTimestamp   = 0LL;
           Job_initOptions(&jobOptions);
           loginFlag      = FALSE;
+          error = Storage_init(&storageInfo,
+                               NULL,  // masterIO
+                               &addStorageSpecifier,
+                               &jobOptions,
+                               &globalOptions.indexDatabaseMaxBandWidthList,
+                               SERVER_CONNECTION_PRIORITY_LOW,
+                               CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                               CALLBACK_(NULL,NULL),  // getNamePassword
+                               CALLBACK_(NULL,NULL),  // requestVolume
+                               CALLBACK_(NULL,NULL),  // isPause
+                               CALLBACK_(NULL,NULL),  // isAborted
+                               NULL  // logHandle
+                              );
+          loginFlag = (error == ERROR_NONE);
           LIST_ITERATEX(&loginList,loginNode,!loginFlag)
           {
             String_set(addStorageSpecifier.loginName,loginNode->name);
@@ -22930,6 +22944,8 @@ Errors Server_socket(void)
                  globalOptions.serverPort,
                  Error_getText(error)
                 );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
     }
   }
   if (globalOptions.serverTLSPort != 0)
@@ -22961,6 +22977,8 @@ Errors Server_socket(void)
                      globalOptions.serverTLSPort,
                      Error_getText(error)
                     );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
         }
       #else /* not HAVE_GNU_TLS */
         printWarning("TLS/SSL is not supported!");

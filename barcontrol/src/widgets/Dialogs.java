@@ -12,7 +12,6 @@
 /****************************** Imports ********************************/
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 
@@ -723,6 +722,15 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    */
   public abstract void delete(T file)
     throws IOException;
+}
+
+abstract class ListDirectoryFilter<T extends File>
+{
+  /** check if accepted
+   * @param file file to check
+   * @return true iff accepted
+   */
+  public abstract boolean isAccepted(T file);
 }
 
 /** dialog
@@ -4609,17 +4617,19 @@ class Dialogs
    * @param defaultFileExtension default file extension pattern or null
    * @param flags flags; see FILE_...
    * @param listDirectory list directory handler
+   * @param listDirectoryFilter list directory filter or null
    * @return file name or null
    */
   private static Object lastFile = null;
-  public static <T extends File> String file(final Shell            parentShell,
-                                             final FileDialogTypes  type,
-                                             String                 title,
-                                             T                      oldFile,
-                                             final String[]         fileExtensions,
-                                             String                 defaultFileExtension,
-                                             int                    flags,
-                                             final ListDirectory<T> listDirectory
+  public static <T extends File> String file(final Shell                  parentShell,
+                                             final FileDialogTypes        type,
+                                             String                       title,
+                                             T                            oldFile,
+                                             final String[]               fileExtensions,
+                                             String                       defaultFileExtension,
+                                             int                          flags,
+                                             final ListDirectory<T>       listDirectory,
+                                             final ListDirectoryFilter<T> listDirectoryFilter
                                             )
   {
     // create: hexdump -v -e '1/1 "(byte)0x%02x" "\n"' images/directory.png | awk 'BEGIN {n=0;} /.*/ { if (n > 8) { printf("\n"); n=0; }; f=1; printf("%s,",$1); n++; }'
@@ -5040,31 +5050,33 @@ class Dialogs
     */
     class Updater
     {
-      private Cursor            CURSOR_WAIT;
+      private Cursor                 CURSOR_WAIT;
 
-      private Shell             dialog;
-      private FileComparator<T> fileComparator;
-      private ListDirectory<T>  listDirectory;
-      private SimpleDateFormat  simpleDateFormat;
-      private Pattern           fileFilterPattern;
-      private boolean           showHidden;
-      private boolean           showFiles;
+      private Shell                  dialog;
+      private FileComparator<T>      fileComparator;
+      private ListDirectory<T>       listDirectory;
+      private ListDirectoryFilter<T> listDirectoryFilter;
+      private SimpleDateFormat       simpleDateFormat;
+      private Pattern                fileFilterPattern;
+      private boolean                showHidden;
+      private boolean                showFiles;
 
       /** create update file list
        * @param listDirectory list directory
        * @param fileComparator file comparator
        */
-      public Updater(Shell dialog, FileComparator<T> fileComparator, ListDirectory<T> listDirectory, boolean showFiles)
+      public Updater(Shell dialog, FileComparator<T> fileComparator, ListDirectory<T> listDirectory, ListDirectoryFilter<T> listDirectoryFilter, boolean showFiles)
       {
-        this.CURSOR_WAIT       = new Cursor(dialog.getDisplay(),SWT.CURSOR_WAIT);
+        this.CURSOR_WAIT         = new Cursor(dialog.getDisplay(),SWT.CURSOR_WAIT);
 
-        this.dialog            = dialog;
-        this.fileComparator    = fileComparator;
-        this.listDirectory     = listDirectory;
-        this.simpleDateFormat  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        this.fileFilterPattern = null;
-        this.showHidden        = false;
-        this.showFiles         = showFiles;
+        this.dialog              = dialog;
+        this.fileComparator      = fileComparator;
+        this.listDirectory       = listDirectory;
+        this.listDirectoryFilter = listDirectoryFilter;
+        this.simpleDateFormat    = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        this.fileFilterPattern   = null;
+        this.showHidden          = false;
+        this.showFiles           =  showFiles;
       }
 
       /** update shortcut list
@@ -5112,6 +5124,7 @@ class Dialogs
                 if (   (showHidden || !listDirectory.isHidden(file))
                     && (showFiles || listDirectory.isDirectory(file))
                     && ((fileFilterPattern == null) || listDirectory.isDirectory(file) || fileFilterPattern.matcher(file.getName()).matches())
+                    && ((listDirectoryFilter == null) || listDirectoryFilter.isAccepted(file))
                    )
                 {
                   // find insert index
@@ -5303,7 +5316,12 @@ class Dialogs
       dialog.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},1.0));
 
       final FileComparator fileComparator = new FileComparator(FileComparator.SORTMODE_NAME);
-      final Updater        updater        = new Updater(dialog,fileComparator,listDirectory,(type != FileDialogTypes.DIRECTORY));
+      final Updater        updater        = new Updater(dialog,
+                                                        fileComparator,
+                                                        listDirectory,
+                                                        listDirectoryFilter,
+                                                        (type != FileDialogTypes.DIRECTORY)
+                                                       );
       final ArrayList<T>   shortcutList   = new ArrayList<T>();
 
       final Text   widgetPath;
@@ -6178,6 +6196,60 @@ class Dialogs
    * @param parentShell parent shell
    * @param type file dialog type
    * @param title title text
+   * @param oldFile old file or null
+   * @param fileExtensions array with {name,pattern} or null
+   * @param defaultFileExtension default file extension pattern or null
+   * @param flags flags; see FILE_...
+   * @param listDirectory list directory handler
+   * @return file name or null
+   */
+  public static <T extends File> String file(final Shell            parentShell,
+                                             final FileDialogTypes  type,
+                                             String                 title,
+                                             T                      oldFile,
+                                             final String[]         fileExtensions,
+                                             String                 defaultFileExtension,
+                                             int                    flags,
+                                             final ListDirectory<T> listDirectory
+                                            )
+  {
+    return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,flags,listDirectory,(ListDirectoryFilter<T>)null);
+  }
+//file(Shell,FileDialogTypes,String,String,String[],String,int,ListDirectory<? extends File>,ListDirectoryFilter<File>)
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
+   * @param oldFileName old file name or null
+   * @param fileExtensions array with {name,pattern} or null
+   * @param defaultFileExtension default file extension pattern or null
+   * @param flags flags; see FILE_...
+   * @param listDirectory list directory handler
+   * @param listDirectoryFilter list directory filter or null
+   * @return file name or null
+   */
+  public static <T extends File> String file(Shell                  parentShell,
+                                             FileDialogTypes        type,
+                                             String                 title,
+                                             String                 oldFileName,
+                                             String[]               fileExtensions,
+                                             String                 defaultFileExtension,
+                                             int                    flags,
+                                             ListDirectory<T>       listDirectory,
+                                             ListDirectoryFilter<T> listDirectoryFilter
+                                            )
+  {
+    T oldFile = !oldFileName.isEmpty()
+                  ? listDirectory.newFileInstance(oldFileName)
+                  : listDirectory.getDefaultRoot();
+    return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,flags,listDirectory,listDirectoryFilter);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
    * @param oldFileName old file name or null
    * @param fileExtensions array with {name,pattern} or null
    * @param defaultFileExtension default file extension pattern or null
@@ -6195,57 +6267,7 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    T oldFile = !oldFileName.isEmpty()
-                  ? listDirectory.newFileInstance(oldFileName)
-                  : listDirectory.getDefaultRoot();
-    return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,flags,listDirectory);
-  }
-
-  /** open a file dialog
-   * @param parentShell parent shell
-   * @param type file dialog type
-   * @param title title text
-   * @param oldFile old file or null
-   * @param fileExtensions array with {name,pattern} or null
-   * @param defaultFileExtension default file extension pattern or null
-   * @param listDirectory list directory handler
-   * @return file name or null
-   */
-  public static <T extends File> String file(Shell                 parentShell,
-                                             final FileDialogTypes type,
-                                             String                title,
-                                             T                     oldFile,
-                                             final String[]        fileExtensions,
-                                             String                defaultFileExtension,
-                                             ListDirectory<T>      listDirectory
-                                            )
-  {
-    return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,FILE_SHOW_HIDDEN,listDirectory);
-  }
-
-  /** open a file dialog
-   * @param parentShell parent shell
-   * @param type file dialog type
-   * @param title title text
-   * @param oldFileName old file name or null
-   * @param fileExtensions array with {name,pattern} or null
-   * @param defaultFileExtension default file extension pattern or null
-   * @param listDirectory list directory handler
-   * @return file name or null
-   */
-  public static <T extends File> String file(Shell            parentShell,
-                                             FileDialogTypes  type,
-                                             String           title,
-                                             String           oldFileName,
-                                             final String[]   fileExtensions,
-                                             String           defaultFileExtension,
-                                             ListDirectory<T> listDirectory
-                                            )
-  {
-    T oldFile = !oldFileName.isEmpty()
-                  ? listDirectory.newFileInstance(oldFileName)
-                  : (T)null;
-    return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,listDirectory);
+    return file(parentShell,type,title,oldFileName,fileExtensions,defaultFileExtension,flags,listDirectory,(ListDirectoryFilter<T>)null);
   }
 
   /** open a file dialog
@@ -6255,14 +6277,16 @@ class Dialogs
    * @param oldFile old file or null
    * @param flags flags; see FILE_...
    * @param listDirectory list directory handler
+   * @param listDirectoryFilter list directory filter or null
    * @return file name or null
    */
-  public static <T extends File> String file(Shell            parentShell,
-                                             FileDialogTypes  type,
-                                             String           title,
-                                             T                oldFile,
-                                             int              flags,
-                                             ListDirectory<T> listDirectory
+  public static <T extends File> String file(Shell                  parentShell,
+                                             FileDialogTypes        type,
+                                             String                 title,
+                                             T                      oldFile,
+                                             int                    flags,
+                                             ListDirectory<T>       listDirectory,
+                                             ListDirectoryFilter<T> listDirectoryFilter
                                             )
   {
     return file(parentShell,type,title,oldFile,(String[])null,(String)null,flags,listDirectory);
@@ -6272,6 +6296,51 @@ class Dialogs
    * @param parentShell parent shell
    * @param type file dialog type
    * @param title title text
+   * @param oldFile old file or null
+   * @param flags flags; see FILE_...
+   * @param listDirectory list directory handler
+   * @return file name or null
+   */
+  public static <T extends File> String file(Shell            parentShell,
+                                             FileDialogTypes  type,
+                                             String           title,
+                                             T                oldFile,
+                                             int              flags,
+                                             ListDirectory<T> listDirectory
+                                            )
+  {
+    return file(parentShell,type,title,oldFile,(String[])null,(String)null,flags,listDirectory,(ListDirectoryFilter<T>)null);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
+   * @param oldFileName old file name or null
+   * @param flags flags; see FILE_...
+   * @param listDirectory list directory handler
+   * @param listDirectoryFilter list directory filter or null
+   * @return file name or null
+   */
+  public static <T extends File> String file(Shell                  parentShell,
+                                             FileDialogTypes        type,
+                                             String                 title,
+                                             String                 oldFileName,
+                                             int                    flags,
+                                             ListDirectory<T>       listDirectory,
+                                             ListDirectoryFilter<T> listDirectoryFilter
+                                            )
+  {
+    T oldFile = !oldFileName.isEmpty()
+                  ? listDirectory.newFileInstance(oldFileName)
+                  : (T)null;
+    return file(parentShell,type,title,oldFile,flags,listDirectory,listDirectoryFilter);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
    * @param oldFileName old file name or null
    * @param flags flags; see FILE_...
    * @param listDirectory list directory handler
@@ -6285,10 +6354,27 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    T oldFile = !oldFileName.isEmpty()
-                  ? listDirectory.newFileInstance(oldFileName)
-                  : (T)null;
-    return file(parentShell,type,title,oldFile,flags,listDirectory);
+    return file(parentShell,type,title,oldFileName,flags,listDirectory,(ListDirectoryFilter<T>)null);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
+   * @param oldFile old file or null
+   * @param listDirectory list directory handler
+   * @param listDirectoryFilter list directory filter or null
+   * @return file name or null
+   */
+  public static <T extends File> String file(Shell                  parentShell,
+                                             FileDialogTypes        type,
+                                             String                 title,
+                                             T                      oldFile,
+                                             ListDirectory<T>       listDirectory,
+                                             ListDirectoryFilter<T> listDirectoryFilter
+                                            )
+  {
+    return file(parentShell,type,title,oldFile,FILE_NONE,listDirectory,listDirectoryFilter);
   }
 
   /** open a file dialog
@@ -6306,7 +6392,30 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    return file(parentShell,type,title,oldFile,FILE_NONE,listDirectory);
+    return file(parentShell,type,title,oldFile,FILE_NONE,listDirectory,(ListDirectoryFilter<T>)null);
+  }
+
+  /** open a file dialog
+   * @param parentShell parent shell
+   * @param type file dialog type
+   * @param title title text
+   * @param oldFileName old file name or null
+   * @param listDirectory list directory handler
+   * @param listDirectoryFilter list directory filter or null
+   * @return file name or null
+   */
+  public static <T extends File> String file(Shell                  parentShell,
+                                             FileDialogTypes        type,
+                                             String                 title,
+                                             String                 oldFileName,
+                                             ListDirectory<T>       listDirectory,
+                                             ListDirectoryFilter<T> listDirectoryFilter
+                                            )
+  {
+    T oldFile = !oldFileName.isEmpty()
+                  ? listDirectory.newFileInstance(oldFileName)
+                  : (T)null;
+    return file(parentShell,type,title,oldFile,listDirectory,listDirectoryFilter);
   }
 
   /** open a file dialog
@@ -6324,10 +6433,7 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    T oldFile = !oldFileName.isEmpty()
-                  ? listDirectory.newFileInstance(oldFileName)
-                  : (T)null;
-    return file(parentShell,type,title,oldFile,listDirectory);
+    return file(parentShell,type,title,oldFileName,listDirectory,(ListDirectoryFilter<T>)null);
   }
 
 //TODO: replace by file() above
