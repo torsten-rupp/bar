@@ -2312,9 +2312,10 @@ LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
 }
 
 /***********************************************************************\
-* Name   : getNextScheduleDateTime
+* Name   : getNextSchedule
 * Purpose: get next schedule
-* Input  : scheduleUUID          - schedule UUID
+* Input  : jobNode               - current active job
+*          scheduleUUID          - current active schedule UUID
 *          scheduleStartDateTime - schedule start date/time
 *          nextJobName           - next job name variable or NULL
 *          nextJobUUID           - next job UUID variable or NULL
@@ -2326,11 +2327,12 @@ LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint64 getNextSchedule(ConstString scheduleUUID,
-                             uint64      scheduleStartDateTime,
-                             String      nextJobName,
-                             String      nextJobUUID,
-                             String      nextScheduleUUID
+LOCAL uint64 getNextSchedule(const JobNode *jobNode,
+                             ConstString   scheduleUUID,
+                             uint64        scheduleStartDateTime,
+                             String        nextJobName,
+                             String        nextJobUUID,
+                             String        nextScheduleUUID
                             )
 {
   assert(nextScheduleUUID != NULL);
@@ -2345,19 +2347,26 @@ LOCAL uint64 getNextSchedule(ConstString scheduleUUID,
   JobScheduleList jobScheduleList;
   List_init(&jobScheduleList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeJobScheduleNode,NULL));
 
-  // get jobs schedule list (Note: avoid long locking of job list)
+  // check schedules/get schedule list of all jobs (Note: avoid long locking of job list)
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
-    JobNode *jobNode;
-    JOB_LIST_ITERATE(jobNode)
+    const JobNode *checkJobNode;
+    JOB_LIST_ITERATEX(checkJobNode,nextScheduleDateTime != 0LL)
     {
-      if (Job_isLocal(jobNode))
+      // check if some other job is already activated (by scheduler or manually)
+      if ((checkJobNode != jobNode) && Job_isActive(checkJobNode->jobState))
+      {
+        nextScheduleDateTime = 0LL;
+      }
+
+      // get schedules for job
+      if (Job_isLocal(checkJobNode))
       {
         // local job
         getJobScheduleList(&jobScheduleList,
-                           jobNode,
+                           checkJobNode,
                            JOB_STATESET_ALL,
-                           FALSE,  // all schedules
+                           TRUE,  // enabled schedules only
                              SET_VALUE(ARCHIVE_TYPE_NORMAL)
                            | SET_VALUE(ARCHIVE_TYPE_FULL)
                            | SET_VALUE(ARCHIVE_TYPE_INCREMENTAL)
@@ -2368,14 +2377,14 @@ LOCAL uint64 getNextSchedule(ConstString scheduleUUID,
       {
         // remote job: only if connected
         ConnectorInfo *connectorInfo;
-        JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+        JOB_CONNECTOR_LOCKED_DO(connectorInfo,checkJobNode,LOCK_TIMEOUT)
         {
           if (Connector_isConnected(connectorInfo))
           {
             getJobScheduleList(&jobScheduleList,
-                               jobNode,
+                               checkJobNode,
                                JOB_STATESET_ALL,
-                               FALSE,  // all schedules
+                               TRUE,  // enabled schedules only
                                  SET_VALUE(ARCHIVE_TYPE_NORMAL)
                                | SET_VALUE(ARCHIVE_TYPE_FULL)
                                | SET_VALUE(ARCHIVE_TYPE_INCREMENTAL)
@@ -2389,7 +2398,7 @@ LOCAL uint64 getNextSchedule(ConstString scheduleUUID,
 
   // find next schedule (ordering: running/active/scheduled)
   JobScheduleNode *jobScheduleNode;
-  LIST_ITERATEX(&jobScheduleList,jobScheduleNode,(nextScheduleDateTime >= MAX_UINT64) && !isQuit())
+  LIST_ITERATEX(&jobScheduleList,jobScheduleNode,(nextScheduleDateTime != 0LL) && !isQuit())
   {
     if (   !String_equals(jobScheduleNode->scheduleUUID,scheduleUUID)
         && jobScheduleNode->active
@@ -2401,7 +2410,7 @@ LOCAL uint64 getNextSchedule(ConstString scheduleUUID,
       nextScheduleDateTime = 0LL;
     }
   }
-  LIST_ITERATEX(&jobScheduleList,jobScheduleNode,!isQuit())
+  LIST_ITERATEX(&jobScheduleList,jobScheduleNode,(nextScheduleDateTime != 0LL) && !isQuit())
   {
     if (!String_equals(jobScheduleNode->scheduleUUID,scheduleUUID))
     {
@@ -6119,7 +6128,8 @@ LOCAL void jobThreadCode(void)
     executeStartDateTime = Misc_getCurrentDateTime();
 
     // get next schedule
-    nextScheduleDateTime = getNextSchedule(scheduleUUID,
+    nextScheduleDateTime = getNextSchedule(jobNode,
+                                           scheduleUUID,
                                            executeStartDateTime,
                                            nextJobName,
                                            nextJobUUID,
@@ -6141,13 +6151,24 @@ LOCAL void jobThreadCode(void)
             TEXT_MACRO_X_CSTRING("%T",                   Archive_archiveTypeToShortString(archiveType),                NULL);
             TEXT_MACRO_X_STRING ("%directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
             TEXT_MACRO_X_STRING ("%file",                storageSpecifier.archiveName,                                 NULL);
-            TEXT_MACRO_X_STRING ("%nextJobName",         nextJobName,                                                  NULL);
-            TEXT_MACRO_X_STRING ("%nextJobUUID",         nextJobUUID,                                                  NULL);
-            TEXT_MACRO_X_STRING ("%nextScheduleUUID",    nextScheduleUUID,                                             NULL);
-            TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
-                                                           ? nextScheduleDateTime-executeStartDateTime
-                                                           : 0,                                                        NULL);
-            TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                         NULL);
+            if (nextScheduleDateTime < MAX_UINT64)
+            {
+              TEXT_MACRO_X_STRING ("%nextJobName",         nextJobName,                                                NULL);
+              TEXT_MACRO_X_STRING ("%nextJobUUID",         nextJobUUID,                                                NULL);
+              TEXT_MACRO_X_STRING ("%nextScheduleUUID",    nextScheduleUUID,                                           NULL);
+              TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
+                                                             ? nextScheduleDateTime-executeStartDateTime
+                                                             : 0,                                                      NULL);
+              TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                       NULL);
+            }
+            else
+            {
+              TEXT_MACRO_X_CSTRING("%nextJobName",         "",                                                         NULL);
+              TEXT_MACRO_X_CSTRING("%nextJobUUID",         "",                                                         NULL);
+              TEXT_MACRO_X_CSTRING("%nextScheduleUUID",    "",                                                         NULL);
+              TEXT_MACRO_X_CSTRING("%nextSchedule",        "",                                                         NULL);
+              TEXT_MACRO_X_CSTRING("%nextScheduleDateTime","",                                                         NULL);
+            }
           }
           error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
                                   executeStartDateTime,
@@ -6393,8 +6414,14 @@ LOCAL void jobThreadCode(void)
       }
     }
 
-    // get end date/time
-    executeEndDateTime = Misc_getCurrentDateTime();
+    // update next schedule
+    nextScheduleDateTime = getNextSchedule(jobNode,
+                                           scheduleUUID,
+                                           executeStartDateTime,
+                                           nextJobName,
+                                           nextJobUUID,
+                                           nextScheduleUUID
+                                          );
 
     // job post-process command
     if      (!Job_isRemote(jobNode))
@@ -6412,13 +6439,24 @@ LOCAL void jobThreadCode(void)
           TEXT_MACRO_X_CSTRING("%state",               Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),NULL);
           TEXT_MACRO_X_UINT   ("%error",               Error_getCode(jobNode->runningInfo.error),                             NULL);
           TEXT_MACRO_X_CSTRING("%message",             Error_getText(jobNode->runningInfo.error),                             NULL);
-          TEXT_MACRO_X_STRING ("%nextJobName",         nextJobName,                                                           NULL);
-          TEXT_MACRO_X_STRING ("%nextJobUUID",         nextJobUUID,                                                           NULL);
-          TEXT_MACRO_X_STRING ("%nextScheduleUUID",    nextScheduleUUID,                                                      NULL);
-          TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
-                                                         ? nextScheduleDateTime-executeStartDateTime
-                                                         : 0,                                                                 NULL);
-          TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                                  NULL);
+          if (nextScheduleDateTime < MAX_UINT64)
+          {
+            TEXT_MACRO_X_STRING ("%nextJobName",         nextJobName,                                                         NULL);
+            TEXT_MACRO_X_STRING ("%nextJobUUID",         nextJobUUID,                                                         NULL);
+            TEXT_MACRO_X_STRING ("%nextScheduleUUID",    nextScheduleUUID,                                                    NULL);
+            TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
+                                                           ? nextScheduleDateTime-executeStartDateTime
+                                                           : 0,                                                               NULL);
+            TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                                NULL);
+          }
+          else
+          {
+            TEXT_MACRO_X_CSTRING("%nextJobName",         "",                                                                  NULL);
+            TEXT_MACRO_X_CSTRING("%nextJobUUID",         "",                                                                  NULL);
+            TEXT_MACRO_X_CSTRING("%nextScheduleUUID",    "",                                                                  NULL);
+            TEXT_MACRO_X_CSTRING("%nextSchedule",        "",                                                                  NULL);
+            TEXT_MACRO_X_CSTRING("%nextScheduleDateTime","",                                                                  NULL);
+          }
         }
         error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
                                 executeStartDateTime,
@@ -6446,6 +6484,9 @@ LOCAL void jobThreadCode(void)
         }
       }
     }
+
+    // get end date/time
+    executeEndDateTime = Misc_getCurrentDateTime();
 
     // store final compress ratio: 100%-totalSum/totalCompressedSum
     jobNode->runningInfo.progress.compressionRatio = (!jobOptions.dryRun && (jobNode->runningInfo.progress.total.size > 0))
