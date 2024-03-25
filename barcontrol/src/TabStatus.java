@@ -109,21 +109,33 @@ class JobData implements Comparable<JobData>
     PAIRED;
   };
 
+  /** volume requests
+   */
+  static enum VolumeRequests
+  {
+    NONE,
+    INITIAL,
+    REPLACEMENT
+  };
+
   /** message codes
    */
   static enum MessageCodes
   {
     NONE,
     WAIT_FOR_TEMPORARY_SPACE,
-    REQUEST_FTP_PASSWORD,
-    REQUEST_SSH_PASSWORD,
-    REQUEST_WEBDAV_PASSWORD,
-    REQUEST_CRYPT_PASSWORD,
-    REQUEST_VOLUME,
-    REQUEST_REPLACEMENT_VOLUME,
-    ADD_ERROR_CORRECTION_CODES,
+// TODO: remove
+//    REQUEST_FTP_PASSWORD,
+//    REQUEST_SSH_PASSWORD,
+//    REQUEST_WEBDAV_PASSWORD,
+//    REQUEST_CRYPT_PASSWORD,
+//    REQUEST_VOLUME,
+//    REQUEST_REPLACEMENT_VOLUME,
     BLANK_VOLUME,
-    WRITE_VOLUME;
+    CREATE_IMAGE,
+    ADD_ERROR_CORRECTION_CODES,
+    WRITE_VOLUME,
+    VERIFY_VOLUME;
 
     /** get (translated) running state text
      * @return running state text
@@ -133,12 +145,12 @@ class JobData implements Comparable<JobData>
       switch (this)
       {
         case NONE:                       return "";
-        case WAIT_FOR_TEMPORARY_SPACE:   return BARControl.tr("waiting for temporary space");
-        case REQUEST_VOLUME:
-        case REQUEST_REPLACEMENT_VOLUME: return BARControl.tr("waiting for volumn");
-        case ADD_ERROR_CORRECTION_CODES: return BARControl.tr("adding error correction codes");
-        case BLANK_VOLUME:               return BARControl.tr("blanking volumn");
-        case WRITE_VOLUME:               return BARControl.tr("writing volumn");
+        case WAIT_FOR_TEMPORARY_SPACE:   return BARControl.tr("Waiting for temporary space");
+        case BLANK_VOLUME:               return BARControl.tr("Blanking volume...");
+        case CREATE_IMAGE:               return BARControl.tr("Creating image...");
+        case ADD_ERROR_CORRECTION_CODES: return BARControl.tr("Adding error correction codes...");
+        case WRITE_VOLUME:               return BARControl.tr("Writing volume...");
+        case VERIFY_VOLUME:              return BARControl.tr("Verifing volume...");
       }
 
       return "";
@@ -189,25 +201,26 @@ class JobData implements Comparable<JobData>
     return buffer.toString();
   }
 
-  String       uuid;
-  String       master;
-  String       name;
-  States       state;
-  String       slaveHostName;
-  int          slaveHostPort;
-  SlaveStates  slaveState;
-  boolean      slaveTLS;
-  boolean      slaveInsecureTLS;
-  ArchiveTypes archiveType;
-  long         archivePartSize;
-  String       deltaCompressAlgorithm;
-  String       byteCompressAlgorithm;
-  String       cryptAlgorithm;
-  String       cryptType;
-  String       cryptPasswordMode;
-  long         lastExecutedDateTime;
-  long         estimatedRestTime;
-  MessageCodes messageCode;
+  String         uuid;
+  String         master;
+  String         name;
+  States         state;
+  String         slaveHostName;
+  int            slaveHostPort;
+  SlaveStates    slaveState;
+  boolean        slaveTLS;
+  boolean        slaveInsecureTLS;
+  ArchiveTypes   archiveType;
+  long           archivePartSize;
+  String         deltaCompressAlgorithm;
+  String         byteCompressAlgorithm;
+  String         cryptAlgorithm;
+  String         cryptType;
+  String         cryptPasswordMode;
+  long           lastExecutedDateTime;
+  long           estimatedRestTime;
+  VolumeRequests volumeRequest;
+  MessageCodes   messageCode;
 
   // date/time format
   private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -231,27 +244,29 @@ class JobData implements Comparable<JobData>
    * @param cryptPasswordMode crypt password mode
    * @param lastExecutedDateTime last executed date/time [s]
    * @param estimatedRestTime estimated rest time [s]
+   * @param volumeRequest volume request
    * @param messageCode message code
    */
-  JobData(String       uuid,
-          String       master,
-          String       name,
-          States       state,
-          String       slaveHostName,
-          int          slaveHostPort,
-          SlaveStates  slaveState,
-          boolean      slaveTLS,
-          boolean      slaveInsecureTLS,
-          ArchiveTypes archiveType,
-          long         archivePartSize,
-          String       deltaCompressAlgorithm,
-          String       byteCompressAlgorithm,
-          String       cryptAlgorithm,
-          String       cryptType,
-          String       cryptPasswordMode,
-          long         lastExecutedDateTime,
-          long         estimatedRestTime,
-          MessageCodes messageCode
+  JobData(String         uuid,
+          String         master,
+          String         name,
+          States         state,
+          String         slaveHostName,
+          int            slaveHostPort,
+          SlaveStates    slaveState,
+          boolean        slaveTLS,
+          boolean        slaveInsecureTLS,
+          ArchiveTypes   archiveType,
+          long           archivePartSize,
+          String         deltaCompressAlgorithm,
+          String         byteCompressAlgorithm,
+          String         cryptAlgorithm,
+          String         cryptType,
+          String         cryptPasswordMode,
+          long           lastExecutedDateTime,
+          long           estimatedRestTime,
+          VolumeRequests volumeRequest,
+          MessageCodes   messageCode
          )
   {
     this.uuid                   = uuid;
@@ -272,6 +287,7 @@ class JobData implements Comparable<JobData>
     this.cryptPasswordMode      = cryptPasswordMode;
     this.lastExecutedDateTime   = lastExecutedDateTime;
     this.estimatedRestTime      = estimatedRestTime;
+    this.volumeRequest          = volumeRequest;
     this.messageCode            = messageCode;
   }
 
@@ -973,7 +989,7 @@ public class TabStatus
   private WidgetVariable                  totalEntriesProgress    = new WidgetVariable<Double>(0.0);
   private WidgetVariable                  totalBytesProgress      = new WidgetVariable<Double>(0.0);
   private WidgetVariable                  collectTotalSumDone     = new WidgetVariable<Boolean>(false);
-  private WidgetVariable                  requestedVolumeNumber   = new WidgetVariable<Integer>(0);
+  private WidgetVariable                  volumeRequestNumber     = new WidgetVariable<Integer>(0);
   private WidgetVariable                  message                 = new WidgetVariable<String>("");
 
   // variables
@@ -1603,8 +1619,8 @@ public class TabStatus
         public void handle(Widget widget, JobData jobData)
         {
           MenuItem menuItem = (MenuItem)widget;
-          menuItem.setEnabled(   (jobData.messageCode == JobData.MessageCodes.REQUEST_VOLUME)
-                              || (jobData.messageCode == JobData.MessageCodes.REQUEST_REPLACEMENT_VOLUME)
+          menuItem.setEnabled(   (jobData.volumeRequest == JobData.VolumeRequests.INITIAL)
+                              || (jobData.volumeRequest == JobData.VolumeRequests.REPLACEMENT)
                              );
         }
       });
@@ -2336,6 +2352,7 @@ public class TabStatus
           if (selectedJobData != null)
           {
             volume();
+            widgetButtonVolume.setEnabled(false);
           }
         }
       });
@@ -2345,8 +2362,8 @@ public class TabStatus
         public void handle(Widget widget, JobData jobData)
         {
           Button button = (Button)widget;
-          button.setEnabled(   (jobData.messageCode == JobData.MessageCodes.REQUEST_VOLUME)
-                            || (jobData.messageCode == JobData.MessageCodes.REQUEST_REPLACEMENT_VOLUME)
+          button.setEnabled(   (jobData.volumeRequest == JobData.VolumeRequests.INITIAL)
+                            || (jobData.volumeRequest == JobData.VolumeRequests.REPLACEMENT)
                            );
         }
       });
@@ -2485,30 +2502,31 @@ public class TabStatus
                                  public void handle(int i, ValueMap valueMap)
                                  {
                                    // get data
-                                   String               jobUUID                = valueMap.getString ("jobUUID"                               );
-                                   String               master                 = valueMap.getString ("master",""                             );
-                                   String               name                   = valueMap.getString ("name"                                  );
-                                   JobData.States       state                  = valueMap.getEnum   ("state",JobData.States.class            );
-                                   String               slaveHostName          = valueMap.getString ("slaveHostName",""                      );
-                                   int                  slaveHostPort          = valueMap.getInt    ("slaveHostPort",0                       );
-                                   JobData.SlaveStates  slaveState             = valueMap.getEnum   ("slaveState",JobData.SlaveStates.class  );
-                                   boolean              slaveTLS               = valueMap.getBoolean("slaveTLS",false                        );
-                                   boolean              slaveInsecureTLS       = valueMap.getBoolean("slaveInsecureTLS",true                 );
-                                   ArchiveTypes         archiveType            = valueMap.getEnum   ("archiveType",ArchiveTypes.class        );
-                                   long                 archivePartSize        = valueMap.getLong   ("archivePartSize"                       );
+                                   String                 jobUUID                = valueMap.getString ("jobUUID"                                   );
+                                   String                 master                 = valueMap.getString ("master",""                                 );
+                                   String                 name                   = valueMap.getString ("name"                                      );
+                                   JobData.States         state                  = valueMap.getEnum   ("state",JobData.States.class                );
+                                   String                 slaveHostName          = valueMap.getString ("slaveHostName",""                          );
+                                   int                    slaveHostPort          = valueMap.getInt    ("slaveHostPort",0                           );
+                                   JobData.SlaveStates    slaveState             = valueMap.getEnum   ("slaveState",JobData.SlaveStates.class      );
+                                   boolean                slaveTLS               = valueMap.getBoolean("slaveTLS",false                            );
+                                   boolean                slaveInsecureTLS       = valueMap.getBoolean("slaveInsecureTLS",true                     );
+                                   ArchiveTypes           archiveType            = valueMap.getEnum   ("archiveType",ArchiveTypes.class            );
+                                   long                   archivePartSize        = valueMap.getLong   ("archivePartSize"                           );
 //TODO: enum?
-                                   String               deltaCompressAlgorithm = valueMap.getString ("deltaCompressAlgorithm"                );
+                                   String                 deltaCompressAlgorithm = valueMap.getString ("deltaCompressAlgorithm"                    );
 //TODO: enum?
-                                   String               byteCompressAlgorithm  = valueMap.getString ("byteCompressAlgorithm"                 );
+                                   String                 byteCompressAlgorithm  = valueMap.getString ("byteCompressAlgorithm"                     );
 //TODO: enum?
-                                   String               cryptAlgorithm         = valueMap.getString ("cryptAlgorithm"                        );
+                                   String                 cryptAlgorithm         = valueMap.getString ("cryptAlgorithm"                            );
 //TODO: enum?
-                                   String               cryptType              = valueMap.getString ("cryptType"                             );
+                                   String                 cryptType              = valueMap.getString ("cryptType"                                 );
 //TODO: enum?
-                                   String               cryptPasswordMode      = valueMap.getString ("cryptPasswordMode"                     );
-                                   long                 lastExecutedDateTime   = valueMap.getLong   ("lastExecutedDateTime"                  );
-                                   long                 estimatedRestTime      = valueMap.getLong   ("estimatedRestTime"                     );
-                                   JobData.MessageCodes messageCode            = valueMap.getEnum   ("messageCode",JobData.MessageCodes.class);
+                                   String                 cryptPasswordMode      = valueMap.getString ("cryptPasswordMode"                         );
+                                   long                   lastExecutedDateTime   = valueMap.getLong   ("lastExecutedDateTime"                      );
+                                   long                   estimatedRestTime      = valueMap.getLong   ("estimatedRestTime"                         );
+                                   JobData.VolumeRequests volumeRequest          = valueMap.getEnum   ("volumeRequest",JobData.VolumeRequests.class);
+                                   JobData.MessageCodes   messageCode            = valueMap.getEnum   ("messageCode",JobData.MessageCodes.class    );
 
                                    JobData jobData = jobDataMap.get(jobUUID);
                                    if (jobData != null)
@@ -2530,6 +2548,7 @@ public class TabStatus
                                      jobData.cryptPasswordMode      = cryptPasswordMode;
                                      jobData.lastExecutedDateTime   = lastExecutedDateTime;
                                      jobData.estimatedRestTime      = estimatedRestTime;
+                                     jobData.volumeRequest          = volumeRequest;
                                      jobData.messageCode            = messageCode;
                                    }
                                    else
@@ -2552,6 +2571,7 @@ public class TabStatus
                                                            cryptPasswordMode,
                                                            lastExecutedDateTime,
                                                            estimatedRestTime,
+                                                           volumeRequest,
                                                            messageCode
                                                           );
                                    }
@@ -2641,6 +2661,16 @@ public class TabStatus
                   case RUNNING:
                   case NO_STORAGE:
                   case DRY_RUNNING:
+                    if (jobData.volumeRequest != JobData.VolumeRequests.NONE)
+                    {
+                      tableItem.setBackground(COLOR_REQUEST);
+                    }
+                    else
+                    {
+                      tableItem.setBackground(COLOR_RUNNING);
+                    }
+// TODO: remove
+/*
                     switch (jobData.messageCode)
                     {
                       case REQUEST_FTP_PASSWORD:
@@ -2655,6 +2685,7 @@ public class TabStatus
                         tableItem.setBackground(COLOR_RUNNING);
                         break;
                     }
+*/
                     break;
                   case ERROR:
                     tableItem.setBackground(COLOR_ERROR);
@@ -2987,7 +3018,8 @@ public class TabStatus
       {
         final ValueMap valueMap = new ValueMap();
         BARServer.executeCommand(StringParser.format("JOB_STATUS jobUUID=%s",selectedJobData.uuid),
-                                 3,  // debugLevel
+// TODO: revert
+1,//                                 3,  // debugLevel
                                  valueMap
                                 );
 
@@ -2995,12 +3027,13 @@ public class TabStatus
         {
           public void run()
           {
-            JobData.States       state       = valueMap.getEnum  ("state",JobData.States.class);
-            int                  errorCode   = valueMap.getInt   ("errorCode");
-            int                  errorNumber = valueMap.getInt   ("errorNumber");
-            String               errorData   = valueMap.getString("errorData");
-            JobData.MessageCodes messageCode = valueMap.getEnum  ("messageCode",JobData.MessageCodes.class);
-            String               messageData = valueMap.getString("messageData");
+            JobData.States         state         = valueMap.getEnum  ("state",JobData.States.class);
+            int                    errorCode     = valueMap.getInt   ("errorCode");
+            int                    errorNumber   = valueMap.getInt   ("errorNumber");
+            String                 errorData     = valueMap.getString("errorData");
+            JobData.VolumeRequests volumeRequest = valueMap.getEnum  ("volumeRequest",JobData.VolumeRequests.class);
+            JobData.MessageCodes   messageCode   = valueMap.getEnum  ("messageCode",JobData.MessageCodes.class);
+            String                 messageText   = valueMap.getString("messageText");
 
             doneCount.set            (valueMap.getLong   ("doneCount"            ));
             doneSize.set             (valueMap.getLong   ("doneSize"             ));
@@ -3030,7 +3063,7 @@ public class TabStatus
             totalBytesProgress.set   (getProgress(doneSize.getLong()+skippedEntrySize.getLong()+errorEntrySize.getLong(),
                                                   totalEntrySize.getLong())
                                                  );
-            requestedVolumeNumber.set(valueMap.getInt("requestedVolumeNumber"));
+            volumeRequestNumber.set  (valueMap.getInt("volumeRequestNumber"));
 
             // trigger update job state listeners
             if (selectedJobData != null)
@@ -3049,44 +3082,44 @@ public class TabStatus
               case RUNNING:
               case NO_STORAGE:
               case DRY_RUNNING:
-                switch (messageCode)
+                if (volumeRequest != JobData.VolumeRequests.NONE)
                 {
-                  case NONE:
-                    message.set("");
-                    break;
-                  case REQUEST_VOLUME:
-                    message.set(BARControl.tr("Please insert volume #{0}",
-                                              requestedVolumeNumber.getInteger()
-                                             )
-                               );
-                    break;
-                  case REQUEST_REPLACEMENT_VOLUME:
-                    if (!messageData.isEmpty())
-                    {
-                      message.set(BARControl.tr("Please insert replacement volume #{0}:\n\n{1}",
-                                                requestedVolumeNumber.getInteger(),
-                                                messageData
+                  switch (volumeRequest)
+                  {
+                    case NONE:
+                      break;
+                    case INITIAL:
+                      message.set(BARControl.tr("Please insert volume #{0}",
+                                                volumeRequestNumber.getInteger()
                                                )
                                  );
-                    }
-                    else
-                    {
+                      break;
+                    case REPLACEMENT:
                       message.set(BARControl.tr("Please insert replacement volume #{0}",
-                                                requestedVolumeNumber.getInteger()
+                                                volumeRequestNumber.getInteger()
                                                )
                                  );
-                    }
-                    break;
-                  default:
-                    if      (!messageData.isEmpty())
-                    {
-                      message.set(messageCode.getText()+": "+messageData);
-                    }
-                    else
-                    {
-                      message.set(messageCode.getText());
-                    }
-                    break;
+                      break;
+                  }
+                }
+                else
+                {
+                  switch (messageCode)
+                  {
+                    case NONE:
+                      message.set("");
+                      break;
+                    default:
+                      if      (!messageText.isEmpty())
+                      {
+                        message.set(messageCode.getText()+": "+messageText);
+                      }
+                      else
+                      {
+                        message.set(messageCode.getText());
+                      }
+                      break;
+                  }
                 }
                 break;
               case DONE:
@@ -3136,7 +3169,7 @@ public class TabStatus
           volumeDone.set           (0.0);
           totalEntriesProgress.set (getProgress(0L,0L));
           totalBytesProgress.set   (getProgress(0L,0L));
-          requestedVolumeNumber.set(0);
+          volumeRequestNumber.set  (0);
           message.set              ("");
 
           if (!widgetButtonStart.isDisposed())
@@ -3466,7 +3499,7 @@ public class TabStatus
 
     try
     {
-      long volumeNumber = requestedVolumeNumber.getInteger();
+      long volumeNumber = volumeRequestNumber.getInteger();
       switch (Dialogs.select(shell,
                              BARControl.tr("Volume request"),
                              BARControl.tr("Load volume number {0}.",volumeNumber),

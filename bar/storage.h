@@ -82,45 +82,49 @@
 /***************************** Datatypes *******************************/
 
 /***********************************************************************\
-* Name   : StorageUpdateRunningInfoFunction
-* Purpose: storage update status call-back
+* Name   : StorageUpdateProgressFunction
+* Purpose: update storage progress call-back
 * Input  : doneSize     - done size [bytes]
 *          volumeNumber - volume number [1..n]
 *          volumeDone   - volume done [0..100%]
-*          userData          - user data
+*          messageCode  - message code; see MESSAGE_CODE_...
+*          messageText  - message text
+*          userData     - user data
 * Output : -
 * Return : TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-typedef bool(*StorageUpdateRunningInfoFunction)(uint64 doneSize,
-                                                uint   volumeNumber,
-                                                double volumeDone,
-                                                void   *userData
-                                               );
+typedef bool(*StorageUpdateProgressFunction)(uint64       doneSize,
+                                             uint         volumeNumber,
+                                             double       volumeDone,
+                                             MessageCodes messageCode,
+                                             ConstString  messageText,
+                                             void         *userData
+                                            );
 
 // storage request volume types
 typedef enum
 {
   STORAGE_REQUEST_VOLUME_TYPE_NEW,
   STORAGE_REQUEST_VOLUME_TYPE_RENEW
-} StorageRequestVolumeTypes;
+} StorageVolumeRequestTypes;
 
 // storage request volume results
 typedef enum
 {
-  STORAGE_REQUEST_VOLUME_RESULT_NONE,
+  STORAGE_VOLUME_REQUEST_RESULT_NONE,
 
-  STORAGE_REQUEST_VOLUME_RESULT_OK,
-  STORAGE_REQUEST_VOLUME_RESULT_FAIL,
-  STORAGE_REQUEST_VOLUME_RESULT_UNLOAD,
-  STORAGE_REQUEST_VOLUME_RESULT_ABORTED,
+  STORAGE_VOLUME_REQUEST_RESULT_OK,
+  STORAGE_VOLUME_REQUEST_RESULT_FAIL,
+  STORAGE_VOLUME_REQUEST_RESULT_UNLOAD,
+  STORAGE_VOLUME_REQUEST_RESULT_ABORTED,
 
-  STORAGE_REQUEST_VOLUME_RESULT_UNKNOWN,
-} StorageRequestVolumeResults;
+  STORAGE_VOLUME_REQUEST_RESULT_UNKNOWN,
+} StorageVolumeRequestResults;
 
 /***********************************************************************\
-* Name   : StorageRequestVolumeFunction
+* Name   : StorageVolumeRequestFunction
 * Purpose: request new volume call-back
 * Input  : type         - storage request type; see StorageRequestTypes
 *          volumeNumber - requested volume number
@@ -131,7 +135,7 @@ typedef enum
 * Notes  : -
 \***********************************************************************/
 
-typedef StorageRequestVolumeResults(*StorageRequestVolumeFunction)(StorageRequestVolumeTypes type,
+typedef StorageVolumeRequestResults(*StorageVolumeRequestFunction)(StorageVolumeRequestTypes type,
                                                                    uint                      volumeNumber,
                                                                    const char                *message,
                                                                    void                      *userData
@@ -222,41 +226,41 @@ typedef enum
 // bandwidth data
 typedef struct
 {
-  BandWidthList *maxBandWidthList;                           // list with max. band width [bits/s] to use or NULL
-  ulong         maxBlockSize;                                // max. block size [bytes]
-  ulong         blockSize;                                   // current block size [bytes]
-  ulong         measurements[16];                            // measured band width values [bis/s]
+  BandWidthList *maxBandWidthList;                            // list with max. band width [bits/s] to use or NULL
+  ulong         maxBlockSize;                                 // max. block size [bytes]
+  ulong         blockSize;                                    // current block size [bytes]
+  ulong         measurements[16];                             // measured band width values [bis/s]
   uint          measurementNextIndex;
   uint          measurementCount;
-  ulong         measurementBytes;                            // measurement sum of transmitted bytes
-  uint64        measurementTime;                             // measurement sum of time for transmission [us]
+  ulong         measurementBytes;                             // measurement sum of transmitted bytes
+  uint64        measurementTime;                              // measurement sum of time for transmission [us]
 } StorageBandWidthLimiter;
 
 // storage info
 typedef struct
 {
-  Semaphore                        lock;
+  Semaphore                     lock;
 
-  StorageSpecifier                 storageSpecifier;          // storage specifier data
-  const JobOptions                 *jobOptions;
-  ServerIO                         *masterIO;
+  StorageSpecifier              storageSpecifier;             // storage specifier data
+  const JobOptions              *jobOptions;
+  ServerIO                      *masterIO;
 
-  LogHandle                        *logHandle;                // log handle
+  LogHandle                     *logHandle;                   // log handle
 
-  StorageUpdateRunningInfoFunction updateRunningInfoFunction; // storage running info update call-back
-  void                             *updateRunningInfoUserData;
-  GetNamePasswordFunction          getNamePasswordFunction;   // get name/password call-back
-  void                             *getNamePasswordUserData;
-  StorageRequestVolumeFunction     requestVolumeFunction;     // request new volume call-back
-  void                             *requestVolumeUserData;
-  IsPauseFunction                  isPauseFunction;           // check if pause call-back
-  void                             *isPauseUserData;
-  IsAbortedFunction                isAbortedFunction;         // check if aborted call-back
-  void                             *isAbortedUserData;
+  StorageUpdateProgressFunction updateProgressFunction;       // storage progress update call-back
+  void                          *updateProgressUserData;
+  GetNamePasswordFunction       getNamePasswordFunction;      // get name/password call-back
+  void                          *getNamePasswordUserData;
+  StorageVolumeRequestFunction  volumeRequestFunction;        // request new volume call-back
+  void                          *volumeRequestUserData;
+  IsPauseFunction               isPauseFunction;              // check if pause call-back
+  void                          *isPauseUserData;
+  IsAbortedFunction             isAbortedFunction;            // check if aborted call-back
+  void                          *isAbortedUserData;
 
-  uint                             volumeNumber;              // current loaded volume number
-  uint                             requestedVolumeNumber;     // requested volume number
-  StorageVolumeStates              volumeState;               // volume state
+  uint                          volumeNumber;                 // current loaded volume number
+  uint                          volumeRequestNumber;          // requested volume number
+  StorageVolumeStates           volumeState;                  // volume state
 
   union
   {
@@ -420,10 +424,11 @@ typedef struct
 
   struct
   {
-    uint64 storageDoneBytes;                                  // storage done [bytes]
-    uint   volumeNumber;                                      // current volume number
-    double volumeDone;                                        // current volume progress [0..100%]
-  }                                progress;
+    uint64  storageDoneBytes;                                 // storage done [bytes]
+    uint    volumeNumber;                                     // current volume number
+    double  volumeDone;                                       // current volume progress [0..100%]
+    Message message;
+  }                             progress;
 } StorageInfo;
 
 // storage handle
@@ -1169,76 +1174,76 @@ Errors Storage_prepare(const String     storageName,
 /***********************************************************************\
 * Name   : Storage_init
 * Purpose: init new storage
-* Input  : storageInfo                      - storage info variable
-*          masterIO                         - master I/O (can be NULL)
-*          storageSpecifier                 - storage specifier structure
-*          jobOptions                       - job options or NULL
-*          maxBandWidthList                 - list with max. band width
-*                                             to use [bits/s] or NULL
-*          storageFlags                     - storage flags; see
-*                                             STORAGE_FLAG_...
-*          serverConnectionPriority         - server connection priority
-*          storageUpdateRunningInfoFunction - update running info call-back
-*          storageUpdateRunningInfoUserData - user data for update running
-*                                             info call-back
-*          getNamePasswordFunction          - get name/password call-back
-*                                             (can be NULL)
-*          getNamePasswordUserData          - user data for get password
-*                                             call-back
-*          storageRequestVolumeFunction     - volume request call-back
-*          storageRequestVolumeUserData     - user data for volume
-*          isPauseFunction                  - is pause check callback (can
-*                                             be NULL)
-*          isPauseUserData                  - user data for is pause check
-*          isAbortedFunction                - is abort check callback (can
-*                                             be NULL)
-*          isAbortedUserData                - user data for is aborted
-*                                             check
-*          logHandle                        - log handle (can be NULL)
+* Input  : storageInfo                   - storage info variable
+*          masterIO                      - master I/O (can be NULL)
+*          storageSpecifier              - storage specifier structure
+*          jobOptions                    - job options or NULL
+*          maxBandWidthList              - list with max. band width
+*                                          to use [bits/s] or NULL
+*          storageFlags                  - storage flags; see
+*                                          STORAGE_FLAG_...
+*          serverConnectionPriority      - server connection priority
+*          storageUpdateProgressFunction - update progress call-back
+*          storageUpdateProgressUserData - user data for update progress
+*                                          info call-back
+*          getNamePasswordFunction       - get name/password call-back
+*                                          (can be NULL)
+*          getNamePasswordUserData       - user data for get password
+*                                          call-back
+*          storageVolumeRequestFunction  - volume request call-back
+*          storageVolumeRequestUserData  - user data for volume
+*          isPauseFunction               - is pause check callback (can
+*                                          be NULL)
+*          isPauseUserData               - user data for is pause check
+*          isAbortedFunction             - is abort check callback (can
+*                                          be NULL)
+*          isAbortedUserData             - user data for is aborted
+*                                          check
+*          logHandle                     - log handle (can be NULL)
 * Output : storageInfo - initialized storage info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  Errors Storage_init(StorageInfo                      *storageInfo,
-                      ServerIO                         *masterIO,
-                      const StorageSpecifier           *storageSpecifier,
-                      const JobOptions                 *jobOptions,
-                      BandWidthList                    *maxBandWidthList,
-                      ServerConnectionPriorities       serverConnectionPriority,
-                      StorageUpdateRunningInfoFunction storageUpdateRunningInfoFunction,
-                      void                             *storageUpdateRunningInfoUserData,
-                      GetNamePasswordFunction          getNamePasswordFunction,
-                      void                             *getNamePasswordUserData,
-                      StorageRequestVolumeFunction     storageRequestVolumeFunction,
-                      void                             *storageRequestVolumeUserData,
-                      IsPauseFunction                  isPauseFunction,
-                      void                             *isPauseUserData,
-                      IsAbortedFunction                isAbortedFunction,
-                      void                             *isAbortedUserData,
-                      LogHandle                        *logHandle
+  Errors Storage_init(StorageInfo                   *storageInfo,
+                      ServerIO                      *masterIO,
+                      const StorageSpecifier        *storageSpecifier,
+                      const JobOptions              *jobOptions,
+                      BandWidthList                 *maxBandWidthList,
+                      ServerConnectionPriorities    serverConnectionPriority,
+                      StorageUpdateProgressFunction storageUpdateProgressFunction,
+                      void                          *storageUpdateProgressUserData,
+                      GetNamePasswordFunction       getNamePasswordFunction,
+                      void                          *getNamePasswordUserData,
+                      StorageVolumeRequestFunction  storageVolumeRequestFunction,
+                      void                          *storageVolumeRequestUserData,
+                      IsPauseFunction               isPauseFunction,
+                      void                          *isPauseUserData,
+                      IsAbortedFunction             isAbortedFunction,
+                      void                          *isAbortedUserData,
+                      LogHandle                     *logHandle
                      );
 #else /* not NDEBUG */
-  Errors __Storage_init(const char                       *__fileName__,
-                        ulong                            __lineNb__,
-                        StorageInfo                      *storageInfo,
-                        ServerIO                         *masterIO,
-                        const StorageSpecifier           *storageSpecifier,
-                        const JobOptions                 *jobOptions,
-                        BandWidthList                    *maxBandWidthList,
-                        ServerConnectionPriorities       serverConnectionPriority,
-                        StorageUpdateRunningInfoFunction storageUpdateRunningInfoFunction,
-                        void                             *storageUpdateRunningInfoUserData,
-                        GetNamePasswordFunction          getNamePasswordFunction,
-                        void                             *getNamePasswordUserData,
-                        StorageRequestVolumeFunction     storageRequestVolumeFunction,
-                        void                             *storageRequestVolumeUserData,
-                        IsPauseFunction                  isPauseFunction,
-                        void                             *isPauseUserData,
-                        IsAbortedFunction                isAbortedFunction,
-                        void                             *isAbortedUserData,
-                        LogHandle                        *logHandle
+  Errors __Storage_init(const char                    *__fileName__,
+                        ulong                         __lineNb__,
+                        StorageInfo                   *storageInfo,
+                        ServerIO                      *masterIO,
+                        const StorageSpecifier        *storageSpecifier,
+                        const JobOptions              *jobOptions,
+                        BandWidthList                 *maxBandWidthList,
+                        ServerConnectionPriorities    serverConnectionPriority,
+                        StorageUpdateProgressFunction storageUpdateProgressFunction,
+                        void                          *storageUpdateProgressUserData,
+                        GetNamePasswordFunction       getNamePasswordFunction,
+                        void                          *getNamePasswordUserData,
+                        StorageVolumeRequestFunction  storageVolumeRequestFunction,
+                        void                          *storageVolumeRequestUserData,
+                        IsPauseFunction               isPauseFunction,
+                        void                          *isPauseUserData,
+                        IsAbortedFunction             isAbortedFunction,
+                        void                          *isAbortedUserData,
+                        LogHandle                     *logHandle
                        );
 #endif /* NDEBUG */
 
@@ -1672,8 +1677,8 @@ Errors Storage_seek(StorageHandle *storageHandle,
 *          storageUpdateRunningInfoFunction - running info call-back
 *          storageUpdateRunningInfoUserData - user data for running info
 *                                             call-back
-*          storageRequestVolumeFunction     - volume request call-back
-*          storageRequestVolumeUserData     - user data for volume request
+*          storageVolumeRequestFunction     - volume request call-back
+*          storageVolumeRequestUserData     - user data for volume request
 *                                             call-back
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1681,14 +1686,14 @@ Errors Storage_seek(StorageHandle *storageHandle,
 \***********************************************************************/
 
 // TODO: storageSpecifier -> storageInfo
-Errors Storage_copyToLocal(const StorageSpecifier           *storageSpecifier,
-                           ConstString                      localFileName,
-                           const JobOptions                 *jobOptions,
-                           BandWidthList                    *maxBandWidthList,
-                           StorageUpdateRunningInfoFunction storageUpdateRunningInfoFunction,
-                           void                             *storageUpdateRunningInfoUserData,
-                           StorageRequestVolumeFunction     storageRequestVolumeFunction,
-                           void                             *storageRequestVolumeUserData
+Errors Storage_copyToLocal(const StorageSpecifier        *storageSpecifier,
+                           ConstString                   localFileName,
+                           const JobOptions              *jobOptions,
+                           BandWidthList                 *maxBandWidthList,
+                           StorageUpdateProgressFunction storageUpdateRunningInfoFunction,
+                           void                          *storageUpdateRunningInfoUserData,
+                           StorageVolumeRequestFunction  storageVolumeRequestFunction,
+                           void                          *storageVolumeRequestUserData
                           );
 
 /***********************************************************************\

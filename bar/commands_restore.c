@@ -399,8 +399,8 @@ LOCAL void updateRunningInfo(RestoreInfo *restoreInfo, bool forceUpdate)
     if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
     {
       restoreInfo->updateRunningInfoFunction(&restoreInfo->runningInfo,
-                                            restoreInfo->updateRunningInfoUserData
-                                           );
+                                             restoreInfo->updateRunningInfoUserData
+                                            );
       lastTimestamp = timestamp;
     }
   }
@@ -3422,7 +3422,7 @@ NULL, // masterIO
                        restoreInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                       CALLBACK_(NULL,NULL),  // storageUpdateProgress
                        CALLBACK_(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
                        CALLBACK_(NULL,NULL), // requestVolume
 //TODO

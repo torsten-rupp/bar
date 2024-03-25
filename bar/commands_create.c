@@ -859,7 +859,7 @@ LOCAL void addIncrementalList(Dictionary     *namesDictionary,
   assert(fileInfo != NULL);
 
   incrementalListInfo.state = INCREMENTAL_FILE_STATE_ADDED;
-  memcpy(&incrementalListInfo.cast,&fileInfo->cast,sizeof(FileCast));
+  memCopyFast(&incrementalListInfo.cast,sizeof(incrementalListInfo.cast),&fileInfo->cast,sizeof(FileCast));
 
   Dictionary_add(namesDictionary,
                  String_cString(fileName),
@@ -945,7 +945,7 @@ LOCAL void runningInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
 
   if (name != NULL)
   {
-    // update current running info if not set or timeout
+    // update current running info if not set or on timeout
     if (   (createInfo->runningInfoCurrentFragmentNode == NULL)
         || ((Misc_getTimestamp()-createInfo->runningInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
        )
@@ -1004,22 +1004,26 @@ LOCAL void runningInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
       )
 
 /***********************************************************************\
-* Name   : updateStorageRunningInfo
-* Purpose: update storage info data
+* Name   : updateStorageProgress
+* Purpose: update storage progress data
 * Input  : doneSize     - done size [bytes]
 *          volumeNumber - volume number [1..n]
 *          volumeDone   - volume done [0..100%]
+*          messageCode  - message code; see MESSAGE_CODE_...
+*          messageText  - message text
 *          userData     - user data
 * Output : -
 * Return : TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool updateStorageRunningInfo(uint64 doneSize,
-                                    uint   volumeNumber,
-                                    double volumeDone,
-                                    void   *userData
-                                   )
+LOCAL bool updateStorageProgress(uint64       doneSize,
+                                 uint         volumeNumber,
+                                 double       volumeDone,
+                                 MessageCodes messageCode,
+                                 ConstString  messageText,
+                                 void         *userData
+                                )
 {
   CreateInfo *createInfo = (CreateInfo*)userData;
 
@@ -1030,6 +1034,7 @@ LOCAL bool updateStorageRunningInfo(uint64 doneSize,
     createInfo->runningInfo.progress.storage.doneSize = doneSize;
     createInfo->runningInfo.progress.volume.number    = volumeNumber;
     createInfo->runningInfo.progress.volume.done      = volumeDone;
+    messageSet(&createInfo->runningInfo.message,messageCode,messageText);
   }
 
   return !isAborted(createInfo);
@@ -3838,8 +3843,8 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
       {
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
-          assert(createInfo->runningInfo.message.code == MESSAGE_CODE_NONE);
-          createInfo->runningInfo.message.code = MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE;
+          messageSet(&createInfo->runningInfo.message,MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE,NULL);
+          String_clear(createInfo->runningInfo.message.text);
         }
 
         do
@@ -3854,8 +3859,8 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 
         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
-          assert(createInfo->runningInfo.message.code != MESSAGE_CODE_NONE);
-          createInfo->runningInfo.message.code = MESSAGE_CODE_NONE;
+          messageClear(&createInfo->runningInfo.message);
+          String_clear(createInfo->runningInfo.message.text);
         }
       }
     }
@@ -4367,7 +4372,7 @@ NULL, // masterIO
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                               CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                CALLBACK_(NULL,NULL),  // getPassword
                                CALLBACK_(NULL,NULL),  // requestVolume
                                CALLBACK_(NULL,NULL),  // isPause
@@ -4589,7 +4594,7 @@ NULL, // masterIO
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                               CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                CALLBACK_(NULL,NULL),  // getPassword
                                CALLBACK_(NULL,NULL),  // requestVolume
                                CALLBACK_(NULL,NULL),  // isPause
@@ -7840,8 +7845,8 @@ Errors Command_create(ServerIO                     *masterIO,
                       void                         *getNamePasswordUserData,
                       RunningInfoFunction          runningInfoFunction,
                       void                         *runningInfoUserData,
-                      StorageRequestVolumeFunction storageRequestVolumeFunction,
-                      void                         *storageRequestVolumeUserData,
+                      StorageVolumeRequestFunction storageVolumeRequestFunction,
+                      void                         *storageVolumeRequestUserData,
                       IsPauseFunction              isPauseCreateFunction,
                       void                         *isPauseCreateUserData,
                       IsPauseFunction              isPauseStorageFunction,
@@ -7968,9 +7973,9 @@ Errors Command_create(ServerIO                     *masterIO,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(updateStorageRunningInfo,&createInfo),
+                       CALLBACK_(updateStorageProgress,&createInfo),
                        CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                       CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData),
+                       CALLBACK_(storageVolumeRequestFunction,storageVolumeRequestUserData),
                        CALLBACK_(isPauseStorageFunction,isPauseStorageUserData),
                        CALLBACK_(isAbortedFunction,isAbortedUserData),
                        logHandle
@@ -8234,7 +8239,7 @@ Errors Command_create(ServerIO                     *masterIO,
   // final update of running info
   SEMAPHORE_LOCKED_DO(&createInfo.runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
   {
-    (void)updateRunningInfo(&createInfo,TRUE);
+    updateRunningInfo(&createInfo,TRUE);
   }
 
   // update index

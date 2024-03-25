@@ -426,9 +426,8 @@ class Command
   enum Actions
   {
     NONE,
-    REQUEST_PASSWORD,
-    REQUEST_VOLUME,
-    CONFIRM;
+    CONFIRM,
+    REQUEST_PASSWORD
   };
 
   // --------------------------- variables --------------------------------
@@ -1448,20 +1447,6 @@ class CommandThread extends Thread
           else
           {
             BARServer.sendResult(command.id,1,true,BARException.NO_PASSWORD);
-          }
-        }
-        else if (command.name.equals("REQUEST_VOLUME"))
-        {
-          // get volume
-          if (display != null)
-          {
-//TODO
-Dprintf.dprintf("REQUEST_VOLUME");
-BARServer.sendResult(command.id,1,true,BARException.LOAD_VOLUME_FAIL);
-          }
-          else
-          {
-            BARServer.sendResult(command.id,1,true,BARException.LOAD_VOLUME_FAIL);
           }
         }
         else

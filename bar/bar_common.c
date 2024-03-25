@@ -226,17 +226,77 @@ void initRunningInfo(RunningInfo *runningInfo)
   runningInfo->progress.storage.totalSize   = 0LL;
   runningInfo->progress.volume.number       = 0;
   runningInfo->progress.volume.done         = 0.0;
+  runningInfo->volumeRequest                = VOLUME_REQUEST_NONE;
+  runningInfo->volumeRequestNumber          = 0;
   runningInfo->message.code                 = MESSAGE_CODE_NONE;
-  runningInfo->message.data                 = String_new();
+  runningInfo->message.text                 = String_new();
+
+  runningInfo->lastErrorCode                = 0;
+  runningInfo->lastErrorNumber              = 0;
+  runningInfo->lastErrorData                = String_new();
+
+  runningInfo->lastExecutedDateTime         = 0LL;
 }
 
 void doneRunningInfo(RunningInfo *runningInfo)
 {
   assert(runningInfo != NULL);
 
-  String_delete(runningInfo->message.data);
+  String_delete(runningInfo->lastErrorData);
+  String_delete(runningInfo->message.text);
   String_delete(runningInfo->progress.storage.name);
   String_delete(runningInfo->progress.entry.name);
+}
+
+void setRunningInfo(RunningInfo *runningInfo, const RunningInfo *fromRunningInfo)
+{
+  assert(runningInfo != NULL);
+  assert(runningInfo->progress.entry.name != NULL);
+  assert(runningInfo->progress.storage.name != NULL);
+  assert(runningInfo->message.text != NULL);
+  assert(runningInfo->lastErrorData != NULL);
+  assert(fromRunningInfo != NULL);
+  assert(fromRunningInfo->progress.entry.name != NULL);
+  assert(fromRunningInfo->progress.storage.name != NULL);
+  assert(fromRunningInfo->message.text != NULL);
+  assert(fromRunningInfo->lastErrorData != NULL);
+
+  runningInfo->error                        = fromRunningInfo->error;
+
+  runningInfo->progress.done.count          = fromRunningInfo->progress.done.count;
+  runningInfo->progress.done.size           = fromRunningInfo->progress.done.size;
+  runningInfo->progress.total.count         = fromRunningInfo->progress.total.count;
+  runningInfo->progress.total.size          = fromRunningInfo->progress.total.size;
+  runningInfo->progress.collectTotalSumDone = fromRunningInfo->progress.collectTotalSumDone;
+  runningInfo->progress.skipped.count       = fromRunningInfo->progress.skipped.count;
+  runningInfo->progress.skipped.size        = fromRunningInfo->progress.skipped.size;
+  runningInfo->progress.error.count         = fromRunningInfo->progress.error.count;
+  runningInfo->progress.error.size          = fromRunningInfo->progress.error.size;
+  runningInfo->progress.archiveSize         = fromRunningInfo->progress.archiveSize;
+  runningInfo->progress.compressionRatio    = fromRunningInfo->progress.compressionRatio;
+  String_set(runningInfo->progress.entry.name,fromRunningInfo->progress.entry.name);
+  runningInfo->progress.entry.doneSize      = fromRunningInfo->progress.entry.doneSize;
+  runningInfo->progress.entry.totalSize     = fromRunningInfo->progress.entry.totalSize;
+  String_set(runningInfo->progress.storage.name,fromRunningInfo->progress.storage.name);
+  runningInfo->progress.storage.doneSize    = fromRunningInfo->progress.storage.doneSize;
+  runningInfo->progress.storage.totalSize   = fromRunningInfo->progress.storage.totalSize;
+  runningInfo->progress.volume.number       = fromRunningInfo->progress.volume.number;
+  runningInfo->progress.volume.done         = fromRunningInfo->progress.volume.done;
+  runningInfo->volumeRequest                = fromRunningInfo->volumeRequest;
+  runningInfo->volumeRequestNumber          = fromRunningInfo->volumeRequestNumber;
+  runningInfo->message.code                 = fromRunningInfo->message.code;
+  String_set(runningInfo->message.text,fromRunningInfo->message.text);
+
+  runningInfo->lastErrorCode                = fromRunningInfo->lastErrorCode;
+  runningInfo->lastErrorNumber              = fromRunningInfo->lastErrorNumber;
+  String_set(runningInfo->lastErrorData,fromRunningInfo->lastErrorData);
+
+  runningInfo->lastExecutedDateTime         = fromRunningInfo->lastExecutedDateTime;
+
+  runningInfo->entriesPerSecond             = fromRunningInfo->entriesPerSecond;
+  runningInfo->bytesPerSecond               = fromRunningInfo->bytesPerSecond;
+  runningInfo->storageBytesPerSecond        = fromRunningInfo->storageBytesPerSecond;
+  runningInfo->estimatedRestTime            = fromRunningInfo->estimatedRestTime;
 }
 
 void resetRunningInfo(RunningInfo *runningInfo)
@@ -264,8 +324,10 @@ void resetRunningInfo(RunningInfo *runningInfo)
   runningInfo->progress.storage.totalSize   = 0LL;
   runningInfo->progress.volume.number       = 0;
   runningInfo->progress.volume.done         = 0.0;
+  runningInfo->volumeRequest                = VOLUME_REQUEST_NONE;
+  runningInfo->volumeRequestNumber          = 0;
   runningInfo->message.code                 = MESSAGE_CODE_NONE;
-  String_clear(runningInfo->message.data);
+  String_clear(runningInfo->message.text);
 
   runningInfo->lastErrorCode                = ERROR_CODE_NONE;
   runningInfo->lastErrorNumber              = 0;
@@ -283,26 +345,54 @@ void resetRunningInfo(RunningInfo *runningInfo)
   runningInfo->estimatedRestTime            = 0L;
 }
 
+const char *volumeRequestToString(VolumeRequests volumeRequest)
+{
+  const char *VOLUME_REQUEST_TEXT[] =
+  {
+    "NONE",
+    "INITIAL",
+    "REPLACEMENT"
+  };
+
+  assert(volumeRequest >= VOLUME_REQUEST_MIN);
+  assert(volumeRequest <= VOLUME_REQUEST_MAX);
+  assert((VOLUME_REQUEST_MAX-VOLUME_REQUEST_MIN+1) == SIZE_OF_ARRAY(VOLUME_REQUEST_TEXT));
+
+  return VOLUME_REQUEST_TEXT[(uint)volumeRequest];
+}
+
+void messageSet(Message *message, MessageCodes messageCode, ConstString messageText)
+{
+  assert(message != NULL);
+
+  message->code = messageCode;
+  String_set(message->text,messageText);
+}
+
+void messageClear(Message *message)
+{
+  assert(message != NULL);
+
+  message->code = MESSAGE_CODE_NONE;
+  String_clear(message->text);
+}
+
 const char *messageCodeToString(MessageCodes messageCode)
 {
   const char *MESSAGE_CODE_TEXT[] =
   {
     "NONE",
     "WAIT_FOR_TEMPORARY_SPACE",
-    "REQUEST_FTP_PASSWORD",
-    "REQUEST_SSH_PASSWORD",
-    "REQUEST_WEBDAV_PASSWORD",
-    "REQUEST_CRYPT_PASSWORD",
-    "REQUEST_VOLUME",
-    "REQUEST_REPLACEMENT_VOLUME",
-    "ADD_ERROR_CORRECTION_CODES",
     "BLANK_VOLUME",
-    "WRITE_VOLUME"
+    "CREATE_IMAGE",
+    "ADD_ERROR_CORRECTION_CODES",
+    "WRITE_VOLUME",
+    "VERIFY_VOLUME"
   };
 
   assert(messageCode >= MESSAGE_CODE_MIN);
   assert(messageCode <= MESSAGE_CODE_MAX);
-  assert((MESSAGE_CODE_MAX-MESSAGE_CODE_MIN+1) <= SIZE_OF_ARRAY(MESSAGE_CODE_TEXT));
+  assert((MESSAGE_CODE_MAX-MESSAGE_CODE_MIN+1) == SIZE_OF_ARRAY(MESSAGE_CODE_TEXT));
 
   return MESSAGE_CODE_TEXT[(uint)messageCode];
 }
