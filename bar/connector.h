@@ -411,9 +411,9 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
 *                                         function (can be NULL)
 *          runningInfoUserData          - user data for running info
 *                                         function
-*          storageRequestVolumeFunction - request volume call back
+*          storageVolumeRequestFunction - request volume call back
 *                                         function (can be NULL)
-*          storageRequestVolumeUserData - user data for request
+*          storageVolumeRequestUserData - user data for request
 *                                         volume
 * Output : -
 * Return : ERROR_NONE or error code
@@ -435,8 +435,8 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         void                         *getNamePasswordUserData,
                         RunningInfoFunction          runningInfoFunction,
                         void                         *runningInfoUserData,
-                        StorageRequestVolumeFunction storageRequestVolumeFunction,
-                        void                         *storageRequestVolumeUserData
+                        StorageVolumeRequestFunction storageVolumeRequestFunction,
+                        void                         *storageVolumeRequestUserData
                        );
 
 #ifdef __cplusplus

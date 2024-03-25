@@ -313,12 +313,14 @@ BEGIN {
                storageTotalSize=2058977288 \
                volumeNumber=0 \
                volumeProgress=0 \
-               requestedVolumeNumber=0 \
+               volumeRequest=NONE \
+               volumeRequestNumber=0 \
                entriesPerSecond=37 \
                bytesPerSecond=7820540 \
                storageBytesPerSecond=28602424 \
                estimatedRestTime=8343 \
-               message='' \
+               messageCode=NONE \
+               messageText='' \
               ");
   next;
 }

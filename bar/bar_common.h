@@ -289,95 +289,29 @@ typedef enum
   RESTORE_ENTRY_MODE_SKIP_EXISTING
 } RestoreEntryModes;
 
+// volume requests
+typedef enum
+{
+  VOLUME_REQUEST_NONE,
+  VOLUME_REQUEST_INITIAL,
+  VOLUME_REQUEST_REPLACEMENT,
+} VolumeRequests;
+#define VOLUME_REQUEST_MIN VOLUME_REQUEST_NONE
+#define VOLUME_REQUEST_MAX VOLUME_REQUEST_REPLACEMENT
+
 // message codes
 typedef enum
 {
   MESSAGE_CODE_NONE,
   MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE,
-  MESSAGE_CODE_REQUEST_FTP_PASSWORD,
-  MESSAGE_CODE_REQUEST_SSH_PASSWORD,
-  MESSAGE_CODE_REQUEST_WEBDAV_PASSWORD,
-  MESSAGE_CODE_REQUEST_CRYPT_PASSWORD,
-  MESSAGE_CODE_REQUEST_VOLUME,
-  MESSAGE_CODE_REQUEST_REPLACEMENT_VOLUME,
-  MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES,
   MESSAGE_CODE_BLANK_VOLUME,
-  MESSAGE_CODE_WRITE_VOLUME
+  MESSAGE_CODE_CREATE_IMAGE,
+  MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES,
+  MESSAGE_CODE_WRITE_VOLUME,
+  MESSAGE_CODE_VERIFY_VOLUME
 } MessageCodes;
 #define MESSAGE_CODE_MIN MESSAGE_CODE_NONE
-#define MESSAGE_CODE_MAX MESSAGE_CODE_WRITE_VOLUME
-
-// running info
-typedef struct
-{
-  Errors            error;                            // error
-
-  struct
-  {
-    struct
-    {
-      ulong     count;                                // number of entries processed
-      uint64    size;                                 // size processed [bytes]
-    } done;
-    struct
-    {
-      ulong     count;                                // total number of entries
-      uint64    size;                                 // total size of entries [bytes]
-    } total;
-    bool   collectTotalSumDone;                       // TRUE iff all entries are collected
-    struct
-    {
-      ulong     count;                                // number of skipped entries
-      uint64    size;                                 // size sum skipped [bytes]
-    } skipped;
-    struct
-    {
-      ulong     count;                                // number of entries with errors
-      uint64    size;                                 // size sum of entries with errors [bytes]
-    } error;
-    uint64 archiveSize;                               // number stored in archive [bytes]
-    double compressionRatio;                          // compression ratio
-    struct
-    {
-      String    name;                                 // current entry name
-      uint64    doneSize;                             // size processed of current entry [bytes]
-      uint64    totalSize;                            // total size of current entry [bytes]
-    } entry;
-    struct
-    {
-      String    name;                                 // current storage name
-      uint64    doneSize;                             // size processed of current archive [bytes]
-      uint64    totalSize;                            // total size of current archive [bytes]
-    } storage;
-    struct
-    {
-      uint      number;                               // current volume number
-      double    done;                                 // current volume progress done [0..100%]
-    } volume;
-  }                 progress;
-
-  struct
-  {
-    MessageCodes code;
-    String       data;
-  }                 message;                          // last message
-
-  uint              lastErrorCode;
-  uint              lastErrorNumber;
-  String            lastErrorData;
-
-  uint64            lastExecutedDateTime;             // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
-  uint64            nextExecutedDateTime;             // next execution date/time
-
-  PerformanceFilter entriesPerSecondFilter;
-  PerformanceFilter bytesPerSecondFilter;
-  PerformanceFilter storageBytesPerSecondFilter;
-
-  double            entriesPerSecond;                 // average processed entries last 10s [1/s]
-  double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
-  double            storageBytesPerSecond;            // average processed storage bytes last 10s [1/s]
-  ulong             estimatedRestTime;                // estimated rest running time [s]
-} RunningInfo;
+#define MESSAGE_CODE_MAX MESSAGE_CODE_VERIFY_VOLUME
 
 // log types
 typedef enum
@@ -557,7 +491,7 @@ typedef struct ScheduleNode
   uint64             lastExecutedDateTime;                    // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
 
   // running info
-  bool               active;                                  // TRUE iff scheduled is active
+  bool               active;                                  // TRUE iff schedule is activated
 
   // cached statistics info
   ulong              totalEntityCount;                        // total number of entities of last execution
@@ -900,6 +834,83 @@ typedef enum
 
   COMMAND_UNKNOWN,
 } Commands;
+
+// message
+typedef struct
+{
+  MessageCodes code;
+  String       text;
+} Message;
+
+// running info
+typedef struct
+{
+  Errors            error;                            // error
+
+  struct
+  {
+    struct
+    {
+      ulong     count;                                // number of entries processed
+      uint64    size;                                 // size processed [bytes]
+    } done;
+    struct
+    {
+      ulong     count;                                // total number of entries
+      uint64    size;                                 // total size of entries [bytes]
+    } total;
+    bool   collectTotalSumDone;                       // TRUE iff all entries are collected
+    struct
+    {
+      ulong     count;                                // number of skipped entries
+      uint64    size;                                 // size sum skipped [bytes]
+    } skipped;
+    struct
+    {
+      ulong     count;                                // number of entries with errors
+      uint64    size;                                 // size sum of entries with errors [bytes]
+    } error;
+    uint64 archiveSize;                               // number stored in archive [bytes]
+    double compressionRatio;                          // compression ratio
+    struct
+    {
+      String    name;                                 // current entry name
+      uint64    doneSize;                             // size processed of current entry [bytes]
+      uint64    totalSize;                            // total size of current entry [bytes]
+    } entry;
+    struct
+    {
+      String    name;                                 // current storage name
+      uint64    doneSize;                             // size processed of current archive [bytes]
+      uint64    totalSize;                            // total size of current archive [bytes]
+    } storage;
+    struct
+    {
+      uint      number;                               // current volume number
+      double    done;                                 // current volume progress done [0..100%]
+    } volume;
+  }                 progress;
+
+  VolumeRequests    volumeRequest;
+  uint              volumeRequestNumber;              // requested volume number
+  Message           message;                          // last message
+
+  uint              lastErrorCode;
+  uint              lastErrorNumber;
+  String            lastErrorData;
+
+  uint64            lastExecutedDateTime;             // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
+  uint64            nextExecutedDateTime;             // next execution date/time
+
+  PerformanceFilter entriesPerSecondFilter;
+  PerformanceFilter bytesPerSecondFilter;
+  PerformanceFilter storageBytesPerSecondFilter;
+
+  double            entriesPerSecond;                 // average processed entries last 10s [1/s]
+  double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
+  double            storageBytesPerSecond;            // average processed storage bytes last 10s [1/s]
+  ulong             estimatedRestTime;                // estimated rest running time [s]
+} RunningInfo;
 
 // global options
 typedef struct
@@ -1311,9 +1322,43 @@ void resetRunningInfo(RunningInfo *runningInfo);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : volumeRequestToString
+* Purpose: get volume request string
+* Input  : volumeRequest - volume request
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+const char *volumeRequestToString(VolumeRequests volumeRequest);
+
+/***********************************************************************\
+* Name   : messageSet
+* Purpose: set message
+* Input  : messageCode - message code
+*          messageText - message text
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void messageSet(Message *message, MessageCodes messageCode, ConstString messageText);
+
+/***********************************************************************\
+* Name   : messageClear
+* Purpose: clear message
+* Input  : message - message to clear
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void messageClear(Message *message);
+
+/***********************************************************************\
 * Name   : messageCodeToString
 * Purpose: get message code string
-* Input  : messageCode - messsage code
+* Input  : messageCode - message code
 * Output : -
 * Return : string
 * Notes  : -

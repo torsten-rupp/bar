@@ -4930,7 +4930,7 @@ public class TabJobs
           widgetArchivePartSize.setToolTipText(BARControl.tr("Size limit for one storage file part."));
           widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","140M","215M","240M","250M","256M","260M","280M","425M","470M","512M","620M","660M","800M","850M","1G","1800M","2G","4G","5G","6.4G","8G","10G","20G"});
           widgetArchivePartSize.setData("showedErrorDialog",false);
-          Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W);
+          Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
           Widgets.addModifyListener(new WidgetModifyListener(widgetArchivePartSize,archivePartSizeFlag)
           {
             @Override
@@ -6792,6 +6792,468 @@ public class TabJobs
               }
             }
           });
+        }
+
+        // PAR2
+        label = Widgets.newLabel(tab,BARControl.tr("PAR2")+":",Settings.hasExpertRole());
+        Widgets.layout(label,4,0,TableLayoutData.NW);
+        composite = Widgets.newComposite(tab,Settings.hasExpertRole());
+        composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
+        Widgets.layout(composite,4,1,TableLayoutData.WE);
+        {
+          label = Widgets.newLabel(composite,BARControl.tr("Directory")+":",Settings.hasExpertRole());
+          Widgets.layout(label,0,0,TableLayoutData.W);
+          subComposite = Widgets.newComposite(composite,Settings.hasExpertRole());
+          subComposite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0,0.0}));
+          Widgets.layout(subComposite,0,1,TableLayoutData.WE);
+          {
+            text = Widgets.newText(subComposite);
+            text.setToolTipText(BARControl.tr("Name of the directory to store PAR2 checksum files. If no directory is given no PAR2 checksum files are created."));
+            Widgets.layout(text,0,1,TableLayoutData.WE);
+            text.addModifyListener(new ModifyListener()
+            {
+              @Override
+              public void modifyText(ModifyEvent modifyEvent)
+              {
+                Text   widget = (Text)modifyEvent.widget;
+                String string = widget.getText();
+                Color  color  = COLOR_MODIFIED;
+
+                if (incrementalListFileName.getString().equals(string)) color = null;
+                widget.setBackground(color);
+              }
+            });
+            text.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+                Text   widget = (Text)selectionEvent.widget;
+                String string = widget.getText();
+
+                try
+                {
+                  par2Directory.set(string);
+                  BARServer.setJobOption(selectedJobData.uuid,par2Directory);
+                  widget.setBackground(null);
+                }
+                catch (Exception exception)
+                {
+                  // ignored
+                }
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+              }
+            });
+            text.addFocusListener(new FocusListener()
+            {
+              @Override
+              public void focusGained(FocusEvent focusEvent)
+              {
+              }
+              @Override
+              public void focusLost(FocusEvent focusEvent)
+              {
+                Text   widget = (Text)focusEvent.widget;
+                String string = widget.getText();
+
+                try
+                {
+                  par2Directory.set(string);
+                  BARServer.setJobOption(selectedJobData.uuid,par2Directory);
+                  widget.setBackground(null);
+                }
+                catch (Exception exception)
+                {
+                  // ignored
+                }
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(text,par2Directory));
+
+            button = Widgets.newButton(subComposite,IMAGE_EDIT);
+            Widgets.layout(button,0,2,TableLayoutData.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                if (selectedJobData != null)
+                {
+                  try
+                  {
+                    String fileName = fileNameEdit(par2Directory.getString());
+                    if (fileName != null)
+                    {
+                      par2Directory.set(fileName);
+                      BARServer.setJobOption(selectedJobData.uuid,par2Directory);
+                    }
+                  }
+                  catch (Exception exception)
+                  {
+                    // ignored
+                  }
+                }
+              }
+            });
+
+            button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+            button.setToolTipText(BARControl.tr("Select PAR2 directory. CTRL+click to select local file."));
+            Widgets.layout(button,0,3,TableLayoutData.DEFAULT);
+            button.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                if (selectedJobData != null)
+                {
+                  String fileName = Dialogs.file(shell,
+                                                 Dialogs.FileDialogTypes.DIRECTORY,
+                                                 BARControl.tr("Select PAR2 checksums directory"),
+                                                 storageFileName.getString(),
+                                                 new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                             },
+                                                 "*",
+                                                 Dialogs.FILE_NONE,
+                                                 ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                                   ? BARServer.remoteListDirectory(selectedJobData.uuid)
+                                                   : BARControl.listDirectory
+                                                );
+                  if (fileName != null)
+                  {
+                    try
+                    {
+                      par2Directory.set(fileName);
+                      BARServer.setJobOption(selectedJobData.uuid,par2Directory);
+                    }
+                    catch (Exception exception)
+                    {
+                      // ignored
+                    }
+                  }
+                }
+              }
+            });
+          }
+
+          label = Widgets.newLabel(composite,BARControl.tr("Block size")+":",Settings.hasExpertRole());
+          Widgets.layout(label,1,0,TableLayoutData.W);
+          spinner = Widgets.newSpinner(composite);
+          spinner.setToolTipText(BARControl.tr("PAR2 block size."));
+          spinner.setMinimum(512);
+          spinner.setMaximum(65535);
+          spinner.setEnabled(false);
+          Widgets.layout(spinner,1,1,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT);
+          Widgets.addEventListener(new WidgetEventListener(spinner,selectJobEvent)
+          {
+            @Override
+            public void trigger(Control control)
+            {
+              Widgets.setEnabled(control,(selectedJobData != null) && !par2Directory.getString().isEmpty());
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2Directory)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable par2Directory)
+            {
+              Widgets.setEnabled(control,!par2Directory.getString().isEmpty());
+            }
+          });
+          spinner.addModifyListener(new ModifyListener()
+          {
+            @Override
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Spinner widget = (Spinner)modifyEvent.widget;
+              int     n      = widget.getSelection();
+              Color   color  = COLOR_MODIFIED;
+
+              if (par2BlockSize.getInteger() == n) color = null;
+              widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
+            }
+          });
+          spinner.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockSize.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,slaveHostPort);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockSize.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2BlockSize);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          spinner.addFocusListener(new FocusListener()
+          {
+            @Override
+            public void focusGained(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              widget.setData("showedErrorDialog",false);
+            }
+            @Override
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockSize.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2BlockSize);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2BlockSize));
+
+          label = Widgets.newLabel(composite,BARControl.tr("File count")+":",Settings.hasExpertRole());
+          Widgets.layout(label,2,0,TableLayoutData.W);
+          spinner = Widgets.newSpinner(composite);
+          spinner.setToolTipText(BARControl.tr("PAR2 file count."));
+          spinner.setMinimum(1);
+          spinner.setMaximum(65535);
+          spinner.setEnabled(false);
+          Widgets.layout(spinner,2,1,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT);
+          Widgets.addEventListener(new WidgetEventListener(spinner,selectJobEvent)
+          {
+            @Override
+            public void trigger(Control control)
+            {
+              Widgets.setEnabled(control,(selectedJobData != null) && !par2Directory.getString().isEmpty());
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2Directory)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable par2Directory)
+            {
+              Widgets.setEnabled(control,!par2Directory.getString().isEmpty());
+            }
+          });
+          spinner.addModifyListener(new ModifyListener()
+          {
+            @Override
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Spinner widget = (Spinner)modifyEvent.widget;
+              int     n      = widget.getSelection();
+              Color   color  = COLOR_MODIFIED;
+
+              if (par2FileCount.getInteger() == n) color = null;
+              widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
+            }
+          });
+          spinner.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2FileCount.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2FileCount);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2FileCount.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2FileCount);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          spinner.addFocusListener(new FocusListener()
+          {
+            @Override
+            public void focusGained(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              widget.setData("showedErrorDialog",false);
+            }
+            @Override
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                slaveHostPort.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,slaveHostPort);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2FileCount));
+
+          label = Widgets.newLabel(composite,BARControl.tr("Block count")+":",Settings.hasExpertRole());
+          Widgets.layout(label,3,0,TableLayoutData.W);
+          spinner = Widgets.newSpinner(composite);
+          spinner.setToolTipText(BARControl.tr("PAR2 block count."));
+          spinner.setMinimum(1);
+          spinner.setMaximum(65535);
+          spinner.setEnabled(false);
+          Widgets.layout(spinner,3,1,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT);
+          Widgets.addEventListener(new WidgetEventListener(spinner,selectJobEvent)
+          {
+            @Override
+            public void trigger(Control control)
+            {
+              Widgets.setEnabled(control,(selectedJobData != null) && !par2Directory.getString().isEmpty());
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2Directory)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable par2Directory)
+            {
+              Widgets.setEnabled(control,!par2Directory.getString().isEmpty());
+            }
+          });
+          spinner.addModifyListener(new ModifyListener()
+          {
+            @Override
+            public void modifyText(ModifyEvent modifyEvent)
+            {
+              Spinner widget = (Spinner)modifyEvent.widget;
+              int     n      = widget.getSelection();
+              Color   color  = COLOR_MODIFIED;
+
+              if (par2BlockCount.getInteger() == n) color = null;
+              widget.setBackground(color);
+              widget.setData("showedErrorDialog",false);
+            }
+          });
+          spinner.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockCount.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2BlockCount);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Spinner widget = (Spinner)selectionEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockCount.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2BlockCount);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          spinner.addFocusListener(new FocusListener()
+          {
+            @Override
+            public void focusGained(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              widget.setData("showedErrorDialog",false);
+            }
+            @Override
+            public void focusLost(FocusEvent focusEvent)
+            {
+              Spinner widget = (Spinner)focusEvent.widget;
+              int     n      = widget.getSelection();
+
+              try
+              {
+                par2BlockCount.set(n);
+                BARServer.setJobOption(selectedJobData.uuid,par2BlockCount);
+                widget.setBackground(null);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(spinner,par2BlockCount));
         }
 
         // destination
