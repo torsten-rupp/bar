@@ -799,78 +799,75 @@ LOCAL const char *getClientInfoString(ClientInfo *clientInfo, char *buffer, uint
 }
 
 /***********************************************************************\
-* Name   : storageRequestVolume
-* Purpose: request volume call-back
-* Input  : type         - storage request volume type,
+* Name   : storageVolumeRequest
+* Purpose: volume request call-back
+* Input  : type         - storage volume request type
 *          volumeNumber - volume number
 *          message      - message or NULL
 *          userData     - user data: job node
 * Output : -
-* Return : request result; see StorageRequestResults
+* Return : volume request result; see StorageVolumeRequestResults
 * Notes  : -
 \***********************************************************************/
 
-LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes type,
+LOCAL StorageVolumeRequestResults storageVolumeRequest(StorageVolumeRequestTypes type,
                                                        uint                      volumeNumber,
                                                        const char                *message,
                                                        void                      *userData
                                                       )
 {
   JobNode                     *jobNode = (JobNode*)userData;
-  StorageRequestVolumeResults storageRequestVolumeResult;
+  StorageVolumeRequestResults storageVolumeRequestResult;
 
   assert(jobNode != NULL);
 
 //TODO: use type?
   UNUSED_VARIABLE(type);
+//TODO: use message
+  UNUSED_VARIABLE(message);
 
-  storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_NONE;
+  storageVolumeRequestResult = STORAGE_VOLUME_REQUEST_RESULT_NONE;
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // request volume
     assert(jobNode->jobState == JOB_STATE_RUNNING);
-    assert(jobNode->runningInfo.message.code == MESSAGE_CODE_NONE);
-    jobNode->runningInfo.message.code = (jobNode->requestedVolumeNumber != volumeNumber)
-                                           ? MESSAGE_CODE_REQUEST_VOLUME
-                                           : MESSAGE_CODE_REQUEST_REPLACEMENT_VOLUME;
-    jobNode->requestedVolumeNumber = volumeNumber;
-    jobNode->volumeUnloadFlag      = FALSE;
-    jobNode->volumeNumber          = 0;
+    jobNode->runningInfo.volumeRequest       = VOLUME_REQUEST_INITIAL;
+    jobNode->runningInfo.volumeRequestNumber = volumeNumber;
+    jobNode->volumeUnloadFlag    = FALSE;
+    jobNode->volumeNumber        = 0;
     Job_listSignalModifed();
 
     // wait until volume is available or job is aborted
-    storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_NONE;
+    storageVolumeRequestResult = STORAGE_VOLUME_REQUEST_RESULT_NONE;
     do
     {
       Job_listWaitModifed(LOCK_TIMEOUT);
-      assert(jobNode->runningInfo.message.code != MESSAGE_CODE_NONE);
 
       if      (jobNode->requestedAbortFlag)
       {
-        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_ABORTED;
+        storageVolumeRequestResult = STORAGE_VOLUME_REQUEST_RESULT_ABORTED;
       }
       else if (jobNode->volumeUnloadFlag)
       {
-        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_UNLOAD;
+        storageVolumeRequestResult = STORAGE_VOLUME_REQUEST_RESULT_UNLOAD;
         jobNode->volumeUnloadFlag = FALSE;
       }
-      else if (jobNode->volumeNumber == jobNode->requestedVolumeNumber)
+      else if (jobNode->volumeNumber == jobNode->runningInfo.volumeRequestNumber)
       {
-        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
+        storageVolumeRequestResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
       }
     }
     while (   !isQuit()
-           && (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_NONE)
+           && (storageVolumeRequestResult == STORAGE_VOLUME_REQUEST_RESULT_NONE)
           );
 
     // clear request volume
-    assert(jobNode->runningInfo.message.code != MESSAGE_CODE_NONE);
-    jobNode->runningInfo.message.code = MESSAGE_CODE_NONE;
+    jobNode->runningInfo.volumeRequest = VOLUME_REQUEST_NONE;
     Job_listSignalModifed();
   }
 
-  return storageRequestVolumeResult;
+  return storageVolumeRequestResult;
 }
 
 /***********************************************************************\
@@ -2512,7 +2509,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                (jobNode != NULL) ? &jobNode->job.options : NULL,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                               CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                CALLBACK_(NULL,NULL),  // getNamePassword
                                CALLBACK_(NULL,NULL),  // requestVolume
                                CALLBACK_(NULL,NULL),  // isPause
@@ -2529,7 +2526,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                  (jobNode != NULL) ? &jobNode->job.options : NULL,
                                  &globalOptions.indexDatabaseMaxBandWidthList,
                                  SERVER_CONNECTION_PRIORITY_HIGH,
-                                 CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                                 CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                  CALLBACK_(NULL,NULL),  // getNamePassword
                                  CALLBACK_(NULL,NULL),  // requestVolume
                                  CALLBACK_(NULL,NULL),  // isPause
@@ -2547,7 +2544,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                (jobNode != NULL) ? &jobNode->job.options : NULL,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
-                               CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                               CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                CALLBACK_(NULL,NULL),  // getNamePassword
                                CALLBACK_(NULL,NULL),  // requestVolume
                                CALLBACK_(NULL,NULL),  // isPause
@@ -2575,7 +2572,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                    &jobNode->job.options,
                                    &globalOptions.indexDatabaseMaxBandWidthList,
                                    SERVER_CONNECTION_PRIORITY_HIGH,
-                                   CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                                   CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                    CALLBACK_(NULL,NULL),  // getNamePassword
                                    CALLBACK_(NULL,NULL),  // requestVolume
                                    CALLBACK_(NULL,NULL),  // isPause
@@ -2592,7 +2589,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                      &jobNode->job.options,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
-                                     CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                                     CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                      CALLBACK_(NULL,NULL),  // getNamePassword
                                      CALLBACK_(NULL,NULL),  // requestVolume
                                      CALLBACK_(NULL,NULL),  // isPause
@@ -2610,7 +2607,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                    &jobNode->job.options,
                                    &globalOptions.indexDatabaseMaxBandWidthList,
                                    SERVER_CONNECTION_PRIORITY_HIGH,
-                                   CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                                   CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                    CALLBACK_(NULL,NULL),  // getNamePassword
                                    CALLBACK_(NULL,NULL),  // requestVolume
                                    CALLBACK_(NULL,NULL),  // isPause
@@ -3922,9 +3919,9 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                  jobOptions,
                                  &maxFromBandWidthList,
                                  SERVER_CONNECTION_PRIORITY_LOW,
-                                 CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                                 CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                  CALLBACK_(NULL,NULL),  // getNamePassword
-                                 CALLBACK_(NULL,NULL),  // storageRequestVolume
+                                 CALLBACK_(NULL,NULL),  // storageVolumeRequest
                                  CALLBACK_(NULL,NULL),  // isPause
                                  CALLBACK_(NULL,NULL),  // isAborted
                                  NULL  // logHandle
@@ -3939,9 +3936,9 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                      jobOptions,
                                      &maxToBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_LOW,
-                                     CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                                     CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                      CALLBACK_(NULL,NULL),  // getNamePassword
-                                     CALLBACK_(NULL,NULL),  // storageRequestVolume
+                                     CALLBACK_(NULL,NULL),  // storageVolumeRequest
                                      CALLBACK_(NULL,NULL),  // isPause
                                      CALLBACK_(NULL,NULL),  // isAborted
                                      NULL  // logHandle
@@ -4918,7 +4915,7 @@ LOCAL void updateIndexThreadCode(void)
                                &jobOptions,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_LOW,
-                               CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                               CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                CALLBACK_(NULL,NULL),  // getNamePassword
                                CALLBACK_(NULL,NULL),  // requestVolume
                                CALLBACK_(NULL,NULL),  // isPause
@@ -4936,7 +4933,7 @@ LOCAL void updateIndexThreadCode(void)
                                  &jobOptions,
                                  &globalOptions.indexDatabaseMaxBandWidthList,
                                  SERVER_CONNECTION_PRIORITY_LOW,
-                                 CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                                 CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                  CALLBACK_(NULL,NULL),  // getNamePassword
                                  CALLBACK_(NULL,NULL),  // requestVolume
                                  CALLBACK_(NULL,NULL),  // isPause
@@ -5710,8 +5707,8 @@ LOCAL Errors getCryptPasswordFromConfig(String        name,
 }
 
 /***********************************************************************\
-* Name   : updateProgressInfo
-* Purpose: update progrss info
+* Name   : createRunningInfo
+* Purpose: create running info
 * Input  : error       - error code
 *          runningInfo - running info data
 *          userData    - user data: job node
@@ -5720,17 +5717,15 @@ LOCAL Errors getCryptPasswordFromConfig(String        name,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateProgressInfo(Errors      error,
-                              RunningInfo *runningInfo,
-                              void        *userData
-                             )
+LOCAL void createRunningInfo(Errors      error,
+                             RunningInfo *runningInfo,
+                             void        *userData
+                            )
 {
   JobNode *jobNode = (JobNode*)userData;
 
   assert(jobNode != NULL);
   assert(runningInfo != NULL);
-  assert(runningInfo->progress.entry.name != NULL);
-  assert(runningInfo->progress.storage.name != NULL);
 
   UNUSED_VARIABLE(error);
 
@@ -5743,32 +5738,11 @@ LOCAL void updateProgressInfo(Errors      error,
     uint64  restStorageBytes;
     ulong   estimatedRestTime;
 
-    assert(jobNode->runningInfo.progress.entry.name != NULL);
-    assert(jobNode->runningInfo.progress.storage.name != NULL);
-
-    jobNode->runningInfo.progress.done.count          = runningInfo->progress.done.count;
-    jobNode->runningInfo.progress.done.size           = runningInfo->progress.done.size;
-    jobNode->runningInfo.progress.total.count         = runningInfo->progress.total.count;
-    jobNode->runningInfo.progress.total.size          = runningInfo->progress.total.size;
-    jobNode->runningInfo.progress.collectTotalSumDone = runningInfo->progress.collectTotalSumDone;
-    jobNode->runningInfo.progress.skipped.count       = runningInfo->progress.skipped.count;
-    jobNode->runningInfo.progress.skipped.size        = runningInfo->progress.skipped.size;
-    jobNode->runningInfo.progress.error.count         = runningInfo->progress.error.count;
-    jobNode->runningInfo.progress.error.size          = runningInfo->progress.error.size;
-    jobNode->runningInfo.progress.archiveSize         = runningInfo->progress.archiveSize;
-    jobNode->runningInfo.progress.compressionRatio    = runningInfo->progress.compressionRatio;
-    String_set(jobNode->runningInfo.progress.entry.name,runningInfo->progress.entry.name);
-    jobNode->runningInfo.progress.entry.doneSize      = runningInfo->progress.entry.doneSize;
-    jobNode->runningInfo.progress.entry.totalSize     = runningInfo->progress.entry.totalSize;
-    String_set(jobNode->runningInfo.progress.storage.name,runningInfo->progress.storage.name);
-    jobNode->runningInfo.progress.storage.doneSize    = runningInfo->progress.storage.doneSize;
-    jobNode->runningInfo.progress.storage.totalSize   = runningInfo->progress.storage.totalSize;
-    jobNode->runningInfo.progress.volume.number       = runningInfo->progress.volume.number;
-    jobNode->runningInfo.progress.volume.done         = runningInfo->progress.volume.done;
+    setRunningInfo(&jobNode->runningInfo,runningInfo);
 
     // calculate statics values
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     jobNode->runningInfo.progress.done.count);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       jobNode->runningInfo.progress.done.size);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     jobNode->runningInfo.progress.done.count      );
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       jobNode->runningInfo.progress.done.size       );
     Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,jobNode->runningInfo.progress.storage.doneSize);
     entriesPerSecondAverage      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecondFilter     );
     bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
@@ -5794,8 +5768,8 @@ LOCAL void updateProgressInfo(Errors      error,
 }
 
 /***********************************************************************\
-* Name   : restoreUpdateRunningInfo
-* Purpose: update restore running info
+* Name   : restoreRunningInfo
+* Purpose: restore running info
 * Input  : runningInfo - running info data
 *          userData    - user data: job node
 * Output : -
@@ -5803,42 +5777,24 @@ LOCAL void updateProgressInfo(Errors      error,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void restoreUpdateRunningInfo(const RunningInfo *runningInfo,
-                                    void              *userData
-                                   )
+LOCAL void restoreRunningInfo(const RunningInfo *runningInfo,
+                              void              *userData
+                             )
 {
   JobNode *jobNode = (JobNode*)userData;
-//NYI:  double        entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
 
   assert(jobNode != NULL);
   assert(runningInfo != NULL);
-  assert(runningInfo->progress.storage.name != NULL);
-  assert(runningInfo->progress.entry.name != NULL);
 
+  // Note: update progress info has low priority; only try for 2s
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
-// TODO: use setRunningInfo()
-    // calculate estimated rest time
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     runningInfo->progress.done.count);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       runningInfo->progress.done.size);
-    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,runningInfo->progress.storage.doneSize);
+    setRunningInfo(&jobNode->runningInfo,runningInfo);
 
-    jobNode->runningInfo.progress.done.count         = runningInfo->progress.done.count;
-    jobNode->runningInfo.progress.done.size          = runningInfo->progress.done.size;
-    jobNode->runningInfo.progress.skipped.count      = runningInfo->progress.skipped.count;
-    jobNode->runningInfo.progress.skipped.size       = runningInfo->progress.skipped.size;
-    jobNode->runningInfo.progress.error.count        = runningInfo->progress.error.count;
-    jobNode->runningInfo.progress.error.size         = runningInfo->progress.error.size;
-    jobNode->runningInfo.progress.archiveSize        = 0LL;
-    jobNode->runningInfo.progress.compressionRatio   = 0.0;
-    String_set(jobNode->runningInfo.progress.entry.name,runningInfo->progress.entry.name);
-    jobNode->runningInfo.progress.entry.doneSize     = runningInfo->progress.entry.doneSize;
-    jobNode->runningInfo.progress.entry.totalSize    = runningInfo->progress.entry.totalSize;
-    String_set(jobNode->runningInfo.progress.storage.name,runningInfo->progress.storage.name);
-    jobNode->runningInfo.progress.storage.doneSize   = runningInfo->progress.storage.doneSize;
-    jobNode->runningInfo.progress.storage.totalSize  = runningInfo->progress.storage.totalSize;
-    jobNode->runningInfo.progress.volume.number      = 0;
-    jobNode->runningInfo.progress.volume.done        = 0.0;
+    // calculate estimated rest time
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     runningInfo->progress.done.count      );
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       runningInfo->progress.done.size       );
+    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,runningInfo->progress.storage.doneSize);
 
     jobNode->runningInfo.estimatedRestTime = 0;
   }
@@ -6316,8 +6272,8 @@ LOCAL void jobThreadCode(void)
                                                           &jobOptions,
                                                           startDateTime,
                                                           CALLBACK_(getCryptPasswordFromConfig,jobNode),
-                                                          CALLBACK_(updateProgressInfo,jobNode),
-                                                          CALLBACK_(storageRequestVolume,jobNode),
+                                                          CALLBACK_(createRunningInfo,jobNode),
+                                                          CALLBACK_(storageVolumeRequest,jobNode),
                                                           CALLBACK_(isPauseCreate,NULL),
                                                           CALLBACK_(isPauseStorage,NULL),
 //TODO access jobNode?
@@ -6333,7 +6289,7 @@ LOCAL void jobThreadCode(void)
                                                            &includeEntryList,
                                                            &excludePatternList,
                                                            &jobOptions,
-                                                           CALLBACK_(restoreUpdateRunningInfo,jobNode),
+                                                           CALLBACK_(restoreRunningInfo,jobNode),
                                                            CALLBACK_(NULL,NULL),  // restoreHandleError
                                                            CALLBACK_(getCryptPasswordFromConfig,jobNode),
                                                            CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
@@ -6404,8 +6360,8 @@ LOCAL void jobThreadCode(void)
                                                         NULL,  // scheduleTitle,
                                                         NULL,  // scheduleCustomText,
                                                         CALLBACK_(getCryptPasswordFromConfig,jobNode),
-                                                        CALLBACK_(updateProgressInfo,jobNode),
-                                                        CALLBACK_(storageRequestVolume,jobNode)
+                                                        CALLBACK_(createRunningInfo,jobNode),
+                                                        CALLBACK_(storageVolumeRequest,jobNode)
                                                        );
 
           // done storage
@@ -6692,7 +6648,7 @@ LOCAL void jobThreadCode(void)
                      jobNode->jobState,
                      jobNode->noStorage,
                      jobNode->dryRun,
-                     jobNode->runningInfo.message.data
+                     jobNode->runningInfo.message.text
                     );
     }
     doneLog(&logHandle);
@@ -11546,7 +11502,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     JOB_LIST_ITERATEX(jobNode,!isQuit() && !isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveTLSMode=%s slaveState=%'s slaveTLS=%y slaveInsecureTLS=%y archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S estimatedRestTime=%lu messageCode=%s",
+                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveTLSMode=%s slaveState=%'s slaveTLS=%y slaveInsecureTLS=%y archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S estimatedRestTime=%lu volumeRequest=%s volumeRequestNumber=%u messageCode=%s messageText=%'S",
                           jobNode->job.uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
@@ -11579,7 +11535,10 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           jobNode->runningInfo.lastErrorCode,
                           jobNode->runningInfo.lastErrorData,
                           jobNode->runningInfo.estimatedRestTime,
-                          messageCodeToString(jobNode->runningInfo.message.code)
+                          volumeRequestToString(jobNode->runningInfo.volumeRequest),
+                          jobNode->runningInfo.volumeRequestNumber,
+                          messageCodeToString(jobNode->runningInfo.message.code),
+                          jobNode->runningInfo.message.text
                          );
     }
   }
@@ -12409,7 +12368,9 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *            storageTotalSize=<n [bytes]>
 *            volumeNumber=<number>
 *            volumeProgress=<n [0..100]>
-*            requestedVolumeNumber=<n>
+*            volumeRequest=<text>
+*            volumeRequestNumber=<n>
+*            messageCode=<text>
 *            message=<text>
 *            entriesPerSecond=<n [1/s]>
 *            bytesPerSecond=<n [bytes/s]>
@@ -12449,7 +12410,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     // format and send result
     // Note: remote jobs status is updated in jobThreadRun->Connector_create()
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%s errorCode=%u errorNumber=%d errorData=%'S doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeDone=%lf requestedVolumeNumber=%d messageCode=%s messageData=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
+                        "state=%s errorCode=%u errorNumber=%d errorData=%'S doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeDone=%lf entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu volumeRequest=%s volumeRequestNumber=%d messageCode=%s messageText=%'S",
                         Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),
                         jobNode->runningInfo.lastErrorCode,
                         jobNode->runningInfo.lastErrorNumber,
@@ -12473,13 +12434,14 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
                         jobNode->runningInfo.progress.storage.totalSize,
                         jobNode->runningInfo.progress.volume.number,
                         jobNode->runningInfo.progress.volume.done,
-                        jobNode->requestedVolumeNumber,
-                        messageCodeToString(jobNode->runningInfo.message.code),
-                        jobNode->runningInfo.message.data,
                         jobNode->runningInfo.entriesPerSecond,
                         jobNode->runningInfo.bytesPerSecond,
                         jobNode->runningInfo.storageBytesPerSecond,
-                        jobNode->runningInfo.estimatedRestTime
+                        jobNode->runningInfo.estimatedRestTime,
+                        volumeRequestToString(jobNode->runningInfo.volumeRequest),
+                        jobNode->runningInfo.volumeRequestNumber,
+                        messageCodeToString(jobNode->runningInfo.message.code),
+                        jobNode->runningInfo.message.text
                        );
   }
 }
@@ -16418,7 +16380,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                       CALLBACK_(NULL,NULL),  // storageUpdateProgress
                        CALLBACK_(NULL,NULL),  // getNamePassword
                        CALLBACK_(NULL,NULL),  // requestVolume
                        CALLBACK_(NULL,NULL),  // isPause
@@ -19503,7 +19465,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                        &jobOptions,
                        &globalOptions.indexDatabaseMaxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_LOW,
-                       CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                       CALLBACK_(NULL,NULL),  // storageUpdateProgress
                        CALLBACK_(NULL,NULL),  // getNamePassword
                        CALLBACK_(NULL,NULL),  // requestVolume
                        CALLBACK_(NULL,NULL),  // isPause
@@ -19674,7 +19636,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                                     &jobOptions,
                                                     &globalOptions.indexDatabaseMaxBandWidthList,
                                                     SERVER_CONNECTION_PRIORITY_LOW,
-                                                    CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                                                    CALLBACK_(NULL,NULL),  // storageUpdateProgress
                                                     CALLBACK_(NULL,NULL),  // getNamePassword
                                                     CALLBACK_(NULL,NULL),  // requestVolume
                                                     CALLBACK_(NULL,NULL),  // isPause
@@ -20842,7 +20804,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
 
   /***********************************************************************\
-  * Name   : restoreUpdateRunningInfo
+  * Name   : restoreRunningInfo
   * Purpose: update restore running info
   * Input  : runningInfo - running info data,
   *          userData    - user data
@@ -20851,10 +20813,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   * Notes  : -
   \***********************************************************************/
 
-  auto void restoreUpdateRunningInfo(const RunningInfo *runningInfo,
+  auto void restoreRunningInfo(const RunningInfo *runningInfo,
                                      void              *userData
                                     );
-  void restoreUpdateRunningInfo(const RunningInfo *runningInfo,
+  void restoreRunningInfo(const RunningInfo *runningInfo,
                                 void              *userData
                                )
   {
@@ -20927,13 +20889,13 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                 1*60*MS_PER_SECOND,
                                 resultMap,
                                 "CONFIRM",
-                                "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S messageCode=%s messageData=%'S",
+                                "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S messageCode=%s messageText=%'S",
                                 error,
                                 Error_getText(error),
                                 runningInfo->progress.storage.name,
                                 runningInfo->progress.entry.name,
                                 messageCodeToString(runningInfo->message.code),
-                                runningInfo->message.data
+                                runningInfo->message.text
                                ) != ERROR_NONE
          )
       {
@@ -21325,7 +21287,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                           &includeEntryList,
                           NULL,  // excludePatternList
                           &jobOptions,
-                          CALLBACK_(restoreUpdateRunningInfo,&restoreCommandInfo),
+                          CALLBACK_(restoreRunningInfo,&restoreCommandInfo),
                           CALLBACK_(restoreHandleError,&restoreCommandInfo),
                           CALLBACK_(getNamePassword,&restoreCommandInfo),
                           CALLBACK_(NULL,NULL),  // isPause callback

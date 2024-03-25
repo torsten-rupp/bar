@@ -161,13 +161,15 @@ LOCAL bool updateStorageRunningInfo(const StorageInfo *storageInfo)
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
-  if (storageInfo->updateRunningInfoFunction != NULL)
+  if (storageInfo->updateProgressFunction != NULL)
   {
-    result = storageInfo->updateRunningInfoFunction(storageInfo->progress.storageDoneBytes,
-                                                    storageInfo->progress.volumeNumber,
-                                                    storageInfo->progress.volumeDone,
-                                                    storageInfo->updateRunningInfoUserData
-                                                   );
+    result = storageInfo->updateProgressFunction(storageInfo->progress.storageDoneBytes,
+                                                 storageInfo->progress.volumeNumber,
+                                                 storageInfo->progress.volumeDone,
+                                                 storageInfo->progress.message.code,
+                                                 storageInfo->progress.message.text,
+                                                 storageInfo->updateProgressUserData
+                                                );
   }
   else
   {
@@ -178,22 +180,42 @@ LOCAL bool updateStorageRunningInfo(const StorageInfo *storageInfo)
 }
 
 /***********************************************************************\
-* Name   : updateStorageRunningInfo
-* Purpose: update storage running info
+* Name   : resetVolumeDone
+* Purpose: reset volume progres done
 * Input  : storageInfo - storage info
-*          percentage  - percentage [0..100]
 * Output : -
-* Return : TRUE to continue, FALSE to abort
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool updateVolumeDone(StorageInfo *storageInfo, double percentage)
+LOCAL void resetVolumeDone(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
+  storageInfo->opticalDisk.write.step = 0;
+  storageInfo->progress.volumeDone    = 0.0;
+}
+
+/***********************************************************************\
+* Name   : updateStorageRunningInfo
+* Purpose: update volume progress
+* Input  : storageInfo   - storage info
+*          stepIncrement - step increment
+*          percentage    - percentage [0..100]
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void updateVolumeDone(StorageInfo *storageInfo, uint stepIncrement, double percentage)
+{
+  assert(storageInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
+
+  storageInfo->opticalDisk.write.step += stepIncrement;
+  assert(storageInfo->opticalDisk.write.step <= storageInfo->opticalDisk.write.steps);
   storageInfo->progress.volumeDone = ((double)storageInfo->opticalDisk.write.step*100.0+percentage)/(double)(storageInfo->opticalDisk.write.steps);
-  return updateStorageRunningInfo(storageInfo);
 }
 
 #ifdef HAVE_CURL
@@ -2291,45 +2313,45 @@ uint Storage_getServerSettings(Server                 *server,
 }
 
 #ifdef NDEBUG
-  Errors Storage_init(StorageInfo                      *storageInfo,
-                      ServerIO                         *masterIO,
-                      const StorageSpecifier           *storageSpecifier,
+  Errors Storage_init(StorageInfo                   *storageInfo,
+                      ServerIO                      *masterIO,
+                      const StorageSpecifier        *storageSpecifier,
 // TODO: only storageOnMasterFlag need, pass this value and avoid jobOptions?
-                      const JobOptions                 *jobOptions,
-                      BandWidthList                    *maxBandWidthList,
-                      ServerConnectionPriorities       serverConnectionPriority,
-                      StorageUpdateRunningInfoFunction storageUpdateRunningInfoFunction,
-                      void                             *storageUpdateRunningInfoUserData,
-                      GetNamePasswordFunction          getNamePasswordFunction,
-                      void                             *getNamePasswordUserData,
-                      StorageRequestVolumeFunction     storageRequestVolumeFunction,
-                      void                             *storageRequestVolumeUserData,
-                      IsPauseFunction                  isPauseFunction,
-                      void                             *isPauseUserData,
-                      IsAbortedFunction                isAbortedFunction,
-                      void                             *isAbortedUserData,
-                      LogHandle                        *logHandle
+                      const JobOptions              *jobOptions,
+                      BandWidthList                 *maxBandWidthList,
+                      ServerConnectionPriorities    serverConnectionPriority,
+                      StorageUpdateProgressFunction storageUpdateProgressFunction,
+                      void                          *storageUpdateProgressUserData,
+                      GetNamePasswordFunction       getNamePasswordFunction,
+                      void                          *getNamePasswordUserData,
+                      StorageVolumeRequestFunction  storageVolumeRequestFunction,
+                      void                          *storageVolumeRequestUserData,
+                      IsPauseFunction               isPauseFunction,
+                      void                          *isPauseUserData,
+                      IsAbortedFunction             isAbortedFunction,
+                      void                          *isAbortedUserData,
+                      LogHandle                     *logHandle
                      )
 #else /* not NDEBUG */
-  Errors __Storage_init(const char                       *__fileName__,
-                        ulong                            __lineNb__,
-                        StorageInfo                      *storageInfo,
-                        ServerIO                         *masterIO,
-                        const StorageSpecifier           *storageSpecifier,
-                        const JobOptions                 *jobOptions,
-                        BandWidthList                    *maxBandWidthList,
-                        ServerConnectionPriorities       serverConnectionPriority,
-                        StorageUpdateRunningInfoFunction storageUpdateRunningInfoFunction,
-                        void                             *storageUpdateRunningInfoUserData,
-                        GetNamePasswordFunction          getNamePasswordFunction,
-                        void                             *getNamePasswordUserData,
-                        StorageRequestVolumeFunction     storageRequestVolumeFunction,
-                        void                             *storageRequestVolumeUserData,
-                        IsPauseFunction                  isPauseFunction,
-                        void                             *isPauseUserData,
-                        IsAbortedFunction                isAbortedFunction,
-                        void                             *isAbortedUserData,
-                        LogHandle                        *logHandle
+  Errors __Storage_init(const char                    *__fileName__,
+                        ulong                         __lineNb__,
+                        StorageInfo                   *storageInfo,
+                        ServerIO                      *masterIO,
+                        const StorageSpecifier        *storageSpecifier,
+                        const JobOptions              *jobOptions,
+                        BandWidthList                 *maxBandWidthList,
+                        ServerConnectionPriorities    serverConnectionPriority,
+                        StorageUpdateProgressFunction storageUpdateProgressFunction,
+                        void                          *storageUpdateProgressUserData,
+                        GetNamePasswordFunction       getNamePasswordFunction,
+                        void                          *getNamePasswordUserData,
+                        StorageVolumeRequestFunction  storageVolumeRequestFunction,
+                        void                          *storageVolumeRequestUserData,
+                        IsPauseFunction               isPauseFunction,
+                        void                          *isPauseUserData,
+                        IsAbortedFunction             isAbortedFunction,
+                        void                          *isAbortedUserData,
+                        LogHandle                     *logHandle
                        )
 #endif /* NDEBUG */
 {
@@ -2349,30 +2371,30 @@ uint Storage_getServerSettings(Server                 *server,
   AutoFree_init(&autoFreeList);
   Semaphore_init(&storageInfo->lock,SEMAPHORE_TYPE_BINARY);
   Storage_duplicateSpecifier(&storageInfo->storageSpecifier,storageSpecifier);
-  storageInfo->jobOptions                = jobOptions;
-  storageInfo->masterIO                  = masterIO;
-  storageInfo->logHandle                 = logHandle;
-  storageInfo->updateRunningInfoFunction = storageUpdateRunningInfoFunction;
-  storageInfo->updateRunningInfoUserData = storageUpdateRunningInfoUserData;
-  storageInfo->getNamePasswordFunction   = getNamePasswordFunction;
-  storageInfo->getNamePasswordUserData   = getNamePasswordUserData;
-  storageInfo->requestVolumeFunction     = storageRequestVolumeFunction;
-  storageInfo->requestVolumeUserData     = storageRequestVolumeUserData;
-  storageInfo->isPauseFunction           = isPauseFunction;
-  storageInfo->isPauseUserData           = isPauseUserData;
-  storageInfo->isAbortedFunction         = isAbortedFunction;
-  storageInfo->isAbortedUserData         = isAbortedUserData;
+  storageInfo->jobOptions              = jobOptions;
+  storageInfo->masterIO                = masterIO;
+  storageInfo->logHandle               = logHandle;
+  storageInfo->updateProgressFunction  = storageUpdateProgressFunction;
+  storageInfo->updateProgressUserData  = storageUpdateProgressUserData;
+  storageInfo->getNamePasswordFunction = getNamePasswordFunction;
+  storageInfo->getNamePasswordUserData = getNamePasswordUserData;
+  storageInfo->volumeRequestFunction   = storageVolumeRequestFunction;
+  storageInfo->volumeRequestUserData   = storageVolumeRequestUserData;
+  storageInfo->isPauseFunction         = isPauseFunction;
+  storageInfo->isPauseUserData         = isPauseUserData;
+  storageInfo->isAbortedFunction       = isAbortedFunction;
+  storageInfo->isAbortedUserData       = isAbortedUserData;
   if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)
   {
-    storageInfo->volumeNumber            = 0;
-    storageInfo->requestedVolumeNumber   = 0;
-    storageInfo->volumeState             = STORAGE_VOLUME_STATE_UNKNOWN;
+    storageInfo->volumeNumber        = 0;
+    storageInfo->volumeRequestNumber = 0;
+    storageInfo->volumeState         = STORAGE_VOLUME_STATE_UNKNOWN;
   }
   else
   {
-    storageInfo->volumeNumber            = 1;
-    storageInfo->requestedVolumeNumber   = 1;
-    storageInfo->volumeState             = STORAGE_VOLUME_STATE_LOADED;
+    storageInfo->volumeNumber        = 1;
+    storageInfo->volumeRequestNumber = 1;
+    storageInfo->volumeState         = STORAGE_VOLUME_STATE_LOADED;
   }
   AUTOFREE_ADD(&autoFreeList,&storageInfo->lock,{ Semaphore_done(&storageInfo->lock); });
   AUTOFREE_ADD(&autoFreeList,&storageInfo->storageSpecifier,{ Storage_doneSpecifier(&storageInfo->storageSpecifier); });
@@ -2454,6 +2476,8 @@ uint Storage_getServerSettings(Server                 *server,
   storageInfo->progress.storageDoneBytes = 0LL;
   storageInfo->progress.volumeNumber     = 0;
   storageInfo->progress.volumeDone       = 0.0;
+  storageInfo->progress.message.code     = MESSAGE_CODE_NONE;
+  storageInfo->progress.message.text     = String_new();
 
   // free resources
   AutoFree_done(&autoFreeList);
@@ -2486,6 +2510,8 @@ uint Storage_getServerSettings(Server                 *server,
   #else /* not NDEBUG */
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageInfo,StorageInfo);
   #endif /* NDEBUG */
+
+  String_delete(storageInfo->progress.message.text);
 
   error = ERROR_UNKNOWN;
   if (   (   (storageInfo->jobOptions == NULL)
@@ -4096,14 +4122,14 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return error;
 }
 
-Errors Storage_copyToLocal(const StorageSpecifier          *storageSpecifier,
-                           ConstString                     localFileName,
-                           const JobOptions                *jobOptions,
-                           BandWidthList                   *maxBandWidthList,
-                           StorageUpdateRunningInfoFunction storageUpdateRunningInfoFunction,
-                           void                            *storageUpdateRunningInfoUserData,
-                           StorageRequestVolumeFunction    storageRequestVolumeFunction,
-                           void                            *storageRequestVolumeUserData
+Errors Storage_copyToLocal(const StorageSpecifier        *storageSpecifier,
+                           ConstString                   localFileName,
+                           const JobOptions              *jobOptions,
+                           BandWidthList                 *maxBandWidthList,
+                           StorageUpdateProgressFunction storageUpdateProgressFunction,
+                           void                          *storageUpdateProgressUserData,
+                           StorageVolumeRequestFunction  storageVolumeRequestFunction,
+                           void                          *storageVolumeRequestUserData
                           )
 {
   AutoFreeList  autoFreeList;
@@ -4135,9 +4161,9 @@ NULL, // masterIO
                        jobOptions,
                        maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(storageUpdateRunningInfoFunction,storageUpdateRunningInfoUserData),
+                       CALLBACK_(storageUpdateProgressFunction,storageUpdateProgressUserData),
                        CALLBACK_(NULL,NULL),  // updateStatusInfo
-                       CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData),
+                       CALLBACK_(storageVolumeRequestFunction,storageVolumeRequestUserData),
                        CALLBACK_(NULL,NULL),  // isPause
                        CALLBACK_(NULL,NULL),  // isAborted
                        NULL  // logHandle

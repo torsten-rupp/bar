@@ -4930,7 +4930,7 @@ public class TabJobs
           widgetArchivePartSize.setToolTipText(BARControl.tr("Size limit for one storage file part."));
           widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","140M","215M","240M","250M","256M","260M","280M","425M","470M","512M","620M","660M","800M","850M","1G","1800M","2G","4G","5G","6.4G","8G","10G","20G"});
           widgetArchivePartSize.setData("showedErrorDialog",false);
-          Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W);
+          Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
           Widgets.addModifyListener(new WidgetModifyListener(widgetArchivePartSize,archivePartSizeFlag)
           {
             @Override

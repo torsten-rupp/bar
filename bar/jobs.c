@@ -1150,10 +1150,6 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecondFilter       );
   Misc_performanceFilterDone(&jobNode->runningInfo.entriesPerSecondFilter     );
 
-  String_delete(jobNode->runningInfo.lastErrorData);
-
-  String_delete(jobNode->volumeMessage);
-
   String_delete(jobNode->abortedByInfo);
 
   String_delete(jobNode->customText);
@@ -1338,9 +1334,7 @@ JobNode *Job_new(JobTypes    jobType,
 
   jobNode->requestedAbortFlag               = FALSE;
   jobNode->abortedByInfo                    = String_new();
-  jobNode->requestedVolumeNumber            = 0;
   jobNode->volumeNumber                     = 0;
-  jobNode->volumeMessage                    = String_new();
   jobNode->volumeUnloadFlag                 = FALSE;
 
   jobNode->runningInfo.lastExecutedDateTime = 0LL;
@@ -1417,9 +1411,7 @@ JobNode *Job_copy(const JobNode *jobNode,
 
   newJobNode->requestedAbortFlag               = FALSE;
   newJobNode->abortedByInfo                    = String_new();
-  newJobNode->requestedVolumeNumber            = 0;
   newJobNode->volumeNumber                     = 0;
-  newJobNode->volumeMessage                    = String_new();
   newJobNode->volumeUnloadFlag                 = FALSE;
 
   newJobNode->runningInfo.lastExecutedDateTime = 0LL;
@@ -2612,9 +2604,7 @@ void Job_trigger(JobNode      *jobNode,
     // reset running info
     jobNode->requestedAbortFlag    = FALSE;
     String_clear(jobNode->abortedByInfo);
-    jobNode->requestedVolumeNumber = 0;
     jobNode->volumeNumber          = 0;
-    String_clear(jobNode->volumeMessage);
     jobNode->volumeUnloadFlag      = FALSE;
     Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 

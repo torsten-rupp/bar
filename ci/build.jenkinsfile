@@ -93,7 +93,7 @@ def build()
               sh "sudo -n /bin/chown -R jenkins:jenkins /home/jenkins"
               sh "sudo -n /bin/chown -R test:test /var/www"
 
-              sh "make test_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
+              sh "make tests_smoke"+binaryExtension+" "+TEST_SETTINGS+" O='--verbose=1'"
             }
           }
         }

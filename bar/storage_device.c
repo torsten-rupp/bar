@@ -80,12 +80,12 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
 {
   TextMacros                  (textMacros,2);
   bool                        volumeRequestedFlag;
-  StorageRequestVolumeResults storageRequestVolumeResult;
+  StorageVolumeRequestResults storageRequestVolumeResult;
 
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING("%device",storageInfo->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_X_INT   ("%number",storageInfo->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_X_INT   ("%number",storageInfo->volumeRequestNumber,        NULL);
   }
 
   if (   (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
@@ -109,20 +109,20 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
 
   // request new volume
   volumeRequestedFlag  = FALSE;
-  storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_UNKNOWN;
-  if      (storageInfo->requestVolumeFunction != NULL)
+  storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_UNKNOWN;
+  if      (storageInfo->volumeRequestFunction != NULL)
   {
     volumeRequestedFlag = TRUE;
 
     // request new volume via call back, unload if requested
     do
     {
-      storageRequestVolumeResult = storageInfo->requestVolumeFunction(STORAGE_REQUEST_VOLUME_TYPE_NEW,
-                                                                  storageInfo->requestedVolumeNumber,
-                                                                  NULL,  // message
-                                                                  storageInfo->requestVolumeUserData
-                                                                 );
-      if (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD)
+      storageRequestVolumeResult = storageInfo->volumeRequestFunction(STORAGE_REQUEST_VOLUME_TYPE_NEW,
+                                                                      storageInfo->volumeRequestNumber,
+                                                                      NULL,  // message
+                                                                      storageInfo->volumeRequestUserData
+                                                                     );
+      if (storageRequestVolumeResult == STORAGE_VOLUME_REQUEST_RESULT_UNLOAD)
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
         printInfo(1,"Unload volume...");
@@ -137,7 +137,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         printInfo(1,"OK\n");
       }
     }
-    while (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD);
+    while (storageRequestVolumeResult == STORAGE_VOLUME_REQUEST_RESULT_UNLOAD);
 
     storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
@@ -146,7 +146,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
     volumeRequestedFlag = TRUE;
 
     // request new volume via external command
-    printInfo(1,"Request new volume #%d...",storageInfo->requestedVolumeNumber);
+    printInfo(1,"Request new volume #%d...",storageInfo->volumeRequestNumber);
     if (Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
                             textMacros.data,
                             textMacros.count,
@@ -157,12 +157,12 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
        )
     {
       printInfo(1,"OK\n");
-      storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
+      storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
     }
     else
     {
       printInfo(1,"FAIL\n");
-      storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_FAIL;
+      storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_FAIL;
     }
 
     storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
@@ -175,14 +175,22 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
       {
         volumeRequestedFlag = TRUE;
 
-        printInfo(0,"Please insert volume #%d into drive '%s' and press ENTER to continue\n",storageInfo->requestedVolumeNumber,storageInfo->storageSpecifier.deviceName);
+        printInfo(0,
+                  "Please insert volume #%d into drive '%s' and press ENTER to continue\n",
+                  storageInfo->volumeRequestNumber,
+                  storageInfo->storageSpecifier.deviceName
+                 );
         Misc_waitEnter();
 
-        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
+        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
       }
       else
       {
-        printInfo(0,"Please insert volume #%d into drive '%s'\n",storageInfo->requestedVolumeNumber,storageInfo->storageSpecifier.deviceName);
+        printInfo(0,
+                  "Please insert volume #%d into drive '%s'\n",
+                  storageInfo->volumeRequestNumber,
+                  storageInfo->storageSpecifier.deviceName
+                 );
       }
     }
     else
@@ -194,7 +202,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         printInfo(0,"Press ENTER to continue\n");
         Misc_waitEnter();
 
-        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
+        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
       }
     }
 
@@ -205,9 +213,9 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
   {
     switch (storageRequestVolumeResult)
     {
-      case STORAGE_REQUEST_VOLUME_RESULT_OK:
+      case STORAGE_VOLUME_REQUEST_RESULT_OK:
         // load volume; sleep a short time to give hardware time for reading volume information
-        printInfo(1,"Load volume #%d...",storageInfo->requestedVolumeNumber);
+        printInfo(1,"Load volume #%d...",storageInfo->volumeRequestNumber);
         Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
                             textMacros.data,
                             textMacros.count,
@@ -219,7 +227,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         printInfo(1,"OK\n");
 
         // store new volume number
-        storageInfo->volumeNumber = storageInfo->requestedVolumeNumber;
+        storageInfo->volumeNumber = storageInfo->volumeRequestNumber;
 
         // update volume info
         storageInfo->progress.volumeNumber = storageInfo->volumeNumber;
@@ -228,9 +236,9 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         storageInfo->volumeState = STORAGE_VOLUME_STATE_LOADED;
         return ERROR_NONE;
         break;
-      case STORAGE_REQUEST_VOLUME_RESULT_ABORTED:
+      case STORAGE_VOLUME_REQUEST_RESULT_ABORTED:
         // load volume
-        printInfo(1,"Load volume #%d...",storageInfo->requestedVolumeNumber);
+        printInfo(1,"Load volume #%d...",storageInfo->volumeRequestNumber);
         Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
                             textMacros.data,
                             textMacros.count,
@@ -472,7 +480,7 @@ LOCAL Errors StorageDevice_init(StorageInfo            *storageInfo,
   }
 
   // request first volume for device
-  storageInfo->requestedVolumeNumber = 1;
+  storageInfo->volumeRequestNumber = 1;
 
   // free resources
   Configuration_doneDeviceSettings(&device);
@@ -538,11 +546,11 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
     storageInfo->device.write.number++;
     storageInfo->device.write.newVolumeFlag = FALSE;
 
-    storageInfo->requestedVolumeNumber = storageInfo->device.write.number;
+    storageInfo->volumeRequestNumber = storageInfo->device.write.number;
   }
 
   // check if new volume is required
-  if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
+  if (storageInfo->volumeNumber != storageInfo->volumeRequestNumber)
   {
     error = requestNewDeviceVolume(storageInfo,FALSE);
   }
@@ -553,7 +561,7 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
   {
     TEXT_MACRO_X_STRING("%device",storageInfo->storageSpecifier.deviceName,NULL);
     TEXT_MACRO_X_STRING("%file",  archiveName,                             NULL);
-    TEXT_MACRO_X_INT   ("%number",storageInfo->requestedVolumeNumber,      NULL);
+    TEXT_MACRO_X_INT   ("%number",storageInfo->volumeRequestNumber,        NULL);
     TEXT_MACRO_X_INT   ("%j",     j,                                       NULL);
     TEXT_MACRO_X_INT   ("%j1",    (j > 1) ? j-1 : 1,                       NULL);
   }
@@ -621,7 +629,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     updateStorageRunningInfo(storageInfo);
 
     // check if new volume is required
-    if (storageInfo->volumeNumber != storageInfo->requestedVolumeNumber)
+    if (storageInfo->volumeNumber != storageInfo->volumeRequestNumber)
     {
       if (error == ERROR_NONE)
       {
@@ -905,8 +913,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
             printInfo(1,"OK\n");
             logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked volume #%u",storageInfo->volumeNumber);
             logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
-            storageInfo->opticalDisk.write.step++;
-            updateVolumeDone(storageInfo,0);
+            updateVolumeDone(storageInfo,1,0);
+            updateStorageRunningInfo(storageInfo);
           }
           else
           {
@@ -983,8 +991,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       {
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written image volume #%u",storageInfo->volumeNumber);
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
-        storageInfo->opticalDisk.write.step++;
-        updateVolumeDone(storageInfo,0);
+        updateVolumeDone(storageInfo,1,0);
+        updateStorageRunningInfo(storageInfo);
       }
     }
 
@@ -993,7 +1001,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     String_delete(imageFileName);
 
     // update running info
-    updateVolumeDone(storageInfo,100.0);
+    updateVolumeDone(storageInfo,0,100.0);
+    updateStorageRunningInfo(storageInfo);
 
     // delete stored files
     fileName = String_new();

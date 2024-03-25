@@ -2992,8 +2992,6 @@ void Misc_performanceFilterInit(PerformanceFilter *performanceFilter,
                                 uint              maxSeconds
                                )
 {
-  uint z;
-
   assert(performanceFilter != NULL);
   assert(maxSeconds > 0);
 
@@ -3002,12 +3000,12 @@ void Misc_performanceFilterInit(PerformanceFilter *performanceFilter,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  performanceFilter->performanceValues[0].timeStamp = Misc_getTimestamp()/1000L;
+  performanceFilter->performanceValues[0].timeStamp = Misc_getTimestamp()/US_PER_MS;
   performanceFilter->performanceValues[0].value     = 0.0;
-  for (z = 1; z < maxSeconds; z++)
+  for (uint i = 1; i < maxSeconds; i++)
   {
-    performanceFilter->performanceValues[z].timeStamp = 0;
-    performanceFilter->performanceValues[z].value     = 0.0;
+    performanceFilter->performanceValues[i].timeStamp = 0;
+    performanceFilter->performanceValues[i].value     = 0.0;
   }
   performanceFilter->maxSeconds = maxSeconds;
   performanceFilter->seconds    = 0;
@@ -3026,17 +3024,15 @@ void Misc_performanceFilterDone(PerformanceFilter *performanceFilter)
 
 void Misc_performanceFilterClear(PerformanceFilter *performanceFilter)
 {
-  uint z;
-
   assert(performanceFilter != NULL);
   assert(performanceFilter->performanceValues != NULL);
 
-  performanceFilter->performanceValues[0].timeStamp = Misc_getTimestamp()/1000L;
+  performanceFilter->performanceValues[0].timeStamp = Misc_getTimestamp()/US_PER_MS;
   performanceFilter->performanceValues[0].value     = 0.0;
-  for (z = 1; z < performanceFilter->maxSeconds; z++)
+  for (uint i = 1; i < performanceFilter->maxSeconds; i++)
   {
-    performanceFilter->performanceValues[z].timeStamp = 0;
-    performanceFilter->performanceValues[z].value     = 0.0;
+    performanceFilter->performanceValues[i].timeStamp = 0;
+    performanceFilter->performanceValues[i].value     = 0.0;
   }
   performanceFilter->seconds = 0;
   performanceFilter->index   = 0;
@@ -3057,16 +3053,15 @@ void Misc_performanceFilterAdd(PerformanceFilter *performanceFilter,
   assert(performanceFilter->performanceValues != NULL);
   assert(performanceFilter->index < performanceFilter->maxSeconds);
 
-  timeStamp = Misc_getTimestamp()/1000L;
-
-  if (timeStamp > (performanceFilter->performanceValues[performanceFilter->index].timeStamp+1000))
+  timeStamp = Misc_getTimestamp()/US_PER_MS;
+  if (timeStamp > (performanceFilter->performanceValues[performanceFilter->index].timeStamp+MS_PER_SECOND))
   {
     // calculate new average value
     if (performanceFilter->seconds > 0)
     {
       valueDelta     = value-performanceFilter->performanceValues[performanceFilter->index].value;
       timeStampDelta = timeStamp-performanceFilter->performanceValues[performanceFilter->index].timeStamp;
-      average = (valueDelta*1000)/(double)timeStampDelta;
+      average = (valueDelta*MS_PER_SECOND)/(double)timeStampDelta;
       if (performanceFilter->n > 0)
       {
         performanceFilter->average = average/(double)performanceFilter->n+((double)(performanceFilter->n-1)*performanceFilter->average)/(double)performanceFilter->n;
@@ -3109,7 +3104,7 @@ double Misc_performanceFilterGetValue(const PerformanceFilter *performanceFilter
 
   valueDelta     = performanceFilter->performanceValues[i1].value-performanceFilter->performanceValues[i0].value;
   timeStampDelta = performanceFilter->performanceValues[i1].timeStamp-performanceFilter->performanceValues[i0].timeStamp;
-  return (timeStampDelta > 0) ? (valueDelta*1000)/(double)timeStampDelta : 0.0;
+  return (timeStampDelta > 0) ? (valueDelta*MS_PER_SECOND)/(double)timeStampDelta : 0.0;
 }
 
 double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilter)

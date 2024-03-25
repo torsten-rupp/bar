@@ -2133,7 +2133,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                        convertInfo->newJobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                       CALLBACK_(NULL,NULL),  // storageUpdateProgress
                        CALLBACK_(NULL,NULL),  // getPassword
                        CALLBACK_(NULL,NULL),  // requestVolume
                        CALLBACK_(NULL,NULL),  // isPause
@@ -2232,7 +2232,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                        convertInfo->newJobOptions,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
-                       CALLBACK_(NULL,NULL),  // storageUpdateRunningInfo
+                       CALLBACK_(NULL,NULL),  // storageUpdateProgress
                        CALLBACK_(NULL,NULL),  // getPassword
                        CALLBACK_(NULL,NULL),  // requestVolume
                        CALLBACK_(NULL,NULL),  // isPause

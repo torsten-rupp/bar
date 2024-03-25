@@ -635,6 +635,13 @@ ERROR OPEN_OPTICAL_DISK
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR READ_OPTICAL_DISK
+  stringSet(errorText,sizeof(errorText),TR("read CD/DVD/BD disk failed"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR OPEN_ISO9660_FILE
   stringSet(errorText,sizeof(errorText),TR("open ISO 9660 image failed"));
   if (!stringIsEmpty(ERROR_DATA))
