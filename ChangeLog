@@ -1,10 +1,13 @@
 2024-02-29 24
   * added support to create PAR2 checksum files
 
-2024-03-05 23b
+2024-03-28 23b
   * fixed write CD/DVD/BD
-  * added verify CD/DVD/BD
+  * added verify CD/DVD/BD: growisofs does not always return
+    an exit code on failure. Thus read the data back which was
+    just written and compare.
   * BARControl: fixed request CD/DVD/BD volume
+  * BARControl: improved CD/DVD/BD messages
 
 2024-01-27 23a
   * fixed scheduler trigger job, check time (1min instead every

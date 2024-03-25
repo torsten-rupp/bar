@@ -68,9 +68,9 @@
 *          runningInfoFunction          - running info callback
 *                                         function (can be NULL)
 *          runningInfoUserData          - user data for running info
-*          storageRequestVolumeFunction - request volume callback
+*          storageVolumeRequestFunction - request volume callback
 *                                         function (can be NULL)
-*          storageRequestVolumeUserData - user data for request
+*          storageVolumeRequestUserData - user data for request
 *                                         volume
 *          isPauseCreateFunction        - is pause check callback (can
 *                                         be NULL)
@@ -105,8 +105,8 @@ Errors Command_create(ServerIO                     *masterIO,
                       void                         *getNamePasswordUserData,
                       RunningInfoFunction          runningInfoFunction,
                       void                         *runningInfoUserData,
-                      StorageRequestVolumeFunction storageRequestVolumeFunction,
-                      void                         *storageRequestVolumeUserData,
+                      StorageVolumeRequestFunction storageVolumeRequestFunction,
+                      void                         *storageVolumeRequestUserData,
                       IsPauseFunction              isPauseCreateFunction,
                       void                         *isPauseCreateUserData,
                       IsPauseFunction              isPauseStorageFunction,

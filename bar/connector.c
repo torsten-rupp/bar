@@ -4010,9 +4010,9 @@ Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
 //TODO
-CALLBACK_(NULL,NULL),//                       CALLBACK_(updateStorageRunningInfo,connectorInfo),
+CALLBACK_(NULL,NULL),//                       CALLBACK_(storageUpdateProgress,connectorInfo),
 CALLBACK_(NULL,NULL),//                       CALLBACK_(getPasswordFunction,getPasswordUserData),
-CALLBACK_(NULL,NULL),//                       CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData)
+CALLBACK_(NULL,NULL),//                       CALLBACK_(storageVolumeRequestFunction,storageVolumeRequestUserData)
                        CALLBACK_(NULL,NULL),  // isPause
                        CALLBACK_(NULL,NULL),  // isAborted
                        NULL  // logHandle
@@ -4128,8 +4128,8 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         void                         *getNamePasswordUserData,
                         RunningInfoFunction          runningInfoFunction,
                         void                         *runningInfoUserData,
-                        StorageRequestVolumeFunction storageRequestVolumeFunction,
-                        void                         *storageRequestVolumeUserData
+                        StorageVolumeRequestFunction storageVolumeRequestFunction,
+                        void                         *storageVolumeRequestUserData
                        )
 {
   /***********************************************************************\
@@ -4165,31 +4165,59 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
   }
 
   /***********************************************************************\
-  * Name   : parseMessageCode
-  * Purpose: parse message code text
-  * Input  : jobStateText - job state text
-  *          jobState     - job state variable
-  *          userData     - user data (not used)
-  * Output : jobState - job state
+  * Name   : parseVolumeRequest
+  * Purpose: parse volume request text
+  * Input  : text          - text
+  *          volumeRequest - volume request variable
+  *          userData      - user data (not used)
+  * Output : volumeRequest - volume request
   * Return : always TRUE
   * Notes  : -
   \***********************************************************************/
 
-  auto bool parseMessageCode(const char *messageCodeText, MessageCodes *messageCode, void *userData);
-  bool parseMessageCode(const char *messageCodeText, MessageCodes *messageCode, void *userData)
+  auto bool parseVolumeRequest(const char *text, VolumeRequests *volumeRequest, void *userData);
+  bool parseVolumeRequest(const char *text, VolumeRequests *volumeRequest, void *userData)
   {
-    assert(messageCodeText != NULL);
+    assert(text != NULL);
+    assert(volumeRequest != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    if      (stringEquals(text,"-"          )) (*volumeRequest) = VOLUME_REQUEST_NONE;
+    else if (stringEquals(text,"INITIAL"    )) (*volumeRequest) = VOLUME_REQUEST_INITIAL;
+    else if (stringEquals(text,"REPLACEMENT")) (*volumeRequest) = VOLUME_REQUEST_REPLACEMENT;
+    else                                       (*volumeRequest) = VOLUME_REQUEST_NONE;
+
+    return TRUE;
+  }
+
+  /***********************************************************************\
+  * Name   : parseMessageCode
+  * Purpose: parse message code text
+  * Input  : text        - text
+  *          messageCode - message code variable
+  *          userData    - user data (not used)
+  * Output : messageCode - message code
+  * Return : always TRUE
+  * Notes  : -
+  \***********************************************************************/
+
+  auto bool parseMessageCode(const char *text, MessageCodes *messageCode, void *userData);
+  bool parseMessageCode(const char *text, MessageCodes *messageCode, void *userData)
+  {
+    assert(text != NULL);
     assert(messageCode != NULL);
 
     UNUSED_VARIABLE(userData);
 
-    if      (stringEquals(messageCodeText,"-"                         )) (*messageCode) = MESSAGE_CODE_NONE;
-    else if (stringEquals(messageCodeText,"WAIT_FOR_TEMPORARY_SPACE"  )) (*messageCode) = MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE;
-    else if (stringEquals(messageCodeText,"REQUEST_VOLUME"            )) (*messageCode) = MESSAGE_CODE_REQUEST_VOLUME;
-    else if (stringEquals(messageCodeText,"ADD_ERROR_CORRECTION_CODES")) (*messageCode) = MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES;
-    else if (stringEquals(messageCodeText,"BLANK_VOLUME"              )) (*messageCode) = MESSAGE_CODE_BLANK_VOLUME;
-    else if (stringEquals(messageCodeText,"WRITE_VOLUME"              )) (*messageCode) = MESSAGE_CODE_WRITE_VOLUME;
-    else                                                                 (*messageCode) = MESSAGE_CODE_NONE;
+    if      (stringEquals(text,"-"                         )) (*messageCode) = MESSAGE_CODE_NONE;
+    else if (stringEquals(text,"WAIT_FOR_TEMPORARY_SPACE"  )) (*messageCode) = MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE;
+    else if (stringEquals(text,"BLANK_VOLUME"              )) (*messageCode) = MESSAGE_CODE_BLANK_VOLUME;
+    else if (stringEquals(text,"CREATE_IMAGE"              )) (*messageCode) = MESSAGE_CODE_CREATE_IMAGE;
+    else if (stringEquals(text,"ADD_ERROR_CORRECTION_CODES")) (*messageCode) = MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES;
+    else if (stringEquals(text,"WRITE_VOLUME"              )) (*messageCode) = MESSAGE_CODE_WRITE_VOLUME;
+    else if (stringEquals(text,"VERIFY_VOLUME"             )) (*messageCode) = MESSAGE_CODE_VERIFY_VOLUME;
+                                                              (*messageCode) = MESSAGE_CODE_NONE;
 
     return TRUE;
   }
@@ -4207,8 +4235,8 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
 
 UNUSED_VARIABLE(getNamePasswordFunction);
 UNUSED_VARIABLE(getNamePasswordUserData);
-UNUSED_VARIABLE(storageRequestVolumeFunction);
-UNUSED_VARIABLE(storageRequestVolumeUserData);
+UNUSED_VARIABLE(storageVolumeRequestFunction);
+UNUSED_VARIABLE(storageVolumeRequestUserData);
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -4293,6 +4321,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                        StringMap_getEnum  (resultMap,"state",                &state,CALLBACK_((StringMapParseEnumFunction)parseJobState,NULL),JOB_STATE_NONE);
                                        StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_CODE_NONE);
                                        StringMap_getString(resultMap,"errorData",            errorData,NULL);
+
                                        StringMap_getULong (resultMap,"doneCount",            &runningInfo.progress.done.count,0L);
                                        StringMap_getUInt64(resultMap,"doneSize",             &runningInfo.progress.done.size,0LL);
                                        StringMap_getULong (resultMap,"totalEntryCount",      &runningInfo.progress.total.count,0L);
@@ -4312,13 +4341,18 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                        StringMap_getUInt64(resultMap,"storageTotalSize",     &runningInfo.progress.storage.totalSize,0L);
                                        StringMap_getUInt  (resultMap,"volumeNumber",         &runningInfo.progress.volume.number,0);
                                        StringMap_getDouble(resultMap,"volumeDone",           &runningInfo.progress.volume.done,0.0);
+
+                                       /* Note: not use, recalculated in running info function
+                                       StringMap_getULong (resultMap,"entriesPerSecond",     &statusInfo.entriesPerSecond,0L);
+                                       StringMap_getULong (resultMap,"bytesPerSecond",       &statusInfo.bytesPerSecond,0L);
+                                       StringMap_getULong (resultMap,"storageBytesPerSecond",&statusInfo.storageBytesPerSecond,0L);
+                                       StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
+                                       */
+
+                                       StringMap_getEnum  (resultMap,"volumeRequest",        &runningInfo.volumeRequest,CALLBACK_((StringMapParseEnumFunction)parseVolumeRequest,NULL),VOLUME_REQUEST_NONE);
+                                       StringMap_getUInt  (resultMap,"volumeRequestNumber",  &runningInfo.volumeRequestNumber,0);
                                        StringMap_getEnum  (resultMap,"messageCode",          &runningInfo.message.code,CALLBACK_((StringMapParseEnumFunction)parseMessageCode,NULL),MESSAGE_CODE_NONE);
-                                       StringMap_getString(resultMap,"messageData",          runningInfo.message.data,NULL);
-//TODO
-//                                       StringMap_getULong (resultMap,"entriesPerSecond",    &statusInfo.entriesPerSecond,0L);
-//                                       StringMap_getULong (resultMap,"bytesPerSecond",    &statusInfo.bytesPerSecond,0L);
-//                                       StringMap_getULong (resultMap,"storageBytesPerSecond",    &statusInfo.storageBytesPerSecond,0L);
-//                                       StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
+                                       StringMap_getString(resultMap,"messageText",          runningInfo.message.text,NULL);
 
                                        return (errorCode != ERROR_CODE_NONE)
                                                 ? ERRORF_(errorCode,"%s",String_cString(errorData))

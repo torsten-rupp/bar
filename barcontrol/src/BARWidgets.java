@@ -4527,8 +4527,8 @@ public class BARWidgets
      * @param deviceNameVariable device name variable (can be null)
      * @param volumeSizeVariable volume size variable (can be null)
      * @param eccVariable add error correction codes variable (can be null)
-     * @param blankVariable blank volumn variable (can be null)
-     * @param waitFirstVolumeVariable wait for first volumn variable (can be null)
+     * @param blankVariable blank volume variable (can be null)
+     * @param waitFirstVolumeVariable wait for first volume variable (can be null)
      * @param archivePartSizeFlag archive parts enable variable (can be null)
      * @param archivePartSize archive part size variable (can be null)
      */
