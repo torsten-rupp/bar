@@ -4971,7 +4971,7 @@ public class TabJobs
                 long n = Units.parseByteSize(string);
                 archivePartSize.set(n);
                 BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
-                widget.setText(Units.formatByteSize(n));
+                widget.setText(Units.formatSize(n));
                 widget.setBackground(null);
               }
               catch (NumberFormatException exception)
@@ -4998,7 +4998,7 @@ public class TabJobs
                 long n = Units.parseByteSize(string);
                 archivePartSize.set(n);
                 BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
-                widget.setText(Units.formatByteSize(n));
+                widget.setText(Units.formatSize(n));
                 widget.setBackground(null);
               }
               catch (NumberFormatException exception)
@@ -5034,7 +5034,7 @@ public class TabJobs
                 long n = Units.parseByteSize(string);
                 archivePartSize.set(n);
                 BARServer.setJobOption(selectedJobData.uuid,archivePartSize);
-                widget.setText(Units.formatByteSize(n));
+                widget.setText(Units.formatSize(n));
                 widget.setBackground(null);
               }
               catch (NumberFormatException exception)
@@ -5057,7 +5057,7 @@ public class TabJobs
             @Override
             public String getString(WidgetVariable variable)
             {
-              return Units.formatByteSize(variable.getLong());
+              return Units.formatSize(variable.getLong());
             }
           });
 
