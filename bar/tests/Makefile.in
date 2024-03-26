@@ -1216,7 +1216,7 @@ tests_data_distclean: \
 
 tests1 tests_basic: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 1: basic)
+	@$(call functionInfoBegin,Tests 1: basic)
 	@$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -1256,7 +1256,7 @@ tests1-valgrind tests_basic-valgrind:
 # TODO: split into tests_compress tests_compress_large
 tests2 tests_compress: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 2: compress)
+	@$(call functionInfoBegin,Tests 2: compress)
 	for compress in $(TEST_MIN_COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -1334,7 +1334,7 @@ tests2-valgrind tests_compress-valgrind:
 
 tests_delta_compress: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 2: delta compress)
+	@$(call functionInfoBegin,Tests 2: delta compress)
 	for compress in $(TEST_COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -1376,7 +1376,7 @@ tests_delta_compress-valgrind:
 tests3 tests_crypt: \
   $(TEST_BAR) \
   $(TEST_KEYS)
-	@$(call functionInfoBegin,Test 3: crypt)
+	@$(call functionInfoBegin,Tests 3: crypt)
 	for crypt in $(TEST_CRYPT_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -1437,7 +1437,7 @@ tests3-valgrind tests_crypt-valgrind:
 tests4 tests_asymmetric_crypt: \
   $(TEST_BAR) \
   $(TEST_KEYS)
-	@$(call functionInfoBegin,Test 4: asymmetric crypt)
+	@$(call functionInfoBegin,Tests 4: asymmetric crypt)
 	for crypt in $(TEST_CRYPT_NAMES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -1506,7 +1506,7 @@ tests4-valgrind tests_asymmetric_crypt-valgrind:
 tests5 tests_signatures: \
   $(TEST_BAR) \
   $(TEST_KEYS)
-	@$(call functionInfoBegin,Test 5: signatures)
+	@$(call functionInfoBegin,Tests 5: signatures)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -1567,7 +1567,7 @@ tests5-valgrind tests_signatures-valgrind:
 
 tests6 tests_split: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 6: split)
+	@$(call functionInfoBegin,Tests 6: split)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test-####" \
@@ -1616,7 +1616,7 @@ tests6-valgrind tests_split-valgrind:
 tests7 tests_convert: \
   $(TEST_BAR) \
   $(TEST_KEYS)
-	@$(call functionInfoBegin,Test 7: convert)
+	@$(call functionInfoBegin,Tests 7: convert)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -1640,7 +1640,7 @@ tests7-valgrind tests_convert-valgrind:
 
 tests8 tests_image: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 8: image)
+	@$(call functionInfoBegin,Tests 8: image)
 	for compress in $(IMAGE_TEST_COMPRESS_NAMES); do \
             $(MAKE) \
               BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -1681,7 +1681,7 @@ tests8-valgrind tests_image-valgrind:
 
 tests9 tests_storage: \
   $(TEST_BAR)
-	@$(ECHO_NO_LF) "Test 9: storage..."
+	@$(ECHO_NO_LF) "Tests 9: storage..."
 	@$(MAKE) tests_storage_file \
            tests_storage_ftp \
            tests_storage_scp \
@@ -2061,7 +2061,6 @@ tests_storage_optical-valgrind:
 
 tests_storage_device: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 11: device)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -2114,7 +2113,7 @@ tests10-valgrind tests_huge-valgrind:
 tests11 tests_index: \
   $(TEST_BAR) \
   $(TEST_BAR_INDEX)
-	@$(call functionInfoBegin,Test 13: index)
+	@$(call functionInfoBegin,Tests 11: index)
 	for testIndexDatabase in $(TEST_INDEX_DATABASES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -2146,7 +2145,7 @@ tests11-valgrind tests_index-valgrind:
 
 tests12 tests_server: \
   $(TEST_BAR)
-	@$(call functionInfoBegin,Test 14: server)
+	@$(call functionInfoBegin,Tests 12: server)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -2181,7 +2180,7 @@ tests13_master_slave tests_master_slave: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
-	@$(call functionInfoBegin,Test 14: master)
+	@$(call functionInfoBegin,Tests 13: master)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -2207,7 +2206,7 @@ tests13_master tests_master: \
   $(TEST_BAR) \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
-	@$(call functionInfoBegin,Test 14: master)
+	@$(call functionInfoBegin,Tests 13: master)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -2233,7 +2232,7 @@ tests13_slave tests_slave: \
   $(TEST_BAR) \
   $(TEST_SLAVE_CONFIG) \
   $(TEST_SLAVE_JOBS_DIRECTORY)
-	@$(call functionInfoBegin,Test 14: slave)
+	@$(call functionInfoBegin,Tests 13: slave)
 	$(MAKE) \
           BAR_STORAGE="$(INTERMEDIATE_DIR)" \
           BAR_FILE="test" \
@@ -2258,7 +2257,7 @@ tests13_slave-valgrind tests_slave-valgrind:
 tests_combined: \
   $(TEST_BAR) \
   $(TEST_KEYS)
-	@$(call functionInfoBegin,Test combined)
+	@$(call functionInfoBegin,Tests combined)
 	for compress in $(COMBINED_TEST_COMPRESS_NAMES); do \
           for crypt in $(COMBINED_TEST_CRYPT_NAMES); do \
             $(MAKE) \
@@ -2313,7 +2312,7 @@ tests_arguments: \
   $(TEST_JOBS_DIRECTORY) \
   $(TEST_KEYS) \
   $(TEST_FILES)
-	@$(call functionInfoBegin,Test arguments)
+	@$(call functionInfoBegin,Tests arguments)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(ECHO) "# test config" >$(INTERMEDIATE_DIR)/test.cfg
 	@#
@@ -2853,7 +2852,7 @@ tests_config: \
   $(TEST_BAR) \
   $(TEST_CONFIGS) \
   $(TEST_KEYS)
-	@$(call functionInfoBegin,Test configurations)
+	@$(call functionInfoBegin,Tests configurations)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@$(call functionCleanTestFiles)
 	@#
@@ -2898,7 +2897,7 @@ tests_config-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_config
 
 tests_miscellaneous tests_misc:
-	@$(call functionInfoBegin,Test miscellaneous)
+	@$(call functionInfoBegin,Tests miscellaneous)
 	@$(call functionCleanTestFiles)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@#
