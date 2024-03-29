@@ -565,7 +565,7 @@ public class Settings
   public static boolean                        pairMasterFlag                  = false;
 
   // commands and data
-  public static String                         runJobName                      = null;
+  public static LinkedHashSet<String>          runJobNames                     = new LinkedHashSet<String>();
   public static ArchiveTypes                   archiveType                     = ArchiveTypes.NORMAL;
   public static String                         abortJobName                    = null;
   public static int                            pauseTime                       = 0;

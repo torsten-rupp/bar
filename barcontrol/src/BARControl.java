@@ -2914,7 +2914,7 @@ public class BARControl
     new Option("--pair-master",                  null,Options.Types.BOOLEAN,    "pairMasterFlag"),
 
     new Option("--select-job",                   null,Options.Types.STRING,     "selectedJobName"),
-    new Option("--job",                          "-j",Options.Types.STRING,     "runJobName"),
+    new Option("--job",                          "-j",Options.Types.STRING,     "runJobNames"),
     new Option("--archive-type",                 null,Options.Types.ENUMERATION,"archiveType",ARCHIVE_TYPE_ENUMERATION),
     new Option("--abort",                        null,Options.Types.STRING,     "abortJobName"),
     new Option("--pause",                        "-t",Options.Types.INTEGER,    "pauseTime",new Object[]{"s",1,"m",60,"h",60*60}),
@@ -6047,7 +6047,7 @@ if (false) {
 
       // commands
       if (   Settings.pairMasterFlag
-          || (Settings.runJobName != null)
+          || !Settings.runJobNames.isEmpty()
           || (Settings.abortJobName != null)
           || (Settings.pauseTime > 0)
           || (Settings.maintenanceTime > 0)
@@ -6166,13 +6166,13 @@ if (false) {
           }
         }
 
-        if (Settings.runJobName != null)
+        for (String runJobName : Settings.runJobNames)
         {
           // get job UUID
-          String jobUUID = getJobUUID(Settings.runJobName);
+          String jobUUID = getJobUUID(runJobName);
           if (jobUUID == null)
           {
-            printError(BARControl.tr("job ''{0}'' not found",Settings.runJobName));
+            printError(BARControl.tr("job ''{0}'' not found",runJobName));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -6189,7 +6189,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError(BARControl.tr("cannot start job ''{0}'' (error: {1})",Settings.runJobName,exception.getMessage()));
+            printError(BARControl.tr("cannot start job ''{0}'' (error: {1})",runJobName,exception.getMessage()));
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -6267,7 +6267,7 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError("cannot continue (error: %s)",Settings.runJobName,exception.getMessage());
+            printError("cannot continue (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
