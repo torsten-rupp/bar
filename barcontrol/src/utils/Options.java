@@ -12,8 +12,12 @@
 import java.lang.reflect.Field;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.EnumSet;
+import java.util.HashSet;
 
 /****************************** Classes ********************************/
 
@@ -165,6 +169,7 @@ public class Options
 
             // get field
             Field field = clazz.getField(fieldNames[fieldNames.length-1]);
+            Class type = field.getType();
 
             switch (foundOption.type)
             {
@@ -188,7 +193,31 @@ public class Options
                   // parse value
                   try
                   {
-                    field.setInt(null,Integer.parseInt(string)*factor);
+                    int value = Integer.parseInt(string)*factor;
+
+                    if      (type.isArray())
+                    {
+                      field.set(null,addArrayUniq((int[])field.get(null),value));
+                    }
+                    else if (type == ArrayList.class)
+                    {
+                      ArrayList<Integer> arrayList = (ArrayList<Integer>)field.get(null);
+                      arrayList.add(value);
+                    }
+                    else if (type == LinkedHashSet.class)
+                    {
+                      LinkedHashSet<Integer> hashSet = (LinkedHashSet<Integer>)field.get(null);
+                      hashSet.add(value);
+                    }
+                    else if (type == HashSet.class)
+                    {
+                      HashSet<Integer> hashSet = (HashSet<Integer>)field.get(null);
+                      hashSet.add(value);
+                    }
+                    else
+                    {
+                      field.setInt(null,value);
+                    }
                   }
                   catch (NumberFormatException exception)
                   {
@@ -198,7 +227,29 @@ public class Options
                 }
                 break;
               case STRING:
-                field.set(null,string);
+                if      (type.isArray())
+                {
+                  field.set(null,addArrayUniq((String[])field.get(null),string));
+                }
+                else if (type == ArrayList.class)
+                {
+                  ArrayList<String> arrayList = (ArrayList<String>)field.get(null);
+                  arrayList.add(string);
+                }
+                else if (type == LinkedHashSet.class)
+                {
+                  LinkedHashSet<String> hashSet = (LinkedHashSet<String>)field.get(null);
+                  hashSet.add(string);
+                }
+                else if (type == HashSet.class)
+                {
+                  HashSet<String> hashSet = (HashSet<String>)field.get(null);
+                  hashSet.add(string);
+                }
+                else
+                {
+                  field.set(null,string);
+                }
                 break;
               case FLOAT:
                 {
@@ -220,9 +271,33 @@ public class Options
                   // parse value
                   try
                   {
-                    field.setFloat(null,Float.parseFloat(string)*factor);
+                    float value = NumberFormat.getInstance().parse(string).floatValue()*factor;
+
+                    if      (type.isArray())
+                    {
+                      field.set(null,addArrayUniq((float[])field.get(null),value));
+                    }
+                    else if (type == ArrayList.class)
+                    {
+                      ArrayList<Float> arrayList = (ArrayList<Float>)field.get(null);
+                      arrayList.add(value);
+                    }
+                    else if (type == LinkedHashSet.class)
+                    {
+                      LinkedHashSet<Float> hashSet = (LinkedHashSet<Float>)field.get(null);
+                      hashSet.add(value);
+                    }
+                    else if (type == HashSet.class)
+                    {
+                      HashSet<Float> hashSet = (HashSet<Float>)field.get(null);
+                      hashSet.add(value);
+                    }
+                    else
+                    {
+                      field.setFloat(null,value);
+                    }
                   }
-                  catch (NumberFormatException exception)
+                  catch (ParseException exception)
                   {
                     printError("Invalid number '%s' for option %s",string,option.name);
                     System.exit(ExitCodes.FAIL);
@@ -249,7 +324,31 @@ public class Options
                   // parse value
                   try
                   {
-                    field.setDouble(null,NumberFormat.getInstance().parse(string).doubleValue()*factor);
+                    double value = NumberFormat.getInstance().parse(string).doubleValue()*factor;
+
+                    if      (type.isArray())
+                    {
+                      field.set(null,addArrayUniq((double[])field.get(null),value));
+                    }
+                    else if (type == ArrayList.class)
+                    {
+                      ArrayList<Double> arrayList = (ArrayList<Double>)field.get(null);
+                      arrayList.add(value);
+                    }
+                    else if (type == LinkedHashSet.class)
+                    {
+                      LinkedHashSet<Double> hashSet = (LinkedHashSet<Double>)field.get(null);
+                      hashSet.add(value);
+                    }
+                    else if (type == HashSet.class)
+                    {
+                      HashSet<Double> hashSet = (HashSet<Double>)field.get(null);
+                      hashSet.add(value);
+                    }
+                    else
+                    {
+                      field.setDouble(null,value);
+                    }
                   }
                   catch (ParseException exception)
                   {
@@ -259,12 +358,35 @@ public class Options
                 }
                 break;
               case BOOLEAN:
-                field.setBoolean(null,
-                                    string.equals("1")
-                                 || string.equalsIgnoreCase("true")
-                                 || string.equalsIgnoreCase("yes")
-                                 || string.equalsIgnoreCase("on")
-                                );
+                {
+                  boolean value =    string.equals("1")
+                                  || string.equalsIgnoreCase("true")
+                                  || string.equalsIgnoreCase("yes")
+                                  || string.equalsIgnoreCase("on");
+                  if      (type.isArray())
+                  {
+                    field.set(null,addArrayUniq((boolean[])field.get(null),value));
+                  }
+                  else if (type == ArrayList.class)
+                  {
+                    ArrayList<Boolean> arrayList = (ArrayList<Boolean>)field.get(null);
+                    arrayList.add(value);
+                  }
+                  else if (type == LinkedHashSet.class)
+                  {
+                    LinkedHashSet<Boolean> hashSet = (LinkedHashSet<Boolean>)field.get(null);
+                    hashSet.add(value);
+                  }
+                  else if (type == HashSet.class)
+                  {
+                    HashSet<Boolean> hashSet = (HashSet<Boolean>)field.get(null);
+                    hashSet.add(value);
+                  }
+                  else
+                  {
+                    field.setBoolean(null,value);
+                  }
+                }
                 break;
               case ENUMERATION:
                 {
@@ -290,7 +412,30 @@ public class Options
                     try
                     {
                       Enum value = optionEnum.parse(string);
-                      field.set(null,value);
+
+                      if      (type.isArray())
+                      {
+                        field.set(null,addArrayUniq((Enum[])field.get(null),value));
+                      }
+                      else if (type == ArrayList.class)
+                      {
+                        ArrayList<Enum> arrayList = (ArrayList<Enum>)field.get(null);
+                        arrayList.add(value);
+                      }
+                      else if (type == LinkedHashSet.class)
+                      {
+                        LinkedHashSet<Enum> hashSet = (LinkedHashSet<Enum>)field.get(null);
+                        hashSet.add(value);
+                      }
+                      else if (type == HashSet.class)
+                      {
+                        HashSet<Enum> hashSet = (HashSet<Enum>)field.get(null);
+                        hashSet.add(value);
+                      }
+                      else
+                      {
+                        field.set(null,value);
+                      }
                       foundFlag = true;
                     }
                     catch (Exception exception)
@@ -300,7 +445,7 @@ public class Options
                   }
                   else
                   {
-                    printError("INTERNAL ERROR: unsupported enumerationt type '%s' for option %s",foundOption.enumeration.getClass(),option.name);
+                    printError("INTERNAL ERROR: unsupported enumeration type '%s' for option %s",foundOption.enumeration.getClass(),option.name);
                     System.exit(ExitCodes.FAIL);
                   }
                   if (!foundFlag)
@@ -343,7 +488,30 @@ public class Options
                     System.exit(ExitCodes.FAIL);
                   }
                 }
-                field.set(null,enumSet);
+
+                if      (type.isArray())
+                {
+                  field.set(null,addArrayUniq((EnumSet[])field.get(null),enumSet));
+                }
+                else if (type == ArrayList.class)
+                {
+                  ArrayList<EnumSet> arrayList = (ArrayList<EnumSet>)field.get(null);
+                  arrayList.add(enumSet);
+                }
+                else if (type == LinkedHashSet.class)
+                {
+                  LinkedHashSet<EnumSet> hashSet = (LinkedHashSet<EnumSet>)field.get(null);
+                  hashSet.add(enumSet);
+                }
+                else if (type == HashSet.class)
+                {
+                  HashSet<EnumSet> hashSet = (HashSet<EnumSet>)field.get(null);
+                  hashSet.add(enumSet);
+                }
+                else
+                {
+                  field.set(null,enumSet);
+                }
                 break;
               case INCREMENT:
                 try
@@ -376,6 +544,271 @@ public class Options
     }
 
     return -1;
+  }
+
+  /** unique add element to int array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static int[] addArrayUniq(int[] array, int n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i] != n))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to int array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static Integer[] addArrayUniq(Integer[] array, int n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i] != n))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to long array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static long[] addArrayUniq(long[] array, long n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i] != n))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to long array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static Long[] addArrayUniq(Long[] array, long n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i] != n))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to float array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static float[] addArrayUniq(float[] array, float n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i] != n))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to double array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static double[] addArrayUniq(double[] array, double n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i] != n))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to double array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static Double[] addArrayUniq(Double[] array, double n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i] != n))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to boolean array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static boolean[] addArrayUniq(boolean[] array, boolean n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i] != n))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to boolean array
+   * @param array array
+   * @param n element
+   * @return extended array or array
+   */
+  private static Boolean[] addArrayUniq(Boolean[] array, boolean n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i] != n))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** add element to string array
+   * @param array array
+   * @param string element
+   * @return extended array or array
+   */
+  private static String[] addArray(String[] array, String string)
+  {
+    array = Arrays.copyOf(array,array.length+1);
+    array[array.length-1] = string;
+
+    return array;
+  }
+
+  /** unique add element to string array
+   * @param array array
+   * @param string element
+   * @return extended array or array
+   */
+  private static String[] addArrayUniq(String[] array, String string)
+  {
+    int i = 0;
+    while ((i < array.length) && !array[i].equals(string))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = string;
+    }
+
+    return array;
+  }
+
+  /** unique add element to enum array
+   * @param array array
+   * @param string element
+   * @return extended array or array
+   */
+  private static Enum[] addArrayUniq(Enum[] array, Enum n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i] != n))
+    {
+      i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
+  }
+
+  /** unique add element to enum set array
+   * @param array array
+   * @param string element
+   * @return extended array or array
+   */
+  private static EnumSet[] addArrayUniq(EnumSet[] array, EnumSet n)
+  {
+    int i = 0;
+    while ((i < array.length) && (array[i].equals(n)))
+    {
+        i++;
+    }
+    if (i >= array.length)
+    {
+      array = Arrays.copyOf(array,array.length+1);
+      array[array.length-1] = n;
+    }
+
+    return array;
   }
 
   /** print error

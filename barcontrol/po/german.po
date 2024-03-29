@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-26 02:30+0100\n"
-"PO-Revision-Date: 2023-06-25 11:36+0200\n"
+"POT-Creation-Date: 2024-03-29 04:37+0100\n"
+"PO-Revision-Date: 2024-03-29 04:48+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
 "Language: de\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-Bookmarks: 304,-1,-1,-1,-1,-1,-1,320,-1,-1\n"
-"X-Generator: Poedit 2.0.6\n"
+"X-Generator: Poedit 3.0.1\n"
 
 #: src/BARControl.java:208
 msgid "filesystem"
@@ -767,9 +767,8 @@ msgid "Job"
 msgstr "Auftrag"
 
 #: src/BARControl.java:6531
-#, fuzzy
 msgid "UUID"
-msgstr "UUID Kennung"
+msgstr "UUID"
 
 #: src/BARControl.java:6532 src/ServerSettings.java:1497
 #: src/ServerSettings.java:3713 src/TabJobs.java:8122 src/TabJobs.java:14211
@@ -823,17 +822,17 @@ msgid "Next"
 msgstr ""
 
 #: src/BARControl.java:6576
-#, fuzzy, java-format
+#, java-format
 msgid "{0} {0,choice,0#jobs|1#schedule|1<schedules}"
-msgstr "{0} {0,choice,0#Aufträge|1#Auftag|1<Aufträge}"
+msgstr "{0} {0,choice,0#Aufträge|1#Auftrag|1<Aufträge}"
 
 #: src/BARControl.java:6581
-#, fuzzy, java-format
+#, java-format
 msgid "cannot get schedule list (error: {0})"
-msgstr "Ermitteln der Archiveliste fehlgeschlagen (Fehler: {0})"
+msgstr "Ermitteln der Auftragsliste fehlgeschlagen (Fehler: {0})"
 
 #: src/BARControl.java:6632
-#, fuzzy, java-format
+#, java-format
 msgid "cannot get job info ''{0}'' (error: {1})"
 msgstr "Fehler beim Starten des Auftrags ''{0}'' (Fehler: {1})"
 
@@ -858,9 +857,8 @@ msgid "Entity id"
 msgstr "Datensatz Kennung"
 
 #: src/BARControl.java:6819
-#, fuzzy
 msgid "Job id"
-msgstr "Auftrag UUID"
+msgstr "Auftrag ID"
 
 #: src/BARControl.java:6821 src/BARControl.java:6894 src/BARControl.java:7100
 #: src/BARControl.java:7112 src/BARWidgets.java:4684 src/BARWidgets.java:5056
@@ -1047,7 +1045,6 @@ msgid "function still not implemented"
 msgstr "Funktion noch nicht implementiert"
 
 #: src/BARException.java:330
-#, fuzzy
 msgid "run as daemon/service failed"
 msgstr "Ausführung als Dienst fehlgeschlagen"
 
@@ -1136,17 +1133,14 @@ msgid "timeout receive data"
 msgstr "Zeitüberschreitung beim Empfangen von Daten"
 
 #: src/BARException.java:422
-#, fuzzy
 msgid "no response from remote"
 msgstr "Keine Rückmeldung von Programm auf anderem Rechner"
 
 #: src/BARException.java:425
-#, fuzzy
 msgid "invalid response from remote"
 msgstr "Ungültige Rückmeldung von Programm auf anderem Rechner"
 
 #: src/BARException.java:428
-#, fuzzy
 msgid "bad request"
 msgstr "Ungültiger WebDAV-Befehl"
 
@@ -1213,7 +1207,7 @@ msgstr "Kein SSH-Passwort"
 #: src/BARException.java:489 src/BARException.java:497
 #: src/BARException.java:532 src/BARException.java:550
 #: src/BARException.java:637 src/BARException.java:1126
-#, fuzzy, java-format
+#, java-format
 msgid "for ''{0}''"
 msgstr "für ''{0}''"
 
@@ -1238,34 +1232,28 @@ msgid "ssh protocol error"
 msgstr "SSH Protokoll-Fehler"
 
 #: src/BARException.java:525
-#, fuzzy
 msgid "invalid SMB/CIFS specifier"
-msgstr "Ungültiger SSH-Prefix"
+msgstr "Ungültiger SMB/CIFS-Prefix"
 
 #: src/BARException.java:528
-#, fuzzy
 msgid "no SMB/CIFS password given"
-msgstr "Kein SSH-Passwort"
+msgstr "Kein SMB/CIFS-Passwort"
 
 #: src/BARException.java:536
-#, fuzzy
 msgid "initialize SMB/CIFS session failed"
-msgstr "Initialisierung der SSH-Sitzung fehlgeschlagen"
+msgstr "Initialisierung der SMB/CIFS-Sitzung fehlgeschlagen"
 
 #: src/BARException.java:539
-#, fuzzy
 msgid "SMB/CIFS authentication failed"
-msgstr "SSH-Authentifizierung fehlgeschlagen"
+msgstr "SMB/CIFS-Authentifizierung fehlgeschlagen"
 
 #: src/BARException.java:546
-#, fuzzy
 msgid "invalid SMB/CIFS password"
-msgstr "Ungültiges SSH-Passwort"
+msgstr "Ungültiges SMB/CIFS-Passwort"
 
 #: src/BARException.java:554
-#, fuzzy
 msgid "SMB/CIFS protocol error"
-msgstr "SSH Protokoll-Fehler"
+msgstr "SMB/CIFS Protokoll-Fehler"
 
 #: src/BARException.java:561
 #, java-format
@@ -1607,7 +1595,6 @@ msgid "file not found"
 msgstr "Datei nicht gefunden"
 
 #: src/BARException.java:995
-#, fuzzy
 msgid "access denied"
 msgstr "Zugriff verweigert"
 
@@ -1640,9 +1627,8 @@ msgid "open CD/DVD/BD disk failed"
 msgstr "Öffnen des CD/DVD/BD-Medium fehlgeschlagen"
 
 #: src/BARException.java:1043
-#, fuzzy
 msgid "read CD/DVD/BD disk failed"
-msgstr "Öffnen des CD/DVD/BD-Medium fehlgeschlagen"
+msgstr "Lesen des CD/DVD/BD-Medium fehlgeschlagen"
 
 #: src/BARException.java:1050
 msgid "open ISO 9660 image failed"
@@ -1989,9 +1975,8 @@ msgid "parse index id failed"
 msgstr "Fehler beim Lesen der Datensatzkennung"
 
 #: src/BARException.java:1535
-#, fuzzy
 msgid "database is locked"
-msgstr "Datenbankverknüpfung fehlgeschlagen"
+msgstr "Datenbank ist gesperrt"
 
 #: src/BARException.java:1542
 msgid "database busy"
@@ -2408,21 +2393,19 @@ msgid "Select SSH private key file"
 msgstr "Wählen Sie die private SSH-Schlüsseldatei aus"
 
 #: src/BARWidgets.java:3324
-#, fuzzy
 msgid "SMB/CIFS server name."
-msgstr "Server Name"
+msgstr "SMB/CIFS Server Name."
 
 #: src/BARWidgets.java:3387
 msgid "Share"
 msgstr ""
 
 #: src/BARWidgets.java:3391
-#, fuzzy
 msgid ""
 "SMB/CIFS server share name. Leave it empty to use the default share name "
 "from the configuration file."
 msgstr ""
-"SSH-Server Login-Name. Es ist keine Angabe erforderlich, wenn der "
+"SMB/CIFS-Server Login-Name. Es ist keine Angabe erforderlich, wenn der "
 "Standardname aus der Konfigurationsdatei verwendet werden soll."
 
 #: src/BARWidgets.java:3823
@@ -4111,7 +4094,6 @@ msgid "Destination"
 msgstr "Ziel"
 
 #: src/TabJobs.java:6805
-#, fuzzy
 msgid ""
 "Storage destination type:\n"
 "  into file system\n"
@@ -4132,6 +4114,7 @@ msgstr ""
 "  auf SSH-Server mit sftp (secure FTP)\n"
 "  auf WebDAV-Server\n"
 "  auf WebDAV-Secure-Server\n"
+"  auf SMB/CIFS-Secure-Server\n"
 "  auf CD\n"
 "  auf DVD\n"
 "  auf BD\n"
@@ -4253,7 +4236,7 @@ msgid "Pre-script"
 msgstr "Vorverarbeitungs-Skript"
 
 #: src/TabJobs.java:7678
-#, fuzzy, java-printf-format
+#, java-printf-format
 msgid ""
 "Command or script to execute before start of job.\n"
 "\n"
@@ -4273,6 +4256,7 @@ msgstr ""
 "\n"
 "%name - Name Auftrag\n"
 "%archive - Name Archiv\n"
+"%type - Name Typ\n"
 "%file - Name Archivdatei\n"
 "%directory - Name Archivverzeichnis\n"
 "\n"
@@ -4283,7 +4267,6 @@ msgid "Post-script"
 msgstr "Nachverarbeitungs-Skript"
 
 #: src/TabJobs.java:7769
-#, fuzzy
 msgid ""
 "Command or script to execute after termination of job.\n"
 "\n"
@@ -4304,7 +4287,7 @@ msgid ""
 msgstr ""
 "Befehl oder Skript, das nach einem Auftrag ausgeführt werden soll.\n"
 "\n"
-"Macros:\n"
+"Makros:\n"
 "\n"
 "%name - Name Auftrag\n"
 "%archive - Name Archiv\n"
@@ -4312,12 +4295,14 @@ msgstr ""
 "%file - Name Archivdatei\n"
 "%directory - Name Archivverzeichnis\n"
 "%error - Fehlercode\n"
+"%nextSchedule - nächster Auftrag [s]\n"
+"%nextScheduleDateTime - nächster Auftrag Zeitstempe [s]\n"
 "%message - Nachricht\n"
 "\n"
 "Zusätzliche Zeit-Makros sind verfügbar."
 
 #: src/TabJobs.java:7865
-#, fuzzy, java-printf-format
+#, java-printf-format
 msgid ""
 "Command or script to execute before start of job on slave.\n"
 "\n"
@@ -4338,13 +4323,13 @@ msgstr ""
 "\n"
 "%name - Name Auftrag\n"
 "%archive - Name Archiv\n"
+"%type - Name Typ\n"
 "%file - Name Archivdatei\n"
 "%directory - Name Archivverzeichnis\n"
 "\n"
 "Zusätzliche Zeit-Makros sind verfügbar."
 
 #: src/TabJobs.java:7983
-#, fuzzy
 msgid ""
 "Command or script to execute after termination of job on slave.\n"
 "\n"
@@ -4365,7 +4350,7 @@ msgstr ""
 "Befehl oder Skript, das nach einem Auftrag auf einer Nebeninstanz ausgeführt "
 "werden soll.\n"
 "\n"
-"Macros:\n"
+"Makros:\n"
 "\n"
 "%name - Name Auftrag\n"
 "%archive - Name Archiv\n"
@@ -4374,6 +4359,8 @@ msgstr ""
 "%directory - Name Archivverzeichnis\n"
 "%error - Fehlercode\n"
 "%message - Nachricht\n"
+"%nextSchedule - nächster Auftrag [s]\n"
+"%nextScheduleDateTime - nächster Auftrag Zeitstempe [s]\n"
 "\n"
 "Zusätzliche Zeit-Makros sind verfügbar."
 
@@ -5345,7 +5332,6 @@ msgid "Select storage directory"
 msgstr "Auswahl Speicherpfad"
 
 #: src/TabJobs.java:15157
-#, fuzzy
 msgid ""
 "Storage destination type:\n"
 "  into file system\n"
@@ -5363,14 +5349,15 @@ msgstr ""
 "  auf SSH-Server mit sftp (secure FTP)\n"
 "  auf WebDAV-Server\n"
 "  auf WebDAV-Secure-Server\n"
+"  auf SMB/CIFS-Secure-Server\n"
 
 #: src/TabJobs.java:15336
 msgid "No max. keep set!"
-msgstr "Kein max. Anzahl angegeben"
+msgstr "Kein max. Anzahl angegeben!"
 
 #: src/TabJobs.java:15342
 msgid "No max. age set!"
-msgstr "Kein max. Alter angegeben"
+msgstr "Kein max. Alter angegeben!"
 
 #: src/TabJobs.java:15412
 #, java-format
@@ -5925,9 +5912,8 @@ msgid "Add storage to index database"
 msgstr "Archive zu Index hinzufügen"
 
 #: src/TabRestore.java:8502
-#, fuzzy
 msgid "Archive name"
-msgstr "Archivtyp"
+msgstr "Archivname"
 
 #: src/TabRestore.java:8506
 msgid "Enter local or remote storage path."
@@ -5942,7 +5928,6 @@ msgid "Select storage"
 msgstr "Wähle Archivdateiname aus"
 
 #: src/TabRestore.java:8545
-#, fuzzy
 msgid ""
 "Storage type:\n"
 "  into file system\n"
@@ -6314,34 +6299,28 @@ msgid "done"
 msgstr "fertig"
 
 #: src/TabStatus.java:148
-#, fuzzy
 msgid "Waiting for temporary space"
-msgstr "Größenlimit für temporäre Dateien."
+msgstr "Warte auf freien temporären Speicherplatz"
 
 #: src/TabStatus.java:149
-#, fuzzy
 msgid "Blanking volume..."
-msgstr "Medium löschen"
+msgstr "Medium löschen..."
 
 #: src/TabStatus.java:150
-#, fuzzy
 msgid "Creating image..."
-msgstr "direktes Abbild"
+msgstr "Abbild erzeugen..."
 
 #: src/TabStatus.java:151
-#, fuzzy
 msgid "Adding error correction codes..."
-msgstr "Fehlerkorrekturcodes hinzufügen"
+msgstr "Fehlerkorrekturcodes hinzufügen..."
 
 #: src/TabStatus.java:152
-#, fuzzy
 msgid "Writing volume..."
-msgstr "Warten bis das erste Medium eingelegt ist"
+msgstr "Schreibe Medium..."
 
 #: src/TabStatus.java:153
-#, fuzzy
 msgid "Verifing volume..."
-msgstr "Warten bis das erste Medium eingelegt ist"
+msgstr "Prüfe Medium..."
 
 #: src/TabStatus.java:176 src/TabStatus.java:187
 msgid "offline"
@@ -6531,12 +6510,9 @@ msgid "Please insert volume #{0}"
 msgstr "Bitte Medium {0} einlegen"
 
 #: src/TabStatus.java:3098
-#, fuzzy, java-format
+#, java-format
 msgid "Please insert replacement volume #{0}"
-msgstr ""
-"Bitte legen Sie einen Ersatz für Medium #{0} ein:\n"
-"\n"
-"{1}"
+msgstr "Bitte legen Sie einen Ersatz für Medium #{0} ein"
 
 #: src/TabStatus.java:3243
 #, java-format
