@@ -2351,7 +2351,11 @@ LOCAL uint64 getNextSchedule(const JobNode *jobNode,
     JOB_LIST_ITERATEX(checkJobNode,nextScheduleDateTime != 0LL)
     {
       // check if some other job is already activated (by scheduler or manually)
-      if ((checkJobNode != jobNode) && Job_isActive(checkJobNode->jobState))
+      if (   (checkJobNode != jobNode)
+          && (checkJobNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
+          && (!Job_isRemote(checkJobNode) || isSlavePaired(checkJobNode))
+          && Job_isActive(checkJobNode->jobState)
+         )
       {
         nextScheduleDateTime = 0LL;
       }
