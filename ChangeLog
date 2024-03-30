@@ -1,3 +1,6 @@
+2024-03-30 23c
+  * fixed macros %nextSchedule, %nextScheduleDateTime
+
 2024-03-28 23b
   * fixed write CD/DVD/BD
   * added verify CD/DVD/BD: growisofs does not always return
