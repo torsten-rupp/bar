@@ -363,16 +363,47 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
-#ifdef __cplusplus
-extern "C"
-#endif
-INLINE void __ensureStringLength(struct __String *string, size_t newLength);
 
 /***************************** Functions *******************************/
 
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : __extendStringSize
+* Purpose: extend size of string
+* Input  : string  - string
+*          newSize - new size of string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void __extendStringSize(struct __String *string, size_t newSize);
+
+/***********************************************************************\
+* Name   : __ensureStringLength
+* Purpose: ensure min. length of string
+* Input  : string    - string
+*          newLength - new min. length of string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void __ensureStringLength(struct __String *string, size_t newLength);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE void __ensureStringLength(struct __String *string, size_t newLength)
+{
+  assert(string != NULL);
+
+  if ((newLength + 1) > string->maxLength)
+  {
+    __extendStringSize(string,newLength + 1);
+  }
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : String_new, String_newCString, String_newChar,
@@ -1514,41 +1545,6 @@ StringUnit String_getMatchingUnitDouble(double n, const StringUnit units[], uint
 \***********************************************************************/
 
 char* String_toCString(ConstString string);
-
-/***********************************************************************\
-* Name   : __extendStringSize
-* Purpose: extend size of string
-* Input  : string  - string
-*          newSize - new size of string
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void __extendStringSize(struct __String *string, size_t newSize);
-
-/***********************************************************************\
-* Name   : __ensureStringLength
-* Purpose: ensure min. length of string
-* Input  : string    - string
-*          newLength - new min. length of string
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-INLINE void __ensureStringLength(struct __String *string, size_t newLength);
-#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
-INLINE void __ensureStringLength(struct __String *string, size_t newLength)
-{
-  assert(string != NULL);
-
-  if ((newLength + 1) > string->maxLength)
-  {
-    __extendStringSize(string,newLength + 1);
-  }
-}
-#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : __printErrorConstString

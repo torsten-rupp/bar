@@ -18,6 +18,9 @@
   #include <cdio/iso9660.h>
   #include <cdio/logging.h>
 #endif /* HAVE_ISO9660 */
+#ifdef HAVE_ISOFS
+  #include "libisofs/libisofs.h"
+#endif /* HAVE_ISOFS */
 #include <errno.h>
 #include <assert.h>
 
@@ -510,11 +513,22 @@ LOCAL Errors StorageOptical_initAll(void)
     (void)cdio_log_set_handler(libcdioLogCallback);
   #endif /* HAVE_ISO9660 */
 
+  #ifdef HAVE_ISOFS
+    if (iso_init() != 0)
+    {
+      error = ERROR_INIT;
+    }
+  #endif /* HAVE_ISOFS */
+
   return error;
 }
 
 LOCAL void StorageOptical_doneAll(void)
 {
+  #ifdef HAVE_ISOFS
+    iso_finish();
+  #endif /* HAVE_ISOFS */
+
   #ifdef HAVE_ISO9660
     (void)cdio_log_set_handler(NULL);
   #endif /* HAVE_ISO9660 */

@@ -847,6 +847,7 @@ AC_SUBST(HAVE_PCRE)                          dnl "1" for pcre support, "" otherw
 AC_SUBST(HAVE_MARIADB)                       dnl "1" for MariaDB support, "" otherwise
 AC_SUBST(HAVE_POSTGRESQL)                    dnl "1" for PostgreSQL support, "" otherwise
 AC_SUBST(HAVE_PAR2)                          dnl "1" for PAR2 support, "" otherwise
+AC_SUBST(HAVE_ISOFS)                         dnl "1" for isofs support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                  dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BFD)                           dnl "1" for BFD support, "" otherwise
 
@@ -1014,6 +1015,7 @@ ENABLE_MARIADB="yes"
 ENABLE_POSTGRESQL="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_PAR2="yes"
+ENABLE_ISOFS="yes"
 ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
@@ -1240,6 +1242,11 @@ AC_ARG_ENABLE(
   par2,
   AC_HELP_STRING([--disable-par2],[disable PAR2 support]),
   [ENABLE_PAR2=$enableval]
+)
+AC_ARG_ENABLE(
+  isofs,
+  AC_HELP_STRING([--disable-isofs],[disable ISO file system support]),
+  [ENABLE_ISOFS=$enableval]
 )
 AC_ARG_ENABLE(
   bfd,
@@ -4588,6 +4595,7 @@ if test $ENABLE_PAR2 = "yes"; then
               --host=$host \
               --build=$build \
               --prefix=$cwd/extern \
+              --disable-openmp \
             ) 1>$tmpFile 2>&1
             ;;
           windows*|mingw*)
@@ -4595,6 +4603,7 @@ if test $ENABLE_PAR2 = "yes"; then
               --host=$host \
               --build=$build \
               --prefix=$cwd/extern \
+              --disable-openmp \
             ) 1>$tmpFile 2>&1
             ;;
         esac
@@ -4671,6 +4680,115 @@ if test $ENABLE_PAR2 = "yes"; then
   if test -z "$HAVE_PAR2"; then
     if test ! \( -d par2cmdline -o -d "`readlink par2cmdline`" \); then
       AC_MSG_WARN([PAR2 not compiled: PAR2 package missing])
+    fi
+  fi
+fi
+
+# compile/use isofs library
+if test $ENABLE_ISOFS = "yes"; then
+  if test -d libisofs -o -d "`readlink libisofs`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+      dnl compile isofs library
+
+      cwd=`pwd`
+
+      AC_MSG_COMPILE([libiosfs])
+      result=1
+      if test $result -eq 1; then
+        (cd libisofs; ./bootstrap) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (automake)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            (cd libisofs; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            (cd libisofs; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+            ) 1>$tmpFile 2>&1
+            ;;
+        esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd libisofs; \
+         make -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd libisofs; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES isofs"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES isofs"
+      fi
+      HAVE_ISOFS=1
+      AC_DEFINE(HAVE_ISOFS,1,[libisofs installed (local)])
+    fi
+  else
+    dnl search for installed PAR2 library
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(par2create,par2,[HAVE_ISOFS=1;LIBRARIES="isofs $LIBRARIES";AC_DEFINE(HAVE_ISOFS,1,[libisofs installed])])
+    else
+      if test -z "$HAVE_ISOFS"; then
+        AC_SEARCH_STATIC_LIBRARIES(par2create,par2,[HAVE_ISOFS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES isofs";AC_DEFINE(HAVE_ISOFS,1,[libisofs installed])])
+      fi
+      if test -z "$HAVE_ISOFS"; then
+        AC_SEARCH_LIBRARIES(par2create,par2,[HAVE_ISOFS=1;LIBRARIES="isofs $LIBRARIES";AC_DEFINE(HAVE_ISOFS,1,[libisofs installed])])
+      fi
+    fi
+  fi
+
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
+  if test -z "$HAVE_ISOFS"; then
+    if test ! \( -d libisofs -o -d "`readlink libisofs`" \); then
+      AC_MSG_WARN([libisofs not compiled: libisofs package missing])
     fi
   fi
 fi
@@ -4880,6 +4998,7 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_SMB2      ,,AC_MSG_ERROR([smb2 missing]))
    AS_IF(test $HAVE_PCRE      ,,AC_MSG_ERROR([PCRE missing]))
    AS_IF(test $HAVE_PAR2      ,,AC_MSG_ERROR([PAR2 missing]))
+   AS_IF(test $HAVE_ISOFS     ,,AC_MSG_ERROR([isofs missing]))
   ]
 )
 
@@ -5526,9 +5645,23 @@ if test "$HAVE_PAR2"; then
                     [],
                     [ "]
                    )
-  AC_DEFINE_UNQUOTED(VERSION_PCRE,"$VERSION_PAR2",[PAR2 version])
+  AC_DEFINE_UNQUOTED(VERSION_PAR2,"$VERSION_PAR2",[PAR2 version])
 else
-  AC_DEFINE_UNQUOTED(VERSION_PCRE,"",[PAR2 version])
+  AC_DEFINE_UNQUOTED(VERSION_PAR2,"",[PAR2 version])
+fi
+
+if test "$HAVE_ISOFS"; then
+  AC_CONSTANT_VALUE([isofs version],
+                    VERSION_ISOFS,
+                    [#include "libisofs/libisofs.h"
+                    ],
+                    [iso_lib_header_version_major.iso_lib_header_version_minor.iso_lib_header_version_micro],
+                    [],
+                    [ "]
+                   )
+  AC_DEFINE_UNQUOTED(VERSION_ISOFS,"$VERSION_ISOFS",[isofs version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_ISOFS,"",[isofs version])
 fi
 
 dnl ------------ autoheader: top/bottom include for config.h -----------
@@ -5618,6 +5751,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  MariaDB support      : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
                     echo "  PostgreSQL support   : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
                     echo "  PAR2 support         : `if test "$HAVE_PAR2"; then echo "yes ($VERSION_PAR2)"; else echo no; fi`";
+                    echo "  isofs support        : `if test "$HAVE_ISOFS"; then echo "yes ($VERSION_ISOFS)"; else echo no; fi`";
                     echo "  GUI support          : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support     : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                  : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
@@ -5654,7 +5788,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_ISO9660" \
                             -o ! "$HAVE_SMB2" \
                             -o ! "$HAVE_PCRE" \
-                            -o ! "$HAVE_PAR2"; then
+                            -o ! "$HAVE_PAR2" \
+                            -o ! "$HAVE_ISOFS"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."
@@ -5688,6 +5823,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_SMB2=$HAVE_SMB2
                    HAVE_PCRE=$HAVE_PCRE
                    HAVE_PAR2=$HAVE_PAR2
+                   HAVE_ISOFS=$HAVE_ISOFS
                    HAVE_BFD=$HAVE_BFD
 
                    ENABLE_DEBUG=$ENABLE_DEBUG
@@ -5728,6 +5864,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_PCRE="$VERSION_PCRE"
                    VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_PAR2="$VERSION_PAR2"
+                   VERSION_ISOFS="$VERSION_ISOFS"
                   )
 
 AC_OUTPUT

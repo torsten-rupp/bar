@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-03-30 08:01+0100\n"
+"POT-Creation-Date: 2024-03-31 11:38+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,1026 +17,1026 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: /home/torsten/projects/bar/bar/archive.c:6386
+#: /home/torsten/projects/bar/bar/archive.c:6383
 msgid "No BAR header found! This may be a broken archive or not an archive"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_compare.c:2412
+#: /home/torsten/projects/bar/bar/commands_compare.c:2409
 #, c-format
 msgid "Compare fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_convert.c:2666
+#: /home/torsten/projects/bar/bar/commands_convert.c:2663
 #, c-format
 msgid "Convert fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_restore.c:3983
+#: /home/torsten/projects/bar/bar/commands_restore.c:3980
 #, c-format
 msgid "Restore fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_test.c:1779
+#: /home/torsten/projects/bar/bar/commands_test.c:1776
 msgid "Test fail: {0}\n"
 msgstr ""
 
-#: errors.def:24
+#: errors.def:21
 msgid "insufficient memory"
 msgstr ""
 
-#: errors.def:25
+#: errors.def:22
 msgid "initialize failed"
 msgstr ""
 
-#: errors.def:26
+#: errors.def:23
 msgid "invalid argument"
 msgstr ""
 
-#: errors.def:27
+#: errors.def:24
 msgid "configuration error"
 msgstr ""
 
-#: errors.def:28
+#: errors.def:25
 msgid "no writable configuration file"
 msgstr ""
 
-#: errors.def:29
+#: errors.def:26
 msgid "aborted"
 msgstr ""
 
-#: errors.def:30
+#: errors.def:27
 msgid "interrupted"
 msgstr ""
 
-#: errors.def:31
+#: errors.def:28
 msgid "function not supported"
 msgstr ""
 
-#: errors.def:32
+#: errors.def:29
 msgid "function still not implemented"
 msgstr ""
 
-#: errors.def:33
+#: errors.def:30
 msgid "run as daemon/service failed"
 msgstr ""
 
-#: errors.def:34
+#: errors.def:31
 msgid "inter-process communication failed"
 msgstr ""
 
-#: errors.def:35
+#: errors.def:32
 msgid "initialize password failed"
 msgstr ""
 
-#: errors.def:36 errors.def:83
+#: errors.def:33 errors.def:80
 msgid "no password given"
 msgstr ""
 
-#: errors.def:38
+#: errors.def:35
 msgid "invalid password"
 msgstr ""
 
-#: errors.def:39
+#: errors.def:36
 msgid "process data failed"
 msgstr ""
 
-#: errors.def:40 errors.def:386
+#: errors.def:37 errors.def:383
 msgid "invalid encoding"
 msgstr ""
 
-#: errors.def:41
+#: errors.def:38
 msgid "convert characters"
 msgstr ""
 
-#: errors.def:48
+#: errors.def:45
 msgid "invalid pattern"
 msgstr ""
 
-#: errors.def:53
+#: errors.def:50
 msgid "no host name given"
 msgstr ""
 
-#: errors.def:63
+#: errors.def:60
 msgid "host not found"
 msgstr ""
 
-#: errors.def:67
+#: errors.def:64
 msgid "bind failed"
 msgstr ""
 
-#: errors.def:74
+#: errors.def:71
 msgid "connect failed"
 msgstr ""
 
-#: errors.def:78
+#: errors.def:75
 msgid "connect timeout"
 msgstr ""
 
-#: errors.def:79
+#: errors.def:76
 msgid "disconnected"
 msgstr ""
 
-#: errors.def:81
+#: errors.def:78
 msgid "too many concurrent connections"
 msgstr ""
 
-#: errors.def:82
+#: errors.def:79
 msgid "no login name given"
 msgstr ""
 
-#: errors.def:87
+#: errors.def:84
 msgid "sending data failed"
 msgstr ""
 
-#: errors.def:91
+#: errors.def:88
 msgid "receiving data failed"
 msgstr ""
 
-#: errors.def:92
+#: errors.def:89
 msgid "execute command failed"
 msgstr ""
 
-#: errors.def:93
+#: errors.def:90
 msgid "timeout send data"
 msgstr ""
 
-#: errors.def:94
+#: errors.def:91
 msgid "timeout receive data"
 msgstr ""
 
-#: errors.def:95
+#: errors.def:92
 msgid "no response from remote"
 msgstr ""
 
-#: errors.def:96
+#: errors.def:93
 msgid "invalid response from remote"
 msgstr ""
 
-#: errors.def:97
+#: errors.def:94
 msgid "bad request"
 msgstr ""
 
-#: errors.def:100
+#: errors.def:97
 msgid "initialize (TLS/SSL) failed"
 msgstr ""
 
-#: errors.def:101
+#: errors.def:98
 msgid "no (TLS/SSL) certificate authority file"
 msgstr ""
 
-#: errors.def:102
+#: errors.def:99
 msgid "no (TLS/SSL) certificate file"
 msgstr ""
 
-#: errors.def:103
+#: errors.def:100
 msgid "no (TLS/SSL) key file"
 msgstr ""
 
-#: errors.def:104
+#: errors.def:101
 msgid "invalid (TLS/SSL) certificate authority"
 msgstr ""
 
-#: errors.def:105
+#: errors.def:102
 msgid "invalid (TLS/SSL) certificate"
 msgstr ""
 
-#: errors.def:106
+#: errors.def:103
 msgid "read (TLS/SSL) certificate fail"
 msgstr ""
 
-#: errors.def:107
+#: errors.def:104
 msgid "corrupt (TLS/SSL) certificate"
 msgstr ""
 
-#: errors.def:111
+#: errors.def:108
 msgid "TLS (SSL) certificate expired"
 msgstr ""
 
-#: errors.def:118
+#: errors.def:115
 msgid "TLS (SSL) certificate is still not active"
 msgstr ""
 
-#: errors.def:125
+#: errors.def:122
 msgid "TLS (SSL) handshake failedure"
 msgstr ""
 
-#: errors.def:129
+#: errors.def:126
 msgid "invalid SSH specifier"
 msgstr ""
 
-#: errors.def:130
+#: errors.def:127
 msgid "no SSH public key"
 msgstr ""
 
-#: errors.def:131
+#: errors.def:128
 msgid "no SSH private key"
 msgstr ""
 
-#: errors.def:135
+#: errors.def:132
 msgid "no SSH password given"
 msgstr ""
 
-#: errors.def:139 errors.def:147 errors.def:180 errors.def:196 errors.def:278
-#: errors.def:709
+#: errors.def:136 errors.def:144 errors.def:177 errors.def:193 errors.def:275
+#: errors.def:706
 msgid "for '{0}'"
 msgstr ""
 
-#: errors.def:143
+#: errors.def:140
 msgid "invalid SSH password"
 msgstr ""
 
-#: errors.def:151
+#: errors.def:148
 msgid "invalid SSH private key"
 msgstr ""
 
-#: errors.def:155
+#: errors.def:152
 msgid "initialize SSH session failed"
 msgstr ""
 
-#: errors.def:159
+#: errors.def:156
 msgid "SSH authentication failed"
 msgstr ""
 
-#: errors.def:166
+#: errors.def:163
 msgid "ssh protocol error"
 msgstr ""
 
-#: errors.def:172
+#: errors.def:169
 msgid "invalid SMB/CIFS specifier"
 msgstr ""
 
-#: errors.def:176
+#: errors.def:173
 msgid "no SMB/CIFS password given"
 msgstr ""
 
-#: errors.def:181
+#: errors.def:178
 msgid "initialize SMB/CIFS session failed"
 msgstr ""
 
-#: errors.def:185
+#: errors.def:182
 msgid "SMB/CIFS authentication failed"
 msgstr ""
 
-#: errors.def:192
+#: errors.def:189
 msgid "invalid SMB/CIFS password"
 msgstr ""
 
-#: errors.def:200
+#: errors.def:197
 msgid "SMB/CIFS protocol error"
 msgstr ""
 
-#: errors.def:208
+#: errors.def:205
 msgid "job '{0}' already exists"
 msgstr ""
 
-#: errors.def:211
+#: errors.def:208
 msgid "job '{0}' running"
 msgstr ""
 
-#: errors.def:214
+#: errors.def:211
 msgid "create job failed"
 msgstr ""
 
-#: errors.def:221
+#: errors.def:218
 msgid "delete job failed"
 msgstr ""
 
-#: errors.def:228
+#: errors.def:225
 msgid "rename job failed"
 msgstr ""
 
-#: errors.def:237
+#: errors.def:234
 msgid "initialize storage failed"
 msgstr ""
 
-#: errors.def:241
+#: errors.def:238
 msgid "no storage name given"
 msgstr ""
 
-#: errors.def:242
+#: errors.def:239
 msgid "invalid storage"
 msgstr ""
 
-#: errors.def:245
+#: errors.def:242
 msgid "invalid FTP specifier"
 msgstr ""
 
-#: errors.def:249
+#: errors.def:246
 msgid "initialize FTP session failed"
 msgstr ""
 
-#: errors.def:253
+#: errors.def:250
 msgid "no FTP password given"
 msgstr ""
 
-#: errors.def:254
+#: errors.def:251
 msgid "invalid FTP password"
 msgstr ""
 
-#: errors.def:258
+#: errors.def:255
 msgid "invalid FTP user/password"
 msgstr ""
 
-#: errors.def:262
+#: errors.def:259
 msgid "get FTP file size failed"
 msgstr ""
 
-#: errors.def:269
+#: errors.def:266
 msgid "invalid WebDAV specifier"
 msgstr ""
 
-#: errors.def:270
+#: errors.def:267
 msgid "initialize WebDAV session failed"
 msgstr ""
 
-#: errors.def:274
+#: errors.def:271
 msgid "no WebDAV password given"
 msgstr ""
 
-#: errors.def:279
+#: errors.def:276
 msgid "invalid WebDAV password"
 msgstr ""
 
-#: errors.def:283
+#: errors.def:280
 msgid "invalid WebDAV user/password"
 msgstr ""
 
-#: errors.def:290
+#: errors.def:287
 msgid "get WebDAV file size"
 msgstr ""
 
-#: errors.def:296
+#: errors.def:293
 msgid "failed"
 msgstr ""
 
-#: errors.def:299
+#: errors.def:296
 msgid "WebDAV upload failed"
 msgstr ""
 
-#: errors.def:306
+#: errors.def:303
 msgid "WebDAV download failed"
 msgstr ""
 
-#: errors.def:313
+#: errors.def:310
 msgid "WebDAV failed"
 msgstr ""
 
-#: errors.def:321
+#: errors.def:318
 msgid "initialize compress failed"
 msgstr ""
 
-#: errors.def:328
+#: errors.def:325
 msgid "initialize decompress failed"
 msgstr ""
 
-#: errors.def:332
+#: errors.def:329
 msgid "end of compressed file"
 msgstr ""
 
-#: errors.def:336 errors.def:980
+#: errors.def:333 errors.def:977
 msgid "delta source not found"
 msgstr ""
 
-#: errors.def:340
+#: errors.def:337
 msgid "invalid compress algorithm"
 msgstr ""
 
-#: errors.def:341
+#: errors.def:338
 msgid "unknown compress algorithm"
 msgstr ""
 
-#: errors.def:342
+#: errors.def:339
 msgid "compress algorithm not supported"
 msgstr ""
 
-#: errors.def:347
+#: errors.def:344
 msgid "compress failed"
 msgstr ""
 
-#: errors.def:354
+#: errors.def:351
 msgid "decompress failed"
 msgstr ""
 
-#: errors.def:359
+#: errors.def:356
 msgid "unsupported block length"
 msgstr ""
 
-#: errors.def:363
+#: errors.def:360
 msgid "initialize crypt failed"
 msgstr ""
 
-#: errors.def:367
+#: errors.def:364
 msgid "no crypt key for cipher"
 msgstr ""
 
-#: errors.def:368
+#: errors.def:365
 msgid "no password given for cipher"
 msgstr ""
 
-#: errors.def:369
+#: errors.def:366
 msgid "invalid decryption password"
 msgstr ""
 
-#: errors.def:370
+#: errors.def:367
 msgid "encryption passwords mismatch"
 msgstr ""
 
-#: errors.def:375
+#: errors.def:372
 msgid "initialize cipher failed"
 msgstr ""
 
-#: errors.def:382
+#: errors.def:379
 msgid "create public/private key failed"
 msgstr ""
 
-#: errors.def:391
+#: errors.def:388
 msgid "initialize key failed"
 msgstr ""
 
-#: errors.def:398
+#: errors.def:395
 msgid "public/private key not found"
 msgstr ""
 
-#: errors.def:405
+#: errors.def:402
 msgid "read public/private key failed"
 msgstr ""
 
-#: errors.def:412
+#: errors.def:409
 msgid "invalid key"
 msgstr ""
 
-#: errors.def:419
+#: errors.def:416
 msgid "corrupt key"
 msgstr ""
 
-#: errors.def:423
+#: errors.def:420
 msgid "invalid key length"
 msgstr ""
 
-#: errors.def:425
+#: errors.def:422
 msgid "invalid block length"
 msgstr ""
 
-#: errors.def:426
+#: errors.def:423
 msgid "invalid salt length"
 msgstr ""
 
-#: errors.def:427
+#: errors.def:424
 msgid "no public encryption key"
 msgstr ""
 
-#: errors.def:428
+#: errors.def:425
 msgid "no private encryption key"
 msgstr ""
 
-#: errors.def:432
+#: errors.def:429
 msgid "key is not a public encryption key"
 msgstr ""
 
-#: errors.def:439
+#: errors.def:436
 msgid "key is not a private encryption key"
 msgstr ""
 
-#: errors.def:443
+#: errors.def:440
 msgid "no public signature key"
 msgstr ""
 
-#: errors.def:444
+#: errors.def:441
 msgid "no private signature key"
 msgstr ""
 
-#: errors.def:448
+#: errors.def:445
 msgid "key is not a public signature key"
 msgstr ""
 
-#: errors.def:455
+#: errors.def:452
 msgid "key is not a private signature key"
 msgstr ""
 
-#: errors.def:462
+#: errors.def:459
 msgid "key encryption failed"
 msgstr ""
 
-#: errors.def:469
+#: errors.def:466
 msgid "key decryption failed"
 msgstr ""
 
-#: errors.def:473
+#: errors.def:470
 msgid "wrong private decryption key"
 msgstr ""
 
-#: errors.def:475
+#: errors.def:472
 msgid "invalid encryption algorithm"
 msgstr ""
 
-#: errors.def:476
+#: errors.def:473
 msgid "unknown encryption algorithm"
 msgstr ""
 
-#: errors.def:481
+#: errors.def:478
 msgid "encrypt failed"
 msgstr ""
 
-#: errors.def:488
+#: errors.def:485
 msgid "decrypt failed"
 msgstr ""
 
-#: errors.def:493
+#: errors.def:490
 msgid "initialize hash failed"
 msgstr ""
 
-#: errors.def:494
+#: errors.def:491
 msgid "invalid hash algorithm"
 msgstr ""
 
-#: errors.def:495
+#: errors.def:492
 msgid "unknown hash algorithm"
 msgstr ""
 
-#: errors.def:497
+#: errors.def:494
 msgid "initialize message authentication code failed"
 msgstr ""
 
-#: errors.def:498
+#: errors.def:495
 msgid "invalid message authentication code algorithm"
 msgstr ""
 
-#: errors.def:499
+#: errors.def:496
 msgid "unknown message authentication code algorithm"
 msgstr ""
 
-#: errors.def:505
+#: errors.def:502
 msgid "directory not found"
 msgstr ""
 
-#: errors.def:509
+#: errors.def:506
 msgid "no file name given"
 msgstr ""
 
-#: errors.def:514
+#: errors.def:511
 msgid "create file failed"
 msgstr ""
 
-#: errors.def:527
+#: errors.def:524
 msgid "open file failed"
 msgstr ""
 
-#: errors.def:531
+#: errors.def:528
 msgid "create directory failed"
 msgstr ""
 
-#: errors.def:538
+#: errors.def:535
 msgid "read file failed"
 msgstr ""
 
-#: errors.def:545
+#: errors.def:542
 msgid "end of file"
 msgstr ""
 
-#: errors.def:552
+#: errors.def:549
 msgid "write file failed"
 msgstr ""
 
-#: errors.def:559
+#: errors.def:556
 msgid "delete file failed"
 msgstr ""
 
-#: errors.def:566
+#: errors.def:563
 msgid "open directory"
 msgstr ""
 
-#: errors.def:570
+#: errors.def:567
 msgid "read directory failed"
 msgstr ""
 
-#: errors.def:578
+#: errors.def:575
 msgid "file '{0}' already exists"
 msgstr ""
 
-#: errors.def:582
+#: errors.def:579
 msgid "file already exists"
 msgstr ""
 
-#: errors.def:587
+#: errors.def:584
 msgid "file not found"
 msgstr ""
 
-#: errors.def:594
+#: errors.def:591
 msgid "access denied"
 msgstr ""
 
-#: errors.def:601
+#: errors.def:598
 msgid "not a directory"
 msgstr ""
 
-#: errors.def:605
+#: errors.def:602
 msgid "end of directory list"
 msgstr ""
 
-#: errors.def:610
+#: errors.def:607
 msgid "init file notify failed"
 msgstr ""
 
-#: errors.def:614
+#: errors.def:611
 msgid "insufficient file notify entries"
 msgstr ""
 
-#: errors.def:619
+#: errors.def:616
 msgid "i/o error"
 msgstr ""
 
-#: errors.def:627
+#: errors.def:624
 msgid "CD/DVD/BD device not found"
 msgstr ""
 
-#: errors.def:634
+#: errors.def:631
 msgid "open CD/DVD/BD disk failed"
 msgstr ""
 
-#: errors.def:641
+#: errors.def:638
 msgid "read CD/DVD/BD disk failed"
 msgstr ""
 
-#: errors.def:648
+#: errors.def:645
 msgid "open ISO 9660 image failed"
 msgstr ""
 
-#: errors.def:653
+#: errors.def:650
 msgid "no device name given"
 msgstr ""
 
-#: errors.def:654
+#: errors.def:651
 msgid "not a device"
 msgstr ""
 
-#: errors.def:659
+#: errors.def:656
 msgid "open device failed"
 msgstr ""
 
-#: errors.def:663
+#: errors.def:660
 msgid "invalid device block size"
 msgstr ""
 
-#: errors.def:664
+#: errors.def:661
 msgid "read device failed"
 msgstr ""
 
-#: errors.def:665
+#: errors.def:662
 msgid "write device failed"
 msgstr ""
 
-#: errors.def:666
+#: errors.def:663
 msgid "error parsing device list"
 msgstr ""
 
-#: errors.def:671
+#: errors.def:668
 msgid "mount failed"
 msgstr ""
 
-#: errors.def:678
+#: errors.def:675
 msgid "unmount failed"
 msgstr ""
 
-#: errors.def:683
+#: errors.def:680
 msgid "no archive file name given"
 msgstr ""
 
-#: errors.def:688
+#: errors.def:685
 msgid "not an archive file"
 msgstr ""
 
-#: errors.def:695
+#: errors.def:692
 msgid "archive not found"
 msgstr ""
 
-#: errors.def:699
+#: errors.def:696
 msgid "end of archive"
 msgstr ""
 
-#: errors.def:700
+#: errors.def:697
 msgid "no meta entry"
 msgstr ""
 
-#: errors.def:701
+#: errors.def:698
 msgid "no file entry"
 msgstr ""
 
-#: errors.def:705
+#: errors.def:702
 msgid "no file data entry"
 msgstr ""
 
-#: errors.def:710
+#: errors.def:707
 msgid "no directory entry"
 msgstr ""
 
-#: errors.def:711
+#: errors.def:708
 msgid "no link entry"
 msgstr ""
 
-#: errors.def:712
+#: errors.def:709
 msgid "no hard link entry"
 msgstr ""
 
-#: errors.def:713
+#: errors.def:710
 msgid "no special entry"
 msgstr ""
 
-#: errors.def:714
+#: errors.def:711
 msgid "no image entry"
 msgstr ""
 
-#: errors.def:715
+#: errors.def:712
 msgid "no image data entry"
 msgstr ""
 
-#: errors.def:716
+#: errors.def:713
 msgid "end of data"
 msgstr ""
 
-#: errors.def:717
+#: errors.def:714
 msgid "incomplete archive"
 msgstr ""
 
-#: errors.def:718
+#: errors.def:715
 msgid "insufficient split number digits in name"
 msgstr ""
 
-#: errors.def:724
+#: errors.def:721
 msgid "wrong CRC"
 msgstr ""
 
-#: errors.def:728
+#: errors.def:725
 msgid "at offset"
 msgstr ""
 
-#: errors.def:741
+#: errors.def:738
 msgid "entry is incomplete"
 msgstr ""
 
-#: errors.def:748
+#: errors.def:745
 msgid "wrong entry type"
 msgstr ""
 
-#: errors.def:755
+#: errors.def:752
 msgid "entries differ"
 msgstr ""
 
-#: errors.def:762
+#: errors.def:759
 msgid "corrupt data or invalid password"
 msgstr ""
 
-#: errors.def:766
+#: errors.def:763
 msgid "invalid chunk size"
 msgstr ""
 
-#: errors.def:770
+#: errors.def:767
 msgid "unknown chunk"
 msgstr ""
 
-#: errors.def:774
+#: errors.def:771
 msgid "invalid signature"
 msgstr ""
 
-#: errors.def:777
+#: errors.def:774
 msgid "invalid incremental file"
 msgstr ""
 
-#: errors.def:778
+#: errors.def:775
 msgid "wrong incremental file version"
 msgstr ""
 
-#: errors.def:779
+#: errors.def:776
 msgid "corrupt incremental file"
 msgstr ""
 
-#: errors.def:782
+#: errors.def:779
 msgid "invalid device specifier"
 msgstr ""
 
-#: errors.def:783
+#: errors.def:780
 msgid "load volume failed"
 msgstr ""
 
-#: errors.def:789
+#: errors.def:786
 msgid "parse command failed"
 msgstr ""
 
-#: errors.def:793
+#: errors.def:790
 msgid "expand command template failed"
 msgstr ""
 
-#: errors.def:797
+#: errors.def:794
 msgid "i/o redirect failed"
 msgstr ""
 
-#: errors.def:804
+#: errors.def:801
 msgid "execute external program failed"
 msgstr ""
 
-#: errors.def:811
+#: errors.def:808
 msgid "terminated external program"
 msgstr ""
 
-#: errors.def:819
+#: errors.def:816
 msgid "parsing data failed"
 msgstr ""
 
-#: errors.def:826
+#: errors.def:823
 msgid "parsing date failed"
 msgstr ""
 
-#: errors.def:833
+#: errors.def:830
 msgid "parsing time failed"
 msgstr ""
 
-#: errors.def:840
+#: errors.def:837
 msgid "parsing weekdays failed"
 msgstr ""
 
-#: errors.def:847
+#: errors.def:844
 msgid "parsing maintenance failed"
 msgstr ""
 
-#: errors.def:854
+#: errors.def:851
 msgid "parsing schedule failed"
 msgstr ""
 
-#: errors.def:861
+#: errors.def:858
 msgid "unknown command"
 msgstr ""
 
-#: errors.def:868
+#: errors.def:865
 msgid "expected parameter"
 msgstr ""
 
-#: errors.def:881
+#: errors.def:878
 msgid "unknown value"
 msgstr ""
 
-#: errors.def:885
+#: errors.def:882
 msgid "invalid value"
 msgstr ""
 
-#: errors.def:892
+#: errors.def:889
 msgid "deprecated or ignored value"
 msgstr ""
 
-#: errors.def:896
+#: errors.def:893
 msgid "authorization failed"
 msgstr ""
 
-#: errors.def:900
+#: errors.def:897
 msgid "job not found"
 msgstr ""
 
-#: errors.def:907
+#: errors.def:904
 msgid "schedule not found"
 msgstr ""
 
-#: errors.def:920
+#: errors.def:917
 msgid "persistence not found"
 msgstr ""
 
-#: errors.def:930
+#: errors.def:927
 msgid "maintenance not found"
 msgstr ""
 
-#: errors.def:940
+#: errors.def:937
 msgid "server not found"
 msgstr ""
 
-#: errors.def:950
+#: errors.def:947
 msgid "entry not found"
 msgstr ""
 
-#: errors.def:960
+#: errors.def:957
 msgid "pattern not found"
 msgstr ""
 
-#: errors.def:970
+#: errors.def:967
 msgid "mount not found"
 msgstr ""
 
-#: errors.def:985
+#: errors.def:982
 msgid "database"
 msgstr ""
 
-#: errors.def:992
+#: errors.def:989
 msgid "invalid database URI"
 msgstr ""
 
-#: errors.def:996
+#: errors.def:993
 msgid "database type not supported"
 msgstr ""
 
-#: errors.def:998
+#: errors.def:995
 msgid "database already exists"
 msgstr ""
 
-#: errors.def:999
+#: errors.def:996
 msgid "database not found"
 msgstr ""
 
-#: errors.def:1000
+#: errors.def:997
 msgid "connect to database failed"
 msgstr ""
 
-#: errors.def:1001
+#: errors.def:998
 msgid "database connection lost"
 msgstr ""
 
-#: errors.def:1002
+#: errors.def:999
 msgid "database authorization failed"
 msgstr ""
 
-#: errors.def:1007
+#: errors.def:1004
 msgid "insufficient database version"
 msgstr ""
 
-#: errors.def:1011
+#: errors.def:1008
 msgid "unknown version of index"
 msgstr ""
 
-#: errors.def:1015
+#: errors.def:1012
 msgid "missing table"
 msgstr ""
 
-#: errors.def:1022
+#: errors.def:1019
 msgid "missing column"
 msgstr ""
 
-#: errors.def:1029
+#: errors.def:1026
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:1036
+#: errors.def:1033
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:1043
+#: errors.def:1040
 msgid "database bind failed"
 msgstr ""
 
-#: errors.def:1050
+#: errors.def:1047
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:1054
+#: errors.def:1051
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:1055
+#: errors.def:1052
 msgid "index not found"
 msgstr ""
 
-#: errors.def:1056
+#: errors.def:1053
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:1060
+#: errors.def:1057
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:1067
+#: errors.def:1064
 msgid "parse index id failed"
 msgstr ""
 
-#: errors.def:1074
+#: errors.def:1071
 msgid "database is locked"
 msgstr ""
 
-#: errors.def:1078
+#: errors.def:1075
 msgid "database busy"
 msgstr ""
 
-#: errors.def:1079
+#: errors.def:1076
 msgid "database operation interrupted"
 msgstr ""
 
-#: errors.def:1083
+#: errors.def:1080
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:1087
+#: errors.def:1084
 msgid "database entry not found"
 msgstr ""
 
-#: errors.def:1090
+#: errors.def:1087
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:1091
+#: errors.def:1088
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:1092
+#: errors.def:1089
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:1093
+#: errors.def:1090
 msgid "instance is not a slave"
 msgstr ""
 
-#: errors.def:1096
+#: errors.def:1093
 msgid "create PAR2 checksums fail"
 msgstr ""

@@ -271,6 +271,9 @@
 /* iso9660_open() available */
 #undef HAVE_ISO9660_OPEN
 
+/* libisofs installed */
+#undef HAVE_ISOFS
+
 /* kill() available */
 #undef HAVE_KILL
 
@@ -852,6 +855,9 @@
 /* icu version */
 #undef VERSION_ICU
 
+/* isofs version */
+#undef VERSION_ISOFS
+
 /* SMB2 version */
 #undef VERSION_LIBSMB2
 
@@ -874,6 +880,9 @@
 #undef VERSION_OPENSSL
 
 /* PAR2 version */
+#undef VERSION_PAR2
+
+/* pcre version */
 #undef VERSION_PCRE
 
 /* PostgreSQL version */
