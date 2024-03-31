@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision$
-* $Date$
-* $Author$
 * Contents: Backup ARchiver delta compression source functions
 * Systems: all
 *

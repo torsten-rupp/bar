@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 3543 $
-* $Date: 2015-01-24 13:59:52 +0100 (Sat, 24 Jan 2015) $
-* $Author: torsten $
 * Contents: Backup ARchiver entry list functions
 * Systems: all
 *

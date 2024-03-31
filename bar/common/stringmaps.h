@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 1092 $
-* $Date: 2013-07-28 05:34:57 +0200 (Sun, 28 Jul 2013) $
-* $Author: torsten $
 * Contents: string map functions
 * Systems: all
 *

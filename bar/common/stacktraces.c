@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 3843 $
-* $Date: 2015-03-26 21:07:41 +0100 (Thu, 26 Mar 2015) $
-* $Author: torsten $
 * Contents: stacktrace functions
 * Systems: Linux
 *

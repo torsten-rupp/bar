@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 4036 $
-* $Date: 2015-05-30 01:48:57 +0200 (Sat, 30 May 2015) $
-* $Author: torsten $
 * Contents: storage file functions
 * Systems: all
 *

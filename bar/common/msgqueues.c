@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision$
-* $Date$
-* $Author$
 * Contents: functions for inter-process message queues
 * Systems: all POSIX
 *

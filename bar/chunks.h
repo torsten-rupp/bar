@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision$
-* $Date$
-* $Author$
 * Contents: Backup ARchiver file chunk functions
 * Systems: all
 *

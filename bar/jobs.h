@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 8947 $
-* $Date: 2018-11-29 13:04:59 +0100 (Thu, 29 Nov 2018) $
-* $Author: torsten $
 * Contents: Backup ARchiver job functions
 * Systems: all
 *

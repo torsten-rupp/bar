@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision$
-* $Date$
-* $Author$
 * Contents: miscellaneous functions
 * Systems: all
 *

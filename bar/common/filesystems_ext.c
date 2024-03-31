@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision$
-* $Date$
-* $Author$
 * Contents: Backup ARchiver EXT2/3/4 file system plug in
 * Systems: all
 *

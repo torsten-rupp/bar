@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 3071 $
-* $Date: 2014-02-22 20:20:41 +0100 (Sat, 22 Feb 2014) $
-* $Author: trupp $
 * Contents: Backup ARchiver compress functions
 * Systems: all
 *

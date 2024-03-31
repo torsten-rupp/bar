@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Source: /tmp/cvs/onzen/src/ProgressBar.java,v $
-* $Revision: 1564 $
-* $Author: torsten $
 * Contents: progress bar widget
 * Systems: all
 *

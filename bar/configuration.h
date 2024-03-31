@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 11180 $
-* $Date: 2020-11-19 12:31:04 +0100 (Thu, 19 Nov 2020) $
-* $Author: torsten $
 * Contents: Backup ARchiver configuration
 * Systems: all
 *

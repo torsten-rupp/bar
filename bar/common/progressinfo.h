@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 3438 $
-* $Date: 2015-01-02 10:45:04 +0100 (Fri, 02 Jan 2015) $
-* $Author: torsten $
 * Contents: Progress info functions
 * Systems: all
 *

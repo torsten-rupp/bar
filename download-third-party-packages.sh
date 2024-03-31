@@ -2,9 +2,6 @@
 
 # ----------------------------------------------------------------------------
 #
-# $Source: /home/torsten/cvs/bar/download-third-party-packages.sh,v $
-# $Revision: 1.18 $
-# $Author: torsten $
 # Contents: download third-party packages
 # Systems: Unix
 #

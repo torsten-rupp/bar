@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 4135 $
-* $Date: 2015-09-19 11:03:57 +0200 (Sat, 19 Sep 2015) $
-* $Author: torsten $
 * Contents: Backup ARchiver connector functions
 * Systems: all
 *

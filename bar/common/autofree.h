@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 2615 $
-* $Date: 2013-09-02 20:57:12 +0200 (Mon, 02 Sep 2013) $
-* $Author: trupp $
 * Contents: auto-free resource functions
 * Systems: Linux
 *

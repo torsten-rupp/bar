@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision$
-* $Date$
-* $Author$
 * Contents: "destroy" binary files by overwrite/insert/delete bytes;
 *           used for test only!
 * Systems: all

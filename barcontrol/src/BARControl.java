@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 1.30 $
-* $Date: 2019-01-17 21:06:25 +0100 (Thu, 17 Jan 2019) $
-* $Author: torsten $
 * Contents: BARControl (frontend for BAR)
 * Systems: all
 *

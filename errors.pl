@@ -6,9 +6,6 @@
 
 # ----------------------------------------------------------------------------
 #
-# $Source: /home/torsten/cvs/bar/errors.pl,v $
-# $Revision$
-# $Author$
 # Contents: create header/c file definition from errors definition
 # Systems: all
 #

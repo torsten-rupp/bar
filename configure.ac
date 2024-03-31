@@ -1,8 +1,5 @@
 dnl --------------------------------------------------------------------
 dnl
-dnl $Source: /home/torsten/cvs/bar/configure.in,v $
-dnl $Revision: 11560 $
-dnl $Author: torsten $
 dnl Contents: BAR auto-configure script
 dnl
 dnl --------------------------------------------------------------------

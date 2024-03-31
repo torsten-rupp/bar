@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 3620 $
-* $Date: 2015-02-06 20:57:40 +0100 (Fri, 06 Feb 2015) $
-* $Author: torsten $
 * Contents: Backup ARchiver delta source list functions
 * Systems: all
 *

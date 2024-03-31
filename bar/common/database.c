@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision$
-* $Date$
-* $Author$
 * Contents: database functions (SQLite3, MariaDB, PostgreSQL)
 * Systems: all
 *

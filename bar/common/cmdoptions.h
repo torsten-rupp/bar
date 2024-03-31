@@ -1,8 +1,5 @@
 /**********************************************************************
 *
-* $Revision$
-* $Date$
-* $Author$
 * Contents: command line options parser
 * Systems: all
 *

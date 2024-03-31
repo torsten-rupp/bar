@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 11036 $
-* $Date: 2020-07-28 08:02:25 +0200 (Tue, 28 Jul 2020) $
-* $Author: torsten $
 * Contents: thread pool functions
 * Systems: all
 *

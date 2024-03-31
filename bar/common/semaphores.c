@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision$
-* $Date$
-* $Author$
 * Contents: functions for inter-process semaphores
 * Systems: all POSIX
 *

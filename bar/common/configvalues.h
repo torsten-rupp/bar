@@ -1,8 +1,5 @@
 /**********************************************************************
 *
-* $Revision$
-* $Date$
-* $Author$
 * Contents: config file entry parser
 * Systems: all
 *

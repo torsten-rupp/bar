@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 4012 $
-* $Date: 2015-04-28 19:02:40 +0200 (Tue, 28 Apr 2015) $
-* $Author: torsten $
 * Contents: storage FTP functions
 * Systems: all
 *

@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 7100 $
-* $Date: 2017-01-19 15:55:44 +0100 (Thu, 19 Jan 2017) $
-* $Author: torsten $
 * Contents: Backup ARchiver server input/output
 * Systems: all
 *

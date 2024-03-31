@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 4195 $
-* $Date: 2015-10-17 10:41:02 +0200 (Sat, 17 Oct 2015) $
-* $Author: torsten $
 * Contents: continuous functions
 * Systems: all
 *

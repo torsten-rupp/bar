@@ -1,8 +1,5 @@
 /***********************************************************************\
 *
-* $Revision: 7195 $
-* $Date: 2017-02-22 03:54:06 +0100 (Wed, 22 Feb 2017) $
-* $Author: torsten $
 * Contents: Backup ARchiver archive convert functions
 * Systems: all
 *
