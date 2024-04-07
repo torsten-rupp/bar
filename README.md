@@ -24,11 +24,12 @@ Features
 * encrypt archive content with gcrypt algorithms (BLOWFISH,
   TWOFISH, AES, a. o.),
 * asymmetric encryption with RSA,
+* create PAR2 checksum files,
 * store archives directly on external server via ftp or scp,
   sftp, webDAV, webDAVs, SMB/CIFS,
-* with external tools: store archives on CD/DVD/BD including
-  error correction codes,
-* support storage on a generic device,
+* store archives on CD/DVD/BD and add error correction codes
+  with the external tool dvdisaster,
+  on a generic device,
 * multicore support for compression and encryption,
 * server mode with included scheduler for doing backups regularly.
   Controlling the server can be done via network connection

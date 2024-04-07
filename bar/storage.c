@@ -33,6 +33,7 @@
 #include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/files.h"
+#include "common/devices.h"
 #include "common/network.h"
 #include "common/semaphores.h"
 #include "common/passwords.h"
@@ -975,6 +976,22 @@ LOCAL Errors transferStorageToStorage(StorageHandle               *fromStorageHa
   #undef TRANSFER_BUFFER_SIZE
 }
 
+#ifndef NDEBUG
+/***********************************************************************\
+* Name   : debugGetEmulateBlockDevice
+* Purpose: get emulated block device file name
+* Input  : -
+* Output : -
+* Return : emulated block device file name or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE char *debugGetEmulateBlockDevice(void)
+{
+  return getenv(DEVICE_DEBUG_EMULATE_BLOCK_DEVICE);
+}
+#endif // NDEBUG
+
 // ----------------------------------------------------------------------
 
 #include "storage_file.c"
@@ -1011,41 +1028,32 @@ Errors Storage_initAll(void)
       }
     }
   #endif
-  if (error == ERROR_NONE)
+
+  struct { Errors(*initAll)(); void(*doneAll)(); } INIT_DONE[] =
   {
-    error = StorageFile_initAll();
+    { StorageFile_initAll,    StorageFile_doneAll    },
+    { StorageFTP_initAll,     StorageFTP_doneAll     },
+    { StorageSCP_initAll,     StorageSCP_doneAll     },
+    { StorageSFTP_initAll,    StorageSFTP_doneAll    },
+    { StorageWebDAV_initAll,  StorageWebDAV_doneAll  },
+    { StorageSMB_initAll,     StorageSMB_doneAll     },
+    { StorageOptical_initAll, StorageOptical_doneAll },
+    { StorageDevice_initAll,  StorageDevice_doneAll  },
+    { StorageMaster_initAll,  StorageMaster_doneAll  }
+  };
+  size_t i = 0;
+  while ((i < SIZE_OF_ARRAY(INIT_DONE)) && (error == ERROR_NONE))
+  {
+    error = INIT_DONE[i].initAll();
+    i++;
   }
-  if (error == ERROR_NONE)
+  if (error != ERROR_NONE)
   {
-    error = StorageFTP_initAll();
-  }
-  if (error == ERROR_NONE)
-  {
-    error = StorageSCP_initAll();
-  }
-  if (error == ERROR_NONE)
-  {
-    error = StorageSFTP_initAll();
-  }
-  if (error == ERROR_NONE)
-  {
-    error = StorageWebDAV_initAll();
-  }
-  if (error == ERROR_NONE)
-  {
-    error = StorageSMB_initAll();
-  }
-  if (error == ERROR_NONE)
-  {
-    error = StorageOptical_initAll();
-  }
-  if (error == ERROR_NONE)
-  {
-    error = StorageDevice_initAll();
-  }
-  if (error == ERROR_NONE)
-  {
-    error = StorageMaster_initAll();
+    while (i > 0)
+    {
+      i--;
+      INIT_DONE[i].doneAll();
+    }
   }
 
   return error;

@@ -70,6 +70,9 @@
 /* BLKSSZGET available */
 #undef HAVE_BLKSSZGET
 
+/* libisofs installed */
+#undef HAVE_BURN
+
 /* bzip2 installed */
 #undef HAVE_BZ2
 
@@ -833,6 +836,9 @@
 
 /* TLS directory */
 #undef TLS_DIR
+
+/* burn version */
+#undef VERSION_BURN
 
 /* bz2 version */
 #undef VERSION_BZ2

@@ -618,7 +618,6 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
 // TODO:
 //    storageInfo->device.write.step = 0;
     executeIOInfo.storageInfo      = storageInfo;
-    executeIOInfo.commandLine      = String_new();
     StringList_init(&executeIOInfo.stderrList);
 
     // update running info
@@ -666,6 +665,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       if (!String_isEmpty(storageInfo->device.write.imagePreProcessCommand))
       {
         printInfo(1,"Image pre-processing of volume #%u...",storageInfo->volumeNumber);
+        String commandLine = String_new();
         error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePreProcessCommand ),
                                     textMacros.data,
                                     textMacros.count,
@@ -686,13 +686,14 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                      storageInfo->volumeNumber,
                      Error_getText(error)
                     );
-          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
           logLines(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
                    "  ",
                    &executeIOInfo.stderrList
                   );
         }
+        String_delete(commandLine);
       }
     }
 
@@ -702,10 +703,12 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       if (!String_isEmpty(storageInfo->device.write.imageCommand))
       {
         printInfo(1,"Create image volume #%u...",storageInfo->volumeNumber);
+
+        String commandLine = String_new();
         error = Misc_executeCommand(String_cString(storageInfo->device.write.imageCommand),
                                     textMacros.data,
                                     textMacros.count,
-                                    NULL, // commandLine
+                                    commandLine,
                                     CALLBACK_(executeIOOutput,NULL),
                                     CALLBACK_(executeIOOutput,NULL)
                                    );
@@ -727,13 +730,14 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                      storageInfo->volumeNumber,
                      Error_getText(error)
                     );
-          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
           logLines(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
                    "  ",
                    &executeIOInfo.stderrList
                   );
         }
+        String_delete(commandLine);
       }
     }
 
@@ -746,10 +750,12 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         if (!String_isEmpty(storageInfo->device.write.eccPreProcessCommand))
         {
           printInfo(1,"Add ECC pre-processing to image of volume #%u...",storageInfo->volumeNumber);
+
+          String commandLine = String_new();
           error = Misc_executeCommand(String_cString(storageInfo->device.write.eccPreProcessCommand ),
                                       textMacros.data,
                                       textMacros.count,
-                                      NULL, // commandLine
+                                      commandLine,
                                       CALLBACK_(executeIOOutput,NULL),
                                       CALLBACK_(executeIOOutput,NULL)
                                      );
@@ -766,13 +772,14 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                        storageInfo->volumeNumber,
                        Error_getText(error)
                       );
-            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
             logLines(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
                      "  ",
                      &executeIOInfo.stderrList
                     );
           }
+          String_delete(commandLine);
         }
       }
 
@@ -782,12 +789,13 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         if (!String_isEmpty(storageInfo->device.write.eccCommand))
         {
           printInfo(1,"Add ECC to image of volume #%u...",storageInfo->volumeNumber);
-          String_clear(executeIOInfo.commandLine);
+
+          String commandLine = String_new();
           StringList_clear(&executeIOInfo.stderrList);
           error = Misc_executeCommand(String_cString(storageInfo->device.write.eccCommand),
                                       textMacros.data,
                                       textMacros.count,
-                                      executeIOInfo.commandLine,
+                                      commandLine,
                                       CALLBACK_(executeIOdvdisasterStdout,&executeIOInfo),
                                       CALLBACK_(executeIOdvdisasterStderr,&executeIOInfo)
                                      );
@@ -804,13 +812,14 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                        storageInfo->volumeNumber,
                        Error_getText(error)
                       );
-            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
             logLines(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
                      "  ",
                      &executeIOInfo.stderrList
                     );
           }
+          String_delete(commandLine);
         }
       }
 
@@ -820,10 +829,12 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         if (!String_isEmpty(storageInfo->device.write.eccPostProcessCommand))
         {
           printInfo(1,"Add ECC post-processing to image of volume #%u...",storageInfo->volumeNumber);
+
+          String commandLine = String_new();
           error = Misc_executeCommand(String_cString(storageInfo->device.write.eccPostProcessCommand ),
                                       textMacros.data,
                                       textMacros.count,
-                                      NULL, // commandLine
+                                      commandLine,
                                       CALLBACK_(executeIOOutput,NULL),
                                       CALLBACK_(executeIOOutput,NULL)
                                      );
@@ -841,13 +852,14 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                        storageInfo->volumeNumber,
                        Error_getText(error)
                       );
-            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
             logLines(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
                      "  ",
                      &executeIOInfo.stderrList
                     );
           }
+          String_delete(commandLine);
         }
       }
     }
@@ -858,10 +870,12 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       if (!String_isEmpty(storageInfo->device.write.imagePostProcessCommand))
       {
         printInfo(1,"Image post-processing of volume #%u...",storageInfo->volumeNumber);
+
+        String commandLine = String_new();
         error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePostProcessCommand),
                                     textMacros.data,
                                     textMacros.count,
-                                    NULL, // commandLine
+                                    commandLine,
                                     CALLBACK_(executeIOOutput,NULL),
                                     CALLBACK_(executeIOOutput,NULL)
                                    );
@@ -878,13 +892,14 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                      storageInfo->volumeNumber,
                      Error_getText(error)
                     );
-          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
           logLines(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
                    "  ",
                    &executeIOInfo.stderrList
                   );
         }
+        String_delete(commandLine);
       }
     }
 
@@ -896,12 +911,13 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         if (!String_isEmpty(storageInfo->device.write.blankCommand))
         {
           printInfo(1,"Blank volume #%u...",storageInfo->device.write.number);
-          String_clear(executeIOInfo.commandLine);
+
+          String commandLine = String_new();
           StringList_clear(&executeIOInfo.stderrList);
           error = Misc_executeCommand(String_cString(storageInfo->device.write.blankCommand),
                                       textMacros.data,
                                       textMacros.count,
-                                      executeIOInfo.commandLine,
+                                      commandLine,
                                       CALLBACK_(executeIOblankStdout,&executeIOInfo),
                                       CALLBACK_(executeIOblankStderr,&executeIOInfo)
                                      );
@@ -909,7 +925,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
           {
             printInfo(1,"OK\n");
             logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked volume #%u",storageInfo->volumeNumber);
-            logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
             updateVolumeDone(storageInfo,1,0);
             updateStorageRunningInfo(storageInfo);
           }
@@ -923,13 +939,14 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                        storageInfo->volumeNumber,
                        Error_getText(error)
                       );
-            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
             logLines(storageInfo->logHandle,
                      LOG_TYPE_ERROR,
                      "  ",
                      &executeIOInfo.stderrList
                     );
           }
+          String_delete(commandLine);
         }
       }
     }
@@ -937,6 +954,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     // write to device
     if (error == ERROR_NONE)
     {
+      String commandLine = String_new();
       retryCount = 3;
       retryFlag  = TRUE;
       do
@@ -944,10 +962,11 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         retryFlag = FALSE;
 
         printInfo(1,"Write device volume #%u...",storageInfo->volumeNumber);
+
         error = Misc_executeCommand(String_cString(storageInfo->device.write.writeCommand),
                                     textMacros.data,
                                     textMacros.count,
-                                    NULL, // commandLine
+                                    commandLine,
                                     CALLBACK_(executeIOOutput,NULL),
                                     CALLBACK_(executeIOOutput,NULL)
                                    );
@@ -965,7 +984,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                      storageInfo->volumeNumber,
                      Error_getText(error)
                     );
-          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(executeIOInfo.commandLine));
+          logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
           logLines(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
                    "  ",
@@ -973,13 +992,15 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                   );
 
           retryCount--;
-          if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
+          switch (globalOptions.runMode)
           {
-            retryFlag = Misc_getYesNo("Retry write image to volume?");
-          }
-          else
-          {
-            retryFlag = (requestNewOpticalMedium(storageInfo,Error_getText(error),TRUE) == ERROR_NONE);
+            case RUN_MODE_INTERACTIVE:
+              retryFlag = Misc_getYesNo("Retry write image to volume?");
+              break;
+            case RUN_MODE_BATCH:
+            case RUN_MODE_SERVER:
+              retryFlag = (requestNewOpticalMedium(storageInfo,Error_getText(error),TRUE) == ERROR_NONE);
+              break;
           }
         }
       }
@@ -987,10 +1008,11 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       if (error == ERROR_NONE)
       {
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written image volume #%u",storageInfo->volumeNumber);
-        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(executeIOInfo.commandLine));
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
         updateVolumeDone(storageInfo,1,0);
         updateStorageRunningInfo(storageInfo);
       }
+      String_delete(commandLine);
     }
 
     // delete image
@@ -1017,7 +1039,6 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     // handle error
     if (error != ERROR_NONE)
     {
-      String_delete(executeIOInfo.commandLine);
       StringList_done(&executeIOInfo.stderrList);
       return error;
     }
@@ -1027,7 +1048,6 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     storageInfo->device.write.totalSize     = 0;
 
     // free resources
-    String_delete(executeIOInfo.commandLine);
     StringList_done(&executeIOInfo.stderrList);
 
     // write post-processing

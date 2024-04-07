@@ -776,6 +776,7 @@ INSTALL_DIR
 HAVE_USLEEP
 HAVE_BFD
 HAVE_PTHREADS_W32
+HAVE_BURN
 HAVE_ISOFS
 HAVE_PAR2
 HAVE_POSTGRESQL
@@ -908,6 +909,7 @@ enable_postgresql
 enable_pcre
 enable_par2
 enable_isofs
+enable_burn
 enable_bfd
 enable_gui
 enable_gui_i18n
@@ -1571,6 +1573,7 @@ Optional Features:
   --disable-pcre          disable PCRE support
   --disable-par2          disable PAR2 support
   --disable-isofs         disable ISO file system support
+  --disable-burn          disable burn support
   --disable-bfd           disable BFD support
   --disable-gui           disable GUI support (barcontrol)
   --disable-gui-i18n      disable GUI localization support (barcontrol)
@@ -3370,6 +3373,7 @@ ENABLE_POSTGRESQL="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_PAR2="yes"
 ENABLE_ISOFS="yes"
+ENABLE_BURN="yes"
 ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
@@ -3654,6 +3658,13 @@ fi
 if test ${enable_isofs+y}
 then :
   enableval=$enable_isofs; ENABLE_ISOFS=$enableval
+
+fi
+
+# Check whether --enable-burn was given.
+if test ${enable_burn+y}
+then :
+  enableval=$enable_burn; ENABLE_BURN=$enableval
 
 fi
 
@@ -20930,16 +20941,16 @@ printf "%s\n" "#define HAVE_ISOFS 1" >>confdefs.h
 
 
     ac_result=""
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing par2create" >&5
-printf %s "checking for library containing par2create... " >&6; }
-if test ${ac_cv_search_libraries_par2create+y}
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing iso_image_new" >&5
+printf %s "checking for library containing iso_image_new... " >&6; }
+if test ${ac_cv_search_libraries_iso_image_new+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
             ac_func_search_libraries_save_LIBS=$LIBS
 
-      for ac_library in par2 ""; do
+      for ac_library in isofs ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -20953,8 +20964,8 @@ else $as_nop
 int
 main (void)
 {
-`if test -z ""; then echo "extern void par2create();"; fi`
-                                         return (int)par2create;
+`if test -z ""; then echo "extern void iso_image_new();"; fi`
+                                         return (int)iso_image_new;
 
 
   ;
@@ -20964,26 +20975,26 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_libraries_par2create=$ac_result; break
+  ac_cv_search_libraries_iso_image_new=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
       done
-      if test ${ac_cv_search_libraries_par2create+y}
+      if test ${ac_cv_search_libraries_iso_image_new+y}
 then :
 
 else $as_nop
-  ac_cv_search_libraries_par2create=no
+  ac_cv_search_libraries_iso_image_new=no
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_par2create" >&5
-printf "%s\n" "$ac_cv_search_libraries_par2create" >&6; }
-  ac_result=$ac_cv_search_libraries_par2create
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_iso_image_new" >&5
+printf "%s\n" "$ac_cv_search_libraries_iso_image_new" >&6; }
+  ac_result=$ac_cv_search_libraries_iso_image_new
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ISOFS=1;LIBRARIES="isofs $LIBRARIES";
@@ -20995,9 +21006,9 @@ fi
       if test -z "$HAVE_ISOFS"; then
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing par2create" >&5
-printf %s "checking for static library containing par2create... " >&6; }
-if test ${ac_cv_search_static_par2create+y}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing iso_image_new" >&5
+printf %s "checking for static library containing iso_image_new... " >&6; }
+if test ${ac_cv_search_static_iso_image_new+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
@@ -21006,7 +21017,7 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in par2 ""; do
+      for ac_library in isofs ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -21020,8 +21031,8 @@ else $as_nop
 int
 main (void)
 {
-`if test -z ""; then echo "extern void par2create();"; fi`
-                                         return (int)par2create;
+`if test -z ""; then echo "extern void iso_image_new();"; fi`
+                                         return (int)iso_image_new;
 
 
   ;
@@ -21031,17 +21042,17 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_static_par2create=$ac_result; break
+  ac_cv_search_static_iso_image_new=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
       done
-      if test ${ac_cv_search_static_par2create+y}
+      if test ${ac_cv_search_static_iso_image_new+y}
 then :
 
 else $as_nop
-  ac_cv_search_static_par2create=no
+  ac_cv_search_static_iso_image_new=no
 fi
 
             LIBS=$ac_func_search_static_libraries_save_LIBS
@@ -21049,9 +21060,9 @@ fi
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_par2create" >&5
-printf "%s\n" "$ac_cv_search_static_par2create" >&6; }
-  ac_result=$ac_cv_search_static_par2create
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_iso_image_new" >&5
+printf "%s\n" "$ac_cv_search_static_iso_image_new" >&6; }
+  ac_result=$ac_cv_search_static_iso_image_new
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ISOFS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES isofs";
@@ -21064,16 +21075,16 @@ fi
 
 
     ac_result=""
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing par2create" >&5
-printf %s "checking for library containing par2create... " >&6; }
-if test ${ac_cv_search_libraries_par2create+y}
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing iso_image_new" >&5
+printf %s "checking for library containing iso_image_new... " >&6; }
+if test ${ac_cv_search_libraries_iso_image_new+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
             ac_func_search_libraries_save_LIBS=$LIBS
 
-      for ac_library in par2 ""; do
+      for ac_library in isofs ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
@@ -21087,8 +21098,8 @@ else $as_nop
 int
 main (void)
 {
-`if test -z ""; then echo "extern void par2create();"; fi`
-                                         return (int)par2create;
+`if test -z ""; then echo "extern void iso_image_new();"; fi`
+                                         return (int)iso_image_new;
 
 
   ;
@@ -21098,26 +21109,26 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_libraries_par2create=$ac_result; break
+  ac_cv_search_libraries_iso_image_new=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
       done
-      if test ${ac_cv_search_libraries_par2create+y}
+      if test ${ac_cv_search_libraries_iso_image_new+y}
 then :
 
 else $as_nop
-  ac_cv_search_libraries_par2create=no
+  ac_cv_search_libraries_iso_image_new=no
 fi
 
             LIBS=$ac_func_search_libraries_save_LIBS
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_par2create" >&5
-printf "%s\n" "$ac_cv_search_libraries_par2create" >&6; }
-  ac_result=$ac_cv_search_libraries_par2create
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_iso_image_new" >&5
+printf "%s\n" "$ac_cv_search_libraries_iso_image_new" >&6; }
+  ac_result=$ac_cv_search_libraries_iso_image_new
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_ISOFS=1;LIBRARIES="isofs $LIBRARIES";
@@ -21144,6 +21155,329 @@ fi
     if test ! \( -d libisofs -o -d "`readlink libisofs`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libisofs not compiled: libisofs package missing" >&5
 printf "%s\n" "$as_me: WARNING: libisofs not compiled: libisofs package missing" >&2;}
+    fi
+  fi
+fi
+
+# compile/use burn library
+if test $ENABLE_BURN = "yes"; then
+  if test -d libburn -o -d "`readlink libburn`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+
+      cwd=`pwd`
+
+
+  printf %s "compile libburn... " >&6
+
+      result=1
+      if test $result -eq 1; then
+        (cd libburn; ./bootstrap) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (automake)" >&5
+printf "%s\n" "fail (automake)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            (cd libburn; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            (cd libburn; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+            ) 1>$tmpFile 2>&1
+            ;;
+        esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+printf "%s\n" "fail (configure)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd libburn; \
+         make -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+printf "%s\n" "fail (make)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd libburn; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+printf "%s\n" "fail (install)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
+printf "%s\n" "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES burn"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES burn"
+      fi
+      HAVE_BURN=1
+
+printf "%s\n" "#define HAVE_BURN 1" >>confdefs.h
+
+    fi
+  else
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing burn_disc_write" >&5
+printf %s "checking for library containing burn_disc_write... " >&6; }
+if test ${ac_cv_search_libraries_burn_disc_write+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in burn ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void burn_disc_write();"; fi`
+                                         return (int)burn_disc_write;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_burn_disc_write=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_burn_disc_write+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_burn_disc_write=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_burn_disc_write" >&5
+printf "%s\n" "$ac_cv_search_libraries_burn_disc_write" >&6; }
+  ac_result=$ac_cv_search_libraries_burn_disc_write
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BURN=1;LIBRARIES="isofs $LIBRARIES";
+printf "%s\n" "#define HAVE_BURN 1" >>confdefs.h
+
+fi
+
+    else
+      if test -z "$HAVE_BURN"; then
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing burn_disc_write" >&5
+printf %s "checking for static library containing burn_disc_write... " >&6; }
+if test ${ac_cv_search_static_burn_disc_write+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in burn ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void burn_disc_write();"; fi`
+                                         return (int)burn_disc_write;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_burn_disc_write=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_burn_disc_write+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_burn_disc_write=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_burn_disc_write" >&5
+printf "%s\n" "$ac_cv_search_static_burn_disc_write" >&6; }
+  ac_result=$ac_cv_search_static_burn_disc_write
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BURN=1;STATIC_LIBRARIES="$STATIC_LIBRARIES burn";
+printf "%s\n" "#define HAVE_BURN 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_BURN"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing burn_disc_write" >&5
+printf %s "checking for library containing burn_disc_write... " >&6; }
+if test ${ac_cv_search_libraries_burn_disc_write+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in burn ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void burn_disc_write();"; fi`
+                                         return (int)burn_disc_write;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_burn_disc_write=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_burn_disc_write+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_burn_disc_write=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_burn_disc_write" >&5
+printf "%s\n" "$ac_cv_search_libraries_burn_disc_write" >&6; }
+  ac_result=$ac_cv_search_libraries_burn_disc_write
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BURN=1;LIBRARIES="burn $LIBRARIES";
+printf "%s\n" "#define HAVE_BURN 1" >>confdefs.h
+
+fi
+
+      fi
+    fi
+  fi
+
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
+  if test -z "$HAVE_BURN"; then
+    if test ! \( -d libburn -o -d "`readlink libburn`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libburn not compiled: libburn package missing" >&5
+printf "%s\n" "$as_me: WARNING: libburn not compiled: libburn package missing" >&2;}
     fi
   fi
 fi
@@ -33498,6 +33832,101 @@ printf "%s\n" "#define VERSION_ISOFS \"\"" >>confdefs.h
 
 fi
 
+if test "$HAVE_BURN"; then
+
+
+    if test -n "burn version"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking burn version" >&5
+printf %s "checking burn version... " >&6; }
+if test ${ac_cv_constant_value_VERSION_BURN+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "libburn/libburn.h"
+
+int
+main (void)
+{
+__CONFTEST__ burn_header_version_major.burn_header_version_minor.burn_header_version_micro
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_BURN=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_BURN=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_BURN=`echo $ac_cv_constant_value_VERSION_BURN|tr -d " \"
+                   "`
+        fi
+        VERSION_BURN=$ac_cv_constant_value_VERSION_BURN
+
+        rm -f conftest.c conftest
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_BURN" >&5
+printf "%s\n" "$ac_cv_constant_value_VERSION_BURN" >&6; }  else
+    if test ${ac_cv_constant_value_VERSION_BURN+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "libburn/libburn.h"
+
+int
+main (void)
+{
+__CONFTEST__ burn_header_version_major.burn_header_version_minor.burn_header_version_micro
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_BURN=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_BURN=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_BURN=`echo $ac_cv_constant_value_VERSION_BURN|tr -d " \"
+                   "`
+        fi
+        VERSION_BURN=$ac_cv_constant_value_VERSION_BURN
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
+
+printf "%s\n" "#define VERSION_BURN \"$VERSION_BURN\"" >>confdefs.h
+
+else
+
+printf "%s\n" "#define VERSION_BURN \"\"" >>confdefs.h
+
+fi
+
 
 ac_config_headers="$ac_config_headers bar/config.h"
 
@@ -34268,6 +34697,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_PCRE=$HAVE_PCRE
                    HAVE_PAR2=$HAVE_PAR2
                    HAVE_ISOFS=$HAVE_ISOFS
+                   HAVE_BURN=$HAVE_BURN
                    HAVE_BFD=$HAVE_BFD
 
                    ENABLE_DEBUG=$ENABLE_DEBUG
@@ -34309,6 +34739,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_PAR2="$VERSION_PAR2"
                    VERSION_ISOFS="$VERSION_ISOFS"
+                   VERSION_BURN="$VERSION_BURN"
 
 
 _ACEOF
@@ -34887,7 +35318,7 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
     "SET_PACKAGE_IN_CONFIG_H":C) sed -i 's/#define PACKAGE_/#define BAR_PACKAGE_/g' bar/config.h
                    ;;
     "BUILD_NOTE":C) echo "";
-                    echo "Configuration $VERSION_MAJOR.$VERSION_MINOR$VERSION_PATCH ($VERSION_REVISION):";
+                    echo "Configuration $VERSION_MAJOR`if test -n "$VERSION_MINOR"; then echo .$VERSION_MINOR; fi`$VERSION_PATCH ($VERSION_REVISION):";
                     echo "  Host                 : $host";
                     echo "  Dynamic linked       : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  ICU support          : `if test "$HAVE_ICU"; then echo "yes ($VERSION_ICU)"; else echo no; fi`";
@@ -34911,6 +35342,7 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                     echo "  PostgreSQL support   : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
                     echo "  PAR2 support         : `if test "$HAVE_PAR2"; then echo "yes ($VERSION_PAR2)"; else echo no; fi`";
                     echo "  isofs support        : `if test "$HAVE_ISOFS"; then echo "yes ($VERSION_ISOFS)"; else echo no; fi`";
+                    echo "  burn support         : `if test "$HAVE_BURN"; then echo "yes ($VERSION_BURN)"; else echo no; fi`";
                     echo "  GUI support          : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support     : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                  : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
@@ -34948,7 +35380,8 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                             -o ! "$HAVE_SMB2" \
                             -o ! "$HAVE_PCRE" \
                             -o ! "$HAVE_PAR2" \
-                            -o ! "$HAVE_ISOFS"; then
+                            -o ! "$HAVE_ISOFS" \
+                            -o ! "$HAVE_BURN"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."

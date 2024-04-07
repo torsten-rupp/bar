@@ -113,36 +113,68 @@
 #define MOUNT_DEVICE_COMMAND                      "mount -p 0 %device %directory"
 #define UNMOUNT_COMMAND                           "umount %directory"
 
-#define CD_UNLOAD_VOLUME_COMMAND                  "eject %device"
-#define CD_LOAD_VOLUME_COMMAND                    "eject -t %device"
+#ifdef HAVE_ISOFS
+#define CD_IMAGE_COMMAND                          ""
+#define CD_ECC_COMMAND                            ""
+#else
 #define CD_IMAGE_COMMAND                          "nice mkisofs -V Backup -volset %number -J -r -o %image %directory"
 #define CD_ECC_COMMAND                            "nice dvdisaster -mRS03 -x %j1 -c -i %image -v"
+#endif
+#ifdef HAVE_BURN
+#define CD_UNLOAD_VOLUME_COMMAND                  ""
+#define CD_LOAD_VOLUME_COMMAND                    ""
+#define CD_BLANK_COMMAND                          ""
+#define CD_WRITE_COMMAND                          ""
+#define CD_WRITE_IMAGE_COMMAND                    ""
+#else
+#define CD_UNLOAD_VOLUME_COMMAND                  "eject %device"
+#define CD_LOAD_VOLUME_COMMAND                    "eject -t %device"
 #define CD_BLANK_COMMAND                          "nice dvd+rw-format -force %device"
 #define CD_WRITE_COMMAND                          "nice sh -c 'mkisofs -V Backup -volset %number -J -r -o %image %directory && cdrecord dev=%device %image'"
 #define CD_WRITE_IMAGE_COMMAND                    "nice cdrecord dev=%device %image"
+#endif
 
-#define DVD_UNLOAD_VOLUME_COMMAND                 "eject %device"
-#define DVD_LOAD_VOLUME_COMMAND                   "eject -t %device"
+#ifdef HAVE_ISOFS
+#define DVD_IMAGE_COMMAND                         ""
+#define DVD_ECC_COMMAND                           ""
+#else
 #define DVD_IMAGE_COMMAND                         "nice mkisofs -V Backup -volset %number -J -r -o %image %directory"
 #define DVD_ECC_COMMAND                           "nice dvdisaster -mRS03 -x %j1 -c -i %image -v"
+#endif
+#ifdef HAVE_BURN
+#define DVD_UNLOAD_VOLUME_COMMAND                 ""
+#define DVD_LOAD_VOLUME_COMMAND                   ""
+#define DVD_BLANK_COMMAND                         ""
+#define DVD_WRITE_COMMAND                         ""
+#define DVD_WRITE_IMAGE_COMMAND                   ""
+#else
+#define DVD_UNLOAD_VOLUME_COMMAND                 "eject %device"
+#define DVD_LOAD_VOLUME_COMMAND                   "eject -t %device"
 #define DVD_BLANK_COMMAND                         "nice dvd+rw-format -force %device"
 #define DVD_WRITE_COMMAND                         "nice growisofs -Z %device -A BAR -V Backup -volset %number -J -r %directory -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
-//#warning todo remove -dry-run
-//#define DVD_WRITE_COMMAND                         "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -J -r  %directory"
 #define DVD_WRITE_IMAGE_COMMAND                   "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
-//#warning todo remove -dry-run
-//#define DVD_WRITE_IMAGE_COMMAND                   "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -dry-run"
+#endif
 
-#define BD_UNLOAD_VOLUME_COMMAND                  "eject %device"
-#define BD_LOAD_VOLUME_COMMAND                    "eject -t %device"
+#ifdef HAVE_ISOFS
+#define BD_IMAGE_COMMAND                          ""
+#define BD_ECC_COMMAND                            ""
+#else
 #define BD_IMAGE_COMMAND                          "nice mkisofs -V Backup -volset %number -J -r -o %image %directory"
 #define BD_ECC_COMMAND                            "nice dvdisaster -mRS03 -x %j1 -c -i %image -v"
+#endif
+#ifdef HAVE_BURN
+#define BD_UNLOAD_VOLUME_COMMAND                  ""
+#define BD_LOAD_VOLUME_COMMAND                    ""
+#define BD_BLANK_COMMAND                          ""
+#define BD_WRITE_COMMAND                          ""
+#define BD_WRITE_IMAGE_COMMAND                    ""
+#else
+#define BD_UNLOAD_VOLUME_COMMAND                  "eject %device"
+#define BD_LOAD_VOLUME_COMMAND                    "eject -t %device"
 #define BD_BLANK_COMMAND                          "nice dvd+rw-format -force %device"
 #define BD_WRITE_COMMAND                          "nice growisofs -Z %device -A BAR -V Backup -volset %number -J -r %directory -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
-//#warning todo remove -dry-run
-//#define BD_WRITE_COMMAND                          "nice growisofs -Z %device -A BAR -V Backup -volset %number -dry-run -J -r %directory"
 #define BD_WRITE_IMAGE_COMMAND                    "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
-//#define BD_WRITE_IMAGE_COMMAND                    "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty -dry-run"
+#endif
 
 #define MIN_PASSWORD_QUALITY_LEVEL                0.6
 

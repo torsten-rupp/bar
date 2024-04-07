@@ -1,5 +1,11 @@
-2024-02-29 24
+2024-04-29 24
   * added support to create PAR2 checksum files
+  * integerated libisofs: create ISO 9660 images without external
+    tools. Used when --(cd|dvd|bd)-image-command is not set
+    (empty)
+  * integerated libburn: write CD/DVD/BD without external tools.
+    Used when --(cd|dvd|bd)-[write|write-image|load-volume|
+    unload-volume]-command is not set (empty)
 
 2024-03-28 23b
   * fixed write CD/DVD/BD

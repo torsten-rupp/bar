@@ -618,7 +618,7 @@ ERROR IO
   }
 
 // --- optical disk i/o -------------------------------------------------
-ERROR OPTICAL_DISK_NOT_FOUND
+ERROR OPTICAL_DRIVE_NOT_FOUND
   stringSet(errorText,sizeof(errorText),TR("CD/DVD/BD device not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
@@ -639,8 +639,22 @@ ERROR READ_OPTICAL_DISK
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR OPEN_ISO9660_FILE
+ERROR WRITE_OPTICAL_DISK
+  stringSet(errorText,sizeof(errorText),TR("write CD/DVD/BD disk failed"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR OPEN_ISO9660
   stringSet(errorText,sizeof(errorText),TR("open ISO 9660 image failed"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR CREATE_ISO9660
+  stringSet(errorText,sizeof(errorText),TR("create ISO 9660 image failed"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);

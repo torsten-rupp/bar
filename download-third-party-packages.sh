@@ -62,7 +62,8 @@ KRB5_VERSION=1.21
 KRB5_VERSION_MINOR=2
 LIBSMB2_VERSION=4.0.0
 PAR2_VERSION=0.8.1
-LIBISOFS_VERSION="release-1.5.6pl01"
+LIBISOFS_VERSION="release-1.5.6.pl01"
+LIBBURN_VERSION="release-1.5.6"
 BINUTILS_VERSION=2.41
 PTHREAD_W32_VERSION=2-9-1
 LAUNCH4J_MAJOR_VERSION=3
@@ -113,6 +114,7 @@ gnutlsFlag=0
 libcdioFlag=0
 libsmb2Flag=0
 libisofsFlag=0
+libburnFlag=0
 pcreFlag=0
 sqlite3Flag=0
 mariaDBFlag=0
@@ -277,6 +279,10 @@ while test $# != 0; do
           allFlag=0
           libisofsFlag=1
           ;;
+        burn|libburn)
+          allFlag=0
+          libburnFlag=1
+          ;;
         binutils|bfd)
           allFlag=0
           binutilsFlag=1
@@ -400,6 +406,10 @@ while test $# != 0; do
       allFlag=0
       libisofsFlag=1
       ;;
+    burn|libburn)
+      allFlag=0
+      libburnFlag=1
+      ;;
     binutils|bfd)
       allFlag=0
       binutilsFlag=1
@@ -455,7 +465,6 @@ if test $helpFlag -eq 1; then
   $ECHO " gnutls"
   $ECHO " libcdio"
   $ECHO " libsmbclient"
-  $ECHO " libisofs"
   $ECHO " pcre"
   $ECHO " sqlite3"
   $ECHO " mariadb"
@@ -463,6 +472,8 @@ if test $helpFlag -eq 1; then
   $ECHO " mtx"
   $ECHO " icu"
   $ECHO " par2"
+  $ECHO " libisofs"
+  $ECHO " libburn"
   $ECHO " binutils"
   $ECHO " launch4j"
   $ECHO " jre-windows"
@@ -1641,68 +1652,6 @@ if test $cleanFlag -eq 0; then
     fi
   fi
 
-  if test $allFlag -eq 1 -o $libisofsFlag -eq 1; then
-    (
-     install -d "$destinationDirectory"
-     cd "$destinationDirectory"
-
-     $ECHO_NO_NEW_LINE "Get libisofs ($LIBISOFS_VERSION)..."
-     directoryName="libisofs-$LIBISOFS_VERSION"
-
-     if test ! -d $directoryName; then
-       if test -n "$localDirectory" -a -d $localDirectory/libisofs-$LIBISOFS_VERSION; then
-         # Note: make a copy to get usable file permissions (source may be owned by root)
-         $CP -r $localDirectory/libisofs-$LIBISOFS_VERSION $directoryName
-         result=1
-       else
-         url="https://dev.lovelyhq.com/libburnia/libisofs.git"
-         $GIT clone $url $directoryName 1>/dev/null 2>/dev/null
-         if test $? -ne 0; then
-           fatalError "checkout $url -> $directoryName"
-         fi
-         (cd $directoryName; \
-          $GIT checkout v$LIBISOFS_VERSION 1>/dev/null 2>/dev/null; \
-          install -d m4;
-         )
-         if test $? -ne 0; then
-           fatalError "checkout tag v$LIBISOFS_VERSION"
-         fi
-         result=2
-       fi
-     else
-       result=3
-     fi
-
-     if test $noDecompressFlag -eq 0; then
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libisofs-$LIBISOFS_VERSION libisofs)
-       if test $? -ne 0; then
-         fatalError "symbolic link"
-       fi
-
-       # patch to fix defintions for MinGW:
-       #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
-       # Note: ignore exit code 1: patch may already be applied
-#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
-#       if test $? -gt 1; then
-#         fatalError "patch"
-#       fi
-     fi
-
-     exit $result
-    )
-    result=$?
-    case $result in
-      1) $ECHO "ok (local)"; ;;
-      2) $ECHO "ok"; ;;
-      3) $ECHO "ok (cached)"; ;;
-      *) exit $result; ;;
-    esac
-
-    if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/libsmb2-$LIBSMB2_VERSION libsmb2)
-    fi
-  fi
-
   if test $allFlag -eq 1 -o $pcreFlag -eq 1; then
     (
      install -d "$destinationDirectory"
@@ -2025,6 +1974,122 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $libisofsFlag -eq 1; then
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get libisofs ($LIBISOFS_VERSION)..."
+     directoryName="libisofs-$LIBISOFS_VERSION"
+
+     if test ! -d $directoryName; then
+       if test -n "$localDirectory" -a -d $localDirectory/libisofs-$LIBISOFS_VERSION; then
+         # Note: make a copy to get usable file permissions (source may be owned by root)
+         $CP -r $localDirectory/libisofs-$LIBISOFS_VERSION $directoryName
+         result=1
+       else
+         url="https://dev.lovelyhq.com/libburnia/libisofs.git"
+         $GIT clone $url $directoryName 1>/dev/null 2>/dev/null
+         if test $? -ne 0; then
+           fatalError "checkout $url -> $directoryName"
+         fi
+         (cd $directoryName; \
+          $GIT checkout $LIBISOFS_VERSION 1>/dev/null 2>/dev/null; \
+          install -d m4;
+         )
+         if test $? -ne 0; then
+           fatalError "checkout tag v$LIBISOFS_VERSION"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+
+     if test $noDecompressFlag -eq 0; then
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libisofs-$LIBISOFS_VERSION libisofs)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to fix defintions for MinGW:
+       #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
+       # Note: ignore exit code 1: patch may already be applied
+#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
+#       if test $? -gt 1; then
+#         fatalError "patch"
+#       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $libburnFlag -eq 1; then
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get libburn ($LIBBURN_VERSION)..."
+     directoryName="libburn-$LIBBURN_VERSION"
+
+     if test ! -d $directoryName; then
+       if test -n "$localDirectory" -a -d $localDirectory/libisofs-$LIBBURN_VERSION; then
+         # Note: make a copy to get usable file permissions (source may be owned by root)
+         $CP -r $localDirectory/libisofs-$LIBBURN_VERSION $directoryName
+         result=1
+       else
+         url="https://dev.lovelyhq.com/libburnia/libburn.git"
+         $GIT clone $url $directoryName 1>/dev/null 2>/dev/null
+         if test $? -ne 0; then
+           fatalError "checkout $url -> $directoryName"
+         fi
+         (cd $directoryName; \
+          $GIT checkout $LIBBURN_VERSION 1>/dev/null 2>/dev/null; \
+          install -d m4;
+         )
+         if test $? -ne 0; then
+           fatalError "checkout tag v$LIBBURN_VERSION"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+
+     if test $noDecompressFlag -eq 0; then
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libburn-$LIBBURN_VERSION libburn)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to fix defintions for MinGW:
+       #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
+       # Note: ignore exit code 1: patch may already be applied
+#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
+#       if test $? -gt 1; then
+#         fatalError "patch"
+#       fi
      fi
 
      exit $result
@@ -2495,6 +2560,24 @@ else
       $RMRF par2cmdline
     ) 2>/dev/null
     $RMF $workingDirectory/par2cmdline
+  fi
+
+  if test $allFlag -eq 1 -o $libisofsFlag -eq 1; then
+    # pcre
+    (
+      cd "$destinationDirectory"
+      $RMRF libisofs-*
+    ) 2>/dev/null
+    $RMF $workingDirectory/libisofs
+  fi
+
+  if test $allFlag -eq 1 -o $libburnFlag -eq 1; then
+    # pcre
+    (
+      cd "$destinationDirectory"
+      $RMRF libburn-*
+    ) 2>/dev/null
+    $RMF $workingDirectory/libburn
   fi
 
   if test $allFlag -eq 1 -o $binutilsFlag -eq 1; then

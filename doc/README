@@ -23,13 +23,13 @@ integrated for making automated backups in the background.
 * encrypt archive content with gcrypt algorithms (BLOWFISH,
   TWOFISH, AES, a. o.),
 * asymmetric encryption with RSA,
+* create PAR2 checksum files,
 * store archives directly on external server via ftp or scp,
   sftp, webdav, webdavs,
-* with external tools: store archives on CD/DVD/BD including
-  error correction codes,
+* store archives on CD/DVD/BD and add error correction codes
+  with the external tool dvdisaster,
 * support storage on a generic device,
 * multicore support for compression and encryption,
-* create PAR2 checksum files,
 * server mode with included scheduler for doing backups regularly.
   Controlling the server can be done via network connection
   (plain & TLS/SSL),
@@ -71,6 +71,9 @@ optional:
 * Kerberos 5 library (https://kerberos.org/dist/krb5)
 * libsmb2 (https://github.com/sahlberg/libsmb2)
 * cdio library 1.1 or newer (www.gnu.org/software/libcdio/libcdio.html)
+* libisofs (https://dev.lovelyhq.com/libburnia/libisofs)
+* libburn (https://dev.lovelyhq.com/libburnia/libburn)
+* par2cmdline (https://github.com/Parchive/par2cmdline)
 * pcre library (http://www.pcre.org)
 * sqlite 3.38 or newer (https://www.sqlite.org/index.html)
 * MariaDB server 10.4.22 or newer
