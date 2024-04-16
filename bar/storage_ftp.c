@@ -1936,6 +1936,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
     ulong     bytesAvail;
     ulong     length;
     uint64    startTimestamp,endTimestamp;
+    uint64    startTotalReceivedBytes,endTotalReceivedBytes;
     CURLMcode curlmCode;
     int       runningHandles;
   #else /* not HAVE_CURL || HAVE_FTP */
@@ -1973,7 +1974,6 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
     error = ERROR_NONE;
     while (   (bufferSize > 0L)
            && (storageHandle->ftp.index < storageHandle->ftp.size)
-           && (error == ERROR_NONE)
           )
     {
       assert(storageHandle->ftp.index >= (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length));
@@ -1989,8 +1989,9 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       }
       assert(length > 0L);
 
-      // get start time
-      startTimestamp = Misc_getTimestamp();
+      // get start time, start received bytes
+      startTimestamp          = Misc_getTimestamp();
+      startTotalReceivedBytes = 0;
 
       if (length < BUFFER_SIZE)
       {
@@ -2000,7 +2001,6 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         storageHandle->ftp.transferedBytes = 0L;
         runningHandles = 1;
         while (   (storageHandle->ftp.transferedBytes == 0L)
-               && (error == ERROR_NONE)
                && (runningHandles > 0)
               )
         {
@@ -2022,6 +2022,10 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           if (curlmCode != CURLM_OK)
           {
             error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
+          }
+          if (error != ERROR_NONE)
+          {
+            break;
           }
         }
         if      (error != ERROR_NONE)
@@ -2066,7 +2070,6 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         storageHandle->ftp.transferedBytes = 0L;
         runningHandles = 1;
         while (   (storageHandle->ftp.transferedBytes == 0L)
-               && (error == ERROR_NONE)
                && (runningHandles > 0)
               )
         {
@@ -2088,6 +2091,10 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           if (curlmCode != CURLM_OK)
           {
             error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
+          }
+          if (error != ERROR_NONE)
+          {
+            break;
           }
         }
         if      (error != ERROR_NONE)
@@ -2120,8 +2127,10 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         storageHandle->ftp.index += (uint64)bytesAvail;
       }
 
-      // get end time
-      endTimestamp = Misc_getTimestamp();
+      // get end time, end received bytes
+      endTimestamp          = Misc_getTimestamp();
+      endTotalReceivedBytes = bytesAvail;
+      assert(endTotalReceivedBytes >= startTotalReceivedBytes);
 
       /* limit used band width if requested (note: when the system time is
          changing endTimestamp may become smaller than startTimestamp;
@@ -2132,7 +2141,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           limitBandWidth(&storageHandle->storageInfo->ftp.bandWidthLimiter,
-                         bytesAvail,
+                         endTotalReceivedBytes-startTotalReceivedBytes,
                          endTimestamp-startTimestamp
                         );
         }
@@ -2162,6 +2171,7 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
     ulong     writtenBytes;
     ulong     length;
     uint64    startTimestamp,endTimestamp;
+    uint64    startTotalSentBytes,endTotalSentBytes;
     CURLMcode curlmCode;
     int       runningHandles;
   #else /* not HAVE_CURL || HAVE_FTP */
@@ -2183,9 +2193,7 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
 
     error        = ERROR_NONE;
     writtenBytes = 0L;
-    while (   (error == ERROR_NONE)
-           && (writtenBytes < bufferLength)
-          )
+    while (writtenBytes < bufferLength)
     {
       // get max. number of bytes to send in one step
       if (storageHandle->storageInfo->ftp.bandWidthLimiter.maxBandWidthList != NULL)
@@ -2198,8 +2206,9 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
       }
       assert(length > 0L);
 
-      // get start time
-      startTimestamp = Misc_getTimestamp();
+      // get start time, start received bytes
+      startTimestamp      = Misc_getTimestamp();
+      startTotalSentBytes = 0;
 
       // send data
       storageHandle->ftp.buffer          = (void*)buffer;
@@ -2207,7 +2216,6 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
       storageHandle->ftp.transferedBytes = 0L;
       runningHandles = 1;
       while (   (storageHandle->ftp.transferedBytes == 0L)
-             && (error == ERROR_NONE)
              && (runningHandles > 0)
             )
       {
@@ -2230,37 +2238,41 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
         {
           error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
         }
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
       }
-
-      // get end time
-      endTimestamp = Misc_getTimestamp();
+      if (error != ERROR_NONE)
+      {
+        break;
+      }
 
       // check transmission error
-      if (   (error == ERROR_NONE)
-          && (storageHandle->ftp.transferedBytes <= 0L)
-         )
+      if (storageHandle->ftp.transferedBytes <= 0L)
       {
         error = ERRORX_(NETWORK_SEND,0,"%s",errorBuffer);
+        break;
       }
 
-      if (error == ERROR_NONE)
-      {
-        buffer = (byte*)buffer+storageHandle->ftp.transferedBytes;
-        writtenBytes += storageHandle->ftp.transferedBytes;
-      }
+      buffer = (byte*)buffer+storageHandle->ftp.transferedBytes;
+      writtenBytes += storageHandle->ftp.transferedBytes;
+
+      // get end time, end received bytes
+      endTimestamp      = Misc_getTimestamp();
+      endTotalSentBytes = storageHandle->ftp.transferedBytes;
+      assert(endTotalSentBytes >= startTotalSentBytes);
 
       /* limit used band width if requested (note: when the system time is
          changing endTimestamp may become smaller than startTimestamp;
          thus do not check this with an assert())
       */
-      if (   (error == ERROR_NONE)
-          && (endTimestamp >= startTimestamp)
-         )
+      if (endTimestamp >= startTimestamp)
       {
         SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           limitBandWidth(&storageHandle->storageInfo->ftp.bandWidthLimiter,
-                         storageHandle->ftp.transferedBytes,
+                         endTotalSentBytes-startTotalSentBytes,
                          endTimestamp-startTimestamp
                         );
         }
