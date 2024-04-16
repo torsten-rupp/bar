@@ -1220,7 +1220,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
     ulong   length;
     uint64  startTimestamp,endTimestamp;
     uint64  startTotalReceivedBytes,endTotalReceivedBytes;
-    ssize_t readBytes;
+    ssize_t n;
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
@@ -1236,9 +1236,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
     assert(storageHandle->scp.readAheadBuffer.data != NULL);
 
     error = ERROR_NONE;
-    while (   (bufferSize > 0L)
-           && (error == ERROR_NONE)
-          )
+    while (bufferSize > 0L)
     {
       // copy as much data as available from read-ahead buffer
       if (   (storageHandle->scp.index >= storageHandle->scp.readAheadBuffer.offset)
@@ -1281,20 +1279,23 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
           // read into read-ahead buffer
           do
           {
-            readBytes = libssh2_channel_read(storageHandle->scp.channel,
-                                             (char*)storageHandle->scp.readAheadBuffer.data,
-                                             length
-                                           );
-            if (readBytes == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+            n = libssh2_channel_read(storageHandle->scp.channel,
+                                     (char*)storageHandle->scp.readAheadBuffer.data,
+                                     length
+                                    );
+            if (n == LIBSSH2_ERROR_EAGAIN)
+            {
+              Misc_mdelay(100);
+            }
           }
-          while (readBytes == LIBSSH2_ERROR_EAGAIN);
-          if (readBytes < 0)
+          while (n == LIBSSH2_ERROR_EAGAIN);
+          if (n < 0)
           {
             error = ERROR_(IO,errno);
             break;
           }
           storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
-          storageHandle->scp.readAheadBuffer.length = (ulong)readBytes;
+          storageHandle->scp.readAheadBuffer.length = (ulong)n;
 //fprintf(stderr,"%s,%d: readBytes=%ld storageHandle->scp.bufferOffset=%"PRIu64" storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,readBytes,storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
 
           // copy data from read-ahead buffer
@@ -1312,24 +1313,24 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
           // read direct
           do
           {
-            readBytes = libssh2_channel_read(storageHandle->scp.channel,
-                                             buffer,
-                                             length
-                                            );
-            if (readBytes == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+            n = libssh2_channel_read(storageHandle->scp.channel,
+                                     buffer,
+                                     length
+                                    );
+            if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
           }
-          while (readBytes == LIBSSH2_ERROR_EAGAIN);
-          if (readBytes < 0)
+          while (n == LIBSSH2_ERROR_EAGAIN);
+          if (n < 0)
           {
             error = ERROR_(IO,errno);
             break;
           }
 
           // adjust buffer, bufferSize, bytes read, index
-          buffer = (byte*)buffer+(ulong)readBytes;
-          bufferSize -= (ulong)readBytes;
-          if (bytesRead != NULL) (*bytesRead) += (ulong)readBytes;
-          storageHandle->scp.index += (uint64)readBytes;
+          buffer = (byte*)buffer+(ulong)n;
+          bufferSize -= (ulong)n;
+          if (bytesRead != NULL) (*bytesRead) += (ulong)n;
+          storageHandle->scp.index += (uint64)n;
         }
 
         // get end time, end received bytes
@@ -1412,15 +1413,23 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
       startTotalSentBytes = storageHandle->scp.totalSentBytes;
 
       // send data
+      ssize_t retryCount = 5;
       do
       {
         n = libssh2_channel_write(storageHandle->scp.channel,
                                   buffer,
                                   length
                                  );
-        if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+        if (n == LIBSSH2_ERROR_EAGAIN)
+        {
+          retryCount--;
+          if (retryCount >= 0)
+          {
+            Misc_mdelay(100);
+          }
+        }
       }
-      while (n == LIBSSH2_ERROR_EAGAIN);
+      while ((n == LIBSSH2_ERROR_EAGAIN) && (retryCount >= 0));
 
       // get end time, end received bytes
       endTimestamp      = Misc_getTimestamp();

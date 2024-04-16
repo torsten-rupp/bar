@@ -2263,7 +2263,6 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
 
     while (   (bufferSize > 0L)
 //           && (storageHandle->webdav.index < storageHandle->webdav.size)
-           && (error == ERROR_NONE)
           )
     {
       // copy as much data as available from receive buffer
@@ -2313,7 +2312,6 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
         runningHandles = 1;
         while (   (storageHandle->webdav.receiveBuffer.length < length)
                && (runningHandles > 0)
-               && (error == ERROR_NONE)
               )
         {
           // wait for socket
@@ -2338,6 +2336,10 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
           else
           {
             error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
+          }
+          if (error != ERROR_NONE)
+          {
+            break;
           }
         }
         if      (error != ERROR_NONE)
@@ -2465,7 +2467,6 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
       storageHandle->webdav.sendBuffer.length = length;
       runningHandles = 1;
       while (   (storageHandle->webdav.sendBuffer.index < storageHandle->webdav.sendBuffer.length)
-             && (error == ERROR_NONE)
              && (runningHandles > 0)
             )
       {
@@ -2492,6 +2493,10 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
         else
         {
           error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
+        }
+        if (error != ERROR_NONE)
+        {
+          break;
         }
       }
       if      (error != ERROR_NONE)

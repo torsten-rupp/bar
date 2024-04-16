@@ -200,6 +200,7 @@ LOCAL Errors sftpRead(SocketHandle        *socketHandle,
 
   #ifdef HAVE_SSH2
     error = ERROR_UNKNOWN;
+    ssize_t retryCount = 5;
     do
     {
       n = libssh2_sftp_read(sftpHandle,
@@ -208,6 +209,7 @@ LOCAL Errors sftpRead(SocketHandle        *socketHandle,
                            );
       if      (n == 0)
       {
+        retryCount--;
         // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
         if (!waitSSHSessionSocket(socketHandle))
         {
@@ -216,10 +218,14 @@ LOCAL Errors sftpRead(SocketHandle        *socketHandle,
       }
       else if (n == LIBSSH2_ERROR_EAGAIN)
       {
-        Misc_udelay(100LL*US_PER_MS);
+        retryCount--;
+        if (retryCount >= 0)
+        {
+          Misc_mdelay(100);
+        }
       }
     }
-    while (n == LIBSSH2_ERROR_EAGAIN);
+    while ((n == LIBSSH2_ERROR_EAGAIN) && (retryCount >= 0));
     if      (n >= 0)
     {
       (*bytesRead) = (ulong)n;
@@ -288,6 +294,7 @@ LOCAL Errors sftpWrite(SocketHandle        *socketHandle,
 
   #ifdef HAVE_SSH2
     error = ERROR_UNKNOWN;
+    ssize_t retryCount = 5;
     do
     {
       n = libssh2_sftp_write(sftpHandle,
@@ -296,6 +303,7 @@ LOCAL Errors sftpWrite(SocketHandle        *socketHandle,
                             );
       if      (n == 0)
       {
+        retryCount--;
         // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
         if (!waitSSHSessionSocket(socketHandle))
         {
@@ -304,13 +312,17 @@ LOCAL Errors sftpWrite(SocketHandle        *socketHandle,
       }
       else if (n == LIBSSH2_ERROR_EAGAIN)
       {
-        Misc_udelay(100LL*US_PER_MS);
+        retryCount--;
+        if (retryCount >= 0)
+        {
+          Misc_mdelay(100);
+        }
       }
     }
-    while (n == LIBSSH2_ERROR_EAGAIN);
+    while ((n == LIBSSH2_ERROR_EAGAIN) && (retryCount >= 0));
     if      (n > 0)
     {
-      (*bytesWritten) = (ulong) n;
+      (*bytesWritten) = (ulong)n;
       error           = ERROR_NONE;
     }
     else if (n == LIBSSH2_ERROR_SFTP_PROTOCOL)
@@ -2040,9 +2052,7 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
       assert(storageHandle->sftp.sftpHandle != NULL);
       assert(storageHandle->sftp.readAheadBuffer.data != NULL);
 
-      while (   (bufferSize > 0)
-             && (error == ERROR_NONE)
-            )
+      while (bufferSize > 0)
       {
         // copy as much data as available from read-ahead buffer
         if (   (storageHandle->sftp.index >= storageHandle->sftp.readAheadBuffer.offset)
