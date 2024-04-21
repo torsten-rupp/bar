@@ -57,7 +57,7 @@ CC_WARN_FLAGS              = @CC_WARN_FLAGS@
 CXX                        = @CXX@
 #TODO
 #CXX_FLAGS                  = @CXX_FLAGS@ -g -D_FORTIFY_SOURCE=2
-CXX_FLAGS                  = @CXX_FLAGS@ -g
+CXX_FLAGS                  = @CXX_FLAGS@ -std=c++11 -g
 CXX_WARN_FLAGS             = @CXX_WARN_FLAGS@
 CC_FLAGS_RELEASE           = @CC_FLAGS_RELEASE@
 CC_FLAGS_DEBUG             = @CC_FLAGS_DEBUG@ -finstrument-functions
