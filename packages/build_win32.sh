@@ -201,12 +201,20 @@ fi
 #set -e
 
 # create temporary directory
-temporaryDirectory=`mktemp -d /tmp/win32-XXXXXX`
+# Note: inside docker use a fixed temporary directory,
+#       because e. g. libgcrypt does not accept directories
+#       with a name contain '-O[1-9]'
+if test -f /.dockerenv; then
+  tmpDir=/tmp/win32
+  install -d $tmpDir
+else
+  tmpDir=`mktemp -d /tmp/win32-XXXXXX`
+fi
 
 (
   set -e
 
-  cd $temporaryDirectory
+  cd $tmpDir
 
 # TODO: out-of-source build, build from source instead of extrac distribution file
   # get sources
@@ -259,7 +267,7 @@ rc=$?
 
 # debug
 if test $debugFlag -eq 1; then
-  (cd $temporaryDirectory;
+  (cd $tmpDir;
    /bin/bash
   )
 fi
@@ -267,7 +275,7 @@ fi
 # clean-up
 $wineboot --shutdown
 $wineboot --end-session
-rm -rf $temporaryDirectory
+rm -rf $tmpDir
 if test -n "$wineDir"; then
   rm -rf $wineDir;
 fi

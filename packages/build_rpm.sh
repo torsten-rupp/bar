@@ -141,7 +141,15 @@ fi
 #set -e
 
 # create temporary directory
-tmpDir=`mktemp -d /tmp/rpm-XXXXXX`
+# Note: inside docker use a fixed temporary directory,
+#       because e. g. libgcrypt does not accept directories
+#       with a name contain '-O[1-9]'
+if test -f /.dockerenv; then
+  tmpDir=/tmp/rpm
+  install -d $tmpDir
+else
+  tmpDir=`mktemp -d /tmp/rpm-XXXXXX`
+fi
 
 # create .spec-file with changelog
 sed '/^%changelog/q1' < $sourcePath/packages/backup-archiver.spec > $tmpDir/backup-archiver.spec

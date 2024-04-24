@@ -150,7 +150,15 @@ fi
 #set -e
 
 # create temporary directory
-tmpDir=`mktemp -d /tmp/deb-XXXXXX`
+# Note: inside docker use a fixed temporary directory,
+#       because e. g. libgcrypt does not accept directories
+#       with a name contain '-O[1-9]'
+if test -f /.dockerenv; then
+  tmpDir=/tmp/deb
+  install -d $tmpDir
+else
+  tmpDir=`mktemp -d /tmp/deb-XXXXXX`
+fi
 
 # build deb package
 (
