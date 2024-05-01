@@ -31,6 +31,7 @@
 #include "common/files.h"
 
 #include "configuration.h"
+#include "errors.h"
 
 #include "par2.h"
 
@@ -38,6 +39,7 @@
 
 /***************************** Constants *******************************/
 
+#define MAX_PAR2_BLOCKS  32768
 #define PAR2_MEMORY_SIZE (64*MB)
 
 /***************************** Datatypes *******************************/
@@ -54,7 +56,32 @@
   extern "C" {
 #endif
 
+/***********************************************************************\
+* Name   : resultToText
+* Purpose: convert result to text
+* Input  : result - result
+* Output : -
+* Return : text
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char* resultToText(Result result)
+{
+  switch (result)
+  {
+    case eRepairNotPossible:           return "repair not possible";
+    case eInvalidCommandLineArguments: return "invalid argument";
+    case eInsufficientCriticalData:    return "insufficient critical data";
+    case eRepairFailed:                return "repair failed";
+    case eFileIOError:                 return "file i/o error";
+    case eLogicError:                  return "internal error";
+    case eMemoryError:                 return "insufficient memory";
+    default:                           return "";
+  }
+}
+
 Errors PAR2_create(ConstString      dataFileName,
+                   uint64           dataFileSize,
                    ConstString      sourceFileName,
                    const char       *checkSumFilesDirectory,
                    ArchiveFileModes archiveFileMode
@@ -62,6 +89,22 @@ Errors PAR2_create(ConstString      dataFileName,
 {
 #ifdef HAVE_PAR2
   Errors error = ERROR_NONE;
+
+  // check blocks size/block count
+  if (   (globalOptions.par2BlockSize <= 0)
+      || ((globalOptions.par2BlockSize % 4) != 0)
+     )
+  {
+    return ERROR_PAR2_INVALID_BLOCK_SIZE;
+  }
+  if (globalOptions.par2BlockCount > MAX_PAR2_BLOCKS)
+  {
+    return ERROR_PAR2_TOO_MANY_BLOCKS;
+  }
+  if ((ALIGN(dataFileSize,globalOptions.par2BlockSize)/globalOptions.par2BlockSize) > MAX_PAR2_BLOCKS)
+  {
+    return ERRORX_(PAR2_BLOCK_SIZE_TOO_SMALL,0,"%" PRIu64,ALIGN(dataFileSize/MAX_PAR2_BLOCKS,4));
+  }
 
   String dataDirectoryName = File_getDirectoryName(String_new(),dataFileName);
   String sourceLinkName    = File_getBaseName(String_new(),sourceFileName,TRUE);
@@ -164,7 +207,7 @@ Errors PAR2_create(ConstString      dataFileName,
         noiseLevel = NoiseLevel::nlDebug;
         break;
       default:
-        noiseLevel = nlSilent;
+        noiseLevel = NoiseLevel::nlSilent;
         break;
     }
     Result result = par2create((globalOptions.verboseLevel >= 3) ? std::cout : null,
@@ -189,7 +232,7 @@ Errors PAR2_create(ConstString      dataFileName,
         error = ERROR_IO;
         break;
       default:
-        error = ERRORX_(PAR2,(uint)result,"create fail");
+        error = ERRORX_(PAR2,(uint)result,"%s",resultToText(result));
         break;
     }
     null.close();

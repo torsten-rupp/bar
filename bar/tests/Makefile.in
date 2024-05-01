@@ -584,7 +584,8 @@ help_output:
 	@$(ECHO) "  tests_all[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  tests_smoke[$(HELP_SUFFIXES)]"
 	@$(ECHO) "  tests_data"
-	@$(ECHO) "  tests_hugedata"
+	@$(ECHO) "  tests_data_large"
+	@$(ECHO) "  tests_data_huge"
 	@$(ECHO) "  tests_data_clean"
 	@$(ECHO) "  tests_data_dist_clean"
 	@$(ECHO) ""
@@ -1101,8 +1102,8 @@ endif
 TEST_ENVIRONMENT = DISPLAY= SSH_ASKPASS= DEBUG_EMULATE_MKNOD=1
 
 # test timeout command (Note: older versions of the timeout command may not support --kill-after)
-#TEST_TIMEOUT            = $(TIMEOUT) --signal=KILL 1200 $(TIMEOUT) --signal=ABRT 800 $(TIMEOUT) --signal=QUIT 600
-TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foreground --signal=ABRT 800 $(TIMEOUT) --foreground --signal=QUIT 600
+#TEST_TIMEOUT            = $(TIMEOUT) --signal=KILL 1800 $(TIMEOUT) --signal=ABRT 1400 $(TIMEOUT) --signal=QUIT 1200
+TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1800 $(TIMEOUT) --foreground --signal=ABRT 1400 $(TIMEOUT) --foreground --signal=QUIT 1200
 
 .PHONY: tests tests_win
 .PHONY: tests-debug tests_win-debug
@@ -2907,13 +2908,17 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	$(call functionTestCheckExitcode,1,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --overwrite-archive-files $(LOG)))
 endif
 	@#
+ifeq ($(findstring -valgrind$(EXE_SUFFIX),$(TEST_BAR)),)
 ifeq (@HAVE_PAR2@,1)
 	# PAR2
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --skip-unreadable $(LOG)))
-	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --overwrite-archive-files --skip-unreadable $(LOG)))
-	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --overwrite-archive-files --par2-block-size=1024 --skip-unreadable $(LOG)))
-	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --overwrite-archive-files --par2-block-size=1024 --par2-files=2 --par2-blocks=123 --skip-unreadable $(LOG)))
+	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --par2-block-size=64K --par2-blocks=512 --skip-unreadable $(LOG)))
+	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --par2-block-size=64K --par2-blocks=512 --overwrite-archive-files --skip-unreadable $(LOG)))
+	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --par2-block-size=64K --par2-blocks=512 --overwrite-archive-files --skip-unreadable $(LOG)))
+	$(call functionTestCheckExitcode,0,0,($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar data --par2-directory=$(INTERMEDIATE_DIR) --par2-block-size=64K --par2-blocks=512 --par2-files=2 --overwrite-archive-files --skip-unreadable $(LOG)))
+endif
+else
+	@$(ECHO) Skipped PAR2 tests with $(TEST_BAR)
 endif
 ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	# mount
@@ -6661,7 +6666,7 @@ tests_server_operations_batch: \
             $(CD) $(UP_DIR); \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
             \
-            $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY); \
+            $(INSTALL) -d $(TEST_SERVER_JOBS_DIRECTORY); \
             $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
               -C $(SUB_DIR) \
               --config=$(TEST_SERVER_CONFIG) \
@@ -6703,9 +6708,9 @@ tests_server_operations_socket_server: \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
             \
             : start server; \
-            $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_DIRECTORY); \
-            $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY); \
-            $(INSTALL) bar.cfg $(SUB_DIR)/$(TEST_SERVER_CONFIG); \
+            $(INSTALL) -d $(TEST_SERVER_DIRECTORY); \
+            $(INSTALL) -d $(TEST_SERVER_JOBS_DIRECTORY); \
+            $(INSTALL) bar.cfg $(TEST_SERVER_CONFIG); \
             $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
               -C $(SUB_DIR) \
               $(TEST_OPTIONS) \
@@ -7001,9 +7006,9 @@ tests_master_slave_operations_master: \
             $(CD) $(UP_DIR); \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
             \
-            $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_DIRECTORY); \
-            $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_JOBS_DIRECTORY); \
-            $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_MASTER_CONFIG); \
+            $(INSTALL) -d $(TEST_MASTER_DIRECTORY); \
+            $(INSTALL) -d $(TEST_MASTER_JOBS_DIRECTORY); \
+            $(INSTALL) -m 600 bar.cfg $(TEST_MASTER_CONFIG); \
             $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
               -C $(SUB_DIR) \
               $(TEST_OPTIONS) \
@@ -7072,9 +7077,9 @@ tests_master_slave_operations_slave: \
                 $(ADDITIONAL_OPTIONS); \
               ); \
             else \
-              $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_DIRECTORY); \
-              $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_JOBS_DIRECTORY); \
-              $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_SLAVE_CONFIG); \
+              $(INSTALL) -d $(TEST_SLAVE_DIRECTORY); \
+              $(INSTALL) -d $(TEST_SLAVE_JOBS_DIRECTORY); \
+              $(INSTALL) -m 600 bar.cfg $(TEST_SLAVE_CONFIG); \
               $(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME2); \
               $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
                 -C $(SUB_DIR) \

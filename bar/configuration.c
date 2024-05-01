@@ -8163,7 +8163,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
 #ifdef HAVE_PAR2
   CMD_OPTION_CSTRING      ("par2-directory",                    0,  1,2,globalOptions.par2Directory,                                                                                      "PAR2 checksum directory","path"                                           ),
-  CMD_OPTION_INTEGER      ("par2-block-size",                   0,  1,2,globalOptions.par2BlockSize,                         0,MAX_INT,NULL,                                              "PAR2 block size (default: %default%)"                                     ),
+  CMD_OPTION_INTEGER      ("par2-block-size",                   0,  1,2,globalOptions.par2BlockSize,                         0,MAX_INT,COMMAND_LINE_BYTES_UNITS,                          "PAR2 block size (default: %default%)"                                     ),
   CMD_OPTION_INTEGER      ("par2-files",                        0,  1,2,globalOptions.par2FileCount,                         0,MAX_INT,NULL,                                              "number of PAR2 checksum files to create (default: %default%)"             ),
   CMD_OPTION_INTEGER      ("par2-blocks",                       0,  1,2,globalOptions.par2BlockCount,                        0,MAX_INT,NULL,                                              "number of PAR2 error correction blocks (default: %default%)"              ),
 #endif // HAVE_PAR2

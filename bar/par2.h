@@ -37,6 +37,7 @@
 * Purpose: create PAR2 checksum files
 * Input  : dataFileName               - data file name to create
 *                                       checksum files for
+           dataFileSize               - size of data file [bytes]
 *          sourceFileName             - source file name
 *          checkSumFilesDirectoryPath - path to store checksum files
 *                                       (could be NULL)
@@ -47,6 +48,7 @@
 \***********************************************************************/
 
 Errors PAR2_create(ConstString      dataFileName,
+                   uint64           dataFileSize,
                    ConstString      sourceFileName,
                    const char       *checkSumFilesDirectoryPath,
                    ArchiveFileModes archiveFileMode

@@ -254,7 +254,7 @@ sh "echo binaryExtension="+binaryExtension
         }
       }
 
-      timeout(time: 360, unit: 'MINUTES')
+      timeout(time: 480, unit: 'MINUTES')
       {
         stage("Valgrind")
         {

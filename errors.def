@@ -1104,7 +1104,22 @@ ERROR NOT_PAIRED                       TR("slave is not paired")
 ERROR NOT_A_SLAVE                      TR("instance is not a slave")
 
 // --- PAR2 ------------------------------------------------------------
-ERROR PAR2                             TR("create PAR2 checksums fail")
+ERROR PAR2
+  stringSet(errorText,sizeof(errorText),TR("create PAR2 checksums fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR PAR2_INVALID_BLOCK_SIZE          TR("invalid block size (multiple of 4)")
+ERROR PAR2_BLOCK_SIZE_TOO_SMALL
+  stringSet(errorText,sizeof(errorText),TR("PAR2 block size too small"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": at least %s bytes",ERROR_DATA);
+  }
+
+ERROR PAR2_TOO_MANY_BLOCKS             TR("too many PAR2 blocks (max. 32768)")
 
 // --- debugging only ---------------------------------------------------
 ERROR TESTCODE

@@ -4825,10 +4825,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           n++;
         }
         while (Storage_exists(&createInfo->storageInfo,storageMsg.archiveName));
-        String_delete(baseName);
-        String_delete(directoryPath);
         String_delete(postfixFileName);
         String_delete(prefixFileName);
+        String_delete(extension);
+        String_delete(baseName);
+        String_delete(directoryPath);
       }
 
       // get printable storage name
@@ -5075,6 +5076,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         printInfo(1,"Create PAR2 files for '%s'...",String_cString(printableStorageName));
         error = PAR2_create(storageMsg.intermediateFileName,
+                            fileInfo.size,
                             storageMsg.archiveName,
                             !String_isEmpty(createInfo->jobOptions->par2Directory)
                               ? String_cString(createInfo->jobOptions->par2Directory)
