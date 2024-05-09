@@ -18603,14 +18603,126 @@ Errors Database_setString(DatabaseHandle       *databaseHandle,
                         );
 }
 
+Errors Database_vacuum(DatabaseHandle     *databaseHandle,
+                       const char * const tableNames[],
+                       uint               tableNameCount,
+                       const char         *toDatabaseURI,
+                       bool               force
+                      )
+{
+  Errors error = ERROR_UNKNOWN;
+
+  switch (Database_getType(databaseHandle))
+  {
+    case DATABASE_TYPE_SQLITE3:
+      if (toDatabaseURI != NULL)
+      {
+        // check if file exists
+        if (!force && File_existsCString(toDatabaseURI))
+        {
+          return ERROR_FILE_EXISTS_;
+        }
+
+        // create empty file
+        FileHandle handle;
+        error = File_openCString(&handle,toDatabaseURI,FILE_OPEN_CREATE);
+        if (error == ERROR_NONE)
+        {
+          (void)File_close(&handle);
+        }
+        else
+        {
+          return error;
+        }
+
+        // vacuum into file
+        char sqlString[256];
+        error = Database_execute(databaseHandle,
+                                 NULL,  // changedRowCount
+                                 DATABASE_FLAG_NONE,
+                                 stringFormat(sqlString,sizeof(sqlString),
+                                              "VACUUM INTO '%s'",
+                                              toDatabaseURI
+                                             )
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+      else
+      {
+        // vacuum
+        error = Database_execute(databaseHandle,
+                                 NULL,  // changedRowCount
+                                 DATABASE_FLAG_NONE,
+                                 "VACUUM"
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+      break;
+    case DATABASE_TYPE_MARIADB:
+      {
+        UNUSED_VARIABLE(toDatabaseURI);  // not supported
+        UNUSED_VARIABLE(force);          // not supported
+
+        error = ERROR_NONE;
+        for (uint i = 0; i < tableNameCount; i++)
+        {
+          char sqlString[256];
+          error = Database_execute(databaseHandle,
+                                   NULL,  // changedRowCount
+                                   DATABASE_FLAG_NONE,
+                                   stringFormat(sqlString,sizeof(sqlString),
+                                                "OPTIMIZE TABLE %s",
+                                                tableNames[i]
+                                               )
+                                  );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+      }
+      break;
+    case DATABASE_TYPE_POSTGRESQL:
+      {
+        UNUSED_VARIABLE(toDatabaseURI);  // not supported
+        UNUSED_VARIABLE(force);          // not supported
+
+        error = ERROR_NONE;
+        for (uint i = 0; i < tableNameCount; i++)
+        {
+          char sqlString[256];
+          error = Database_execute(databaseHandle,
+                                   NULL,  // changedRowCount
+                                   DATABASE_FLAG_NONE,
+                                   stringFormat(sqlString,sizeof(sqlString),
+                                                "VACUUM %s",
+                                                tableNames[i]
+                                               )
+                                  );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+      }
+      break;
+  }
+
+  return error;
+}
+
 Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseCheck)
 {
-  Errors error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
-  error = ERROR_UNKNOWN;
+  Errors error = ERROR_UNKNOWN;
   DATABASE_DOX(error,
                #ifndef NDEBUG
                  ERRORX_(DATABASE_TIMEOUT,0,"locked %s",__FILE__,__LINE__,debugGetLockedByInfo(databaseHandle)),

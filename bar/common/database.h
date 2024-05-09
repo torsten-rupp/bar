@@ -155,7 +155,7 @@ typedef enum
 #define DATABASE_FLAG_IGNORE       (1 <<  0)
 #define DATABASE_FLAG_REPLACE      (1 <<  1)
 #define DATABASE_FLAG_PLAIN        (1 <<  2)
-#define DATABASE_FLAG_FETCH_ALL      (1 <<  3)
+#define DATABASE_FLAG_FETCH_ALL    (1 <<  3)
 #define DATABASE_FLAG_COLUMN_NAMES (1 <<  4)
 
 #define DATABASE_FLAG_DEBUG        (1 << 31)  // print SQL statement to console
@@ -2978,8 +2978,28 @@ Errors Database_setString(DatabaseHandle       *databaseHandle,
                          );
 
 /***********************************************************************\
+* Name   : Database_vacuum
+* Purpose: vacuum data base: remove not used storage space
+* Input  : databaseHandle - database handle
+*          tableNames     - tables to vacuum
+*          tableNameCount - tables count
+*          toDatabaseURI  - to-database URI or NULL
+*          forceFlag      - to force vacuum
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_vacuum(DatabaseHandle     *databaseHandle,
+                       const char * const tableNames[],
+                       uint               tableNameCount,
+                       const char         *toDatabaseURI,
+                       bool               force
+                      );
+
+/***********************************************************************\
 * Name   : Database_check
-* Purpose: check database
+* Purpose: check database integrity
 * Input  : databaseHandle - database handle
 *          databaseCheck  - database check to execute
 * Output : -

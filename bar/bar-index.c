@@ -7927,118 +7927,35 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
 
 LOCAL Errors vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 {
-  Errors     error;
-  FileHandle handle;
-  char       sqlString[256];
-
   printInfo("Vacuum...");
+  const char * const *tableNames;
+  uint               tableNameCount;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      if (toFileName != NULL)
-      {
-        // check if file exists
-        if (!forceFlag && File_existsCString(toFileName))
-        {
-          printInfo("FAIL!\n");
-          printError("vacuum fail: file '%s' already exists!",toFileName);
-          return ERROR_FILE_EXISTS_;
-        }
-
-        // create empty file
-        error = File_openCString(&handle,toFileName,FILE_OPEN_CREATE);
-        if (error == ERROR_NONE)
-        {
-          (void)File_close(&handle);
-        }
-        else
-        {
-          printInfo("FAIL!\n");
-          printError("vacuum fail (error: %s)!",Error_getText(error));
-          return error;
-        }
-
-        // vacuum into file
-// TODO: move to databaes.c
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 stringFormat(sqlString,sizeof(sqlString),
-                                              "VACUUM INTO '%s'",
-                                              toFileName
-                                             )
-                                );
-        if (error != ERROR_NONE)
-        {
-          printInfo("FAIL!\n");
-          printError("vacuum fail (error: %s)!",Error_getText(error));
-          return error;
-        }
-      }
-      else
-      {
-        // vacuum
-        error = Database_execute(databaseHandle,
-                                 NULL,  // changedRowCount
-                                 DATABASE_FLAG_NONE,
-                                 "VACUUM"
-                                );
-        if (error != ERROR_NONE)
-        {
-          printInfo("FAIL!\n");
-          printError("vacuum fail (error: %s)!",Error_getText(error));
-          return error;
-        }
-      }
+      tableNames     = NULL;
+      tableNameCount = 0;
       break;
     case DATABASE_TYPE_MARIADB:
-      {
-        char sqlString[256];
-
-        error = ERROR_NONE;
-        for (uint i = 0; i < INDEX_DEFINITION_TABLE_NAME_COUNT_MARIADB; i++)
-        {
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "OPTIMIZE TABLE %s",
-                                                INDEX_DEFINITION_TABLE_NAMES_MARIADB[i]
-                                               )
-                                  );
-          if (error != ERROR_NONE)
-          {
-            printInfo("FAIL!\n");
-            printError("vacuum fail (error: %s)!",Error_getText(error));
-            return error;
-          }
-        }
-      }
+      tableNames     = INDEX_DEFINITION_TABLE_NAMES_MARIADB;
+      tableNameCount = INDEX_DEFINITION_TABLE_NAME_COUNT_MARIADB;
       break;
     case DATABASE_TYPE_POSTGRESQL:
-      {
-        char sqlString[256];
-
-        error = ERROR_NONE;
-        for (uint i = 0; i < INDEX_DEFINITION_TABLE_NAME_COUNT_POSTGRESQL; i++)
-        {
-          error = Database_execute(databaseHandle,
-                                   NULL,  // changedRowCount
-                                   DATABASE_FLAG_NONE,
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "VACUUM %s",
-                                                INDEX_DEFINITION_TABLE_NAMES_POSTGRESQL[i]
-                                               )
-                                  );
-          if (error != ERROR_NONE)
-          {
-            printInfo("FAIL!\n");
-            printError("vacuum fail (error: %s)!",Error_getText(error));
-            return error;
-          }
-        }
-      }
+      tableNames     = INDEX_DEFINITION_TABLE_NAMES_POSTGRESQL;
+      tableNameCount = INDEX_DEFINITION_TABLE_NAME_COUNT_POSTGRESQL;
       break;
+  }
+  Errors error = Database_vacuum(databaseHandle,
+                                 tableNames,
+                                 tableNameCount,
+                                 toFileName,
+                                 forceFlag
+                                );
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL!\n");
+    printError("vacuum fail (error: %s)!",Error_getText(error));
+    return error;
   }
   printInfo("OK\n");
 
