@@ -6111,10 +6111,19 @@ class Dialogs
         {
           if (oldFile.isDirectory())
           {
-            widgetPath.setData(oldFile);
-            widgetPath.setText(oldFile.getAbsolutePath());
-            widgetName.setText("");
-            widgetDone.setEnabled(false);
+            if (!widgetPath.isDisposed())
+            {
+              widgetPath.setData(oldFile);
+              widgetPath.setText(oldFile.getAbsolutePath());
+            }
+            if (!widgetName.isDisposed())
+            {
+              widgetName.setText("");
+            }
+            if (!widgetDone.isDisposed())
+            {
+              widgetDone.setEnabled(false);
+            }
           }
           else
           {
@@ -6122,33 +6131,53 @@ class Dialogs
             widgetPath.setData(parentFile);
             if (parentFile != null)
             {
-              widgetPath.setText(parentFile.getAbsolutePath());
+              if (!widgetPath.isDisposed())
+              {
+                widgetPath.setText(parentFile.getAbsolutePath());
+              }
             }
-            widgetName.setText(oldFile.getName());
-            widgetDone.setEnabled(true);
+            if (!widgetName.isDisposed())
+            {
+              widgetName.setText(oldFile.getName());
+            }
+            if (!widgetDone.isDisposed())
+            {
+              widgetDone.setEnabled(true);
+            }
           }
         }
         else
         {
-          widgetPath.setData(oldFile);
-          widgetPath.setText(oldFile.getAbsolutePath());
-          widgetDone.setEnabled(true);
+          if (!widgetPath.isDisposed())
+          {
+            widgetPath.setData(oldFile);
+            widgetPath.setText(oldFile.getAbsolutePath());
+          }
+          if (!widgetDone.isDisposed())
+          {
+            widgetDone.setEnabled(true);
+          }
         }
       }
 
       if ((fileExtensions != null) && (widgetFilter != null))
       {
         // update file extensions
-        for (int i = 0; i < fileExtensions.length; i+= 2)
+        if (!widgetFilter.isDisposed())
         {
-          widgetFilter.add(fileExtensions[i+0]+" ("+fileExtensions[i+1]+")");
+          for (int i = 0; i < fileExtensions.length; i+= 2)
+          {
+            widgetFilter.add(fileExtensions[i+0]+" ("+fileExtensions[i+1]+")");
+          }
+          widgetFilter.setText(defaultFileExtension);
         }
-        widgetFilter.setText(defaultFileExtension);
         updater.setFileFilter(defaultFileExtension);
        }
 
       // update file list
-      if (!widgetPath.getText().isEmpty())
+      if (   !widgetPath.isDisposed()
+          && !widgetPath.getText().isEmpty()
+         )
       {
         updater.updateFileList(widgetFileList,
                                IMAGE_DIRECTORY,
@@ -6159,21 +6188,29 @@ class Dialogs
       }
 
       // run
-      widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
-                            || ((type == FileDialogTypes.SAVE     ) && !widgetName.getText().isEmpty())
-                            || ((type == FileDialogTypes.DIRECTORY) && !widgetPath.getText().isEmpty())
-                            || ((type == FileDialogTypes.ENTRY    ) && (!widgetPath.getText().isEmpty() || !widgetName.getText().isEmpty()))
-                           );
-
+      if (!widgetDone.isDisposed())
+      {
+        widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
+                              || ((type == FileDialogTypes.SAVE     ) && !widgetName.getText().isEmpty())
+                              || ((type == FileDialogTypes.DIRECTORY) && !widgetPath.getText().isEmpty())
+                              || ((type == FileDialogTypes.ENTRY    ) && (!widgetPath.getText().isEmpty() || !widgetName.getText().isEmpty()))
+                             );
+      }
       if (widgetName != null)
       {
-        widgetName.setFocus();
-        widgetName.setSelection(new Point(0,widgetName.getText().length()));
+        if (!widgetName.isDisposed())
+        {
+          widgetName.setFocus();
+          widgetName.setSelection(new Point(0,widgetName.getText().length()));
+        }
       }
       else
       {
-        widgetPath.setFocus();
-        widgetPath.setSelection(new Point(0,widgetPath.getText().length()));
+        if (!widgetPath.isDisposed())
+        {
+          widgetPath.setFocus();
+          widgetPath.setSelection(new Point(0,widgetPath.getText().length()));
+        }
       }
       result = (T)run(dialog,null);
     }
