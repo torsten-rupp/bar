@@ -2834,7 +2834,6 @@ public class BARControl
   public static final String ALL_FILE_EXTENSION;
 
   // version, email address, homepage URL
-  public static final String VERSION          = Config.VERSION;
   public static final char   MAIL_AT          = '@';  // use MAIL_AT to avoid spam
   public static final String EMAIL_ADDRESS    = "torsten.rupp"+MAIL_AT+"gmx.net";
   public static final String URL              = "http://www.kigen.de/projects/bar";
@@ -3114,7 +3113,7 @@ public class BARControl
 
       // write version+stack trace
       output.println("Date/Time: "+new Date().toString());
-      output.println("Version: "+VERSION);
+      output.println("Version: "+Version.STRING);
       output.println("Protocol version: "+BARServer.PROTOCOL_VERSION);
       output.println("Java version: "+System.getProperty("java.version"));
       output.println("Error: "+throwable.getMessage());
@@ -3167,7 +3166,7 @@ public class BARControl
   public static void printInternalError(String format, Object... args)
   {
     System.err.println("INTERNAL ERROR: "+String.format(format,args));
-    System.err.println("Version "+VERSION);
+    System.err.println("Version "+Version.STRING);
     System.err.println("Please report this error to "+EMAIL_ADDRESS+".");
   }
 
@@ -3179,7 +3178,7 @@ public class BARControl
     System.err.println("INTERNAL ERROR: "+throwable.getMessage());
     printStackTrace(throwable);
     logThrowable(throwable);
-    System.err.println("Version "+VERSION);
+    System.err.println("Version "+Version.STRING);
     System.err.println("Please report this error to "+EMAIL_ADDRESS+".");
   }
 
@@ -3261,7 +3260,7 @@ public class BARControl
                       BARControl.getStackTraceList(throwable),
                       BARControl.tr("INTERNAL ERROR")+": "+message[0]+"\n"+
                       "\n"+
-                      "Version "+VERSION+"\n"+
+                      "Version "+Version.STRING+"\n"+
                       "\n"+
                       BARControl.tr("Please report this error to ")+BARControl.EMAIL_ADDRESS+"." // use MAIL_AT to avoid SPAM
                      );
@@ -3402,7 +3401,7 @@ public class BARControl
    */
   private void printVersion()
   {
-    System.out.println("barcontrol "+VERSION);
+    System.out.println("barcontrol "+Version.STRING);
   }
 
   /** parse arguments
@@ -3749,13 +3748,13 @@ if (false) {
 
             // check if newer version is available
             if (   ((homepageVersionMajor != null) && (homepageVersionMinor != null))
-                && (   (homepageVersionMajor.compareTo(Config.VERSION_MAJOR) > 0)
-                    || (   (homepageVersionMajor.compareTo(Config.VERSION_MAJOR) >= 0)
-                        && (homepageVersionMinor.compareTo(Config.VERSION_MINOR) > 0))
+                && (   (homepageVersionMajor.compareTo(Version.MAJOR) > 0)
+                    || (   (homepageVersionMajor.compareTo(Version.MAJOR) >= 0)
+                        && (homepageVersionMinor.compareTo(Version.MINOR) > 0))
                     || (   (homepageVersionPatch != null)
-                        && (homepageVersionMajor.compareTo(Config.VERSION_MAJOR) >= 0)
-                        && (homepageVersionMinor.compareTo(Config.VERSION_MINOR) >= 0)
-                        && (homepageVersionPatch.compareTo(Config.VERSION_PATCH) > 0)
+                        && (homepageVersionMajor.compareTo(Version.MAJOR) >= 0)
+                        && (homepageVersionMinor.compareTo(Version.MINOR) >= 0)
+                        && (homepageVersionPatch.compareTo(Version.PATCH) > 0)
                        )
                    )
 
@@ -3993,7 +3992,7 @@ if (false) {
         label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
 
         label = new Label(composite,SWT.LEFT|SWT.WRAP);
-        label.setText("BAR control "+Config.VERSION+".\n"+
+        label.setText("BAR control "+Version.STRING+".\n"+
                       "\n"+
                       BARControl.tr("Written by Torsten Rupp")+"\n"
                      );
@@ -4007,7 +4006,7 @@ if (false) {
         {
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            Widgets.setClipboard(clipboard,"BAR version "+Config.VERSION);
+            Widgets.setClipboard(clipboard,"BAR version "+Version.STRING);
           }
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
