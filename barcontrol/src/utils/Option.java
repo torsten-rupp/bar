@@ -14,9 +14,9 @@ import java.util.EnumSet;
  */
 public class Option
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   public String        name;
   public String        shortName;
   public Options.Types type;
@@ -27,9 +27,9 @@ public class Option
   public Class         enumerationSetClass;
   public OptionSpecial special;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create option
    * @param name name

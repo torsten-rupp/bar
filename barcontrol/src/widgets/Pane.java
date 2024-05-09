@@ -35,7 +35,7 @@ import org.eclipse.swt.widgets.Listener;
  */
 public class Pane extends Canvas
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
   public  final static int SIZE          = 12;   // total width/height of slider
 
   private final static int SLIDER_SIZE   =  8;   // width/height of slider button
@@ -50,7 +50,7 @@ public class Pane extends Canvas
 
   private final Cursor     CURSOR;
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private Composite         composites[];
   private boolean           initFlag = false;
   private int               offsets[];               // offset of composites
@@ -74,9 +74,9 @@ public class Pane extends Canvas
 
   */
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create pane
    * @param parent parent widget

@@ -39,7 +39,7 @@ import org.xnap.commons.i18n.I18nFactory;
  */
 public class BusyDialog
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
   // busy dialog flags
   public final static int NONE               = 0;
@@ -55,7 +55,7 @@ public class BusyDialog
 
   public final static int AUTO_ANIMATE       = 1 << 24;   // auto animate
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private static I18n                         i18n;
 
   private Display                             display;
@@ -86,9 +86,9 @@ public class BusyDialog
   private boolean                             listEmptyFlag;
   private Boolean                             redrawRequestedFlag;   // Note: avoid unlimited number of async-exec-request in event queue!
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** init internationalization
    * @param i18n internationlization instance

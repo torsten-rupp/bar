@@ -30,9 +30,9 @@ import org.eclipse.swt.widgets.Composite;
  */
 public class ProgressBar extends Canvas
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private double minimum;
   private double maximum;
   private int    subValueCount;
@@ -50,9 +50,9 @@ public class ProgressBar extends Canvas
   private Color  colorBar;
   private Color  colorBarSet;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create progress bar
    * @param composite parent composite widget

@@ -892,7 +892,7 @@ public class TabJobs
       }
     }
 
-    // ----------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
     /** get index of directory info request in list
      * @param directoryInfoRequest directory info request

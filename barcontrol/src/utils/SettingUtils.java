@@ -756,16 +756,16 @@ public class SettingUtils
     }
   }
 
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private static boolean permitModifyFlag     = false;
   private static boolean modifiedFlag         = false;
   private static long    lastExternalModified = 0L;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** load program settings
    * @param file settings file to load

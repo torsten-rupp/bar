@@ -20,7 +20,7 @@ import java.util.Iterator;
  */
 public class StringUtils
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
   /** quoting characters for string values
    */
   public final static String QUOTE_CHARS = "'\"";
@@ -41,11 +41,11 @@ public class StringUtils
    */
   public final static Character ESCAPE_CHAR = '\\';
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** check if string is null or empty
    * @param string string

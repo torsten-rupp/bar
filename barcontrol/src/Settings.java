@@ -489,7 +489,7 @@ public class Settings
     }
   }
 
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
   static final String DEFAULT_SERVER_NAME                 = "localhost";
   static final int    DEFAULT_SERVER_PORT                 = 38523;
   static final int    DEFAULT_SERVER_TLS_PORT             = 0;
@@ -497,7 +497,7 @@ public class Settings
 
   static final int    MAX_SERVER_HISTORY = 10;
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
 
   @SettingComment(text={"BARControl configuration",""})
 
@@ -631,9 +631,9 @@ public class Settings
   @SettingValue(name="server-tls-port",deprecated=true)
   public static int                            serverTLSPort                   = DEFAULT_SERVER_TLS_PORT;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // -------------------------- methods -------------------------------
 
   /** load program settings
    * @param fileName settings file name

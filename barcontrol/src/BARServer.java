@@ -106,14 +106,14 @@ import javax.naming.ldap.Rdn;
  */
 class ConnectionError extends Error
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   public String extendedMessage[];
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create new connection error
    * @param message message
@@ -189,14 +189,14 @@ class ConnectionError extends Error
  */
 class CommunicationError extends Error
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   public String extendedMessage[];
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create new connection error
    * @param message message
@@ -302,13 +302,13 @@ class CommunicationError extends Error
  */
 class BusyIndicator
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** called when busy
    * @param n progress value
@@ -334,14 +334,14 @@ class Command
    */
   static abstract class ResultHandler
   {
-    // --------------------------- constants --------------------------------
+    // -------------------------- constants -------------------------------
 
-    // --------------------------- variables --------------------------------
+    // -------------------------- variables -------------------------------
     private boolean abortedFlag = false;
 
-    // ------------------------ native functions ----------------------------
+    // ----------------------- native functions ---------------------------
 
-    // ---------------------------- methods ---------------------------------
+    // --------------------------- methods --------------------------------
 
     /** handle result
      * Note: called for every result received from the server
@@ -385,13 +385,13 @@ class Command
    */
   static abstract class Handler
   {
-    // --------------------------- constants --------------------------------
+    // -------------------------- constants -------------------------------
 
-    // --------------------------- variables --------------------------------
+    // -------------------------- variables -------------------------------
 
-    // ------------------------ native functions ----------------------------
+    // ----------------------- native functions ---------------------------
 
-    // ---------------------------- methods ---------------------------------
+    // --------------------------- methods --------------------------------
 
     /** handle result
      * Note: called once for final result received from the server
@@ -414,7 +414,7 @@ class Command
     }
   }
 
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
   public final static int TIMEOUT      = 60*1000;   // default timeout [ms]
   public final static int WAIT_FOREVER = -1;
 
@@ -427,7 +427,7 @@ class Command
     REQUEST_PASSWORD
   };
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
 
   private static long         commandId = 0;     // global command id counter
 
@@ -446,9 +446,9 @@ class Command
   private boolean             abortedFlag;       // true iff command aborted
   private long                timeoutTimestamp;  // timeout timestamp [ms]
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create new command
    * @param commandString command string
@@ -867,18 +867,18 @@ class Command
  */
 class ReadThread extends Thread
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private Display               display;
   private String                serverName;
   private BufferedReader        input;
   private boolean               quitFlag = false;
   private HashMap<Long,Command> commandHashMap = new HashMap<Long,Command>();
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create read thread
    * @param input input stream
@@ -1269,17 +1269,17 @@ class CommandThread extends Thread
     }
   }
 
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private Display               display;
   private BufferedWriter        output;
   private boolean               quitFlag = false;
   private ArrayDeque<Command>   commandQueue = new ArrayDeque<Command>();
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create command thread
    * @param output output stream
@@ -1492,7 +1492,7 @@ class CommandThread extends Thread
  */
 public class BARServer
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
   public final static int               PROTOCOL_VERSION_MAJOR = 8;
   public final static int               PROTOCOL_VERSION_MINOR = 0;
   public final static String            PROTOCOL_VERSION = PROTOCOL_VERSION_MAJOR+"."+PROTOCOL_VERSION_MINOR;
@@ -1644,7 +1644,7 @@ public class BARServer
     OTHER
   };
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private static Object                      lock = new Object();
   private static JcaX509CertificateConverter certificateConverter;
   private static Display                     display = null;
@@ -1665,9 +1665,9 @@ public class BARServer
   private static ReadThread                  readThread;
   private static CommandThread               commandThread;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   static
   {
@@ -3444,7 +3444,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     sendResult(commandId,debugLevel,completedFlag,error,(String)null);
   }
 
-  // ----------------------------------------------------------------------
+  // ---------------------------------------------------------------------
 
   private static int setLockCounter = 0;
 
@@ -5640,7 +5640,7 @@ throw new Error("NYI");
     }
   }
 
-  // -------------------------------------------------------------------
+  // ------------------------------------------------------------------
 }
 
 /* end of file */

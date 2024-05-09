@@ -2756,7 +2756,7 @@ public class BARControl
     private int  index;
   };
 
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
   /** roles
    */
@@ -2962,7 +2962,7 @@ public class BARControl
     new Option("--swing",                        null, Options.Types.BOOLEAN,   null),
   };
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   // images
   private static Image IMAGE_ERROR;
   private static Image IMAGE_LOCK;
@@ -2985,9 +2985,9 @@ public class BARControl
   private TabRestore       tabRestore;
   private boolean          quitFlag = false;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   static
   {
@@ -3321,7 +3321,7 @@ public class BARControl
     resetCursor(shell);
   }
 
-  // ----------------------------------------------------------------------
+  // ---------------------------------------------------------------------
 
   /** print program usage
    */

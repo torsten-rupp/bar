@@ -112,9 +112,9 @@ class SimpleBusyDialog
     }
   };
 
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private final Data    data = new Data();
   private final Display display;
   private final Shell   dialog;
@@ -122,9 +122,9 @@ class SimpleBusyDialog
   private final Point   imageSize;
   private final Canvas  widgetImage;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create simple busy dialog
    * @param parentShell parent shell
@@ -343,17 +343,17 @@ class SimpleProgressDialog
     }
   };
 
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private final Data        data = new Data();
   private final Display     display;
   private final Shell       dialog;
   private final ProgressBar widgetProgressBar;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create simgple progress dialog
    * @param parentShell parent shell
@@ -733,7 +733,7 @@ abstract class ListDirectoryFilter<T extends File>
  */
 class Dialogs
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
   public enum FileDialogTypes
   {
     OPEN,
@@ -745,14 +745,14 @@ class Dialogs
   public final static int FILE_NONE        = 0;
   public final static int FILE_SHOW_HIDDEN = 1 << 0;
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private static I18n  i18n;
 
   private static Point fileGeometry = new Point(600,400);
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** init internationalization
    * @param i18n internationlization instance

@@ -4163,7 +4163,7 @@ Dprintf.dprintf("");
     }
   }
 
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
   // colors
   private final Color COLOR_MODIFIED;
   private final Color COLOR_INFO_FOREGROUND;
@@ -4201,7 +4201,7 @@ Dprintf.dprintf("");
   private final int STORAGE_TREE_MENU_START_INDEX = 0;
   private final int STORAGE_LIST_MENU_START_INDEX = 6;  // entry 0..4: new "..."; entry 5: separator
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
 
   // global variable references
   private Shell                                                      shell;
@@ -4248,9 +4248,9 @@ Dprintf.dprintf("");
   private UpdateEntryTableThread                      updateEntryTableThread = new UpdateEntryTableThread();
 
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** show UUID index tool tip
    * @param entityIndexData entity index data

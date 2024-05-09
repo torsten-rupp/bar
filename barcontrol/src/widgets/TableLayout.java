@@ -24,7 +24,7 @@ import org.eclipse.swt.widgets.TreeColumn;
 
 public class TableLayout extends Layout
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
   // layout constants
   public final static int NONE    = 0;
@@ -47,7 +47,7 @@ public class TableLayout extends Layout
 
   public final static int DEFAULT = 0;
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
 
   // weight of rows for shrinking/expanding
   public double   rowWeight         = 0.0;
@@ -89,9 +89,9 @@ public class TableLayout extends Layout
     return buffer.toString();
   }
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
 
   /** create table layout

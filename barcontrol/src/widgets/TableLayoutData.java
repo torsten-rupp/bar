@@ -12,7 +12,7 @@ import org.eclipse.swt.SWT;
 
 public class TableLayoutData
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
   public final static int NONE    = TableLayout.NONE;
 
@@ -34,7 +34,7 @@ public class TableLayoutData
 
   public final static int DEFAULT = TableLayout.DEFAULT;
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
 
   public int     width     = SWT.DEFAULT;  // requested size
   public int     height    = SWT.DEFAULT;
@@ -49,9 +49,9 @@ public class TableLayoutData
   protected int rowSpawn,columnSpawn;
   protected int padX,padY;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create table layout data
    * @param row,column row/column (0..n)

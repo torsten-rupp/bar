@@ -52,20 +52,20 @@ public class Dprintf
     }
   }
 
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
   /** any debug group (always enabled)
    */
   public static final Group GROUP_ANY;
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private static PrintStream           outputStream = System.err;
   private static int                   debugLevel   = 0;
   private static HashMap<String,Group> debugGroups  = new HashMap<String,Group>();
   private static boolean               timeStampsEnabled = true;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** initialize debug level and groups
    */

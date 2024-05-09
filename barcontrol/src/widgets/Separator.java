@@ -24,9 +24,9 @@ import org.eclipse.swt.widgets.Composite;
  */
 class Separator extends Canvas
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private Point  textSize;
   private String text;
 
@@ -34,9 +34,9 @@ class Separator extends Canvas
   private Color  colorNormalShadow;
   private Color  colorHighlightShadow;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create separator bar
    * @param composite parent composite widget

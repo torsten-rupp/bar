@@ -24,16 +24,16 @@ import org.eclipse.swt.SWTException;
  */
 abstract class BackgroundRunnable implements Runnable
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   protected Object[]            userData;
 
   private   StackTraceElement[] stackTrace;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create background task
    * @param userData user data
@@ -68,15 +68,15 @@ abstract class BackgroundRunnable implements Runnable
  */
 class BackgroundTask implements Runnable
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
   private BackgroundRunnable backgroundRunnable;
   private Method             runMethod;
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** create background task
    * @param backgroundRunnable background runnable to execute
@@ -169,10 +169,10 @@ class BackgroundTask implements Runnable
  */
 public class Background
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
   private final static int MAX_BACKGROUND_TASKS = 8;
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
 
   public static ExecutorService executorService = Executors.newFixedThreadPool(MAX_BACKGROUND_TASKS,new ThreadFactory()
   {
@@ -185,9 +185,9 @@ public class Background
     }
   });
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** run task in background
    * @param backgroundRunnable task to run in background

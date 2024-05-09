@@ -22,7 +22,7 @@ import java.util.HashSet;
  */
 public class Options
 {
-  // --------------------------- constants --------------------------------
+  // -------------------------- constants -------------------------------
   public enum Types
   {
     NONE,
@@ -37,11 +37,11 @@ public class Options
     SPECIAL,
   };
 
-  // --------------------------- variables --------------------------------
+  // -------------------------- variables -------------------------------
 
-  // ------------------------ native functions ----------------------------
+  // ----------------------- native functions ---------------------------
 
-  // ---------------------------- methods ---------------------------------
+  // --------------------------- methods --------------------------------
 
   /** get default value string from enumeration set
    * @param enumeration enumeration set
