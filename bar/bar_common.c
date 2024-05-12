@@ -204,6 +204,8 @@ void initRunningInfo(RunningInfo *runningInfo)
 {
   assert(runningInfo != NULL);
 
+  runningInfo->error                        = ERROR_NONE;
+
   runningInfo->progress.done.count          = 0L;
   runningInfo->progress.done.size           = 0LL;
   runningInfo->progress.total.count         = 0L;
@@ -228,16 +230,29 @@ void initRunningInfo(RunningInfo *runningInfo)
   runningInfo->message.code                 = MESSAGE_CODE_NONE;
   runningInfo->message.text                 = String_new();
 
-  runningInfo->lastErrorCode                = 0;
+  runningInfo->lastErrorCode                = ERROR_CODE_NONE;
   runningInfo->lastErrorNumber              = 0;
   runningInfo->lastErrorData                = String_new();
 
   runningInfo->lastExecutedDateTime         = 0LL;
+
+  Misc_performanceFilterInit(&runningInfo->entriesPerSecondFilter,     10*60);
+  Misc_performanceFilterInit(&runningInfo->bytesPerSecondFilter,       10*60);
+  Misc_performanceFilterInit(&runningInfo->storageBytesPerSecondFilter,10*60);
+
+  runningInfo->entriesPerSecond             = 0.0;
+  runningInfo->bytesPerSecond               = 0.0;
+  runningInfo->storageBytesPerSecond        = 0.0;
+  runningInfo->estimatedRestTime            = 0L;
 }
 
 void doneRunningInfo(RunningInfo *runningInfo)
 {
   assert(runningInfo != NULL);
+
+  Misc_performanceFilterDone(&runningInfo->entriesPerSecondFilter);
+  Misc_performanceFilterDone(&runningInfo->bytesPerSecondFilter);
+  Misc_performanceFilterDone(&runningInfo->storageBytesPerSecondFilter);
 
   String_delete(runningInfo->lastErrorData);
   String_delete(runningInfo->message.text);
