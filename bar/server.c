@@ -2451,7 +2451,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
   String           string;
   uint64           createdDateTime;
   const JobNode    *jobNode;
-  StorageSpecifier storageSpecifier,jobStorageSpecifier;
+  StorageSpecifier storageSpecifier;
   StorageInfo      storageInfo;
 
   assert(indexHandle != NULL);
@@ -2490,9 +2490,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error == ERROR_NONE)
     {
-      // get archive name
-      String archiveName = String_duplicate(storageSpecifier.archiveName);
-
       // get storage specified job options (if possible)
       JobOptions *jobOptions = NULL;
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
@@ -2693,13 +2690,16 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
     }
     else
     {
-      logMessage(NULL,  // logHandle,
-                 LOG_TYPE_ALWAYS,
-                 "Delete storage #%"PRIi64": '%s' fail (error: %s)",
-                 INDEX_DATABASE_ID(storageId),
-                 String_cString(storageName),
-                 Error_getText(error)
-                );
+      if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+      {
+        logMessage(NULL,  // logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Delete storage #%"PRIi64": '%s' fail (error: %s)",
+                   INDEX_DATABASE_ID(storageId),
+                   String_cString(storageName),
+                   Error_getText(error)
+                  );
+      }
     }
   }
 
@@ -2886,13 +2886,16 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   }
   else
   {
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               "Delete entity #%"PRIi64": job '%s' fail (error: %s)",
-               INDEX_DATABASE_ID(entityId),
-               String_cString(jobName),
-               Error_getText(error)
-              );
+    if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Delete entity #%"PRIi64": job '%s' fail (error: %s)",
+                 INDEX_DATABASE_ID(entityId),
+                 String_cString(jobName),
+                 Error_getText(error)
+                );
+    }
   }
 
   // free resources
@@ -3642,23 +3645,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
       // delete expired entity
       if (error == ERROR_NONE)
       {
-        plogMessage(NULL,  // logHandle,
-                    LOG_TYPE_INDEX,
-                    "INDEX",
-                    #ifdef SIMULATE_PURGE
-                      "Purge expired entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated): %s",
-                    #else /* not SIMULATE_PURGE */
-                      "Purge expired entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes): %s",
-                    #endif /* SIMULATE_PURGE */
-                    String_cString(expiredJobName),
-                    Archive_archiveTypeToString(expiredArchiveType),
-                    Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,TIME_TYPE_LOCAL,NULL),
-                    expiredTotalEntryCount,
-                    BYTES_SHORT(expiredTotalEntrySize),
-                    BYTES_UNIT(expiredTotalEntrySize),
-                    expiredTotalEntrySize,
-                    String_cString(expiredReason)
-                   );
         #ifndef SIMULATE_PURGE
           error = deleteEntity(indexHandle,expiredEntityId);
         #else /* not SIMULATE_PURGE */
@@ -3681,15 +3667,15 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
         (void)Index_unlockEntity(indexHandle,expiredEntityId);
       }
 
-      if (error != ERROR_NONE)
+      if (error == ERROR_NONE)
       {
         plogMessage(NULL,  // logHandle,
                     LOG_TYPE_INDEX,
                     "INDEX",
                     #ifdef SIMULATE_PURGE
-                      "Purge entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated) failed: %s",
+                      "Purged expired entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated): %s",
                     #else /* not SIMULATE_PURGE */
-                      "Purge entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) failed: %s",
+                      "Purged expired entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes): %s",
                     #endif /* SIMULATE_PURGE */
                     String_cString(expiredJobName),
                     Archive_archiveTypeToString(expiredArchiveType),
@@ -3698,18 +3684,40 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                     BYTES_SHORT(expiredTotalEntrySize),
                     BYTES_UNIT(expiredTotalEntrySize),
                     expiredTotalEntrySize,
-                    Error_getText(error)
+                    String_cString(expiredReason)
                    );
+      }
+      else
+      {
+        if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+        {
+          plogMessage(NULL,  // logHandle,
+                      LOG_TYPE_INDEX,
+                      "INDEX",
+                      #ifdef SIMULATE_PURGE
+                        "Purge expired entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated) failed: %s",
+                      #else /* not SIMULATE_PURGE */
+                        "Purge expired entity of job '%s': '%s', created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) failed: %s",
+                      #endif /* SIMULATE_PURGE */
+                      String_cString(expiredJobName),
+                      Archive_archiveTypeToString(expiredArchiveType),
+                      Misc_formatDateTimeCString(string,sizeof(string),expiredCreatedDateTime,TIME_TYPE_LOCAL,NULL),
+                      expiredTotalEntryCount,
+                      BYTES_SHORT(expiredTotalEntrySize),
+                      BYTES_UNIT(expiredTotalEntrySize),
+                      expiredTotalEntrySize,
+                      Error_getText(error)
+                     );
+        }
       }
 
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
-      }
-
-      if (failError == ERROR_NONE)
-      {
-        failError = error;
+        if (failError == ERROR_NONE)
+        {
+          failError = error;
+        }
       }
 
       AutoFree_done(&autoFreeList);
@@ -4516,7 +4524,7 @@ LOCAL void persistenceThreadCode(void)
         purgeMounts(FALSE);
 
         // sleep
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_CONNECT_FAIL))
         {
           // sleep and check quit flag
           delayThread(SLEEP_TIME_PERSISTENCE_THREAD,&persistenceThreadTrigger);
