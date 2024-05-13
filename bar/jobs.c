@@ -1150,10 +1150,6 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  Misc_performanceFilterDone(&jobNode->runningInfo.storageBytesPerSecondFilter);
-  Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecondFilter       );
-  Misc_performanceFilterDone(&jobNode->runningInfo.entriesPerSecondFilter     );
-
   String_delete(jobNode->abortedByInfo);
 
   String_delete(jobNode->customText);
@@ -1254,7 +1250,7 @@ void Job_initDuplicate(Job *job, const Job *fromJob)
                             NULL,  // fromPatternListFromNode
                             NULL  // fromPatternListToNode
                            );
-  Job_duplicateOptions(&job->options,&fromJob->options);
+  Job_copyOptions(&job->options,&fromJob->options);
 
   DEBUG_ADD_RESOURCE_TRACE(job,Job);
 }
@@ -1340,17 +1336,8 @@ JobNode *Job_new(JobTypes    jobType,
   jobNode->abortedByInfo                    = String_new();
   jobNode->volumeNumber                     = 0;
   jobNode->volumeUnloadFlag                 = FALSE;
-
-  jobNode->runningInfo.lastExecutedDateTime = 0LL;
-  jobNode->runningInfo.lastErrorCode        = 0;
-  jobNode->runningInfo.lastErrorNumber      = 0;
-  jobNode->runningInfo.lastErrorData        = String_new();
-
-  Misc_performanceFilterInit(&jobNode->runningInfo.entriesPerSecondFilter,     10*60);
-  Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecondFilter,       10*60);
-  Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecondFilter,10*60);
-
-  resetRunningInfo(&jobNode->runningInfo);
+// TODO: remove
+//  resetRunningInfo(&jobNode->runningInfo);
 
   jobNode->executionCount.normal            = 0L;
   jobNode->executionCount.full              = 0L;
@@ -1417,15 +1404,6 @@ JobNode *Job_copy(const JobNode *jobNode,
   newJobNode->abortedByInfo                    = String_new();
   newJobNode->volumeNumber                     = 0;
   newJobNode->volumeUnloadFlag                 = FALSE;
-
-  newJobNode->runningInfo.lastExecutedDateTime = 0LL;
-  newJobNode->runningInfo.lastErrorCode        = 0;
-  newJobNode->runningInfo.lastErrorNumber      = 0;
-  newJobNode->runningInfo.lastErrorData        = String_new();
-
-  Misc_performanceFilterInit(&newJobNode->runningInfo.entriesPerSecondFilter,     10*60);
-  Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecondFilter,       10*60);
-  Misc_performanceFilterInit(&newJobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
   resetRunningInfo(&newJobNode->runningInfo);
 
@@ -2837,7 +2815,7 @@ void Job_initOptions(JobOptions *jobOptions)
   DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
 
-void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
+void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
 {
   uint i;
 
@@ -2975,6 +2953,17 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
 
+JobOptions* Job_duplicateOptions(const JobOptions *fromJobOptions)
+{
+  JobOptions *jobOptions = (JobOptions*)malloc(sizeof(JobOptions));
+  if (jobOptions != NULL)
+  {
+    Job_copyOptions(jobOptions,fromJobOptions);
+  }
+
+  return jobOptions;
+}
+
 void Job_doneOptions(JobOptions *jobOptions)
 {
   assert(jobOptions != NULL);
@@ -3022,6 +3011,12 @@ void Job_doneOptions(JobOptions *jobOptions)
   String_delete(jobOptions->includeFileListFileName);
 
   String_delete(jobOptions->uuid);
+}
+
+void Job_freeOptions(JobOptions *jobOptions)
+{
+  Job_doneOptions(jobOptions);
+  free(jobOptions);
 }
 
 void Job_duplicatePersistenceList(PersistenceList *persistenceList, const PersistenceList *fromPersistenceList)

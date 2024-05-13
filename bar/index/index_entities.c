@@ -1019,7 +1019,7 @@ Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
   }
 
   // prune entities
-  ARRAY_ITERATEX(&entityIds,arrayIterator,databaseId,error == ERROR_NONE)
+  ARRAY_ITERATEX(&entityIds,arrayIterator,databaseId,(error == ERROR_NONE) && !indexQuitFlag)
   {
     error = IndexEntity_prune(indexHandle,doneFlag,deletedCounter,INDEX_ID_ENTITY(databaseId));
   }

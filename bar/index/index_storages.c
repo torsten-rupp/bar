@@ -2912,7 +2912,7 @@ Errors IndexStorage_pruneAll(IndexHandle *indexHandle,
   }
 
   // prune storages
-  ARRAY_ITERATEX(&storageIds,arrayIterator,databaseId,error == ERROR_NONE)
+  ARRAY_ITERATEX(&storageIds,arrayIterator,databaseId,(error == ERROR_NONE) && !indexQuitFlag)
   {
     error = IndexStorage_prune(indexHandle,doneFlag,deletedCounter,INDEX_ID_STORAGE(databaseId));
 // TODO: progressInfo

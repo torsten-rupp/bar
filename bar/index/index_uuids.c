@@ -1737,7 +1737,7 @@ Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
   }
 
   // prune UUIDs
-  ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
+  ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,(error == ERROR_NONE) && !indexQuitFlag)
   {
     error = IndexUUID_prune(indexHandle,
                             doneFlag,

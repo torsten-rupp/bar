@@ -868,6 +868,11 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
     Array_done(&databaseIds);
     return error;
   }
+  if (indexQuitFlag)
+  {
+    Array_done(&databaseIds);
+    return ERROR_NONE;
+  }
 
   // delete file entries without fragments
   error = IndexCommon_deleteByIds(indexHandle,
@@ -882,6 +887,11 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   {
     Array_done(&databaseIds);
     return error;
+  }
+  if (indexQuitFlag)
+  {
+    Array_done(&databaseIds);
+    return ERROR_NONE;
   }
 
   // get all image entries without fragments
@@ -903,6 +913,11 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
     Array_done(&databaseIds);
     return error;
   }
+  if (indexQuitFlag)
+  {
+    Array_done(&databaseIds);
+    return ERROR_NONE;
+  }
 
   // delete image entries without fragments
   error = IndexCommon_deleteByIds(indexHandle,
@@ -917,6 +932,11 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   {
     Array_done(&databaseIds);
     return error;
+  }
+  if (indexQuitFlag)
+  {
+    Array_done(&databaseIds);
+    return ERROR_NONE;
   }
 
   // get all hardlink entries without fragments
@@ -938,6 +958,11 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
     Array_done(&databaseIds);
     return error;
   }
+  if (indexQuitFlag)
+  {
+    Array_done(&databaseIds);
+    return ERROR_NONE;
+  }
 
   // delete hardlink entries without fragments
   error = IndexCommon_deleteByIds(indexHandle,
@@ -952,6 +977,11 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   {
     Array_done(&databaseIds);
     return error;
+  }
+  if (indexQuitFlag)
+  {
+    Array_done(&databaseIds);
+    return ERROR_NONE;
   }
 
   // free resources

@@ -51,7 +51,6 @@
 
 /****************** Conditional compilation switches *******************/
 // switch off for debugging only!
-// TODO:
 #define INDEX_INTIIAL_CLEANUP
 #define INDEX_IMPORT_OLD_DATABASE
 #define INDEX_SUPPORT_DELETE

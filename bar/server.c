@@ -2486,20 +2486,88 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
 
   if (!String_isEmpty(storageName))
   {
-    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    Storage_initSpecifier(&storageSpecifier);
+    error = Storage_parseName(&storageSpecifier,storageName);
+    if (error == ERROR_NONE)
     {
-      // find job if possible
-      jobNode = Job_findByUUID(jobUUID);
+      // get archive name
+      String archiveName = String_duplicate(storageSpecifier.archiveName);
 
-      Storage_initSpecifier(&storageSpecifier);
-      error = Storage_parseName(&storageSpecifier,storageName);
-      if (error == ERROR_NONE)
+      // get storage specified job options (if possible)
+      JobOptions *jobOptions = NULL;
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
+        jobNode = Job_findByUUID(jobUUID);
+
+        if (jobNode != NULL)
+        {
+          Storage_parseName(&storageSpecifier,jobNode->job.storageName);
+          jobOptions = Job_duplicateOptions(&jobNode->job.options);
+        }
+      }
+
 //TODO
 #ifndef WERROR
 #warning NYI: move this special handling of limited scp into Storage_delete()?
 #endif
-        // init storage
+      // init storage
+      if (storageSpecifier.type == STORAGE_TYPE_SCP)
+      {
+        // try to init scp-storage first with sftp
+        storageSpecifier.type = STORAGE_TYPE_SFTP;
+        error = Storage_init(&storageInfo,
+                             NULL,  // masterIO
+                             &storageSpecifier,
+                             jobOptions,
+                             &globalOptions.indexDatabaseMaxBandWidthList,
+                             SERVER_CONNECTION_PRIORITY_HIGH,
+                             CALLBACK_(NULL,NULL),  // storageUpdateProgress
+                             CALLBACK_(NULL,NULL),  // getNamePassword
+                             CALLBACK_(NULL,NULL),  // requestVolume
+                             CALLBACK_(NULL,NULL),  // isPause
+                             CALLBACK_(NULL,NULL),  // isAborted
+                             NULL  // logHandle
+                            );
+        if (error != ERROR_NONE)
+        {
+          // init scp-storage
+          storageSpecifier.type = STORAGE_TYPE_SCP;
+          error = Storage_init(&storageInfo,
+                               NULL,  // masterIO
+                               &storageSpecifier,
+                               jobOptions,
+                               &globalOptions.indexDatabaseMaxBandWidthList,
+                               SERVER_CONNECTION_PRIORITY_HIGH,
+                               CALLBACK_(NULL,NULL),  // storageUpdateProgress
+                               CALLBACK_(NULL,NULL),  // getNamePassword
+                               CALLBACK_(NULL,NULL),  // requestVolume
+                               CALLBACK_(NULL,NULL),  // isPause
+                               CALLBACK_(NULL,NULL),  // isAborted
+                               NULL  // logHandle
+                              );
+        }
+      }
+      else
+      {
+        // init other storage types
+        error = Storage_init(&storageInfo,
+                             NULL,  // masterIO
+                             &storageSpecifier,
+                             jobOptions,
+                             &globalOptions.indexDatabaseMaxBandWidthList,
+                             SERVER_CONNECTION_PRIORITY_HIGH,
+                             CALLBACK_(NULL,NULL),  // storageUpdateProgress
+                             CALLBACK_(NULL,NULL),  // getNamePassword
+                             CALLBACK_(NULL,NULL),  // requestVolume
+                             CALLBACK_(NULL,NULL),  // isPause
+                             CALLBACK_(NULL,NULL),  // isAborted
+                             NULL  // logHandle
+                            );
+      }
+
+      if (error !=  ERROR_NONE)
+      {
+        // init storage with job settings
         if (storageSpecifier.type == STORAGE_TYPE_SCP)
         {
           // try to init scp-storage first with sftp
@@ -2507,7 +2575,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
           error = Storage_init(&storageInfo,
                                NULL,  // masterIO
                                &storageSpecifier,
-                               (jobNode != NULL) ? &jobNode->job.options : NULL,
+                               jobOptions,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                CALLBACK_(NULL,NULL),  // storageUpdateProgress
@@ -2524,7 +2592,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
             error = Storage_init(&storageInfo,
                                  NULL,  // masterIO
                                  &storageSpecifier,
-                                 (jobNode != NULL) ? &jobNode->job.options : NULL,
+                                 jobOptions,
                                  &globalOptions.indexDatabaseMaxBandWidthList,
                                  SERVER_CONNECTION_PRIORITY_HIGH,
                                  CALLBACK_(NULL,NULL),  // storageUpdateProgress
@@ -2542,7 +2610,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
           error = Storage_init(&storageInfo,
                                NULL,  // masterIO
                                &storageSpecifier,
-                               (jobNode != NULL) ? &jobNode->job.options : NULL,
+                               jobOptions,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                CALLBACK_(NULL,NULL),  // storageUpdateProgress
@@ -2553,98 +2621,37 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                NULL  // logHandle
                               );
         }
-
-        if ((error !=  ERROR_NONE) && (jobNode != NULL))
-        {
-          // init storage with job settings
-          Storage_initSpecifier(&jobStorageSpecifier);
-          error = Storage_parseName(&jobStorageSpecifier,jobNode->job.storageName);
-          if (error == ERROR_NONE)
-          {
-            String_set(jobStorageSpecifier.archiveName,storageSpecifier.archiveName);
-
-            if (jobStorageSpecifier.type == STORAGE_TYPE_SCP)
-            {
-              // try to init scp-storage first with sftp
-              jobStorageSpecifier.type = STORAGE_TYPE_SFTP;
-              error = Storage_init(&storageInfo,
-                                   NULL,  // masterIO
-                                   &jobStorageSpecifier,
-                                   &jobNode->job.options,
-                                   &globalOptions.indexDatabaseMaxBandWidthList,
-                                   SERVER_CONNECTION_PRIORITY_HIGH,
-                                   CALLBACK_(NULL,NULL),  // storageUpdateProgress
-                                   CALLBACK_(NULL,NULL),  // getNamePassword
-                                   CALLBACK_(NULL,NULL),  // requestVolume
-                                   CALLBACK_(NULL,NULL),  // isPause
-                                   CALLBACK_(NULL,NULL),  // isAborted
-                                   NULL  // logHandle
-                                  );
-              if (error != ERROR_NONE)
-              {
-                // init scp-storage
-                jobStorageSpecifier.type = STORAGE_TYPE_SCP;
-                error = Storage_init(&storageInfo,
-                                     NULL,  // masterIO
-                                     &jobStorageSpecifier,
-                                     &jobNode->job.options,
-                                     &globalOptions.indexDatabaseMaxBandWidthList,
-                                     SERVER_CONNECTION_PRIORITY_HIGH,
-                                     CALLBACK_(NULL,NULL),  // storageUpdateProgress
-                                     CALLBACK_(NULL,NULL),  // getNamePassword
-                                     CALLBACK_(NULL,NULL),  // requestVolume
-                                     CALLBACK_(NULL,NULL),  // isPause
-                                     CALLBACK_(NULL,NULL),  // isAborted
-                                     NULL  // logHandle
-                                    );
-              }
-            }
-            else
-            {
-              // init other storage types
-              error = Storage_init(&storageInfo,
-                                   NULL,  // masterIO
-                                   &jobStorageSpecifier,
-                                   &jobNode->job.options,
-                                   &globalOptions.indexDatabaseMaxBandWidthList,
-                                   SERVER_CONNECTION_PRIORITY_HIGH,
-                                   CALLBACK_(NULL,NULL),  // storageUpdateProgress
-                                   CALLBACK_(NULL,NULL),  // getNamePassword
-                                   CALLBACK_(NULL,NULL),  // requestVolume
-                                   CALLBACK_(NULL,NULL),  // isPause
-                                   CALLBACK_(NULL,NULL),  // isAborted
-                                   NULL  // logHandle
-                                  );
-            }
-          }
-          Storage_doneSpecifier(&jobStorageSpecifier);
-        }
-
-        // delete storage file
-        if (error == ERROR_NONE)
-        {
-          if (Storage_exists(&storageInfo,
-                             NULL  // archiveName
-                            )
-             )
-          {
-            // delete storage
-            error = Storage_delete(&storageInfo,
-                                   NULL  // archiveName
-                                  );
-          }
-
-          // prune empty directories
-          Storage_pruneDirectories(&storageInfo,
-                                   NULL  // archiveName
-                                  );
-
-          // close storage
-          Storage_done(&storageInfo);
-        }
       }
-      Storage_doneSpecifier(&storageSpecifier);
+
+      // delete storage file
+      if (error == ERROR_NONE)
+      {
+        if (Storage_exists(&storageInfo,
+                           NULL  // archiveName
+                          )
+           )
+        {
+          // delete storage
+          error = Storage_delete(&storageInfo,
+                                 NULL  // archiveName
+                                );
+        }
+
+        // prune empty directories
+        Storage_pruneDirectories(&storageInfo,
+                                 NULL  // archiveName
+                                );
+
+        // close storage
+        Storage_done(&storageInfo);
+      }
+
+      if (jobOptions != NULL)
+      {
+        Job_freeOptions(jobOptions);
+      }
     }
+    Storage_doneSpecifier(&storageSpecifier);
     if (isQuit())
     {
       String_delete(string);
@@ -5971,7 +5978,8 @@ LOCAL void jobThreadCode(void)
       String_set(scheduleUUID,jobNode->scheduleUUID);
       EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK_(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK_(NULL,NULL));
-      Job_duplicateOptions(&jobOptions,&jobNode->job.options);
+fprintf(stderr,"%s:%d: copz po\n",__FILE__,__LINE__);
+      Job_copyOptions(&jobOptions,&jobNode->job.options);
       archiveType         = jobNode->archiveType;
       String_set(customText,jobNode->customText);
       startDateTime       = jobNode->startDateTime;
@@ -6216,7 +6224,7 @@ LOCAL void jobThreadCode(void)
 //        (void)purgeExpiredEntities(indexHandle,jobUUID,archiveType);
       }
 
-      // create/restore operaton
+      // create/restore operation
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
         #ifdef SIMULATOR
@@ -21092,7 +21100,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   // init variables
   storageName = String_new();
   entryName   = String_new();
-  Job_duplicateOptions(&jobOptions,&clientInfo->jobOptions);
+  Job_copyOptions(&jobOptions,&clientInfo->jobOptions);
 
   // get storage/entry list
   error = ERROR_NONE;

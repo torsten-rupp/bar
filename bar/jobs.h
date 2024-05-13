@@ -1585,19 +1585,30 @@ Errors Job_add(JobTypes          jobType,
 void Job_initOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
-* Name   : Job_duplicateOptions
-* Purpose: duplicated job options
+* Name   : Job_copyOptions
+* Purpose: copy job options
 * Input  : jobOptions     - job options variable
 *          fromJobOptions - source job options
-* Output : jobOptions - initialized job options variable
+* Output : jobOptions - initialized job options
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
+void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
 
 /***********************************************************************\
-* Name   : doneJobOptions
+* Name   : Job_duplicateOptions
+* Purpose: duplicate job options
+* Input  : fromJobOptions - source job options
+* Output : -
+* Return : job options
+* Notes  : -
+\***********************************************************************/
+
+JobOptions* Job_duplicateOptions(const JobOptions *fromJobOptions);
+
+/***********************************************************************\
+* Name   : Job_doneOptions
 * Purpose: done job options
 * Input  : jobOptions - job options
 * Output : -
@@ -1606,6 +1617,17 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
 \***********************************************************************/
 
 void Job_doneOptions(JobOptions *jobOptions);
+
+/***********************************************************************\
+* Name   : Job_freeOptions
+* Purpose: free job options
+* Input  : jobOptions - job options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_freeOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
 * Name   : Job_duplicatePersistenceList

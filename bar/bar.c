@@ -3116,7 +3116,7 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
     String_set(globalOptions.storageName,jobNode->job.storageName);
     EntryList_copy(&globalOptions.includeEntryList,&jobNode->job.includeEntryList,NULL,NULL);
     PatternList_copy(&globalOptions.excludePatternList,&jobNode->job.excludePatternList,NULL,NULL);
-    Job_duplicateOptions(&jobOptions,&jobNode->job.options);
+    Job_copyOptions(&jobOptions,&jobNode->job.options);
     archiveType  = jobNode->archiveType;
     jobOptions.testCreatedArchivesFlag = jobNode->testCreatedArchives;
     jobOptions.noStorage               = jobNode->noStorage;
