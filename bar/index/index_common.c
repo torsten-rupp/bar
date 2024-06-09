@@ -601,7 +601,6 @@ Errors IndexCommon_delete(IndexHandle          *indexHandle,
                );
       }
     #endif
-//fprintf(stderr,"%s, %d: IndexCommon_isIndexInUse=%d\n",__FILE__,__LINE__,IndexCommon_isIndexInUse());
     indexInUse = IndexCommon_isIndexInUse();
   }
   while (   (error == ERROR_NONE)

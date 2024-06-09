@@ -1746,7 +1746,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
 }
 
 /***********************************************************************\
-* Name   : clearStorage
+* Name   : cleanUpOrphanedStorages
 * Purpose: clear index storage content
 * Input  : indexHandle  - index handle
 *          storageId    - database id of storage
@@ -2668,13 +2668,10 @@ LOCAL void indexThreadCode(void)
               );
       #endif /* INDEX_SUPPORT_DELETE */
 
-      if (!indexQuitFlag)
-      {
-        (void)IndexStorage_pruneAll(&indexHandle,NULL,NULL);
-        (void)IndexEntry_pruneAll(&indexHandle,NULL,NULL);
-        (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
-        (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
-      }
+      if (!indexQuitFlag) (void)IndexStorage_pruneAll(&indexHandle,NULL,NULL);
+      if (!indexQuitFlag) (void)IndexEntry_pruneAll(&indexHandle,NULL,NULL);
+      if (!indexQuitFlag) (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
+      if (!indexQuitFlag) (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
     }
 
     // sleep and check quit flag/trigger

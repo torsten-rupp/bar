@@ -1725,7 +1725,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                                "FTS_storages \
                                   LEFT JOIN storages ON storages.id=FTS_storages.storageId \
                                ",
-                               "COUNT(storageId)",
+                               "COUNT(FTS_storages.rowid)",
                                "storages.id IS NULL",
                                DATABASE_FILTERS
                                (

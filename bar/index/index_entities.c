@@ -2493,8 +2493,8 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
       // get storages to purge
       error = Database_getIds(&indexHandle->databaseHandle,
                               &storageIds,
-                              "storages \
-                                 LEFT JOIN entities ON entities.id=storages.entityId \
+                              "entities \
+                                 LEFT JOIN storages ON storages.entityId=entities.id \
                               ",
                               "storages.id",
                               "entities.id=?",
