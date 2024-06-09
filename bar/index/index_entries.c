@@ -841,6 +841,8 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
                            ulong       *deletedCounter
                           )
 {
+  #define INCREMENT 4096LL
+
   Array  databaseIds;
   Errors error;
 
@@ -849,24 +851,89 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   // init vairables
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
-  // get all file entries without fragments
-  Array_clear(&databaseIds);
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "fileEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
-                          ",
-                          "fileEntries.id",
-                          "entryFragments.id IS NULL",
-                          DATABASE_FILTERS
-                          (
-                          ),
-                          DATABASE_UNLIMITED
-                         );
-  if (error != ERROR_NONE)
+  bool indexInUse = IndexCommon_isIndexInUse();
+
+  if (!indexInUse)
   {
-    Array_done(&databaseIds);
-    return error;
+    // get all file entries without fragments
+    static uint64 offsetFileEntries = 0LL;
+    Array_clear(&databaseIds);
+    ulong count;
+    do
+    {
+      count = 0;
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             DatabaseId fileEntryId      = values[0].id;
+                             DatabaseId entryFragmentsId = values[1].id;
+
+                             if (entryFragmentsId == DATABASE_ID_NONE)
+                             {
+                               Array_append(&databaseIds,&fileEntryId);
+                             }
+                             count++;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "fileEntries \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
+                             "
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY("fileEntries.id"),
+                             DATABASE_COLUMN_KEY("entryFragments.id")
+                           ),
+                           NULL, // filter
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderBy
+                           offsetFileEntries,
+                           INCREMENT
+                          );
+      offsetFileEntries += INCREMENT;
+
+      indexInUse = IndexCommon_isIndexInUse();
+    }
+    while (   (count > 0)
+           && !indexInUse
+           && (error == ERROR_NONE)
+          );
+    if (count == 0) offsetFileEntries = 0LL;
+
+    if (error != ERROR_NONE)
+    {
+      Array_done(&databaseIds);
+      return error;
+    }
+
+    // delete file entries without fragments
+    error = IndexCommon_deleteByIds(indexHandle,
+                                    doneFlag,
+                                    deletedCounter,
+                                    "fileEntries",
+                                    "id",
+                                    Array_cArray(&databaseIds),
+                                    Array_length(&databaseIds)
+                                   );
+    if (error != ERROR_NONE)
+    {
+      Array_done(&databaseIds);
+      return error;
+    }
   }
   if (indexQuitFlag)
   {
@@ -874,19 +941,86 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
     return ERROR_NONE;
   }
 
-  // delete file entries without fragments
-  error = IndexCommon_deleteByIds(indexHandle,
-                                  doneFlag,
-                                  deletedCounter,
-                                  "fileEntries",
-                                  "id",
-                                  Array_cArray(&databaseIds),
-                                  Array_length(&databaseIds)
-                                 );
-  if (error != ERROR_NONE)
+  if (!indexInUse)
   {
-    Array_done(&databaseIds);
-    return error;
+    // get all image entries without fragments
+    Array_clear(&databaseIds);
+    static uint64 offsetImageEntries = 0LL;
+    ulong count;
+    do
+    {
+      count = 0;
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
+
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
+
+                             DatabaseId fileEntryId      = values[0].id;
+                             DatabaseId entryFragmentsId = values[1].id;
+
+                             if (entryFragmentsId == DATABASE_ID_NONE)
+                             {
+                               Array_append(&databaseIds,&fileEntryId);
+                             }
+                             count++;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "imageEntries \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
+                             "
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY("imageEntries.id"),
+                             DATABASE_COLUMN_KEY("entryFragments.id")
+                           ),
+                           NULL, // filter
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderBy
+                           offsetImageEntries,
+                           INCREMENT
+                          );
+      offsetImageEntries += INCREMENT;
+
+      indexInUse = IndexCommon_isIndexInUse();
+    }
+    while (   (count > 0)
+           && !indexInUse
+           && (error == ERROR_NONE)
+          );
+    if (count == 0) offsetImageEntries = 0LL;
+    if (error != ERROR_NONE)
+    {
+      Array_done(&databaseIds);
+      return error;
+    }
+
+    // delete image entries without fragments
+    error = IndexCommon_deleteByIds(indexHandle,
+                                    doneFlag,
+                                    deletedCounter,
+                                    "imageEntries",
+                                    "id",
+                                    Array_cArray(&databaseIds),
+                                    Array_length(&databaseIds)
+                                   );
+    if (error != ERROR_NONE)
+    {
+      Array_done(&databaseIds);
+      return error;
+    }
   }
   if (indexQuitFlag)
   {
@@ -894,89 +1028,86 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
     return ERROR_NONE;
   }
 
-  // get all image entries without fragments
-  Array_clear(&databaseIds);
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "imageEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
-                          ",
-                          "imageEntries.id",
-                          "entryFragments.id IS NULL",
-                          DATABASE_FILTERS
-                          (
-                          ),
-                          DATABASE_UNLIMITED
-                         );
-  if (error != ERROR_NONE)
+  if (!indexInUse)
   {
-    Array_done(&databaseIds);
-    return error;
-  }
-  if (indexQuitFlag)
-  {
-    Array_done(&databaseIds);
-    return ERROR_NONE;
-  }
+    // get all hardlink entries without fragments
+    Array_clear(&databaseIds);
+    static uint64 offsetHardlinkEntries = 0LL;
+    ulong count;
+    do
+    {
+      count = 0;
+      error = Database_get(&indexHandle->databaseHandle,
+                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                           {
+                             assert(values != NULL);
+                             assert(valueCount == 2);
 
-  // delete image entries without fragments
-  error = IndexCommon_deleteByIds(indexHandle,
-                                  doneFlag,
-                                  deletedCounter,
-                                  "imageEntries",
-                                  "id",
-                                  Array_cArray(&databaseIds),
-                                  Array_length(&databaseIds)
-                                 );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-  if (indexQuitFlag)
-  {
-    Array_done(&databaseIds);
-    return ERROR_NONE;
-  }
+                             UNUSED_VARIABLE(userData);
+                             UNUSED_VARIABLE(valueCount);
 
-  // get all hardlink entries without fragments
-  Array_clear(&databaseIds);
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "hardlinkEntries \
-                             LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
-                          ",
-                          "hardlinkEntries.id",
-                          "entryFragments.id IS NULL",
-                          DATABASE_FILTERS
-                          (
-                          ),
-                          DATABASE_UNLIMITED
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
-  if (indexQuitFlag)
-  {
-    Array_done(&databaseIds);
-    return ERROR_NONE;
-  }
+                             DatabaseId fileEntryId      = values[0].id;
+                             DatabaseId entryFragmentsId = values[1].id;
 
-  // delete hardlink entries without fragments
-  error = IndexCommon_deleteByIds(indexHandle,
-                                  doneFlag,
-                                  deletedCounter,
-                                  "hardlinkEntries",
-                                  "id",
-                                  Array_cArray(&databaseIds),
-                                  Array_length(&databaseIds)
-                                 );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
+                             if (entryFragmentsId == DATABASE_ID_NONE)
+                             {
+                               Array_append(&databaseIds,&fileEntryId);
+                             }
+                             count++;
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           DATABASE_TABLES
+                           (
+                             "hardlinkEntries \
+                                LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
+                             "
+                           ),
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY("hardlinkEntries.id"),
+                             DATABASE_COLUMN_KEY("entryFragments.id")
+                           ),
+                           NULL, // filter
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL,  // groupBy
+                           NULL,  // orderBy
+                           offsetHardlinkEntries,
+                           INCREMENT
+                          );
+      offsetHardlinkEntries += INCREMENT;
+
+      indexInUse = IndexCommon_isIndexInUse();
+    }
+    while (   (count > 0)
+           && !indexInUse
+           && (error == ERROR_NONE)
+          );
+    if (count == 0) offsetHardlinkEntries = 0LL;
+    if (error != ERROR_NONE)
+    {
+      Array_done(&databaseIds);
+      return error;
+    }
+
+    // delete hardlink entries without fragments
+    error = IndexCommon_deleteByIds(indexHandle,
+                                    doneFlag,
+                                    deletedCounter,
+                                    "hardlinkEntries",
+                                    "id",
+                                    Array_cArray(&databaseIds),
+                                    Array_length(&databaseIds)
+                                   );
+    if (error != ERROR_NONE)
+    {
+      Array_done(&databaseIds);
+      return error;
+    }
   }
   if (indexQuitFlag)
   {
@@ -988,6 +1119,8 @@ Errors IndexEntry_pruneAll(IndexHandle *indexHandle,
   Array_done(&databaseIds);
 
   return ERROR_NONE;
+
+  #undef INCREMENT
 }
 
 // ----------------------------------------------------------------------

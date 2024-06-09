@@ -1103,6 +1103,8 @@ LOCAL Errors unloadVolume(const StorageInfo *storageInfo)
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
 
+  error = ERROR_NONE;
+
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
 #ifndef NDEBUG
   const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
