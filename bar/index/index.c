@@ -1100,7 +1100,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
       break;
     default:
       // unknown version if index
-      error = ERROR_DATABASE_VERSION_UNKNOWN;
+      error = ERRORX_(DATABASE_VERSION_UNKNOWN,0,"%d",indexVersion);
       break;
   }
 
@@ -1159,7 +1159,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
       break;
     default:
       // unknown version if index
-      error = ERROR_DATABASE_VERSION_UNKNOWN;
+      error = ERRORX_(DATABASE_VERSION_UNKNOWN,0,"%d",indexVersion);
       break;
   }
   ProgressInfo_done(&progressInfo);
@@ -2416,7 +2416,6 @@ LOCAL void indexThreadCode(void)
     if (indexDatabaseSpecifier->type == DATABASE_TYPE_SQLITE3)
     {
       // get absolute database file name
-// TODO:
       absoluteFileName = File_getAbsoluteFileName(String_new(),indexDatabaseSpecifier->sqlite.fileName);
 
       // open directory where database is located
@@ -2448,8 +2447,13 @@ LOCAL void indexThreadCode(void)
              && (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
             )
       {
-        if (   String_startsWith(oldDatabaseFileName,absoluteFileName)\
-            && String_matchCString(oldDatabaseFileName,STRING_BEGIN,DATABASE_SAVE_PATTERNS[indexDatabaseSpecifier->type],NULL,NULL)
+fprintf(stderr,"%s:%d: oldDatabaseFileName=%s\n",__FILE__,__LINE__,String_cString(oldDatabaseFileName));
+        if (String_matchCString(oldDatabaseFileName,
+                                STRING_BEGIN,
+                                DATABASE_SAVE_PATTERNS[indexDatabaseSpecifier->type],
+                                NULL,
+                                NULL
+                               )
            )
         {
           if (i == 0)
@@ -2470,7 +2474,6 @@ LOCAL void indexThreadCode(void)
           else
           {
             failFileName = String_appendCString(String_duplicate(oldDatabaseFileName),".fail");
-// TODO:
             (void)File_rename(oldDatabaseFileName,failFileName,NULL);
             String_delete(failFileName);
           }
@@ -3045,20 +3048,59 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
         if (indexVersion < INDEX_VERSION)
         {
           // rename existing index for upgrade
-          String saveDatabaseName;
-          uint   n;
+          String saveDatabaseName = String_new();
 
-          saveDatabaseName = String_new();
-
-          // get backup name
-          n = 0;
-          do
+          switch (indexDatabaseSpecifier->type)
           {
-            String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
-            String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
-            n++;
+            case DATABASE_TYPE_SQLITE3:
+              {
+                // get directory where database is located
+                String absoluteFileName = File_getAbsoluteFileName(String_new(),indexDatabaseSpecifier->sqlite.fileName);
+                String directoryName = File_getDirectoryName(String_new(),absoluteFileName);
+                String_delete(absoluteFileName);
+
+                // get backup name
+                uint n = 0;
+                do
+                {
+                  String_set(saveDatabaseName,directoryName);
+                  File_appendFileNameCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
+                  String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
+                  n++;
+                }
+                while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
+
+                // free resources
+                String_delete(directoryName);
+              }
+              break;
+            case DATABASE_TYPE_MARIADB:
+              {
+                // get backup name
+                uint n = 0;
+                do
+                {
+                  String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
+                  String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
+                  n++;
+                }
+                while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
+              }
+              break;
+            case DATABASE_TYPE_POSTGRESQL:
+              {
+                // get backup name
+                uint n = 0;
+                do
+                {
+                  String_setCString(saveDatabaseName,DEFAULT_DATABASE_NAME);
+                  String_appendFormat(saveDatabaseName,DATABASE_SAVE_EXTENSIONS[indexDatabaseSpecifier->type],n);
+                  n++;
+                }
+                while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
+              }
+              break;
           }
-          while (Database_exists(indexDatabaseSpecifier,saveDatabaseName));
 
           // rename database
           error = Database_rename(indexDatabaseSpecifier,NULL,String_cString(saveDatabaseName));

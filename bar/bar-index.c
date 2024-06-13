@@ -1247,7 +1247,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
       break;
     default:
       // unknown version if index
-      error = ERROR_DATABASE_VERSION_UNKNOWN;
+      error = ERRORX_(DATABASE_VERSION_UNKNOWN,0,"%d",indexVersion);
       break;
   }
   if (error != ERROR_NONE)
