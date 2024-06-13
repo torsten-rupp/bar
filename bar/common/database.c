@@ -12179,7 +12179,7 @@ String Database_getPrintableName(String                  string,
   return string;
 }
 
-Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
+Errors Database_rename(const DatabaseSpecifier *databaseSpecifier,
                        const char        *databaseName,
                        const char        *newDatabaseName
                       )
@@ -12200,7 +12200,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
                                  newDatabaseName,
                                  NULL
                                 );
-      String_setCString(databaseSpecifier->sqlite.fileName,newDatabaseName);
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
@@ -12281,8 +12280,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           closeDatabase(&databaseHandle);
 
           // free resources
-
-          String_setCString(databaseSpecifier->mariadb.databaseName,newDatabaseName);
         }
       #else /* HAVE_MARIADB */
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -12333,8 +12330,6 @@ Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
           closeDatabase(&databaseHandle);
 
           // free resources
-
-          String_setCString(databaseSpecifier->postgresql.databaseName,newDatabaseName);
         }
       #else /* HAVE_POSTGRESQL */
         error = ERROR_FUNCTION_NOT_SUPPORTED;

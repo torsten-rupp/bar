@@ -1319,9 +1319,9 @@ bool Database_exists(const DatabaseSpecifier *databaseSpecifier,
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_rename(DatabaseSpecifier *databaseSpecifier,
-                       const char        *databaseName,
-                       const char        *newDatabaseName
+Errors Database_rename(const DatabaseSpecifier *databaseSpecifier,
+                       const char              *databaseName,
+                       const char              *newDatabaseName
                       );
 
 //Database_delete(indexDatabaseSpecifier,databaseName);

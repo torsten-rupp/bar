@@ -1019,7 +1019,13 @@ ERROR DATABASE_VERSION
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR DATABASE_VERSION_UNKNOWN         TR("unknown version of index")
+ERROR DATABASE_VERSION_UNKNOWN
+  stringSet(errorText,sizeof(errorText),TR("unknown version of index"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+  }
+
 ERROR DATABASE_MISSING_TABLE
   stringSet(errorText,sizeof(errorText),TR("missing table"));
   if (!stringIsEmpty(ERROR_DATA))

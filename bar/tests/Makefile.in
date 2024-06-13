@@ -2124,6 +2124,7 @@ tests11 tests_index: \
             BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-unreadable --skip-verify-signatures $(OPTIONS)" \
             TEST_INDEX_DATABASE=$$testIndexDatabase \
             TEST_INDEX_DATABASE_IMPORT=$(SOURCE_DIR)/archive/index.sql \
+            TEST_INDEX_DATABASE_IMPORT_PREV=$(SOURCE_DIR)/archive/index-prev.sql \
             tests_index_operations \
             ; \
           rc=$$?; \
@@ -6088,12 +6089,22 @@ tests_index_operations_base: \
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
+	@$(call functionVerifyParameter,TEST_INDEX_DATABASE_IMPORT_PREV)
 	@#
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
+	# import into index
+	#
 	# maintain index
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=$(TEST_INDEX_DATABASE) --debug-index-wait-operations $(LOG))
 	@#
-	# import into index
+	# upgrade index (sqlite3 only)
+ifeq ($(TEST_INDEX_DATABASE),$(TEST_INDEX_DATABASE_SQLITE))
+	pwd
+	$(RMF) intermediate/index.db
+	$(SQLITE3) --batch intermediate/index.db < $(TEST_INDEX_DATABASE_IMPORT_PREV)
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=$(TEST_INDEX_DATABASE) --debug-index-wait-operations $(LOG))
+endif
+	# create test archives
 	@$(call functionCleanTestFiles)
 	@$(call functionCleanTestDatabase,$(TEST_INDEX_DATABASE))
 	@$(call functionExec,$(TEST_BAR)) -c $(BAR_STORAGE)/test0.bar $(TEST_FILES_SIMPLE) --skip-unreadable >/dev/null
