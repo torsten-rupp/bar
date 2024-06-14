@@ -2446,7 +2446,6 @@ LOCAL void indexThreadCode(void)
              && (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
             )
       {
-fprintf(stderr,"%s:%d: oldDatabaseFileName=%s\n",__FILE__,__LINE__,String_cString(oldDatabaseFileName));
         if (String_matchCString(oldDatabaseFileName,
                                 STRING_BEGIN,
                                 DATABASE_SAVE_PATTERNS[indexDatabaseSpecifier->type],

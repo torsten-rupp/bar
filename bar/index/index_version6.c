@@ -1516,8 +1516,12 @@ LOCAL Errors importIndexVersion6(DatabaseHandle *oldDatabaseHandle,
                             );
   if (error != ERROR_NONE)
   {
+    Dictionary_done(&storageIdDictionary);
     return error;
   }
+
+  // free resources
+  Dictionary_done(&storageIdDictionary);
 
   return ERROR_NONE;
 }
