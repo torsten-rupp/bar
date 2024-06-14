@@ -1,6 +1,8 @@
 2024-06-09 24a
   * fixed long blocking of database at clean
   * fixed upgrade database, fixed memory leak
+  * BARControl: fixed add unreadable directory content to index
+  * BARControl: fixed add single archive to index
 
 2024-05-08 24
   * added support to create PAR2 checksum files
