@@ -2116,6 +2116,7 @@ tests11 tests_index: \
   $(TEST_BAR) \
   $(TEST_BAR_INDEX)
 	@$(call functionInfoBegin,Tests 11: index)
+	install -d $(INTERMEDIATE_DIR)
 	for testIndexDatabase in $(TEST_INDEX_DATABASES); do \
           $(MAKE) \
             BAR_STORAGE="$(INTERMEDIATE_DIR)" \
@@ -6090,6 +6091,7 @@ tests_index_operations_base: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
 	@$(call functionVerifyParameter,TEST_INDEX_DATABASE_IMPORT_PREV)
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@#
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	# import into index
@@ -6099,7 +6101,6 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	@#
 	# upgrade index (sqlite3 only)
 ifeq ($(TEST_INDEX_DATABASE),$(TEST_INDEX_DATABASE_SQLITE))
-	pwd
 	$(RMF) intermediate/index.db
 	$(SQLITE3) --batch intermediate/index.db < $(TEST_INDEX_DATABASE_IMPORT_PREV)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --index-database=$(TEST_INDEX_DATABASE) --debug-index-wait-operations $(LOG))
@@ -6321,6 +6322,7 @@ tests_index_operations_server: \
 	# bar server index operations
 	@$(call functionInfoHeader,test index opertations server)
 	@$(call functionVerifyParameter,TEST_INDEX_DATABASE)
+	$(INSTALL) -d $(INTERMEDIATE_DIR)
 	@#
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 ifeq ($(TEST_INDEX_DATABASE),$(TEST_INDEX_DATABASE_SQLITE))
