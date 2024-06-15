@@ -4093,6 +4093,7 @@ String String_makeValidUTF8(String string, size_t index)
         index++;
       }
     }
+    string->data[toIndex] = NUL;
     string->length = toIndex;
 
     STRING_UPDATE_VALID(string);
