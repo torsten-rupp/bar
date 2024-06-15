@@ -901,8 +901,7 @@ LOCAL void outputProgressInit(const char *text,
   UNUSED_VARIABLE(maxSteps);
   UNUSED_VARIABLE(userData);
 
-  UNUSED_RESULT(fwrite(text,1,stringLength(text),stdout));
-  fflush(stdout);
+  printInfo(2,"%s",text);
 }
 
 // TODO: remove
@@ -952,12 +951,7 @@ LOCAL void outputProgressInfo(uint  progress,
   }
   outputProgressBufferLength = stringLength(outputProgressBuffer);
 
-  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
-
-  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
-  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
-
-  fflush(stdout);
+  printInfo(2,"%s\n",outputProgressBuffer);
 
   wheelIndex = (wheelIndex+1) % 4;
 }
@@ -987,12 +981,7 @@ LOCAL void outputProgressDone(ulong totalTime,
               );
   stringFillAppend(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,' ');
 
-  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
-
-  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
-  UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
-
-  UNUSED_RESULT(fwrite("\n",1,1,stdout));
+  printInfo(2,"%s\n",outputProgressBuffer);
 
   fflush(stdout);
 }
