@@ -12180,8 +12180,8 @@ String Database_getPrintableName(String                  string,
 }
 
 Errors Database_rename(const DatabaseSpecifier *databaseSpecifier,
-                       const char        *databaseName,
-                       const char        *newDatabaseName
+                       const char              *databaseName,
+                       const char              *newDatabaseName
                       )
 {
   Errors error;

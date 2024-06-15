@@ -5986,7 +5986,6 @@ LOCAL void jobThreadCode(void)
       String_set(scheduleUUID,jobNode->scheduleUUID);
       EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK_(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK_(NULL,NULL));
-fprintf(stderr,"%s:%d: copz po\n",__FILE__,__LINE__);
       Job_copyOptions(&jobOptions,&jobNode->job.options);
       archiveType         = jobNode->archiveType;
       String_set(customText,jobNode->customText);

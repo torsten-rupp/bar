@@ -1,3 +1,7 @@
+2024-06-01 25
+  * removed directory aggregate data from index: hardly used,
+    save space and time
+
 2024-06-09 24a
   * fixed long blocking of database at clean
 

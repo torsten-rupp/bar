@@ -304,12 +304,6 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   entryId               BIGINT NOT NULL,
   storageId             BIGINT NOT NULL,
 
-  // updated by updateDirectoryContentAggregates()
-  totalEntryCount       BIGINT DEFAULT 0,  // total number of directory entries
-  totalEntrySize        BIGINT DEFAULT 0,  // total size of directory entries [bytes]
-  totalEntryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
-  totalEntrySizeNewest  BIGINT DEFAULT 0,  // total size of newest directory entries [bytes]
-
   // Note: redundancy for faster access
   name                  VARCHAR(${MAX_TEXT_LENGTH}),
 

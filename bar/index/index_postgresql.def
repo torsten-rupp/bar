@@ -278,12 +278,6 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   // Note: redundancy for faster access
   name                  VARCHAR(${MAX_TEXT_LENGTH}),
 
-  // updated by updateDirectoryContentAggregates()
-  totalEntryCount       BIGINT DEFAULT 0,  // total number of directory entries
-  totalEntrySize        BIGINT DEFAULT 0,  // total size of directory entries [bytes]
-  totalEntryCountNewest BIGINT DEFAULT 0,  // total number of newest directory entries
-  totalEntrySizeNewest  BIGINT DEFAULT 0,  // total size of newest directory entries [bytes]
-
   UNIQUE (entryId)
 );
 
