@@ -8542,7 +8542,7 @@ Dprintf.dprintf("");
       widgetStorageType.setToolTipText(BARControl.tr("Storage type:\n"+
                                                      "  into file system\n"+
                                                      "  on FTP server\n"+
-// TODO:implemente/remove?                                                     "  on SSH server with scp (secure copy)\n"+
+// TODO:implement/remove?                                                     "  on SSH server with scp (secure copy)\n"+
                                                      "  on SSH server with sftp (secure FTP)\n"+
                                                      "  on WebDAV server\n"+
                                                      "  on WebDAV secure server\n"+
@@ -8555,7 +8555,7 @@ Dprintf.dprintf("");
       Widgets.setComboItems(widgetStorageType,
                             new Object[]{BARControl.tr("file system"),StorageTypes.FILESYSTEM,
                                                        "ftp",         StorageTypes.FTP,
-// TODO:implemente/remove?                                                       "scp",         StorageTypes.SCP,
+// TODO:implement/remove?                                                       "scp",         StorageTypes.SCP,
                                                        "sftp",        StorageTypes.SFTP,
                                                        "webdav",      StorageTypes.WEBDAV,
                                                        "webdavs",     StorageTypes.WEBDAVS,
@@ -8569,28 +8569,34 @@ Dprintf.dprintf("");
       Widgets.layout(widgetStorageType,1,1,TableLayoutData.W,0,2);
 
       // destination file system
-      widgetFile= new BARWidgets.File(composite);
+      widgetFile = new BARWidgets.File(composite);
       Widgets.layout(widgetFile,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+      Widgets.setVisible(widgetFile,true);
 
       // destination ftp
-      widgetFTP= new BARWidgets.FTP(composite);
+      widgetFTP = new BARWidgets.FTP(composite);
       Widgets.layout(widgetFTP,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+      Widgets.setVisible(widgetFTP,false);
 
       // destination scp/sftp
-      widgetSFTP= new BARWidgets.SFTP(composite);
+      widgetSFTP = new BARWidgets.SFTP(composite);
       Widgets.layout(widgetSFTP,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+      Widgets.setVisible(widgetSFTP,false);
 
       // destination WebDAV
-      widgetWebDAV= new BARWidgets.WebDAV(composite);
+      widgetWebDAV = new BARWidgets.WebDAV(composite);
       Widgets.layout(widgetWebDAV,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+      Widgets.setVisible(widgetWebDAV,false);
 
       // destination cd/dvd/bd
-      widgetOptical= new BARWidgets.Optical(composite);
+      widgetOptical = new BARWidgets.Optical(composite);
       Widgets.layout(widgetOptical,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+      Widgets.setVisible(widgetOptical,false);
 
       // destination device
-      widgetDevice= new BARWidgets.Device(composite);
+      widgetDevice = new BARWidgets.Device(composite);
       Widgets.layout(widgetDevice,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
+      Widgets.setVisible(widgetDevice,false);
     }
 
     // buttons
@@ -8737,8 +8743,6 @@ Dprintf.dprintf("");
                                           data.deviceName,
                                           data.archiveName
                                          );
-Dprintf.dprintf("addURIParts=%s",addURIParts);
-Dprintf.dprintf("addURIParts.getURI()=%s",addURIParts.getURI());
 
       Background.run(new BackgroundRunnable(busyDialog,addURIParts)
       {
@@ -8758,10 +8762,10 @@ Dprintf.dprintf("addURIParts.getURI()=%s",addURIParts.getURI());
                                        @Override
                                        public void handle(int i, ValueMap valueMap)
                                        {
-                                         long   storageId  = valueMap.getLong  ("storageId" );
-                                         String name       = valueMap.getString("name"      );
-                                         long   doneCount  = valueMap.getLong  ("doneCount" );
-                                         long   totalCount = valueMap.getLong  ("totalCount");
+                                         long   storageId  = valueMap.getLong  ("storageId", 0L);
+                                         String name       = valueMap.getString("name"        );
+                                         long   doneCount  = valueMap.getLong  ("doneCount", 0L);
+                                         long   totalCount = valueMap.getLong  ("totalCount",0L);
 
                                          if      ((storageId != 0) && (!name.isEmpty()))
                                          {

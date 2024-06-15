@@ -5075,11 +5075,31 @@ UNUSED_VARIABLE(skipUnreadableFlag);
         }
 
         // check if sub-directory, add to directory list
-        if (   (fileInfo.type == FILE_TYPE_DIRECTORY)
-//            && (!skipUnreadableFlag || Storage_isReadable(,name))
-           )
+        if (fileInfo.type == FILE_TYPE_DIRECTORY)
         {
-          StringList_append(&directoryList,name);
+          // open storage
+          StorageInfo storageInfo;
+          error = Storage_init(&storageInfo,
+                               NULL, // masterIO
+                               storageSpecifier,
+                               NULL, // jobOptions,
+                               &globalOptions.indexDatabaseMaxBandWidthList,
+                               SERVER_CONNECTION_PRIORITY_HIGH,
+                               CALLBACK_(NULL,NULL),  // storageUpdateProgress
+                               CALLBACK_(NULL,NULL),  // updateStatusInfo
+                               CALLBACK_(NULL,NULL),  // storageVolumeRequest
+                               CALLBACK_(NULL,NULL),  // isPause
+                               CALLBACK_(NULL,NULL),  // isAborted
+                               NULL  // logHandle
+                              );
+          if (error == ERROR_NONE)
+          {
+            if (!skipUnreadableFlag || Storage_isReadable(&storageInfo,name))
+            {
+              StringList_append(&directoryList,name);
+            }
+            Storage_done(&storageInfo);
+          }
         }
 
         // match pattern and call storage callback on match
