@@ -204,6 +204,7 @@ vpath %.java $(BUILD_DIR)/barcontrol:$(SOURCE_DIR)
 .NOTPARALLEL: classes/%.class
 classes/%.class: \
   $(SOURCE_DIR)/src/%.java \
+  $(BUILD_DIR)/src/Version.java \
   $(BUILD_DIR)/src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
@@ -217,7 +218,10 @@ ifneq ($(JAVAC),)
 else
 	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"; false
 endif
-classes/%.class: $(SOURCE_DIR)/src/utils/%.java
+classes/%.class: \
+  $(SOURCE_DIR)/src/utils/%.java \
+  $(BUILD_DIR)/src/Version.java \
+  $(BUILD_DIR)/src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
@@ -230,7 +234,10 @@ ifneq ($(JAVAC),)
 else
 	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"; false
 endif
-classes/%.class: $(SOURCE_DIR)/src/widgets/%.java
+classes/%.class: \
+  $(SOURCE_DIR)/src/widgets/%.java \
+  $(BUILD_DIR)/src/Version.java \
+  $(BUILD_DIR)/src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
@@ -243,17 +250,23 @@ ifneq ($(JAVAC),)
 else
 	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"; false
 endif
-classes/Version.class: $(BUILD_DIR)/src/Version.java
+classes/Version.class: \
+  $(BUILD_DIR)/src/Version.java \
+  $(BUILD_DIR)/src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
           -d classes \
           -classpath $(CLASSPATH) \
-          $(BUILD_DIR)/src/*.java
+          $(SOURCE_DIR)/src/*.java \
+          $(SOURCE_DIR)/src/utils/*.java \
+          $(SOURCE_DIR)/src/widgets/*.java
 else
 	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"; false
 endif
-classes/BARException.class: $(BUILD_DIR)/src/BARException.java
+classes/BARException.class: \
+  $(BUILD_DIR)/src/Version.java \
+  $(BUILD_DIR)/src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
 	$(JAVAC) $(JAVAC_FLAGS) \
@@ -312,7 +325,8 @@ OBJECTS        = $(foreach z,$(SOURCES),$(addprefix classes/,$(basename $(notdir
                  \
                  $(foreach z,$(LANGUAGES),classes/app/i18n/Messages_$z.class) \
 
-INTERMEDIATE   = $(BUILD_DIR)/barcontrol/src/BARException.java \
+INTERMEDIATE   = $(BUILD_DIR)/barcontrol/src/Version.java \
+                 $(BUILD_DIR)/barcontrol/src/BARException.java \
                  barcontrol.jar \
                  barcontrol-linux.jar \
                  barcontrol-linux_64.jar \
