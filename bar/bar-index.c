@@ -1173,6 +1173,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
                        );
   if (error != ERROR_NONE)
   {
+    printError("open database fail (error: %s)!",Error_getText(error));
     String_delete(printableDatabaseURI);
     Database_doneSpecifier(&databaseSpecifier);
     return error;
@@ -1190,6 +1191,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
                           );
   if (error != ERROR_NONE)
   {
+    printError("get database version fail (error: %s)!",Error_getText(error));
     String_delete(printableDatabaseURI);
     Database_doneSpecifier(&databaseSpecifier);
     return error;
@@ -10664,7 +10666,7 @@ uint xxxShow=0;
     }
     else if (stringStartsWith(argv[i],"--import="))
     {
-      importFileName = &argv[i][12];
+      importFileName = &argv[i][9];
       i++;
     }
     else if (stringEquals(argv[i],"-I") || stringEquals(argv[i],"--import"))
