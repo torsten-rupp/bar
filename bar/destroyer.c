@@ -59,7 +59,7 @@ typedef struct
 LOCAL bool versionFlag = FALSE;
 LOCAL bool helpFlag    = FALSE;
 
-LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
+LOCAL CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 (
   CMD_OPTION_BOOLEAN("version",0  ,0,0,versionFlag,"print version"  ),
   CMD_OPTION_BOOLEAN("help",   'h',0,0,helpFlag,   "print this help"),
@@ -98,7 +98,7 @@ LOCAL void printUsage(const char *programName)
   printf("  i:[<position>|<find text>]:<value>  - insert at <position> byte <value>\n");
   printf("\n");
   CmdOption_printHelp(stdout,
-                      COMMAND_LINE_OPTIONS,
+                      BAR_COMMAND_LINE_OPTIONS,
                       0
                      );
  }
@@ -379,9 +379,9 @@ int main(int argc, const char *argv[])
   uint64      n;
 
   // parse command line
-  CmdOption_init(COMMAND_LINE_OPTIONS);
+  CmdOption_init(BAR_COMMAND_LINE_OPTIONS);
   if (!CmdOption_parse(argv,&argc,
-                       COMMAND_LINE_OPTIONS,
+                       BAR_COMMAND_LINE_OPTIONS,
                        CMD_PRIORITY_ANY,CMD_PRIORITY_ANY,
                        stderr,NULL,NULL
                       )
@@ -505,7 +505,7 @@ int main(int argc, const char *argv[])
   fclose(inputHandle);
 
   // free resources
-  CmdOption_done(COMMAND_LINE_OPTIONS);
+  CmdOption_done(BAR_COMMAND_LINE_OPTIONS);
 
   return 0;
  }

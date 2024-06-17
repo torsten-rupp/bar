@@ -986,8 +986,8 @@ LOCAL void outputProgressDone(ulong totalTime,
   fflush(stdout);
 }
 
-// TODO:
 #if 0
+// not supported anymore
 #include "index_version1.c"
 #include "index_version2.c"
 #include "index_version3.c"

@@ -10,7 +10,6 @@
 
 /****************************** Includes *******************************/
 #include <stdlib.h>
-#include <stdbool.h>
 
 #include "common/global.h"
 
@@ -25,11 +24,11 @@
 
 /***********************************************************************\
 * Name   : ListNodeDuplicateFunction
-* Purpose: duplicate list node function
+* Purpose: callback function to duplicate a list node
 * Input  : fromNode - copy from node
 *          userData - user data
 * Output : -
-* Return : duplicated list node
+* Return : new duplicated list node
 * Notes  : -
 \***********************************************************************/
 
@@ -37,11 +36,11 @@ typedef void*(*ListNodeDuplicateFunction)(const void *fromNode, void *userData);
 
 /***********************************************************************\
 * Name   : ListNodeFreeFunction
-* Purpose: delete list node function
-* Input  : node     - node
+* Purpose: callback function to delete a list node
+* Input  : node     - node to delete
 *          userData - user data
 * Output : -
-* Return : duplicated list node
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
@@ -49,7 +48,7 @@ typedef void(*ListNodeFreeFunction)(void *node, void *userData);
 
 /***********************************************************************\
 * Name   : ListNodeEqualsFunction
-* Purpose: list node equals function
+* Purpose: callback function to check if a list node equals to something
 * Input  : node     - node to check
 *          userData - user data
 * Output : -
@@ -61,9 +60,9 @@ typedef bool(*ListNodeEqualsFunction)(const void *node, void *userData);
 
 /***********************************************************************\
 * Name   : ListNodeCompareFunction
-* Purpose: compare list nodes function
+* Purpose: callback function to compare list nodes
 * Input  : node1,node2 - nodes to compare
-*          userData - user data
+*          userData    - user data
 * Output : -
 * Return : -1/0/-1 iff </=/>
 * Notes  : -
@@ -148,8 +147,8 @@ typedef struct
 
 /***********************************************************************\
 * Name   : LIST_DONE
-* Purpose: iterated over list and execute block then delete node
-* Input  : list     - list
+* Purpose: iterated over a list, execute block and delete node
+* Input  : list     - list to iterate
 *          variable - iterator variable
 * Output : -
 * Return : -
@@ -192,7 +191,7 @@ typedef struct
 
 /***********************************************************************\
 * Name   : LIST_ITERATE
-* Purpose: iterated over list and execute block
+* Purpose: iterated over a list and execute block
 * Input  : list     - list
 *          variable - iteration variable
 * Output : -
@@ -213,7 +212,7 @@ typedef struct
 
 /***********************************************************************\
 * Name   : LIST_ITERATEX
-* Purpose: iterated over list and execute block
+* Purpose: iterated over a list and execute block
 * Input  : list      - list
 *          variable  - iteration variable
 *          condition - additional condition
@@ -235,7 +234,7 @@ typedef struct
 
 /***********************************************************************\
 * Name   : LIST_FIND_FIRST, LIST_FIND_LAST, LIST_FIND
-* Purpose: find first/last entry in list
+* Purpose: find first/last/any entry in list
 * Input  : list      - list
 *          variable  - variable name
 *          condition - condition code
@@ -350,7 +349,7 @@ typedef struct
 * Purpose: find and remove entry in list
 * Input  : list      - list
 *          variable  - iteration variable
-*          condition - additional condition
+*          condition - condition
 * Output : -
 * Return : -
 * Notes  : -
@@ -397,7 +396,7 @@ typedef struct
 
 /***********************************************************************\
 * Name   : List_newNode
-* Purpose: allocate new list node
+* Purpose: allocate a new list node
 * Input  : size - size of node
 * Output : -
 * Return : node or NULL if insufficient memory
@@ -412,7 +411,7 @@ Node *__List_newNode(const char *__fileName__, ulong __lineNb__, ulong size);
 
 /***********************************************************************\
 * Name   : List_deleteNode
-* Purpose: delete list node
+* Purpose: delete a list node
 * Input  : node - list node
 * Output : -
 * Return : next node in list or NULL
@@ -427,11 +426,13 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node);
 
 /***********************************************************************\
 * Name   : List_init
-* Purpose: initialize list
+* Purpose: initialize a list
 * Input  : list              - list to initialize
-*          duplicateFunction - node duplicate function
+*          duplicateFunction - node duplicate callback function (could
+*                              be NULL(
 *          duplicateUserData - node duplicate user data
-*          freeFunction      - node free function
+*          freeFunction      - node free callback function (could be
+*                              NULL)
 *          freeUserData      - node free user data
 * Output : -
 * Return : -
@@ -458,14 +459,16 @@ void __List_init(const char                *__fileName__,
 
 /***********************************************************************\
 * Name   : List_initDuplicate
-* Purpose: initialize a duplicated list
+* Purpose: initialize and duplicated list
 * Input  : list                            - list to initialize
 *          fromList                        - from list
 *          fromListFromNode,fromListToNode - from/to node (could be
 *                                            NULL)
-*          duplicateFunction               - node duplicate function
+*          duplicateFunction               - node duplicate callback
+*                                            function (could be NULL)
 *          duplicateUserData               - node duplicate user data
-*          freeFunction                    - node free function
+*          freeFunction                    - node free callback function
+*                                            (could be NULL)
 *          freeUserData                    - node free user data
 * Output : -
 * Return : -
@@ -498,7 +501,7 @@ void __List_initDuplicate(const char                *__fileName__,
 
 /***********************************************************************\
 * Name   : List_done
-* Purpose: free all nodes
+* Purpose: free all nodes and deinitialize list
 * Input  : list - list to free
 * Output : -
 * Return : -
@@ -509,13 +512,15 @@ void List_done(void *list);
 
 /***********************************************************************\
 * Name   : List_new
-* Purpose: allocate new list
-* Input  : duplicateFunction - node duplicate function
+* Purpose: allocate a new list
+* Input  : duplicateFunction - node duplicate callback function (could
+*                              be NULL)
 *          duplicateUserData - node duplicate user data
-*          freeFunction      - node free function
+*          freeFunction      - node free callback function (could be
+*                              NULL)
 *          freeUserData      - node free user data
 * Output : -
-* Return : list or NULL on insufficient memory
+* Return : new list or NULL on insufficient memory
 * Notes  : -
 \***********************************************************************/
 
@@ -537,13 +542,15 @@ List *__List_new(const char                *__fileName__,
 
 /***********************************************************************\
 * Name   : List_duplicate
-* Purpose: duplicate list
+* Purpose: duplicate a list
 * Input  : fromList                        - from list
 *          fromListFromNode,fromListToNode - from/to node (could be
 *                                            NULL)
-*          duplicateFunction               - node duplicate function
+*          duplicateFunction               - node duplicate callback
+*                                            function (could be NULL)
 *          duplicateUserData               - node duplicate user data
-*          freeFunction                    - node free function
+*          freeFunction                    - node free callback function
+*                                            (could be NULL)
 *          freeUserData                    - node free user data
 * Output : -
 * Return : -
@@ -575,7 +582,7 @@ List *__List_duplicate(const char                *__fileName__,
 /***********************************************************************\
 * Name   : List_delete
 * Purpose: free all nodes and delete list
-* Input  : list - list to free
+* Input  : list - list to delete
 * Output : -
 * Return : -
 * Notes  : -
@@ -619,10 +626,10 @@ void List_copy(void       *toList,
 * Name   : List_move
 * Purpose: move contents of list
 * Input  : toList                          - to list
-*          toListNextNode                  - insert node before nextNode
+*          toListNextNode                  - insert nodes before nextNode
 *                                            (could be NULL)
 *          fromList                        - from list
-*          fromListFromNode,fromListToNode - from/to node (could be
+*          fromListFromNode,fromListToNode - from/to nodes (could be
 *                                            NULL)
 * Output : -
 * Return : -
@@ -651,10 +658,10 @@ void List_exchange(void *list1,
 
 /***********************************************************************\
 * Name   : List_isEmpty
-* Purpose: check if list is empty
+* Purpose: check if a list is empty
 * Input  : list - list
 * Output : -
-* Return : TRUE if list is empty, FALSE otherwise
+* Return : TRUE iff list is empty
 * Notes  : -
 \***********************************************************************/
 
@@ -673,7 +680,7 @@ INLINE bool List_isEmpty(const void *list)
 
 /***********************************************************************\
 * Name   : List_count
-* Purpose: get number of elements in list
+* Purpose: get the number of elements in a list
 * Input  : list - list
 * Output : -
 * Return : number of elements
@@ -695,7 +702,7 @@ INLINE ulong List_count(const void *list)
 
 /***********************************************************************\
 * Name   : List_insert
-* Purpose: insert node into list
+* Purpose: insert a node into a list
 * Input  : list     - list
 *          node     - node to insert
 *          nextNode - insert node before nextNode (could be NULL to
@@ -721,7 +728,7 @@ void __List_insert(const char *fileName,
 
 /***********************************************************************\
 * Name   : List_append
-* Purpose: append node to end of list
+* Purpose: append a node to end of a list
 * Input  : list - list
 *          node - node to add
 * Output : -
@@ -743,7 +750,7 @@ void __List_append(const char *fileName,
 
 /***********************************************************************\
 * Name   : List_remove
-* Purpose: remove node from list
+* Purpose: remove a node from a list
 * Input  : list - list
 *          node - node to remove
 * Output : -
@@ -757,7 +764,7 @@ void *List_remove(void *list,
 
 /***********************************************************************\
 * Name   : List_removeAndFree
-* Purpose: remove node from list and free
+* Purpose: remove a node from a list and free
 * Input  : list - list
 *          node - node to remove
 * Output : -
@@ -771,7 +778,7 @@ void *List_removeAndFree(void *list,
 
 /***********************************************************************\
 * Name   : List_first
-* Purpose: first node from list
+* Purpose: geth the first node in list
 * Input  : list - list
 * Output : -
 * Return : node or NULL if list is empty
@@ -793,7 +800,7 @@ INLINE Node *List_first(const void *list)
 
 /***********************************************************************\
 * Name   : List_last
-* Purpose: last node from list
+* Purpose: get the last node in list
 * Input  : list - list
 * Output : -
 * Return : node or NULL if list is empty
@@ -826,7 +833,7 @@ Node *List_removeFirst(void *list);
 
 /***********************************************************************\
 * Name   : List_removeLast
-* Purpose: remove and return last node from list
+* Purpose: remove and return the last node from list
 * Input  : list - list
 * Output : -
 * Return : removed node or NULL if list is empty
@@ -837,7 +844,7 @@ Node *List_removeLast(void *list);
 
 /***********************************************************************\
 * Name   : List_contains
-* Purpose: check if list contains node
+* Purpose: check if a list contains a node
 * Input  : list                   - list
 *          node                   - node
 *          listNodeEqualsFunction - equals function or NULL
@@ -855,7 +862,7 @@ bool List_contains(const void             *list,
 
 /***********************************************************************\
 * Name   : List_find
-* Purpose: find node in list
+* Purpose: find a node in a list
 * Input  : list                   - list
 *          listNodeEqualsFunction - equals function
 *          listNodeEqualsUserData - user data for equals function
@@ -891,7 +898,7 @@ INLINE void *List_find(const void             *list,
 
 /***********************************************************************\
 * Name   : List_findFirst
-* Purpose: find node in list
+* Purpose: find a node in a list
 * Input  : list                   - list
 *          listFindMode           - list find mode
 *          listNodeEqualsFunction - equals function
@@ -909,10 +916,10 @@ void *List_findFirst(const void             *list,
 
 /***********************************************************************\
 * Name   : List_findNext
-* Purpose: find next node in list
+* Purpose: find the next node in a list
 * Input  : list                   - list
 *          listFindMode           - list find mode
-*          node                   - previous found node
+*          node                   - current node
 *          listNodeEqualsFunction - equals function
 *          listNodeEqualsUserData - user data for equals function
 * Output : -
@@ -929,7 +936,7 @@ void *List_findNext(const void             *list,
 
 /***********************************************************************\
 * Name   : List_findAndRemove
-* Purpose: find and remove node from list
+* Purpose: find and remove a node from a list
 * Input  : list                   - list
 *          listFindMode           - list find mode
 *          listNodeEqualsFunction - equals function or NULL
@@ -948,7 +955,7 @@ Node *List_findAndRemove(void                   *list,
 
 /***********************************************************************\
 * Name   : List_sort
-* Purpose: sort list
+* Purpose: sort a list
 * Input  : list                    - list
 *          listNodeCompareFunction - compare function
 *          listNodeCompareUserData - user data for compare function

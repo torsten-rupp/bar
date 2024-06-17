@@ -416,7 +416,7 @@ LOCAL void printUsage(const char *programName, uint level)
   printf("               device://[<device name>:]<file name>\n");
   printf("\n");
   CmdOption_printHelp(stdout,
-                      COMMAND_LINE_OPTIONS,
+                      BAR_COMMAND_LINE_OPTIONS,
                       level
                      );
 }
@@ -695,8 +695,8 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,Server_initAll,{ Server_doneAll(); });
 
   // initialize config values and command line options
-  ConfigValue_init(CONFIG_VALUES);
-  CmdOption_init(COMMAND_LINE_OPTIONS);
+  ConfigValue_init(BAR_CONFIG_VALUES);
+  CmdOption_init(BAR_COMMAND_LINE_OPTIONS);
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -720,8 +720,8 @@ LOCAL void doneAll(void)
   #endif /* HAVE_SIGACTION */
 
   // deinitialize command line options and config values
-  CmdOption_done(COMMAND_LINE_OPTIONS);
-  ConfigValue_done(CONFIG_VALUES);
+  CmdOption_done(BAR_COMMAND_LINE_OPTIONS);
+  ConfigValue_done(BAR_CONFIG_VALUES);
 
   // deinitialize modules
   Server_doneAll();
@@ -4308,7 +4308,7 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
-                       COMMAND_LINE_OPTIONS,
+                       BAR_COMMAND_LINE_OPTIONS,
                        0,1,
                        stderr,"ERROR: ","Warning: "
                       )
@@ -4384,7 +4384,7 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   // parse command line: post-options
   if (!CmdOption_parse(argv,&argc,
-                       COMMAND_LINE_OPTIONS,
+                       BAR_COMMAND_LINE_OPTIONS,
                        2,2,
                        stderr,"ERROR: ","Warning: "
                       )
@@ -4412,7 +4412,7 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   // parse command line: pre+post-options
   if (!CmdOption_parse(argv,&argc,
-                       COMMAND_LINE_OPTIONS,
+                       BAR_COMMAND_LINE_OPTIONS,
                        0,2,
                        stderr,"ERROR: ","Warning: "
                       )
@@ -4423,7 +4423,7 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   // parse command line: all
   if (!CmdOption_parse(argv,&argc,
-                       COMMAND_LINE_OPTIONS,
+                       BAR_COMMAND_LINE_OPTIONS,
                        CMD_PRIORITY_ANY,CMD_PRIORITY_ANY,
                        stderr,"ERROR: ","Warning: "
                       )
@@ -4458,7 +4458,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     configFileName = String_newCString(globalOptions.saveConfigurationFileName);
     if (isPrintInfo(2) || printInfoFlag) { printConsole(stdout,0,"Writing configuration file '%s'...",String_cString(configFileName)); }
     error = ConfigValue_writeConfigFile(configFileName,
-                                        CONFIG_VALUES,
+                                        BAR_CONFIG_VALUES,
                                         NULL,
                                         globalOptions.cleanConfigurationComments
                                        );
@@ -4519,7 +4519,7 @@ LOCAL Errors bar(int argc, const char *argv[])
       byte buffer[20];
       uint i;
 
-      ConfigValue_debugSHA256(CONFIG_VALUES,buffer,sizeof(buffer));
+      ConfigValue_debugSHA256(BAR_CONFIG_VALUES,buffer,sizeof(buffer));
       for (i = 0; i < sizeof(buffer); i++)
       {
         printf("%02x",buffer[i]);
@@ -4618,7 +4618,7 @@ int main(int argc, const char *argv[])
   if (error == ERROR_NONE)
   {
     if (!CmdOption_parse(argv,&argc,
-                         COMMAND_LINE_OPTIONS,
+                         BAR_COMMAND_LINE_OPTIONS,
                          0,0,
                          stderr,"ERROR: ","Warning: "
                         )

@@ -138,13 +138,13 @@ LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  hashIndex = calculateHash(name)%stringMap->size;
+  hashIndex = calculateHash(name) % stringMap->size;
   n = 0;
   while (   (stringMap->entries[hashIndex].name != NULL)
          && (n < stringMap->size)
         )
   {
-    hashIndex = (hashIndex+1)%stringMap->size;
+    hashIndex = (hashIndex+1) % stringMap->size;
     n++;
   }
 
@@ -1752,7 +1752,7 @@ bool StringMap_parseEnumNumber(const char *name, uint *value, void *userData)
 {
   assert(name != NULL);
   assert(value != NULL);
-  
+
   UNUSED_VARIABLE(userData);
 
   (*value) = (uint)atoi(name);

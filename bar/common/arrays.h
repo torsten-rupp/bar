@@ -601,7 +601,7 @@ INLINE ulong Array_segmentOffset(const Array *array, const ArraySegmentIterator 
   assert(array != NULL);
   assert(arraySegmentIterator != NULL);
   assert(arraySegmentIterator->offset < Array_length(array));
-  
+
   UNUSED_VARIABLE(array);
 
   return arraySegmentIterator->offset;

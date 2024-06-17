@@ -2011,14 +2011,14 @@ bool Job_read(JobNode *jobNode)
       // commented value -> only store comments
       if (!StringList_isEmpty(&commentList))
       {
-        i = ConfigValue_find(CONFIG_VALUES,
+        i = ConfigValue_find(BAR_CONFIG_VALUES,
                              CONFIG_VALUE_INDEX_NONE,
                              CONFIG_VALUE_INDEX_NONE,
                              String_cString(name)
                             );
         if (i != CONFIG_VALUE_INDEX_NONE)
         {
-          ConfigValue_setComments(CONFIG_VALUES,&CONFIG_VALUES[i],&commentList);
+          ConfigValue_setComments(BAR_CONFIG_VALUES,&BAR_CONFIG_VALUES[i],&commentList);
           StringList_clear(&commentList);
         }
       }

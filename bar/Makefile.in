@@ -586,6 +586,7 @@ BAR_INDEX_SOURCES           = bar-index.c \
 BAR_INDEX_HEADERS           = $(patsubst %.c,%.h,$(filter-out bar-index.c,$(BAR_INDEX_SOURCES))) \
 
 BAR_INDEX_SOURCES_COMMON    = common/arrays.c \
+                              common/autofree.c \
                               common/cmdoptions.c \
                               common/database.c \
                               common/configvalues.c \

@@ -1078,7 +1078,7 @@ bool CmdOption_parse(const char              *argv[],
                     );
 
 /***********************************************************************\
-* Name   : CmdOptionParseDeprecatedStringOption
+* Name   : CmdOption_parseDeprecatedStringOption
 * Purpose: command line option call back to parse deprecated string
 * Input  : userData         - user data (not used)
 *          variable         - variable
@@ -1092,14 +1092,14 @@ bool CmdOption_parse(const char              *argv[],
 * Notes  : -
 \***********************************************************************/
 
-bool CmdOptionParseDeprecatedStringOption(void       *userData,
-                                          void       *variable,
-                                          const char *name,
-                                          const char *value,
-                                          const void *defaultValue,
-                                          char       errorMessage[],
-                                          uint       errorMessageSize
-                                         );
+bool CmdOption_parseDeprecatedStringOption(void       *userData,
+                                           void       *variable,
+                                           const char *name,
+                                           const char *value,
+                                           const void *defaultValue,
+                                           char       errorMessage[],
+                                           uint       errorMessageSize
+                                          );
 
 /***********************************************************************\
 * Name   : cmdOptionParseDeprecatedMountDevice
@@ -1116,14 +1116,14 @@ bool CmdOptionParseDeprecatedStringOption(void       *userData,
 * Notes  : -
 \***********************************************************************/
 
-bool CmdOptionParseDeprecatedCStringOption(void       *userData,
-                                           void       *variable,
-                                           const char *name,
-                                           const char *value,
-                                           const void *defaultValue,
-                                           char       errorMessage[],
-                                           uint       errorMessageSize
-                                          );
+bool CmdOption_parseDeprecatedCStringOption(void       *userData,
+                                            void       *variable,
+                                            const char *name,
+                                            const char *value,
+                                            const void *defaultValue,
+                                            char       errorMessage[],
+                                            uint       errorMessageSize
+                                           );
 
 /***********************************************************************
 * Name   : CmdOption_find

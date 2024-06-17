@@ -1272,6 +1272,7 @@ LOCAL void expandMacros(char *line, uint lineSize, const char *template, uint te
   */
   for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
+    assert(commandLineOptions[i].variable.pointer != NULL);
     switch (commandLineOptions[i].type)
     {
       case CMD_OPTION_TYPE_INTEGER:
@@ -1886,14 +1887,14 @@ bool CmdOption_parse(const char              *argv[],
   return TRUE;
 }
 
-bool CmdOptionParseDeprecatedStringOption(void       *userData,
-                                          void       *variable,
-                                          const char *name,
-                                          const char *value,
-                                          const void *defaultValue,
-                                          char       errorMessage[],
-                                          uint       errorMessageSize
-                                         )
+bool CmdOption_parseDeprecatedStringOption(void       *userData,
+                                           void       *variable,
+                                           const char *name,
+                                           const char *value,
+                                           const void *defaultValue,
+                                           char       errorMessage[],
+                                           uint       errorMessageSize
+                                          )
 {
   assert(variable != NULL);
   assert(value != NULL);
@@ -1909,14 +1910,14 @@ bool CmdOptionParseDeprecatedStringOption(void       *userData,
   return TRUE;
 }
 
-bool CmdOptionParseDeprecatedCStringOption(void       *userData,
-                                           void       *variable,
-                                           const char *name,
-                                           const char *value,
-                                           const void *defaultValue,
-                                           char       errorMessage[],
-                                           uint       errorMessageSize
-                                          )
+bool CmdOption_parseDeprecatedCStringOption(void       *userData,
+                                            void       *variable,
+                                            const char *name,
+                                            const char *value,
+                                            const void *defaultValue,
+                                            char       errorMessage[],
+                                            uint       errorMessageSize
+                                           )
 {
   assert(variable != NULL);
   assert(value != NULL);

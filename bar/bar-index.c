@@ -22,6 +22,7 @@
 #include <assert.h>
 
 #include "common/global.h"
+#include "common/autofree.h"
 #include "common/strings.h"
 #include "common/files.h"
 #include "common/cmdoptions.h"
@@ -66,24 +67,16 @@ typedef struct
   size_t *widths;
 } PrintRowData;
 
-#if 0
-// TODO: still not used
-LOCAL const CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
-(
-  CMD_OPTION_BOOLEAN      ("table-names",                       0  , 1, 0, showTableNames,   "xxx"                  ),
-  CMD_OPTION_BOOLEAN      ("index-names",                       0  , 1, 0, showIndexNames,   ""                  ),
-  CMD_OPTION_BOOLEAN      ("trigger-names",                     0  , 1, 0, showTriggerNames, ""                  ),
-  CMD_OPTION_BOOLEAN      ("drop-tables",                       0  , 1, 0, dropTablesFlag,   ""                  ),
-  CMD_OPTION_BOOLEAN      ("drop-triggers",                     0  , 1, 0, dropTriggersFlag, ""                  ),
-  CMD_OPTION_BOOLEAN      ("drop-indizes",                      0  , 1, 0, dropIndizesFlag,  ""                  ),
-  CMD_OPTION_BOOLEAN      ("help",                              'h', 0, 0, helpFlag,         "output this help"                ),
-  CMD_OPTION_BOOLEAN      ("xhelp",                             0,   0, 0, xhelpFlag,        "output help to extended options" ),
-);
-#endif
-
 /***************************** Variables *******************************/
 LOCAL const char *changeToDirectory                   = NULL;
 LOCAL const char *importFileName                      = NULL;
+LOCAL Array      uuidIds;
+LOCAL Array      uuids;
+LOCAL Array      entityIds;
+LOCAL Array      entryIds;
+LOCAL Array      storageIds;
+LOCAL String     entryName,storageName;
+LOCAL String     command;
 LOCAL bool       infoFlag                             = FALSE;  // output index database info
 LOCAL bool       infoUUIDsFlag                        = FALSE;  // output index database UUIDs info
 LOCAL bool       infoEntitiesFlag                     = FALSE;  // output index database entities info
@@ -95,6 +88,7 @@ LOCAL uint       entryType                            = INDEX_CONST_TYPE_ANY;
 LOCAL bool       checkIntegrityFlag                   = FALSE;  // check database integrity
 LOCAL bool       checkOrphanedFlag                    = FALSE;  // check database orphaned entries
 LOCAL bool       checkDuplicatesFlag                  = FALSE;  // check database duplicate entries
+LOCAL bool       checkFlag                            = FALSE;  // check database integrity+orphaned+duplicate entries
 LOCAL bool       optimizeFlag                         = FALSE;  // optimize database
 LOCAL bool       reindexFlag                          = FALSE;  // re-create existing indizes
 LOCAL bool       createFlag                           = FALSE;  // create new index database
@@ -111,9 +105,11 @@ LOCAL bool       createNewestFlag                     = FALSE;  // re-create new
 LOCAL bool       createAggregatesDirectoryContentFlag = FALSE;  // re-create aggregates entities data
 LOCAL bool       createAggregatesEntitiesFlag         = FALSE;  // re-create aggregates entities data
 LOCAL bool       createAggregatesStoragesFlag         = FALSE;  // re-create aggregates storages data
+LOCAL bool       createAggregatesFlag                 = FALSE;  // re-create aggregates entities+storages data
 LOCAL bool       cleanOrphanedFlag                    = FALSE;  // execute clean orphaned entries
 LOCAL bool       cleanDuplicateEntriesFlag            = FALSE;  // execute clean duplicate entries
-LOCAL bool       purgeDeletedFlag                     = FALSE;  // execute purge deleted storages
+LOCAL bool       cleanFlag                            = FALSE;  // execute clean orphaned+duplicate entries
+LOCAL bool       purgeFlag                     = FALSE;  // execute purge deleted storages
 LOCAL bool       vacuumFlag                           = FALSE;  // execute vacuum
 LOCAL bool       showStoragesFlag                     = FALSE;  // show storages of job
 LOCAL bool       showEntriesFlag                      = FALSE;  // show entries of job
@@ -125,17 +121,480 @@ LOCAL bool       foreignKeysFlag                      = TRUE;
 LOCAL bool       forceFlag                            = FALSE;
 LOCAL bool       pipeFlag                             = FALSE;
 LOCAL bool       verboseFlag                          = TRUE;
+LOCAL bool       quietFlag                            = FALSE;
 LOCAL bool       timeFlag                             = FALSE;
 LOCAL bool       explainQueryPlanFlag                 = FALSE;
 LOCAL const char *systemEncoding                      = NULL;
 LOCAL const char *consoleEncoding                     = NULL;
-// TODO: use
-LOCAL bool       forceConsoleEncodingFlag             = FALSE;
 LOCAL const char *jobUUID                             = NULL;
 LOCAL const char *toFileName                          = NULL;
-// TODO:
-//LOCAL bool       helpFlag                             = FALSE;
-//LOCAL bool       xhelpFlag                            = FALSE;
+
+LOCAL bool       versionFlag                          = FALSE;
+LOCAL bool       helpFlag                             = FALSE;
+LOCAL bool       xhelpFlag                            = FALSE;
+
+/***********************************************************************\
+* Name   : cmdOptionParseJobsUUIDIds
+* Purpose: command line option call back to parse jobs UUID ids
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseJobsUUIDIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  infoUUIDsFlag = TRUE;
+
+  if (value != NULL)
+  {
+    CStringTokenizer stringTokenizer;
+    stringTokenizerInit(&stringTokenizer,value,",");
+    const char *token;
+    while (stringGetNextToken(&stringTokenizer,&token))
+    {
+      DatabaseId databaseId;
+      if (stringToInt64(token,&databaseId,NULL))
+      {
+        Array_append(&uuidIds,&databaseId);
+      }
+      else
+      {
+        Array_append(&uuids,token);
+      }
+    }
+    stringTokenizerDone(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseEntityIds
+* Purpose: command line option call back to parse entity ids
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseEntityIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  infoEntitiesFlag = TRUE;
+
+  if (value != NULL)
+  {
+    CStringTokenizer stringTokenizer;
+    stringTokenizerInit(&stringTokenizer,value,",");
+    const char *token;
+    while (stringGetNextToken(&stringTokenizer,&token))
+    {
+      DatabaseId databaseId;
+      if (stringToInt64(token,&databaseId,NULL))
+      {
+        Array_append(&entityIds,&databaseId);
+      }
+    }
+    stringTokenizerDone(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseEntryIdsName
+* Purpose: command line option call back to parse entry ids
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseEntryIdsName(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  infoEntriesFlag = TRUE;
+
+  if (value != NULL)
+  {
+    CStringTokenizer stringTokenizer;
+    stringTokenizerInit(&stringTokenizer,value,",");
+    const char *token;
+    while (stringGetNextToken(&stringTokenizer,&token))
+    {
+      DatabaseId databaseId;
+      if (stringToInt64(token,&databaseId,NULL))
+      {
+        Array_append(&entryIds,&databaseId);
+      }
+      else
+      {
+        String_setCString(entryName,token);
+      }
+    }
+    stringTokenizerDone(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseLostEntryIdsName
+* Purpose: command line option call back to parse lost entry ids or name
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseLostEntryIdsName(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  infoLostEntriesFlag = TRUE;
+
+  if (value != NULL)
+  {
+    CStringTokenizer stringTokenizer;
+    stringTokenizerInit(&stringTokenizer,value,",");
+    const char *token;
+    while (stringGetNextToken(&stringTokenizer,&token))
+    {
+      DatabaseId databaseId;
+      if (stringToInt64(token,&databaseId,NULL))
+      {
+        Array_append(&entryIds,&databaseId);
+      }
+      else
+      {
+        String_setCString(entryName,token);
+      }
+    }
+    stringTokenizerDone(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseStorageIdsName
+* Purpose: command line option call back to parse storage ids or name
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseStorageIdsName(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  infoStoragesFlag = TRUE;
+
+  if (value != NULL)
+  {
+    CStringTokenizer stringTokenizer;
+    stringTokenizerInit(&stringTokenizer,value,",");
+    const char *token;
+    while (stringGetNextToken(&stringTokenizer,&token))
+    {
+      DatabaseId databaseId;
+      if (stringToInt64(token,&databaseId,NULL))
+      {
+        Array_append(&storageIds,&databaseId);
+      }
+      else
+      {
+        String_setCString(storageName,token);
+      }
+    }
+    stringTokenizerDone(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseEntityIds
+* Purpose: command line option call back to parse create newest ids
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseCreateNewestIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  createNewestFlag = TRUE;
+
+  if (value != NULL)
+  {
+    CStringTokenizer stringTokenizer;
+    stringTokenizerInit(&stringTokenizer,value,",");
+    const char *token;
+    while (stringGetNextToken(&stringTokenizer,&token))
+    {
+      DatabaseId databaseId;
+      if (stringToInt64(token,&databaseId,NULL))
+      {
+        Array_append(&storageIds,&databaseId);
+      }
+    }
+    stringTokenizerDone(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseCreateAggregateEntityIds
+* Purpose: command line option call back to parse entity ids
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseCreateAggregateEntityIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  createAggregatesEntitiesFlag = TRUE;
+
+  if (value != NULL)
+  {
+    CStringTokenizer stringTokenizer;
+    stringTokenizerInit(&stringTokenizer,value,",");
+    const char *token;
+    while (stringGetNextToken(&stringTokenizer,&token))
+    {
+      DatabaseId databaseId;
+      if (stringToInt64(token,&databaseId,NULL))
+      {
+        Array_append(&entityIds,&databaseId);
+      }
+    }
+    stringTokenizerDone(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseIds
+* Purpose: command line option call back to parse ids
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseCreateAggregateStorageIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  createAggregatesStoragesFlag = TRUE;
+
+  if (value != NULL)
+  {
+    CStringTokenizer stringTokenizer;
+    stringTokenizerInit(&stringTokenizer,value,",");
+    const char *token;
+    while (stringGetNextToken(&stringTokenizer,&token))
+    {
+      DatabaseId databaseId;
+      if (stringToInt64(token,&databaseId,NULL))
+      {
+        Array_append(&storageIds,&databaseId);
+      }
+    }
+    stringTokenizerDone(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseCreateAggregateIds
+* Purpose: command line option call back to parse aggregate ids
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseCreateAggregateIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  createAggregatesFlag = TRUE;
+
+  if (value != NULL)
+  {
+    CStringTokenizer stringTokenizer;
+    stringTokenizerInit(&stringTokenizer,value,",");
+    const char *token;
+    while (stringGetNextToken(&stringTokenizer,&token))
+    {
+      DatabaseId databaseId;
+      if (stringToInt64(token,&databaseId,NULL))
+      {
+        Array_append(&uuidIds,&databaseId);
+      }
+    }
+    stringTokenizerDone(&stringTokenizer);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseVerbose
+* Purpose: command line option call back to parse verbose option
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseVerbose(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(variable);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  quietFlag = FALSE;
+
+  return TRUE;
+}
+
+LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_ENTRY_TYPE[] = CMD_VALUE_SELECT_ARRAY
+(
+  {"file",     INDEX_CONST_TYPE_FILE,     "files"},
+  {"image",    INDEX_CONST_TYPE_IMAGE,    "images"},
+  {"directory",INDEX_CONST_TYPE_DIRECTORY,"directories"},
+  {"link",     INDEX_CONST_TYPE_LINK,     "symbolic links"},
+  {"harlink",  INDEX_CONST_TYPE_HARDLINK, "hard links"},
+  {"special",  INDEX_CONST_TYPE_SPECIAL,  "special files"},
+);
+
+LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
+(
+  CMD_OPTION_CSTRING      ("directory",                         'C',0,0,changeToDirectory,                                                                       "change to directory","directory"                                 ),
+  CMD_OPTION_CSTRING      ("import",                            'I',0,0,importFileName,                                                                          "import database","URI"                                           ),
+
+  CMD_OPTION_BOOLEAN      ("info",                              0,  0,0,infoFlag,                                                                                "output index database infos"                                     ),
+  CMD_OPTION_SPECIAL      ("info-jobs",                         0,  0,1,&infoUUIDsFlag,                  cmdOptionParseJobsUUIDIds,NULL,0,                       "output index database job infos","uuid id|UUID"                  ),
+  CMD_OPTION_SPECIAL      ("info-entities",                     0,  0,1,&infoEntitiesFlag            ,   cmdOptionParseEntityIds,NULL,0,                         "output index database entities infos","entity id"                ),
+  CMD_OPTION_SPECIAL      ("info-entries",                      0,  0,1,&infoEntriesFlag,                cmdOptionParseEntryIdsName,NULL,0,                      "output index database entries infos","entry id|name"             ),
+  CMD_OPTION_SELECT       ("entry-type",                        0,  0,1,entryType,                       COMMAND_LINE_OPTIONS_ENTRY_TYPE,                        "entries type","type","(default)"                                 ),
+  CMD_OPTION_SPECIAL      ("info-lost-entries",                 0,  0,1,&infoLostEntriesFlag,            cmdOptionParseLostEntryIdsName,NULL,0,                  "output index database entries infos without an entity","entry id"),
+  CMD_OPTION_SPECIAL      ("info-storages",                     0,  0,1,&infoStoragesFlag,               cmdOptionParseStorageIdsName,NULL,0,                    "output index database storages infos","storage id"               ),
+  CMD_OPTION_BOOLEAN      ("info-lost-storages",                0,  0,0,infoLostStoragesFlag,                                                                    "output index database storages infos without an entity"          ),
+  CMD_OPTION_BOOLEAN      ("check-integrity",                   0,  0,0,checkIntegrityFlag,                                                                      "check index database integrity"                                  ),
+  CMD_OPTION_BOOLEAN      ("check-orphaned",                    0,  0,0,checkOrphanedFlag,                                                                       "check index database for orphaned entries"                       ),
+  CMD_OPTION_BOOLEAN      ("check-duplicates",                  0,  0,0,checkDuplicatesFlag,                                                                     "check index database for duplicate entries"                      ),
+  CMD_OPTION_BOOLEAN      ("check",                             0,  0,0,checkFlag,                                                                               "check index database"                                            ),
+  CMD_OPTION_BOOLEAN      ("optimize",                          0,  0,0,optimizeFlag,                                                                            "optimize database (analyze and collect statistics data)"         ),
+  CMD_OPTION_BOOLEAN      ("reindex",                           0,  0,0,reindexFlag,                                                                             "re-create all existing indizes"                                  ),
+  CMD_OPTION_BOOLEAN      ("create",                            0,  0,0,createFlag,                                                                              "create new index database"                                       ),
+  CMD_OPTION_BOOLEAN      ("create-triggers",                   0,  0,0,createTriggersFlag,                                                                      "re-create triggers"                                              ),
+  CMD_OPTION_BOOLEAN      ("create-indizes",                    0,  0,0,createIndizesFlag,                                                                       "re-create indizes"                                               ),
+  CMD_OPTION_BOOLEAN      ("create-fts-indizes",                0,  0,0,createFTSIndizesFlag,                                                                    "re-create FTS indizes (full text search)"                        ),
+  CMD_OPTION_SPECIAL      ("create-newest",                     0,  0,1,&uuidIds,                        cmdOptionParseCreateNewestIds,NULL,0,                   "re-create newest data","id"                                      ),
+  CMD_OPTION_SPECIAL      ("create-aggregates-entities",        0,  0,1,&createAggregatesEntitiesFlag,   cmdOptionParseCreateAggregateEntityIds,NULL,0,          "re-create aggregated data entities","entity id"                  ),
+  CMD_OPTION_SPECIAL      ("create-aggregates-storages",        0,  0,1,&createAggregatesStoragesFlag,   cmdOptionParseCreateAggregateStorageIds,NULL,0,         "re-create aggregated data storages","storage id"                 ),
+  CMD_OPTION_SPECIAL      ("create-aggregates",                 0,  0,1,&createAggregatesFlag,           cmdOptionParseCreateAggregateIds,NULL,0,                "re-create aggregated data","id"                                  ),
+  CMD_OPTION_BOOLEAN      ("clean-orphaned",                    0,  0,0,cleanOrphanedFlag,                                                                       "clean orphaned in index database"                                ),
+  CMD_OPTION_BOOLEAN      ("clean-duplicates",                  0,  0,0,cleanDuplicateEntriesFlag,                                                               "clean duplicates in index database"                              ),
+  CMD_OPTION_BOOLEAN      ("clean",                             0,  0,0,cleanFlag,                                                                               "clean index database"                                            ),
+  CMD_OPTION_BOOLEAN      ("purge",                             0,  0,0,purgeFlag,                                                                        "purge deleted storages"                                          ),
+  CMD_OPTION_BOOLEAN      ("vacuum",                            0,  0,0,vacuumFlag,                                                                              "collect and free unused file space"                              ),
+  CMD_OPTION_BOOLEAN      ("storages",                          's',0,0,showStoragesFlag,                                                                        "print storages"                                                  ),
+  CMD_OPTION_BOOLEAN      ("entries",                           'e',0,0,showEntriesFlag,                                                                         "print entries"                                                   ),
+  CMD_OPTION_BOOLEAN      ("entries-newest",                    0  ,0,0,showEntriesNewestFlag,                                                                   "print newest entries"                                            ),
+  CMD_OPTION_BOOLEAN      ("names",                             'n',0,0,showNamesFlag,                                                                           "print values with names"                                         ),
+  CMD_OPTION_BOOLEAN      ("header",                            'H',0,0,showHeaderFlag,                                                                          "print headers"                                                   ),
+  CMD_OPTION_BOOLEAN      ("transaction",                       0  ,0,0,transactionFlag,                                                                         "enable transcations"                                             ),
+  CMD_OPTION_BOOLEAN      ("no-foreign-keys",                   'f',0,0,foreignKeysFlag,                                                                         "disable foreign key constraints"                                 ),
+  CMD_OPTION_BOOLEAN      ("force",                             0  ,0,0,forceFlag,                                                                               "force operation"                                                 ),
+  CMD_OPTION_BOOLEAN      ("pipe",                              0  ,0,0,pipeFlag,                                                                                "read data from stdin and pipe into database"                     ),
+  CMD_OPTION_STRING       ("tmp-directory",                     0,  0,0,tmpDirectory,                                                                            "temporary files directory","directory"                           ),
+  CMD_OPTION_BOOLEAN      ("quiet",                             'q',0,0,quietFlag,                                                                               "suppress any output"                                             ),
+  CMD_OPTION_BOOLEAN      ("time",                              't',0,0,timeFlag,                                                                                "print execution time"                                            ),
+  CMD_OPTION_BOOLEAN      ("explain-query",                     0,  0,0,explainQueryPlanFlag,                                                                    "explain SQL queries"                                             ),
+  CMD_OPTION_CSTRING      ("system-encoding",                   0,  0,0,systemEncoding,                                                                          "system character encoding to use","encoding"                     ),
+  CMD_OPTION_CSTRING      ("console-encoding",                  0,  0,0,consoleEncoding,                                                                         "console character encoding to use","encoding"                    ),
+
+  CMD_OPTION_BOOLEAN      ("table-names",                       0,  1,0,showTableNames,                                                                          "show table names"                                                ),
+  CMD_OPTION_BOOLEAN      ("index-names",                       0,  1,0,showIndexNames,                                                                          "show index names"                                                ),
+  CMD_OPTION_BOOLEAN      ("trigger-names",                     0,  1,0,showTriggerNames,                                                                        "show trigger names"                                              ),
+  CMD_OPTION_BOOLEAN      ("drop-tables",                       0,  1,0,dropTablesFlag,                                                                          "drop all tables"                                                 ),
+  CMD_OPTION_BOOLEAN      ("drop-triggers",                     0,  1,0,dropTriggersFlag,                                                                        "drop all triggers"                                               ),
+  CMD_OPTION_BOOLEAN      ("drop-indizes",                      0,  1,0,dropIndizesFlag,                                                                         "drop all indixes"                                                ),
+
+  CMD_OPTION_BOOLEAN      ("version",                           0  ,0,0,versionFlag,                                                                             "print version"                                                   ),
+  CMD_OPTION_BOOLEAN      ("help",                              'h',0,0,helpFlag,                                                                                "print this help"                                                 ),
+  CMD_OPTION_BOOLEAN      ("xhelp",                             0,  0,0,xhelpFlag,                                                                               "print help to extended options"                                  ),
+
+  CMD_OPTION_DEPRECATED   ("verbose",                           0,  0,0,&verboseFlag,                        cmdOptionParseVerbose,NULL,1,                       "quiet"                                                           ),
+);
 
 LOCAL ulong outputProgressCount;
 LOCAL uint  outputProgressDigits;
@@ -181,89 +640,6 @@ LOCAL uint  outputProgressLength;
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-/***********************************************************************\
-* Name   : printUsage
-* Purpose: print usage
-* Input  : programName - program name
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void printUsage(const char *programName, bool extendedFlag)
-{
-  printf("Usage %s: [<options>] <URI> [<SQL command>...|-]\n",programName);
-  printf("\n");
-  printf("URI: [sqlite:]<file name>\n");
-  printf("     mariadb:<server>:<user>[:<password>]\n");
-  printf("     postgresql:<server>:<user>[:<password>]\n");
-  printf("\n");
-  printf("Options:  -C|--directory=<name>                        - change to directory\n");
-  printf("          --info                                       - output index database infos\n");
-  printf("          --info-jobs[=<uuid id>|UUID,...]             - output index database job infos\n");
-  printf("          --info-entities[=<entity id>,...]            - output index database entities infos\n");
-  printf("          --info-entries[=<entity id>,...|name]        - output index database entries infos\n");
-  printf("          --info-lost-entries[=<entity id>,...|name]   - output index database entries infos without an entity\n");
-  printf("          --entry-type=<type>                          - entries type:\n");
-  printf("                                                           file\n");
-  printf("                                                           image\n");
-  printf("                                                           directory\n");
-  printf("                                                           link\n");
-  printf("                                                           harlink\n");
-  printf("                                                           special\n");
-  printf("          --info-storages[=<storage id>,...|name]      - output index database storages infos\n");
-  printf("          --info-lost-storages[=<storage id>,...|name] - output index database storages infos without an entity\n");
-  printf("          --create                                     - create new index database\n");
-  printf("          --create-triggers                            - re-create triggers\n");
-  printf("          --create-indizes                             - re-create indizes\n");
-  printf("          --create-fts-indizes                         - re-create FTS indizes (full text search)\n");
-  printf("          --create-newest[=id,...]                     - re-create newest data\n");
-  printf("          --create-aggregates                          - re-create aggregated data\n");
-  printf("          --create-aggregates-directory-content        - re-create aggregated data directory content\n");
-  printf("          --create-aggregates-entities                 - re-create aggregated data entities\n");
-  printf("          --create-aggregates-storages                 - re-create aggregated data storages\n");
-  printf("          --import <URI>                               - import database\n");
-  printf("          --optimize                                   - optimize database (analyze and collect statistics data)\n");
-  printf("          --reindex                                    - re-create all existing indizes\n");
-  printf("          --check                                      - check index database\n");
-  printf("          --check-integrity                            - check index database integrity\n");
-  printf("          --check-orphaned                             - check index database for orphaned entries\n");
-  printf("          --check-duplicates                           - check index database for duplicate entries\n");
-  printf("          --clean                                      - clean index database\n");
-  printf("          --clean-orphaned                             - clean orphaned in index database\n");
-  printf("          --clean-duplicates                           - clean duplicates in index database\n");
-  printf("          --purge                                      - purge deleted storages\n");
-  printf("          --vacuum [<new file name>]                   - collect and free unused file space\n");
-  printf("          -e|--entries [<uuid>]                        - print entries\n");
-  printf("          --entries-newest [<uuid>]                    - print newest entries\n");
-  printf("          -s|--storages [<uuid>]                       - print storages\n");
-  printf("          -n|--names                                   - print values with names\n");
-  printf("          -H|--header                                  - print headers\n");
-  printf("          --transaction                                - enable transcations\n");
-  printf("          -f|--no-foreign-keys                         - disable foreign key constraints\n");
-  printf("          --force                                      - force operation\n");
-  printf("          --pipe|-                                     - read data from stdin and pipe into database\n");
-  printf("          --tmp-directory [<path>]                     - temporary files directory\n");
-  printf("          --system-encoding [<encoding>]               - system character encoding to use\n");
-  printf("          --console-encoding [<encoding>]              - console character encoding to use\n");
-  printf("          -v|--verbose                                 - verbose output (default: ON; deprecated)\n");
-  printf("          -q|--quiet                                   - no output\n");
-  printf("          -t|--time                                    - print execution time\n");
-  printf("          -x|--explain-query                           - explain SQL queries\n");
-  if (extendedFlag)
-  {
-    printf("          --table-names                                - show table names\n");
-    printf("          --index-names                                - show index names\n");
-    printf("          --trigger-names                              - show trigger names\n");
-    printf("          --drop-tables                                - drop all tables\n");
-    printf("          --drop-triggers                              - drop all triggers\n");
-    printf("          --drop-indizes                               - drop all indixes\n");
-  }
-  printf("          --version                                    - print version\n");
-  printf("          -h|--help                                    - print this help\n");
-  printf("          --xhelp                                      - print extended help\n");
-}
 
 /***********************************************************************\
 * Name   : vprintInfo, pprintInfo, printInfo
@@ -312,7 +688,7 @@ LOCAL void printInfo(const char *format, ...)
 
   assert(format != NULL);
 
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     va_start(arguments,format);
     vprintInfo(NULL,format,arguments);
@@ -337,7 +713,7 @@ LOCAL void printWarning(const char *text, ...)
 
   assert(text != NULL);
 
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     line = String_new();
     va_start(arguments,text);
@@ -409,7 +785,7 @@ LOCAL int sqlProgressHandler(void *userData)
   // info output
   if (timestamp > (lastTimestamp+250))
   {
-    if (verboseFlag)
+    if (verboseFlag && !quietFlag)
     {
       fprintf(stdout,"%c\b",WHEEL[count%4]); count++; fflush(stdout);
     }
@@ -479,7 +855,7 @@ LOCAL void initProgress(ulong count)
 {
   char   buffer[64];
 
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     outputProgressCount  = count;
     outputProgressDigits = (count > 0L) ? (uint)lrint(ceil(log10((double)count))) : 1;
@@ -508,7 +884,7 @@ LOCAL void printProgress(ulong n)
   double percentage;
   char   buffer[64];
 
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     percentage = (outputProgressCount > 0L) ? ((double)n*1000.0)/((double)outputProgressCount*10.0) : 0.0;
     if (percentage > 100.0) percentage = 100.0;
@@ -536,7 +912,7 @@ LOCAL void doneProgress(void)
 {
   char buffer[64];
 
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     stringFill(buffer,sizeof(buffer),outputProgressLength,' ');
     UNUSED_RESULT(fwrite(buffer,outputProgressLength,1,stdout));
@@ -925,7 +1301,7 @@ LOCAL void formatSubProgressInfo(uint  progress,
   UNUSED_VARIABLE(estimatedTotalTime);
   UNUSED_VARIABLE(userData);
 
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     if (estimatedRestTime < (999*60*60))
     {
@@ -966,7 +1342,7 @@ LOCAL void outputProgressInit(const char *text,
   UNUSED_VARIABLE(maxSteps);
   UNUSED_VARIABLE(userData);
 
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     UNUSED_RESULT(fwrite(text,1,stringLength(text),stdout));
     fflush(stdout);
@@ -997,7 +1373,7 @@ LOCAL void outputProgressInfo(uint  progress,
   UNUSED_VARIABLE(estimatedTotalTime);
   UNUSED_VARIABLE(userData);
 
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     if (estimatedRestTime < (99999*60*60))
     {
@@ -1047,7 +1423,7 @@ LOCAL void outputProgressDone(ulong totalTime,
 {
   UNUSED_VARIABLE(userData);
 
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
                  "%2dh:%02dmin:%02ds",
@@ -8206,7 +8582,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   }
 
   printf("Entities:");
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     // show number of entities
     error = Database_getUInt(databaseHandle,
@@ -8336,7 +8712,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   printf("  Locked          : %u\n",n);
 
   printf("Storages:");
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     // show number of storages
     error = Database_getUInt(databaseHandle,
@@ -8430,7 +8806,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   printf("  Deleted         : %u\n",n);
 
   printf("Entries:");
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     // show number of entries
     error = Database_getUInt(databaseHandle,
@@ -8740,7 +9116,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   }
 
   printf("Newest entries:");
-  if (verboseFlag)
+  if (verboseFlag && !quietFlag)
   {
     // show number of newest entries
     error = Database_getUInt(databaseHandle,
@@ -9055,7 +9431,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
 * Purpose: print UUIDs index info
 * Input  : databaseHandle - database handle
 *          uuidIds        - array with UUID ids or empty array
-*          uuIds          - array with UUIDs or empty array
+*          uuids          - array with UUIDs or empty array
 * Output : -
 * Return : -
 * Notes  : -
@@ -10489,15 +10865,8 @@ int main(int argc, const char *argv[])
 {
   const uint MAX_LINE_LENGTH = 8192;
 
-  Array            uuidIds,uuIds,entityIds,storageIds;
-  StaticString     (uuid,MISC_UUID_STRING_LENGTH);
-  String           entryName,storageName;
-  uint             i,n;
-  CStringTokenizer stringTokenizer;
-  const char       *token;
-  DatabaseId       databaseId;
+  AutoFreeList     autoFreeList;
   const char       *databaseURI;
-  String           command;
   char             line[MAX_LINE_LENGTH];
   Errors           error;
   DatabaseHandle   databaseHandle;
@@ -10507,677 +10876,44 @@ int main(int argc, const char *argv[])
   PrintRowData     printRowData;
   String           s;
   const char       *l;
-DatabaseId xxxId=DATABASE_ID_NONE;
-uint xxxAction=0;
-uint xxxShow=0;
 
   initAll();
 
   // init variables
+  AutoFree_init(&autoFreeList);
   Array_init(&uuidIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  Array_init(&uuIds,MISC_UUID_STRING_LENGTH,64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&uuids,MISC_UUID_STRING_LENGTH,64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&entityIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   entryName   = String_new();
   storageName = String_new();
   databaseURI = NULL;
   command     = String_new();
+  AUTOFREE_ADD(&autoFreeList,&uuidIds,{ Array_done(&uuidIds); });
+  AUTOFREE_ADD(&autoFreeList,&uuids,{ Array_done(&uuids); });
+  AUTOFREE_ADD(&autoFreeList,&entityIds,{ Array_done(&entityIds); });
+  AUTOFREE_ADD(&autoFreeList,&entryIds,{ Array_done(&entryIds); });
+  AUTOFREE_ADD(&autoFreeList,&storageIds,{ Array_done(&storageIds); });
+  AUTOFREE_ADD(&autoFreeList,entryName,{ String_delete(entryName); });
+  AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
+  AUTOFREE_ADD(&autoFreeList,command,{ String_delete(command); });
 
-// TODO: use CmdOption?parse
-#if 0
+  // parse arguments
+  CmdOption_init(COMMAND_LINE_OPTIONS);
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,
-                       0,0,
+                       CMD_PRIORITY_ANY,CMD_PRIORITY_ANY,
                        stderr,"ERROR: ","Warning: "
                       )
      )
   {
-    Array_done(&storageIds);
-    Array_done(&entityIds);
-    Array_done(&uuIds);
-    Array_done(&uuidIds);
-    String_delete(command);
-    String_delete(storageName);
-    String_delete(entryName);
+    CmdOption_done(COMMAND_LINE_OPTIONS);
+    AutoFree_cleanup(&autoFreeList);
     exit(EXITCODE_INVALID_ARGUMENT);
   }
-#endif
-
-  i = 1;
-  n = 0;
-  while (i < (uint)argc)
-  {
-    if      (stringStartsWith(argv[i],"-C="))
-    {
-      changeToDirectory = &argv[i][3];
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--directory="))
-    {
-      changeToDirectory = &argv[i][12];
-      i++;
-    }
-    else if (stringEquals(argv[i],"-C") || stringEquals(argv[i],"--directory"))
-    {
-      if ((i+1) >= (uint)argc)
-      {
-        printError("no value for option '%s'!",argv[i]);
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuIds);
-        Array_done(&uuidIds);
-        String_delete(command);
-        String_delete(storageName);
-        String_delete(entryName);
-        exit(EXITCODE_INVALID_ARGUMENT);
-      }
-      changeToDirectory = argv[i+1];
-      i += 2;
-    }
-    if      (stringStartsWith(argv[i],"-I="))
-    {
-      importFileName = &argv[i][3];
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--import="))
-    {
-      importFileName = &argv[i][12];
-      i++;
-    }
-    else if (stringEquals(argv[i],"-I") || stringEquals(argv[i],"--import"))
-    {
-      if ((i+1) >= (uint)argc)
-      {
-        printError("no value for option '%s'!",argv[i]);
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuIds);
-        Array_done(&uuidIds);
-        String_delete(command);
-        String_delete(storageName);
-        String_delete(entryName);
-        exit(EXITCODE_INVALID_ARGUMENT);
-      }
-      importFileName = argv[i+1];
-      i += 2;
-    }
-    else if (stringEquals(argv[i],"--info"))
-    {
-      infoFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--info-jobs"))
-    {
-      infoUUIDsFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--info-jobs="))
-    {
-      infoUUIDsFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][12],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId,NULL))
-        {
-          Array_append(&uuidIds,&databaseId);
-        }
-        else
-        {
-          String_setCString(uuid,token);
-          Array_append(&uuIds,String_cString(uuid));
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringEquals(argv[i],"--info-entities"))
-    {
-      infoEntitiesFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--info-entities="))
-    {
-      infoEntitiesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][16],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId,NULL))
-        {
-          Array_append(&entityIds,&databaseId);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringEquals(argv[i],"--info-entries"))
-    {
-      infoEntriesFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--info-entries="))
-    {
-      infoEntriesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][15],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId,NULL))
-        {
-          Array_append(&entityIds,&databaseId);
-        }
-        else
-        {
-          String_setCString(entryName,token);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--entry-type="))
-    {
-      if      (stringEquals(&argv[i][13],"file"     )) entryType = INDEX_CONST_TYPE_FILE;
-      else if (stringEquals(&argv[i][13],"image"    )) entryType = INDEX_CONST_TYPE_IMAGE;
-      else if (stringEquals(&argv[i][13],"directory")) entryType = INDEX_CONST_TYPE_DIRECTORY;
-      else if (stringEquals(&argv[i][13],"link"     )) entryType = INDEX_CONST_TYPE_LINK;
-      else if (stringEquals(&argv[i][13],"harlink"  )) entryType = INDEX_CONST_TYPE_HARDLINK;
-      else if (stringEquals(&argv[i][13],"special"  )) entryType = INDEX_CONST_TYPE_SPECIAL;
-      else
-      {
-        printError("unknown value '%s' for option '%s'!",&argv[i][13],argv[i]);
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuIds);
-        Array_done(&uuidIds);
-        String_delete(command);
-        String_delete(storageName);
-        String_delete(entryName);
-        exit(EXITCODE_INVALID_ARGUMENT);
-      }
-      i++;
-    }
-    else if (stringEquals(argv[i],"--info-lost-entries"))
-    {
-      infoLostEntriesFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--info-lost-entries="))
-    {
-      infoLostEntriesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][20],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId,NULL))
-        {
-          Array_append(&entityIds,&databaseId);
-        }
-        else
-        {
-          String_setCString(entryName,token);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringEquals(argv[i],"--info-storages"))
-    {
-      infoStoragesFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--info-storages="))
-    {
-      infoStoragesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][16],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId,NULL))
-        {
-          Array_append(&storageIds,&databaseId);
-        }
-        else
-        {
-          String_setCString(storageName,token);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringEquals(argv[i],"--info-lost-storages"))
-    {
-      infoLostStoragesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--check-integrity"))
-    {
-      checkIntegrityFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--check-orphaned"))
-    {
-      checkOrphanedFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--check-duplicates"))
-    {
-      checkDuplicatesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--check"))
-    {
-      checkIntegrityFlag  = TRUE;
-      checkOrphanedFlag   = TRUE;
-      checkDuplicatesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--optimize"))
-    {
-      optimizeFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--reindex"))
-    {
-      reindexFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--create"))
-    {
-      createFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--create-triggers"))
-    {
-      createTriggersFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--table-names"))
-    {
-      showTableNames = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--index-names"))
-    {
-      showIndexNames = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--trigger-names"))
-    {
-      showTriggerNames = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--drop-tables"))
-    {
-      dropTablesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--drop-triggers"))
-    {
-      dropTriggersFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--create-indizes"))
-    {
-      createIndizesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--create-fts-indizes"))
-    {
-      createFTSIndizesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--drop-indizes"))
-    {
-      dropIndizesFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--create-newest="))
-    {
-      createNewestFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-newest=")],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId,NULL))
-        {
-          Array_append(&storageIds,&databaseId);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringEquals(argv[i],"--create-newest"))
-    {
-      createNewestFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--create-aggregates-directory-content="))
-    {
-      createAggregatesDirectoryContentFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates-directory-content=")],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId,NULL))
-        {
-          Array_append(&storageIds,&databaseId);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringEquals(argv[i],"--create-aggregates-directory-content"))
-    {
-      createAggregatesDirectoryContentFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--create-aggregates-entities="))
-    {
-      createAggregatesEntitiesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates-entities=")],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId,NULL))
-        {
-          Array_append(&entityIds,&databaseId);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringEquals(argv[i],"--create-aggregates-entities"))
-    {
-      createAggregatesEntitiesFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--create-aggregates-storages="))
-    {
-      createAggregatesStoragesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates-storages=")],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId,NULL))
-        {
-          Array_append(&storageIds,&databaseId);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringEquals(argv[i],"--create-aggregates-storages"))
-    {
-      createAggregatesStoragesFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--create-aggregates="))
-    {
-      createAggregatesDirectoryContentFlag = TRUE;
-      createAggregatesEntitiesFlag         = TRUE;
-      createAggregatesStoragesFlag         = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][stringLength("--create-aggregates=")],",");
-      while (stringGetNextToken(&stringTokenizer,&token))
-      {
-        if (stringToInt64(token,&databaseId,NULL))
-        {
-          Array_append(&storageIds,&databaseId);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-      i++;
-    }
-    else if (stringEquals(argv[i],"--create-aggregates"))
-    {
-      createAggregatesDirectoryContentFlag = TRUE;
-      createAggregatesEntitiesFlag         = TRUE;
-      createAggregatesStoragesFlag         = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--clean-orphaned"))
-    {
-      cleanOrphanedFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--clean-duplicates"))
-    {
-      cleanDuplicateEntriesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--clean"))
-    {
-      cleanOrphanedFlag   = TRUE;
-      cleanDuplicateEntriesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--purge"))
-    {
-      purgeDeletedFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--vacuum"))
-    {
-      vacuumFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"-s") || stringEquals(argv[i],"--storages"))
-    {
-      showStoragesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"-e") || stringEquals(argv[i],"--entries"))
-    {
-      showEntriesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--entries-newest"))
-    {
-      showEntriesNewestFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"-n") || stringEquals(argv[i],"--names"))
-    {
-      showNamesFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"-H") || stringEquals(argv[i],"--header"))
-    {
-      showHeaderFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--transaction"))
-    {
-      transactionFlag = FALSE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"-f") || stringEquals(argv[i],"--no-foreign-keys"))
-    {
-      foreignKeysFlag = FALSE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--force"))
-    {
-      forceFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--pipe"))
-    {
-      pipeFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--tmp-directory"))
-    {
-      if ((i+1) >= (uint)argc)
-      {
-        printError("expected path name for option --tmp-directory!");
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuIds);
-        Array_done(&uuidIds);
-        String_delete(command);
-        String_delete(storageName);
-        String_delete(entryName);
-        exit(EXITCODE_INVALID_ARGUMENT);
-      }
-      String_setCString(tmpDirectory,argv[i+1]);
-      i += 2;
-    }
-    else if (stringEquals(argv[i],"-v") || stringEquals(argv[i],"--verbose"))
-    {
-      verboseFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"-q") || stringEquals(argv[i],"--quiet"))
-    {
-      verboseFlag = FALSE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"-t") || stringEquals(argv[i],"--time"))
-    {
-      timeFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"-x") || stringEquals(argv[i],"--explain-query"))
-    {
-      explainQueryPlanFlag = TRUE;
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--system-encoding="))
-    {
-      systemEncoding = &argv[i][18];
-      i++;
-    }
-    else if (stringEquals(argv[i],"--system-encoding"))
-    {
-      i++;
-      if ((i+1) >= (uint)argc)
-      {
-        printError("expected path name for option --system-encoding!");
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuIds);
-        Array_done(&uuidIds);
-        String_delete(command);
-        String_delete(storageName);
-        String_delete(entryName);
-        exit(EXITCODE_INVALID_ARGUMENT);
-      }
-      systemEncoding = argv[i];
-      i++;
-    }
-    else if (stringStartsWith(argv[i],"--console-encoding="))
-    {
-      consoleEncoding = &argv[i][19];
-      i++;
-    }
-    else if (stringEquals(argv[i],"--console-encoding"))
-    {
-      i++;
-      if ((i+1) >= (uint)argc)
-      {
-        printError("expected path name for option --console-encoding!");
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuIds);
-        Array_done(&uuidIds);
-        String_delete(command);
-        String_delete(storageName);
-        String_delete(entryName);
-        exit(EXITCODE_INVALID_ARGUMENT);
-      }
-      consoleEncoding = argv[i];
-      i++;
-    }
-    else if (stringEquals(argv[i],"--force-console-encoding"))
-    {
-      forceConsoleEncodingFlag = TRUE;
-      i++;
-    }
-    else if (stringEquals(argv[i],"--version"))
-    {
-      printf("BAR index version %s\n",VERSION_REVISION_STRING);
-      Array_done(&storageIds);
-      Array_done(&entityIds);
-      Array_done(&uuIds);
-      Array_done(&uuidIds);
-      String_delete(command);
-      String_delete(storageName);
-      String_delete(entryName);
-      exit(EXITCODE_OK);
-    }
-    else if (stringEquals(argv[i],"-h") || stringEquals(argv[i],"--help"))
-    {
-      printUsage(argv[0],FALSE);
-      Array_done(&storageIds);
-      Array_done(&entityIds);
-      Array_done(&uuIds);
-      Array_done(&uuidIds);
-      String_delete(command);
-      String_delete(storageName);
-      String_delete(entryName);
-      exit(EXITCODE_OK);
-    }
-    else if (stringEquals(argv[i],"--xhelp"))
-    {
-      printUsage(argv[0],TRUE);
-      Array_done(&storageIds);
-      Array_done(&entityIds);
-      Array_done(&uuIds);
-      Array_done(&uuidIds);
-      String_delete(command);
-      String_delete(storageName);
-      String_delete(entryName);
-      exit(EXITCODE_OK);
-    }
-    else if (stringEquals(argv[i],"-"))
-    {
-      pipeFlag = TRUE;
-      i++;
-    }
-else if (stringEquals(argv[i],"--xxx"))
-{
-  xxxId = atoi(argv[i+1]);
-  xxxShow = (argc >= (int)i+3) ? atoi(argv[i+2]) : 0;
-  xxxAction = (argc >= (int)i+4) ? atoi(argv[i+3]) : 0;
-  i++;
-  i++;
-  i++;
-  i++;
-}
-    else if (stringEquals(argv[i],"--"))
-    {
-      i++;
-      break;
-    }
-    else if (stringStartsWith(argv[i],"-"))
-    {
-      printError("unknown option '%s'!",argv[i]);
-      Array_done(&storageIds);
-      Array_done(&entityIds);
-      Array_done(&uuIds);
-      Array_done(&uuidIds);
-      String_delete(command);
-      String_delete(storageName);
-      String_delete(entryName);
-      exit(EXITCODE_INVALID_ARGUMENT);
-    }
-    else
-    {
-      switch (n)
-      {
-        case 0:
-          databaseURI = argv[i];
-          n++;
-          i++;
-          break;
-        default:
-          if (vacuumFlag)
-          {
-            toFileName = argv[i];
-          }
-          else
-          {
-            if (!String_isEmpty(command)) String_appendChar(command,' ');
-            String_appendCString(command,argv[i]);
-            jobUUID = argv[i];
-          }
-          i++;
-          break;
-      }
-    }
-  }
+  uint i = 1;
+  uint n = 0;
   while (i < (uint)argc)
   {
     switch (n)
@@ -11203,6 +10939,30 @@ else if (stringEquals(argv[i],"--xxx"))
     }
   }
 
+  if (helpFlag || xhelpFlag)
+  {
+    printf("Usage %s: [<options>] <URI> [<SQL command>...|-]\n",argv[0]);
+    printf("\n");
+    printf("URI: [sqlite:]<file name>\n");
+    printf("     mariadb:<server>:<user>[:<password>]\n");
+    printf("     postgresql:<server>:<user>[:<password>]\n");
+    printf("\n");
+    if      (xhelpFlag) CmdOption_printHelp(stdout,COMMAND_LINE_OPTIONS,1);
+    else if (helpFlag ) CmdOption_printHelp(stdout,COMMAND_LINE_OPTIONS,0);
+
+    CmdOption_done(COMMAND_LINE_OPTIONS);
+    AutoFree_cleanup(&autoFreeList);
+    exit(EXITCODE_OK);
+  }
+  if (versionFlag)
+  {
+    printf("BAR index version %s\n",VERSION_REVISION_STRING);
+
+    CmdOption_done(COMMAND_LINE_OPTIONS);
+    AutoFree_cleanup(&autoFreeList);
+    exit(EXITCODE_OK);
+  }
+
   // init encoding converter
   error = initEncodingConverter(systemEncoding,consoleEncoding);
   if (error != ERROR_NONE)
@@ -11210,13 +10970,9 @@ else if (stringEquals(argv[i],"--xxx"))
     printError(_("cannot initialize encoding (error: %s)!"),
                Error_getText(error)
               );
-    Array_done(&storageIds);
-    Array_done(&entityIds);
-    Array_done(&uuIds);
-    Array_done(&uuidIds);
-    String_delete(command);
-    String_delete(storageName);
-    String_delete(entryName);
+
+    CmdOption_done(COMMAND_LINE_OPTIONS);
+    AutoFree_cleanup(&autoFreeList);
     exit(EXITCODE_FATAL_ERROR);
   }
 
@@ -11225,13 +10981,9 @@ else if (stringEquals(argv[i],"--xxx"))
   {
     printError("no database URI given!");
     doneEncodingConverter();
-    Array_done(&storageIds);
-    Array_done(&entityIds);
-    Array_done(&uuIds);
-    Array_done(&uuidIds);
-    String_delete(command);
-    String_delete(storageName);
-    String_delete(entryName);
+
+    CmdOption_done(COMMAND_LINE_OPTIONS);
+    AutoFree_cleanup(&autoFreeList);
     exit(EXITCODE_INVALID_ARGUMENT);
   }
 
@@ -11245,13 +10997,8 @@ else if (stringEquals(argv[i],"--xxx"))
                  Error_getText(error)
                 );
       doneEncodingConverter();
-      Array_done(&storageIds);
-      Array_done(&entityIds);
-      Array_done(&uuIds);
-      Array_done(&uuidIds);
-      String_delete(command);
-      String_delete(storageName);
-      String_delete(entryName);
+      CmdOption_done(COMMAND_LINE_OPTIONS);
+      AutoFree_cleanup(&autoFreeList);
       exit(EXITCODE_FAIL);
     }
   }
@@ -11261,28 +11008,19 @@ else if (stringEquals(argv[i],"--xxx"))
   if (error != ERROR_NONE)
   {
     doneEncodingConverter();
-    Array_done(&storageIds);
-    Array_done(&entityIds);
-    Array_done(&uuIds);
-    Array_done(&uuidIds);
-    String_delete(command);
-    String_delete(storageName);
-    String_delete(entryName);
+    CmdOption_done(COMMAND_LINE_OPTIONS);
+    AutoFree_cleanup(&autoFreeList);
     exit(EXITCODE_FAIL);
   }
   error = Database_setEnabledForeignKeys(&databaseHandle,foreignKeysFlag);
   if (error != ERROR_NONE)
   {
     printError("cannot set foreign key support (error: %s)",Error_getText(error));
+
     closeDatabase(&databaseHandle);
     doneEncodingConverter();
-    Array_done(&storageIds);
-    Array_done(&entityIds);
-    Array_done(&uuIds);
-    Array_done(&uuidIds);
-    String_delete(command);
-    String_delete(storageName);
-    String_delete(entryName);
+    CmdOption_done(COMMAND_LINE_OPTIONS);
+    AutoFree_cleanup(&autoFreeList);
     exit(EXITCODE_FAIL);
   }
 
@@ -11293,15 +11031,11 @@ else if (stringEquals(argv[i],"--xxx"))
     if (error != ERROR_NONE)
     {
       printError("%s",Error_getText(error));
+
       closeDatabase(&databaseHandle);
       doneEncodingConverter();
-      Array_done(&storageIds);
-      Array_done(&entityIds);
-      Array_done(&uuIds);
-      Array_done(&uuidIds);
-      String_delete(command);
-      String_delete(storageName);
-      String_delete(entryName);
+      CmdOption_done(COMMAND_LINE_OPTIONS);
+      AutoFree_cleanup(&autoFreeList);
       exit(EXITCODE_FAIL);
     }
   }
@@ -11322,6 +11056,7 @@ else if (stringEquals(argv[i],"--xxx"))
           && !checkIntegrityFlag
           && !checkOrphanedFlag
           && !checkDuplicatesFlag
+          && !checkFlag
           && !optimizeFlag
           && !reindexFlag
           && !createTriggersFlag
@@ -11334,9 +11069,11 @@ else if (stringEquals(argv[i],"--xxx"))
           && !createAggregatesDirectoryContentFlag
           && !createAggregatesEntitiesFlag
           && !createAggregatesStoragesFlag
+          && !createAggregatesFlag
           && !cleanOrphanedFlag
           && !cleanDuplicateEntriesFlag
-          && !purgeDeletedFlag
+          && !cleanFlag
+          && !purgeFlag
           && !vacuumFlag
           && !showStoragesFlag
           && !showEntriesFlag
@@ -11353,7 +11090,7 @@ else if (stringEquals(argv[i],"--xxx"))
 
   if (infoUUIDsFlag)
   {
-    printUUIDsInfo(&databaseHandle,uuidIds,uuIds);
+    printUUIDsInfo(&databaseHandle,uuidIds,uuids);
   }
 
   if (infoEntitiesFlag)
@@ -11363,11 +11100,11 @@ else if (stringEquals(argv[i],"--xxx"))
 
   if      (infoLostEntriesFlag)
   {
-    printEntriesInfo(&databaseHandle,entityIds,entryType,entryName,TRUE);
+    printEntriesInfo(&databaseHandle,entryIds,entryType,entryName,TRUE);
   }
   else if (infoEntriesFlag)
   {
-    printEntriesInfo(&databaseHandle,entityIds,entryType,entryName,FALSE);
+    printEntriesInfo(&databaseHandle,entryIds,entryType,entryName,FALSE);
   }
 
   if      (infoLostStoragesFlag)
@@ -11424,7 +11161,7 @@ else if (stringEquals(argv[i],"--xxx"))
   }
 
   // check
-  if (checkIntegrityFlag)
+  if (checkIntegrityFlag || checkFlag)
   {
     integrityFlag = checkIntegrity(&databaseHandle);
   }
@@ -11432,7 +11169,7 @@ else if (stringEquals(argv[i],"--xxx"))
   {
     integrityFlag = TRUE;
   }
-  if (checkOrphanedFlag)
+  if (checkOrphanedFlag || checkFlag)
   {
     orphanedEntriesCount = checkOrphanedEntries(&databaseHandle);
   }
@@ -11440,7 +11177,7 @@ else if (stringEquals(argv[i],"--xxx"))
   {
     orphanedEntriesCount = 0L;
   }
-  if (checkDuplicatesFlag)
+  if (checkDuplicatesFlag || checkFlag)
   {
     duplicatesCount = checkDuplicates(&databaseHandle);
   }
@@ -11466,11 +11203,11 @@ else if (stringEquals(argv[i],"--xxx"))
   }
 
   // clean
-  if (cleanOrphanedFlag)
+  if (cleanOrphanedFlag || cleanFlag)
   {
     error = cleanOrphanedEntries(&databaseHandle);
   }
-  if (cleanDuplicateEntriesFlag)
+  if (cleanDuplicateEntriesFlag || cleanFlag)
   {
     if (error == ERROR_NONE) error = cleanDuplicateEntries(&databaseHandle);
   }
@@ -11482,21 +11219,17 @@ else if (stringEquals(argv[i],"--xxx"))
   }
 
   // calculate aggregates data
-  if (createAggregatesDirectoryContentFlag)
-  {
-    if (error == ERROR_NONE) error = createAggregatesDirectoryContent(&databaseHandle,entityIds);
-  }
-  if (createAggregatesStoragesFlag)
+  if (createAggregatesStoragesFlag || createAggregatesFlag)
   {
     if (error == ERROR_NONE) error = createAggregatesStorages(&databaseHandle,storageIds);
   }
-  if (createAggregatesEntitiesFlag)
+  if (createAggregatesEntitiesFlag || createAggregatesFlag)
   {
     if (error == ERROR_NONE) error = createAggregatesEntities(&databaseHandle,entityIds);
   }
 
   // purge deleted storages
-  if (purgeDeletedFlag)
+  if (purgeFlag)
   {
     error = purgeDeletedStorages(&databaseHandle);
   }
@@ -11518,12 +11251,6 @@ else if (stringEquals(argv[i],"--xxx"))
   {
     optimizeDatabase(&databaseHandle);
   }
-
-
-if (xxxId != DATABASE_ID_NONE)
-{
-  xxx(&databaseHandle,xxxId,xxxShow,xxxAction);
-}
 
 //TODO: remove? use storages-info?
   if (showStoragesFlag)
@@ -11955,14 +11682,10 @@ if (xxxId != DATABASE_ID_NONE)
       if (error != ERROR_NONE)
       {
         printError("SQL command '%s' fail: %s!",String_cString(command),Error_getText(error));
+
         doneEncodingConverter();
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuIds);
-        Array_done(&uuidIds);
-        String_delete(command);
-        String_delete(storageName);
-        String_delete(entryName);
+        CmdOption_done(COMMAND_LINE_OPTIONS);
+        AutoFree_cleanup(&autoFreeList);
         exit(EXITCODE_FAIL);
       }
 
@@ -11979,13 +11702,10 @@ if (xxxId != DATABASE_ID_NONE)
       if (error != ERROR_NONE)
       {
         printError("init transaction fail: %s!",Error_getText(error));
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuIds);
-        Array_done(&uuidIds);
-        String_delete(command);
-        String_delete(storageName);
-        String_delete(entryName);
+
+        doneEncodingConverter();
+        CmdOption_done(COMMAND_LINE_OPTIONS);
+        AutoFree_cleanup(&autoFreeList);
         exit(EXITCODE_FAIL);
       }
     }
@@ -12008,13 +11728,10 @@ if (xxxId != DATABASE_ID_NONE)
       if (error != ERROR_NONE)
       {
         printError("SQL command '%s' fail: %s!",l,Error_getText(error));
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuIds);
-        Array_done(&uuidIds);
-        String_delete(command);
-        String_delete(storageName);
-        String_delete(entryName);
+
+        doneEncodingConverter();
+        CmdOption_done(COMMAND_LINE_OPTIONS);
+        AutoFree_cleanup(&autoFreeList);
         exit(EXITCODE_FAIL);
       }
       t1 = Misc_getTimestamp();
@@ -12029,13 +11746,10 @@ if (xxxId != DATABASE_ID_NONE)
       if (error != ERROR_NONE)
       {
         printError("done transaction fail: %s!",Error_getText(error));
-        Array_done(&storageIds);
-        Array_done(&entityIds);
-        Array_done(&uuIds);
-        Array_done(&uuidIds);
-        String_delete(command);
-        String_delete(storageName);
-        String_delete(entryName);
+
+        doneEncodingConverter();
+        CmdOption_done(COMMAND_LINE_OPTIONS);
+        AutoFree_cleanup(&autoFreeList);
         exit(EXITCODE_FAIL);
       }
     }
@@ -12045,14 +11759,24 @@ if (xxxId != DATABASE_ID_NONE)
   closeDatabase(&databaseHandle);
 
   // free resources
+  AUTOFREE_REMOVE(&autoFreeList,storageName);
+  AUTOFREE_REMOVE(&autoFreeList,command);
+  AUTOFREE_REMOVE(&autoFreeList,entryName);
+  AUTOFREE_REMOVE(&autoFreeList,&storageIds);
+  AUTOFREE_REMOVE(&autoFreeList,&entryIds);
+  AUTOFREE_REMOVE(&autoFreeList,&entityIds);
+  AUTOFREE_REMOVE(&autoFreeList,&uuids);
+  AUTOFREE_REMOVE(&autoFreeList,&uuidIds);
   doneEncodingConverter();
-  Array_done(&storageIds);
-  Array_done(&entityIds);
-  Array_done(&uuIds);
-  Array_done(&uuidIds);
+  CmdOption_done(COMMAND_LINE_OPTIONS);
+  String_delete(command);
   String_delete(storageName);
   String_delete(entryName);
-  String_delete(command);
+  Array_done(&storageIds);
+  Array_done(&entryIds);
+  Array_done(&entityIds);
+  Array_done(&uuids);
+  Array_done(&uuidIds);
 
   doneAll();
 
@@ -12060,6 +11784,7 @@ if (xxxId != DATABASE_ID_NONE)
          && (!checkIntegrityFlag  || integrityFlag)
          && (!checkOrphanedFlag   || (orphanedEntriesCount == 0L))
          && (!checkDuplicatesFlag || (duplicatesCount == 0L))
+         && (!checkFlag || (integrityFlag && (orphanedEntriesCount == 0L) && (duplicatesCount == 0L)))
            ? EXITCODE_OK
            : EXITCODE_FAIL;
 }

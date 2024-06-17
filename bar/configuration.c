@@ -104,19 +104,19 @@ LOCAL const CommandLineUnit COMMAND_LINE_BITS_UNITS[] = CMD_VALUE_UNIT_ARRAY
   {"K",1024LL},
 );
 
-LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES[] = CMD_VALUE_SELECT_ARRAY
+LOCAL const CommandLineOptionSelect BAR_COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES[] = CMD_VALUE_SELECT_ARRAY
 (
   {"secure",   CRYPT_KEY_MODE_NONE,     "secure keys"                 },
   {"transient",CRYPT_KEY_MODE_TRANSIENT,"transient keys (less secure)"},
 );
 
-LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_SERVER_MODES[] = CMD_VALUE_SELECT_ARRAY
+LOCAL const CommandLineOptionSelect BAR_COMMAND_LINE_OPTIONS_SERVER_MODES[] = CMD_VALUE_SELECT_ARRAY
 (
   {"master",SERVER_MODE_MASTER,"master"},
   {"slave", SERVER_MODE_SLAVE, "slave" },
 );
 
-LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_PATTERN_TYPES[] = CMD_VALUE_SELECT_ARRAY
+LOCAL const CommandLineOptionSelect BAR_COMMAND_LINE_OPTIONS_PATTERN_TYPES[] = CMD_VALUE_SELECT_ARRAY
 (
   {"glob",    PATTERN_TYPE_GLOB,          "glob patterns: * and ?"                      },
   {"regex",   PATTERN_TYPE_REGEX,         "regular expression pattern matching"         },
@@ -231,7 +231,7 @@ LOCAL CommandLineOptionSelect COMPRESS_ALGORITHMS_BYTE[] = CMD_VALUE_SELECT_ARRA
   #endif /* HAVE_ZSTD */
 );
 
-LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_CRYPT_TYPES[] = CMD_VALUE_SELECT_ARRAY
+LOCAL const CommandLineOptionSelect BAR_COMMAND_LINE_OPTIONS_CRYPT_TYPES[] = CMD_VALUE_SELECT_ARRAY
 (
   #ifdef HAVE_GCRYPT
     {"symmetric", CRYPT_TYPE_SYMMETRIC, "symmetric"},
@@ -250,7 +250,7 @@ LOCAL const CommandLineUnit COMMAND_LINE_TIME_UNITS[] = CMD_VALUE_UNIT_ARRAY
   {"s",1},
 );
 
-LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] = CMD_VALUE_SET_ARRAY
+LOCAL const CommandLineOptionSet BAR_COMMAND_LINE_OPTIONS_LOG_TYPES[] = CMD_VALUE_SET_ARRAY
 (
   {"none",      LOG_TYPE_NONE,               "no logging"               },
   {"errors",    LOG_TYPE_ERROR,              "log errors"               },
@@ -273,7 +273,7 @@ LOCAL const CommandLineOptionSet COMMAND_LINE_OPTIONS_LOG_TYPES[] = CMD_VALUE_SE
   {"all",       LOG_TYPE_ALL,                "log everything"           },
 );
 
-LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES[] = CMD_VALUE_SELECT_ARRAY
+LOCAL const CommandLineOptionSelect BAR_COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES[] = CMD_VALUE_SELECT_ARRAY
 (
   {"stop",      ARCHIVE_FILE_MODE_STOP,      "stop if archive file exists"      },
   {"rename",    ARCHIVE_FILE_MODE_RENAME,    "rename if archive file exists"    },
@@ -281,7 +281,7 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES[] = 
   {"overwrite", ARCHIVE_FILE_MODE_OVERWRITE, "overwrite existing archive files" },
 );
 
-LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES[] = CMD_VALUE_SELECT_ARRAY
+LOCAL const CommandLineOptionSelect BAR_COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES[] = CMD_VALUE_SELECT_ARRAY
 (
   {"stop",         RESTORE_ENTRY_MODE_STOP,         "stop if entry exists"  },
   {"rename",       RESTORE_ENTRY_MODE_RENAME,       "rename entries"        },
@@ -634,7 +634,7 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 }
 
 /***********************************************************************\
-* Name   : cmdOptionParseNewEntiryUUID
+* Name   : cmdOptionParseNewEntityUUID
 * Purpose: command line option call back for new entity UUID
 * Input  : -
 * Output : -
@@ -642,7 +642,7 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseNewEntiryUUID(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseNewEntityUUID(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
@@ -7223,14 +7223,14 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
       // commented value -> only store comments
       if (!StringList_isEmpty(&commentList))
       {
-        i = ConfigValue_find(CONFIG_VALUES,
+        i = ConfigValue_find(BAR_CONFIG_VALUES,
                              CONFIG_VALUE_INDEX_NONE,
                              CONFIG_VALUE_INDEX_NONE,
                              String_cString(name)
                             );
         if (i != CONFIG_VALUE_INDEX_NONE)
         {
-          ConfigValue_setComments(&CONFIG_VALUES[i],&commentList);
+          ConfigValue_setComments(&BAR_CONFIG_VALUES[i],&commentList);
           StringList_clear(&commentList);
         }
       }
@@ -7252,15 +7252,15 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
       uint i;
 
       // value
-      i = ConfigValue_find(CONFIG_VALUES,
+      i = ConfigValue_find(BAR_CONFIG_VALUES,
                            firstValueIndex,
                            lastValueIndex,
                            String_cString(name)
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-        if (ConfigValue_parse(CONFIG_VALUES,
-                              &CONFIG_VALUES[i],
+        if (ConfigValue_parse(BAR_CONFIG_VALUES,
+                              &BAR_CONFIG_VALUES[i],
                               sectionName,
                               String_cString(value),
                               CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
@@ -7439,14 +7439,14 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // commented value -> only store comments
       if (!StringList_isEmpty(&commentList))
       {
-        i = ConfigValue_find(CONFIG_VALUES,
+        i = ConfigValue_find(BAR_CONFIG_VALUES,
                              CONFIG_VALUE_INDEX_NONE,
                              CONFIG_VALUE_INDEX_NONE,
                              String_cString(name)
                             );
         if (i != CONFIG_VALUE_INDEX_NONE)
         {
-          ConfigValue_setComments(CONFIG_VALUES,&CONFIG_VALUES[i],&commentList);
+          ConfigValue_setComments(BAR_CONFIG_VALUES,&BAR_CONFIG_VALUES[i],&commentList);
           StringList_clear(&commentList);
         }
       }
@@ -7467,7 +7467,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
 
         if (String_parse(line,STRING_BEGIN,"#%S=",&nextIndex,name))
         {
-          i = ConfigValue_find(CONFIG_VALUES,
+          i = ConfigValue_find(BAR_CONFIG_VALUES,
                              CONFIG_VALUE_INDEX_NONE,
                              CONFIG_VALUE_INDEX_NONE,
                              String_cString(name)
@@ -7492,7 +7492,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
     {
       String_remove(line,STRING_BEGIN,1);
       String_trim(line,STRING_WHITE_SPACES);
-      if (!ConfigValue_isCommentLine(CONFIG_VALUES,line))
+      if (!ConfigValue_isCommentLine(BAR_CONFIG_VALUES,line))
       {
         StringList_append(&commentList,line);
       }
@@ -7506,7 +7506,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // parse file-server section
 
       // find section
-      i = ConfigValue_findSection(CONFIG_VALUES,
+      i = ConfigValue_findSection(BAR_CONFIG_VALUES,
                                   "file-server",
                                   &firstValueIndex,
                                   &lastValueIndex
@@ -7561,7 +7561,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // parse ftp-server section
 
       // find section
-      i = ConfigValue_findSection(CONFIG_VALUES,
+      i = ConfigValue_findSection(BAR_CONFIG_VALUES,
                                   "ftp-server",
                                   &firstValueIndex,
                                   &lastValueIndex
@@ -7617,7 +7617,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // parse ssh-server section
 
       // find section
-      i = ConfigValue_findSection(CONFIG_VALUES,
+      i = ConfigValue_findSection(BAR_CONFIG_VALUES,
                                   "ssh-server",
                                   &firstValueIndex,
                                   &lastValueIndex
@@ -7672,7 +7672,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // parse webdav-server section
 
       // find section
-      i = ConfigValue_findSection(CONFIG_VALUES,
+      i = ConfigValue_findSection(BAR_CONFIG_VALUES,
                                   "webdav-server",
                                   &firstValueIndex,
                                   &lastValueIndex
@@ -7728,7 +7728,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // parse webdavs-server section
 
       // find section
-      i = ConfigValue_findSection(CONFIG_VALUES,
+      i = ConfigValue_findSection(BAR_CONFIG_VALUES,
                                   "webdavs-server",
                                   &firstValueIndex,
                                   &lastValueIndex
@@ -7784,7 +7784,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // parse ftp-server section
 
       // find section
-      i = ConfigValue_findSection(CONFIG_VALUES,
+      i = ConfigValue_findSection(BAR_CONFIG_VALUES,
                                   "smb-server",
                                   &firstValueIndex,
                                   &lastValueIndex
@@ -7839,7 +7839,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // parse device-server section
 
       // find section
-      i = ConfigValue_findSection(CONFIG_VALUES,
+      i = ConfigValue_findSection(BAR_CONFIG_VALUES,
                                   "device",
                                   &firstValueIndex,
                                   &lastValueIndex
@@ -7887,7 +7887,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // parse master section
 
       // find section
-      i = ConfigValue_findSection(CONFIG_VALUES,
+      i = ConfigValue_findSection(BAR_CONFIG_VALUES,
                                   "master",
                                   &firstValueIndex,
                                   &lastValueIndex
@@ -7914,7 +7914,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       // parse maintenance section
 
       // find section
-      i = ConfigValue_findSection(CONFIG_VALUES,
+      i = ConfigValue_findSection(BAR_CONFIG_VALUES,
                                   "maintenance",
                                   &firstValueIndex,
                                   &lastValueIndex
@@ -7963,15 +7963,15 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
       uint i;
 
       // parse value
-      i = ConfigValue_find(CONFIG_VALUES,
+      i = ConfigValue_find(BAR_CONFIG_VALUES,
                            CONFIG_VALUE_INDEX_NONE,
                            CONFIG_VALUE_INDEX_NONE,
                            String_cString(name)
                           );
       if (i != CONFIG_VALUE_INDEX_NONE)
       {
-        if (ConfigValue_parse(CONFIG_VALUES,
-                              &CONFIG_VALUES[i],
+        if (ConfigValue_parse(BAR_CONFIG_VALUES,
+                              &BAR_CONFIG_VALUES[i],
                               NULL, // section name
                               String_cString(value),
                               CALLBACK_INLINE(void,(const char *errorMessage, void *userData),
@@ -8037,7 +8037,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
 
 /*---------------------------------------------------------------------*/
 
-CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
+CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 (
   CMD_OPTION_ENUM         ("create",                            'c',0,1,globalOptions.command,                               COMMAND_CREATE_FILES,                                        "create new files archives"                                                ),
   CMD_OPTION_ENUM         ("image",                             'm',0,1,globalOptions.command,                               COMMAND_CREATE_IMAGES,                                       "create new images archives"                                               ),
@@ -8051,7 +8051,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 //  CMD_OPTION_ENUM         ("new-key-password",                  0,  1,1,command,                                             COMMAND_NEW_KEY_PASSWORD,                                    "set new private key password"                                             ),
   CMD_OPTION_INTEGER      ("generate-keys-bits",                0,  1,1,globalOptions.generateKeyBits,                       MIN_ASYMMETRIC_CRYPT_KEY_BITS,
                                                                                                                              MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,       "key bits (default: %default%)"                                            ),
-  CMD_OPTION_SELECT       ("generate-keys-mode",                0,  1,2,globalOptions.generateKeyMode,                       COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES,                     "select generate key mode mode","mode","(default)"                         ),
+  CMD_OPTION_SELECT       ("generate-keys-mode",                0,  1,2,globalOptions.generateKeyMode,                       BAR_COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES,                     "select generate key mode mode","mode","(default)"                         ),
   CMD_OPTION_STRING       ("job",                               0,  0,1,globalOptions.jobUUIDOrName,                                                                                      "execute job","name or UUID"                                               ),
 
   CMD_OPTION_ENUM         ("normal",                            0,  1,2,globalOptions.archiveType,                           ARCHIVE_TYPE_NORMAL,                                         "create normal archive (no incremental list file, default)"                ),
@@ -8060,7 +8060,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_SPECIAL      ("incremental-list-file",             'I',1,2,&globalOptions.incrementalListFileName,              cmdOptionParseString,NULL,1,                                 "incremental list file name (default: <archive name>.bid)","file name"     ),
   CMD_OPTION_ENUM         ("differential",                      0,  1,2,globalOptions.archiveType,                           ARCHIVE_TYPE_DIFFERENTIAL,                                   "create differential archive"                                              ),
 
-  CMD_OPTION_SELECT       ("pattern-type",                      0,  1,2,globalOptions.patternType,                           COMMAND_LINE_OPTIONS_PATTERN_TYPES,                          "select pattern type","type","(default)"                                   ),
+  CMD_OPTION_SELECT       ("pattern-type",                      0,  1,2,globalOptions.patternType,                           BAR_COMMAND_LINE_OPTIONS_PATTERN_TYPES,                          "select pattern type","type","(default)"                                   ),
 
   CMD_OPTION_BOOLEAN      ("storage-list-stdin",                'T',1,3,globalOptions.storageNameListStdin,                                                                               "read storage name list from stdin"                                        ),
   CMD_OPTION_STRING       ("storage-list",                      0,  1,3,globalOptions.storageNameListFileName,                                                                            "storage name list file name","file name"                                  ),
@@ -8152,7 +8152,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
                                                                                                                                                                                           #endif
                                                                                                                                                                                           ,
                                                                                                                                                                                           "algorithm"                                                                ),
-  CMD_OPTION_SELECT       ("crypt-type",                        0,  0,2,globalOptions.cryptType,                             COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type","type","(default)"                                     ),
+  CMD_OPTION_SELECT       ("crypt-type",                        0,  0,2,globalOptions.cryptType,                             BAR_COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type","type","(default)"                                     ),
   CMD_OPTION_SPECIAL      ("crypt-password",                    0,  0,2,&globalOptions.cryptPassword,                        cmdOptionParsePassword,NULL,1,                               "crypt password (use with care!)","password"                               ),
   CMD_OPTION_SPECIAL      ("crypt-new-password",                0,  0,2,&globalOptions.cryptNewPassword,                     cmdOptionParsePassword,NULL,1,                               "new crypt password (use with care!)","password"                           ),
 //#warning remove/revert
@@ -8204,7 +8204,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("daemon",                            0,  1,0,globalOptions.daemonFlag,                                                                                         "run in server daemon mode"                                                ),
   CMD_OPTION_BOOLEAN      ("no-detach",                         'D',1,0,globalOptions.noDetachFlag,                                                                                       "do not detach in daemon mode"                                             ),
 //  CMD_OPTION_BOOLEAN      ("pair-master",                       0  ,1,0,pairMasterFlag,                                                                                                 "pair master"                                                              ),
-  CMD_OPTION_SELECT       ("server-mode",                       0,  1,1,globalOptions.serverMode,                            COMMAND_LINE_OPTIONS_SERVER_MODES,                           "select server mode","mode","(default)"                                    ),
+  CMD_OPTION_SELECT       ("server-mode",                       0,  1,1,globalOptions.serverMode,                            BAR_COMMAND_LINE_OPTIONS_SERVER_MODES,                           "select server mode","mode","(default)"                                    ),
   CMD_OPTION_INTEGER      ("server-port",                       0,  1,1,globalOptions.serverPort,                            0,MAX_PORT_NUMBER,NULL,                                      "server port (default: %default%)"                                         ),
   CMD_OPTION_INTEGER      ("server-tls-port",                   0,  1,1,globalOptions.serverTLSPort,                         0,MAX_PORT_NUMBER,NULL,                                      "TLS (SSL) server port"                                                    ),
   CMD_OPTION_SPECIAL      ("server-ca-file",                    0,  1,1,&globalOptions.serverCA,                             cmdOptionReadCertificateFile,NULL,1,                         "TLS (SSL) server certificate authority file (CA file)","file name"        ),
@@ -8334,7 +8334,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_INTEGER64    ("continuous-max-size",               0,  1,2,globalOptions.continuousMaxSize,                     0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "max. continuous size"                                                     ),
   CMD_OPTION_INTEGER      ("continuous-min-time-delta",         0,  1,1,globalOptions.continuousMinTimeDelta,                0,MAX_INT,COMMAND_LINE_TIME_UNITS,                           "min. time between continuous backup of an entry"                          ),
 
-  CMD_OPTION_SET          ("log",                               0,  1,1,globalOptions.logTypes,                              COMMAND_LINE_OPTIONS_LOG_TYPES,                              "log types","type","(default)"                                             ),
+  CMD_OPTION_SET          ("log",                               0,  1,1,globalOptions.logTypes,                              BAR_COMMAND_LINE_OPTIONS_LOG_TYPES,                              "log types","type","(default)"                                             ),
   CMD_OPTION_STRING       ("log-file",                          0,  1,1,globalOptions.logFileName,                                                                                        "log file name","file name"                                                ),
   CMD_OPTION_CSTRING      ("log-format",                        0,  1,1,globalOptions.logFormat,                                                                                          "log format (default: %default%)","format"                                 ),
   CMD_OPTION_CSTRING      ("log-post-command",                  0,  1,1,globalOptions.logPostCommand,                                                                                     "log file post-process command","command"                                  ),
@@ -8361,10 +8361,10 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("raw-images",                        0,  1,2,globalOptions.rawImagesFlag,                                                                                      "store raw images (store all image blocks)"                                ),
   CMD_OPTION_BOOLEAN      ("no-fragments-check",                0,  1,2,globalOptions.noFragmentsCheckFlag,                                                                               "do not check completeness of file fragments"                              ),
   CMD_OPTION_BOOLEAN      ("no-index-database",                 0,  1,1,globalOptions.noIndexDatabaseFlag,                                                                                "do not store index database for archives"                                 ),
-  CMD_OPTION_SELECT       ("archive-file-mode",                 0,  1,2,globalOptions.archiveFileMode,                       COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,                     "select archive files write mode","mode","(default)"                       ),
+  CMD_OPTION_SELECT       ("archive-file-mode",                 0,  1,2,globalOptions.archiveFileMode,                       BAR_COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,                     "select archive files write mode","mode","(default)"                       ),
   // Note: shortcut for --archive-file-mode=overwrite
   CMD_OPTION_SPECIAL      ("overwrite-archive-files",           'o',0,2,&globalOptions.archiveFileMode,                      cmdOptionParseArchiveFileModeOverwrite,NULL,0,               "overwrite existing archive files",""                                      ),
-  CMD_OPTION_SELECT       ("restore-entry-mode",                0,  1,2,globalOptions.restoreEntryMode,                      COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES,                    "restore entry mode","mode","(default)"                                    ),
+  CMD_OPTION_SELECT       ("restore-entry-mode",                0,  1,2,globalOptions.restoreEntryMode,                      BAR_COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES,                    "restore entry mode","mode","(default)"                                    ),
   // Note: shortcut for --restore-entry-mode=overwrite
   CMD_OPTION_SPECIAL      ("overwrite-files",                   0,  0,2,&globalOptions.restoreEntryMode,                     cmdOptionParseRestoreEntryModeOverwrite,NULL,0,              "overwrite existing entries on restore",""                                 ),
   CMD_OPTION_BOOLEAN      ("sparse-files",                      0,  1,2,globalOptions.sparseFilesFlag,                                                                                    "create sparse files"                                                      ),
@@ -8380,7 +8380,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("no-storage",                        0,  1,2,globalOptions.noStorage,                                                                                          "do not store archives (skip storage, index database"                      ),
   CMD_OPTION_BOOLEAN      ("dry-run",                           0,  1,2,globalOptions.dryRun,                                                                                             "do dry-run (skip storage/restore, incremental data, index database)"      ),
 
-  CMD_OPTION_SPECIAL      ("new-entity-uuid",                   0,  0,2,&globalOptions.newEntityUUID,                        cmdOptionParseNewEntiryUUID,NULL,0,                          "new entity uuid","uuid"                                                   ),
+  CMD_OPTION_SPECIAL      ("new-entity-uuid",                   0,  0,2,&globalOptions.newEntityUUID,                        cmdOptionParseNewEntityUUID,NULL,0,                          "new entity uuid","uuid"                                                   ),
 
   CMD_OPTION_CSTRING      ("system-encoding",                   0,  1,0,globalOptions.systemEncoding,                                                                                     "system encoding","encoding"                                               ),
   CMD_OPTION_CSTRING      ("console-encoding",                  0,  1,0,globalOptions.consoleEncoding,                                                                                    "console encoding","encoding"                                              ),
@@ -8400,7 +8400,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("help-internal",                     0,  1,0,globalOptions.helpInternalFlag,                                                                                   "output help to internal options"                                          ),
 
   // deprecated
-  CMD_OPTION_DEPRECATED   ("server-jobs-directory",             0,  1,1,&globalOptions.jobsDirectory,                        CmdOptionParseDeprecatedStringOption,NULL,1,                 "jobs-directory"                                                           ),
+  CMD_OPTION_DEPRECATED   ("server-jobs-directory",             0,  1,1,&globalOptions.jobsDirectory,                        CmdOption_parseDeprecatedStringOption,NULL,1,                 "jobs-directory"                                                           ),
   CMD_OPTION_DEPRECATED   ("mount-device",                      0,  1,2,&globalOptions.mountList,                            cmdOptionParseDeprecatedMountDevice,NULL,1,                  "device to mount/unmount"                                                  ),
   CMD_OPTION_DEPRECATED   ("stop-on-error",                     0,  1,2,&globalOptions.noStopOnErrorFlag,                    cmdOptionParseDeprecatedStopOnError,NULL,0,                  "no-stop-on-error"                                                         ),
 
@@ -8425,7 +8425,7 @@ CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   #endif
 );
 
-const ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
+const ConfigValue BAR_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   CONFIG_VALUE_SEPARATOR(),
   CONFIG_VALUE_COMMENT(" BAR configuration"),
@@ -10422,7 +10422,7 @@ Errors Configuration_update(void)
     return ERROR_NO_WRITABLE_CONFIG;
   }
 
-  error = ConfigValue_writeConfigFile(configFileName,CONFIG_VALUES,NULL,TRUE);
+  error = ConfigValue_writeConfigFile(configFileName,BAR_CONFIG_VALUES,NULL,TRUE);
   if (error != ERROR_NONE)
   {
     logMessage(NULL,  // logHandle

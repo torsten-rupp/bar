@@ -181,7 +181,6 @@ rest time
 - code formater
 - coding style guide
 - error correction codes
-- bar-index: command line option parser
 - support continuous jobs for slave
 - assign-to progress update
 - test+compare in job dialog

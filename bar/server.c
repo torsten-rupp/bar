@@ -7598,21 +7598,21 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // find config value
-  i = ConfigValue_valueIndex(CONFIG_VALUES,NULL,String_cString(name));
+  i = ConfigValue_valueIndex(BAR_CONFIG_VALUES,NULL,String_cString(name));
   if (i == CONFIG_VALUE_INDEX_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"server config '%S'",name);
     String_delete(name);
     return;
   }
-  assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
+  assert(BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
-  if (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
+  if (BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
   {
     // send value
     value = String_new();
     ConfigValue_formatInit(&configValueFormat,
-                           &CONFIG_VALUES[i],
+                           &BAR_CONFIG_VALUES[i],
                            CONFIG_VALUE_FORMAT_MODE_VALUE,
                            &globalOptions
                           );
@@ -7673,7 +7673,7 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // parse
-  i = ConfigValue_find(CONFIG_VALUES,
+  i = ConfigValue_find(BAR_CONFIG_VALUES,
                        CONFIG_VALUE_INDEX_NONE,
                        CONFIG_VALUE_INDEX_NONE,
                        String_cString(name)
@@ -7686,8 +7686,8 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  if (ConfigValue_parse(CONFIG_VALUES,
-                        &CONFIG_VALUES[i],
+  if (ConfigValue_parse(BAR_CONFIG_VALUES,
+                        &BAR_CONFIG_VALUES[i],
                         NULL, // sectionName
                         String_cString(value),
                         CALLBACK_(NULL,NULL),  // errorFunction
@@ -11260,9 +11260,9 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
       String_delete(name);
       return;
     }
-    assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
+    assert(BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
-    if (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
+    if (BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
     {
       // send value
       s = String_new();
@@ -14909,9 +14909,9 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
       String_delete(name);
       return;
     }
-    assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
+    assert(BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
-    if (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
+    if (BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
     {
       // send value
       s = String_new();
