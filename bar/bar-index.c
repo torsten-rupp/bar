@@ -1549,7 +1549,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
                        );
   if (error != ERROR_NONE)
   {
-    String_delete(printableDatabaseURI);
+    printError("open database fail (error: %s)!",Error_getText(error));
     Database_doneSpecifier(&databaseSpecifier);
     return error;
   }
@@ -1566,7 +1566,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
                           );
   if (error != ERROR_NONE)
   {
-    String_delete(printableDatabaseURI);
+    printError("get database version fail (error: %s)!",Error_getText(error));    String_delete(printableDatabaseURI);
     Database_doneSpecifier(&databaseSpecifier);
     return error;
   }
