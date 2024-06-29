@@ -4612,20 +4612,16 @@ int main(int argc, const char *argv[])
   // get executable name
   File_getAbsoluteFileNameCString(globalOptions.barExecutable,argv[0]);
 
-  error = ERROR_NONE;
-
   // parse command line: pre-options
-  if (error == ERROR_NONE)
+  if (!CmdOption_parse(argv,&argc,
+                       BAR_COMMAND_LINE_OPTIONS,
+                       0,0,
+                       stderr,"ERROR: ","Warning: "
+                      )
+     )
   {
-    if (!CmdOption_parse(argv,&argc,
-                         BAR_COMMAND_LINE_OPTIONS,
-                         0,0,
-                         stderr,"ERROR: ","Warning: "
-                        )
-       )
-    {
-      error = ERROR_INVALID_ARGUMENT;
-    }
+    doneAll();
+    return ERROR_INVALID_ARGUMENT;
   }
 
   // init encoding converter
@@ -4635,43 +4631,42 @@ int main(int argc, const char *argv[])
     printError(_("cannot initialize encoding (error: %s)!"),
                Error_getText(error)
               );
+    doneAll();
+    return ERROR_INIT;
   }
 
   // change working directory
-  if (error == ERROR_NONE)
+  if (!stringIsEmpty(globalOptions.changeToDirectory))
   {
-    if (!stringIsEmpty(globalOptions.changeToDirectory))
+    error = File_changeDirectoryCString(globalOptions.changeToDirectory);
+    if (error != ERROR_NONE)
     {
-      error = File_changeDirectoryCString(globalOptions.changeToDirectory);
-      if (error != ERROR_NONE)
-      {
-        printError(_("cannot change to directory '%s' (error: %s)!"),
-                   globalOptions.changeToDirectory,
-                   Error_getText(error)
-                  );
-      }
+      printError(_("cannot change to directory '%s' (error: %s)!"),
+                 globalOptions.changeToDirectory,
+                 Error_getText(error)
+                );
+      doneEncodingConverter();
+      doneAll();
+      return ERROR_INIT;
     }
   }
 
   // run bar
-  if (error == ERROR_NONE)
+  if (   globalOptions.daemonFlag
+      && !globalOptions.noDetachFlag
+      && !globalOptions.versionFlag
+      && !globalOptions.helpFlag
+      && !globalOptions.xhelpFlag
+      && !globalOptions.helpInternalFlag
+     )
   {
-    if (   globalOptions.daemonFlag
-        && !globalOptions.noDetachFlag
-        && !globalOptions.versionFlag
-        && !globalOptions.helpFlag
-        && !globalOptions.xhelpFlag
-        && !globalOptions.helpInternalFlag
-       )
-    {
-      // run as service
-      error = Misc_runService(bar,argc,argv);
-    }
-    else
-    {
-      // run normal
-      error = bar(argc,argv);
-    }
+    // run as service
+    error = Misc_runService(bar,argc,argv);
+  }
+  else
+  {
+    // run normal
+    error = bar(argc,argv);
   }
 
   // free resources
