@@ -56,6 +56,7 @@
   extern "C" {
 #endif
 
+#ifdef HAVE_PAR2
 /***********************************************************************\
 * Name   : resultToText
 * Purpose: convert result to text
@@ -79,6 +80,7 @@ LOCAL const char* resultToText(Result result)
     default:                           return "";
   }
 }
+#endif
 
 Errors PAR2_create(ConstString      dataFileName,
                    uint64           dataFileSize,
