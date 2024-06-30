@@ -3012,6 +3012,7 @@ tests_all:
           tests_crypt \
           tests_asymmetric_crypt \
           tests_split \
+          tests_convert \
           tests_image \
           tests_storage \
           tests_huge \
@@ -3037,6 +3038,7 @@ tests_smoke: \
                       tests_crypt \
                       tests_asymmetric_crypt \
                       tests_split \
+                      tests_convert \
                       tests_index \
                       tests_arguments \
                       tests_config \

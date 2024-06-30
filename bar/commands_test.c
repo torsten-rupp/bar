@@ -470,6 +470,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
                String_cString(deviceName),
                BUFFER_SIZE
               );
+    (void)Archive_closeEntry(&archiveEntryInfo);
     String_delete(deviceName);
     return ERROR_INVALID_DEVICE_BLOCK_SIZE;
   }
@@ -1118,6 +1119,109 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
 }
 
 /***********************************************************************\
+* Name   : testEntry
+* Purpose: test single entry
+* Input  : archiveHandle    - archive handle
+*          archiveEntryType - archive entry type
+*          testInfo         - test info
+*          buffer           - buffer for temporary data
+*          bufferSize       - size of data buffer
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors testEntry(ArchiveHandle     *archiveHandle,
+                       ArchiveEntryTypes archiveEntryType,
+                       TestInfo          *testInfo,
+                       byte              *buffer,
+                       uint              bufferSize
+                      )
+{
+  assert(archiveHandle != NULL);
+  assert(testInfo != NULL);
+  assert(buffer != NULL);
+
+  Errors error = ERROR_UNKNOWN;
+  switch (archiveEntryType)
+  {
+    case ARCHIVE_ENTRY_TYPE_NONE:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+    case ARCHIVE_ENTRY_TYPE_FILE:
+      error = testFileEntry(archiveHandle,
+                            testInfo->includeEntryList,
+                            testInfo->excludePatternList,
+                            &testInfo->fragmentListLock,
+                            testInfo->fragmentList,
+                            buffer,
+                            bufferSize
+                           );
+      break;
+    case ARCHIVE_ENTRY_TYPE_IMAGE:
+      error = testImageEntry(archiveHandle,
+                             testInfo->includeEntryList,
+                             testInfo->excludePatternList,
+                             &testInfo->fragmentListLock,
+                             testInfo->fragmentList,
+                             buffer,
+                             bufferSize
+                            );
+      break;
+    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      error = testDirectoryEntry(archiveHandle,
+                                 testInfo->includeEntryList,
+                                 testInfo->excludePatternList
+                                );
+      break;
+    case ARCHIVE_ENTRY_TYPE_LINK:
+      error = testLinkEntry(archiveHandle,
+                            testInfo->includeEntryList,
+                            testInfo->excludePatternList
+                           );
+      break;
+    case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      error = testHardLinkEntry(archiveHandle,
+                                testInfo->includeEntryList,
+                                testInfo->excludePatternList,
+                                &testInfo->fragmentListLock,
+                                testInfo->fragmentList,
+                                buffer,
+                                bufferSize
+                               );
+      break;
+    case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      error = testSpecialEntry(archiveHandle,
+                               testInfo->includeEntryList,
+                               testInfo->excludePatternList
+                              );
+      break;
+    case ARCHIVE_ENTRY_TYPE_META:
+      error = Archive_skipNextEntry(archiveHandle);
+      break;
+    case ARCHIVE_ENTRY_TYPE_SALT:
+    case ARCHIVE_ENTRY_TYPE_KEY:
+    case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #else
+        error = Archive_skipNextEntry(archiveHandle);
+      #endif /* NDEBUG */
+      break;
+    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : testThreadCode
 * Purpose: test worker thread
 * Input  : testInfo - test info structure
@@ -1200,79 +1304,12 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         break;
       }
 
-      switch (entryMsg.archiveEntryType)
-      {
-        case ARCHIVE_ENTRY_TYPE_NONE:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNREACHABLE();
-          #endif /* NDEBUG */
-          break; /* not reached */
-        case ARCHIVE_ENTRY_TYPE_FILE:
-          error = testFileEntry(&archiveHandle,
-                                testInfo->includeEntryList,
-                                testInfo->excludePatternList,
-                                &testInfo->fragmentListLock,
-                                testInfo->fragmentList,
-                                buffer,
-                                BUFFER_SIZE
-                               );
-          break;
-        case ARCHIVE_ENTRY_TYPE_IMAGE:
-          error = testImageEntry(&archiveHandle,
-                                 testInfo->includeEntryList,
-                                 testInfo->excludePatternList,
-                                 &testInfo->fragmentListLock,
-                                 testInfo->fragmentList,
-                                 buffer,
-                                 BUFFER_SIZE
-                                );
-          break;
-        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-          error = testDirectoryEntry(&archiveHandle,
-                                     testInfo->includeEntryList,
-                                     testInfo->excludePatternList
-                                    );
-          break;
-        case ARCHIVE_ENTRY_TYPE_LINK:
-          error = testLinkEntry(&archiveHandle,
-                                testInfo->includeEntryList,
-                                testInfo->excludePatternList
-                               );
-          break;
-        case ARCHIVE_ENTRY_TYPE_HARDLINK:
-          error = testHardLinkEntry(&archiveHandle,
-                                    testInfo->includeEntryList,
-                                    testInfo->excludePatternList,
-                                    &testInfo->fragmentListLock,
-                                    testInfo->fragmentList,
-                                    buffer,
-                                    BUFFER_SIZE
-                                   );
-          break;
-        case ARCHIVE_ENTRY_TYPE_SPECIAL:
-          error = testSpecialEntry(&archiveHandle,
-                                   testInfo->includeEntryList,
-                                   testInfo->excludePatternList
-                                  );
-          break;
-        case ARCHIVE_ENTRY_TYPE_META:
-          error = Archive_skipNextEntry(&archiveHandle);
-          break;
-        case ARCHIVE_ENTRY_TYPE_SALT:
-        case ARCHIVE_ENTRY_TYPE_KEY:
-        case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNREACHABLE();
-          #else
-            error = Archive_skipNextEntry(&archiveHandle);
-          #endif /* NDEBUG */
-          break;
-        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNREACHABLE();
-          #endif /* NDEBUG */
-          break; /* not reached */
-      }
+      error = testEntry(&archiveHandle,
+                        entryMsg.archiveEntryType,
+                        testInfo,
+                        buffer,
+                        BUFFER_SIZE
+                       );
       if (error != ERROR_NONE)
       {
         if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
@@ -1331,6 +1368,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
   StorageInfo          storageInfo;
   Errors               error;
   uint                 testThreadCount;
+  byte                 *buffer;
   uint                 i;
   ArchiveHandle        archiveHandle;
   CryptSignatureStates allCryptSignatureState;
@@ -1459,12 +1497,25 @@ NULL, // masterSocketHandle
             !isPrintInfo(1) ? "..." : ":\n"
            );
 
-  // start test threads
-  MsgQueue_reset(&testInfo->entryMsgQueue);
+  // start test threads/allocate uffer
   testThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  for (i = 0; i < testThreadCount; i++)
+  if (testThreadCount > 1)
   {
-    ThreadPool_run(&workerThreadPool,testThreadCode,testInfo);
+    MsgQueue_reset(&testInfo->entryMsgQueue);
+    for (i = 0; i < testThreadCount; i++)
+    {
+      ThreadPool_run(&workerThreadPool,testThreadCode,testInfo);
+    }
+    buffer = NULL;
+  }
+  else
+  {
+    buffer = (byte*)malloc(BUFFER_SIZE);
+    if (buffer == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   }
 
   // read archive entries
@@ -1496,24 +1547,36 @@ NULL, // masterSocketHandle
 
     if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
     {
-      // send entry to test threads
+      if (testThreadCount > 1)
+      {
+        // send entry to test threads
 //TODO: increment on multiple archives and when threads are not restarted each time
-      entryMsg.archiveIndex     = 1;
-      entryMsg.archiveHandle    = &archiveHandle;
-      entryMsg.archiveEntryType = archiveEntryType;
-      entryMsg.archiveCryptInfo = archiveCryptInfo;
-      entryMsg.offset           = offset;
-      if (!MsgQueue_put(&testInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
-      {
-        HALT_INTERNAL_ERROR("Send message to test threads fail!");
-      }
+        entryMsg.archiveIndex     = 1;
+        entryMsg.archiveHandle    = &archiveHandle;
+        entryMsg.archiveEntryType = archiveEntryType;
+        entryMsg.archiveCryptInfo = archiveCryptInfo;
+        entryMsg.offset           = offset;
+        if (!MsgQueue_put(&testInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+        {
+          HALT_INTERNAL_ERROR("Send message to test threads fail!");
+        }
 
-      // skip entry
-      error = Archive_skipNextEntry(&archiveHandle);
-      if (error != ERROR_NONE)
+        // skip entry
+        error = Archive_skipNextEntry(&archiveHandle);
+        if (error != ERROR_NONE)
+        {
+          if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
+          break;
+        }
+      }
+      else
       {
-        if (testInfo->failError == ERROR_NONE) testInfo->failError = error;
-        break;
+        error = testEntry(&archiveHandle,
+                          archiveEntryType,
+                          testInfo,
+                          buffer,
+                          BUFFER_SIZE
+                         );
       }
     }
     else
@@ -1537,9 +1600,17 @@ NULL, // masterSocketHandle
     }
   }
 
-  // wait for test threads
-  MsgQueue_setEndOfMsg(&testInfo->entryMsgQueue);
-  ThreadPool_joinAll(&workerThreadPool);
+  // wait for test threads/free buffer
+  if (testThreadCount > 1)
+  {
+    MsgQueue_setEndOfMsg(&testInfo->entryMsgQueue);
+    ThreadPool_joinAll(&workerThreadPool);
+  }
+  else
+  {
+    AUTOFREE_REMOVE(&autoFreeList,buffer);
+    free(buffer);
+  }
 
   // close archive
   (void)Archive_close(&archiveHandle,FALSE);

@@ -2412,7 +2412,6 @@ LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
     }
     else if (offset < storageHandle->sftp.index)
     {
-
       skip = storageHandle->sftp.index-offset;
       if (skip > 0LL)
       {

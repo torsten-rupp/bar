@@ -1882,6 +1882,113 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
 }
 
 /***********************************************************************\
+* Name   : convertEntry
+* Purpose: convert single entry
+* Input  : sourceArchiveHandle - source archive handle
+*          archiveEntryType    - archive entry type
+*          convertInfo         - convert info
+*          buffer              - buffer for temporary data
+*          bufferSize          - size of data buffer
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors convertEntry(ArchiveHandle     *sourceArchiveHandle,
+                          ArchiveEntryTypes archiveEntryType,
+                          ConvertInfo       *convertInfo,
+                          byte              *buffer,
+                          uint              bufferSize
+                         )
+{
+  assert(sourceArchiveHandle != NULL);
+  assert(convertInfo != NULL);
+  assert(buffer != NULL);
+
+  Errors error = ERROR_UNKNOWN;
+  switch (archiveEntryType)
+  {
+    case ARCHIVE_ENTRY_TYPE_NONE:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+    case ARCHIVE_ENTRY_TYPE_FILE:
+      error = convertFileEntry(sourceArchiveHandle,
+                               &convertInfo->destinationArchiveHandle,
+                               convertInfo->newJobOptions,
+                               buffer,
+                               bufferSize
+                              );
+      break;
+    case ARCHIVE_ENTRY_TYPE_IMAGE:
+      error = convertImageEntry(sourceArchiveHandle,
+                                &convertInfo->destinationArchiveHandle,
+                                convertInfo->newJobOptions,
+                                buffer,
+                                bufferSize
+                               );
+      break;
+    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      error = convertDirectoryEntry(sourceArchiveHandle,
+                                    &convertInfo->destinationArchiveHandle,
+                                    convertInfo->newJobOptions
+                                   );
+      break;
+    case ARCHIVE_ENTRY_TYPE_LINK:
+      error = convertLinkEntry(sourceArchiveHandle,
+                               &convertInfo->destinationArchiveHandle,
+                               convertInfo->newJobOptions
+                              );
+      break;
+    case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      error = convertHardLinkEntry(sourceArchiveHandle,
+                                   &convertInfo->destinationArchiveHandle,
+                                   convertInfo->newJobOptions,
+                                   buffer,
+                                   bufferSize
+                                  );
+      break;
+    case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      error = convertSpecialEntry(sourceArchiveHandle,
+                                  &convertInfo->destinationArchiveHandle,
+                                  convertInfo->newJobOptions
+                                 );
+      break;
+    case ARCHIVE_ENTRY_TYPE_META:
+      error = convertMetaEntry(sourceArchiveHandle,
+                               &convertInfo->destinationArchiveHandle,
+                               convertInfo->newJobUUID,
+                               convertInfo->newEntityUUID,
+                               convertInfo->newCreatedDateTime,
+                               convertInfo->newJobOptions
+                              );
+      break;
+    case ARCHIVE_ENTRY_TYPE_SALT:
+    case ARCHIVE_ENTRY_TYPE_KEY:
+      assert(!CmdOption_isSet(globalOptions.cryptAlgorithms));
+      error = Archive_transferEntry(sourceArchiveHandle,
+                                    &convertInfo->destinationArchiveHandle
+                                   );
+      break;
+    case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #else
+        error = Archive_skipNextEntry(sourceArchiveHandle);
+      #endif /* NDEBUG */
+      break;
+    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : convertThreadCode
 * Purpose: convert worker thread
 * Input  : convertInfo - convert info structure
@@ -1901,7 +2008,6 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
   assert(convertInfo != NULL);
 
   // init variables
-//  printableStorageName = String_new();
   buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
@@ -1914,7 +2020,6 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
   {
     assert(entryMsg.archiveHandle != NULL);
     assert(entryMsg.archiveCryptInfo != NULL);
-//fprintf(stderr,"%s, %d: %p %d %"PRIu64"\n",__FILE__,__LINE__,pthread_self(),entryMsg.archiveEntryType,entryMsg.offset);
     if (   ((convertInfo->failError == ERROR_NONE) || !convertInfo->newJobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(convertInfo)
@@ -1962,84 +2067,12 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
         break;
       }
 
-      switch (entryMsg.archiveEntryType)
-      {
-        case ARCHIVE_ENTRY_TYPE_NONE:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNREACHABLE();
-          #endif /* NDEBUG */
-          break; /* not reached */
-        case ARCHIVE_ENTRY_TYPE_FILE:
-          error = convertFileEntry(&sourceArchiveHandle,
-                                   &convertInfo->destinationArchiveHandle,
-                                   convertInfo->newJobOptions,
-                                   buffer,
-                                   BUFFER_SIZE
-                                  );
-          break;
-        case ARCHIVE_ENTRY_TYPE_IMAGE:
-          error = convertImageEntry(&sourceArchiveHandle,
-                                    &convertInfo->destinationArchiveHandle,
-                                    convertInfo->newJobOptions,
-                                    buffer,
-                                    BUFFER_SIZE
-                                   );
-          break;
-        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-          error = convertDirectoryEntry(&sourceArchiveHandle,
-                                        &convertInfo->destinationArchiveHandle,
-                                        convertInfo->newJobOptions
-                                       );
-          break;
-        case ARCHIVE_ENTRY_TYPE_LINK:
-          error = convertLinkEntry(&sourceArchiveHandle,
-                                   &convertInfo->destinationArchiveHandle,
-                                   convertInfo->newJobOptions
-                                  );
-          break;
-        case ARCHIVE_ENTRY_TYPE_HARDLINK:
-          error = convertHardLinkEntry(&sourceArchiveHandle,
-                                       &convertInfo->destinationArchiveHandle,
-                                       convertInfo->newJobOptions,
-                                       buffer,
-                                       BUFFER_SIZE
-                                      );
-          break;
-        case ARCHIVE_ENTRY_TYPE_SPECIAL:
-          error = convertSpecialEntry(&sourceArchiveHandle,
-                                      &convertInfo->destinationArchiveHandle,
-                                      convertInfo->newJobOptions
-                                     );
-          break;
-        case ARCHIVE_ENTRY_TYPE_META:
-          error = convertMetaEntry(&sourceArchiveHandle,
-                                   &convertInfo->destinationArchiveHandle,
-                                   convertInfo->newJobUUID,
-                                   convertInfo->newEntityUUID,
-                                   convertInfo->newCreatedDateTime,
-                                   convertInfo->newJobOptions
-                                  );
-          break;
-        case ARCHIVE_ENTRY_TYPE_SALT:
-        case ARCHIVE_ENTRY_TYPE_KEY:
-          assert(!CmdOption_isSet(globalOptions.cryptAlgorithms));
-          error = Archive_transferEntry(&sourceArchiveHandle,
-                                        &convertInfo->destinationArchiveHandle
-                                       );
-          break;
-        case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNREACHABLE();
-          #else
-            error = Archive_skipNextEntry(&sourceArchiveHandle);
-          #endif /* NDEBUG */
-          break;
-        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNREACHABLE();
-          #endif /* NDEBUG */
-          break; /* not reached */
-      }
+      error = convertEntry(&sourceArchiveHandle,
+                           entryMsg.archiveEntryType,
+                           convertInfo,
+                           buffer,
+                           BUFFER_SIZE
+                          );
       if (error != ERROR_NONE)
       {
         if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
@@ -2089,6 +2122,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   AutoFreeList         autoFreeList;
   String               printableStorageName;
   uint                 convertThreadCount;
+  byte                 *buffer;
   Errors               error;
   String               baseName;
   Thread               storageThread;
@@ -2320,14 +2354,27 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   }
   AUTOFREE_ADD(&autoFreeList,&storageThread,{ MsgQueue_setEndOfMsg(&convertInfo->storageMsgQueue); Thread_join(&storageThread); Thread_done(&storageThread); });
 
+  // start convert threads/allo0cate buffer
 // TODO: cannot be done multi-threaded because chunks-ordering is important and must not be changed! do multiple storages in parallel
-  // start convert threads
-  MsgQueue_reset(&convertInfo->entryMsgQueue);
 //  convertThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
 convertThreadCount = 1;
-  for (i = 0; i < convertThreadCount; i++)
+  if (convertThreadCount > 1)
   {
-    ThreadPool_run(&workerThreadPool,convertThreadCode,convertInfo);
+    MsgQueue_reset(&convertInfo->entryMsgQueue);
+    for (i = 0; i < convertThreadCount; i++)
+    {
+      ThreadPool_run(&workerThreadPool,convertThreadCode,convertInfo);
+    }
+    buffer = NULL;
+  }
+  else
+  {
+    buffer = (byte*)malloc(BUFFER_SIZE);
+    if (buffer == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   }
 
   // output info
@@ -2367,17 +2414,10 @@ convertThreadCount = 1;
 
     // convert entries
 //fprintf(stderr,"%s:%d: %s archiveEntryType=%s %llu %llu\n",__FILE__,__LINE__,String_cString(printableStorageName),Archive_archiveEntryTypeToString(archiveEntryType),offset,size);
-    switch (archiveEntryType)
+    if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
     {
-      case ARCHIVE_ENTRY_TYPE_FILE:
-      case ARCHIVE_ENTRY_TYPE_IMAGE:
-      case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-      case ARCHIVE_ENTRY_TYPE_LINK:
-      case ARCHIVE_ENTRY_TYPE_HARDLINK:
-      case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      case ARCHIVE_ENTRY_TYPE_META:
-      case ARCHIVE_ENTRY_TYPE_SALT:
-      case ARCHIVE_ENTRY_TYPE_KEY:
+      if (convertThreadCount > 1)
+      {
         // send entry to convert threads
 //TODO: increment on multiple archives and when threads are not restarted each time
         entryMsg.archiveIndex     = 1;
@@ -2397,36 +2437,49 @@ convertThreadCount = 1;
           if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
           break;
         }
+      }
+      else
+      {
+        error = convertEntry(&sourceArchiveHandle,
+                             archiveEntryType,
+                             convertInfo,
+                             buffer,
+                             BUFFER_SIZE
+                            );
+      }
+    }
+    else
+    {
+      if (!convertInfo->newJobOptions->skipVerifySignaturesFlag)
+      {
+        // check signature
+        error = Archive_verifySignatureEntry(&sourceArchiveHandle,sourceLastSignatureOffset,&sourceAllCryptSignatureState);
+      }
+      else
+      {
+        // skip signature
+        error = Archive_skipNextEntry(&sourceArchiveHandle);
+      }
+      if (error != ERROR_NONE)
+      {
+        if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
         break;
-      case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-        if (!convertInfo->newJobOptions->skipVerifySignaturesFlag)
-        {
-          // check signature
-          error = Archive_verifySignatureEntry(&sourceArchiveHandle,sourceLastSignatureOffset,&sourceAllCryptSignatureState);
-        }
-        else
-        {
-          // skip signature
-          error = Archive_skipNextEntry(&sourceArchiveHandle);
-        }
-        if (error != ERROR_NONE)
-        {
-          if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
-          break;
-        }
-        sourceLastSignatureOffset = Archive_tell(&sourceArchiveHandle);
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
+      }
+      sourceLastSignatureOffset = Archive_tell(&sourceArchiveHandle);
     }
   }
 
   // wait for convert threads
-  MsgQueue_setEndOfMsg(&convertInfo->entryMsgQueue);
-  ThreadPool_joinAll(&workerThreadPool);
+  if (convertThreadCount > 1)
+  {
+    MsgQueue_setEndOfMsg(&convertInfo->entryMsgQueue);
+    ThreadPool_joinAll(&workerThreadPool);
+  }
+  else
+  {
+    AUTOFREE_REMOVE(&autoFreeList,buffer);
+    free(buffer);
+  }
 
   // close destination archive
   AUTOFREE_REMOVE(&autoFreeList,&convertInfo->destinationArchiveHandle);
@@ -2444,7 +2497,7 @@ convertThreadCount = 1;
   }
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-  // wait for storage thread
+  // wait for storage thread/free buffer
   AUTOFREE_REMOVE(&autoFreeList,&storageThread);
   MsgQueue_setEndOfMsg(&convertInfo->storageMsgQueue);
   if (!Thread_join(&storageThread))
