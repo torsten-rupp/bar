@@ -1744,6 +1744,114 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
 }
 
 /***********************************************************************\
+* Name   : compareEntry
+* Purpose: compare single entry
+* Input  : archiveHandle    - archive handle
+*          archiveEntryType - archive entry type
+*          compareInfo      - compare info
+*          buffer0,buffer1  - buffers for temporary data
+*          bufferSize       - size of data buffer
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors compareEntry(ArchiveHandle     *archiveHandle,
+                          ArchiveEntryTypes archiveEntryType,
+                          CompareInfo       *compareInfo,
+                          byte              *buffer0,
+                          byte              *buffer1,
+                          uint              bufferSize
+                         )
+{
+  assert(archiveHandle != NULL);
+  assert(compareInfo != NULL);
+  assert(buffer0 != NULL);
+  assert(buffer1 != NULL);
+
+  Errors error = ERROR_UNKNOWN;
+  switch (archiveEntryType)
+  {
+    case ARCHIVE_ENTRY_TYPE_NONE:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+    case ARCHIVE_ENTRY_TYPE_FILE:
+      error = compareFileEntry(archiveHandle,
+                               compareInfo->includeEntryList,
+                               compareInfo->excludePatternList,
+                               &compareInfo->fragmentListLock,
+                               compareInfo->fragmentList,
+                               buffer0,
+                               buffer1,
+                               bufferSize
+                              );
+      break;
+    case ARCHIVE_ENTRY_TYPE_IMAGE:
+      error = compareImageEntry(archiveHandle,
+                                compareInfo->includeEntryList,
+                                compareInfo->excludePatternList,
+                                &compareInfo->fragmentListLock,
+                                compareInfo->fragmentList,
+                                buffer0,
+                                buffer1,
+                                bufferSize
+                               );
+      break;
+    case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+      error = compareDirectoryEntry(archiveHandle,
+                                    compareInfo->includeEntryList,
+                                    compareInfo->excludePatternList
+                                   );
+      break;
+    case ARCHIVE_ENTRY_TYPE_LINK:
+      error = compareLinkEntry(archiveHandle,
+                               compareInfo->includeEntryList,
+                               compareInfo->excludePatternList
+                              );
+      break;
+    case ARCHIVE_ENTRY_TYPE_HARDLINK:
+      error = compareHardLinkEntry(archiveHandle,
+                                   compareInfo->includeEntryList,
+                                   compareInfo->excludePatternList,
+                                   &compareInfo->fragmentListLock,
+                                   compareInfo->fragmentList,
+                                   buffer0,
+                                   buffer1,
+                                   bufferSize
+                                  );
+      break;
+    case ARCHIVE_ENTRY_TYPE_SPECIAL:
+      error = compareSpecialEntry(archiveHandle,
+                                  compareInfo->includeEntryList,
+                                  compareInfo->excludePatternList
+                                 );
+      break;
+    case ARCHIVE_ENTRY_TYPE_META:
+      error = Archive_skipNextEntry(archiveHandle);
+      break;
+    case ARCHIVE_ENTRY_TYPE_SALT:
+    case ARCHIVE_ENTRY_TYPE_KEY:
+    case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #else
+        error = Archive_skipNextEntry(archiveHandle);
+      #endif /* NDEBUG */
+      break;
+    case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+      #ifndef NDEBUG
+        HALT_INTERNAL_ERROR_UNREACHABLE();
+      #endif /* NDEBUG */
+      break; /* not reached */
+  }
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : compareThreadCode
 * Purpose: compare worker thread
 * Input  : compareInfo - compare info structure
@@ -1831,82 +1939,13 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         break;
       }
 
-      switch (entryMsg.archiveEntryType)
-      {
-        case ARCHIVE_ENTRY_TYPE_NONE:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNREACHABLE();
-          #endif /* NDEBUG */
-          break; /* not reached */
-        case ARCHIVE_ENTRY_TYPE_FILE:
-          error = compareFileEntry(&archiveHandle,
-                                   compareInfo->includeEntryList,
-                                   compareInfo->excludePatternList,
-                                   &compareInfo->fragmentListLock,
-                                   compareInfo->fragmentList,
-                                   buffer0,
-                                   buffer1,
-                                   BUFFER_SIZE
-                                  );
-          break;
-        case ARCHIVE_ENTRY_TYPE_IMAGE:
-          error = compareImageEntry(&archiveHandle,
-                                    compareInfo->includeEntryList,
-                                    compareInfo->excludePatternList,
-                                    &compareInfo->fragmentListLock,
-                                    compareInfo->fragmentList,
-                                    buffer0,
-                                    buffer1,
-                                    BUFFER_SIZE
-                                   );
-          break;
-        case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-          error = compareDirectoryEntry(&archiveHandle,
-                                        compareInfo->includeEntryList,
-                                        compareInfo->excludePatternList
-                                       );
-          break;
-        case ARCHIVE_ENTRY_TYPE_LINK:
-          error = compareLinkEntry(&archiveHandle,
-                                   compareInfo->includeEntryList,
-                                   compareInfo->excludePatternList
-                                  );
-          break;
-        case ARCHIVE_ENTRY_TYPE_HARDLINK:
-          error = compareHardLinkEntry(&archiveHandle,
-                                       compareInfo->includeEntryList,
-                                       compareInfo->excludePatternList,
-                                       &compareInfo->fragmentListLock,
-                                       compareInfo->fragmentList,
-                                       buffer0,
-                                       buffer1,
-                                       BUFFER_SIZE
-                                      );
-          break;
-        case ARCHIVE_ENTRY_TYPE_SPECIAL:
-          error = compareSpecialEntry(&archiveHandle,
-                                      compareInfo->includeEntryList,
-                                      compareInfo->excludePatternList
-                                     );
-          break;
-        case ARCHIVE_ENTRY_TYPE_META:
-          error = Archive_skipNextEntry(&archiveHandle);
-          break;
-        case ARCHIVE_ENTRY_TYPE_SALT:
-        case ARCHIVE_ENTRY_TYPE_KEY:
-        case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNREACHABLE();
-          #else
-            error = Archive_skipNextEntry(&archiveHandle);
-          #endif /* NDEBUG */
-          break;
-        case ARCHIVE_ENTRY_TYPE_UNKNOWN:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNREACHABLE();
-          #endif /* NDEBUG */
-          break; /* not reached */
-      }
+      error = compareEntry(&archiveHandle,
+                           entryMsg.archiveEntryType,
+                           compareInfo,
+                           buffer0,
+                           buffer1,
+                           BUFFER_SIZE
+                          );
       if (error != ERROR_NONE)
       {
         if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
@@ -1957,6 +1996,7 @@ LOCAL Errors compareArchive(CompareInfo      *compareInfo,
   AutoFreeList         autoFreeList;
   String               printableStorageName;
   uint                 compareThreadCount;
+  byte                 *buffer0,*buffer1;
   StorageInfo          storageInfo;
   Errors               error;
   uint                 i;
@@ -2080,12 +2120,32 @@ NULL, // masterSocketHandle
     }
   }
 
-  // start compare threads
-  MsgQueue_reset(&compareInfo->entryMsgQueue);
+  // start compare threads/allocate buffers
   compareThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-  for (i = 0; i < compareThreadCount; i++)
+  if (compareThreadCount > 1)
   {
-    ThreadPool_run(&workerThreadPool,compareThreadCode,compareInfo);
+    MsgQueue_reset(&compareInfo->entryMsgQueue);
+    for (i = 0; i < compareThreadCount; i++)
+    {
+      ThreadPool_run(&workerThreadPool,compareThreadCode,compareInfo);
+    }
+    buffer0 = NULL;
+    buffer1 = NULL;
+  }
+  else
+  {
+    buffer0 = (byte*)malloc(BUFFER_SIZE);
+    if (buffer0 == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    buffer1 = (byte*)malloc(BUFFER_SIZE);
+    if (buffer1 == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+    AUTOFREE_ADD(&autoFreeList,buffer1,{ free(buffer1); });
+    AUTOFREE_ADD(&autoFreeList,buffer0,{ free(buffer0); });
   }
 
   // output info
@@ -2124,24 +2184,37 @@ NULL, // masterSocketHandle
 
     if (archiveEntryType != ARCHIVE_ENTRY_TYPE_SIGNATURE)
     {
-      // send entry to test threads
+      if (compareThreadCount > 1)
+      {
+        // send entry to test threads
 //TODO: increment on multiple archives and when threads are not restarted each time
-      entryMsg.archiveIndex     = 1;
-      entryMsg.archiveHandle    = &archiveHandle;
-      entryMsg.archiveEntryType = archiveEntryType;
-      entryMsg.archiveCryptInfo = archiveCryptInfo;
-      entryMsg.offset           = offset;
-      if (!MsgQueue_put(&compareInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
-      {
-        HALT_INTERNAL_ERROR("Send message to compare threads fail!");
-      }
+        entryMsg.archiveIndex     = 1;
+        entryMsg.archiveHandle    = &archiveHandle;
+        entryMsg.archiveEntryType = archiveEntryType;
+        entryMsg.archiveCryptInfo = archiveCryptInfo;
+        entryMsg.offset           = offset;
+        if (!MsgQueue_put(&compareInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+        {
+          HALT_INTERNAL_ERROR("Send message to compare threads fail!");
+        }
 
-      // next entry
-      error = Archive_skipNextEntry(&archiveHandle);
-      if (error != ERROR_NONE)
+        // next entry
+        error = Archive_skipNextEntry(&archiveHandle);
+        if (error != ERROR_NONE)
+        {
+          if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
+          break;
+        }
+      }
+      else
       {
-        if (compareInfo->failError == ERROR_NONE) compareInfo->failError = error;
-        break;
+        error = compareEntry(&archiveHandle,
+                             archiveEntryType,
+                             compareInfo,
+                             buffer0,
+                             buffer1,
+                             BUFFER_SIZE
+                            );
       }
     }
     else
@@ -2165,9 +2238,19 @@ NULL, // masterSocketHandle
     }
   }
 
-  // wait for compare threads
-  MsgQueue_setEndOfMsg(&compareInfo->entryMsgQueue);
-  ThreadPool_joinAll(&workerThreadPool);
+  // wait for compare threads/free buffer
+  if (compareThreadCount > 1)
+  {
+    MsgQueue_setEndOfMsg(&compareInfo->entryMsgQueue);
+    ThreadPool_joinAll(&workerThreadPool);
+  }
+  else
+  {
+    AUTOFREE_REMOVE(&autoFreeList,buffer1);
+    AUTOFREE_REMOVE(&autoFreeList,buffer0);
+    free(buffer1);
+    free(buffer0);
+  }
 
   // close archive
   Archive_close(&archiveHandle,FALSE);

@@ -4599,13 +4599,6 @@ int main(int argc, const char *argv[])
   if (error != ERROR_NONE)
   {
     UNUSED_RESULT(fprintf(stderr,"ERROR: Cannot initialize program resources (error: %s)\n",Error_getText(error)));
-    #ifndef NDEBUG
-      debugResourceDone();
-      File_debugDone();
-      Array_debugDone();
-      String_debugDone();
-      List_debugDone();
-    #endif /* not NDEBUG */
     return errorToExitcode(error);
   }
 
@@ -4621,7 +4614,7 @@ int main(int argc, const char *argv[])
      )
   {
     doneAll();
-    return ERROR_INVALID_ARGUMENT;
+    return EXITCODE_INVALID_ARGUMENT;
   }
 
   // init encoding converter
@@ -4632,7 +4625,7 @@ int main(int argc, const char *argv[])
                Error_getText(error)
               );
     doneAll();
-    return ERROR_INIT;
+    return errorToExitcode(error);
   }
 
   // change working directory
@@ -4647,7 +4640,7 @@ int main(int argc, const char *argv[])
                 );
       doneEncodingConverter();
       doneAll();
-      return ERROR_INIT;
+      return errorToExitcode(error);
     }
   }
 
@@ -4673,11 +4666,6 @@ int main(int argc, const char *argv[])
   doneEncodingConverter();
   doneAll();
   #ifndef NDEBUG
-    debugResourceDone();
-    File_debugDone();
-    Array_debugDone();
-    String_debugDone();
-    List_debugDone();
     UNUSED_RESULT(fprintf(stderr,
                           "DEBUG: %s exitcode %d\n",
                           (globalOptions.serverMode == SERVER_MODE_MASTER)

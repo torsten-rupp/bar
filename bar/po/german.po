@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-04-28 08:52+0200\n"
+"POT-Creation-Date: 2024-07-01 02:58+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -21,22 +21,22 @@ msgstr ""
 msgid "No BAR header found! This may be a broken archive or not an archive"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_compare.c:2409
+#: /home/torsten/projects/bar/bar/commands_compare.c:2492
 #, c-format
 msgid "Compare fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_convert.c:2663
+#: /home/torsten/projects/bar/bar/commands_convert.c:2716
 #, c-format
 msgid "Convert fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_restore.c:3980
+#: /home/torsten/projects/bar/bar/commands_restore.c:4042
 #, c-format
 msgid "Restore fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_test.c:1776
+#: /home/torsten/projects/bar/bar/commands_test.c:1847
 msgid "Test fail: {0}\n"
 msgstr ""
 
@@ -961,92 +961,104 @@ msgstr ""
 msgid "insufficient database version"
 msgstr ""
 
-#: errors.def:1022
+#: errors.def:1025
 msgid "unknown version of index"
 msgstr ""
 
-#: errors.def:1026
+#: errors.def:1032
 msgid "missing table"
 msgstr ""
 
-#: errors.def:1033
+#: errors.def:1039
 msgid "missing column"
 msgstr ""
 
-#: errors.def:1040
+#: errors.def:1046
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:1047
+#: errors.def:1053
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:1054
+#: errors.def:1060
 msgid "database bind failed"
 msgstr ""
 
-#: errors.def:1061
+#: errors.def:1067
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:1065
+#: errors.def:1071
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:1066
+#: errors.def:1072
 msgid "index not found"
 msgstr ""
 
-#: errors.def:1067
+#: errors.def:1073
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:1071
+#: errors.def:1077
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:1078
+#: errors.def:1084
 msgid "parse index id failed"
 msgstr ""
 
-#: errors.def:1085
+#: errors.def:1091
 msgid "database is locked"
 msgstr ""
 
-#: errors.def:1089
+#: errors.def:1095
 msgid "database busy"
 msgstr ""
 
-#: errors.def:1090
+#: errors.def:1096
 msgid "database operation interrupted"
 msgstr ""
 
-#: errors.def:1094
+#: errors.def:1100
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:1098
+#: errors.def:1104
 msgid "database entry not found"
 msgstr ""
 
-#: errors.def:1101
+#: errors.def:1107
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:1102
+#: errors.def:1108
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:1103
+#: errors.def:1109
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:1104
+#: errors.def:1110
 msgid "instance is not a slave"
 msgstr ""
 
-#: errors.def:1107
+#: errors.def:1116
 msgid "create PAR2 checksums fail"
+msgstr ""
+
+#: errors.def:1120
+msgid "invalid block size (multiple of 4)"
+msgstr ""
+
+#: errors.def:1124
+msgid "PAR2 block size too small"
+msgstr ""
+
+#: errors.def:1128
+msgid "too many PAR2 blocks (max. 32768)"
 msgstr ""
 
 #~ msgid "Cannot get file info for configuration file '%s' (error: %s)\n"
