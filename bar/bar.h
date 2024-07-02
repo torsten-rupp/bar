@@ -60,38 +60,6 @@ extern ThreadPool workerThreadPool;
 
 /****************************** Macros *********************************/
 
-/***********************************************************************\
-* Name   : BYTES_SHORT
-* Purpose: return short number of bytes
-* Input  : n - number
-* Output : -
-* Return : short number
-* Notes  : -
-\***********************************************************************/
-
-#define BYTES_SHORT(n) (((n)>(1024LL*1024LL*1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL*1024LL): \
-                        ((n)>(       1024LL*1024LL*1024LL))?(double)(n)/(double)(       1024LL*1024LL*1024LL): \
-                        ((n)>(              1024LL*1024LL))?(double)(n)/(double)(              1024LL*1024LL): \
-                        ((n)>                      1024LL )?(double)(n)/(double)(                     1024LL): \
-                        (double)(n) \
-                       )
-
-/***********************************************************************\
-* Name   : BYTES_UNIT
-* Purpose: return unit for short number of bytes
-* Input  : n - number
-* Output : -
-* Return : unit string
-* Notes  : -
-\***********************************************************************/
-
-#define BYTES_UNIT(n) (((n)>(1024LL*1024LL*1024LL*1024LL))?"TB": \
-                       ((n)>(       1024LL*1024LL*1024LL))?"GB": \
-                       ((n)>(              1024LL*1024LL))?"MB": \
-                       ((n)>                      1024LL )?"KB": \
-                       "bytes" \
-                      )
-
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/

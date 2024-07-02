@@ -1150,14 +1150,40 @@ class Units
   {
     String result;
 
-    if      (n >= P) result =  BARControl.tr("PBytes");
-    else if (n >= T) result =  BARControl.tr("TBytes");
-    else if (n >= G) result =  BARControl.tr("GBytes");
-    else if (n >= M) result =  BARControl.tr("MBytes");
-    else if (n >= K) result =  BARControl.tr("KBytes");
+    if      (n >= P) result =  BARControl.tr("PiBytes");
+    else if (n >= T) result =  BARControl.tr("TiBytes");
+    else if (n >= G) result =  BARControl.tr("GiBytes");
+    else if (n >= M) result =  BARControl.tr("MiBytes");
+    else if (n >= K) result =  BARControl.tr("KiBytes");
     else             result =  BARControl.tr("bytes");
 
     return result;
+  }
+
+  /** get max. byte size unit text size
+   * @param control widget
+   * @param suffix suffix
+   * @return max. text size
+   */
+  public static Point getMaxByteUnitTextSize(Control control, String suffix)
+  {
+    return Widgets.getTextSize(control,new String[]{BARControl.tr("bytes")  +suffix,
+                                                    BARControl.tr("KiBytes")+suffix,
+                                                    BARControl.tr("MiBytes")+suffix,
+                                                    BARControl.tr("GiBytes")+suffix,
+                                                    BARControl.tr("TiBytes")+suffix,
+                                                    BARControl.tr("PiBytes")+suffix
+                                                   }
+                              );
+  }
+
+  /** get max. byte size unit text size
+   * @param control widget
+   * @return max. text size
+   */
+  public static Point getMaxByteUnitTextSize(Control control)
+  {
+    return getMaxByteUnitTextSize(control,"");
   }
 
   /** get byte size short unit
@@ -1168,14 +1194,40 @@ class Units
   {
     String result;
 
-    if      (n >= P) result =  "PB";
-    else if (n >= T) result =  "TB";
-    else if (n >= G) result =  "GB";
-    else if (n >= M) result =  "MB";
-    else if (n >= K) result =  "KB";
+    if      (n >= P) result =  "PiB";
+    else if (n >= T) result =  "TiB";
+    else if (n >= G) result =  "GiB";
+    else if (n >= M) result =  "MiB";
+    else if (n >= K) result =  "KiB";
     else             result =  "B";
 
     return result;
+  }
+
+  /** get max. byte size short unit text size
+   * @param control widget
+   * @param suffix suffix
+   * @return max. text size
+   */
+  public static Point getMaxByteShortUnitTextSize(Control control, String suffix)
+  {
+    return Widgets.getTextSize(control,new String[]{BARControl.tr("B")  +suffix,
+                                                    BARControl.tr("KiB")+suffix,
+                                                    BARControl.tr("MiB")+suffix,
+                                                    BARControl.tr("GiB")+suffix,
+                                                    BARControl.tr("TiB")+suffix,
+                                                    BARControl.tr("PiB")+suffix
+                                                   }
+                              );
+  }
+
+  /** get max. byte size short unit text size
+   * @param control widget
+   * @return max. text size
+   */
+  public static Point getMaxByteShortUnitTextSize(Control control)
+  {
+    return getMaxByteShortUnitTextSize(control,"");
   }
 
   /** parse byte size string
@@ -1190,43 +1242,43 @@ class Units
     // try to parse with default locale
     try
     {
-      if      (string.endsWith("PB"))
+      if      (string.endsWith("PB") || string.endsWith("PiB"))
       {
         return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*P);
       }
-      else if (string.endsWith("P"))
+      else if (string.endsWith("P") || string.endsWith("Pi"))
       {
         return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*P);
       }
-      else if  (string.endsWith("TB"))
+      else if  (string.endsWith("TB") || string.endsWith("TiB"))
       {
         return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*T);
       }
-      else if (string.endsWith("T"))
+      else if (string.endsWith("T") || string.endsWith("Ti"))
       {
         return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*T);
       }
-      else if (string.endsWith("GB"))
+      else if (string.endsWith("GB") || string.endsWith("GiB"))
       {
         return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*G);
       }
-      else if (string.endsWith("G"))
+      else if (string.endsWith("G") || string.endsWith("Gi"))
       {
         return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*G);
       }
-      else if (string.endsWith("MB"))
+      else if (string.endsWith("MB") || string.endsWith("MiB"))
       {
         return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*M);
       }
-      else if (string.endsWith("M"))
+      else if (string.endsWith("M") || string.endsWith("Mi"))
       {
         return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*M);
       }
-      else if (string.endsWith("KB"))
+      else if (string.endsWith("KB") || string.endsWith("KiB"))
       {
         return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-2)).doubleValue()*K);
       }
-      else if (string.endsWith("K"))
+      else if (string.endsWith("K") || string.endsWith("Ki"))
       {
         return (long)(NumberFormat.getInstance().parse(string.substring(0,string.length()-1)).doubleValue()*K);
       }

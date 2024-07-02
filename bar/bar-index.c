@@ -456,11 +456,11 @@ LOCAL const char *getByteUnitShort(uint64 n)
 {
   const char *shortUnit;
 
-  if      (n >= 1024LL*1024LL*1024LL*1024LL*1024LL) shortUnit = "PB";
-  else if (n >=        1024LL*1024LL*1024LL*1024LL) shortUnit = "TB";
-  else if (n >=               1024LL*1024LL*1024LL) shortUnit = "GB";
-  else if (n >=                      1024LL*1024LL) shortUnit = "MB";
-  else if (n >=                             1024LL) shortUnit = "KB";
+  if      (n >= 1024LL*1024LL*1024LL*1024LL*1024LL) shortUnit = "PiB";
+  else if (n >=        1024LL*1024LL*1024LL*1024LL) shortUnit = "TiB";
+  else if (n >=               1024LL*1024LL*1024LL) shortUnit = "GiB";
+  else if (n >=                      1024LL*1024LL) shortUnit = "MiB";
+  else if (n >=                             1024LL) shortUnit = "KiB";
   else                                              shortUnit = "bytes";
 
   return shortUnit;

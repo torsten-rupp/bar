@@ -1,6 +1,11 @@
 2024-06-09 24a
   * fixed long blocking of database at clean
   * fixed upgrade database, fixed memory leak
+  * test/compare/extract: reduced thread overhead if only a
+    single thread is used
+  * fixed duplicated error message when parsing command line
+    arguments
+  * fixed byte units
   * BARControl: fixed add unreadable directory content to index
   * BARControl: fixed add single archive to index
 
