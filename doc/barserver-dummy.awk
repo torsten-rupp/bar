@@ -26,7 +26,7 @@ BEGIN {
   next;
 }
 /^[0-9]+ VERSION/ {
-  send($1,1,0,"major=7 minor=0 mode=MASTER");
+  send($1,1,0,"major=8 minor=0 mode=MASTER");
   next;
 }
 /^[0-9]+ GET name=PATH_SEPARATOR/ {
@@ -71,7 +71,10 @@ BEGIN {
                cryptType=asymmetric \
                cryptPasswordMode=ask \
                lastExecutedDateTime=0 \
-               lastErrorMessage='' estimatedRestTime=0 \
+               estimatedRestTime=0 \
+               volumeRequest=none \
+               messageCode=none \
+               lastErrorMessage='' \
               ");
   send($1,0,0,"jobUUID=2 \
                master='' \
@@ -90,7 +93,10 @@ BEGIN {
                cryptType=symmetric \
                cryptPasswordMode=ask \
                lastExecutedDateTime=1665331796 \
-               lastErrorMessage='' estimatedRestTime=0 \
+               estimatedRestTime=0 \
+               volumeRequest=none \
+               messageCode=none \
+               lastErrorMessage='' \
               ");
   send($1,0,0,"jobUUID=3 \
                master='' \
@@ -109,7 +115,10 @@ BEGIN {
                cryptType=symmetric \
                cryptPasswordMode=ask \
                lastExecutedDateTime=0 \
-               lastErrorMessage='' estimatedRestTime=3921 \
+               estimatedRestTime=3921 \
+               volumeRequest=none \
+               messageCode=none \
+               lastErrorMessage='' \
               ");
   send($1,0,0,"jobUUID=4 \
                master='' \
@@ -127,8 +136,11 @@ BEGIN {
                cryptAlgorithm=none \
                cryptType=symmetric \
                cryptPasswordMode=ask \
+               estimatedRestTime=0 \
+               volumeRequest=none \
+               messageCode=none \
                lastExecutedDateTime=0 \
-               lastErrorMessage='' estimatedRestTime=0 \
+               lastErrorMessage='' \
               ");
   send($1,0,0,"jobUUID=7 \
                master='' \
@@ -146,8 +158,11 @@ BEGIN {
                cryptAlgorithm=AES256 \
                cryptType=symmetric \
                cryptPasswordMode=ask \
+               estimatedRestTime=0 \
+               volumeRequest=none \
+               messageCode=none \
                lastExecutedDateTime=0 \
-               lastErrorMessage='' estimatedRestTime=0 \
+               lastErrorMessage='' \
               ");
   send($1,0,0,"jobUUID=8 \
                master='' \
@@ -165,8 +180,14 @@ BEGIN {
                cryptAlgorithm=AES256 \
                cryptType=symmetric \
                cryptPasswordMode=ask \
+               estimatedRestTime=0 \
+               volumeRequest=none \
+               messageCode=none \
+               estimatedRestTime=0 \
+               volumeRequest=none \
+               messageCode=none \
                lastExecutedDateTime=0 \
-               lastErrorMessage='' estimatedRestTime=0 \
+               lastErrorMessage='' \
               ");
   send($1,1,0);
   next;
@@ -273,19 +294,19 @@ BEGIN {
   next;
 }
 /^[0-9]+ SCHEDULE_LIST/ {
-  send($1,0,0,"scheduleUUID=5e1cbe0b-f54b-45bc-89c1-469111e81ee3 archiveType=full date=*-*-01 weekDays=* time=23:00 interval=0 beginTime=*:* endTime=*:* customText='' testCreatedArchives=no noStorage=no enabled=yes lastExecutedDateTime=0 totalEntities=0 totalStorageCount=0 totalEntryCount=0 totalEntrySize=0");
-  send($1,0,0,"scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 archiveType=incremental date=*-*-* weekDays=* time=23:00 interval=0 beginTime=*:* endTime=*:* customText='' testCreatedArchives=no noStorage=no enabled=yes lastExecutedDateTime=1582346747 totalEntities=12 totalStorageCount=7 totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"jobName='' jobUUID=1 scheduleUUID=5e1cbe0b-f54b-45bc-89c1-469111e81ee3 archiveType=full date=*-*-01 weekDays=* time=23:00 interval=0 beginTime=*:* endTime=*:* customText='' testCreatedArchives=no noStorage=no enabled=yes lastExecutedDateTime=0 nextExecutedDateTime=0 totalEntities=0 totalStorageCount=0 totalEntryCount=0 totalEntrySize=0");
+  send($1,0,0,"jobName='' jobUUID=1 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 archiveType=incremental date=*-*-* weekDays=* time=23:00 interval=0 beginTime=*:* endTime=*:* customText='' testCreatedArchives=no noStorage=no enabled=yes lastExecutedDateTime=1582346747 nextExecutedDateTime=0 totalEntities=12 totalStorageCount=7 totalEntryCount=0 totalEntrySize=0");
   send($1,1,0);
   next;
 }
 /^[0-9]+ PERSISTENCE_LIST/ {
-  send($1,0,0,"persistenceId=111 archiveType=incremental minKeep=1 maxKeep=4 maxAge=28 size=0");
-  send($1,0,0,"persistenceId=111 entityId=3330 createdDateTime=1582342898 size=181545558 totalEntryCount=5493 totalEntrySize=1659806641 inTransit=no");
-  send($1,0,0,"persistenceId=111 entityId=3138 createdDateTime=1582236736 size=0 totalEntryCount=0 totalEntrySize=0 inTransit=no");
-  send($1,0,0,"persistenceId=111 entityId=2994 createdDateTime=1582154300 size=0 totalEntryCount=0 totalEntrySize=0 inTransit=no");
-  send($1,0,0,"persistenceId=112 archiveType=full minKeep=1 maxKeep=2 maxAge=90 size=0");
-  send($1,0,0,"persistenceId=113 archiveType=full minKeep=1 maxKeep=2 maxAge=180 size=0");
-  send($1,0,0,"persistenceId=114 archiveType=full minKeep=1 maxKeep=1 maxAge=365 size=0");
+  send($1,0,0,"persistenceId=111 archiveType=incremental minKeep=1 maxKeep=4 maxAge=28 size=0 moveTo=''");
+  send($1,0,0,"persistenceId=111 entityId=3330 createdDateTime=1582342898 size=181545558 moveTo='' totalEntryCount=5493 totalEntrySize=1659806641 inTransit=no");
+  send($1,0,0,"persistenceId=111 entityId=3138 createdDateTime=1582236736 size=0 moveTo='' totalEntryCount=0 totalEntrySize=0 inTransit=no");
+  send($1,0,0,"persistenceId=111 entityId=2994 createdDateTime=1582154300 size=0 moveTo='' totalEntryCount=0 totalEntrySize=0 inTransit=no");
+  send($1,0,0,"persistenceId=112 archiveType=full minKeep=1 maxKeep=2 maxAge=90 size=0 moveTo=''");
+  send($1,0,0,"persistenceId=113 archiveType=full minKeep=1 maxKeep=2 maxAge=180 size=0 moveTo=''");
+  send($1,0,0,"persistenceId=114 archiveType=full minKeep=1 maxKeep=1 maxAge=365 size=0 moveTo=''");
   send($1,1,0);
   next;
 }
@@ -312,7 +333,7 @@ BEGIN {
                storageDoneSize=1700460006 \
                storageTotalSize=2058977288 \
                volumeNumber=0 \
-               volumeProgress=0 \
+               volumeDone=0 \
                volumeRequest=NONE \
                volumeRequestNumber=0 \
                entriesPerSecond=37 \
@@ -324,7 +345,7 @@ BEGIN {
               ");
   next;
 }
-/^[0-9]+ JOB_OPTION_GET jobUUID=.+ name="archive-part-size"/ {
+/^[0-9]+ JOB_OPTION_GET jobUUID.+ name="archive-part-size"/ {
   send($1,1,0,"value=1073741824");
   next;
 }
@@ -337,6 +358,10 @@ BEGIN {
   next;
 }
 /^[0-9]+ JOB_OPTION_GET jobUUID=.+/ {
+  send($1,1,0,"value=''");
+  next;
+}
+/^[0-9]+ JOB_OPTION_SET ./ {
   send($1,1,0,"value=''");
   next;
 }
@@ -388,8 +413,8 @@ BEGIN {
   next;
 }
 /^[0-9]+ INDEX_ENTITY_LIST/ {
-  send($1,0,0,"jobUUID=1 scheduleUUID=1 entityId=2786 archiveType='full' createdDateTime=1582011128 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0 expireDateTime=0");
-  send($1,0,0,"jobUUID=1 scheduleUUID=2 entityId=2802 archiveType='full' createdDateTime=1582021128 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0 expireDateTime=0");
+  send($1,0,0,"jobUUID=1 scheduleUUID=1 entityId=2786 archiveType='full' createdDateTime=1582011128 lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0 expireDateTime=0");
+  send($1,0,0,"jobUUID=1 scheduleUUID=2 entityId=2802 archiveType='full' createdDateTime=1582021128 lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0 expireDateTime=0");
   send($1,0,0,"jobUUID=1 scheduleUUID=3 entityId=2818 archiveType='incremental' createdDateTime=1582031128 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0 expireDateTime=0");
   send($1,1,0);
   next;
@@ -444,18 +469,18 @@ BEGIN {
 /^[0-9]+ INDEX_STORAGE_LIST/ {
   if (restoreSelectFlag==0)
   {
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=66 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=67 name='/media/backup/2020-02-15/system-000.bar' dateTime=1581807232 size=171982692 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581811813 errorMessage='' totalEntryCount=6386 totalEntrySize=1485024576");
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=1154 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=14643 name='/media/backup/2020-02-16/system-000.bar' dateTime=1581891395 size=269795718 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581896270 errorMessage='' totalEntryCount=12010 totalEntrySize=1308150220");
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2562 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=23043 name='/media/backup/2020-02-17/system-000.bar' dateTime=1581977795 size=109502524 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581982741 errorMessage='' totalEntryCount=5471 totalEntrySize=785522513");
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2866 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=27555 name='/media/backup/2020-02-18/system-000.bar' dateTime=1582093564 size=146739802 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582097475 errorMessage='' totalEntryCount=5500 totalEntrySize=1080935743");
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=3330 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=39635 name='/media/backup/2020-02-21/system-000.bar' dateTime=1582342906 size=181545558 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582346743 errorMessage='' totalEntryCount=5493 totalEntrySize=1659806641");
+    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=66 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' createdDateTime=1582342898 archiveType='incremental' storageId=67 name='/media/backup/2020-02-15/system-000.bar' dateTime=1581807232 size=171982692 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581811813 errorMessage='' totalEntryCount=6386 totalEntrySize=1485024576");
+    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=1154 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' createdDateTime=1582342898 archiveType='incremental' storageId=14643 name='/media/backup/2020-02-16/system-000.bar' dateTime=1581891395 size=269795718 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581896270 errorMessage='' totalEntryCount=12010 totalEntrySize=1308150220");
+    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2562 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' createdDateTime=1582342898 archiveType='incremental' storageId=23043 name='/media/backup/2020-02-17/system-000.bar' dateTime=1581977795 size=109502524 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581982741 errorMessage='' totalEntryCount=5471 totalEntrySize=785522513");
+    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2866 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' createdDateTime=1582342898 archiveType='incremental' storageId=27555 name='/media/backup/2020-02-18/system-000.bar' dateTime=1582093564 size=146739802 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582097475 errorMessage='' totalEntryCount=5500 totalEntrySize=1080935743");
+    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=3330 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' createdDateTime=1582342898 archiveType='incremental' storageId=39635 name='/media/backup/2020-02-21/system-000.bar' dateTime=1582342906 size=181545558 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582346743 errorMessage='' totalEntryCount=5493 totalEntrySize=1659806641");
   }
   else
   {
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=1154 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=14643 name='/media/backup/2020-02-16/system-000.bar' dateTime=1581891395 size=269795718 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581896270 errorMessage='' totalEntryCount=12010 totalEntrySize=1308150220");
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2562 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=23043 name='/media/backup/2020-02-17/system-000.bar' dateTime=1581977795 size=109502524 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581982741 errorMessage='' totalEntryCount=5471 totalEntrySize=785522513");
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2866 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=27555 name='/media/backup/2020-02-18/system-000.bar' dateTime=1582093564 size=146739802 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582097475 errorMessage='' totalEntryCount=5500 totalEntrySize=1080935743");
-    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=3330 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' archiveType='incremental' storageId=39635 name='/media/backup/2020-02-21/system-000.bar' dateTime=1582342906 size=181545558 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582346743 errorMessage='' totalEntryCount=5493 totalEntrySize=1659806641");
+    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=1154 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' createdDateTime=1582342898 archiveType='incremental' storageId=14643 name='/media/backup/2020-02-16/system-000.bar' dateTime=1581891395 size=269795718 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581896270 errorMessage='' totalEntryCount=12010 totalEntrySize=1308150220");
+    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2562 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' createdDateTime=1582342898 archiveType='incremental' storageId=23043 name='/media/backup/2020-02-17/system-000.bar' dateTime=1581977795 size=109502524 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1581982741 errorMessage='' totalEntryCount=5471 totalEntrySize=785522513");
+    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=2866 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' createdDateTime=1582342898 archiveType='incremental' storageId=27555 name='/media/backup/2020-02-18/system-000.bar' dateTime=1582093564 size=146739802 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582097475 errorMessage='' totalEntryCount=5500 totalEntrySize=1080935743");
+    send($1,0,0,"uuidId=129 jobUUID=c39b72b9-c125-411a-a396-f7da6a832ba3 jobName='system-hd' entityId=3330 scheduleUUID=1b6a2f4c-1df1-44e8-b591-5a9951f1c8a9 hostName='tooku' createdDateTime=1582342898 archiveType='incremental' storageId=39635 name='/media/backup/2020-02-21/system-000.bar' dateTime=1582342906 size=181545558 indexState='OK' indexMode='AUTO' lastCheckedDateTime=1582346743 errorMessage='' totalEntryCount=5493 totalEntrySize=1659806641");
   }
   send($1,1,0);
   next;
