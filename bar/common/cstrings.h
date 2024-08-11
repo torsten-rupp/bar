@@ -418,7 +418,7 @@ static inline size_t stringIntLength(int n)
 
 static inline size_t stringInt64Length(int64 n)
 {
-  return snprintf(NULL,0,"%"PRIi64,n);
+  return snprintf(NULL,0,"%" PRIi64,n);
 }
 
 /***********************************************************************\

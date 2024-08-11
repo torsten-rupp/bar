@@ -64,6 +64,7 @@ LIBSMB2_VERSION=4.0.0
 PAR2_VERSION=0.8.1
 LIBISOFS_VERSION="release-1.5.6.pl01"
 LIBBURN_VERSION="release-1.5.6"
+UTIL_LINUX_VERSION="v2.40"
 BINUTILS_VERSION=2.41
 PTHREAD_W32_VERSION=2-9-1
 LAUNCH4J_MAJOR_VERSION=3
@@ -115,6 +116,7 @@ libcdioFlag=0
 libsmb2Flag=0
 libisofsFlag=0
 libburnFlag=0
+utilLinuxFlag=0
 pcreFlag=0
 sqlite3Flag=0
 mariaDBFlag=0
@@ -283,6 +285,10 @@ while test $# != 0; do
           allFlag=0
           libburnFlag=1
           ;;
+        mount|libmount|util-linux)
+          allFlag=0
+          utilLinuxFlag=1
+          ;;
         binutils|bfd)
           allFlag=0
           binutilsFlag=1
@@ -410,6 +416,10 @@ while test $# != 0; do
       allFlag=0
       libburnFlag=1
       ;;
+    mount|libmount|util-linux)
+      allFlag=0
+      utilLinuxFlag=1
+      ;;
     binutils|bfd)
       allFlag=0
       binutilsFlag=1
@@ -474,6 +484,7 @@ if test $helpFlag -eq 1; then
   $ECHO " par2"
   $ECHO " libisofs"
   $ECHO " libburn"
+  $ECHO " util-linux"
   $ECHO " binutils"
   $ECHO " launch4j"
   $ECHO " jre-windows"
@@ -2054,9 +2065,9 @@ if test $cleanFlag -eq 0; then
      directoryName="libburn-$LIBBURN_VERSION"
 
      if test ! -d $directoryName; then
-       if test -n "$localDirectory" -a -d $localDirectory/libisofs-$LIBBURN_VERSION; then
+       if test -n "$localDirectory" -a -d $localDirectory/libburn-$LIBBURN_VERSION; then
          # Note: make a copy to get usable file permissions (source may be owned by root)
-         $CP -r $localDirectory/libisofs-$LIBBURN_VERSION $directoryName
+         $CP -r $localDirectory/libburn-$LIBBURN_VERSION $directoryName
          result=1
        else
          url="https://dev.lovelyhq.com/libburnia/libburn.git"
@@ -2079,6 +2090,64 @@ if test $cleanFlag -eq 0; then
 
      if test $noDecompressFlag -eq 0; then
        (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libburn-$LIBBURN_VERSION libburn)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to fix defintions for MinGW:
+       #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
+       # Note: ignore exit code 1: patch may already be applied
+#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
+#       if test $? -gt 1; then
+#         fatalError "patch"
+#       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $utilLinuxFlag -eq 1; then
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get util-linux ($UTIL_LINUX_VERSION)..."
+     directoryName="util-linux-$UTIL_LINUX_VERSION"
+
+     if test ! -d $directoryName; then
+       if test -n "$localDirectory" -a -d $localDirectory/util-linux-$UTIL_LINUX_VERSION; then
+         # Note: make a copy to get usable file permissions (source may be owned by root)
+         $CP -r $localDirectory/util-linux-$UTIL_LINUX_VERSION $directoryName
+         result=1
+       else
+         url="https://github.com/util-linux/util-linux.git"
+         $GIT clone $url $directoryName 1>/dev/null 2>/dev/null
+         if test $? -ne 0; then
+           fatalError "checkout $url -> $directoryName"
+         fi
+         (cd $directoryName; \
+          $GIT checkout $UTIL_LINUX_VERSION 1>/dev/null 2>/dev/null; \
+          install -d m4;
+         )
+         if test $? -ne 0; then
+           fatalError "checkout tag v$UTIL_LINUX_VERSION"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+
+     if test $noDecompressFlag -eq 0; then
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/util-linux-$UTIL_LINUX_VERSION util-linux)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
@@ -2553,7 +2622,7 @@ else
   fi
 
   if test $allFlag -eq 1 -o $par2Flag -eq 1; then
-    # binutils
+    # par2
     (
       cd "$destinationDirectory"
       $RMRF par2cmdline-*
@@ -2563,7 +2632,7 @@ else
   fi
 
   if test $allFlag -eq 1 -o $libisofsFlag -eq 1; then
-    # pcre
+    # libisofs
     (
       cd "$destinationDirectory"
       $RMRF libisofs-*
@@ -2572,12 +2641,21 @@ else
   fi
 
   if test $allFlag -eq 1 -o $libburnFlag -eq 1; then
-    # pcre
+    # libburn
     (
       cd "$destinationDirectory"
       $RMRF libburn-*
     ) 2>/dev/null
     $RMF $workingDirectory/libburn
+  fi
+
+  if test $allFlag -eq 1 -o $utilLinuxFlag -eq 1; then
+    # libburn
+    (
+      cd "$destinationDirectory"
+      $RMRF util-linux-*
+    ) 2>/dev/null
+    $RMF $workingDirectory/util-linux
   fi
 
   if test $allFlag -eq 1 -o $binutilsFlag -eq 1; then

@@ -849,6 +849,7 @@ AC_SUBST(HAVE_POSTGRESQL)                    dnl "1" for PostgreSQL support, "" 
 AC_SUBST(HAVE_PAR2)                          dnl "1" for PAR2 support, "" otherwise
 AC_SUBST(HAVE_ISOFS)                         dnl "1" for isofs support, "" otherwise
 AC_SUBST(HAVE_BURN)                          dnl "1" for burn support, "" otherwise
+AC_SUBST(HAVE_LIBMOUNT)                      dnl "1" for libmount support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                  dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BFD)                           dnl "1" for BFD support, "" otherwise
 
@@ -1018,6 +1019,7 @@ ENABLE_PTHREADS_W32="yes"
 ENABLE_PAR2="yes"
 ENABLE_ISOFS="yes"
 ENABLE_BURN="yes"
+ENABLE_LIBMOUNT="yes"
 ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
@@ -1254,6 +1256,11 @@ AC_ARG_ENABLE(
   burn,
   AC_HELP_STRING([--disable-burn],[disable burn support]),
   [ENABLE_BURN=$enableval]
+)
+AC_ARG_ENABLE(
+  libmount,
+  AC_HELP_STRING([--disable-libmount],[disable libmount support]),
+  [ENABLE_LIBMOUNT=$enableval]
 )
 AC_ARG_ENABLE(
   bfd,
@@ -4879,7 +4886,7 @@ if test $ENABLE_BURN = "yes"; then
     dnl search for installed burn library
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;LIBRARIES="isofs $LIBRARIES";AC_DEFINE(HAVE_BURN,1,[libisofs installed])])
+      AC_SEARCH_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;LIBRARIES="burn $LIBRARIES";AC_DEFINE(HAVE_BURN,1,[libisofs installed])])
     else
       if test -z "$HAVE_BURN"; then
         AC_SEARCH_STATIC_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;STATIC_LIBRARIES="$STATIC_LIBRARIES burn";AC_DEFINE(HAVE_BURN,1,[libisofs installed])])
@@ -4905,6 +4912,111 @@ if test $ENABLE_BURN = "yes"; then
   if test -z "$HAVE_BURN"; then
     if test ! \( -d libburn -o -d "`readlink libburn`" \); then
       AC_MSG_WARN([libburn not compiled: libburn package missing])
+    fi
+  fi
+fi
+
+# compile/use libmount
+if test $ENABLE_LIBMOUNT = "yes"; then
+  if test -d util-linux -o -d "`readlink util-linux`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+      dnl compile libmount from util-linux
+
+      cwd=`pwd`
+
+      AC_MSG_COMPILE([libmount])
+      result=1
+      if test $result -eq 1; then
+        (cd util-linux; ./autogen.sh) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (autogen)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            (cd util-linux; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+              --disable-all-programs --enable-libmount --enable-libblkid \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            ;;
+        esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd util-linux; \
+         make -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd util-linux; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES mount blkid"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES mount blkid"
+      fi
+      HAVE_LIBMOUNT=1
+      AC_DEFINE(HAVE_LIBMOUNT,1,[libmount installed (local)])
+    fi
+  else
+    dnl search for installed libmount
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(mnt_new_table_from_file,mount,[HAVE_LIBMOUNT=1;LIBRARIES="mount blkid $LIBRARIES";AC_DEFINE(HAVE_LIBMOUNT,1,[libisofs installed])])
+    else
+      if test -z "$HAVE_LIBMOUNT"; then
+        AC_SEARCH_STATIC_LIBRARIES(mnt_new_table_from_file,mount,[HAVE_LIBMOUNT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mount blkid";AC_DEFINE(HAVE_LIBMOUNT,1,[libisofs installed])])
+      fi
+      if test -z "$HAVE_LIBMOUNT"; then
+        AC_SEARCH_LIBRARIES(mnt_new_table_from_file,mount,[HAVE_LIBMOUNT=1;LIBRARIES="mount blkid $LIBRARIES";AC_DEFINE(HAVE_LIBMOUNT,1,[libisofs installed])])
+      fi
+    fi
+  fi
+
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
+  if test -z "$HAVE_LIBMOUNT"; then
+    if test ! \( -d util-linux -o -d "`readlink util-linux`" \); then
+      AC_MSG_WARN([libmount not compiled: util-linux package missing])
     fi
   fi
 fi
@@ -5142,6 +5254,7 @@ AC_CHECK_HEADERS(\
                  icu.h \
                  libiberty/demangle.h \
                  libintl.h \
+                 libmount/libmount.h \
                  libpq-fe.h \
                  link.h \
                  linux/fs.h \
@@ -5434,6 +5547,9 @@ AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() avai
 
 AC_CHECK_FUNCTION(sd_id128_get_machine,             AC_DEFINE(HAVE_SD_ID128_GET_MACHINE,             1,[sd_id128_get_machine() available]),,systemd/sd-id128.h)
 AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC,1,[sd_id128_get_machine_app_specific() available]),,systemd/sd-id128.h)
+
+AC_CHECK_FUNCTION(mnt_new_table_from_file,AC_DEFINE(HAVE_MNT_NEW_TABLE_FROM_FILE,1,[mnt_new_table_from_file() available]),,libmount.h)
+AC_CHECK_FUNCTION(mnt_context_mount,AC_DEFINE(HAVE_MNT_CONTEXT_MOUNT,1,[mnt_context_mount() available]),,libmount.h)
 
 AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]),,bfd.h)
 AC_CHECK_FUNCTION(bfd_get_section_flags,AC_DEFINE(HAVE_BFD_GET_SECTION_FLAGS,1,[bfd_get_section_flags() available]),,bfd.h)
@@ -5794,6 +5910,20 @@ else
   AC_DEFINE_UNQUOTED(VERSION_BURN,"",[burn version])
 fi
 
+if test "$HAVE_LIBMOUNT"; then
+  AC_CONSTANT_VALUE([libmount version],
+                    VERSION_LIBMOUNT,
+                    [#include "libmount/libmount.h"
+                    ],
+                    [LIBMOUNT_VERSION],
+                    [],
+                    [ "]
+                   )
+  AC_DEFINE_UNQUOTED(VERSION_LIBMOUNT,"$VERSION_LIBMOUNT",[libmount version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_LIBMOUNT,"",[libmount version])
+fi
+
 dnl ------------ autoheader: top/bottom include for config.h -----------
 
 AC_CONFIG_HEADERS(bar/config.h)
@@ -5883,6 +6013,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  PAR2 support         : `if test "$HAVE_PAR2"; then echo "yes ($VERSION_PAR2)"; else echo no; fi`";
                     echo "  isofs support        : `if test "$HAVE_ISOFS"; then echo "yes ($VERSION_ISOFS)"; else echo no; fi`";
                     echo "  burn support         : `if test "$HAVE_BURN"; then echo "yes ($VERSION_BURN)"; else echo no; fi`";
+                    echo "  libmount support     : `if test "$HAVE_LIBMOUNT"; then echo "yes ($VERSION_LIBMOUNT)"; else echo no; fi`";
                     echo "  GUI support          : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support     : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                  : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
@@ -5921,7 +6052,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_PCRE" \
                             -o ! "$HAVE_PAR2" \
                             -o ! "$HAVE_ISOFS" \
-                            -o ! "$HAVE_BURN"; then
+                            -o ! "$HAVE_BURN" \
+                            -o ! "$HAVE_LIBMOUNT"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."
@@ -5957,6 +6089,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_PAR2=$HAVE_PAR2
                    HAVE_ISOFS=$HAVE_ISOFS
                    HAVE_BURN=$HAVE_BURN
+                   HAVE_LIBMOUNT=$HAVE_LIBMOUNT
                    HAVE_BFD=$HAVE_BFD
 
                    ENABLE_DEBUG=$ENABLE_DEBUG
@@ -5999,6 +6132,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_PAR2="$VERSION_PAR2"
                    VERSION_ISOFS="$VERSION_ISOFS"
                    VERSION_BURN="$VERSION_BURN"
+                   VERSION_LIBMOUNT="$VERSION_LIBMOUNT"
                   )
 
 AC_OUTPUT

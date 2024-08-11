@@ -39,6 +39,9 @@
 #if   defined(PLATFORM_LINUX)
   #include <linux/types.h>
   #include <linux/fs.h>
+  #ifdef HAVE_LIBMOUNT_LIBMOUNT_H
+    #include "libmount/libmount.h"
+  #endif
 #elif defined(PLATFORM_WINDOWS)
 #endif /* PLATFORM_... */
 
@@ -530,17 +533,72 @@ Errors Device_mount(ConstString mountCommand,
                     ConstString deviceName
                    )
 {
-  const char *command;
-  TextMacros (textMacros,2);
-
   assert(mountPointName != NULL);
 
-  TEXT_MACROS_INIT(textMacros)
+  Errors error;
+#ifdef HAVE_LIBMOUNT
+  if      (!String_isEmpty(mountCommand))
   {
-    TEXT_MACRO_X_STRING ("%device",   deviceName,    NULL);
-    TEXT_MACRO_X_STRING ("%directory",mountPointName,NULL);
+    TextMacros (textMacros,2);
+    TEXT_MACROS_INIT(textMacros)
+    {
+      TEXT_MACRO_X_STRING ("%device",   deviceName,    NULL);
+      TEXT_MACRO_X_STRING ("%directory",mountPointName,NULL);
+    }
+    error = Misc_executeCommand(String_cString(mountCommand),
+                                textMacros.data,
+                                textMacros.count,
+                                NULL, // commandLine
+                                CALLBACK_(NULL,NULL),
+                                CALLBACK_(NULL,NULL)
+                               );
   }
+  else
+  {
+    struct libmnt_table *libmountTable = mnt_new_table_from_file("/etc/fstab");
+    if (libmountTable != NULL)
+    {
+      struct libmnt_fs *libmountFileSystem = mnt_table_find_target(libmountTable, String_cString(mountPointName), MNT_ITER_FORWARD);
+      if (libmountFileSystem != NULL)
+      {
+        struct libmnt_context *libmountContext = mnt_new_context();
+        if (libmountContext != NULL)
+        {
+          mnt_context_set_fs(libmountContext, libmountFileSystem);
+          mnt_context_set_target(libmountContext, String_cString(mountPointName));
 
+          if (   (mnt_context_mount(libmountContext) == 0)
+              && (mnt_context_get_status(libmountContext) == 1)
+             )
+          {
+            error = ERROR_NONE;
+          }
+          else
+          {
+            error = ERRORX_(MOUNT,mnt_context_get_status(libmountContext),"'%s'", String_cString(deviceName));
+          }
+
+          mnt_free_context(libmountContext);
+        }
+        else
+        {
+          error = ERRORX_(MOUNT,0,"create mount context");
+        }
+      }
+      else
+      {
+        error = ERRORX_(MOUNT,0,"mount point '%s' not found", String_cString(mountPointName));
+      }
+
+      mnt_unref_table(libmountTable);
+    }
+    else
+    {
+      error = ERRORX_(MOUNT,0,"read /etc/fstab fail");
+    }
+  }
+#else
+  const char *command;
   if      (mountCommand != NULL)
   {
     command = String_cString(mountCommand);
@@ -554,13 +612,22 @@ Errors Device_mount(ConstString mountCommand,
     command = "/bin/mount -p 0 %directory";
   }
 
-  return Misc_executeCommand(command,
-                             textMacros.data,
-                             textMacros.count,
-                             NULL, // commandLine
-                             CALLBACK_(NULL,NULL),
-                             CALLBACK_(NULL,NULL)
-                            );
+  TextMacros (textMacros,2);
+  TEXT_MACROS_INIT(textMacros)
+  {
+    TEXT_MACRO_X_STRING ("%device",   deviceName,    NULL);
+    TEXT_MACRO_X_STRING ("%directory",mountPointName,NULL);
+  }
+  error = Misc_executeCommand(command,
+                              textMacros.data,
+                              textMacros.count,
+                              NULL, // commandLine
+                              CALLBACK_(NULL,NULL),
+                              CALLBACK_(NULL,NULL)
+                             );
+#endif
+
+  return error;
 }
 
 Errors Device_umount(ConstString umountCommand,

@@ -292,6 +292,12 @@
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
+/* libisofs installed */
+#undef HAVE_LIBMOUNT
+
+/* Define to 1 if you have the <libmount/libmount.h> header file. */
+#undef HAVE_LIBMOUNT_LIBMOUNT_H
+
 /* Define to 1 if you have the <libpar2.h> header file. */
 #undef HAVE_LIBPAR2_H
 
@@ -381,6 +387,12 @@
 
 /* Define to 1 if you have the <mntent.h> header file. */
 #undef HAVE_MNTENT_H
+
+/* mnt_context_mount() available */
+#undef HAVE_MNT_CONTEXT_MOUNT
+
+/* mnt_new_table_from_file() available */
+#undef HAVE_MNT_NEW_TABLE_FROM_FILE
 
 /* MSG_NOSIGNAL available */
 #undef HAVE_MSG_NOSIGNAL
@@ -863,6 +875,9 @@
 
 /* isofs version */
 #undef VERSION_ISOFS
+
+/* libmount version */
+#undef VERSION_LIBMOUNT
 
 /* SMB2 version */
 #undef VERSION_LIBSMB2

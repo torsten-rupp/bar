@@ -776,6 +776,7 @@ INSTALL_DIR
 HAVE_USLEEP
 HAVE_BFD
 HAVE_PTHREADS_W32
+HAVE_LIBMOUNT
 HAVE_BURN
 HAVE_ISOFS
 HAVE_PAR2
@@ -910,6 +911,7 @@ enable_pcre
 enable_par2
 enable_isofs
 enable_burn
+enable_libmount
 enable_bfd
 enable_gui
 enable_gui_i18n
@@ -1574,6 +1576,7 @@ Optional Features:
   --disable-par2          disable PAR2 support
   --disable-isofs         disable ISO file system support
   --disable-burn          disable burn support
+  --disable-libmount      disable libmount support
   --disable-bfd           disable BFD support
   --disable-gui           disable GUI support (barcontrol)
   --disable-gui-i18n      disable GUI localization support (barcontrol)
@@ -3374,6 +3377,7 @@ ENABLE_PTHREADS_W32="yes"
 ENABLE_PAR2="yes"
 ENABLE_ISOFS="yes"
 ENABLE_BURN="yes"
+ENABLE_LIBMOUNT="yes"
 ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
@@ -3665,6 +3669,13 @@ fi
 if test ${enable_burn+y}
 then :
   enableval=$enable_burn; ENABLE_BURN=$enableval
+
+fi
+
+# Check whether --enable-libmount was given.
+if test ${enable_libmount+y}
+then :
+  enableval=$enable_libmount; ENABLE_LIBMOUNT=$enableval
 
 fi
 
@@ -21320,7 +21331,7 @@ printf "%s\n" "$ac_cv_search_libraries_burn_disc_write" >&6; }
   ac_result=$ac_cv_search_libraries_burn_disc_write
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BURN=1;LIBRARIES="isofs $LIBRARIES";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_BURN=1;LIBRARIES="burn $LIBRARIES";
 printf "%s\n" "#define HAVE_BURN 1" >>confdefs.h
 
 fi
@@ -21478,6 +21489,325 @@ fi
     if test ! \( -d libburn -o -d "`readlink libburn`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libburn not compiled: libburn package missing" >&5
 printf "%s\n" "$as_me: WARNING: libburn not compiled: libburn package missing" >&2;}
+    fi
+  fi
+fi
+
+# compile/use libmount
+if test $ENABLE_LIBMOUNT = "yes"; then
+  if test -d util-linux -o -d "`readlink util-linux`"; then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+
+      cwd=`pwd`
+
+
+  printf %s "compile libmount... " >&6
+
+      result=1
+      if test $result -eq 1; then
+        (cd util-linux; ./autogen.sh) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (autogen)" >&5
+printf "%s\n" "fail (autogen)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            (cd util-linux; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+              --disable-all-programs --enable-libmount --enable-libblkid \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            ;;
+        esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+printf "%s\n" "fail (configure)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd util-linux; \
+         make -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+printf "%s\n" "fail (make)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        (cd util-linux; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+printf "%s\n" "fail (install)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result=0
+        fi
+      fi
+      if test $result -eq 1; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
+printf "%s\n" "done" >&6; }
+      fi
+    else
+      result=1
+    fi
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES mount blkid"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES mount blkid"
+      fi
+      HAVE_LIBMOUNT=1
+
+printf "%s\n" "#define HAVE_LIBMOUNT 1" >>confdefs.h
+
+    fi
+  else
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing mnt_new_table_from_file" >&5
+printf %s "checking for library containing mnt_new_table_from_file... " >&6; }
+if test ${ac_cv_search_libraries_mnt_new_table_from_file+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in mount ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void mnt_new_table_from_file();"; fi`
+                                         return (int)mnt_new_table_from_file;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_mnt_new_table_from_file=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_mnt_new_table_from_file+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_mnt_new_table_from_file=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_mnt_new_table_from_file" >&5
+printf "%s\n" "$ac_cv_search_libraries_mnt_new_table_from_file" >&6; }
+  ac_result=$ac_cv_search_libraries_mnt_new_table_from_file
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LIBMOUNT=1;LIBRARIES="mount blkid $LIBRARIES";
+printf "%s\n" "#define HAVE_LIBMOUNT 1" >>confdefs.h
+
+fi
+
+    else
+      if test -z "$HAVE_LIBMOUNT"; then
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing mnt_new_table_from_file" >&5
+printf %s "checking for static library containing mnt_new_table_from_file... " >&6; }
+if test ${ac_cv_search_static_mnt_new_table_from_file+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in mount ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void mnt_new_table_from_file();"; fi`
+                                         return (int)mnt_new_table_from_file;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_mnt_new_table_from_file=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_mnt_new_table_from_file+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_mnt_new_table_from_file=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_mnt_new_table_from_file" >&5
+printf "%s\n" "$ac_cv_search_static_mnt_new_table_from_file" >&6; }
+  ac_result=$ac_cv_search_static_mnt_new_table_from_file
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LIBMOUNT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mount blkid";
+printf "%s\n" "#define HAVE_LIBMOUNT 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_LIBMOUNT"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing mnt_new_table_from_file" >&5
+printf %s "checking for library containing mnt_new_table_from_file... " >&6; }
+if test ${ac_cv_search_libraries_mnt_new_table_from_file+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in mount ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void mnt_new_table_from_file();"; fi`
+                                         return (int)mnt_new_table_from_file;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_mnt_new_table_from_file=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_mnt_new_table_from_file+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_mnt_new_table_from_file=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_mnt_new_table_from_file" >&5
+printf "%s\n" "$ac_cv_search_libraries_mnt_new_table_from_file" >&6; }
+  ac_result=$ac_cv_search_libraries_mnt_new_table_from_file
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LIBMOUNT=1;LIBRARIES="mount blkid $LIBRARIES";
+printf "%s\n" "#define HAVE_LIBMOUNT 1" >>confdefs.h
+
+fi
+
+      fi
+    fi
+  fi
+
+    case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
+  if test -z "$HAVE_LIBMOUNT"; then
+    if test ! \( -d util-linux -o -d "`readlink util-linux`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libmount not compiled: util-linux package missing" >&5
+printf "%s\n" "$as_me: WARNING: libmount not compiled: util-linux package missing" >&2;}
     fi
   fi
 fi
@@ -22213,6 +22543,12 @@ ac_fn_c_check_header_compile "$LINENO" "libintl.h" "ac_cv_header_libintl_h" "$ac
 if test "x$ac_cv_header_libintl_h" = xyes
 then :
   printf "%s\n" "#define HAVE_LIBINTL_H 1" >>confdefs.h
+
+fi
+ac_fn_c_check_header_compile "$LINENO" "libmount/libmount.h" "ac_cv_header_libmount_libmount_h" "$ac_includes_default"
+if test "x$ac_cv_header_libmount_libmount_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_LIBMOUNT_LIBMOUNT_H 1" >>confdefs.h
 
 fi
 ac_fn_c_check_header_compile "$LINENO" "libpq-fe.h" "ac_cv_header_libpq_fe_h" "$ac_includes_default"
@@ -31162,6 +31498,119 @@ fi
 
 
 
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for mnt_new_table_from_file" >&5
+printf %s "checking for mnt_new_table_from_file... " >&6; }
+if test ${ac_cv_func_mnt_new_table_from_file+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_mnt_new_table_from_file="no"
+      echo > conftest.log
+
+      for ac_headers in libmount.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void mnt_new_table_from_file();"; fi`
+                                         #ifdef mnt_new_table_from_file
+                                         #else
+                                           return (intptr_t)mnt_new_table_from_file;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_mnt_new_table_from_file=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_mnt_new_table_from_file" >&5
+printf "%s\n" "$ac_cv_func_mnt_new_table_from_file" >&6; }
+  if test "$ac_cv_func_mnt_new_table_from_file" != no
+then :
+
+printf "%s\n" "#define HAVE_MNT_NEW_TABLE_FROM_FILE 1" >>confdefs.h
+
+elif :
+then :
+
+fi
+
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for mnt_context_mount" >&5
+printf %s "checking for mnt_context_mount... " >&6; }
+if test ${ac_cv_func_mnt_context_mount+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_mnt_context_mount="no"
+      echo > conftest.log
+
+      for ac_headers in libmount.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void mnt_context_mount();"; fi`
+                                         #ifdef mnt_context_mount
+                                         #else
+                                           return (intptr_t)mnt_context_mount;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_mnt_context_mount=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_mnt_context_mount" >&5
+printf "%s\n" "$ac_cv_func_mnt_context_mount" >&6; }
+  if test "$ac_cv_func_mnt_context_mount" != no
+then :
+
+printf "%s\n" "#define HAVE_MNT_CONTEXT_MOUNT 1" >>confdefs.h
+
+elif :
+then :
+
+fi
+
+
+
+
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for bfd_init" >&5
 printf %s "checking for bfd_init... " >&6; }
 if test ${ac_cv_func_bfd_init+y}
@@ -33927,6 +34376,101 @@ printf "%s\n" "#define VERSION_BURN \"\"" >>confdefs.h
 
 fi
 
+if test "$HAVE_LIBMOUNT"; then
+
+
+    if test -n "libmount version"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking libmount version" >&5
+printf %s "checking libmount version... " >&6; }
+if test ${ac_cv_constant_value_VERSION_LIBMOUNT+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "libmount/libmount.h"
+
+int
+main (void)
+{
+__CONFTEST__ LIBMOUNT_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_LIBMOUNT=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_LIBMOUNT=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_LIBMOUNT=`echo $ac_cv_constant_value_VERSION_LIBMOUNT|tr -d " \"
+                   "`
+        fi
+        VERSION_LIBMOUNT=$ac_cv_constant_value_VERSION_LIBMOUNT
+
+        rm -f conftest.c conftest
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_LIBMOUNT" >&5
+printf "%s\n" "$ac_cv_constant_value_VERSION_LIBMOUNT" >&6; }  else
+    if test ${ac_cv_constant_value_VERSION_LIBMOUNT+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "libmount/libmount.h"
+
+int
+main (void)
+{
+__CONFTEST__ LIBMOUNT_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_LIBMOUNT=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_LIBMOUNT=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_LIBMOUNT=`echo $ac_cv_constant_value_VERSION_LIBMOUNT|tr -d " \"
+                   "`
+        fi
+        VERSION_LIBMOUNT=$ac_cv_constant_value_VERSION_LIBMOUNT
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
+
+printf "%s\n" "#define VERSION_LIBMOUNT \"$VERSION_LIBMOUNT\"" >>confdefs.h
+
+else
+
+printf "%s\n" "#define VERSION_LIBMOUNT \"\"" >>confdefs.h
+
+fi
+
 
 ac_config_headers="$ac_config_headers bar/config.h"
 
@@ -34698,6 +35242,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_PAR2=$HAVE_PAR2
                    HAVE_ISOFS=$HAVE_ISOFS
                    HAVE_BURN=$HAVE_BURN
+                   HAVE_LIBMOUNT=$HAVE_LIBMOUNT
                    HAVE_BFD=$HAVE_BFD
 
                    ENABLE_DEBUG=$ENABLE_DEBUG
@@ -34740,6 +35285,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_PAR2="$VERSION_PAR2"
                    VERSION_ISOFS="$VERSION_ISOFS"
                    VERSION_BURN="$VERSION_BURN"
+                   VERSION_LIBMOUNT="$VERSION_LIBMOUNT"
 
 
 _ACEOF
@@ -35343,6 +35889,7 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                     echo "  PAR2 support         : `if test "$HAVE_PAR2"; then echo "yes ($VERSION_PAR2)"; else echo no; fi`";
                     echo "  isofs support        : `if test "$HAVE_ISOFS"; then echo "yes ($VERSION_ISOFS)"; else echo no; fi`";
                     echo "  burn support         : `if test "$HAVE_BURN"; then echo "yes ($VERSION_BURN)"; else echo no; fi`";
+                    echo "  libmount support     : `if test "$HAVE_LIBMOUNT"; then echo "yes ($VERSION_LIBMOUNT)"; else echo no; fi`";
                     echo "  GUI support          : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support     : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                  : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
@@ -35381,7 +35928,8 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                             -o ! "$HAVE_PCRE" \
                             -o ! "$HAVE_PAR2" \
                             -o ! "$HAVE_ISOFS" \
-                            -o ! "$HAVE_BURN"; then
+                            -o ! "$HAVE_BURN" \
+                            -o ! "$HAVE_LIBMOUNT"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."

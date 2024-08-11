@@ -56,7 +56,6 @@
   extern "C" {
 #endif
 
-#ifdef HAVE_PAR2
 /***********************************************************************\
 * Name   : resultToText
 * Purpose: convert result to text
@@ -66,6 +65,7 @@
 * Notes  : -
 \***********************************************************************/
 
+#ifdef HAVE_PAR2
 LOCAL const char* resultToText(Result result)
 {
   switch (result)
@@ -80,7 +80,7 @@ LOCAL const char* resultToText(Result result)
     default:                           return "";
   }
 }
-#endif
+#endif // HAVE_PAR2
 
 Errors PAR2_create(ConstString      dataFileName,
                    uint64           dataFileSize,
@@ -260,6 +260,7 @@ Errors PAR2_create(ConstString      dataFileName,
   return error;
 #else // not HAVE_PAR2
   UNUSED_VARIABLE(dataFileName);
+  UNUSED_VARIABLE(dataFileSize);
   UNUSED_VARIABLE(sourceFileName);
   UNUSED_VARIABLE(checkSumFilesDirectory);
   UNUSED_VARIABLE(archiveFileMode);

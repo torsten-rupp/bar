@@ -116,7 +116,6 @@ ToDo
 - BARControl: delete schedule entry -> update context menu in job status
 - systemd script: restart
 - logrotate: use signal HUP
-- libmount
 - job settings for max./keep until normal/full/incremental/differential storages
 - SVN number in version (Unversioned directory?)
 - restore: ask for overwrite, skip, overwrite all, skip all
