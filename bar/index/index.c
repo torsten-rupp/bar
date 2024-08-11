@@ -904,59 +904,6 @@ LOCAL void outputProgressInit(const char *text,
   printInfo(2,"%s",text);
 }
 
-// TODO: remove
-#if 0
-/***********************************************************************\
-* Name   : outputProgressInfo
-* Purpose: output progress info on console
-* Input  : progress           - progres [%%]
-*          estimatedTotalTime - estimated total time [s]
-*          estimatedRestTime  - estimated rest time [s]
-*          userData           - user data (not used)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void outputProgressInfo(uint  progress,
-                              ulong estimatedTotalTime,
-                              ulong estimatedRestTime,
-                              void  *userData
-                             )
-{
-  const char *WHEEL = "|/-\\";
-  static uint wheelIndex = 0;
-
-  UNUSED_VARIABLE(estimatedTotalTime);
-  UNUSED_VARIABLE(userData);
-
-  if (estimatedRestTime < (99999*60*60))
-  {
-    stringAppendFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                       " / %7.1f%% %5uh:%02umin:%02us %c",
-                       (float)progress/10.0,
-                       estimatedRestTime/(60*60),
-                       estimatedRestTime%(60*60)/60,
-                       estimatedRestTime%60,
-                       WHEEL[wheelIndex]
-                      );
-  }
-  else
-  {
-    stringAppendFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                       " / %7.1f%% -----h:--min:--s %c",
-                       (float)progress/10.0,
-                       WHEEL[wheelIndex]
-                      );
-  }
-  outputProgressBufferLength = stringLength(outputProgressBuffer);
-
-  printInfo(2,"%s\n",outputProgressBuffer);
-
-  wheelIndex = (wheelIndex+1) % 4;
-}
-#endif
-
 /***********************************************************************\
 * Name   : outputProgressDone
 * Purpose: done progress output
@@ -982,8 +929,6 @@ LOCAL void outputProgressDone(ulong totalTime,
   stringFillAppend(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,' ');
 
   printInfo(2,"%s\n",outputProgressBuffer);
-
-  fflush(stdout);
 }
 
 #if 0
@@ -996,6 +941,7 @@ LOCAL void outputProgressDone(ulong totalTime,
 #endif
 #include "index_version6.c"
 #include "index_version7.c"
+#include "index_version8.c"
 
 /***********************************************************************\
 * Name   : importIndex
@@ -1083,8 +1029,11 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
     case 6:
       maxSteps = getImportStepsVersion6(&oldIndexHandle.databaseHandle);
       break;
-    case INDEX_CONST_VERSION:
+    case 7:
       maxSteps = getImportStepsVersion7(&oldIndexHandle.databaseHandle);
+      break;
+    case INDEX_CONST_VERSION:
+      maxSteps = getImportStepsVersion8(&oldIndexHandle.databaseHandle);
       break;
     default:
       // unknown version if index
@@ -1107,7 +1056,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                        plogMessage(NULL,  // logHandle
                                    LOG_TYPE_INDEX,
                                    "INDEX",
-                                   "%s %0.1f%%, estimated rest time %uh:%02umin:%02us",
+                                   "%0.1f%%, estimated rest time %uh:%02umin:%02us",
                                    (float)progress/10.0,
                                    (uint)((estimatedRestTime/US_PER_SECOND)/3600LL),
                                    (uint)(((estimatedRestTime/US_PER_SECOND)%3600LL)/60),
@@ -1139,8 +1088,14 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                   &progressInfo
                                  );
       break;
-    case INDEX_CONST_VERSION:
+    case 7:
       error = importIndexVersion7(&oldIndexHandle.databaseHandle,
+                                  &indexHandle->databaseHandle,
+                                  &progressInfo
+                                 );
+      break;
+    case INDEX_CONST_VERSION:
+      error = importIndexVersion8(&oldIndexHandle.databaseHandle,
                                   &indexHandle->databaseHandle,
                                   &progressInfo
                                  );

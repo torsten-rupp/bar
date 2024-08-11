@@ -45,7 +45,7 @@
 */
 
 // index version
-const VERSION = 7
+const VERSION = 8
 
 // storage states
 const STATE_OK               = 1

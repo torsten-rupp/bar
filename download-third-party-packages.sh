@@ -25,7 +25,7 @@ TAR="tar"
 UNZIP="unzip"
 XZ="xz"
 
-ZLIB_VERSION=1.3
+ZLIB_VERSION=1.3.1
 BZIP2_VERSION=1.0.8
 XZ_VERSION=5.2.5
 LZO_VERSION=2.10
@@ -43,7 +43,7 @@ GNU_TLS_VERSION=3.6.16
 LIBICONV_VERSION=1.16
 OPENSSL_VERSION=1.1.1n
 LIBSSH2_VERSION=1.10.0
-C_ARES_VERSION=1.20.1
+C_ARES_VERSION=1.33.0
 CURL_VERSION=7.77.0
 PCRE_VERSION=8.45
 SQLITE_YEAR=2022
@@ -986,7 +986,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/c-ares-$C_ARES_VERSION.tar.gz $fileName
          result=1
        else
-         url="http://c-ares.haxx.se/download/$fileName"
+         url="https://github.com/c-ares/c-ares/releases/download/v$C_ARES_VERSION/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"

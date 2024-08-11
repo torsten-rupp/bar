@@ -4046,7 +4046,7 @@ if (false) {
         label = new Label(composite,SWT.LEFT|SWT.WRAP);
         label.setText("BAR control "+Version.STRING+".\n"+
                       "\n"+
-                      BARControl.tr("Written by Torsten Rupp")+"\n"+
+                      BARControl.tr("Written by Torsten Rupp")+"\n"
                      );
         label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NS|TableLayoutData.W,0,0,4));
 

@@ -87,8 +87,7 @@ RUN WINEPREFIX=$WINEPREFIX wineboot --init
 #  -O /tmp/innosetup-5.6.1.exe \
 #  https://files.jrsoftware.org/is/5/innosetup-5.6.1.exe
 COPY innosetup-5.6.1.exe /tmp
-RUN pwd
-RUN ps auxw|grep wine
+#RUN pwd
 #RUN ps auxw|grep wine
 #RUN WINEARCH=win32 WINEPREFIX=$WINEPREFIX DISPLAY=:0.0 xvfb-run -e /dev/stdout --auto-servernum wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES
 RUN WINEARCH=win32 WINEPREFIX=$WINEPREFIX DISPLAY=:0.0 xvfb-run -e /dev/stdout wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES
@@ -108,7 +107,7 @@ RUN apt-get -y install --fix-missing \
 RUN wget \
   --no-check-certificate \
   --quiet \
-  --output-document /jdk-windows-x64_bin.zip \
+  --output-document /tmp/jdk-windows-x64_bin.zip \
   https://download.java.net/java/GA/jdk20.0.2/6e380f22cbe7469fa75fb448bd903d8e/9/GPL/openjdk-20.0.2_windows-x64_bin.zip
 #RUN (cd /opt; unzip /root/jdk-windows-x64_bin.zip)
 #RUN (cd "$WINEPREFIX/drive_c/Program Files"; unzip /tmp/jdk-windows-x64_bin.zip)

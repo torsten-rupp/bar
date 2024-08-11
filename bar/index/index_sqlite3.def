@@ -275,12 +275,6 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   // Note: redundancy for faster access
   name                  TEXT,
 
-  // updated by updateDirectoryContentAggregates()
-  totalEntryCount       INTEGER DEFAULT 0,  // total number of directory entries
-  totalEntrySize        INTEGER DEFAULT 0,  // total size of directory entries [bytes]
-  totalEntryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
-  totalEntrySizeNewest  INTEGER DEFAULT 0,  // total size of newest directory entries [bytes]
-
   CONSTRAINT directoryEntries UNIQUE (entryId)
 );
 CREATE INDEX ON directoryEntries (entryId);

@@ -117,11 +117,11 @@ DISTRIBUTION_NAME           = $(PACKAGE_NAME)-$(VERSION)
 DISTRIBUTION_NAME_ORIG      = $(PACKAGE_NAME)_$(VERSION).orig
 DISTRIBUTION_NAME_GUI       = $(PACKAGE_NAME_GUI)-$(VERSION)
 
-TEST_PACKAGES_CENTOS        := "8"
-TEST_PACKAGES_FEDORA        := "37 38 39 40"
-TEST_PACKAGES_OPENSUSE_LEAP := "15.1 15.2 15.3 15.4 15.5"
-TEST_PACKAGES_DEBIAN        := "10 11 12"
-TEST_PACKAGES_UBUNTU        := "20.04 22.04 23.04 23.10"
+TEST_PACKAGES_CENTOS        := 8
+TEST_PACKAGES_FEDORA        := 37 38 39 40
+TEST_PACKAGES_OPENSUSE_LEAP := 15.1 15.2 15.3 15.4 15.5
+TEST_PACKAGES_DEBIAN        := 10 11 12
+TEST_PACKAGES_UBUNTU        := 20.04 22.04 23.04 23.10
 
 #-------------------------------- functions ----------------------------------
 
@@ -729,12 +729,13 @@ docker_update update_docker:
 	# base images
 	$(DOCKER) pull centos:7
 	$(DOCKER) pull debian:10
+	$(DOCKER) pull ubuntu:22.04
 	#
 	$(INSTALL) download-third-party-packages.sh packages
 	#
-	(cd packages; $(DOCKER) build -f bar-centos7-x86_64.dockerfile -t bar-centos-x86_64:7  --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
-	(cd packages; $(DOCKER) build -f bar-debian8-x86_64.dockerfile -t bar-debian-x86_64:10 --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
-	(cd packages; $(DOCKER) build -f bar-ubuntu-mingw32.dockerfile -t bar-mingw32          --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	(cd packages; $(DOCKER) build -f bar-centos7-x86_64.dockerfile -t bar-centos-x86_64:7   --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	(cd packages; $(DOCKER) build -f bar-debian10-x86_64.dockerfile -t bar-debian-x86_64:10 --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	(cd packages; $(DOCKER) build -f bar-ubuntu-mingw32.dockerfile -t bar-mingw32           --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
 	#
 	$(RMF) packages/download-third-party-packages.sh
 	#

@@ -591,114 +591,6 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
 }
 #endif
 
-/***********************************************************************\
-* Name   : updateDirectoryContentAggregates
-* Purpose: update directory content count/size
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
-*          entryId     - entry database id
-*          fileName    - file name
-*          size        - size
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
-                                              DatabaseId  storageId,
-                                              DatabaseId  entryId,
-                                              ConstString fileName,
-                                              uint64      size
-                                             )
-{
-  Errors     error;
-  IndexId    entriesNewestId;
-  DatabaseId databaseId;
-  String     directoryName;
-
-  assert(indexHandle != NULL);
-  assert(storageId != DATABASE_ID_NONE);
-  assert(entryId != DATABASE_ID_NONE);
-  assert(fileName != NULL);
-
-  // get newest id
-  error = Database_getId(&indexHandle->databaseHandle,
-                         &databaseId,
-                         "entriesNewest",
-                         "id",
-                         "entryId=?",
-                         DATABASE_FILTERS
-                         (
-                           DATABASE_FILTER_KEY(entryId)
-                         )
-                        );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  entriesNewestId = INDEX_ID_ENTRY(databaseId);
-
-  directoryName = File_getDirectoryName(String_new(),fileName);
-  while (!String_isEmpty(directoryName) && (error == ERROR_NONE))
-  {
-    // update directory entry
-    error = Database_update(&indexHandle->databaseHandle,
-                            NULL,  // changedRowCount
-                            "directoryEntries",
-                            DATABASE_FLAG_NONE,
-                            DATABASE_VALUES
-                            (
-                              DATABASE_VALUE       ("totalEntryCount", "totalEntryCount+1"),
-                              DATABASE_VALUE_UINT64("totalEntrySize",  "totalEntrySize+?", size)
-                            ),
-                            "    storageId=? \
-                             AND name=? \
-                            ",
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_KEY   (storageId),
-                              DATABASE_FILTER_STRING(directoryName)
-                            )
-                           );
-    if (error != ERROR_NONE)
-    {
-      break;
-    }
-
-    if (!INDEX_ID_IS_NONE(entriesNewestId))
-    {
-      // update directory entry newest
-      error = Database_update(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
-                              "directoryEntries",
-                              DATABASE_FLAG_NONE,
-                              DATABASE_VALUES
-                              (
-                                DATABASE_VALUE       ("totalEntryCountNewest", "totalEntryCountNewest+1"),
-                                DATABASE_VALUE_UINT64("totalEntrySizeNewest",  "totalEntrySizeNewest+?", size),
-                              ),
-                              "    storageId=? \
-                               AND name=? \
-                              ",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY   (storageId),
-                                DATABASE_FILTER_STRING(directoryName)
-                              )
-                             );
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-    }
-
-    File_getDirectoryName(directoryName,directoryName);
-  }
-  String_delete(directoryName);
-
-  return error;
-}
-
 // ----------------------------------------------------------------------
 
 Errors IndexEntry_collectIds(Array        *entryIds,
@@ -4558,18 +4450,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
         return error;
       }
 
-      // update directory content count/size aggregates
-      error = updateDirectoryContentAggregates(indexHandle,
-                                               INDEX_DATABASE_ID(storageId),
-                                               INDEX_DATABASE_ID(entryId),
-                                               name,
-                                               size
-                                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
       #ifndef NDEBUG
         IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntryCount<0");
         IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntrySize<0");
@@ -4936,24 +4816,9 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
         return error;
       }
 
-      // update directory content count/size aggregates
-      error = updateDirectoryContentAggregates(indexHandle,
-                                               INDEX_DATABASE_ID(storageId),
-                                               INDEX_DATABASE_ID(entryId),
-                                               name,
-                                               0LL
-                                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
       #ifndef NDEBUG
         IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntryCount<0");
         IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalDirectoryCount<0");
-
-        IndexCommon_verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-        IndexCommon_verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
       #endif /* not NDEBUG */
 
       return ERROR_NONE;
@@ -5108,18 +4973,6 @@ Errors Index_addLink(IndexHandle *indexHandle,
                               DATABASE_COLUMNS_NONE,
                               DATABASE_FILTERS_NONE
                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // update directory content count/size aggregates
-      error = updateDirectoryContentAggregates(indexHandle,
-                                               INDEX_DATABASE_ID(storageId),
-                                               INDEX_DATABASE_ID(entryId),
-                                               linkName,
-                                               0LL
-                                              );
       if (error != ERROR_NONE)
       {
         return error;
@@ -5327,26 +5180,11 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
         return error;
       }
 
-      // update directory content count/size aggregates
-      error = updateDirectoryContentAggregates(indexHandle,
-                                               INDEX_DATABASE_ID(storageId),
-                                               INDEX_DATABASE_ID(entryId),
-                                               name,
-                                               size
-                                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
       #ifndef NDEBUG
         IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntryCount<0");
         IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntrySize<0");
         IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalFileCount<0");
         IndexCommon_verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalFileSize<0");
-
-        IndexCommon_verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-        IndexCommon_verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
       #endif /* not NDEBUG */
 
       return ERROR_NONE;
@@ -5504,18 +5342,6 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                               DATABASE_COLUMNS_NONE,
                               DATABASE_FILTERS_NONE
                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // update directory content count/size aggregates
-      error = updateDirectoryContentAggregates(indexHandle,
-                                               INDEX_DATABASE_ID(storageId),
-                                               INDEX_DATABASE_ID(entryId),
-                                               name,
-                                               0LL
-                                              );
       if (error != ERROR_NONE)
       {
         return error;
