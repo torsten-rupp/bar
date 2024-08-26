@@ -456,6 +456,7 @@ BAR_SOURCES_OTHER           = forward.h \
                               index/index_version5.c \
                               index/index_version6.c \
                               index/index_version7.c \
+                              index/index_version8.c \
                               \
                               archive_format.pl \
                               archive_format.def \
@@ -616,6 +617,7 @@ BAR_INDEX_SOURCES_OTHER     = index/index_definition.pl \
                               \
                               index/index_version6.c \
                               index/index_version7.c \
+                              index/index_version8.c \
 
 BAR_INDEX_OBJECTS           = $(foreach z,$(BAR_INDEX_SOURCES),$(patsubst %.c,%.o,$z)) \
                               $(SQLITE3_OBJECTS) \

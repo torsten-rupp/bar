@@ -43,7 +43,10 @@ GNU_TLS_VERSION=3.6.16
 LIBICONV_VERSION=1.16
 OPENSSL_VERSION=1.1.1n
 LIBSSH2_VERSION=1.10.0
-C_ARES_VERSION=1.33.0
+# Note: 1.33.0 does not compile on legacy systems; fix is in
+#       main, but not in 1.33. Thus use previous version for
+#       now.
+C_ARES_VERSION=1.32.3
 CURL_VERSION=7.77.0
 PCRE_VERSION=8.45
 SQLITE_YEAR=2022
