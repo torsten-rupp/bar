@@ -66,10 +66,10 @@ typedef struct
   Semaphore                        namesDictionaryLock;
   Dictionary                       namesDictionary;                       // dictionary with files (used for detecting overwrite existing files)
 
-  RestoreUpdateRunningInfoFunction updateRunningInfoFunction;             // update running info call-back
-  void                             *updateRunningInfoUserData;            // user data for update running info call-back
-  RestoreHandleErrorFunction       handleErrorFunction;                   // handle error call-back
-  void                             *handleErrorUserData;                  // user data for handle error call-back
+  RestoreRunningInfoFunction restoreRunningInfoFunction;             // update running info call-back
+  void                             *restoreRunningInfoUserData;            // user data for update running info call-back
+  RestoreHandleErrorFunction       restoreHandleErrorFunction;                   // handle error call-back
+  void                             *restoreHandleErrorUserData;                  // user data for handle error call-back
   GetNamePasswordFunction          getNamePasswordFunction;               // get name/password call-back
   void                             *getNamePasswordUserData;              // user data for get password call-back
   IsPauseFunction                  isPauseFunction;                       // check for pause call-back
@@ -140,12 +140,12 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 *          compressExcludePatternList - exclude compression pattern list
 *          jobOptions                 - job options
 *          storageNameCustomText      - storage name custome text or NULL
-*          updateRunningInfoFunction  - running info function call-back
+*          restoreRunningInfoFunction  - running info function call-back
 *                                       (can be NULL)
-*          updateRunningInfoUserData  - user data for running info
+*          restoreRunningInfoUserData  - user data for running info
 *                                       function
-*          handleErrorFunction        - get password call-back
-*          handleErrorUserData        - user data for get password
+*          restoreHandleErrorFunction        - get password call-back
+*          restoreHandleErrorUserData        - user data for get password
 *          getNamePasswordFunction    - get name/password call-back
 *          getNamePasswordUserData    - user data for get password
 *          pauseRestoreFlag           - pause restore flag (can be
@@ -162,10 +162,10 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
                            const EntryList                 *includeEntryList,
                            const PatternList               *excludePatternList,
                            JobOptions                      *jobOptions,
-                           RestoreUpdateRunningInfoFunction updateRunningInfoFunction,
-                           void                            *updateRunningInfoUserData,
-                           RestoreHandleErrorFunction      handleErrorFunction,
-                           void                            *handleErrorUserData,
+                           RestoreRunningInfoFunction restoreRunningInfoFunction,
+                           void                            *restoreRunningInfoUserData,
+                           RestoreHandleErrorFunction      restoreHandleErrorFunction,
+                           void                            *restoreHandleErrorUserData,
                            GetNamePasswordFunction         getNamePasswordFunction,
                            void                            *getNamePasswordUserData,
                            IsPauseFunction                 isPauseFunction,
@@ -187,10 +187,10 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
 
   restoreInfo->failError                            = ERROR_NONE;
 
-  restoreInfo->updateRunningInfoFunction            = updateRunningInfoFunction;
-  restoreInfo->updateRunningInfoUserData            = updateRunningInfoUserData;
-  restoreInfo->handleErrorFunction                  = handleErrorFunction;
-  restoreInfo->handleErrorUserData                  = handleErrorUserData;
+  restoreInfo->restoreRunningInfoFunction            = restoreRunningInfoFunction;
+  restoreInfo->restoreRunningInfoUserData            = restoreRunningInfoUserData;
+  restoreInfo->restoreHandleErrorFunction                  = restoreHandleErrorFunction;
+  restoreInfo->restoreHandleErrorUserData                  = restoreHandleErrorUserData;
   restoreInfo->getNamePasswordFunction              = getNamePasswordFunction;
   restoreInfo->getNamePasswordUserData              = getNamePasswordUserData;
   restoreInfo->isPauseFunction                      = isPauseFunction;
@@ -246,11 +246,10 @@ LOCAL void doneRestoreInfo(RestoreInfo *restoreInfo)
 
   DEBUG_REMOVE_RESOURCE_TRACE(restoreInfo,RestoreInfo);
 
-  Semaphore_done(&restoreInfo->runningInfoLock);
   MsgQueue_done(&restoreInfo->entryMsgQueue);
 
   doneRunningInfo(&restoreInfo->runningInfo);
-
+  Semaphore_done(&restoreInfo->runningInfoLock);
   FragmentList_done(&restoreInfo->fragmentList);
   Semaphore_done(&restoreInfo->fragmentListLock);
   Dictionary_done(&restoreInfo->namesDictionary);
@@ -390,13 +389,13 @@ LOCAL void updateRunningInfo(RestoreInfo *restoreInfo, bool forceUpdate)
 
   assert(restoreInfo != NULL);
 
-  if (restoreInfo->updateRunningInfoFunction != NULL)
+  if (restoreInfo->restoreRunningInfoFunction != NULL)
   {
     timestamp = Misc_getTimestamp();
     if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
     {
-      restoreInfo->updateRunningInfoFunction(&restoreInfo->runningInfo,
-                                             restoreInfo->updateRunningInfoUserData
+      restoreInfo->restoreRunningInfoFunction(&restoreInfo->runningInfo,
+                                             restoreInfo->restoreRunningInfoUserData
                                             );
       lastTimestamp = timestamp;
     }
@@ -521,11 +520,11 @@ LOCAL Errors handleError(RestoreInfo *restoreInfo, Errors error)
 {
   assert(restoreInfo != NULL);
 
-  if (restoreInfo->handleErrorFunction != NULL)
+  if (restoreInfo->restoreHandleErrorFunction != NULL)
   {
-    error = restoreInfo->handleErrorFunction(error,
+    error = restoreInfo->restoreHandleErrorFunction(error,
                                              &restoreInfo->runningInfo,
-                                             restoreInfo->handleErrorUserData
+                                             restoreInfo->restoreHandleErrorUserData
                                             );
   }
 
@@ -3737,21 +3736,21 @@ NULL, // masterIO
 
 /*---------------------------------------------------------------------*/
 
-Errors Command_restore(const StringList                *storageNameList,
-                       const EntryList                 *includeEntryList,
-                       const PatternList               *excludePatternList,
-                       JobOptions                      *jobOptions,
-                       RestoreUpdateRunningInfoFunction updateRunningInfoFunction,
-                       void                            *updateRunningInfoUserData,
-                       RestoreHandleErrorFunction      handleErrorFunction,
-                       void                            *handleErrorUserData,
-                       GetNamePasswordFunction         getNamePasswordFunction,
-                       void                            *getNamePasswordUserData,
-                       IsPauseFunction                 isPauseFunction,
-                       void                            *isPauseUserData,
-                       IsAbortedFunction               isAbortedFunction,
-                       void                            *isAbortedUserData,
-                       LogHandle                       *logHandle
+Errors Command_restore(const StringList           *storageNameList,
+                       const EntryList            *includeEntryList,
+                       const PatternList          *excludePatternList,
+                       JobOptions                 *jobOptions,
+                       RestoreRunningInfoFunction restoreRunningInfoFunction,
+                       void                       *restoreRunningInfoUserData,
+                       RestoreHandleErrorFunction restoreHandleErrorFunction,
+                       void                       *restoreHandleErrorUserData,
+                       GetNamePasswordFunction    getNamePasswordFunction,
+                       void                       *getNamePasswordUserData,
+                       IsPauseFunction            isPauseFunction,
+                       void                       *isPauseUserData,
+                       IsAbortedFunction          isAbortedFunction,
+                       void                       *isAbortedUserData,
+                       LogHandle                  *logHandle
                       )
 {
   StorageSpecifier           storageSpecifier;
@@ -3778,8 +3777,8 @@ Errors Command_restore(const StringList                *storageNameList,
                   includeEntryList,
                   excludePatternList,
                   jobOptions,
-                  CALLBACK_(updateRunningInfoFunction,updateRunningInfoUserData),
-                  CALLBACK_(handleErrorFunction,handleErrorUserData),
+                  CALLBACK_(restoreRunningInfoFunction,restoreRunningInfoUserData),
+                  CALLBACK_(restoreHandleErrorFunction,restoreHandleErrorUserData),
                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                   CALLBACK_(isPauseFunction,isPauseUserData),
                   CALLBACK_(isAbortedFunction,isAbortedUserData),

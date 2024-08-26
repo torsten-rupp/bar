@@ -190,6 +190,7 @@ public class TabRestore
     }
 
     /** convert data to name list
+     * @param separator separator string
      * @return name list
      */
     public String nameList(String separator)
@@ -5847,6 +5848,20 @@ Dprintf.dprintf("");
 
       menu = Widgets.newPopupMenu(shell);
       {
+        menuItem = Widgets.addMenuItem(menu,BARControl.tr("Test")+"\u2026");
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            testStorages();
+          }
+        });
+
         menuItem = Widgets.addMenuItem(menu,BARControl.tr("Refresh index")+"\u2026");
         menuItem.addSelectionListener(new SelectionListener()
         {
@@ -7746,8 +7761,8 @@ Dprintf.dprintf("");
                                   );
           entityId = valueMap.getLong("entityId",0L);
 
-          busyDialog.updateProgressBar(n);
           n++;
+          busyDialog.updateProgressBar(n);
         }
         catch (Exception exception)
         {
@@ -7813,8 +7828,8 @@ Dprintf.dprintf("");
               break;
             }
 
-            busyDialog.updateProgressBar(n);
             n++;
+            busyDialog.updateProgressBar(n);
           }
         }
       }
@@ -7935,8 +7950,8 @@ Dprintf.dprintf("");
             break;
           }
 
-          busyDialog.updateProgressBar(n);
           n++;
+          busyDialog.updateProgressBar(n);
         }
       }
       catch (CommunicationError error)
@@ -8046,8 +8061,8 @@ Dprintf.dprintf("");
             break;
           }
 
-          busyDialog.updateProgressBar(n);
           n++;
+          busyDialog.updateProgressBar(n);
         }
       }
       catch (CommunicationError error)
@@ -8158,8 +8173,8 @@ Dprintf.dprintf("");
             break;
           }
 
-          busyDialog.updateProgressBar(n);
           n++;
+          busyDialog.updateProgressBar(n);
         }
       }
       catch (CommunicationError error)
@@ -8195,6 +8210,127 @@ Dprintf.dprintf("");
   {
     HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     setEntityType(indexDataHashSet,archiveType);
+  }
+
+  /** test storage files
+   */
+  private void testStorages()
+  {
+    HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
+    if (!indexDataHashSet.isEmpty())
+    {
+      final BusyDialog busyDialog = new BusyDialog(shell,
+                                                   BARControl.tr("Test archives"),
+                                                   500,
+                                                   300,
+                                                   null,
+                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE,
+                                                   250  // max. lines
+                                                  );
+      busyDialog.updateText(3,"%s",BARControl.tr("Failed")+":");
+      busyDialog.setMaximum(0,indexDataHashSet.size());
+
+      Background.run(new BackgroundRunnable(busyDialog,
+                                            indexDataHashSet
+                                           )
+      {
+        public void run(final BusyDialog   busyDialog,
+                        HashSet<IndexData> indexDataHashSet
+                       )
+        {
+          {
+            display.syncExec(new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                BARControl.waitCursor();
+              }
+            });
+          }
+          try
+          {
+            int n = 0;
+            for (IndexData indexData : indexDataHashSet)
+            {
+              final String info = indexData.getInfo();
+
+              try
+              {
+                String command = null;
+                if      (indexData instanceof UUIDIndexData)
+                {
+                  command = StringParser.format("STORAGE_TEST jobUUID=%'S",
+                                                ((UUIDIndexData)indexData).jobUUID
+                                               );
+                }
+                else if (indexData instanceof EntityIndexData)
+                {
+                  command = StringParser.format("STORAGE_TEST entityId=%lld",
+                                                indexData.id
+                                               );
+                }
+                else if (indexData instanceof StorageIndexData)
+                {
+                  command = StringParser.format("STORAGE_TEST storageId=%lld",
+                                                indexData.id
+                                               );
+                }
+
+                BARServer.executeCommand(command,
+                                         2,  // debugLevel
+                                         new Command.ResultHandler()
+                                         {
+                                           @Override
+                                           public void handle(int i, ValueMap valueMap)
+                                           {
+                                             long storageDoneSize  = valueMap.getLong("storageDoneSize");
+                                             long storageTotalSize = valueMap.getLong("storageTotalSize");
+                                             long entryDoneSize    = valueMap.getLong("entryDoneSize");
+                                             long entryTotalSize   = valueMap.getLong("entryTotalSize");
+
+                                             busyDialog.updateText       (0,"%s",valueMap.getString("storageName"));
+                                             busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? (double)storageDoneSize/(double)storageTotalSize : 100.0);
+                                             busyDialog.updateText       (1,"%s",valueMap.getString("entryName"));
+                                             busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? (double)entryTotalSize/(double)entryTotalSize : 100.0);
+Dprintf.dprintf("valueMap=%s",valueMap);
+
+                                             if (busyDialog.isAborted())
+                                             {
+                                               busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
+                                               busyDialog.updateText(1,"");
+                                               abort();
+                                             }
+                                           }
+                                         }
+                                        );
+              }
+              catch (Exception exception)
+              {
+                busyDialog.updateList(info);
+              }
+
+              n++;
+              busyDialog.updateProgressBar(0,n);
+            }
+
+            // done busy dialog
+            busyDialog.done();
+          }
+          finally
+          {
+            display.syncExec(new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                BARControl.resetCursor();
+              }
+            });
+          }
+        }
+      });
+    }
   }
 
   /** refresh storage from index database

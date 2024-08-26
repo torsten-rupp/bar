@@ -55,23 +55,29 @@
 // test info
 typedef struct
 {
-  const EntryList         *includeEntryList;                  // list of included entries
-  const PatternList       *excludePatternList;                // list of exclude patterns
-  JobOptions              *jobOptions;
-  LogHandle               *logHandle;                         // log handle
+  const EntryList               *includeEntryList;                  // list of included entries (can be NULL)
+  const PatternList             *excludePatternList;                // list of exclude patterns (can be NULL)
+  JobOptions                    *jobOptions;
+  LogHandle                     *logHandle;                         // log handle
 
-  bool                    *pauseTestFlag;                     // TRUE for pause creation
-  bool                    *requestedAbortFlag;                // TRUE to abort create
+  TestRunningInfoFunction testRunningInfoFunction;          // update running info call-back
+  void                          *testRunningInfoUserData;         // user data for update running info call-back
+  GetNamePasswordFunction       getNamePasswordFunction;            // get name/password call-back
+  void                          *getNamePasswordUserData;           // user data for get password call-back
+  IsAbortedFunction             isAbortedFunction;                  // check for aborted call-back
+  void                          *isAbortedUserData;                 // user data for check for aborted call-back
+  bool                          *pauseTestFlag;                     // TRUE for pause creation
+  bool                          *requestedAbortFlag;                // TRUE to abort create
 
-  GetNamePasswordFunction getNamePasswordFunction;
-  void                    *getNamePasswordUserData;
+  MsgQueue                      entryMsgQueue;                      // queue with entries to store
 
-  Semaphore               fragmentListLock;
-  FragmentList            *fragmentList;
+  Semaphore                     fragmentListLock;
+  FragmentList                  fragmentList;
 
-  MsgQueue                entryMsgQueue;                      // queue with entries to store
+  Semaphore                     runningInfoLock;
+  RunningInfo                   runningInfo;                        // running info
 
-  Errors                  failError;                          // failure error
+  Errors                        failError;                          // failure error
 } TestInfo;
 
 // entry message send to test threads
@@ -118,8 +124,8 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Name   : initTestInfo
 * Purpose: initialize test info
 * Input  : testInfo                - test info variable
-*          includeEntryList        - include entry list
-*          excludePatternList      - exclude pattern list
+*          includeEntryList        - include entry list (can be NULL)
+*          excludePatternList      - exclude pattern list (can be NULL)
 *          jobOptions              - job options
 *          pauseTestFlag           - pause creation flag (can be NULL)
 *          requestedAbortFlag      - request abort flag (can be NULL)
@@ -132,31 +138,52 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initTestInfo(TestInfo                *testInfo,
-                        const EntryList         *includeEntryList,
-                        const PatternList       *excludePatternList,
-                        JobOptions              *jobOptions,
-                        bool                    *pauseTestFlag,
-                        bool                    *requestedAbortFlag,
-                        GetNamePasswordFunction getNamePasswordFunction,
-                        void                    *getNamePasswordUserData,
-                        FragmentList            *fragmentList,
-                        LogHandle               *logHandle
+LOCAL void initTestInfo(TestInfo                      *testInfo,
+                        const EntryList               *includeEntryList,
+                        const PatternList             *excludePatternList,
+                        JobOptions                    *jobOptions,
+                        TestRunningInfoFunction testRunningInfoFunction,
+                        void                          *testRunningInfoUserData,
+                        bool                          *pauseTestFlag,
+                        bool                          *requestedAbortFlag,
+                        GetNamePasswordFunction       getNamePasswordFunction,
+                        void                          *getNamePasswordUserData,
+                        IsAbortedFunction             isAbortedFunction,
+                        void                          *isAbortedUserData,
+                        LogHandle                     *logHandle
                        )
 {
   assert(testInfo != NULL);
 
   // init variables
-  testInfo->includeEntryList        = includeEntryList;
-  testInfo->excludePatternList      = excludePatternList;
-  testInfo->jobOptions              = jobOptions;
-  testInfo->pauseTestFlag           = pauseTestFlag;
-  testInfo->requestedAbortFlag      = requestedAbortFlag;
-  testInfo->getNamePasswordFunction = getNamePasswordFunction;
-  testInfo->getNamePasswordUserData = getNamePasswordUserData;
-  testInfo->fragmentList            = fragmentList;
-  testInfo->logHandle               = logHandle;
-  testInfo->failError               = ERROR_NONE;
+  testInfo->includeEntryList          = includeEntryList;
+  testInfo->excludePatternList        = excludePatternList;
+  testInfo->jobOptions                = jobOptions;
+
+  testInfo->logHandle                 = logHandle;
+
+  testInfo->failError                 = ERROR_NONE;
+
+  testInfo->testRunningInfoFunction = testRunningInfoFunction;
+  testInfo->testRunningInfoUserData = testRunningInfoUserData;
+  testInfo->pauseTestFlag             = pauseTestFlag;
+  testInfo->requestedAbortFlag        = requestedAbortFlag;
+  testInfo->getNamePasswordFunction   = getNamePasswordFunction;
+  testInfo->getNamePasswordUserData   = getNamePasswordUserData;
+  testInfo->isAbortedFunction         = isAbortedFunction;
+  testInfo->isAbortedUserData         = isAbortedUserData;
+
+  if (!Semaphore_init(&testInfo->fragmentListLock,SEMAPHORE_TYPE_BINARY))
+  {
+    HALT_FATAL_ERROR("Cannot initialize fragment list semaphore!");
+  }
+  FragmentList_init(&testInfo->fragmentList);
+
+  if (!Semaphore_init(&testInfo->runningInfoLock,SEMAPHORE_TYPE_BINARY))
+  {
+    HALT_FATAL_ERROR("Cannot initialize running info semaphore!");
+  }
+  initRunningInfo(&testInfo->runningInfo);
 
   // init entry name queue, storage queue
   if (!MsgQueue_init(&testInfo->entryMsgQueue,
@@ -166,12 +193,6 @@ LOCAL void initTestInfo(TestInfo                *testInfo,
      )
   {
     HALT_FATAL_ERROR("Cannot initialize entry message queue!");
-  }
-
-  // init locks
-  if (!Semaphore_init(&testInfo->fragmentListLock,SEMAPHORE_TYPE_BINARY))
-  {
-    HALT_FATAL_ERROR("Cannot initialize fragment list semaphore!");
   }
 
   DEBUG_ADD_RESOURCE_TRACE(testInfo,TestInfo);
@@ -192,17 +213,52 @@ LOCAL void doneTestInfo(TestInfo *testInfo)
 
   DEBUG_REMOVE_RESOURCE_TRACE(testInfo,TestInfo);
 
-  Semaphore_done(&testInfo->fragmentListLock);
-
   MsgQueue_done(&testInfo->entryMsgQueue);
+
+  doneRunningInfo(&testInfo->runningInfo);
+  Semaphore_done(&testInfo->runningInfoLock);
+
+  FragmentList_done(&testInfo->fragmentList);
+  Semaphore_done(&testInfo->fragmentListLock);
+}
+
+/***********************************************************************\
+* Name   : updateRunningInfo
+* Purpose: update restore running info
+* Input  : TestInfo    - test info
+*          forceUpdate - true to force update
+* Output : -
+* Return : -
+* Notes  : Update only every 500ms or if forced
+\***********************************************************************/
+
+LOCAL void updateRunningInfo(TestInfo *testInfo, bool forceUpdate)
+{
+  static uint64 lastTimestamp = 0LL;
+  uint64        timestamp;
+
+  assert(testInfo != NULL);
+
+  if (testInfo->testRunningInfoFunction != NULL)
+  {
+    timestamp = Misc_getTimestamp();
+    if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
+    {
+      testInfo->testRunningInfoFunction(&testInfo->runningInfo,
+                                          testInfo->testRunningInfoUserData
+                                         );
+      lastTimestamp = timestamp;
+    }
+  }
 }
 
 /***********************************************************************\
 * Name   : testFileEntry
 * Purpose: test a file entry in archive
-* Input  : archiveHandle        - archive handle
-*          includeEntryList     - include entry list
-*          excludePatternList   - exclude pattern list
+* Input  : testInfo             - test info
+*          archiveHandle        - archive handle
+*          includeEntryList     - include entry list (can be NULL)
+*          excludePatternList   - exclude pattern list (can be NULL)
 *          fragmentListLock     - fragment list lock
 *          fragmentList         - fragment list
 *          buffer               - buffer for temporary data
@@ -212,7 +268,8 @@ LOCAL void doneTestInfo(TestInfo *testInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
+LOCAL Errors testFileEntry(TestInfo          *testInfo,
+                           ArchiveHandle     *archiveHandle,
                            const EntryList   *includeEntryList,
                            const PatternList *excludePatternList,
                            Semaphore         *fragmentListLock,
@@ -235,8 +292,6 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
-  assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
   assert(fragmentListLock != NULL);
   assert(fragmentList != NULL);
   assert(buffer != NULL);
@@ -269,15 +324,27 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
     return error;
   }
 
-  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+  if (   ((includeEntryList == NULL) || List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+      && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
      )
   {
+    // test file
     printInfo(1,"  Test file      '%s'...",String_cString(fileName));
+
+    // update running info
+    SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      String_set(testInfo->runningInfo.progress.entry.name,fileName);
+      testInfo->runningInfo.progress.entry.doneSize  = 0LL;
+      testInfo->runningInfo.progress.entry.totalSize = fragmentOffset+fragmentSize;
+      updateRunningInfo(testInfo,FALSE);
+    }
 
     // read file content
     length = 0LL;
-    while (length < fragmentSize)
+    while (   ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
+           && (length < fragmentSize)
+          )
     {
       n = (ulong)MIN(fragmentSize-length,bufferSize);
 
@@ -295,7 +362,16 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
 
       length += (uint64)n;
 
-      printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
+      // update running info
+      SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        String_set(testInfo->runningInfo.progress.entry.name,fileName);
+        testInfo->runningInfo.progress.entry.doneSize = fragmentOffset+(uint64_t)length;
+        testInfo->runningInfo.progress.entry.totalSize = fragmentOffset+fragmentSize;
+        updateRunningInfo(testInfo,FALSE);
+      }
+
+      printInfo(2,"%3u%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
     }
     if (error != ERROR_NONE)
     {
@@ -366,6 +442,18 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
                   );
     }
 
+    // update running info
+    SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      String_set(testInfo->runningInfo.progress.entry.name,fileName);
+      testInfo->runningInfo.progress.entry.doneSize = fragmentOffset+fragmentSize;
+      testInfo->runningInfo.progress.entry.totalSize = fragmentOffset+fragmentSize;
+fprintf(stderr,"%s:%d: %s: done=%lu total=%lu\n",__FILE__,__LINE__,String_cString(testInfo->runningInfo.progress.entry.name),
+testInfo->runningInfo.progress.entry.doneSize,
+testInfo->runningInfo.progress.entry.totalSize);
+      updateRunningInfo(testInfo,TRUE);
+    }
+
     // output
     printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
   }
@@ -395,9 +483,10 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
 /***********************************************************************\
 * Name   : testImageEntry
 * Purpose: test a image entry in archive
-* Input  : archiveHandle        - archive handle
-*          includeEntryList     - include entry list
-*          excludePatternList   - exclude pattern list
+* Input  : testInfo             - test info
+*          archiveHandle        - archive handle
+*          includeEntryList     - include entry list (can be NULL)
+*          excludePatternList   - exclude pattern list (can be NULL)
 *          fragmentListLock     - fragment list lock
 *          fragmentList         - fragment list
 *          buffer               - buffer for temporary data
@@ -407,7 +496,8 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
+LOCAL Errors testImageEntry(TestInfo          *testInfo,
+                            ArchiveHandle     *archiveHandle,
                             const EntryList   *includeEntryList,
                             const PatternList *excludePatternList,
                             Semaphore         *fragmentListLock,
@@ -430,8 +520,6 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
-  assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
   assert(fragmentListLock != NULL);
   assert(fragmentList != NULL);
   assert(buffer != NULL);
@@ -476,15 +564,27 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
   }
   assert(deviceInfo.blockSize > 0);
 
-  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
-      && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
+  if (   ((includeEntryList == NULL) || List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,deviceName,PATTERN_MATCH_MODE_EXACT))
+      && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT))
      )
   {
+    // update running info
+    SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      String_set(testInfo->runningInfo.progress.entry.name,deviceName);
+      testInfo->runningInfo.progress.entry.doneSize  = 0LL;
+      testInfo->runningInfo.progress.entry.totalSize = (blockOffset+blockCount)*(uint64)deviceInfo.blockSize;
+      updateRunningInfo(testInfo,FALSE);
+    }
+
+    // test image
     printInfo(1,"  Test image     '%s'...",String_cString(deviceName));
 
     // read image content
     block = 0LL;
-    while (block < blockCount)
+    while (   ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
+           && (block < blockCount)
+          )
     {
       bufferBlockCount = MIN(blockCount-block,bufferSize/deviceInfo.blockSize);
 
@@ -502,7 +602,16 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
 
       block += (uint64)bufferBlockCount;
 
-      printInfo(2,"%3d%%\b\b\b\b",(uint)((block*100LL)/blockCount));
+      // update running info
+      SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        String_set(testInfo->runningInfo.progress.entry.name,deviceName);
+        testInfo->runningInfo.progress.entry.doneSize  = (blockOffset+block)*(uint64)deviceInfo.blockSize;
+        testInfo->runningInfo.progress.entry.totalSize = (blockOffset+blockCount)*(uint64)deviceInfo.blockSize;
+        updateRunningInfo(testInfo,FALSE);
+      }
+
+      printInfo(2,"%3u%%\b\b\b\b",(uint)((block*100LL)/blockCount));
     }
     if (error != ERROR_NONE)
     {
@@ -573,6 +682,15 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
                   );
     }
 
+    // update running info
+    SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      String_set(testInfo->runningInfo.progress.entry.name,deviceName);
+      testInfo->runningInfo.progress.entry.doneSize  = (blockOffset+blockCount)*(uint64)deviceInfo.blockSize;
+      testInfo->runningInfo.progress.entry.totalSize = (blockOffset+blockCount)*(uint64)deviceInfo.blockSize;
+      updateRunningInfo(testInfo,TRUE);
+    }
+
     // output
     printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
   }
@@ -602,15 +720,17 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
 /***********************************************************************\
 * Name   : testDirectoryEntry
 * Purpose: test a directory entry in archive
-* Input  : archiveHandle      - archive handle
-*          includeEntryList   - include entry list
-*          excludePatternList - exclude pattern list
+* Input  : testInfo           - test info
+*          archiveHandle      - archive handle
+*          includeEntryList   - include entry list (can be NULL)
+*          excludePatternList - exclude pattern list (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
+LOCAL Errors testDirectoryEntry(TestInfo          *testInfo,
+                                ArchiveHandle     *archiveHandle,
                                 const EntryList   *includeEntryList,
                                 const PatternList *excludePatternList
                                )
@@ -623,8 +743,6 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
-  assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
 
   // open archive entry
   directoryName = String_new();
@@ -648,8 +766,8 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
     return error;
   }
 
-  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
-      && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
+  if (   ((includeEntryList == NULL) || List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,directoryName,PATTERN_MATCH_MODE_EXACT))
+      && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT))
      )
   {
     printInfo(1,"  Test directory '%s'...",String_cString(directoryName));
@@ -662,6 +780,15 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(directoryName);
       return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(directoryName));
+    }
+
+    // update running info
+    SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      String_set(testInfo->runningInfo.progress.entry.name,directoryName);
+      testInfo->runningInfo.progress.entry.doneSize  = 0LL;
+      testInfo->runningInfo.progress.entry.totalSize = 0LL;
+      updateRunningInfo(testInfo,TRUE);
     }
 
     printInfo(1,"OK\n");
@@ -694,15 +821,17 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
 /***********************************************************************\
 * Name   : testLinkEntry
 * Purpose: test a link entry in archive
-* Input  : archiveHandle      - archive handle
-*          includeEntryList   - include entry list
-*          excludePatternList - exclude pattern list
+* Input  : testInfo           - test info
+*          archiveHandle      - archive handle
+*          includeEntryList   - include entry list (can be NULL)
+*          excludePatternList - exclude pattern list (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
+LOCAL Errors testLinkEntry(TestInfo          *testInfo,
+                           ArchiveHandle     *archiveHandle,
                            const EntryList   *includeEntryList,
                            const PatternList *excludePatternList
                           )
@@ -716,8 +845,6 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
-  assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
 
   // open archive entry
   linkName = String_new();
@@ -744,10 +871,11 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
     return error;
   }
 
-  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
-      && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
+  if (   ((includeEntryList == NULL) || List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,linkName,PATTERN_MATCH_MODE_EXACT))
+      && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT))
      )
   {
+    // test link
     printInfo(1,"  Test link      '%s'...",String_cString(linkName));
 
     // check if all data read
@@ -762,6 +890,15 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
     }
 
     printInfo(1,"OK\n");
+
+    // update running info
+    SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      String_set(testInfo->runningInfo.progress.entry.name,fileName);
+      testInfo->runningInfo.progress.entry.doneSize  = 0LL;
+      testInfo->runningInfo.progress.entry.totalSize = 0LL;
+      updateRunningInfo(testInfo,TRUE);
+    }
 
     // free resources
   }
@@ -793,9 +930,10 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
 /***********************************************************************\
 * Name   : testHardLinkEntry
 * Purpose: test a hardlink entry in archive
-* Input  : archiveHandle      - archive handle
-*          includeEntryList   - include entry list
-*          excludePatternList - exclude pattern list
+* Input  : testInfo           - test info
+*          archiveHandle      - archive handle
+*          includeEntryList   - include entry list (can be NULL)
+*          excludePatternList - exclude pattern list (can be NULL)
 *          fragmentListLock     - fragment list lock
 *          fragmentList       - fragment list
 *          buffer             - buffer for temporary data
@@ -805,7 +943,8 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
+LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
+                               ArchiveHandle     *archiveHandle,
                                const EntryList   *includeEntryList,
                                const PatternList *excludePatternList,
                                Semaphore         *fragmentListLock,
@@ -831,8 +970,6 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
-  assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
   assert(fragmentListLock != NULL);
   assert(fragmentList != NULL);
   assert(buffer != NULL);
@@ -868,17 +1005,29 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
   testedDataFlag = FALSE;
   STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
   {
-    if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-        && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+    if (   ((includeEntryList == NULL) || List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+        && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
        )
     {
+      // test hardlink
       printInfo(1,"  Test hard link '%s'...",String_cString(fileName));
+
+      // update running info
+      SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      {
+        String_set(testInfo->runningInfo.progress.entry.name,fileName);
+        testInfo->runningInfo.progress.entry.doneSize  = 0LL;
+        testInfo->runningInfo.progress.entry.totalSize = fragmentOffset+fragmentSize;
+        updateRunningInfo(testInfo,FALSE);
+      }
 
       if (!testedDataFlag && (error == ERROR_NONE))
       {
         // read hard link content
         length = 0LL;
-        while (length < fragmentSize)
+        while (   ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
+               && (length < fragmentSize)
+              )
         {
           n = (ulong)MIN(fragmentSize-length,bufferSize);
 
@@ -896,7 +1045,16 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
 
           length += (uint64)n;
 
-          printInfo(2,"%3d%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
+          // update running info
+          SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          {
+            String_set(testInfo->runningInfo.progress.entry.name,fileName);
+            testInfo->runningInfo.progress.entry.doneSize  = fragmentOffset+(uint64_t)length;
+            testInfo->runningInfo.progress.entry.totalSize = fragmentOffset+fragmentSize;
+            updateRunningInfo(testInfo,FALSE);
+          }
+
+          printInfo(2,"%3u%%\b\b\b\b",(uint)((length*100LL)/fragmentSize));
         }
         if (error != ERROR_NONE)
         {
@@ -959,6 +1117,15 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
                        stringInt64Length(fileInfo.size),fragmentOffset,
                        stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
                       );
+        }
+
+        // update running info
+        SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          String_set(testInfo->runningInfo.progress.entry.name,fileName);
+          testInfo->runningInfo.progress.entry.doneSize  = fragmentOffset+fragmentSize;
+          testInfo->runningInfo.progress.entry.totalSize = fragmentOffset+fragmentSize;
+          updateRunningInfo(testInfo,TRUE);
         }
 
         printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
@@ -1029,15 +1196,17 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
 /***********************************************************************\
 * Name   : testSpecialEntry
 * Purpose: test a special entry in archive
-* Input  : archiveHandle      - archive handle
-*          includeEntryList   - include entry list
-*          excludePatternList - exclude pattern list
+* Input  : testInfo           - test info
+*          archiveHandle      - archive handle
+*          includeEntryList   - include entry list (can be NULL)
+*          excludePatternList - exclude pattern list (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
+LOCAL Errors testSpecialEntry(TestInfo          *testInfo,
+                              ArchiveHandle     *archiveHandle,
                               const EntryList   *includeEntryList,
                               const PatternList *excludePatternList
                              )
@@ -1050,8 +1219,6 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
-  assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
 
   // open archive entry
   fileName = String_new();
@@ -1075,10 +1242,11 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
     return error;
   }
 
-  if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
-      && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+  if (   ((includeEntryList == NULL) || List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
+      && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
      )
   {
+    // test special entry
     printInfo(1,"  Test special   '%s'...",String_cString(fileName));
 
     // check if all data read
@@ -1092,6 +1260,15 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
     }
 
     printInfo(1,"OK\n");
+
+    // update running info
+    SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      String_set(testInfo->runningInfo.progress.entry.name,fileName);
+      testInfo->runningInfo.progress.entry.doneSize  = 0LL;
+      testInfo->runningInfo.progress.entry.totalSize = 0LL;
+      updateRunningInfo(testInfo,TRUE);
+    }
 
     // free resources
   }
@@ -1151,49 +1328,55 @@ LOCAL Errors testEntry(ArchiveHandle     *archiveHandle,
       #endif /* NDEBUG */
       break; /* not reached */
     case ARCHIVE_ENTRY_TYPE_FILE:
-      error = testFileEntry(archiveHandle,
+      error = testFileEntry(testInfo,
+                            archiveHandle,
                             testInfo->includeEntryList,
                             testInfo->excludePatternList,
                             &testInfo->fragmentListLock,
-                            testInfo->fragmentList,
+                            &testInfo->fragmentList,
                             buffer,
                             bufferSize
                            );
       break;
     case ARCHIVE_ENTRY_TYPE_IMAGE:
-      error = testImageEntry(archiveHandle,
+      error = testImageEntry(testInfo,
+                             archiveHandle,
                              testInfo->includeEntryList,
                              testInfo->excludePatternList,
                              &testInfo->fragmentListLock,
-                             testInfo->fragmentList,
+                             &testInfo->fragmentList,
                              buffer,
                              bufferSize
                             );
       break;
     case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-      error = testDirectoryEntry(archiveHandle,
+      error = testDirectoryEntry(testInfo,
+                                 archiveHandle,
                                  testInfo->includeEntryList,
                                  testInfo->excludePatternList
                                 );
       break;
     case ARCHIVE_ENTRY_TYPE_LINK:
-      error = testLinkEntry(archiveHandle,
+      error = testLinkEntry(testInfo,
+                            archiveHandle,
                             testInfo->includeEntryList,
                             testInfo->excludePatternList
                            );
       break;
     case ARCHIVE_ENTRY_TYPE_HARDLINK:
-      error = testHardLinkEntry(archiveHandle,
+      error = testHardLinkEntry(testInfo,
+                                archiveHandle,
                                 testInfo->includeEntryList,
                                 testInfo->excludePatternList,
                                 &testInfo->fragmentListLock,
-                                testInfo->fragmentList,
+                                &testInfo->fragmentList,
                                 buffer,
                                 bufferSize
                                );
       break;
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
-      error = testSpecialEntry(archiveHandle,
+      error = testSpecialEntry(testInfo,
+                               archiveHandle,
                                testInfo->includeEntryList,
                                testInfo->excludePatternList
                               );
@@ -1250,7 +1433,9 @@ LOCAL void testThreadCode(TestInfo *testInfo)
   archiveIndex = 0;
 
   // test entries
-  while (MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
+  while (   ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
+         && (MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
+        )
   {
     assert(entryMsg.archiveHandle != NULL);
     assert(entryMsg.archiveCryptInfo != NULL);
@@ -1316,6 +1501,16 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         freeEntryMsg(&entryMsg,NULL);
         break;
       }
+
+      // update running info
+      if (entryMsg.offset > testInfo->runningInfo.progress.storage.doneSize)
+      {
+        SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          testInfo->runningInfo.progress.storage.doneSize = entryMsg.offset;
+          updateRunningInfo(testInfo,FALSE);
+        }
+      }
     }
 
     // free resources
@@ -1344,15 +1539,9 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 /***********************************************************************\
 * Name   : testArchive
 * Purpose: test archive content
-* Input  : storageSpecifier        - storage specifier
-*          archiveName             - archive name (can be NULL)
-*          includeEntryList        - include entry list
-*          excludePatternList      - exclude pattern list
-*          jobOptions              - job options
-*          getNamePasswordFunction - get password call back
-*          getNamePasswordUserData - user data for get password
-*          fragmentList            - fragment list
-*          logHandle               - log handle (can be NULL)
+* Input  : testInfo         - test info
+*          storageSpecifier - storage specifier
+*          archiveName      - archive name (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
@@ -1490,6 +1679,15 @@ NULL, // masterSocketHandle
     }
   }
 
+  // update running info
+  SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    String_set(testInfo->runningInfo.progress.storage.name,printableStorageName);
+    testInfo->runningInfo.progress.storage.doneSize  = 0LL;
+    testInfo->runningInfo.progress.storage.totalSize = Archive_getSize(&archiveHandle);
+    updateRunningInfo(testInfo,FALSE);
+  }
+
   // output info
   printInfo(0,
             "Test storage '%s'%s",
@@ -1525,6 +1723,7 @@ NULL, // masterSocketHandle
   while (   ((testInfo->failError == ERROR_NONE) || !testInfo->jobOptions->noStopOnErrorFlag)
          && (testInfo->jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
          && !Archive_eof(&archiveHandle)
+         && ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
         )
   {
     // get next archive entry type
@@ -1612,6 +1811,13 @@ NULL, // masterSocketHandle
     free(buffer);
   }
 
+  // update running info
+  SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    testInfo->runningInfo.progress.storage.doneSize  = Archive_getSize(&archiveHandle);
+    updateRunningInfo(testInfo,TRUE);
+  }
+
   // close archive
   (void)Archive_close(&archiveHandle,FALSE);
 
@@ -1660,12 +1866,15 @@ Errors Command_test(const StringList        *storageNameList,
                     const EntryList         *includeEntryList,
                     const PatternList       *excludePatternList,
                     JobOptions              *jobOptions,
+                    TestRunningInfoFunction testRunningInfoFunction,
+                    void                    *testRunningInfoUserData,
                     GetNamePasswordFunction getNamePasswordFunction,
                     void                    *getNamePasswordUserData,
+                    IsAbortedFunction       isAbortedFunction,
+                    void                    *isAbortedUserData,
                     LogHandle               *logHandle
                    )
 {
-  FragmentList               fragmentList;
   StorageSpecifier           storageSpecifier;
   TestInfo                   testInfo;
   StringNode                 *stringNode;
@@ -1678,12 +1887,9 @@ Errors Command_test(const StringList        *storageNameList,
   FragmentNode               *fragmentNode;
 
   assert(storageNameList != NULL);
-  assert(includeEntryList != NULL);
-  assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
   // allocate resources
-  FragmentList_init(&fragmentList);
   Storage_initSpecifier(&storageSpecifier);
 
   // init test info
@@ -1691,11 +1897,12 @@ Errors Command_test(const StringList        *storageNameList,
                includeEntryList,
                excludePatternList,
                jobOptions,
+               CALLBACK_(testRunningInfoFunction,testRunningInfoUserData),
 //TODO
 NULL,  //               pauseTestFlag,
 NULL,  //               requestedAbortFlag,
                CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-               &fragmentList,
+               CALLBACK_(isAbortedFunction,isAbortedUserData),
                logHandle
               );
 
@@ -1745,7 +1952,9 @@ NULL,  //               requestedAbortFlag,
       if (error == ERROR_NONE)
       {
         fileName = String_new();
-        while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
+        while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
+               && ((testInfo.isAbortedFunction == NULL) || !testInfo.isAbortedFunction(testInfo.isAbortedUserData))
+              )
         {
           // read next directory entry
           error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
@@ -1804,7 +2013,7 @@ NULL,  //               requestedAbortFlag,
      )
   {
     // check fragment lists
-    FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
+    FRAGMENTLIST_ITERATE(&testInfo.fragmentList,fragmentNode)
     {
       if (!FragmentList_isComplete(fragmentNode))
       {
@@ -1839,7 +2048,6 @@ error = testInfo.failError;
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
-  FragmentList_done(&fragmentList);
 
   // output info
   if (error != ERROR_NONE)

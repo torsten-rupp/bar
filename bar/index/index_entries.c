@@ -1112,6 +1112,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   if (String_isEmpty(ftsMatchString))
   {
     // no names
+
+    // get storage count/size, entry count/size
     #ifdef INDEX_DEBUG_LIST_INFO
       t0 = Misc_getTimestamp();
     #endif /* INDEX_DEBUG_LIST_INFO */
@@ -1922,6 +1924,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
     #endif
 
+    // get total entry content size if possible
     #ifdef INDEX_DEBUG_LIST_INFO
       t0 = Misc_getTimestamp();
     #endif /* INDEX_DEBUG_LIST_INFO */
@@ -1934,51 +1937,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       // get entry content size
       if (newestOnly)
       {
-        error = Database_get(&indexHandle->databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 1);
-
-                               UNUSED_VARIABLE(userData);
-                               UNUSED_VARIABLE(valueCount);
-
-                               if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_TABLES
-                             (
-                               "entriesNewest \
-                                  LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
-                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                  LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
-                                  LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.entryId \
-                                  LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
-                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                               "
-                             ),
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-// TODO: directory correct?
-                               DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
-                             ),
-                             stringFormat(sqlString,sizeof(sqlString),
-                                          "    entities.deletedFlag!=TRUE \
-                                           AND %s \
-                                          ",
-                                          String_cString(filterString)
-                                         ),
-                             DATABASE_FILTERS
-                             (
-                             ),
-                             NULL,  // groupBy
-                             NULL,  // orderby
-                             0LL,
-                             1LL
-                            );
+        // no content size known
+        error = ERROR_NONE;
+        if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
       }
       else
       {
@@ -2027,51 +1988,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         }
         else
         {
-          // entries selected -> get aggregated data from entries
-          error = Database_get(&indexHandle->databaseHandle,
-                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                               {
-                                 assert(values != NULL);
-                                 assert(valueCount == 1);
-
-                                 UNUSED_VARIABLE(userData);
-                                 UNUSED_VARIABLE(valueCount);
-
-                                 if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
-
-                                 return ERROR_NONE;
-                               },NULL),
-                               NULL,  // changedRowCount
-                               DATABASE_TABLES
-                               (
-                                 "entries \
-                                    LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
-                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                    LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
-                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                                    LEFT JOIN entities         ON entities.id=entries.entityId \
-                                    LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                 "
-                               ),
-                               DATABASE_FLAG_NONE,
-                               DATABASE_COLUMNS
-                               (
-                                 DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
-                               ),
-                               stringFormat(sqlString,sizeof(sqlString),
-                                            "    entities.deletedFlag!=TRUE \
-                                             AND %s \
-                                            ",
-                                            String_cString(filterString)
-                                           ),
-                               DATABASE_FILTERS
-                               (
-                               ),
-                               NULL,  // groupBy
-                               NULL,  // orderby
-                               0LL,
-                               1LL
-                              );
+          // no content size known
+          error = ERROR_NONE;
+          if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
         }
       }
       if (error != ERROR_NONE)
@@ -2111,6 +2030,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       Database_filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entries.type=%u",indexType);
     }
 
+    // get entry count/size
     #ifdef INDEX_DEBUG_LIST_INFO
       t0 = Misc_getTimestamp();
     #endif /* INDEX_DEBUG_LIST_INFO */
@@ -2120,7 +2040,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     {
       char sqlString[MAX_SQL_COMMAND_LENGTH];
 
-      // get entry count, entry size
       if (newestOnly)
       {
         error = Database_get(&indexHandle->databaseHandle,
@@ -2235,116 +2154,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
     #endif
 
+    // get total entry content size if possible
     #ifdef INDEX_DEBUG_LIST_INFO
       t0 = Misc_getTimestamp();
     #endif /* INDEX_DEBUG_LIST_INFO */
 
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      char sqlString[MAX_SQL_COMMAND_LENGTH];
+    // no content size known
+    error = ERROR_NONE;
+    if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
 
-      // get entry content size
-      if (newestOnly)
-      {
-        error = Database_get(&indexHandle->databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 1);
-
-                               UNUSED_VARIABLE(userData);
-                               UNUSED_VARIABLE(valueCount);
-
-                               if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_TABLES
-                             (
-                               "FTS_entries \
-                                  LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
-                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                  LEFT JOIN entries          ON entries.id=entriesNewest.entryId \
-                                  LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
-                                  LEFT JOIN entities         ON entities.id=storages.entityId \
-                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                               "
-                             ),
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
-                             ),
-                             stringFormat(sqlString,sizeof(sqlString),
-                                          "    storages.deletedFlag!=TRUE \
-                                           AND %s \
-                                          ",
-                                          String_cString(filterString)
-                                         ),
-                             DATABASE_FILTERS
-                             (
-                             ),
-                             NULL,  // groupBy
-                             NULL,  // orderby
-                             0LL,
-                             1LL
-                            );
-      }
-      else
-      {
-        error = Database_get(&indexHandle->databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 1);
-
-                               UNUSED_VARIABLE(userData);
-                               UNUSED_VARIABLE(valueCount);
-
-                               if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_TABLES
-                             (
-                               "FTS_entries \
-                                  LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
-                                  LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
-                                  LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
-                                  LEFT JOIN entities         ON entities.id=storages.entityId \
-                                  LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                               "
-                             ),
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_UINT64("SUM(directoryEntries.totalEntrySize)")
-                             ),
-                             stringFormat(sqlString,sizeof(sqlString),
-                                          "    storages.deletedFlag!=TRUE \
-                                           AND %s \
-                                          ",
-                                          String_cString(filterString)
-                                         ),
-                             DATABASE_FILTERS
-                             (
-                             ),
-                             NULL,  // groupBy
-                             NULL,  // orderby
-                             0LL,
-                             1LL
-                            );
-      }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      return ERROR_NONE;
-    });
     assertx(   (error == ERROR_NONE)
             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY),
@@ -2562,7 +2380,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT64  ("imageEntries.size"),
                                  DATABASE_COLUMN_UINT    ("imageEntries.fileSystemType"),
                                  DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
-                                 DATABASE_COLUMN_UINT64  ("directoryEntries.totalEntrySizeNewest"),
                                  DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
                                  DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
@@ -2655,7 +2472,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT64  ("imageEntries.size"),
                                  DATABASE_COLUMN_UINT    ("imageEntries.fileSystemType"),
                                  DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
-                                 DATABASE_COLUMN_UINT64  ("directoryEntries.totalEntrySize"),
                                  DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
                                  DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
@@ -2771,7 +2587,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT64  ("imageEntries.size"),
                                  DATABASE_COLUMN_UINT    ("imageEntries.fileSystemType"),
                                  DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
-                                 DATABASE_COLUMN_UINT64  ("directoryEntries.totalEntrySizeNewest"),
                                  DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
                                  DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
@@ -2872,7 +2687,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_COLUMN_UINT64  ("imageEntries.size"),
                                  DATABASE_COLUMN_UINT    ("imageEntries.fileSystemType"),
                                  DATABASE_COLUMN_UINT    ("imageEntries.blockSize"),
-                                 DATABASE_COLUMN_UINT64  ("directoryEntries.totalEntrySizeNewest"),
                                  DATABASE_COLUMN_STRING  ("linkEntries.destinationName"),
                                  DATABASE_COLUMN_UINT64  ("hardlinkEntries.size")
                                ),
@@ -2997,7 +2811,6 @@ bool Index_getNextEntry(IndexQueryHandle *indexQueryHandle,
                            NULL,  // imageSize,
                            &fileSystemType_,
                            &blockSize,
-                           NULL,  // &directorySize,
                            destinationName,
                            NULL  // hardlinkSize
                           )

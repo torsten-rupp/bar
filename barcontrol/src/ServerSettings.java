@@ -313,7 +313,9 @@ public class ServerSettings
     {
       this.year  = !year.equals ("*") ? Integer.parseInt(year ) : ANY;
       this.month = !month.equals("*") ? Integer.parseInt(month) : ANY;
+      if (((this.month != ANY) && (this.month < 1) || (this.month > 12))) throw new IllegalArgumentException(Integer.toString(this.month));
       this.day   = !day.equals  ("*") ? Integer.parseInt(day  ) : ANY;
+      if (((this.day != ANY) && (this.day < 1) || (this.day > 31))) throw new IllegalArgumentException(Integer.toString(this.day));
     }
 
     /** set date
@@ -346,6 +348,7 @@ public class ServerSettings
           else if (name.toLowerCase().equals("fri")) this.weekDays |= (1 << MaintenanceData.FRI);
           else if (name.toLowerCase().equals("sat")) this.weekDays |= (1 << MaintenanceData.SAT);
           else if (name.toLowerCase().equals("sun")) this.weekDays |= (1 << MaintenanceData.SUN);
+          else throw new IllegalArgumentException();
         }
       }
     }
@@ -400,7 +403,9 @@ public class ServerSettings
     void setBeginTime(String hour, String minute)
     {
       this.beginHour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      if ((this.beginHour != ANY) && ((this.beginHour < 0) || (this.beginHour > 23))) throw new IllegalArgumentException(Integer.toString(this.beginHour));
       this.beginMinute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      if ((this.beginMinute != ANY) && ((this.beginMinute < 0) || (this.beginMinute > 59))) throw new IllegalArgumentException(Integer.toString(this.beginMinute));
     }
 
     /** set begin time
@@ -419,7 +424,9 @@ public class ServerSettings
     void setEndTime(String hour, String minute)
     {
       this.endHour   = !hour.equals  ("*") ? Integer.parseInt(hour,  10) : ANY;
+      if ((this.endHour != ANY) && ((this.endHour < 0) || (this.endHour > 23))) throw new IllegalArgumentException(Integer.toString(this.endHour));
       this.endMinute = !minute.equals("*") ? Integer.parseInt(minute,10) : ANY;
+      if ((this.endMinute != ANY) && ((this.endMinute < 0) || (this.endMinute > 59))) throw new IllegalArgumentException(Integer.toString(this.endMinute));
     }
 
     /** set end time
@@ -3454,7 +3461,14 @@ public class ServerSettings
                                        String endTime   = valueMap.getString("endTime"  );
 
                                        // create server data
-                                       maintenanceDataList.add(new MaintenanceData(id,date,weekDays,beginTime,endTime));
+                                       try
+                                       {
+                                         maintenanceDataList.add(new MaintenanceData(id,date,weekDays,beginTime,endTime));
+                                       }
+                                       catch (IllegalArgumentException exception)
+                                       {
+                                         // ignore data
+                                       }
                                      }
                                    }
                                   );

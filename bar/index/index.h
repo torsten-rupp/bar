@@ -879,26 +879,26 @@ bool Index_findEntity(IndexHandle  *indexHandle,
 *          errorMessage        - last error message
 *          totalEntryCount     - total number of entries (can be NULL)
 *          totalEntrySize      - total size [bytes] (can be NULL)
-* Return : ERROR_NONE, ERROR_DATABASE_ENTRY_NOT_FOUND or error code
+* Return : TRUE iff found
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_findStorageById(IndexHandle *indexHandle,
-                             IndexId     findStorageId,
-                             String      jobUUID,
-                             String      entityUUID,
-                             IndexId     *uuidId,
-                             IndexId     *entityId,
-                             String      storageName,
-                             uint64      *dateTime,
-                             uint64      *size,
-                             IndexStates *indexState,
-                             IndexModes  *indexMode,
-                             uint64      *lastCheckedDateTime,
-                             String      errorMessage,
-                             uint        *totalEntryCount,
-                             uint64      *totalEntrySize
-                            );
+bool Index_findStorageById(IndexHandle *indexHandle,
+                           IndexId     findStorageId,
+                           String      jobUUID,
+                           String      entityUUID,
+                           IndexId     *uuidId,
+                           IndexId     *entityId,
+                           String      storageName,
+                           uint64      *dateTime,
+                           uint64      *size,
+                           IndexStates *indexState,
+                           IndexModes  *indexMode,
+                           uint64      *lastCheckedDateTime,
+                           String      errorMessage,
+                           uint        *totalEntryCount,
+                           uint64      *totalEntrySize
+                          );
 
 /***********************************************************************\
 * Name   : Index_findStorageByName

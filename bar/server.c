@@ -51,6 +51,7 @@
 #include "bar.h"
 
 #include "commands_create.h"
+#include "commands_test.h"
 #include "commands_restore.h"
 
 #include "server.h"
@@ -2432,6 +2433,519 @@ LOCAL uint64 getNextSchedule(const JobNode *jobNode,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : testStorages
+* Purpose: test storages
+* Input  : indexHandle         - index handle
+*          storageNameList     - storage name list
+*          jobOptions          - job options
+*          runningInfoFunction - running info function
+*          runningInfoUserData - running info user data
+*          isAbortedFunction   - check for aborted (can be NULL)
+*          isAbortedUserData   - user data for check for aborted
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors testStorages(IndexHandle             *indexHandle,
+                          const StringList        *storageNameList,
+                          JobOptions              *jobOptions,
+                          TestRunningInfoFunction runningInfoFunction,
+                          void                    *runningInfoUserData,
+                          IsAbortedFunction       isAbortedFunction,
+                          void                    *isAbortedUserData
+                         )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  // test storage file
+  error = Command_test(storageNameList,
+                       NULL,  // includeEntryList,
+                       NULL,  // excludePatternList,
+                       jobOptions,
+                       CALLBACK_(runningInfoFunction,runningInfoUserData),
+// TODO:
+                       CALLBACK_(NULL,NULL),  // getNamePassword
+                       CALLBACK_(isAbortedFunction,isAbortedUserData),
+                       NULL   // logHandle
+                      );
+
+  if (isQuit())
+  {
+    return ERROR_INTERRUPTED;
+  }
+
+  // log
+  StringListIterator stringListIterator;
+  String             storageName;
+  STRINGLIST_ITERATE(storageNameList,stringListIterator,storageName)
+  {
+    if (error == ERROR_NONE)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Tested storage '%s'",
+                 String_cString(storageName)
+                );
+    }
+    else
+    {
+      if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+      {
+        logMessage(NULL,  // logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Test storage '%s' fail (error: %s)",
+                   String_cString(storageName),
+                   Error_getText(error)
+                  );
+      }
+    }
+  }
+
+  // free resources
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : testStorages
+* Purpose: test storage
+* Input  : indexHandle             - index handle
+*          storageId               - storage to delete
+*          testRunningInfoFunction - running info function
+*          testRunningInfoUserData - running info user data
+*          isAbortedFunction       - check for aborted (can be NULL)
+*          isAbortedUserData       - user data for check for aborted
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors testStorage(IndexHandle             *indexHandle,
+                         IndexId                 storageId,
+                         TestRunningInfoFunction testRunningInfoFunction,
+                         void                    *testRunningInfoUserData,
+                         IsAbortedFunction       isAbortedFunction,
+                         void                    *isAbortedUserData
+                        )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  // find storage
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String storageName = String_new();
+  if (!Index_findStorageById(indexHandle,
+                             storageId,
+                             jobUUID,
+                             NULL,  // scheduleUUID
+                             NULL,  // uuidId
+                             NULL,  // entityId
+                             storageName,
+                             NULL,  // dateTime
+                             NULL,  // size,
+                             NULL,  // indexState
+                             NULL,  // indexMode
+                             NULL,  // lastCheckedDateTime
+                             NULL,  // errorMessage
+                             NULL,  // totalEntryCount
+                             NULL   // totalEntrySize
+                            )
+     )
+  {
+    return ERROR_DATABASE_ENTRY_NOT_FOUND;
+  }
+
+  // find job name, job options (if possible)
+  String     jobName     = String_new();
+  JobOptions *jobOptions = NULL;
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    JobNode *jobNode = Job_findByUUID(jobUUID);
+    if (jobNode != NULL)
+    {
+      String_set(jobName,jobNode->name);
+      jobOptions = Job_duplicateOptions(&jobNode->job.options);
+    }
+    else
+    {
+      String_set(jobName,jobUUID);
+    }
+  }
+
+  // test storage
+  StringList storageNameList;
+  StringList_init(&storageNameList);
+  StringList_append(&storageNameList,storageName);
+  error = testStorages(indexHandle,
+                       &storageNameList,
+                       jobOptions,
+                       CALLBACK_(testRunningInfoFunction,testRunningInfoUserData),
+                       CALLBACK_(isAbortedFunction,isAbortedUserData)
+                      );
+  if (isQuit())
+  {
+    StringList_done(&storageNameList);
+    Job_doneOptions(jobOptions);
+    String_delete(jobName);
+    String_delete(storageName);
+    return ERROR_INTERRUPTED;
+  }
+  StringList_done(&storageNameList);
+
+  // log
+  if (error == ERROR_NONE)
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Tested storage #%"PRIi64": job '%s'",
+               INDEX_DATABASE_ID(storageId),
+               String_cString(jobName)
+              );
+  }
+  else
+  {
+    if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Test storage #%"PRIi64": job '%s' fail (error: %s)",
+                 INDEX_DATABASE_ID(storageId),
+                 String_cString(jobName),
+                 Error_getText(error)
+                );
+    }
+  }
+
+  // free resources
+  StringList_done(&storageNameList);
+  Job_doneOptions(jobOptions);
+  String_delete(jobName);
+  String_delete(storageName);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : testEntity
+* Purpose: test all storage files of entity
+* Input  : indexHandle             - index handle
+*          entityId                - index id of entity
+*          testRunningInfoFunction - running info function
+*          testRunningInfoUserData - funning info user data
+*          isAbortedFunction       - check for aborted (can be NULL)
+*          isAbortedUserData       - user data for check for aborted
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : No error is reported if a storage file cannot be deleted
+\***********************************************************************/
+
+LOCAL Errors testEntity(IndexHandle             *indexHandle,
+                        IndexId                 entityId,
+                        TestRunningInfoFunction testRunningInfoFunction,
+                        void                    *testRunningInfoUserData,
+                        IsAbortedFunction       isAbortedFunction,
+                        void                    *isAbortedUserData
+                       )
+{
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  Errors           error;
+  const JobNode    *jobNode;
+  IndexQueryHandle indexQueryHandle;
+
+  assert(indexHandle != NULL);
+
+  // find entity
+  if (!Index_findEntity(indexHandle,
+                        entityId,
+                        NULL,  // findJobUUID,
+                        NULL,  // findScheduleUUID
+                        NULL,  // findHostName
+                        ARCHIVE_TYPE_ANY,
+                        0LL,  // findCreatedDate
+                        0L,  // findCreatedTime
+                        jobUUID,
+                        NULL,  // scheduleUUID
+                        NULL,  // uuidId
+                        NULL,  // entityId
+                        NULL,  // archiveType
+                        NULL,  // createdDateTime,
+                        NULL,  // lastErrorMessage
+                        NULL,  // totalEntryCount
+                        NULL  // totalEntrySize
+                       )
+     )
+  {
+    return ERROR_DATABASE_ENTRY_NOT_FOUND;
+  }
+
+  // find job name, job options (if possible)
+  String     jobName     = String_new();
+  JobOptions *jobOptions = NULL;
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    jobNode = Job_findByUUID(jobUUID);
+    if (jobNode != NULL)
+    {
+      String_set(jobName,jobNode->name);
+      jobOptions = Job_duplicateOptions(&jobNode->job.options);
+    }
+    else
+    {
+      String_set(jobName,jobUUID);
+    }
+  }
+
+  // get all storages of entity
+  StringList storageNameList;
+  StringList_init(&storageNameList);
+  String storageName = String_new();
+  error = Index_initListStorages(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 entityId,
+                                 NULL,  // jobUUID
+                                 NULL,  // scheduleUUID,
+                                 NULL,  // indexIds
+                                 0,  // indexIdCount
+                                 INDEX_TYPESET_ALL,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // hostName
+                                 NULL,  // userName
+                                 NULL,  // name
+                                 INDEX_STORAGE_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error != ERROR_NONE)
+  {
+    String_delete(storageName);
+    StringList_done(&storageNameList);
+    Job_doneOptions(jobOptions);
+    String_delete(jobName);
+    return error;
+  }
+  while (Index_getNextStorage(&indexQueryHandle,
+                              NULL,  // uuidId
+                              NULL,  // jobUUID
+                              NULL,  // entityId
+                              NULL,  // scheduleUUID
+                              NULL,  // hostName
+                              NULL,  // userName
+                              NULL,  // comment
+                              NULL,  // createdDateTime
+                              NULL,  // archiveType
+                              NULL,  // storageId
+                              storageName,
+                              NULL,  // createdDateTime
+                              NULL,  // size
+                              NULL,  // indexState
+                              NULL,  // indexMode
+                              NULL,  // lastCheckedDateTime
+                              NULL,  // errorMessage
+                              NULL,  // totalEntryCount
+                              NULL  // totalEntrySize
+                             )
+        )
+  {
+    StringList_append(&storageNameList,storageName);
+  }
+  Index_doneList(&indexQueryHandle);
+
+  // test all storages of entity
+  error = testStorages(indexHandle,
+                       &storageNameList,
+                       jobOptions,
+                       CALLBACK_(testRunningInfoFunction,testRunningInfoUserData),
+                       CALLBACK_(isAbortedFunction,isAbortedUserData)
+                      );
+  if (isQuit())
+  {
+    String_delete(storageName);
+    StringList_done(&storageNameList);
+    Job_doneOptions(jobOptions);
+    String_delete(jobName);
+    return ERROR_INTERRUPTED;
+  }
+
+  // log
+  if (error == ERROR_NONE)
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Tested entity #%"PRIi64": job '%s'",
+               INDEX_DATABASE_ID(entityId),
+               String_cString(jobName)
+              );
+  }
+  else
+  {
+    if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Test entity #%"PRIi64": job '%s' fail (error: %s)",
+                 INDEX_DATABASE_ID(entityId),
+                 String_cString(jobName),
+                 Error_getText(error)
+                );
+    }
+  }
+
+  // free resources
+  String_delete(storageName);
+  StringList_done(&storageNameList);
+  Job_doneOptions(jobOptions);
+  String_delete(jobName);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : testUUID
+* Purpose: deltestete all storage files ofUUID
+* Input  : indexHandle             - index handle
+*          jobUUID                 - job UUID
+*          testRunningInfoFunction - running info function
+*          testRunningInfoUserData - running info user data
+*          isAbortedFunction       - check for aborted (can be NULL)
+*          isAbortedUserData       - user data for check for aborted
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : No error is reported if a storage file cannot be deleted
+\***********************************************************************/
+
+LOCAL Errors testUUID(IndexHandle             *indexHandle,
+                      ConstString             jobUUID,
+                      TestRunningInfoFunction testRunningInfoFunction,
+                      void                    *testRunningInfoUserData,
+                      IsAbortedFunction       isAbortedFunction,
+                      void                    *isAbortedUserData
+                     )
+{
+  Errors           error;
+  IndexId          uuidId;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          entityId;
+
+  assert(indexHandle != NULL);
+
+  // find UUID
+  if (!Index_findUUID(indexHandle,
+                      String_cString(jobUUID),
+                      NULL,  // findScheduleUUID
+                      &uuidId,
+                      NULL,  // executionCountNormal,
+                      NULL,  // executionCountFull,
+                      NULL,  // executionCountIncremental,
+                      NULL,  // executionCountDifferential,
+                      NULL,  // executionCountContinuous,
+                      NULL,  // averageDurationNormal,
+                      NULL,  // averageDurationFull,
+                      NULL,  // averageDurationIncremental,
+                      NULL,  // averageDurationDifferential,
+                      NULL,  // averageDurationContinuous,
+                      NULL,  // totalEntityCount,
+                      NULL,  // totalStorageCount,
+                      NULL,  // totalStorageSize,
+                      NULL,  // totalEntryCount,
+                      NULL  // totalEntrySize
+                     )
+     )
+  {
+    return ERROR_DATABASE_ENTRY_NOT_FOUND;
+  }
+
+  // get all entities with uuid id
+  Array entityIdArray;
+  Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  error = Index_initListEntities(&indexQueryHandle,
+                                 indexHandle,
+                                 uuidId,
+                                 NULL,  // jobUUID
+                                 NULL,  // scheduleId,
+                                 ARCHIVE_TYPE_ANY,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // name
+                                 INDEX_ENTITY_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&entityIdArray);
+    return error;
+  }
+  while (   (error == ERROR_NONE)
+         && !isQuit()
+         && !Job_isSomeActive()
+         && Index_getNextEntity(&indexQueryHandle,
+                                NULL,  // uuidId
+                                NULL,  // jobUUID
+                                NULL,  // scheduleUUID
+                                &entityId,
+                                NULL,  // archiveType
+                                NULL,  // createdDateTime
+                                NULL,  // lastErrorCode
+                                NULL,  // lastErrorData
+                                NULL,  // totalSize
+                                NULL,  // totalEntryCount
+                                NULL,  // totalEntrySize
+                                NULL  // lockedCount
+                               )
+        )
+  {
+    Array_append(&entityIdArray,&entityId);
+  }
+  Index_doneList(&indexQueryHandle);
+
+  // test all entities of uuid
+  ArrayIterator arrayIterator;
+  ARRAY_ITERATEX(&entityIdArray,
+                 arrayIterator,
+                 entityId,
+                    (error == ERROR_NONE)
+                 && ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
+                 && !isQuit()
+                )
+  {
+    error = testEntity(indexHandle,
+                       entityId,
+                       CALLBACK_(testRunningInfoFunction,testRunningInfoUserData),
+                       CALLBACK_(isAbortedFunction,isAbortedUserData)
+                      );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&entityIdArray);
+    return error;
+  }
+  if (isQuit() || Job_isSomeActive())
+  {
+    Array_done(&entityIdArray);
+    return ERROR_INTERRUPTED;
+  }
+
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Tested UUID '%s'",
+             String_cString(jobUUID)
+            );
+
+  // free resources
+  Array_done(&entityIdArray);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : deleteStorage
 * Purpose: delete storage
 * Input  : indexHandle - index handle
@@ -2461,29 +2975,30 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
   string      = String_new();
 
   // find storage
-  error = Index_findStorageById(indexHandle,
-                                storageId,
-                                jobUUID,
-                                NULL,  // scheduleUUID
-                                NULL,  // uuidId
-                                NULL,  // entityId
-                                storageName,
-                                &createdDateTime,
-                                NULL,  // size
-                                NULL,  // indexState
-                                NULL,  // indexMode
-                                NULL,  // lastCheckedDateTime
-                                NULL,  // errorMessage
-                                NULL,  // totalEntryCount
-                                NULL  // totalEntrySize
-                               );
-  if (error != ERROR_NONE)
+  if (!Index_findStorageById(indexHandle,
+                             storageId,
+                             jobUUID,
+                             NULL,  // scheduleUUID
+                             NULL,  // uuidId
+                             NULL,  // entityId
+                             storageName,
+                             &createdDateTime,
+                             NULL,  // size
+                             NULL,  // indexState
+                             NULL,  // indexMode
+                             NULL,  // lastCheckedDateTime
+                             NULL,  // errorMessage
+                             NULL,  // totalEntryCount
+                             NULL  // totalEntrySize
+                            )
+     )
   {
     String_delete(string);
     String_delete(storageName);
-    return error;
+    return ERROR_DATABASE_ENTRY_NOT_FOUND;
   }
 
+  error = ERROR_NONE;
   if (!String_isEmpty(storageName))
   {
     Storage_initSpecifier(&storageSpecifier);
@@ -3824,7 +4339,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
     doneStorageSize  = 0LL;
     do
     {
-      // find net storage to move (Note: do not iterate with index list to avoid long running lock)
+      // find next storage to move (Note: do not iterate with index list to avoid long running lock)
       storageId = INDEX_ID_NONE;
       error = Index_initListStorages(&indexQueryHandle,
                                      indexHandle,
@@ -5986,7 +6501,6 @@ LOCAL void jobThreadCode(void)
       String_set(scheduleUUID,jobNode->scheduleUUID);
       EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK_(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK_(NULL,NULL));
-fprintf(stderr,"%s:%d: copz po\n",__FILE__,__LINE__);
       Job_copyOptions(&jobOptions,&jobNode->job.options);
       archiveType         = jobNode->archiveType;
       String_set(customText,jobNode->customText);
@@ -16960,6 +17474,241 @@ LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *index
 }
 
 /***********************************************************************\
+* Name   : serverCommand_storageTest
+* Purpose: test storage
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            jobUUID=<uuid>|"" and/or
+*            entityId=<id>|0 and/or
+*            storageId=<id>|0
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_storageTest(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  typedef struct
+  {
+    ClientInfo *clientInfo;
+    uint       id;
+    bool       abortFlag;
+  } TestCommandInfo;
+
+  /***********************************************************************\
+  * Name   : testRunningInfo
+  * Purpose: update test running info
+  * Input  : runningInfo - running info data,
+  *          userData    - user data
+  * Output : -
+  * Return : TRUE to continue, FALSE to abort
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void testRunningInfo(const RunningInfo *runningInfo,
+                            void              *userData
+                           );
+  void testRunningInfo(const RunningInfo *runningInfo,
+                       void              *userData
+                      )
+  {
+    TestCommandInfo *testCommandInfo = (TestCommandInfo*)userData;
+
+    assert(testCommandInfo != NULL);
+    assert(runningInfo != NULL);
+    assert(runningInfo->progress.storage.name != NULL);
+    assert(runningInfo->progress.entry.name != NULL);
+
+    ServerIO_sendResult(&testCommandInfo->clientInfo->io,
+                        testCommandInfo->id,
+                        FALSE,
+                        ERROR_NONE,
+// TODO: rename totalEntryCount -> totalCount
+// TODO: rename totalEntrySize -> totalSize
+                        "doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64"",
+                        runningInfo->progress.done.count,
+                        runningInfo->progress.done.size,
+                        runningInfo->progress.total.count,
+                        runningInfo->progress.total.size,
+                        runningInfo->progress.entry.name,
+                        runningInfo->progress.entry.doneSize,
+                        runningInfo->progress.entry.totalSize,
+                        runningInfo->progress.storage.name,
+                        runningInfo->progress.storage.doneSize,
+                        runningInfo->progress.storage.totalSize
+                       );
+  }
+
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  IndexId      entityId;
+  IndexId      storageId;
+  Errors       error;
+  StaticString (uuid,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  // get job uuid, entity id, and/or storage id
+  String_clear(jobUUID);
+  entityId  = INDEX_ID_NONE;
+  storageId = INDEX_ID_NONE;
+  if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+      && !StringMap_getIndexId(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getIndexId(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
+     )
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid> or entityId=<id> or storageId=<id>");
+    return;
+  }
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // mount devices
+  error = ERROR_NONE;
+  String_clear(uuid);
+  if      (!String_isEmpty(jobUUID))
+  {
+    String_set(uuid,jobUUID);
+  }
+  else if (!INDEX_ID_IS_NONE(entityId))
+  {
+    if (!Index_findEntity(indexHandle,
+                          entityId,
+                          NULL,  // findJobUUID
+                          NULL,  // findScheduleUUID
+                          NULL,  // findHostName
+                          ARCHIVE_TYPE_ANY,
+                          0LL,  // findCreatedDate
+                          0L,  // findCreatedTime
+                          uuid,
+                          NULL,  // scheduleUUID
+                          NULL,  // uuidId
+                          NULL,  // entityId
+                          NULL,  // archiveType
+                          NULL,  // createdDateTime
+                          NULL,  // lastErrorMessage
+                          NULL,  // totalEntryCount
+                          NULL  // totalEntrySize
+                         )
+       )
+    {
+      error = ERROR_DATABASE_ENTRY_NOT_FOUND;
+    }
+  }
+  else if (!INDEX_ID_IS_NONE(storageId))
+  {
+    if (!Index_findStorageById(indexHandle,
+                               storageId,
+                               uuid,
+                               NULL,  // scheduleUUID
+                               NULL,  // uuidId
+                               NULL,  // entityId
+                               NULL,  // storageName
+                               NULL,  // createdDateTime
+                               NULL,  // size
+                               NULL,  // indexState
+                               NULL,  // indexMode
+                               NULL,  // lastCheckedDateTime
+                               NULL,  // errorMessage
+                               NULL,  // totalEntryCount
+                               NULL  // totalEntrySize
+                              )
+      )
+    {
+      error = ERROR_DATABASE_ENTRY_NOT_FOUND;
+    }
+  }
+  if (error == ERROR_NONE)
+  {
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    {
+      jobNode = Job_findByUUID(uuid);
+      if (jobNode != NULL)
+      {
+        error = mountAll(&jobNode->job.options.mountList);
+      }
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+    return;
+  }
+
+  // test storages
+  TestCommandInfo testCommandInfo;
+  testCommandInfo.clientInfo = clientInfo;
+  testCommandInfo.id         = id;
+  if (!String_isEmpty(jobUUID))
+  {
+    // test all storage files with job UUID
+    error = testUUID(indexHandle,
+                     jobUUID,
+                     CALLBACK_(testRunningInfo,&testCommandInfo),
+                     CALLBACK_INLINE(bool,(void *userData),
+                     {
+                       UNUSED_VARIABLE(userData);
+                       return isCommandAborted(clientInfo,id);
+                     },NULL)
+                    );
+  }
+
+  if (!INDEX_ID_IS_NONE(entityId))
+  {
+    // test all storage files of entity
+    error = testEntity(indexHandle,
+                       entityId,
+                       CALLBACK_(testRunningInfo,&testCommandInfo),
+                       CALLBACK_INLINE(bool,(void *userData),
+                       {
+                         UNUSED_VARIABLE(userData);
+                         return isCommandAborted(clientInfo,id);
+                       },NULL)
+                      );
+  }
+
+  if (!INDEX_ID_IS_NONE(storageId))
+  {
+    // test storage file
+    error = testStorage(indexHandle,
+                        storageId,
+                        CALLBACK_(testRunningInfo,&testCommandInfo),
+                        CALLBACK_INLINE(bool,(void *userData),
+                        {
+                          UNUSED_VARIABLE(userData);
+                          return isCommandAborted(clientInfo,id);
+                        },NULL)
+                       );
+  }
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+    return;
+  }
+
+  // unmount devices
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    jobNode = Job_findByUUID(uuid);
+    if (jobNode != NULL)
+    {
+      error = unmountAll(&jobNode->job.options.mountList);
+    }
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
 * Name   : serverCommand_storageDelete
 * Purpose: delete storage and remove database index
 * Input  : clientInfo  - client info
@@ -16987,7 +17736,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get uuid, job id, and/or storage id
+  // get job uuid, entity id, and/or storage id
   String_clear(jobUUID);
   entityId  = INDEX_ID_NONE;
   storageId = INDEX_ID_NONE;
@@ -17009,85 +17758,68 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 
   // mount devices
   error = ERROR_NONE;
+  String_clear(uuid);
   if      (!String_isEmpty(jobUUID))
   {
-    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-    {
-      jobNode = Job_findByUUID(jobUUID);
-      if (jobNode != NULL)
-      {
-        error = mountAll(&jobNode->job.options.mountList);
-      }
-    }
+    String_set(uuid,jobUUID);
   }
   else if (!INDEX_ID_IS_NONE(entityId))
   {
-    if (Index_findEntity(indexHandle,
-                         entityId,
-                         NULL,  // findJobUUID
-                         NULL,  // findScheduleUUID
-                         NULL,  // findHostName
-                         ARCHIVE_TYPE_ANY,
-                         0LL,  // findCreatedDate
-                         0L,  // findCreatedTime
-                         uuid,
-                         NULL,  // scheduleUUID
-                         NULL,  // uuidId
-                         NULL,  // entityId
-                         NULL,  // archiveType
-                         NULL,  // createdDateTime
-                         NULL,  // lastErrorMessage
-                         NULL,  // totalEntryCount
-                         NULL  // totalEntrySize
-                        )
+    if (!Index_findEntity(indexHandle,
+                          entityId,
+                          NULL,  // findJobUUID
+                          NULL,  // findScheduleUUID
+                          NULL,  // findHostName
+                          ARCHIVE_TYPE_ANY,
+                          0LL,  // findCreatedDate
+                          0L,  // findCreatedTime
+                          uuid,
+                          NULL,  // scheduleUUID
+                          NULL,  // uuidId
+                          NULL,  // entityId
+                          NULL,  // archiveType
+                          NULL,  // createdDateTime
+                          NULL,  // lastErrorMessage
+                          NULL,  // totalEntryCount
+                          NULL  // totalEntrySize
+                         )
        )
     {
-      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-      {
-        jobNode = Job_findByUUID(uuid);
-        if (jobNode != NULL)
-        {
-          error = mountAll(&jobNode->job.options.mountList);
-        }
-      }
-    }
-    else
-    {
-      error = ERROR_DATABASE_INDEX_NOT_FOUND;
+      error = ERROR_DATABASE_ENTRY_NOT_FOUND;
     }
   }
   else if (!INDEX_ID_IS_NONE(storageId))
   {
-    if (Index_findStorageById(indexHandle,
-                              storageId,
-                              uuid,
-                              NULL,  // scheduleUUID
-                              NULL,  // uuidId
-                              NULL,  // entityId
-                              NULL,  // storageName
-                              NULL,  // createdDateTime
-                              NULL,  // size
-                              NULL,  // indexState
-                              NULL,  // indexMode
-                              NULL,  // lastCheckedDateTime
-                              NULL,  // errorMessage
-                              NULL,  // totalEntryCount
-                              NULL  // totalEntrySize
-                             ) == ERROR_NONE
+    if (!Index_findStorageById(indexHandle,
+                               storageId,
+                               uuid,
+                               NULL,  // scheduleUUID
+                               NULL,  // uuidId
+                               NULL,  // entityId
+                               NULL,  // storageName
+                               NULL,  // createdDateTime
+                               NULL,  // size
+                               NULL,  // indexState
+                               NULL,  // indexMode
+                               NULL,  // lastCheckedDateTime
+                               NULL,  // errorMessage
+                               NULL,  // totalEntryCount
+                               NULL  // totalEntrySize
+                              )
        )
     {
-      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-      {
-        jobNode = Job_findByUUID(uuid);
-        if (jobNode != NULL)
-        {
-          error = mountAll(&jobNode->job.options.mountList);
-        }
-      }
+      error = ERROR_DATABASE_ENTRY_NOT_FOUND;
     }
-    else
+  }
+  if (error == ERROR_NONE)
+  {
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      error = ERROR_DATABASE_INDEX_NOT_FOUND;
+      jobNode = Job_findByUUID(uuid);
+      if (jobNode != NULL)
+      {
+        error = mountAll(&jobNode->job.options.mountList);
+      }
     }
   }
   if (error != ERROR_NONE)
@@ -17096,6 +17828,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     return;
   }
 
+  // delete storages
   if (!String_isEmpty(jobUUID))
   {
     // delete all storage files with job UUID
@@ -17126,6 +17859,16 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
       return;
+    }
+  }
+
+  // unmount devices
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    jobNode = Job_findByUUID(uuid);
+    if (jobNode != NULL)
+    {
+      error = unmountAll(&jobNode->job.options.mountList);
     }
   }
 
@@ -20831,11 +21574,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   \***********************************************************************/
 
   auto void restoreRunningInfo(const RunningInfo *runningInfo,
-                                     void              *userData
-                                    );
+                               void              *userData
+                              );
   void restoreRunningInfo(const RunningInfo *runningInfo,
-                                void              *userData
-                               )
+                          void              *userData
+                         )
   {
     RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
 
@@ -21714,6 +22457,7 @@ SERVER_COMMANDS[] =
 
   { "ENTITY_MOVE_TO",              serverCommand_entityMoveTo,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
+  { "STORAGE_TEST",                serverCommand_storageTest,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "STORAGE_DELETE",              serverCommand_storageDelete,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
   { "INDEX_INFO",                  serverCommand_indexInfo,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },

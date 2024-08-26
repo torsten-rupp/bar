@@ -3,6 +3,7 @@
     save space and time
   * integrated libmount to mount/umount. Used when --mount-command,
     --unmount-command are not set (empty).
+  * BARControl: added test function
 
 2024-07-13 24a
   * fixed long blocking of database at clean

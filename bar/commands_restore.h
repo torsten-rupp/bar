@@ -39,9 +39,9 @@
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*RestoreUpdateRunningInfoFunction)(const RunningInfo *runningInfo,
-                                                void              *userData
-                                               );
+typedef void(*RestoreRunningInfoFunction)(const RunningInfo *runningInfo,
+                                          void              *userData
+                                         );
 
 /***********************************************************************\
 * Name   : RestoreErrorFunction
@@ -78,9 +78,9 @@ typedef Errors(*RestoreHandleErrorFunction)(Errors            error,
 *          includeEntryList             - include entry list
 *          excludePatternList           - exclude pattern list
 *          jobOptions                   - job options
-*          updateRunningInfoFunction    - running info call back
+*          restoreRunningInfoFunction    - running info call back
 *                                         function (can be NULL)
-*          updateRunningInfoUserData    - user data for running info
+*          restoreRunningInfoUserData    - user data for running info
 *                                         function
 *          handleErrorFunction          - error call back (can be NULL)
 *          handleErrorUserData          - user data for error call back
@@ -99,21 +99,21 @@ typedef Errors(*RestoreHandleErrorFunction)(Errors            error,
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_restore(const StringList                *storageNameList,
-                       const EntryList                 *includeEntryList,
-                       const PatternList               *excludePatternList,
-                       JobOptions                      *jobOptions,
-                       RestoreUpdateRunningInfoFunction updateRunningInfoFunction,
-                       void                            *updateRunningInfoUserData,
-                       RestoreHandleErrorFunction      handleErrorFunction,
-                       void                            *handleErrorUserData,
-                       GetNamePasswordFunction         getNamePasswordFunction,
-                       void                            *getNamePasswordUserData,
-                       IsPauseFunction                 isPauseFunction,
-                       void                            *isPauseUserData,
-                       IsAbortedFunction               isAbortedFunction,
-                       void                            *isAbortedUserData,
-                       LogHandle                       *logHandle
+Errors Command_restore(const StringList           *storageNameList,
+                       const EntryList            *includeEntryList,
+                       const PatternList          *excludePatternList,
+                       JobOptions                 *jobOptions,
+                       RestoreRunningInfoFunction restoreRunningInfoFunction,
+                       void                       *restoreRunningInfoUserData,
+                       RestoreHandleErrorFunction handleErrorFunction,
+                       void                       *handleErrorUserData,
+                       GetNamePasswordFunction    getNamePasswordFunction,
+                       void                       *getNamePasswordUserData,
+                       IsPauseFunction            isPauseFunction,
+                       void                       *isPauseUserData,
+                       IsAbortedFunction          isAbortedFunction,
+                       void                       *isAbortedUserData,
+                       LogHandle                  *logHandle
                       );
 
 #ifdef __cplusplus

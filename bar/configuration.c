@@ -3123,8 +3123,20 @@ LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const
   if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
   {
     if (!Configuration_parseDateNumber(s0,&date.year )) errorFlag = TRUE;
-    if (!Configuration_parseDateMonth (s1,&date.month)) errorFlag = TRUE;
-    if (!Configuration_parseDateNumber(s2,&date.day  )) errorFlag = TRUE;
+    if (   !Configuration_parseDateMonth (s1,&date.month)
+        || (   (date.month != DATE_ANY)
+            && (   (date.month < 1)
+                || (date.month > 12)
+               )
+           )
+       ) errorFlag = TRUE;
+    if (   !Configuration_parseDateNumber(s2,&date.day  )
+        || (   (date.day != DATE_ANY)
+            && (   (date.day < 1)
+                || (date.day > 31)
+               )
+           )
+       ) errorFlag = TRUE;
   }
   else
   {
@@ -3146,7 +3158,7 @@ LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const
 }
 
 /***********************************************************************\
-* Name   : configValueFormatMaintenanceDate
+* Name   : configValueMaintenanceDateFormat
 * Purpose: format maintenance config statement
 * Input  : formatUserData  - format user data
 *          operation       - format operation
@@ -3188,7 +3200,7 @@ LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueOp
         {
           if (maintenanceDate->year != DATE_ANY)
           {
-            String_appendFormat(line,"%d",maintenanceDate->year);
+            String_appendFormat(line,"%4d",maintenanceDate->year);
           }
           else
           {
@@ -3197,7 +3209,7 @@ LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueOp
           String_appendChar(line,'-');
           if (maintenanceDate->month != DATE_ANY)
           {
-            String_appendFormat(line,"%d",maintenanceDate->month);
+            String_appendFormat(line,"%02d",maintenanceDate->month);
           }
           else
           {
@@ -3206,7 +3218,7 @@ LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueOp
           String_appendChar(line,'-');
           if (maintenanceDate->day != DATE_ANY)
           {
-            String_appendFormat(line,"%d",maintenanceDate->day);
+            String_appendFormat(line,"%02d",maintenanceDate->day);
           }
           else
           {
@@ -3377,8 +3389,20 @@ LOCAL bool configValueMaintenanceTimeParse(void *userData, void *variable, const
   s1 = String_new();
   if (String_parseCString(value,"%S:%S",NULL,s0,s1))
   {
-    if (!Configuration_parseTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
-    if (!Configuration_parseTimeNumber(s1,&time.minute)) errorFlag = TRUE;
+    if (   !Configuration_parseTimeNumber(s0,&time.hour  )
+        || (   (time.hour != TIME_ANY)
+            && (   (time.hour < 0)
+                || (time.hour > 23)
+               )
+           )
+       ) errorFlag = TRUE;
+    if (   !Configuration_parseTimeNumber(s1,&time.minute)
+        || (   (time.hour != TIME_ANY)
+            && (   (time.minute < 0)
+                || (time.minute > 59)
+               )
+           )
+       ) errorFlag = TRUE;
   }
   String_delete(s1);
   String_delete(s0);

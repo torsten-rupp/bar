@@ -1711,7 +1711,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
-    return ERROR_DATABASE_NOT_FOUND;
+    return FALSE;
   }
 
   // init variables

@@ -3512,7 +3512,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &globalOptions.includeEntryList,
                                  &globalOptions.excludePatternList,
                                  &jobOptions,
+                                 CALLBACK_(NULL,NULL),  // testUpdateRunningInfo
                                  CALLBACK_(getPasswordFromConsole,NULL),
+                                 CALLBACK_(NULL,NULL),  // isAborted
                                  NULL  // logHandle
                                 );
             break;

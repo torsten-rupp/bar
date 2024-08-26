@@ -4311,23 +4311,24 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
 
 // ----------------------------------------------------------------------
 
-Errors Index_findStorageById(IndexHandle *indexHandle,
-                             IndexId     findStorageId,
-                             String      jobUUID,
-                             String      scheduleUUID,
-                             IndexId     *uuidId,
-                             IndexId     *entityId,
-                             String      storageName,
-                             uint64      *dateTime,
-                             uint64      *size,
-                             IndexStates *indexState,
-                             IndexModes  *indexMode,
-                             uint64      *lastCheckedDateTime,
-                             String      errorMessage,
-                             uint        *totalEntryCount,
-                             uint64      *totalEntrySize
-                            )
+bool Index_findStorageById(IndexHandle *indexHandle,
+                           IndexId     findStorageId,
+                           String      jobUUID,
+                           String      scheduleUUID,
+                           IndexId     *uuidId,
+                           IndexId     *entityId,
+                           String      storageName,
+                           uint64      *dateTime,
+                           uint64      *size,
+                           IndexStates *indexState,
+                           IndexModes  *indexMode,
+                           uint64      *lastCheckedDateTime,
+                           String      errorMessage,
+                           uint        *totalEntryCount,
+                           uint64      *totalEntrySize
+                          )
 {
+  bool   foundFlag;
   Errors error;
 
   assert(indexHandle != NULL);
@@ -4336,8 +4337,12 @@ Errors Index_findStorageById(IndexHandle *indexHandle,
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
-    return ERROR_DATABASE_NOT_FOUND;
+    return FALSE;
   }
+
+  // init variables
+  foundFlag = FALSE;
+  error     = ERROR_NONE;
 
   INDEX_DOX(error,
             indexHandle,
@@ -4364,6 +4369,10 @@ Errors Index_findStorageById(IndexHandle *indexHandle,
                           if (errorMessage        != NULL) String_set(errorMessage,values[10].string);
                           if (totalEntryCount     != NULL) (*totalEntryCount)     = values[11].u;
                           if (totalEntrySize      != NULL) (*totalEntrySize)      = values[12].u64;
+
+                          assert(!foundFlag || (storageName == NULL) || !String_isEmpty(storageName));
+
+                          foundFlag = TRUE;
 
                           return ERROR_NONE;
                         },NULL),
@@ -4405,8 +4414,12 @@ Errors Index_findStorageById(IndexHandle *indexHandle,
                         1LL
                        );
   });
+  if ((error != ERROR_NONE) && (error != ERROR_ABORTED))
+  {
+    return FALSE;
+  }
 
-  return error;
+  return foundFlag;
 }
 
 bool Index_findStorageByName(IndexHandle            *indexHandle,
@@ -4440,11 +4453,12 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
-    return ERROR_DATABASE_NOT_FOUND;
+    return FALSE;
   }
 
   // init variables
   foundFlag   = FALSE;
+  error       = ERROR_NONE;
   Storage_initSpecifier(&storageSpecifier);
   storageName = String_new();
 
@@ -4588,6 +4602,7 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
 
   // init variables
   foundFlag           = FALSE;
+  error               = ERROR_NONE;
   indexStateSetString = String_new();
 
   IndexCommon_getIndexStateSetString(indexStateSetString,findIndexStateSet);
