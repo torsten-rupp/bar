@@ -11674,7 +11674,7 @@ Dprintf.dprintf("");
       }
 
       // create composite
-      composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
+      composite = new Composite(tabFolder,SWT.NONE);
       composite.setBackground(tabFolder.getDisplay().getSystemColor(SWT.COLOR_WIDGET_BACKGROUND));
       composite.setLayoutData(new TableLayoutData(isVisible));
       composite.setLayout(new TableLayout(1.0,1.0,2));
@@ -11683,7 +11683,7 @@ Dprintf.dprintf("");
     }
     else
     {
-      composite = new Composite(tabFolder,SWT.BORDER|SWT.NONE);
+      composite = new Composite(tabFolder,SWT.NONE);
       composite.setLayoutData(new TableLayoutData(isVisible));
       composite.setLayout(new TableLayout(1.0,1.0,2));
       composite.setVisible(false);
