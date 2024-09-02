@@ -102,7 +102,7 @@ LOCAL Errors importIndexVersion2(IndexHandle *oldIndexHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
                              "storages",
-                             FALSE,  // transaction flag
+                             TRUE,  // transaction flag
                              NULL,  // duration
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),

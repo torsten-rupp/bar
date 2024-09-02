@@ -1678,14 +1678,10 @@ bool Index_isEmptyEntity(IndexHandle *indexHandle,
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
 *          IndexModeSet     - index mode set
 *          name             - name pattern (glob, can be NULL)
-* Output : totalStorageCount     - total number of storages (can be NULL)
-*          totalStorageSize      - total storage size [bytes] (can be
-*                                  NULL)
-*          totalEntryCount       - total number of entries (can be NULL)
-*          totalEntrySize        - total entry size [bytes] (can be NULL)
-*          totalEntryContentSize - total entry size including directory
-*                                  content
-*                                  content [bytes] (can be NULL)
+* Output : totalStorageCount - total number of storages (can be NULL)
+*          totalStorageSize  - total storage size [bytes] (can be NULL)
+*          totalEntryCount   - total number of entries (can be NULL)
+*          totalEntrySize    - total entry size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1704,8 +1700,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               uint          *totalStorageCount,
                               uint64        *totalStorageSize,
                               uint          *totalEntryCount,
-                              uint64        *totalEntrySize,
-                              uint64        *totalEntryContentSize
+                              uint64        *totalEntrySize
                              );
 
 /***********************************************************************\

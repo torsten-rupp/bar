@@ -112,7 +112,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                            return ERROR_NONE;
                          },NULL),
                          NULL,  // changedRowCount
- //TODO newest
+//TODO newest
                          DATABASE_TABLES
                          (
                            "fileEntries"
@@ -130,7 +130,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                          NULL,  // groupBy
                          NULL,  // orderBy
                          0LL,
-                         DATABASE_UNLIMITED
+                         1LL
                        );
   }
   if (error == ERROR_NONE)
@@ -159,31 +159,27 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                               )
                            {
                              toStorageId = *valueData.id;
-                           }
-                           else
-                           {
-                             toStorageId = DATABASE_ID_NONE;
-                           }
 
-                           DIMPORT("import file fragment %ld -> %ld: offset=%"PRIi64" size=%"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
-                           error = Database_insert(newDatabaseHandle,
-                                                   NULL,  // insertRowId
-                                                   "entryFragments",
-                                                   DATABASE_FLAG_NONE,
-                                                   DATABASE_VALUES
-                                                   (
-                                                     DATABASE_VALUE_KEY   ("entryId",  toEntryId),
-                                                     DATABASE_VALUE_KEY   ("storageId",toStorageId),
-                                                     DATABASE_VALUE_UINT64("offset",   fragmentOffset),
-                                                     DATABASE_VALUE_UINT64("size",     fragmentSize)
-                                                   ),
-                                                   DATABASE_COLUMNS_NONE,
-                                                   DATABASE_FILTERS_NONE
-                                                  );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
-                           }
+                             DIMPORT("import file fragment %ld -> %ld: offset=%"PRIi64" size=%"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
+                             error = Database_insert(newDatabaseHandle,
+                                                     NULL,  // insertRowId
+                                                     "entryFragments",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE_KEY   ("entryId",  toEntryId),
+                                                       DATABASE_VALUE_KEY   ("storageId",toStorageId),
+                                                       DATABASE_VALUE_UINT64("offset",   fragmentOffset),
+                                                       DATABASE_VALUE_UINT64("size",     fragmentSize)
+                                                     ),
+                                                     DATABASE_COLUMNS_NONE,
+                                                     DATABASE_FILTERS_NONE
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                              return error;
+                            }
+                          }
 
                            return ERROR_NONE;
                          },NULL),
@@ -301,7 +297,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                          NULL,  // groupBy
                          NULL,  // orderBy
                          0LL,
-                         DATABASE_UNLIMITED
+                         1LL
                        );
   }
   if (error == ERROR_NONE)
@@ -328,30 +324,26 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                               )
                            {
                              toStorageId = *valueData.id;
-                           }
-                           else
-                           {
-                             toStorageId = DATABASE_ID_NONE;
-                           }
 
-                           DIMPORT("import image fragment %ld -> %ld: offset=%"PRIi64" size=%"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
-                           error = Database_insert(newDatabaseHandle,
-                                                   NULL,  // insertRowId
-                                                   "entryFragments",
-                                                   DATABASE_FLAG_NONE,
-                                                   DATABASE_VALUES
-                                                   (
-                                                     DATABASE_VALUE_KEY   ("entryId",  toEntryId),
-                                                     DATABASE_VALUE_KEY   ("storageId",toStorageId),
-                                                     DATABASE_VALUE_UINT64("offset",   fragmentOffset),
-                                                     DATABASE_VALUE_UINT64("size",     fragmentSize)
-                                                   ),
-                                                   DATABASE_COLUMNS_NONE,
-                                                   DATABASE_FILTERS_NONE
-                                                  );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
+                             DIMPORT("import image fragment %ld -> %ld: offset=%"PRIi64" size=%"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
+                             error = Database_insert(newDatabaseHandle,
+                                                     NULL,  // insertRowId
+                                                     "entryFragments",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE_KEY   ("entryId",  toEntryId),
+                                                       DATABASE_VALUE_KEY   ("storageId",toStorageId),
+                                                       DATABASE_VALUE_UINT64("offset",   fragmentOffset),
+                                                       DATABASE_VALUE_UINT64("size",     fragmentSize)
+                                                     ),
+                                                     DATABASE_COLUMNS_NONE,
+                                                     DATABASE_FILTERS_NONE
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               return error;
+                             }
                            }
 
                            return ERROR_NONE;
@@ -470,7 +462,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                          NULL,  // groupBy
                          NULL,  // orderBy
                          0LL,
-                         DATABASE_UNLIMITED
+                         1LL
                        );
   }
   if (error == ERROR_NONE)
@@ -497,30 +489,26 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                               )
                            {
                              toStorageId = *valueData.id;
-                           }
-                           else
-                           {
-                             toStorageId = DATABASE_ID_NONE;
-                           }
 
-                           DIMPORT("import hardlink fragment %ld -> %ld: offset=%"PRIi64" size=%"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
-                           error = Database_insert(newDatabaseHandle,
-                                                   NULL,  // insertRowId
-                                                   "entryFragments",
-                                                   DATABASE_FLAG_NONE,
-                                                   DATABASE_VALUES
-                                                   (
-                                                     DATABASE_VALUE_KEY   ("entryId",  toEntryId),
-                                                     DATABASE_VALUE_KEY   ("storageId",toStorageId),
-                                                     DATABASE_VALUE_UINT64("offset",   fragmentOffset),
-                                                     DATABASE_VALUE_UINT64("size",     fragmentSize)
-                                                   ),
-                                                   DATABASE_COLUMNS_NONE,
-                                                   DATABASE_FILTERS_NONE
-                                                  );
-                           if (error != ERROR_NONE)
-                           {
-                             return error;
+                             DIMPORT("import hardlink fragment %ld -> %ld: offset=%"PRIi64" size=%"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
+                             error = Database_insert(newDatabaseHandle,
+                                                     NULL,  // insertRowId
+                                                     "entryFragments",
+                                                     DATABASE_FLAG_NONE,
+                                                     DATABASE_VALUES
+                                                     (
+                                                       DATABASE_VALUE_KEY   ("entryId",  toEntryId),
+                                                       DATABASE_VALUE_KEY   ("storageId",toStorageId),
+                                                       DATABASE_VALUE_UINT64("offset",   fragmentOffset),
+                                                       DATABASE_VALUE_UINT64("size",     fragmentSize)
+                                                     ),
+                                                     DATABASE_COLUMNS_NONE,
+                                                     DATABASE_FILTERS_NONE
+                                                    );
+                             if (error != ERROR_NONE)
+                             {
+                               return error;
+                             }
                            }
 
                            return ERROR_NONE;
@@ -637,14 +625,10 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                       )
                                    {
                                      toStorageId = *valueData.id;
-                                   }
-                                   else
-                                   {
-                                     toStorageId = DATABASE_ID_NONE;
-                                   }
 
-                                   (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-                                   (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
+                                     (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                     (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
+                                   }
 
                                    return ERROR_NONE;
                                  },NULL),
@@ -658,8 +642,8 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                  ),
                                  NULL,  // groupBy
                                  NULL,  // orderby
-                                 0L,
-                                 1L
+                                 0LL,
+                                 1LL
                                 );
       break;
     case INDEX_TYPE_LINK:
@@ -696,14 +680,10 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                       )
                                    {
                                      toStorageId = *valueData.id;
-                                   }
-                                   else
-                                   {
-                                     toStorageId = DATABASE_ID_NONE;
-                                   }
 
-                                   (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-                                   (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
+                                     (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                     (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
+                                   }
 
                                    return ERROR_NONE;
                                  },NULL),
@@ -717,8 +697,8 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                  ),
                                  NULL,  // groupBy
                                  NULL,  // orderby
-                                 0L,
-                                 1L
+                                 0LL,
+                                 1LL
                                 );
       break;
     case INDEX_TYPE_HARDLINK:
@@ -765,14 +745,10 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                       )
                                    {
                                      toStorageId = *valueData.id;
-                                   }
-                                   else
-                                   {
-                                     toStorageId = DATABASE_ID_NONE;
-                                   }
 
-                                   (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
-                                   (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
+                                     (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
+                                     (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
+                                   }
 
                                    return ERROR_NONE;
                                  },NULL),
@@ -786,8 +762,8 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                  ),
                                  NULL,  // groupBy
                                  NULL,  // orderby
-                                 0L,
-                                 1L
+                                 0LL,
+                                 1LL
                                 );
       break;
     default:
@@ -969,7 +945,7 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                            newDatabaseHandle,
                            "uuids",
                            "uuids",
-                           FALSE,  // transaction flag
+                           TRUE,  // transaction flag
                            NULL,  // duration
                            CALLBACK_(NULL,NULL),  // pre-copy
                            CALLBACK_(NULL,NULL),  // post-copy
@@ -1044,6 +1020,7 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                                                                        fromEntityId
                                                                       );
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); __B();
                                ProgressInfo_init(&subProgressInfo,
                                                  progressInfo,
                                                  32,  // filterWindowSize
@@ -1051,7 +1028,8 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                                                  maxSteps,
                                                  CALLBACK_(outputProgressInit,NULL),
                                                  CALLBACK_(outputProgressDone,NULL),
-                                                 CALLBACK_(formatSubProgressInfo,NULL),
+//                                                 CALLBACK_(outputProgressInfo,NULL),
+                                                 CALLBACK_(formatProgressInfo,NULL),
                                                  "Import entity #%"PRIi64" '%s': ",
                                                  fromEntityId,
                                                  Database_getTableColumnCString(fromColumnInfo,"jobUUID","")
@@ -1062,7 +1040,7 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                                                           newDatabaseHandle,
                                                           "storages",
                                                           "storages",
-                                                          FALSE,  // transaction flag
+                                                          TRUE,  // transaction flag
                                                           NULL,  // duration
                                                           // pre: transfer storage
                                                           CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
@@ -1133,7 +1111,7 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                                                           newDatabaseHandle,
                                                           "entries",
                                                           "entries",
-                                                          FALSE,  // transaction flag
+                                                          TRUE,  // transaction flag
                                                           NULL,  // duration
                                                           // pre: transfer entry
                                                           CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,

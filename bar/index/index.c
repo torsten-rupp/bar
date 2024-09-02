@@ -931,6 +931,98 @@ LOCAL void outputProgressDone(ulong totalTime,
   printInfo(2,"%s\n",outputProgressBuffer);
 }
 
+/***********************************************************************\
+* Name   : outputProgressInfo
+* Purpose: output progress info on console
+* Input  : progress           - progres [%%]
+*          estimatedTotalTime - estimated total time [s]
+*          estimatedRestTime  - estimated rest time [s]
+*          userData           - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressInfo(uint  progress,
+                              ulong estimatedTotalTime,
+                              ulong estimatedRestTime,
+                              void  *userData
+                             )
+{
+  const char *WHEEL = "|/-\\";
+  static uint wheelIndex = 0;
+
+  UNUSED_VARIABLE(estimatedTotalTime);
+  UNUSED_VARIABLE(userData);
+
+  if (estimatedRestTime < (99999*60*60))
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 " / %5.1f%% %5uh:%02umin:%02us %c",
+                 (float)progress/10.0,
+                 estimatedRestTime/(60*60),
+                 estimatedRestTime%(60*60)/60,
+                 estimatedRestTime%60,
+                 WHEEL[wheelIndex]
+                );
+  }
+  else
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 " / %5.1f%% -----h:--min:--s %c",
+                 (float)progress/10.0,
+                 WHEEL[wheelIndex]
+                );
+  }
+  printInfo(2,"%s\n",outputProgressBuffer);
+
+  stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
+  printInfo(2,"%s\n",outputProgressBuffer);
+
+  wheelIndex = (wheelIndex+1) % 4;
+}
+
+/***********************************************************************\
+* Name   : formatProgressInfo
+* Purpose: format progress info
+* Input  : progress           - progres [%%]
+*          estimatedTotalTime - estimated total time [s]
+*          estimatedRestTime  - estimated rest time [s]
+*          userData           - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void formatProgressInfo(uint  progress,
+                              ulong estimatedTotalTime,
+                              ulong estimatedRestTime,
+                              void  *userData
+                             )
+{
+  UNUSED_VARIABLE(estimatedTotalTime);
+  UNUSED_VARIABLE(userData);
+
+  if (estimatedRestTime < (99999*60*60))
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%5.1f%% %5uh:%02umin:%02us",
+                 (float)progress/10.0,
+                 estimatedRestTime/(60*60),
+                 estimatedRestTime%(60*60)/60,
+                 estimatedRestTime%60
+                );
+  }
+  else
+  {
+    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                 "%5.1f%% -----h:--min:--s",
+                 (float)progress/10.0
+                );
+  }
+  outputProgressBufferLength = stringLength(outputProgressBuffer);
+}
+
 #if 0
 // not supported anymore
 #include "index_version1.c"

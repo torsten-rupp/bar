@@ -130,7 +130,7 @@ LOCAL Errors upgradeFromVersion8_importFileEntry(DatabaseHandle *oldDatabaseHand
                          NULL,  // groupBy
                          NULL,  // orderBy
                          0LL,
-                         DATABASE_UNLIMITED
+                         1LL
                        );
   }
   if (error == ERROR_NONE)
@@ -301,7 +301,7 @@ LOCAL Errors upgradeFromVersion8_importImageEntry(DatabaseHandle *oldDatabaseHan
                          NULL,  // groupBy
                          NULL,  // orderBy
                          0LL,
-                         DATABASE_UNLIMITED
+                         1LL
                        );
   }
   if (error == ERROR_NONE)
@@ -470,7 +470,7 @@ LOCAL Errors upgradeFromVersion8_importHardlinkEntry(DatabaseHandle *oldDatabase
                          NULL,  // groupBy
                          NULL,  // orderBy
                          0LL,
-                         DATABASE_UNLIMITED
+                         1LL
                        );
   }
   if (error == ERROR_NONE)
@@ -1051,7 +1051,7 @@ LOCAL Errors importIndexVersion8(DatabaseHandle *oldDatabaseHandle,
                                                  maxSteps,
                                                  CALLBACK_(outputProgressInit,NULL),
                                                  CALLBACK_(outputProgressDone,NULL),
-                                                 CALLBACK_(formatSubProgressInfo,NULL),
+                                                 CALLBACK_(formatProgressInfo,NULL),
                                                  "Import entity #%"PRIi64" '%s': ",
                                                  fromEntityId,
                                                  Database_getTableColumnCString(fromColumnInfo,"jobUUID","")

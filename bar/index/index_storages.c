@@ -4943,8 +4943,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               uint          *totalStorageCount,
                               uint64        *totalStorageSize,
                               uint          *totalEntryCount,
-                              uint64        *totalEntrySize,
-                              uint64        *totalEntryContentSize
+                              uint64        *totalEntrySize
                              )
 {
   String ftsMatchString;
@@ -4954,7 +4953,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   String filterIdsString;
   String string;
   Errors error;
-//  double                  totalStorageSize_,totalEntryCount_,totalEntrySize_,totalEntryContentSize_;
+//  double                  totalStorageSize_,totalEntryCount_,totalEntrySize_;
   #ifdef INDEX_DEBUG_LIST_INFO
     uint64 t0,t1;
   #endif /* INDEX_DEBUG_LIST_INFO */
@@ -4965,11 +4964,10 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   assert((indexIdCount == 0L) || (indexIds != NULL));
 
   // init variables
-  if (totalStorageCount     != NULL) (*totalStorageCount    ) = 0L;
-  if (totalStorageSize      != NULL) (*totalStorageSize     ) = 0LL;
-  if (totalEntryCount       != NULL) (*totalEntryCount      ) = 0L;
-  if (totalEntrySize        != NULL) (*totalEntrySize       ) = 0LL;
-  if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
+  if (totalStorageCount != NULL) (*totalStorageCount) = 0L;
+  if (totalStorageSize  != NULL) (*totalStorageSize ) = 0LL;
+  if (totalEntryCount   != NULL) (*totalEntryCount  ) = 0L;
+  if (totalEntrySize    != NULL) (*totalEntrySize   ) = 0LL;
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -5099,77 +5097,6 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                            0LL,
                            1LL
                           );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
-
-    if (totalEntryContentSize != NULL)
-    {
-      // get entry content size
-      if      (!String_isEmpty(uuidIdsString))
-      {
-        error = Database_getUInt64(&indexHandle->databaseHandle,
-                                   totalEntryContentSize,
-                                   "storages \
-                                      LEFT JOIN directoryEntries ON directoryEntries.storageId=storages.id \
-                                      LEFT JOIN entities ON entities.id=storages.entityId \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                   ",
-                                   "SUM(directoryEntries.totalEntrySize)",
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "%s",
-                                                String_cString(filterString)
-                                               ),
-                                   DATABASE_FILTERS
-                                   (
-                                   ),
-                                   NULL  // group
-                                  );
-      }
-      else if (   !String_isEmpty(entityIdsString)
-               || !INDEX_ID_IS_ANY(uuidId)
-               || !INDEX_ID_IS_ANY(entityId)
-               || (jobUUID != NULL)
-               || (entityUUID != NULL)
-              )
-      {
-        error = Database_getUInt64(&indexHandle->databaseHandle,
-                                   totalEntryContentSize,
-                                   "storages \
-                                      LEFT JOIN directoryEntries ON directoryEntries.storageId=storages.id \
-                                      LEFT JOIN entities         ON entities.id=storages.entityId \
-                                   ",
-                                   "SUM(directoryEntries.totalEntrySize)",
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "%s",
-                                                String_cString(filterString)
-                                               ),
-                                   DATABASE_FILTERS
-                                   (
-                                   ),
-                                   NULL  // group
-                                  );
-      }
-      else
-      {
-        error = Database_getUInt64(&indexHandle->databaseHandle,
-                                   totalEntryContentSize,
-                                   "storages \
-                                      LEFT JOIN directoryEntries ON directoryEntries.storageId=storages.id \
-                                   ",
-                                   "SUM(directoryEntries.totalEntrySize)",
-                                   stringFormat(sqlString,sizeof(sqlString),
-                                                "%s",
-                                                String_cString(filterString)
-                                               ),
-                                   DATABASE_FILTERS
-                                   (
-                                   ),
-                                   NULL  // group
-                                  );
-      }
       if (error != ERROR_NONE)
       {
         return error;

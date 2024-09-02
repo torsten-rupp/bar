@@ -1280,49 +1280,6 @@ LOCAL_INLINE DatabaseCopyPauseCallbackFunction getCopyPauseCallback(void)
 }
 
 /***********************************************************************\
-* Name   : formatSubProgressInfo
-* Purpose: format sub-progress info call back
-* Input  : progress           - progress [%%]
-*          estimatedTotalTime - estimated total time [s]
-*          estimatedRestTime  - estimated rest time [s]
-*          userData           - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void formatSubProgressInfo(uint  progress,
-                                 ulong estimatedTotalTime,
-                                 ulong estimatedRestTime,
-                                 void  *userData
-                                )
-{
-  UNUSED_VARIABLE(estimatedTotalTime);
-  UNUSED_VARIABLE(userData);
-
-  if (verboseFlag && !quietFlag)
-  {
-    if (estimatedRestTime < (999*60*60))
-    {
-      stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                   "%6.1f%% %2dh:%02dmin:%02ds",
-                   (float)progress/10.0,
-                   estimatedRestTime/(60*60),
-                   estimatedRestTime%(60*60)/60,
-                   estimatedRestTime%60
-                  );
-    }
-    else
-    {
-      stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                   "%6.1f%% ---h:--min:--s",
-                   (float)progress/10.0
-                  );
-    }
-  }
-}
-
-/***********************************************************************\
 * Name   : outputProgressInit
 * Purpose: output progress text
 * Input  : text     - text
@@ -1345,64 +1302,6 @@ LOCAL void outputProgressInit(const char *text,
   {
     UNUSED_RESULT(fwrite(text,1,stringLength(text),stdout));
     fflush(stdout);
-  }
-}
-
-/***********************************************************************\
-* Name   : outputProgressInfo
-* Purpose: output progress info on console
-* Input  : progress           - progres [%%]
-*          estimatedTotalTime - estimated total time [s]
-*          estimatedRestTime  - estimated rest time [s]
-*          userData           - user data (not used)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void outputProgressInfo(uint  progress,
-                              ulong estimatedTotalTime,
-                              ulong estimatedRestTime,
-                              void  *userData
-                             )
-{
-  const char *WHEEL = "|/-\\";
-  static uint wheelIndex = 0;
-
-  UNUSED_VARIABLE(estimatedTotalTime);
-  UNUSED_VARIABLE(userData);
-
-  if (verboseFlag && !quietFlag)
-  {
-    if (estimatedRestTime < (99999*60*60))
-    {
-      stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                   "%7.1f%% %5uh:%02umin:%02us %c",
-                   (float)progress/10.0,
-                   estimatedRestTime/(60*60),
-                   estimatedRestTime%(60*60)/60,
-                   estimatedRestTime%60,
-                   WHEEL[wheelIndex]
-                  );
-    }
-    else
-    {
-      stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                   "%7.1f%% -----h:--min:--s %c",
-                   (float)progress/10.0,
-                   WHEEL[wheelIndex]
-                  );
-    }
-    outputProgressBufferLength = stringLength(outputProgressBuffer);
-
-    UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
-
-    stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
-    UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
-
-    fflush(stdout);
-
-    wheelIndex = (wheelIndex+1) % 4;
   }
 }
 
@@ -1440,6 +1339,114 @@ LOCAL void outputProgressDone(ulong totalTime,
     UNUSED_RESULT(fwrite("\n",1,1,stdout));
 
     fflush(stdout);
+
+    stringClear(outputProgressBuffer);
+    outputProgressBufferLength = 0;
+  }
+}
+
+/***********************************************************************\
+* Name   : outputProgressInfo
+* Purpose: output progress info on console
+* Input  : progress           - progres [%%]
+*          estimatedTotalTime - estimated total time [s]
+*          estimatedRestTime  - estimated rest time [s]
+*          userData           - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputProgressInfo(uint  progress,
+                              ulong estimatedTotalTime,
+                              ulong estimatedRestTime,
+                              void  *userData
+                             )
+{
+  const char *WHEEL = "|/-\\";
+  static uint wheelIndex = 0;
+
+  UNUSED_VARIABLE(estimatedTotalTime);
+  UNUSED_VARIABLE(userData);
+
+  if (verboseFlag && !quietFlag)
+  {
+    if (estimatedRestTime < (99999*60*60))
+    {
+      stringAppendFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                         " / %5.1f%% %5uh:%02umin:%02us %c",
+                         (float)progress/10.0,
+                         estimatedRestTime/(60*60),
+                         estimatedRestTime%(60*60)/60,
+                         estimatedRestTime%60,
+                         WHEEL[wheelIndex]
+                        );
+    }
+    else
+    {
+      stringAppendFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                         " / %5.1f%% -----h:--min:--s %c",
+                         (float)progress/10.0,
+                         WHEEL[wheelIndex]
+                        );
+    }
+    outputProgressBufferLength = stringLength(outputProgressBuffer);
+
+    UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+    stringFill(outputProgressBuffer,sizeof(outputProgressBuffer),outputProgressBufferLength,'\b');
+    UNUSED_RESULT(fwrite(outputProgressBuffer,1,outputProgressBufferLength,stdout));
+
+    fflush(stdout);
+
+    stringClear(outputProgressBuffer);
+    outputProgressBufferLength = 0;
+
+    wheelIndex = (wheelIndex+1) % 4;
+  }
+}
+
+/***********************************************************************\
+* Name   : formatProgressInfo
+* Purpose: format progress info
+* Input  : progress           - progres [%%]
+*          estimatedTotalTime - estimated total time [s]
+*          estimatedRestTime  - estimated rest time [s]
+*          userData           - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void formatProgressInfo(uint  progress,
+                              ulong estimatedTotalTime,
+                              ulong estimatedRestTime,
+                              void  *userData
+                             )
+{
+  UNUSED_VARIABLE(estimatedTotalTime);
+  UNUSED_VARIABLE(userData);
+
+  if (verboseFlag && !quietFlag)
+  {
+    if (estimatedRestTime < (99999*60*60))
+    {
+      stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                   "%5.1f%% %5uh:%02umin:%02us",
+                   (float)progress/10.0,
+                   estimatedRestTime/(60*60),
+                   estimatedRestTime%(60*60)/60,
+                   estimatedRestTime%60
+                  );
+    }
+    else
+    {
+      stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
+                   "%5.1f%% -----h:--min:--s",
+                   (float)progress/10.0
+                  );
+    }
+    outputProgressBufferLength = stringLength(outputProgressBuffer);
   }
 }
 
@@ -1992,6 +1999,38 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL!\n");
     printError("orphaned special entries check fail (error: %s)!",Error_getText(error));
+  }
+  totalCount += (ulong)n;
+
+  // check entries with wrong entity
+  printInfo("  entries with wrong entity...         ");
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                              LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                           ",
+                           "COUNT(entries.id)",
+                           "    entries.deletedFlag=FALSE \
+                            AND (entries.type=? OR entries.type=? OR entries.type=?)\
+                            AND storages.entityId!=entries.entityId \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_FILE),
+                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_IMAGE),
+                             DATABASE_FILTER_UINT(INDEX_CONST_TYPE_HARDLINK)
+                           ),
+                           NULL  // group
+                          );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%u\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError("orphaned file entries check fail (error: %s)!",Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -5413,7 +5452,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 
   String               storageName;
   Errors               error;
-  ulong                total;
+  ulong                totalCount;
   ulong                n;
   Array                ids;
   ArraySegmentIterator arraySegmentIterator;
@@ -5421,7 +5460,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   // initialize variables
   storageName = String_new();
   Array_init(&ids,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  total       = 0;
+  totalCount  = 0;
 
   printInfo("Clean-up orphaned:\n");
 
@@ -5460,7 +5499,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5498,7 +5537,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5536,7 +5575,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5574,13 +5613,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   // clean entries without fragments
   printInfo("  file entries without fragments...    ");
@@ -5616,13 +5655,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   printInfo("  image entries without fragments...   ");
   n = 0L;
@@ -5657,13 +5696,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   printInfo("  hardlink entries without fragments...");
   n = 0L;
@@ -5698,13 +5737,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   // clean entries without associated file/image/directory/link/hardlink/special entry
   printInfo("  entries without file entry...        ");
@@ -5751,13 +5790,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   printInfo("  entries without image entry...       ");
   Array_clear(&ids);
@@ -5803,13 +5842,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   printInfo("  entries without directory entry...   ");
   Array_clear(&ids);
@@ -5855,13 +5894,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   printInfo("  entries without link entry...        ");
   Array_clear(&ids);
@@ -5907,13 +5946,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   printInfo("  entries without hardlink entry...    ");
   Array_clear(&ids);
@@ -5959,13 +5998,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   printInfo("  entries without special entry...     ");
   Array_clear(&ids);
@@ -6011,13 +6050,126 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
+
+  // clean entries with wrong entity
+  printInfo("  entries with wrong entity...         ");
+
+  typedef struct EntryNode
+  {
+    LIST_NODE_HEADER(struct EntryNode);
+
+    DatabaseId entryId;
+    DatabaseId entityId;
+  } EntryNode;
+
+  typedef struct
+  {
+    LIST_HEADER(EntryNode);
+  } EntryList;
+
+  EntryList entryList;
+  List_init(&entryList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get entries info to add
+  error = Database_get(databaseHandle,
+                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                       {
+                         assert(values != NULL);
+                         assert(valueCount == 2);
+
+                         UNUSED_VARIABLE(userData);
+                         UNUSED_VARIABLE(valueCount);
+
+                         DatabaseId entryId  = values[0].id;
+                         DatabaseId entityId = values[1].id;
+
+                         EntryNode *entryNode = LIST_NEW_NODE(EntryNode);
+                         if (entryNode == NULL)
+                         {
+                           HALT_INSUFFICIENT_MEMORY();
+                         }
+
+                         entryNode->entryId  = entryId;
+                         entryNode->entityId = entityId;
+
+                         List_append(&entryList,entryNode);
+
+                         return ERROR_NONE;
+                       },NULL),
+                       NULL,  // changedRowCount
+                       DATABASE_TABLES
+                       (
+                         "entries \
+                            LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                            LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                         "
+                       ),
+                       DATABASE_FLAG_NONE,
+                       DATABASE_COLUMNS
+                       (
+                         DATABASE_COLUMN_KEY     ("entries.id"),
+                         DATABASE_COLUMN_KEY     ("storages.entityId"),
+                       ),
+                       "    entries.deletedFlag=FALSE \
+                        AND (entries.type=? OR entries.type=? OR entries.type=?)\
+                        AND entryFragments.entryId=entries.id \
+                        AND storages.entityId!=entries.entityId \
+                       ",
+                       DATABASE_FILTERS
+                       (
+                         DATABASE_FILTER_UINT(INDEX_CONST_TYPE_FILE),
+                         DATABASE_FILTER_UINT(INDEX_CONST_TYPE_IMAGE),
+                         DATABASE_FILTER_UINT(INDEX_CONST_TYPE_HARDLINK)
+                       ),
+                       NULL,  // groupBy
+                       NULL,  // orderBy
+                       0LL,
+                       DATABASE_UNLIMITED
+                      );
+  if (error != ERROR_NONE)
+  {
+    List_done(&entryList);
+    return error;
+  }
+  const EntryNode *entryNode;
+  n = 0L;
+  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+  {
+    error = Database_update(databaseHandle,
+                            &n,  // changedRowCount
+                            "entries",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES
+                            (
+                              DATABASE_VALUE_KEY     ("entityId",entryNode->entityId),
+                            ),
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryNode->entryId)
+                            )
+                           );
+
+                           n++;
+  }
+  List_done(&entryList);
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
+  printInfo("%lu\n",n);
+  totalCount += n;
 
   // clean storages without name
   printInfo("  storages without name...             ");
@@ -6039,13 +6191,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   // clean storages with invalid state
   printInfo("  storages with invalid state...       ");
@@ -6069,13 +6221,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   // clean entities withoout storages
   printInfo("  entities without storages/entries... ");
@@ -6115,13 +6267,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
   switch (Database_getType(databaseHandle))
   {
@@ -6155,7 +6307,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       }
       (void)Database_flush(databaseHandle);
       printInfo("%lu\n",n);
-      total += n;
+      totalCount += n;
 
       // clean FTS storages without storage
       printInfo("  FTS storages without storage...      ");
@@ -6193,7 +6345,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       {
         printInfo("FAIL (error: %s",Error_getText(error));
       }
-      total += n;
+      totalCount += n;
       break;
     case DATABASE_TYPE_MARIADB:
       // nothing to do (use views)
@@ -6228,7 +6380,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       }
       (void)Database_flush(databaseHandle);
       printInfo("%lu\n",n);
-      total += n;
+      totalCount += n;
 
       // clean FTS storages without entry
       printInfo("  FTS storages without storage...      ");
@@ -6259,7 +6411,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
       }
       (void)Database_flush(databaseHandle);
       printInfo("%lu\n",n);
-      total += n;
+      totalCount += n;
       break;
   }
 
@@ -6293,13 +6445,13 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clearn orphaned fail (error: %s)!",Error_getText(error));
+    printError("clean orphaned fail (error: %s)!",Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
   }
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 
 //TODO: obsolete, remove
 #if 0
@@ -6631,10 +6783,10 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                      DATABASE_UNLIMITED
                     );
   printInfo("%lu\n",n);
-  total += n;
+  totalCount += n;
 #endif
 
-  printInfo("Total %lu orphaned entries removed\n",total);
+  printInfo("Total %lu orphaned entries cleaned\n",totalCount);
 
   // free resources
   Array_done(&ids);

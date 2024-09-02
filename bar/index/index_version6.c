@@ -434,7 +434,7 @@ LOCAL Errors upgradeFromVersion6_importFileEntry(DatabaseHandle *oldDatabaseHand
                          NULL,  // groupBy
                          NULL,  // orderBy
                          0LL,
-                         DATABASE_UNLIMITED
+                         1LL
                        );
   }
   if (error == ERROR_NONE)
@@ -605,7 +605,7 @@ LOCAL Errors upgradeFromVersion6_importImageEntry(DatabaseHandle *oldDatabaseHan
                          NULL,  // groupBy
                          NULL,  // orderBy
                          0LL,
-                         DATABASE_UNLIMITED
+                         1LL
                        );
   }
   if (error == ERROR_NONE)
@@ -774,7 +774,7 @@ LOCAL Errors upgradeFromVersion6_importHardlinkEntry(DatabaseHandle *oldDatabase
                          NULL,  // groupBy
                          NULL,  // orderBy
                          0LL,
-                         DATABASE_UNLIMITED
+                         1LL
                        );
   }
   if (error == ERROR_NONE)
@@ -960,8 +960,8 @@ LOCAL Errors upgradeFromVersion6_importEntry(DatabaseHandle *oldDatabaseHandle,
                                  ),
                                  NULL,  // groupBy
                                  NULL,  // orderby
-                                 0L,
-                                 1L
+                                 0LL,
+                                 1LL
                                 );
       break;
     case INDEX_TYPE_LINK:
@@ -1019,8 +1019,8 @@ LOCAL Errors upgradeFromVersion6_importEntry(DatabaseHandle *oldDatabaseHandle,
                                  ),
                                  NULL,  // groupBy
                                  NULL,  // orderby
-                                 0L,
-                                 1L
+                                 0LL,
+                                 1LL
                                 );
       break;
     case INDEX_TYPE_HARDLINK:
@@ -1087,8 +1087,8 @@ LOCAL Errors upgradeFromVersion6_importEntry(DatabaseHandle *oldDatabaseHandle,
                                  ),
                                  NULL,  // groupBy
                                  NULL,  // orderby
-                                 0L,
-                                 1L
+                                 0LL,
+                                 1LL
                                 );
       break;
     default:
@@ -1265,7 +1265,7 @@ LOCAL Errors importIndexVersion6(DatabaseHandle *oldDatabaseHandle,
                            newDatabaseHandle,
                            "uuids",
                            "uuids",
-                           FALSE,  // transaction flag
+                           TRUE,  // transaction flag
                            NULL,  // duration
                            CALLBACK_(NULL,NULL),  // pre-copy
                            CALLBACK_(NULL,NULL),  // post-copy
@@ -1347,7 +1347,7 @@ LOCAL Errors importIndexVersion6(DatabaseHandle *oldDatabaseHandle,
                                                  maxSteps,
                                                  CALLBACK_(outputProgressInit,NULL),
                                                  CALLBACK_(outputProgressDone,NULL),
-                                                 CALLBACK_(formatSubProgressInfo,NULL),
+                                                 CALLBACK_(outputProgressInfo,NULL),
                                                  "Import entity #%"PRIi64" '%s': ",
                                                  fromEntityId,
                                                  Database_getTableColumnCString(fromColumnInfo,"jobUUID","")
@@ -1359,7 +1359,7 @@ LOCAL Errors importIndexVersion6(DatabaseHandle *oldDatabaseHandle,
                                                           newDatabaseHandle,
                                                           "storage",
                                                           "storages",
-                                                          FALSE,  // transaction flag
+                                                          TRUE,  // transaction flag
                                                           NULL,  // duration
                                                           // pre: transfer storage
                                                           CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,
@@ -1430,7 +1430,7 @@ LOCAL Errors importIndexVersion6(DatabaseHandle *oldDatabaseHandle,
                                                           newDatabaseHandle,
                                                           "entries",
                                                           "entries",
-                                                          FALSE,  // transaction flag
+                                                          TRUE,  // transaction flag
                                                           NULL,  // duration
                                                           // pre: transfer entry
                                                           CALLBACK_INLINE(Errors,(DatabaseColumnInfo *fromColumnInfo,

@@ -139,7 +139,7 @@ LOCAL Errors importIndexVersion4(IndexHandle *oldIndexHandle,
                                                           &newIndexHandle->databaseHandle,
                                                           "storage",
                                                           "storage",
-                                                          FALSE,  // transaction flag
+                                                          TRUE,  // transaction flag
                                                           NULL,  // duration
                                                           // pre: transfer storage
                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
@@ -651,7 +651,7 @@ LOCAL Errors importIndexVersion4(IndexHandle *oldIndexHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
                              "storage",
-                             FALSE,  // transaction flag
+                             TRUE,  // transaction flag
                              NULL,  // duration
                              // pre: transfer storage and create entities
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnInfo, const DatabaseColumnList *toColumnList, void *userData),
