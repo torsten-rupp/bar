@@ -169,11 +169,11 @@ void ProgressInfo_step(void *userData)
       {
         // average filter of last N values
         progressInfo->filterTimeSum =  progressInfo->filterTimeSum
-                                      +estimatedTotalTime
                                       -((progressInfo->filterTimeCount >= progressInfo->filterWindowSize)
-                                         ? progressInfo->filterTimes[(progressInfo->filterTimeIndex+progressInfo->filterWindowSize-1)%progressInfo->filterTimeCount]
+                                         ? progressInfo->filterTimes[progressInfo->filterTimeIndex]
                                          : 0
-                                       );
+                                       )
+                                      +estimatedTotalTime;
 
         progressInfo->filterTimes[progressInfo->filterTimeIndex] = estimatedTotalTime;
         progressInfo->filterTimeIndex = (progressInfo->filterTimeIndex+1) % progressInfo->filterWindowSize;
@@ -204,13 +204,14 @@ void ProgressInfo_step(void *userData)
       {
         if (progressInfo->filterWindowSize > 0)
         {
-          estimatedTotalTime = progressInfo->filterTimeSum/progressInfo->filterWindowSize;
+          assert(progressInfo->filterTimeCount > 0);
+          estimatedTotalTime = progressInfo->filterTimeSum/progressInfo->filterTimeCount;
         }
         else
         {
           estimatedTotalTime = progressInfo->filterTimeSum/progressInfo->step;
         }
-        estimatedRestTime  = (elapsedTime < estimatedTotalTime) ? (ulong)(estimatedTotalTime-elapsedTime) : 0LL;
+        estimatedRestTime = (elapsedTime < estimatedTotalTime) ? (ulong)(estimatedTotalTime-elapsedTime) : 0LL;
 
         progressInfo->infoFunction(progress,
                                    (ulong)(estimatedTotalTime/US_PER_SECOND),
