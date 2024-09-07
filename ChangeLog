@@ -4,6 +4,8 @@
   * integrated libmount to mount/umount. Used when --mount-command,
     --unmount-command are not set (empty).
   * BARControl: added test function
+  * fixed execute pre/post commands: run also for slave jobs
+  * fixed locking entities when adding storages to index
 
 2024-07-13 24a
   * fixed long blocking of database at clean

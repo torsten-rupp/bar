@@ -15338,8 +15338,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String             printableStorageName;
   Errors             error;
   uint64             size;
-  ulong              entryCount;
-  bool               deletedFlag,abortedFlag,serverAllocationPendingFlag;
   ArchiveHandle      archiveHandle;
   ArchiveEntryInfo   archiveEntryInfo;
   ArchiveEntryTypes  archiveEntryType;
@@ -15441,15 +15439,15 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
-  fileName                    = String_new();
-  imageName                   = String_new();
-  directoryName               = String_new();
-  linkName                    = String_new();
-  destinationName             = String_new();
+  fileName             = String_new();
+  imageName            = String_new();
+  directoryName        = String_new();
+  linkName             = String_new();
+  destinationName      = String_new();
   StringList_init(&fileNameList);
-  hostName                    = String_new();
-  userName                    = String_new();
-  comment                     = String_new();
+  hostName             = String_new();
+  userName             = String_new();
+  comment              = String_new();
 
   // get printable name
   Storage_getPrintableName(printableStorageName,&storageInfo->storageSpecifier,NULL);
@@ -15539,16 +15537,17 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   initUpdateIndexProgress(size);
 
   // read archive content
-  entryCount                  = 0L;
-  deletedFlag                 = FALSE;
-  abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
-  serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
+  ulong entryCount              = 0L;
+  bool  deletedStorage          = FALSE;
+  bool  aborted                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
+  bool  serverAllocationPending = Storage_isServerAllocationPending(storageInfo);
+  bool  newEntityCreated        = FALSE;
 //uint64 t0,t1; t0 = Misc_getTimestamp();
   while (   !Archive_eof(&archiveHandle)
          && (error == ERROR_NONE)
-         && !deletedFlag
-         && !abortedFlag
-         && !serverAllocationPendingFlag
+         && !deletedStorage
+         && !aborted
+         && !serverAllocationPending
         )
   {
     // get next file type
@@ -15933,6 +15932,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                       TRUE,  // locked
                                       &entityId
                                      );
+              newEntityCreated = TRUE;
             }
             if (error != ERROR_NONE)
             {
@@ -16037,9 +16037,9 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     }
 
     // check if aborted, check if server allocation pending
-    deletedFlag                 = Index_isDeletedStorage(indexHandle,storageId);
-    abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
-    serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
+    deletedStorage          = Index_isDeletedStorage(indexHandle,storageId);
+    aborted                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
+    serverAllocationPending = Storage_isServerAllocationPending(storageInfo);
   }
 
   // final flush index list
@@ -16076,6 +16076,12 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                     );
   }
 
+  // unlock new created entity
+  if (newEntityCreated)
+  {
+    Index_unlockEntity(indexHandle,entityId);
+  }
+
   // close archive
   Archive_close(&archiveHandle,FALSE);
 
@@ -16083,11 +16089,11 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   doneUpdateIndexProgress();
 
   // info
-  if     (abortedFlag)
+  if      (aborted)
   {
     error = ERROR_ABORTED;
   }
-  else if (serverAllocationPendingFlag)
+  else if (serverAllocationPending)
   {
     error = ERROR_INTERRUPTED;
   }
