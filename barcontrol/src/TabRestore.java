@@ -2232,7 +2232,7 @@ Dprintf.dprintf("");
                                      String lastErrorData        = valueMap.getString("lastErrorData"       );
                                      long   totalSize            = valueMap.getLong  ("totalSize"           );
                                      long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                     long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
+                                     long   totalEntrySize       = valueMap.getLong  ("totalEntrySize",     Long.MAX_VALUE);
 
                                      UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
                                                                                      jobUUID,
@@ -2384,7 +2384,7 @@ Dprintf.dprintf("");
                                      String       lastErrorData    = valueMap.getString("lastErrorData"                 );
                                      long         totalSize        = valueMap.getLong  ("totalSize"                     );
                                      long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
-                                     long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
+                                     long         totalEntrySize   = valueMap.getLong  ("totalEntrySize",               Long.MAX_VALUE);
                                      long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
 
                                      // add entity data index
@@ -2627,7 +2627,7 @@ Dprintf.dprintf("");
                                      long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"           );
                                      String       errorMessage_       = valueMap.getString("errorMessage"                  );
                                      long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
-                                     long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                );
+                                     long         totalEntrySize      = valueMap.getLong  ("totalEntrySize",               Long.MAX_VALUE);
 
                                      // add storage index data
                                      storageIndexDataList.add(new StorageIndexData(storageId,
@@ -2983,7 +2983,7 @@ Dprintf.dprintf("");
                                                                   long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"                               );
                                                                   String       errorMessage_       = valueMap.getString("errorMessage"                                      );
                                                                   long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"                                   );
-                                                                  long         totalEntrySize      = valueMap.getLong  ("totalEntrySize"                                    );
+                                                                  long         totalEntrySize      = valueMap.getLong  ("totalEntrySize",                                   Long.MAX_VALUE);
 
                                                                   // add storage index data
                                                                   storageIndexDataList.add(new StorageIndexData(storageId,
@@ -3727,7 +3727,7 @@ Dprintf.dprintf("");
                                    valueMap
                                   );
           totalEntryCount = valueMap.getLong("totalEntryCount");
-          totalEntrySize  = valueMap.getLong("totalEntrySize" );
+          totalEntrySize  = valueMap.getLong("totalEntrySize",Long.MAX_VALUE);
           assert(totalEntryCount >= 0);
           assert(totalEntrySize >= 0);
         }
@@ -4929,11 +4929,10 @@ Dprintf.dprintf("");
     Composite   tab;
     Menu        menu,subMenu;
     MenuItem    menuItem;
-    Composite   composite,subComposite;
+    Composite   composite,subComposite,subSubComposite,subSubSubComposite;
     Label       label;
     Button      button;
     Pane        pane;
-    Group       group;
     Combo       combo;
     TreeColumn  treeColumn;
     TreeItem    treeItem;
@@ -5026,11 +5025,12 @@ Dprintf.dprintf("");
     composite = pane.getComposite(0);
     composite.setLayout(new TableLayout(1.0,1.0));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
-    group = Widgets.newGroup(composite);  // Note: no title; title is drawn in "tab-area" together with number of entries
-    group.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
-    Widgets.layout(group,0,0,TableLayoutData.NSWE);
+
+    subComposite = Widgets.newComposite(composite);
+    subComposite.setLayout(new TableLayout(new double[]{1.0,0.0},1.0,4));
+    Widgets.layout(subComposite,0,0,TableLayoutData.NSWE);
     {
-      widgetStorageTabFolder = Widgets.newTabFolder(group);
+      widgetStorageTabFolder = Widgets.newTabFolder(subComposite);
       Widgets.layout(widgetStorageTabFolder,0,0,TableLayoutData.NSWE);
 
       widgetStorageTabFolderTitle = widgetStorageTabFolder;
@@ -5049,7 +5049,7 @@ Dprintf.dprintf("");
           Color foreground = widget.getForeground();
 
           // title
-          text = BARControl.tr("Storage");
+          text = BARControl.tr("Storages");
           size = Widgets.getTextSize(gc,text);
           gc.setForeground(display.getSystemColor(SWT.COLOR_BLACK));
           gc.drawText(text,
@@ -6241,11 +6241,11 @@ Dprintf.dprintf("");
       widgetStorageTable.setMenu(menu);
 
       // storage tree filters
-      composite = Widgets.newComposite(group);
-      composite.setLayout(new TableLayout(0.0,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0}));
-      Widgets.layout(composite,2,0,TableLayoutData.WE);
+      subSubComposite = Widgets.newComposite(subComposite);
+      subSubComposite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0,0.0}));
+      Widgets.layout(subSubComposite,1,0,TableLayoutData.WE);
       {
-        button = Widgets.newButton(composite,IMAGE_MARK_ALL);
+        button = Widgets.newButton(subSubComposite,IMAGE_MARK_ALL);
         Widgets.layout(button,0,0,TableLayoutData.W);
         Widgets.addEventListener(new WidgetEventListener<Boolean>(button,enableMarkIndexEvent)
         {
@@ -6311,10 +6311,10 @@ Dprintf.dprintf("");
           }
         });
 
-        label = Widgets.newLabel(composite,BARControl.tr("Filter")+":");
+        label = Widgets.newLabel(subSubComposite,BARControl.tr("Filter")+":");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        widgetStorageFilter = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
+        widgetStorageFilter = Widgets.newText(subSubComposite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
         widgetStorageFilter.setToolTipText(BARControl.tr("Enter filter key words for storage list."));
         widgetStorageFilter.setMessage(BARControl.tr("Enter text to filter storage list"));
         Widgets.layout(widgetStorageFilter,0,2,TableLayoutData.WE);
@@ -6347,14 +6347,14 @@ Dprintf.dprintf("");
           }
         });
 
-        subComposite = Widgets.newComposite(composite,Settings.hasNormalRole());
-        subComposite.setLayout(new TableLayout(null,0.0));
-        Widgets.layout(subComposite,0,3,TableLayoutData.NONE);
+        subSubSubComposite = Widgets.newComposite(subSubComposite,Settings.hasNormalRole());
+        subSubSubComposite.setLayout(new TableLayout(null,0.0));
+        Widgets.layout(subSubSubComposite,0,3,TableLayoutData.NONE);
         {
-          label = Widgets.newLabel(subComposite,BARControl.tr("State")+":");
+          label = Widgets.newLabel(subSubSubComposite,BARControl.tr("State")+":");
           Widgets.layout(label,0,0,TableLayoutData.W);
 
-          widgetStorageStateFilter = Widgets.newOptionMenu(subComposite);
+          widgetStorageStateFilter = Widgets.newOptionMenu(subSubSubComposite);
           widgetStorageStateFilter.setToolTipText(BARControl.tr("Storage states filter."));
           widgetStorageStateFilter.setItems(new String[]{"*",
                                                          BARControl.tr("ok"),
@@ -6402,7 +6402,7 @@ Dprintf.dprintf("");
           updateStorageTreeTableThread.triggerUpdateStorageState((String)null,INDEX_STATE_SET_ALL,EntityStates.ANY);
         }
 
-        button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
+        button = Widgets.newButton(subSubComposite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected archives."));
         button.setEnabled(false);
         Widgets.layout(button,0,4,TableLayoutData.DEFAULT,0,0,0,0,160,SWT.DEFAULT);
@@ -6434,11 +6434,11 @@ Dprintf.dprintf("");
     composite.setLayout(new TableLayout(1.0,1.0));
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
 
-    group = Widgets.newGroup(composite);  // Note: no title; title is drawn in label below together with number of entries
-    group.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,4));
-    Widgets.layout(group,0,0,TableLayoutData.NSWE);
+    subComposite = Widgets.newComposite(composite);
+    subComposite.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,4));
+    Widgets.layout(subComposite,0,0,TableLayoutData.NSWE);
     {
-      widgetEntryTableTitle = Widgets.newLabel(group);
+      widgetEntryTableTitle = Widgets.newLabel(subComposite);
       Widgets.layout(widgetEntryTableTitle,0,0,TableLayoutData.WE);
       widgetEntryTableTitle.addPaintListener(new PaintListener()
       {
@@ -6479,8 +6479,8 @@ Dprintf.dprintf("");
         }
       });
 
-      widgetEntryTable = Widgets.newTable(group,SWT.CHECK|SWT.VIRTUAL);
-      widgetEntryTable.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0,0.0}));
+      widgetEntryTable = Widgets.newTable(subComposite,SWT.CHECK|SWT.VIRTUAL);
+      widgetEntryTable.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0}));
       Widgets.layout(widgetEntryTable,1,0,TableLayoutData.NSWE);
       SelectionListener entryListColumnSelectionListener = new SelectionListener()
       {
@@ -6783,11 +6783,11 @@ Dprintf.dprintf("");
       widgetEntryTable.setMenu(menu);
 
       // entry list filters
-      composite = Widgets.newComposite(group);
-      composite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0,0.0,0.0}));
-      Widgets.layout(composite,2,0,TableLayoutData.WE);
+      subSubComposite = Widgets.newComposite(subComposite);
+      subSubComposite.setLayout(new TableLayout(null,new double[]{0.0,0.0,1.0,0.0,0.0,0.0}));
+      Widgets.layout(subSubComposite,2,0,TableLayoutData.WE);
       {
-        button = Widgets.newButton(composite,IMAGE_MARK_ALL);
+        button = Widgets.newButton(subSubComposite,IMAGE_MARK_ALL);
         Widgets.layout(button,0,0,TableLayoutData.E);
         Widgets.addEventListener(new WidgetEventListener<Boolean>(button,enableMarkEntriesEvent)
         {
@@ -6846,10 +6846,10 @@ Dprintf.dprintf("");
           }
         });
 
-        label = Widgets.newLabel(composite,BARControl.tr("Filter")+":");
+        label = Widgets.newLabel(subSubComposite,BARControl.tr("Filter")+":");
         Widgets.layout(label,0,1,TableLayoutData.W);
 
-        widgetEntryFilter = Widgets.newText(composite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
+        widgetEntryFilter = Widgets.newText(subSubComposite,SWT.SEARCH|SWT.ICON_SEARCH|SWT.ICON_CANCEL);
         widgetEntryFilter.setToolTipText(BARControl.tr("Enter filter key words for entry list."));
         widgetEntryFilter.setMessage(BARControl.tr("Enter text to filter entry list"));
         Widgets.layout(widgetEntryFilter,0,2,TableLayoutData.WE);
@@ -6886,11 +6886,11 @@ Dprintf.dprintf("");
           }
         });
 
-        subComposite = Widgets.newComposite(composite,Settings.hasNormalRole());
-        subComposite.setLayout(new TableLayout(null,0.0));
-        Widgets.layout(subComposite,0,3,TableLayoutData.NONE);
+        subSubSubComposite = Widgets.newComposite(subSubComposite,Settings.hasNormalRole());
+        subSubSubComposite.setLayout(new TableLayout(null,0.0));
+        Widgets.layout(subSubSubComposite,0,3,TableLayoutData.NONE);
         {
-          widgetEntryTypeFilter = Widgets.newOptionMenu(subComposite);
+          widgetEntryTypeFilter = Widgets.newOptionMenu(subSubSubComposite);
           widgetEntryTypeFilter.setToolTipText(BARControl.tr("Entry type."));
           Widgets.setOptionMenuItems(widgetEntryTypeFilter,new Object[]{"*",                         EntryTypes.ANY,
                                                                         BARControl.tr("files"),      EntryTypes.FILE,
@@ -6922,7 +6922,7 @@ Dprintf.dprintf("");
             }
           });
 
-          widgetEntryNewestOnly = Widgets.newCheckbox(subComposite,BARControl.tr("newest only"));
+          widgetEntryNewestOnly = Widgets.newCheckbox(subSubSubComposite,BARControl.tr("newest only"));
           widgetEntryNewestOnly.setToolTipText(BARControl.tr("When this checkbox is enabled, only show newest entry instances and hide all older entry instances."));
           Widgets.layout(widgetEntryNewestOnly,0,1,TableLayoutData.W);
           widgetEntryNewestOnly.addSelectionListener(new SelectionListener()
@@ -6945,7 +6945,7 @@ Dprintf.dprintf("");
           });
         }
 
-        button = Widgets.newButton(composite,BARControl.tr("Restore")+"\u2026");
+        button = Widgets.newButton(subSubComposite,BARControl.tr("Restore")+"\u2026");
         button.setToolTipText(BARControl.tr("Start restoring selected entries."));
         button.setEnabled(false);
         Widgets.layout(button,0,5,TableLayoutData.DEFAULT,0,0,0,0,160,SWT.DEFAULT);
@@ -7401,7 +7401,7 @@ Dprintf.dprintf("");
                                    String lastErrorData        = valueMap.getString("lastErrorData"       );
                                    long   totalSize            = valueMap.getLong  ("totalSize"           );
                                    long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                   long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
+                                   long   totalEntrySize       = valueMap.getLong  ("totalEntrySize",     Long.MAX_VALUE);
 
                                    // add UUID index data
                                    assignToUUIDIndexDataList.add(new UUIDIndexData(uuidId,
@@ -7437,7 +7437,7 @@ Dprintf.dprintf("");
                                    String       lastErrorData    = valueMap.getString("lastErrorData"                 );
                                    long         totalSize        = valueMap.getLong  ("totalSize"                     );
                                    long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
-                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
+                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize",               Long.MAX_VALUE);
                                    long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
 
                                    // get entity data list
@@ -9375,7 +9375,7 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                        long   storageId       = valueMap.getLong  ("storageId");
                                        String name            = valueMap.getString("name");
                                        long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
-                                       long   totalEntrySize  = valueMap.getLong  ("totalEntrySize");
+                                       long   totalEntrySize  = valueMap.getLong  ("totalEntrySize",Long.MAX_VALUE);
 
                                        storageMap.put(storageId,BARControl.tr("#{0}: {1}, {2} {2,choice,0#entries|1#entry|1<entries}, {3} ({4} {4,choice,0#bytes|1#byte|1<bytes})",
                                                                               storageId,
@@ -9405,9 +9405,9 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                    valueMap
                                   );
           totalStorageCount = valueMap.getLong("totalStorageCount");
-          totalStorageSize  = valueMap.getLong("totalStorageSize" );
+          totalStorageSize  = valueMap.getLong("totalStorageSize",Long.MAX_VALUE);
           totalEntryCount   = valueMap.getLong("totalEntryCount"  );
-          totalEntrySize    = valueMap.getLong("totalEntrySize"   );
+          totalEntrySize    = valueMap.getLong("totalEntrySize",  Long.MAX_VALUE);
           assert(totalStorageCount >= 0);
           assert(totalStorageSize >= 0);
           assert(totalEntryCount >= 0);
@@ -9826,7 +9826,7 @@ Dprintf.dprintf("valueMap=%s",valueMap);
       long              totalStorageCount;
       long              totalStorageSize;
       long              totalEntryCount;
-      long              totalEntrySize,totalEntryContentSize;
+      long              totalEntrySize;
       String            restoreToDirectory;
       boolean           directoryContent;
       boolean           sparse;
@@ -9839,7 +9839,6 @@ Dprintf.dprintf("valueMap=%s",valueMap);
         this.totalStorageSize      = 0L;
         this.totalEntryCount       = 0;
         this.totalEntrySize        = 0L;
-        this.totalEntryContentSize = 0L;
         this.restoreToDirectory    = null;
         this.directoryContent      = false;
         this.sparse                = false;
@@ -10023,8 +10022,8 @@ Dprintf.dprintf("valueMap=%s",valueMap);
           data.directoryContent = widget.getSelection();
           widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
                                             data.totalEntryCount,
-                                            Units.formatByteSize(data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize),
-                                            data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize
+                                            Units.formatByteSize(data.totalEntrySize),
+                                            data.totalEntrySize
                                            )
                              );
           widgetTotal.pack();
@@ -10135,11 +10134,10 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
-                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
-                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
-                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
-                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
-                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+                                             data.totalStorageCount = valueMap.getLong("totalStorageCount"              );
+                                             data.totalStorageSize  = valueMap.getLong("totalStorageSize"               );
+                                             data.totalEntryCount   = valueMap.getLong("totalEntryCount"                );
+                                             data.totalEntrySize    = valueMap.getLong("totalEntrySize",  Long.MAX_VALUE);
                                            }
                                          }
                                         );
@@ -10147,7 +10145,6 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                 assert(data.totalStorageSize >= 0);
                 assert(data.totalEntryCount >= 0);
                 assert(data.totalEntrySize >= 0);
-                assert(data.totalEntryContentSize >= 0);
 
                 display.syncExec(new Runnable()
                 {
@@ -10157,8 +10154,8 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                     {
                       widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
                                                         data.totalEntryCount,
-                                                        Units.formatByteSize(data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize),
-                                                        data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize
+                                                        Units.formatByteSize(data.totalEntrySize),
+                                                        data.totalEntrySize
                                                        )
                                          );
                       widgetTotal.pack();
@@ -10174,10 +10171,10 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
-                                             final long   storageId       = valueMap.getLong  ("storageId"      );
-                                             final String name            = valueMap.getString("name"           );
-                                             final long   totalEntryCount = valueMap.getLong  ("totalEntryCount");
-                                             final long   totalEntrySize  = valueMap.getLong  ("totalEntrySize" );
+                                             final long   storageId       = valueMap.getLong  ("storageId"                    );
+                                             final String name            = valueMap.getString("name"                         );
+                                             final long   totalEntryCount = valueMap.getLong  ("totalEntryCount"              );
+                                             final long   totalEntrySize  = valueMap.getLong  ("totalEntrySize",Long.MAX_VALUE);
 
 // TODO: mp syncExec inside executeCommand()?
                                              display.syncExec(new Runnable()
@@ -10215,11 +10212,10 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
-                                             data.totalStorageCount     = valueMap.getLong("totalStorageCount"    );
-                                             data.totalStorageSize      = valueMap.getLong("totalStorageSize"     );
-                                             data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
-                                             data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
-                                             data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+                                             data.totalStorageCount = valueMap.getLong("totalStorageCount"              );
+                                             data.totalStorageSize  = valueMap.getLong("totalStorageSize",Long.MAX_VALUE);
+                                             data.totalEntryCount   = valueMap.getLong("totalEntryCount"                );
+                                             data.totalEntrySize    = valueMap.getLong("totalEntrySize",  Long.MAX_VALUE);
                                            }
                                          }
                                         );
@@ -10227,7 +10223,6 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                 assert(data.totalStorageSize >= 0);
                 assert(data.totalEntryCount >= 0);
                 assert(data.totalEntrySize >= 0);
-                assert(data.totalEntryContentSize >= 0);
 
                 display.syncExec(new Runnable()
                 {
@@ -10237,8 +10232,8 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                     {
                       widgetTotal.setText(BARControl.tr("{0} {0,choice,0#entries|1#entry|1<entries}/{1} ({2} {2,choice,0#bytes|1#byte|1<bytes})",
                                                         data.totalEntryCount,
-                                                        Units.formatByteSize(data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize),
-                                                        data.directoryContent ? data.totalEntryContentSize : data.totalEntrySize
+                                                        Units.formatByteSize(data.totalEntrySize),
+                                                        data.totalEntrySize
                                                        )
                                          );
                       widgetTotal.pack();

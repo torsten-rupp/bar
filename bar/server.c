@@ -4329,8 +4329,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                                  &totalStorageCount,
                                  &totalStorageSize,
                                  NULL,  // totalEntryCount
-                                 NULL,  // totalEntrySize
-                                 NULL//&totalEntryContentSize
+                                 NULL  // totalEntrySize
                                 );
   if (error == ERROR_NONE)
   {
@@ -19029,7 +19028,6 @@ LOCAL void serverCommand_indexStorageListRemove(ClientInfo *clientInfo, IndexHan
 *            totalStorageSize=<n> [bytes] \
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n> [bytes]
-*            totalEntryContentSize=<n> [bytes]
 \***********************************************************************/
 
 LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
@@ -19048,7 +19046,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   String        name;
   Errors        error;
   uint          totalStorageCount,totalEntryCount;
-  uint64        totalStorageSize,totalEntrySize,totalEntryContentSize;
+  uint64        totalStorageSize,totalEntrySize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -19157,8 +19155,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
                                  &totalStorageCount,
                                  &totalStorageSize,
                                  &totalEntryCount,
-                                 &totalEntrySize,
-                                 NULL//&totalEntryContentSize
+                                 &totalEntrySize
                                 );
   if (error != ERROR_NONE)
   {
@@ -19169,15 +19166,12 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
 //fprintf(stderr,"%s, %d: %ld %"PRIi64" %ld %"PRIi64"\n",__FILE__,__LINE__,totalStorageCount,totalStorageSize,totalEntryCount,totalEntrySize);
 
   // send data
-//TODO
-totalEntryContentSize=0;
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                      "totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" totalEntryContentSize=%"PRIu64"",
+                      "totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                       totalStorageCount,
                       totalStorageSize,
                       totalEntryCount,
-                      totalEntrySize,
-                      totalEntryContentSize
+                      totalEntrySize
                      );
 
   // free resources

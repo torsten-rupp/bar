@@ -448,9 +448,6 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
       String_set(testInfo->runningInfo.progress.entry.name,fileName);
       testInfo->runningInfo.progress.entry.doneSize = fragmentOffset+fragmentSize;
       testInfo->runningInfo.progress.entry.totalSize = fragmentOffset+fragmentSize;
-fprintf(stderr,"%s:%d: %s: done=%lu total=%lu\n",__FILE__,__LINE__,String_cString(testInfo->runningInfo.progress.entry.name),
-testInfo->runningInfo.progress.entry.doneSize,
-testInfo->runningInfo.progress.entry.totalSize);
       updateRunningInfo(testInfo,TRUE);
     }
 

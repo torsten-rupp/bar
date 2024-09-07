@@ -6527,7 +6527,7 @@ if (false) {
                                          long         nextExecutedDateTime = valueMap.getLong   ("nextExecutedDateTime"          );
                                          long         totalEntities        = valueMap.getLong   ("totalEntities"                 );
                                          long         totalEntryCount      = valueMap.getLong   ("totalEntryCount"               );
-                                         long         totalEntrySize       = valueMap.getLong   ("totalEntrySize"                );
+                                         long         totalEntrySize       = valueMap.getLong   ("totalEntrySize",               Long.MAX_VALUE);
 
                                          nextScheduleList.add(new ScheduleInfo(jobName,
                                                                                scheduleUUID,
@@ -6700,35 +6700,33 @@ if (false) {
                                          long   totalDeletedEntityCount     = valueMap.getLong  ("totalDeletedEntityCount"    );
 
                                          long   totalEntryCount             = valueMap.getLong  ("totalEntryCount"            );
-                                         long   totalEntrySize              = valueMap.getLong  ("totalEntrySize"             );
-                                         long   totalEntryContentSize       = valueMap.getLong  ("totalEntryContentSize"      );
+                                         long   totalEntrySize              = valueMap.getLong  ("totalEntrySize",            Long.MAX_VALUE);
                                          long   totalFileCount              = valueMap.getLong  ("totalFileCount"             );
-                                         long   totalFileSize               = valueMap.getLong  ("totalFileSize"              );
+                                         long   totalFileSize               = valueMap.getLong  ("totalFileSize",             Long.MAX_VALUE);
                                          long   totalImageCount             = valueMap.getLong  ("totalImageCount"            );
-                                         long   totalImageSize              = valueMap.getLong  ("totalImageSize"             );
+                                         long   totalImageSize              = valueMap.getLong  ("totalImageSize",            Long.MAX_VALUE);
                                          long   totalDirectoryCount         = valueMap.getLong  ("totalDirectoryCount"        );
                                          long   totalLinkCount              = valueMap.getLong  ("totalLinkCount"             );
                                          long   totalHardlinkCount          = valueMap.getLong  ("totalHardlinkCount"         );
-                                         long   totalHardlinkSize           = valueMap.getLong  ("totalHardlinkSize"          );
+                                         long   totalHardlinkSize           = valueMap.getLong  ("totalHardlinkSize",         Long.MAX_VALUE);
                                          long   totalSpecialCount           = valueMap.getLong  ("totalSpecialCount"          );
 
                                          long   totalEntryCountNewest       = valueMap.getLong  ("totalEntryCountNewest"      );
-                                         long   totalEntrySizeNewest        = valueMap.getLong  ("totalEntrySizeNewest"       );
-                                         long   totalEntryContentSizeNewest = valueMap.getLong  ("totalEntryContentSizeNewest");
+                                         long   totalEntrySizeNewest        = valueMap.getLong  ("totalEntrySizeNewest",      Long.MAX_VALUE);
                                          long   totalFileCountNewest        = valueMap.getLong  ("totalFileCountNewest"       );
-                                         long   totalFileSizeNewest         = valueMap.getLong  ("totalFileSizeNewest"        );
+                                         long   totalFileSizeNewest         = valueMap.getLong  ("totalFileSizeNewest",       Long.MAX_VALUE);
                                          long   totalImageCountNewest       = valueMap.getLong  ("totalImageCountNewest"      );
-                                         long   totalImageSizeNewest        = valueMap.getLong  ("totalImageSizeNewest"       );
+                                         long   totalImageSizeNewest        = valueMap.getLong  ("totalImageSizeNewest",      Long.MAX_VALUE);
                                          long   totalDirectoryCountNewest   = valueMap.getLong  ("totalDirectoryCountNewest"  );
                                          long   totalLinkCountNewest        = valueMap.getLong  ("totalLinkCountNewest"       );
                                          long   totalHardlinkCountNewest    = valueMap.getLong  ("totalHardlinkCountNewest"   );
-                                         long   totalHardlinkSizeNewest     = valueMap.getLong  ("totalHardlinkSizeNewest"    );
+                                         long   totalHardlinkSizeNewest     = valueMap.getLong  ("totalHardlinkSizeNewest",   Long.MAX_VALUE);
                                          long   totalSpecialCountNewest     = valueMap.getLong  ("totalSpecialCountNewest"    );
 
                                          long   totalSkippedEntryCount      = valueMap.getLong  ("totalSkippedEntryCount"     );
 
                                          long   totalStorageCount           = valueMap.getLong  ("totalStorageCount"          );
-                                         long   totalStorageSize            = valueMap.getLong  ("totalStorageSize"           );
+                                         long   totalStorageSize            = valueMap.getLong  ("totalStorageSize",          Long.MAX_VALUE);
                                          long   totalDeletedStorageCount    = valueMap.getLong  ("totalDeletedStorageCount"   );
 
                                          System.out.println("Entities");
@@ -6741,7 +6739,6 @@ if (false) {
                                          System.out.println("Entries");
                                          System.out.println(String.format("  total             : %d",totalEntryCount                                                                        ));
                                          System.out.println(String.format("  total size        : %s (%d bytes)",Units.formatByteSize(totalEntrySize),totalEntrySize                          ));
-                                         System.out.println(String.format("  total content size: %s (%d bytes)",Units.formatByteSize(totalEntryContentSize),totalEntryContentSize            ));
                                          System.out.println(String.format("  files             : %d",totalFileCount                                                                         ));
                                          System.out.println(String.format("  file size         : %s (%d bytes)",Units.formatByteSize(totalFileSize),totalFileSize                            ));
                                          System.out.println(String.format("  images            : %d",totalImageCount                                                                        ));
@@ -6754,7 +6751,6 @@ if (false) {
                                          System.out.println("Newest entries:");
                                          System.out.println(String.format("  total             : %d",totalEntryCountNewest                                                                  ));
                                          System.out.println(String.format("  total size        : %s (%d bytes)",Units.formatByteSize(totalEntrySizeNewest),totalEntrySizeNewest              ));
-                                         System.out.println(String.format("  entry content size: %s (%d bytes)",Units.formatByteSize(totalEntryContentSizeNewest),totalEntryContentSizeNewest));
                                          System.out.println(String.format("  files             : %d",totalFileCountNewest                                                                   ));
                                          System.out.println(String.format("  file size         : %s (%d bytes)",Units.formatByteSize(totalFileSizeNewest),totalFileSizeNewest                ));
                                          System.out.println(String.format("  images            : %d",totalImageCountNewest                                                                  ));
@@ -7382,9 +7378,9 @@ if (false) {
                                          String errorMessage      = valueMap.getString("errorMessage"       );
                                          long   duration          = valueMap.getLong  ("duration"           );
                                          long   totalEntryCount   = valueMap.getLong  ("totalEntryCount"    );
-                                         long   totalEntrySize    = valueMap.getLong  ("totalEntrySize"     );
+                                         long   totalEntrySize    = valueMap.getLong  ("totalEntrySize",    Long.MAX_VALUE);
                                          long   skippedEntryCount = valueMap.getLong  ("skippedEntryCount"  );
-                                         long   skippedEntrySize  = valueMap.getLong  ("skippedEntrySize"   );
+                                         long   skippedEntrySize  = valueMap.getLong  ("skippedEntrySize",  Long.MAX_VALUE);
                                          long   errorEntryCount   = valueMap.getLong  ("errorEntryCount"    );
                                          long   errorEntrySize    = valueMap.getLong  ("errorEntrySize"     );
 

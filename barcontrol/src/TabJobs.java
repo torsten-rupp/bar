@@ -3816,7 +3816,7 @@ public class TabJobs
         widgetDeviceTable.setMenu(menu);
 
         // buttons
-        composite = Widgets.newComposite(tab,SWT.NONE,2);
+        composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(1.0,new double[]{1.0,1.0,1.0,0.0,0.0,0.0}));
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
@@ -4007,7 +4007,7 @@ public class TabJobs
           widgetIncludeTable.setMenu(menu);
 
           // buttons
-          composite = Widgets.newComposite(subTab,SWT.NONE,2);
+          composite = Widgets.newComposite(subTab);
           Widgets.layout(composite,1,0,TableLayoutData.WE);
           {
             widgetIncludeTableAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
@@ -4185,7 +4185,7 @@ public class TabJobs
           widgetExcludeList.setMenu(menu);
 
           // buttons
-          composite = Widgets.newComposite(subTab,SWT.NONE,2);
+          composite = Widgets.newComposite(subTab);
           Widgets.layout(composite,1,0,TableLayoutData.WE);
           {
             widgetExcludeListAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
@@ -4335,7 +4335,7 @@ public class TabJobs
             // buttons
             button = Widgets.newButton(subComposite,BARControl.tr("Test")+"\u2026");
             button.setToolTipText(BARControl.tr("Test script."));
-            Widgets.layout(button,2,0,TableLayoutData.E,0,0,2,2);
+            Widgets.layout(button,2,0,TableLayoutData.E);
             button.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -4426,7 +4426,7 @@ public class TabJobs
             // buttons
             button = Widgets.newButton(subComposite,BARControl.tr("Test")+"\u2026");
             button.setToolTipText(BARControl.tr("Test script."));
-            Widgets.layout(button,2,0,TableLayoutData.E,0,0,2,2);
+            Widgets.layout(button,2,0,TableLayoutData.E);
             button.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -4516,7 +4516,7 @@ public class TabJobs
           // buttons
           button = Widgets.newButton(subTab,BARControl.tr("Test")+"\u2026");
           button.setToolTipText(BARControl.tr("Test script."));
-          Widgets.layout(button,1,0,TableLayoutData.E,0,0,2,2);
+          Widgets.layout(button,1,0,TableLayoutData.E);
           button.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -4656,7 +4656,7 @@ public class TabJobs
           widgetMountTable.setMenu(menu);
 
           // buttons
-          composite = Widgets.newComposite(subTab,SWT.NONE,2);
+          composite = Widgets.newComposite(subTab);
           Widgets.layout(composite,1,0,TableLayoutData.WE);
           {
             widgetMountTableAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
@@ -4726,7 +4726,7 @@ public class TabJobs
         }
 
         // options
-        composite = Widgets.newComposite(tab,SWT.NONE,4);
+        composite = Widgets.newComposite(tab);
         composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0}));
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
@@ -4851,7 +4851,6 @@ public class TabJobs
         }
       }
 
-//Settings.hasNormalRole() ? 1.0 : 0.0
       // compress & crypt
       tab = Widgets.addTab(widgetTabFolder,BARControl.tr("Compress && Crypt"));
       tab.setLayout(new TableLayout(new double[]{0.0,0.0,0.0,1.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
@@ -5639,7 +5638,7 @@ public class TabJobs
           widgetCompressExcludeList.setMenu(menu);
 
           // buttons
-          subComposite = Widgets.newComposite(composite,SWT.NONE,4);
+          subComposite = Widgets.newComposite(composite);
           Widgets.layout(subComposite,1,0,TableLayoutData.W);
           {
             widgetCompressExcludeListInsert = Widgets.newButton(subComposite,BARControl.tr("Add")+"\u2026");
@@ -8217,7 +8216,7 @@ public class TabJobs
 
               button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
               button.setToolTipText(BARControl.tr("Test script."));
-              Widgets.layout(button,1,0,TableLayoutData.E,0,0,2,2);
+              Widgets.layout(button,1,0,TableLayoutData.E);
               button.addSelectionListener(new SelectionListener()
               {
                 @Override
@@ -8308,7 +8307,7 @@ public class TabJobs
 
               button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
               button.setToolTipText(BARControl.tr("Test script."));
-              Widgets.layout(button,1,0,TableLayoutData.E,0,0,2,2);
+              Widgets.layout(button,1,0,TableLayoutData.E);
               button.addSelectionListener(new SelectionListener()
               {
                 @Override
@@ -8423,7 +8422,7 @@ public class TabJobs
               button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
               button.setToolTipText(BARControl.tr("Test script."));
               Widgets.setEnabled(button,false);
-              Widgets.layout(button,1,0,TableLayoutData.E,0,0,2,2);
+              Widgets.layout(button,1,0,TableLayoutData.E);
               button.addSelectionListener(new SelectionListener()
               {
                 @Override
@@ -8540,7 +8539,7 @@ public class TabJobs
 
               button = Widgets.newButton(composite,BARControl.tr("Test")+"\u2026");
               button.setToolTipText(BARControl.tr("Test script."));
-              Widgets.layout(button,1,0,TableLayoutData.E,0,0,2,2);
+              Widgets.layout(button,1,0,TableLayoutData.E);
               button.addSelectionListener(new SelectionListener()
               {
                 @Override
@@ -8873,7 +8872,7 @@ public class TabJobs
         widgetScheduleTable.setMenu(menu);
 
         // buttons
-        composite = Widgets.newComposite(tab,SWT.NONE,4);
+        composite = Widgets.newComposite(tab);
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
           widgetScheduleTableAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
@@ -9275,7 +9274,7 @@ TODO: implement delete entity
         widgetPersistenceTree.setMenu(menu);
 
         // buttons
-        composite = Widgets.newComposite(tab,SWT.NONE,4);
+        composite = Widgets.newComposite(tab);
         Widgets.layout(composite,1,0,TableLayoutData.WE);
         {
           widgetPersistenceTreeAdd = Widgets.newButton(composite,BARControl.tr("Add")+"\u2026");
@@ -14483,7 +14482,7 @@ throw new Error("NYI");
 // TODO: needed?
                                      long         totalEntities        = valueMap.getLong   ("totalEntities"                 );
                                      long         totalEntryCount      = valueMap.getLong   ("totalEntryCount"               );
-                                     long         totalEntrySize       = valueMap.getLong   ("totalEntrySize"                );
+                                     long         totalEntrySize       = valueMap.getLong   ("totalEntrySize",               Long.MAX_VALUE);
 
                                      ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
                                      if (scheduleData != null)
@@ -14863,7 +14862,7 @@ throw new Error("NYI");
       label = Widgets.newLabel(composite,BARControl.tr("Options")+":");
       Widgets.layout(label,6,0,TableLayoutData.W);
 
-      subComposite = Widgets.newComposite(composite,SWT.NONE);
+      subComposite = Widgets.newComposite(composite);
       Widgets.layout(subComposite,6,1,TableLayoutData.WE);
       {
         widgetTestCreatedArchives = Widgets.newCheckbox(subComposite,BARControl.tr("test created archives"));
@@ -15293,12 +15292,12 @@ throw new Error("NYI");
 
                                    if      (entityId != 0L)
                                    {
-                                     ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",  ArchiveTypes.class,ArchiveTypes.UNKNOWN);
-                                     long         createdDateTime = valueMap.getLong   ("createdDateTime"                                      );
-                                     long         totalSize       = valueMap.getLong   ("size"                                                 );
-                                     long         totalEntryCount = valueMap.getLong   ("totalEntryCount"                                      );
-                                     long         totalEntrySize  = valueMap.getLong   ("totalEntrySize"                                       );
-                                     boolean      inTransit       = valueMap.getBoolean("inTransit"                                            );
+                                     ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",   ArchiveTypes.class,ArchiveTypes.UNKNOWN);
+                                     long         createdDateTime = valueMap.getLong   ("createdDateTime"                                       );
+                                     long         totalSize       = valueMap.getLong   ("size"                                                  );
+                                     long         totalEntryCount = valueMap.getLong   ("totalEntryCount"                                       );
+                                     long         totalEntrySize  = valueMap.getLong   ("totalEntrySize",Long.MAX_VALUE                         );
+                                     boolean      inTransit       = valueMap.getBoolean("inTransit"                                             );
 
                                      EntityIndexData entityIndexData = new EntityIndexData(entityId,
                                                                                            "", // scheuduleUUID
