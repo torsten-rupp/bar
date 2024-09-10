@@ -3318,18 +3318,39 @@ does not work on Windows? Even cursor keys trigger traversal event?
 
   /** create new string view
    * @param composite composite widget
+   * @param value value
    * @param style view style
    * @return new view
    */
-  public static Text newStringView(Composite composite, int style)
+  public static Text newStringView(Composite composite, String value, int style)
   {
     Text text;
 
     text = new Text(composite,style|SWT.READ_ONLY);
     text.setBackground(composite.getBackground());
-    text.setText("");
+    text.setText(value);
 
     return text;
+  }
+
+  /** create new string view
+   * @param composite composite widget
+   * @param value value
+   * @return new view
+   */
+  public static Text newStringView(Composite composite, String value)
+  {
+    return newStringView(composite,value,SWT.NONE);
+  }
+
+  /** create new string view
+   * @param composite composite widget
+   * @param style view style
+   * @return new view
+   */
+  public static Text newStringView(Composite composite, int style)
+  {
+    return newStringView(composite,"",style);
   }
 
   /** create new string view

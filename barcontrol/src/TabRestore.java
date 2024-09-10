@@ -40,6 +40,7 @@ import java.util.TimerTask;
 // graphics
 import org.eclipse.swt.custom.TreeEditor;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
+import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
 import org.eclipse.swt.dnd.DragSourceEvent;
@@ -4205,9 +4206,10 @@ Dprintf.dprintf("");
   // -------------------------- variables -------------------------------
 
   // global variable references
-  private Shell                                                      shell;
-  private Display                                                    display;
-  private TabStatus                                                  tabStatus;
+  private Shell                                       shell;
+  private Display                                     display;
+  private Clipboard                                   clipboard;
+  private TabStatus                                   tabStatus;
 
   // widgets
   public  Composite                                   widgetTab;
@@ -4255,7 +4257,7 @@ Dprintf.dprintf("");
 
   /** show UUID index tool tip
    * @param entityIndexData entity index data
-   * @param x,y positions
+   * @param x,y position
    */
   private void showUUIDIndexToolTip(UUIDIndexData uuidIndexData, int x, int y)
   {
@@ -4368,7 +4370,7 @@ Dprintf.dprintf("");
 
   /** show entity index tool tip
    * @param entityIndexData entity index data
-   * @param x,y positions
+   * @param x,y position
    */
   private void showEntityIndexToolTip(EntityIndexData entityIndexData, int x, int y)
   {
@@ -4515,12 +4517,17 @@ Dprintf.dprintf("");
 
   /** show storage index tool tip
    * @param storageIndexData storage index data
-   * @param x,y positions
+   * @param x,y position
    */
-  private void showStorageIndexToolTip(StorageIndexData storageIndexData, int x, int y)
+  private void showStorageIndexToolTip(final StorageIndexData storageIndexData, int x, int y)
   {
+    final Image IMAGE_CLIPBOARD = Widgets.loadImage(shell.getDisplay(),"clipboard.png");
+
     int       row;
     Label     label;
+    Composite composite;
+    Text      text;
+    Button    button;
     Separator separator;
 
     if (widgetStorageTableToolTip != null)
@@ -4592,10 +4599,31 @@ Dprintf.dprintf("");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.name);
-      label.setForeground(COLOR_INFO_FOREGROUND);
-      label.setBackground(COLOR_INFO_BACKGROUND);
-      Widgets.layout(label,row,1,TableLayoutData.WE);
+      composite = Widgets.newComposite(widgetStorageTableToolTip);
+      composite.setBackground(COLOR_INFO_BACKGROUND);
+      composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+      Widgets.layout(composite,row,1,TableLayoutData.WE);
+      {
+        label = Widgets.newLabel(composite,storageIndexData.name);
+        label.setForeground(COLOR_INFO_FOREGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,0,0,TableLayoutData.WE);
+
+        button = new Button(composite,SWT.CENTER);
+        button.setToolTipText(BARControl.tr("Copy name to clipboard."));
+        button.setImage(IMAGE_CLIPBOARD);
+        Widgets.layout(button,0,1,TableLayoutData.E);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Widgets.setClipboard(clipboard,storageIndexData.name);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+      }
       row++;
 
       if (Settings.debugLevel > 0)
@@ -4692,10 +4720,12 @@ Dprintf.dprintf("");
 
   /** show entry data tool tip
    * @param entryIndexData entry index data
-   * @param x,y positions
+   * @param x,y position
    */
-  private void showEntryToolTip(EntryIndexData entryIndexData, int x, int y)
+  private void showEntryToolTip(final EntryIndexData entryIndexData, int x, int y)
   {
+    final Image IMAGE_CLIPBOARD = Widgets.loadImage(shell.getDisplay(),"clipboard.png");
+
     /** fragment data
      */
     class FragmentData
@@ -4726,6 +4756,9 @@ Dprintf.dprintf("");
     int         row;
     Label       label;
     Control     control;
+    Composite   composite;
+    Text        text;
+    Button      button;
     final Table table;
     TableColumn tableColumn;
     TableItem   tableItem;
@@ -4852,10 +4885,31 @@ Dprintf.dprintf("");
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.name);
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
-      Widgets.layout(label,row,1,TableLayoutData.WE);
+      composite = Widgets.newComposite(widgetEntryTableToolTip);
+      composite.setBackground(COLOR_BACKGROUND);
+      composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
+      Widgets.layout(composite,row,1,TableLayoutData.WE);
+      {
+        text = Widgets.newStringView(composite,entryIndexData.name);
+        text.setForeground(COLOR_FOREGROUND);
+        text.setBackground(COLOR_BACKGROUND);
+        Widgets.layout(text,0,0,TableLayoutData.WE);
+
+        button = new Button(composite,SWT.CENTER);
+        button.setToolTipText(BARControl.tr("Copy name to clipboard."));
+        button.setImage(IMAGE_CLIPBOARD);
+        Widgets.layout(button,0,1,TableLayoutData.E);
+        button.addSelectionListener(new SelectionListener()
+        {
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            Widgets.setClipboard(clipboard,entryIndexData.name);
+          }
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+        });
+      }
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Type")+":");
@@ -4942,9 +4996,10 @@ Dprintf.dprintf("");
     DragSource  dragSource;
     DropTarget  dropTarget;
 
-    // get shell, display
-    shell   = parentTabFolder.getShell();
-    display = shell.getDisplay();
+    // get shell, display, clipboard
+    shell     = parentTabFolder.getShell();
+    display   = shell.getDisplay();
+    clipboard = new Clipboard(display);
 
     // get colors
     COLOR_MODIFIED           = display.getSystemColor(SWT.COLOR_GRAY);
