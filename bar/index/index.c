@@ -3616,12 +3616,16 @@ bool Index_containsType(const IndexId indexIds[],
 }
 
 Errors Index_getInfos(IndexHandle   *indexHandle,
-                      uint          *totalEntityCount,
+                      uint          *totalNormalEntityCount,
+                      uint          *totalFullEntityCount,
+                      uint          *totalIncrementalEntityCount,
+                      uint          *totalDifferentialEntityCount,
+                      uint          *totalContinuousEntityCount,
+                      uint          *totalLockedEntityCount,
                       uint          *totalDeletedEntityCount,
 
                       uint          *totalEntryCount,
                       uint64        *totalEntrySize,
-                      uint64        *totalEntryContentSize,
                       uint          *totalFileCount,
                       uint64        *totalFileSize,
                       uint          *totalImageCount,
@@ -3634,7 +3638,6 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
 
                       uint          *totalEntryCountNewest,
                       uint64        *totalEntrySizeNewest,
-                      uint64        *totalEntryContentSizeNewest,
                       uint          *totalFileCountNewest,
                       uint64        *totalFileSizeNewest,
                       uint          *totalImageCountNewest,
@@ -3649,6 +3652,9 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
 
                       uint          *totalStorageCount,
                       uint64        *totalStorageSize,
+                      uint          *totalOKStorageCount,
+                      uint          *totalUpdateRequestedStorageCount,
+                      uint          *totalErrorStorageCount,
                       uint          *totalDeletedStorageCount
                      )
 {
@@ -3656,39 +3662,46 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
 
   assert(indexHandle != NULL);
 
-  if (totalEntityCount            != NULL) (*totalEntityCount           ) = 0;
-  if (totalDeletedEntityCount     != NULL) (*totalDeletedEntityCount    ) = 0;
+  if (totalNormalEntityCount           != NULL) (*totalNormalEntityCount          ) = 0;
+  if (totalFullEntityCount             != NULL) (*totalFullEntityCount            ) = 0;
+  if (totalIncrementalEntityCount      != NULL) (*totalIncrementalEntityCount     ) = 0;
+  if (totalDifferentialEntityCount     != NULL) (*totalDifferentialEntityCount    ) = 0;
+  if (totalContinuousEntityCount       != NULL) (*totalContinuousEntityCount      ) = 0;
+  if (totalLockedEntityCount           != NULL) (*totalLockedEntityCount          ) = 0;
+  if (totalDeletedEntityCount          != NULL) (*totalDeletedEntityCount         ) = 0;
 
-  if (totalEntryCount             != NULL) (*totalEntryCount            ) = 0;
-  if (totalEntrySize              != NULL) (*totalEntrySize             ) = 0LL;
-  if (totalEntryContentSize       != NULL) (*totalEntryContentSize      ) = 0LL;
+  if (totalEntryCount                  != NULL) (*totalEntryCount                 ) = 0;
+  if (totalEntrySize                   != NULL) (*totalEntrySize                  ) = 0LL;
 
-  if (totalFileCount              != NULL) (*totalFileCount             ) = 0;
-  if (totalFileSize               != NULL) (*totalFileSize              ) = 0LL;
-  if (totalImageCount             != NULL) (*totalImageCount            ) = 0;
-  if (totalImageSize              != NULL) (*totalImageSize             ) = 0LL;
-  if (totalDirectoryCount         != NULL) (*totalDirectoryCount        ) = 0;
-  if (totalLinkCount              != NULL) (*totalLinkCount             ) = 0;
-  if (totalHardlinkCount          != NULL) (*totalHardlinkCount         ) = 0;
-  if (totalHardlinkSize           != NULL) (*totalHardlinkSize          ) = 0LL;
-  if (totalSpecialCount           != NULL) (*totalSpecialCount          ) = 0;
+  if (totalFileCount                   != NULL) (*totalFileCount                  ) = 0;
+  if (totalFileSize                    != NULL) (*totalFileSize                   ) = 0LL;
+  if (totalImageCount                  != NULL) (*totalImageCount                 ) = 0;
+  if (totalImageSize                   != NULL) (*totalImageSize                  ) = 0LL;
+  if (totalDirectoryCount              != NULL) (*totalDirectoryCount             ) = 0;
+  if (totalLinkCount                   != NULL) (*totalLinkCount                  ) = 0;
+  if (totalHardlinkCount               != NULL) (*totalHardlinkCount              ) = 0;
+  if (totalHardlinkSize                != NULL) (*totalHardlinkSize               ) = 0LL;
+  if (totalSpecialCount                != NULL) (*totalSpecialCount               ) = 0;
 
-  if (totalEntryCountNewest       != NULL) (*totalEntryCountNewest      ) = 0;
-  if (totalEntrySizeNewest        != NULL) (*totalEntrySizeNewest       ) = 0LL;
-  if (totalEntryContentSizeNewest != NULL) (*totalEntryContentSizeNewest) = 0LL;
+  if (totalEntryCountNewest            != NULL) (*totalEntryCountNewest           ) = 0;
+  if (totalEntrySizeNewest             != NULL) (*totalEntrySizeNewest            ) = 0LL;
 
-  if (totalFileCountNewest        != NULL) (*totalFileCountNewest       ) = 0;
-  if (totalFileSizeNewest         != NULL) (*totalFileSizeNewest        ) = 0LL;
-  if (totalImageCountNewest       != NULL) (*totalImageCountNewest      ) = 0;
-  if (totalImageSizeNewest        != NULL) (*totalImageSizeNewest       ) = 0LL;
-  if (totalDirectoryCountNewest   != NULL) (*totalDirectoryCountNewest  ) = 0;
-  if (totalLinkCountNewest        != NULL) (*totalLinkCountNewest       ) = 0;
-  if (totalHardlinkCountNewest    != NULL) (*totalHardlinkCountNewest   ) = 0;
-  if (totalHardlinkSizeNewest     != NULL) (*totalHardlinkSizeNewest    ) = 0LL;
-  if (totalSpecialCountNewest     != NULL) (*totalSpecialCountNewest    ) = 0;
+  if (totalFileCountNewest             != NULL) (*totalFileCountNewest            ) = 0;
+  if (totalFileSizeNewest              != NULL) (*totalFileSizeNewest             ) = 0LL;
+  if (totalImageCountNewest            != NULL) (*totalImageCountNewest           ) = 0;
+  if (totalImageSizeNewest             != NULL) (*totalImageSizeNewest            ) = 0LL;
+  if (totalDirectoryCountNewest        != NULL) (*totalDirectoryCountNewest       ) = 0;
+  if (totalLinkCountNewest             != NULL) (*totalLinkCountNewest            ) = 0;
+  if (totalHardlinkCountNewest         != NULL) (*totalHardlinkCountNewest        ) = 0;
+  if (totalHardlinkSizeNewest          != NULL) (*totalHardlinkSizeNewest         ) = 0LL;
+  if (totalSpecialCountNewest          != NULL) (*totalSpecialCountNewest         ) = 0;
 
-  if (totalStorageCount           != NULL) (*totalStorageCount          ) = 0;
-  if (totalStorageSize            != NULL) (*totalStorageSize           ) = 0LL;
+  if (totalStorageCount                != NULL) (*totalStorageCount               ) = 0;
+  if (totalStorageSize                 != NULL) (*totalStorageSize                ) = 0LL;
+  if (totalOKStorageCount              != NULL) (*totalOKStorageCount             ) = 0;
+  if (totalUpdateRequestedStorageCount != NULL) (*totalUpdateRequestedStorageCount) = 0;
+  if (totalErrorStorageCount           != NULL) (*totalErrorStorageCount          ) = 0;
+  if (totalDeletedStorageCount         != NULL) (*totalDeletedStorageCount        ) = 0;
 
   // init variables
 
@@ -3703,16 +3716,123 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    if (totalEntityCount != NULL)
+    // get entities counts
+    if ((error == ERROR_NONE) && (totalNormalEntityCount != NULL))
     {
-      // get total entities count
       error = Database_getUInt(&indexHandle->databaseHandle,
-                               totalEntityCount,
+                               totalNormalEntityCount,
                                "entities",
                                "COUNT(entities.id)",
-                               "    lockedCount=0 \
+                               "    id!=0 \
+                                AND type=? \
                                 AND deletedFlag!=TRUE \
                                ",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_NORMAL)
+                               ),
+                               NULL  // orderGroup
+                              );
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+            );
+    }
+    if ((error == ERROR_NONE) && (totalFullEntityCount != NULL))
+    {
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalFullEntityCount,
+                               "entities",
+                               "COUNT(entities.id)",
+                               "    id!=0 \
+                                AND type=? \
+                                AND deletedFlag!=TRUE \
+                               ",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_FULL)
+                               ),
+                               NULL  // orderGroup
+                              );
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+            );
+    }
+    if ((error == ERROR_NONE) && (totalIncrementalEntityCount != NULL))
+    {
+      // get entities counts
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalIncrementalEntityCount,
+                               "entities",
+                               "COUNT(entities.id)",
+                               "    id!=0 \
+                                AND type=? \
+                                AND deletedFlag!=TRUE \
+                               ",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_INCREMENTAL)
+                               ),
+                               NULL  // orderGroup
+                              );
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+            );
+    }
+    if ((error == ERROR_NONE) && (totalDifferentialEntityCount != NULL))
+    {
+      // get entities counts
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalDifferentialEntityCount,
+                               "entities",
+                               "COUNT(entities.id)",
+                               "    id!=0 \
+                                AND type=? \
+                                AND deletedFlag!=TRUE \
+                               ",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_DIFFERENTIAL)
+                               ),
+                               NULL  // orderGroup
+                              );
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+            );
+    }
+    if ((error == ERROR_NONE) && (totalContinuousEntityCount != NULL))
+    {
+      // get entities counts
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalContinuousEntityCount,
+                               "entities",
+                               "COUNT(entities.id)",
+                               "    id!=0 \
+                                AND type=? \
+                                AND deletedFlag!=TRUE \
+                               ",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS)
+                               ),
+                               NULL  // orderGroup
+                              );
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+            );
+    }
+    if ((error == ERROR_NONE) && (totalLockedEntityCount != NULL))
+    {
+      // get total deleted entities count
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalLockedEntityCount,
+                               "entities",
+                               "COUNT(entities.id)",
+                               "lockedCount>0",
                                DATABASE_FILTERS
                                (
                                ),
@@ -3723,8 +3843,7 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
              || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
             );
     }
-
-    if (totalDeletedEntityCount != NULL)
+    if ((error == ERROR_NONE) && (totalDeletedEntityCount != NULL))
     {
       // get total deleted entities count
       error = Database_getUInt(&indexHandle->databaseHandle,
@@ -3743,7 +3862,8 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
             );
     }
 
-    if (totalSkippedEntryCount != NULL)
+
+    if ((error == ERROR_NONE) && (totalSkippedEntryCount != NULL))
     {
       // get total skipped entry count
       error = Database_getUInt(&indexHandle->databaseHandle,
@@ -3763,73 +3883,71 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
     }
 
     // get total * count/size, total newest count/size
-    if (   (totalEntryCount             != NULL)
-        || (totalEntrySize              != NULL)
-        || (totalEntryContentSize       != NULL)
-        || (totalFileCount              != NULL)
-        || (totalFileSize               != NULL)
-        || (totalImageCount             != NULL)
-        || (totalImageSize              != NULL)
-        || (totalDirectoryCount         != NULL)
-        || (totalLinkCount              != NULL)
-        || (totalHardlinkCount          != NULL)
-        || (totalHardlinkSize           != NULL)
-        || (totalSpecialCount           != NULL)
-        || (totalEntryCountNewest       != NULL)
-        || (totalEntrySizeNewest        != NULL)
-        || (totalEntryContentSizeNewest != NULL)
-        || (totalFileCountNewest        != NULL)
-        || (totalFileSizeNewest         != NULL)
-        || (totalImageCountNewest       != NULL)
-        || (totalImageSizeNewest        != NULL)
-        || (totalDirectoryCountNewest   != NULL)
-        || (totalLinkCountNewest        != NULL)
-        || (totalHardlinkCountNewest    != NULL)
-        || (totalHardlinkSizeNewest     != NULL)
-        || (totalSpecialCountNewest     != NULL)
-        || (totalStorageCount           != NULL)
-        || (totalStorageSize            != NULL)
+    if (   (error == ERROR_NONE)
+        && (   (totalEntryCount             != NULL)
+            || (totalEntrySize              != NULL)
+            || (totalFileCount              != NULL)
+            || (totalFileSize               != NULL)
+            || (totalImageCount             != NULL)
+            || (totalImageSize              != NULL)
+            || (totalDirectoryCount         != NULL)
+            || (totalLinkCount              != NULL)
+            || (totalHardlinkCount          != NULL)
+            || (totalHardlinkSize           != NULL)
+            || (totalSpecialCount           != NULL)
+            || (totalEntryCountNewest       != NULL)
+            || (totalEntrySizeNewest        != NULL)
+            || (totalFileCountNewest        != NULL)
+            || (totalFileSizeNewest         != NULL)
+            || (totalImageCountNewest       != NULL)
+            || (totalImageSizeNewest        != NULL)
+            || (totalDirectoryCountNewest   != NULL)
+            || (totalLinkCountNewest        != NULL)
+            || (totalHardlinkCountNewest    != NULL)
+            || (totalHardlinkSizeNewest     != NULL)
+            || (totalSpecialCountNewest     != NULL)
+            || (totalStorageCount           != NULL)
+            || (totalStorageSize            != NULL)
+           )
        )
     {
       error = Database_get(&indexHandle->databaseHandle,
                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                            {
                              assert(values != NULL);
-                             assert(valueCount == 26);
+                             assert(valueCount == 24);
 
                              UNUSED_VARIABLE(userData);
                              UNUSED_VARIABLE(valueCount);
 
-                             if (totalEntryCount             != NULL) (*totalEntryCount            ) = values[ 0].u;
-                             if (totalEntrySize              != NULL) (*totalEntrySize             ) = values[ 1].u64;
-                             if (totalEntryContentSize       != NULL) (*totalEntryContentSize      ) = values[ 2].u64;
+                             if (totalEntryCount             != NULL) (*totalEntryCount          ) = values[ 0].u;
+                             if (totalEntrySize              != NULL) (*totalEntrySize           ) = values[ 1].u64;
 
-                             if (totalFileCount              != NULL) (*totalFileCount             ) = values[ 3].u;
-                             if (totalFileSize               != NULL) (*totalFileSize              ) = values[ 4].u64;
-                             if (totalImageCount             != NULL) (*totalImageCount            ) = values[ 5].u;
-                             if (totalImageSize              != NULL) (*totalImageSize             ) = values[ 6].u64;
-                             if (totalDirectoryCount         != NULL) (*totalDirectoryCount        ) = values[ 7].u;
-                             if (totalLinkCount              != NULL) (*totalLinkCount             ) = values[ 8].u;
-                             if (totalHardlinkCount          != NULL) (*totalHardlinkCount         ) = values[ 9].u;
-                             if (totalHardlinkSize           != NULL) (*totalHardlinkSize          ) = values[10].u64;
-                             if (totalSpecialCount           != NULL) (*totalSpecialCount          ) = values[11].u;
+                             if (totalFileCount              != NULL) (*totalFileCount           ) = values[ 2].u;
+                             if (totalFileSize               != NULL) (*totalFileSize            ) = values[ 3].u64;
+                             if (totalImageCount             != NULL) (*totalImageCount          ) = values[ 4].u;
+                             if (totalImageSize              != NULL) (*totalImageSize           ) = values[ 5].u64;
+                             if (totalDirectoryCount         != NULL) (*totalDirectoryCount      ) = values[ 6].u;
+                             if (totalLinkCount              != NULL) (*totalLinkCount           ) = values[ 7].u;
+                             if (totalHardlinkCount          != NULL) (*totalHardlinkCount       ) = values[ 8].u;
+                             if (totalHardlinkSize           != NULL) (*totalHardlinkSize        ) = values[ 9].u64;
+                             if (totalSpecialCount           != NULL) (*totalSpecialCount        ) = values[10].u;
 
-                             if (totalEntryCountNewest       != NULL) (*totalEntryCountNewest      ) = values[12].u;
-                             if (totalEntrySizeNewest        != NULL) (*totalEntrySizeNewest       ) = values[13].u64;
-                             if (totalEntryContentSizeNewest != NULL) (*totalEntryContentSizeNewest) = values[14].u64;
+                             if (totalEntryCountNewest       != NULL) (*totalEntryCountNewest    ) = values[11].u;
+                             if (totalEntrySizeNewest        != NULL) (*totalEntrySizeNewest     ) = values[12].u64;
 
-                             if (totalFileCountNewest        != NULL) (*totalFileCountNewest       ) = values[15].u;
-                             if (totalFileSizeNewest         != NULL) (*totalFileSizeNewest        ) = values[16].u64;
-                             if (totalImageCountNewest       != NULL) (*totalImageCountNewest      ) = values[17].u;
-                             if (totalImageSizeNewest        != NULL) (*totalImageSizeNewest       ) = values[18].u64;
-                             if (totalDirectoryCountNewest   != NULL) (*totalDirectoryCountNewest  ) = values[19].u;
-                             if (totalLinkCountNewest        != NULL) (*totalLinkCountNewest       ) = values[20].u;
-                             if (totalHardlinkCountNewest    != NULL) (*totalHardlinkCountNewest   ) = values[21].u;
-                             if (totalHardlinkSizeNewest     != NULL) (*totalHardlinkSizeNewest    ) = values[22].u64;
-                             if (totalSpecialCountNewest     != NULL) (*totalSpecialCountNewest    ) = values[23].u;
+                             if (totalFileCountNewest        != NULL) (*totalFileCountNewest     ) = values[13].u;
+                             if (totalFileSizeNewest         != NULL) (*totalFileSizeNewest      ) = values[14].u64;
+                             if (totalImageCountNewest       != NULL) (*totalImageCountNewest    ) = values[15].u;
+                             if (totalImageSizeNewest        != NULL) (*totalImageSizeNewest     ) = values[16].u64;
+                             if (totalDirectoryCountNewest   != NULL) (*totalDirectoryCountNewest) = values[17].u;
+                             if (totalLinkCountNewest        != NULL) (*totalLinkCountNewest     ) = values[18].u;
+                             if (totalHardlinkCountNewest    != NULL) (*totalHardlinkCountNewest ) = values[19].u;
+                             if (totalHardlinkSizeNewest     != NULL) (*totalHardlinkSizeNewest  ) = values[20].u64;
+                             if (totalSpecialCountNewest     != NULL) (*totalSpecialCountNewest  ) = values[21].u;
 
-                             if (totalStorageCount           != NULL) (*totalStorageCount          ) = values[24].u;
-                             if (totalStorageSize            != NULL) (*totalStorageSize           ) = values[25].u64;
+                             if (totalStorageCount           != NULL) (*totalStorageCount        ) = values[22].u;
+                             if (totalStorageSize            != NULL) (*totalStorageSize         ) = values[23].u64;
 
                              return ERROR_NONE;
                            },NULL),
@@ -3843,7 +3961,6 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
                            (
                              DATABASE_COLUMN_UINT  ("SUM(totalEntryCount)"),
                              DATABASE_COLUMN_UINT64("SUM(totalEntrySize)"),
-                             DATABASE_COLUMN_UINT  ("0"),
 
                              DATABASE_COLUMN_UINT  ("SUM(totalFileCount)"),
                              DATABASE_COLUMN_UINT64("SUM(totalFileSize)"),
@@ -3857,7 +3974,6 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
 
                              DATABASE_COLUMN_UINT  ("SUM(totalEntryCountNewest)"),
                              DATABASE_COLUMN_UINT64("SUM(totalEntrySizeNewest)"),
-                             DATABASE_COLUMN_UINT  ("0"),
 
                              DATABASE_COLUMN_UINT  ("SUM(totalFileCountNewest)"),
                              DATABASE_COLUMN_UINT64("SUM(totalFileSizeNewest)"),
@@ -3887,9 +4003,75 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
             );
     }
 
-    if (totalDeletedStorageCount != NULL)
+    // get total OK storage count
+    if ((error == ERROR_NONE) && (totalOKStorageCount != NULL))
     {
-      // get total deleted storage count
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalOKStorageCount,
+                               "storages",
+                               "COUNT(id)",
+                               "    state=? \
+                                AND deletedFlag!=TRUE \
+                               ",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT(INDEX_CONST_STATE_OK)
+                               ),
+                               NULL  // orderGroup
+                              );
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+            );
+    }
+
+    // get total update requested storage count
+    if ((error == ERROR_NONE) && (totalUpdateRequestedStorageCount != NULL))
+    {
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalUpdateRequestedStorageCount,
+                               "storages",
+                               "COUNT(id)",
+                               "state=? \
+                                AND deletedFlag!=TRUE \
+                               ",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT(INDEX_CONST_STATE_UPDATE_REQUESTED)
+                               ),
+                               NULL  // orderGroup
+                              );
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+            );
+    }
+
+    // get total error storage count
+    if ((error == ERROR_NONE) && (totalErrorStorageCount != NULL))
+    {
+      error = Database_getUInt(&indexHandle->databaseHandle,
+                               totalErrorStorageCount,
+                               "storages",
+                               "COUNT(id)",
+                               "    state=? \
+                                AND deletedFlag!=TRUE \
+                               ",
+                               DATABASE_FILTERS
+                               (
+                                 DATABASE_FILTER_UINT(INDEX_CONST_STATE_ERROR)
+                               ),
+                               NULL  // orderGroup
+                              );
+      assert(   (error == ERROR_NONE)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
+             || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY)
+            );
+    }
+
+    // get total deleted storage count
+    if ((error == ERROR_NONE) && (totalDeletedStorageCount != NULL))
+    {
       error = Database_getUInt(&indexHandle->databaseHandle,
                                totalDeletedStorageCount,
                                "storages",

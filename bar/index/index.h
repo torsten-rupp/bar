@@ -1048,48 +1048,59 @@ long Index_countStorageState(IndexHandle *indexHandle,
 * Purpose: get infos
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-* Output : totalEntityCount          - total number of entities (can be NULL)
+* Output : totalNormalEntityCount           - total number of normal entities (can be NULL)
+*          totalFullEntityCount             - total number of full entities (can be NULL)
+*          totalIncrementalEntityCount      - total number of incremental entities (can be NULL)
+*          totalDifferentialEntityCount     - total number of differential entities (can be NULL)
+*          totalContinuousEntityCount       - total number of continuous entities (can be NULL)
+*          totalLockedEntityCount           - total number of locked entities (can be NULL)
+*          totalDeletedEntityCount          - total number of deleted entities (can be NULL)
 *
-*          totalEntryCount           - total entry count (can be NULL)
-*          totalEntrySize            - total entry size [bytes] (can be NULL)
-*          totalEntryContentSize     - total entry content size [bytes] (can be NULL)
-*          totalFileCount            - total file entry count (can be NULL)
-*          totalFileSize             - total file entry size [bytes] (can be NULL)
-*          totalImageCount           - total image entry count (can be NULL)
-*          totalImageSize            - total image entry size [bytes] (can be NULL)
-*          totalDirectoryCount       - total directory entry count (can be NULL)
-*          totalLinkCount            - total link entry count (can be NULL)
-*          totalHardlinkCount        - total hardlink entry count (can be NULL)
-*          totalHardlinkSize         - total hardlink entry size [bytes] (can be NULL)
-*          totalSpecialCount         - total special entry count (can be NULL)
+*          totalEntryCount                  - total entry count (can be NULL)
+*          totalEntrySize                   - total entry size [bytes] (can be NULL)
+*          totalFileCount                   - total file entry count (can be NULL)
+*          totalFileSize                    - total file entry size [bytes] (can be NULL)
+*          totalImageCount                  - total image entry count (can be NULL)
+*          totalImageSize                   - total image entry size [bytes] (can be NULL)
+*          totalDirectoryCount              - total directory entry count (can be NULL)
+*          totalLinkCount                   - total link entry count (can be NULL)
+*          totalHardlinkCount               - total hardlink entry count (can be NULL)
+*          totalHardlinkSize                - total hardlink entry size [bytes] (can be NULL)
+*          totalSpecialCount                - total special entry count (can be NULL)
 *
-*          totalEntryCountNewest     - total newest entry count (can be NULL)
-*          totalEntrySizeNewest      - total newest entry size [bytes] (can be NULL)
-*          totalEntryContentSize     - total newest entry content size [bytes] (can be NULL)
-*          totalFileCountNewest      - total newest file entry size [bytes] (can be NULL)
-*          totalFileSizeNewest       - total newest file entry size [bytes] (can be NULL)
-*          totalImageCountNewest     - total newest image entry count (can be NULL)
-*          totalImageSizeNewest      - total newest image entry size [bytes] (can be NULL)
-*          totalDirectoryCountNewest - total newest directory entry count (can be NULL)
-*          totalLinkCountNewest      - total newest link entry count (can be NULL)
-*          totalHardlinkCountNewest  - total newest hardlink entry count (can be NULL)
-*          totalHardlinkSizeNewest   - total newest hardlink entry content size [bytes] (can be NULL)
-*          totalSpecialCountNewest   - total newest specialentry count (can be NULL)
+*          totalEntryCountNewest            - total newest entry count (can be NULL)
+*          totalEntrySizeNewest             - total newest entry size [bytes] (can be NULL)
+*          totalFileCountNewest             - total newest file entry size [bytes] (can be NULL)
+*          totalFileSizeNewest              - total newest file entry size [bytes] (can be NULL)
+*          totalImageCountNewest            - total newest image entry count (can be NULL)
+*          totalImageSizeNewest             - total newest image entry size [bytes] (can be NULL)
+*          totalDirectoryCountNewest        - total newest directory entry count (can be NULL)
+*          totalLinkCountNewest             - total newest link entry count (can be NULL)
+*          totalHardlinkCountNewest         - total newest hardlink entry count (can be NULL)
+*          totalHardlinkSizeNewest          - total newest hardlink entry content size [bytes] (can be NULL)
+*          totalSpecialCountNewest          - total newest specialentry count (can be NULL)
 *
-*          totalSkippedEntryCount    - total skipped number of entries (can be NULL)
-*          totalStorageCount         - total number of storages (can be NULL)
-*          totalStorageSize          - total storages size [bytes] (can be NULL)
+*          totalSkippedEntryCount           - total skipped number of entries (can be NULL)
+*          totalStorageCount                - total number of storages (can be NULL)
+*          totalOKStorageCount              - total number of storages OK (can be NULL)
+*          totalUpdateRequestedStorageCount - total number of storages update requested (can be NULL)
+*          totalErrorStorageCount           - total number of storages with error (can be NULL)
+*          totalStorageSize                 - total storages size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_getInfos(IndexHandle   *indexHandle,
-                      uint          *totalEntityCount,
+                      uint          *totalNormalEntityCount,
+                      uint          *totalFullEntityCount,
+                      uint          *totalIncrementalEntityCount,
+                      uint          *totalDifferentialEntityCount,
+                      uint          *totalContinuousEntityCount,
+                      uint          *totalLockedEntityCount,
                       uint          *totalDeletedEntityCount,
 
                       uint          *totalEntryCount,
                       uint64        *totalEntrySize,
-                      uint64        *totalEntryContentSize,
                       uint          *totalFileCount,
                       uint64        *totalFileSize,
                       uint          *totalImageCount,
@@ -1102,7 +1113,6 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
 
                       uint          *totalEntryCountNewest,
                       uint64        *totalEntrySizeNewest,
-                      uint64        *totalEntryContentSizeNewest,
                       uint          *totalFileCountNewest,
                       uint64        *totalFileSizeNewest,
                       uint          *totalImageCountNewest,
@@ -1117,6 +1127,9 @@ Errors Index_getInfos(IndexHandle   *indexHandle,
 
                       uint          *totalStorageCount,
                       uint64        *totalStorageSize,
+                      uint          *totalOKStorageCount,
+                      uint          *totalUpdateRequestedStorageCount,
+                      uint          *totalErrorStorageCount,
                       uint          *totalDeletedStorageCount
                      );
 
@@ -1999,12 +2012,10 @@ Errors Index_getStorage(IndexHandle  *indexHandle,
 *          indexTypes       - index type or INDEX_TYPE_NONE
 *          name             - name pattern (glob, can be NULL)
 *          newestOnly       - TRUE for newest entries only
-* Output : totalStorageCount     - total storage count (can be NULL)
-*          totalStorageSize      - total storage size [bytes] (can be NULL)
-*          totalEntryCount       - total entry count (can be NULL)
-*          totalEntrySize        - total entry size [bytes] (can be NULL)
-*          totalEntryContentSize - total entry size including directory
-*                                  content [bytes] (can be NULL)
+* Output : totalStorageCount - total storage count (can be NULL)
+*          totalStorageSize  - total storage size [bytes] (can be NULL)
+*          totalEntryCount   - total entry count (can be NULL)
+*          totalEntrySize    - total entry size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -2020,8 +2031,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             uint          *totalStorageCount,
                             uint64        *totalStorageSize,
                             uint          *totalEntryCount,
-                            uint64        *totalEntrySize,
-                            uint64        *totalEntryContentSize
+                            uint64        *totalEntrySize
                            );
 
 /***********************************************************************\

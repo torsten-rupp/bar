@@ -5487,6 +5487,7 @@ LOCAL void updateIndexThreadCode(void)
             if (!INDEX_ID_IS_NONE(entityId))
             {
               // lock
+fprintf(stderr,"%s:%d: lock\n",__FILE__,__LINE__);
               Index_lockEntity(&indexHandle,entityId);
             }
 
@@ -5589,6 +5590,7 @@ LOCAL void updateIndexThreadCode(void)
             if (!INDEX_ID_IS_NONE(entityId))
             {
               // unlock
+fprintf(stderr,"%s:%d: unlock\n",__FILE__,__LINE__);
               Index_unlockEntity(&indexHandle,entityId);
             }
 
@@ -6623,63 +6625,60 @@ LOCAL void jobThreadCode(void)
                                           );
 
     // job pre-process command
-    if      (!Job_isRemote(jobNode))
+    if (jobNode->runningInfo.error == ERROR_NONE)
     {
-      if (jobNode->runningInfo.error == ERROR_NONE)
+      if (!String_isEmpty(jobNode->job.options.preProcessScript))
       {
-        if (!String_isEmpty(jobNode->job.options.preProcessScript))
+        TEXT_MACROS_INIT(textMacros)
         {
-          TEXT_MACROS_INIT(textMacros)
+          TEXT_MACRO_X_STRING ("%name",                jobName,                                                      NULL);
+          TEXT_MACRO_X_STRING ("%archive",             storageName,                                                  NULL);
+          TEXT_MACRO_X_CSTRING("%type",                Archive_archiveTypeToString(archiveType),                     NULL);
+          TEXT_MACRO_X_CSTRING("%T",                   Archive_archiveTypeToShortString(archiveType),                NULL);
+          TEXT_MACRO_X_STRING ("%directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+          TEXT_MACRO_X_STRING ("%file",                storageSpecifier.archiveName,                                 NULL);
+          if (nextScheduleDateTime < MAX_UINT64)
           {
-            TEXT_MACRO_X_STRING ("%name",                jobName,                                                      NULL);
-            TEXT_MACRO_X_STRING ("%archive",             storageName,                                                  NULL);
-            TEXT_MACRO_X_CSTRING("%type",                Archive_archiveTypeToString(archiveType),                     NULL);
-            TEXT_MACRO_X_CSTRING("%T",                   Archive_archiveTypeToShortString(archiveType),                NULL);
-            TEXT_MACRO_X_STRING ("%directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-            TEXT_MACRO_X_STRING ("%file",                storageSpecifier.archiveName,                                 NULL);
-            if (nextScheduleDateTime < MAX_UINT64)
-            {
-              TEXT_MACRO_X_STRING ("%nextJobName",         nextJobName,                                                NULL);
-              TEXT_MACRO_X_STRING ("%nextJobUUID",         nextJobUUID,                                                NULL);
-              TEXT_MACRO_X_STRING ("%nextScheduleUUID",    nextScheduleUUID,                                           NULL);
-              TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
-                                                             ? nextScheduleDateTime-executeStartDateTime
-                                                             : 0,                                                      NULL);
-              TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                       NULL);
-            }
-            else
-            {
-              TEXT_MACRO_X_CSTRING("%nextJobName",         "",                                                         NULL);
-              TEXT_MACRO_X_CSTRING("%nextJobUUID",         "",                                                         NULL);
-              TEXT_MACRO_X_CSTRING("%nextScheduleUUID",    "",                                                         NULL);
-              TEXT_MACRO_X_CSTRING("%nextSchedule",        "",                                                         NULL);
-              TEXT_MACRO_X_CSTRING("%nextScheduleDateTime","",                                                         NULL);
-            }
-          }
-          error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
-                                  executeStartDateTime,
-                                  textMacros.data,
-                                  textMacros.count,
-                                  CALLBACK_(executeIOOutput,NULL)
-                                 );
-          if (error == ERROR_NONE)
-          {
-            logMessage(&logHandle,
-                       LOG_TYPE_INFO,
-                       "Executed pre-command for '%s'",
-                       String_cString(jobName)
-                      );
+            TEXT_MACRO_X_STRING ("%nextJobName",         nextJobName,                                                NULL);
+            TEXT_MACRO_X_STRING ("%nextJobUUID",         nextJobUUID,                                                NULL);
+            TEXT_MACRO_X_STRING ("%nextScheduleUUID",    nextScheduleUUID,                                           NULL);
+            TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
+                                                           ? nextScheduleDateTime-executeStartDateTime
+                                                           : 0,                                                      NULL);
+            TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                       NULL);
           }
           else
           {
-            if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
-            logMessage(&logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Aborted job '%s': pre-command fail (error: %s)",
-                       String_cString(jobName),
-                       Error_getText(jobNode->runningInfo.error)
-                      );
+            TEXT_MACRO_X_CSTRING("%nextJobName",         "",                                                         NULL);
+            TEXT_MACRO_X_CSTRING("%nextJobUUID",         "",                                                         NULL);
+            TEXT_MACRO_X_CSTRING("%nextScheduleUUID",    "",                                                         NULL);
+            TEXT_MACRO_X_CSTRING("%nextSchedule",        "",                                                         NULL);
+            TEXT_MACRO_X_CSTRING("%nextScheduleDateTime","",                                                         NULL);
           }
+        }
+        error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
+                                executeStartDateTime,
+                                textMacros.data,
+                                textMacros.count,
+                                CALLBACK_(executeIOOutput,NULL)
+                               );
+        if (error == ERROR_NONE)
+        {
+          logMessage(&logHandle,
+                     LOG_TYPE_INFO,
+                     "Executed pre-command for '%s'",
+                     String_cString(jobName)
+                    );
+        }
+        else
+        {
+          if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
+          logMessage(&logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Aborted job '%s': pre-command fail (error: %s)",
+                     String_cString(jobName),
+                     Error_getText(jobNode->runningInfo.error)
+                    );
         }
       }
     }
@@ -6910,64 +6909,61 @@ LOCAL void jobThreadCode(void)
                                           );
 
     // job post-process command
-    if      (!Job_isRemote(jobNode))
+    if (!String_isEmpty(jobNode->job.options.postProcessScript))
     {
-      if (!String_isEmpty(jobNode->job.options.postProcessScript))
+      TEXT_MACROS_INIT(textMacros)
       {
-        TEXT_MACROS_INIT(textMacros)
+        TEXT_MACRO_X_STRING ("%name",                jobName,                                                               NULL);
+        TEXT_MACRO_X_STRING ("%archive",             storageName,                                                           NULL);
+        TEXT_MACRO_X_CSTRING("%type",                Archive_archiveTypeToString(archiveType),                              NULL);
+        TEXT_MACRO_X_CSTRING("%T",                   Archive_archiveTypeToShortString(archiveType),                         NULL);
+        TEXT_MACRO_X_STRING ("%directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),         NULL);
+        TEXT_MACRO_X_STRING ("%file",                storageSpecifier.archiveName,                                          NULL);
+        TEXT_MACRO_X_CSTRING("%state",               Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),NULL);
+        TEXT_MACRO_X_UINT   ("%error",               Error_getCode(jobNode->runningInfo.error),                             NULL);
+        TEXT_MACRO_X_CSTRING("%message",             Error_getText(jobNode->runningInfo.error),                             NULL);
+        if (nextScheduleDateTime < MAX_UINT64)
         {
-          TEXT_MACRO_X_STRING ("%name",                jobName,                                                               NULL);
-          TEXT_MACRO_X_STRING ("%archive",             storageName,                                                           NULL);
-          TEXT_MACRO_X_CSTRING("%type",                Archive_archiveTypeToString(archiveType),                              NULL);
-          TEXT_MACRO_X_CSTRING("%T",                   Archive_archiveTypeToShortString(archiveType),                         NULL);
-          TEXT_MACRO_X_STRING ("%directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),         NULL);
-          TEXT_MACRO_X_STRING ("%file",                storageSpecifier.archiveName,                                          NULL);
-          TEXT_MACRO_X_CSTRING("%state",               Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),NULL);
-          TEXT_MACRO_X_UINT   ("%error",               Error_getCode(jobNode->runningInfo.error),                             NULL);
-          TEXT_MACRO_X_CSTRING("%message",             Error_getText(jobNode->runningInfo.error),                             NULL);
-          if (nextScheduleDateTime < MAX_UINT64)
-          {
-            TEXT_MACRO_X_STRING ("%nextJobName",         nextJobName,                                                         NULL);
-            TEXT_MACRO_X_STRING ("%nextJobUUID",         nextJobUUID,                                                         NULL);
-            TEXT_MACRO_X_STRING ("%nextScheduleUUID",    nextScheduleUUID,                                                    NULL);
-            TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
-                                                           ? nextScheduleDateTime-executeStartDateTime
-                                                           : 0,                                                               NULL);
-            TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                                NULL);
-          }
-          else
-          {
-            TEXT_MACRO_X_CSTRING("%nextJobName",         "",                                                                  NULL);
-            TEXT_MACRO_X_CSTRING("%nextJobUUID",         "",                                                                  NULL);
-            TEXT_MACRO_X_CSTRING("%nextScheduleUUID",    "",                                                                  NULL);
-            TEXT_MACRO_X_CSTRING("%nextSchedule",        "",                                                                  NULL);
-            TEXT_MACRO_X_CSTRING("%nextScheduleDateTime","",                                                                  NULL);
-          }
-        }
-        error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
-                                executeStartDateTime,
-                                textMacros.data,
-                                textMacros.count,
-                                CALLBACK_(executeIOOutput,NULL)
-                               );
-        if (error == ERROR_NONE)
-        {
-          logMessage(&logHandle,
-                     LOG_TYPE_INFO,
-                     "Executed post-command for '%s'",
-                     String_cString(jobName)
-                    );
+          TEXT_MACRO_X_STRING ("%nextJobName",         nextJobName,                                                         NULL);
+          TEXT_MACRO_X_STRING ("%nextJobUUID",         nextJobUUID,                                                         NULL);
+          TEXT_MACRO_X_STRING ("%nextScheduleUUID",    nextScheduleUUID,                                                    NULL);
+          TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
+                                                         ? nextScheduleDateTime-executeStartDateTime
+                                                         : 0,                                                               NULL);
+          TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                                NULL);
         }
         else
         {
-          if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Aborted job '%s': post-command fail (error: %s)",
-                     String_cString(jobName),
-                     Error_getText(jobNode->runningInfo.error)
-                    );
+          TEXT_MACRO_X_CSTRING("%nextJobName",         "",                                                                  NULL);
+          TEXT_MACRO_X_CSTRING("%nextJobUUID",         "",                                                                  NULL);
+          TEXT_MACRO_X_CSTRING("%nextScheduleUUID",    "",                                                                  NULL);
+          TEXT_MACRO_X_CSTRING("%nextSchedule",        "",                                                                  NULL);
+          TEXT_MACRO_X_CSTRING("%nextScheduleDateTime","",                                                                  NULL);
         }
+      }
+      error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
+                              executeStartDateTime,
+                              textMacros.data,
+                              textMacros.count,
+                              CALLBACK_(executeIOOutput,NULL)
+                             );
+      if (error == ERROR_NONE)
+      {
+        logMessage(&logHandle,
+                   LOG_TYPE_INFO,
+                   "Executed post-command for '%s'",
+                   String_cString(jobName)
+                  );
+      }
+      else
+      {
+        if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Aborted job '%s': post-command fail (error: %s)",
+                   String_cString(jobName),
+                   Error_getText(jobNode->runningInfo.error)
+                  );
       }
     }
 
@@ -17885,7 +17881,12 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            totalEntityCount=<n> \
+*            totalNormalEntityCount=<n> \
+*            totalFullEntityCount=<n> \
+*            totalIncrementalEntityCount=<n> \
+*            totalDifferentialEntityCount=<n> \
+*            totalContinuousEntityCount=<n> \
+*            totalLockedEntityCount=<n> \
 *            totalDeletedEntityCount=<n> \
 *            \
 *            totalEntryCount=<n> \
@@ -17924,12 +17925,16 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   Errors error;
-  uint   totalEntityCount;
+  uint   totalNormalEntityCount;
+  uint   totalFullEntityCount;
+  uint   totalIncrementalEntityCount;
+  uint   totalDifferentialEntityCount;
+  uint   totalContinuousEntityCount;
+  uint   totalLockedEntityCount;
   uint   totalDeletedEntityCount;
 
   uint   totalEntryCount;
   uint64 totalEntrySize;
-  uint64 totalEntryContentSize;
   uint   totalFileCount;
   uint64 totalFileSize;
   uint   totalImageCount;
@@ -17942,7 +17947,6 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 
   uint   totalEntryCountNewest;
   uint64 totalEntrySizeNewest;
-  uint64 totalEntryContentSizeNewest;
   uint   totalFileCountNewest;
   uint64 totalFileSizeNewest;
   uint   totalImageCountNewest;
@@ -17957,6 +17961,9 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 
   uint   totalStorageCount;
   uint64 totalStorageSize;
+  uint   totalOKStorageCount;
+  uint   totalUpdateRequestedStorageCount;
+  uint   totalErrorStorageCount;
   uint   totalDeletedStorageCount;
 
   assert(clientInfo != NULL);
@@ -17975,12 +17982,16 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 
   // get infos
   error = Index_getInfos(indexHandle,
-                         &totalEntityCount,
+                         &totalNormalEntityCount,
+                         &totalFullEntityCount,
+                         &totalIncrementalEntityCount,
+                         &totalDifferentialEntityCount,
+                         &totalContinuousEntityCount,
+                         &totalLockedEntityCount,
                          &totalDeletedEntityCount,
 
                          &totalEntryCount,
                          &totalEntrySize,
-                         &totalEntryContentSize,
                          &totalFileCount,
                          &totalFileSize,
                          &totalImageCount,
@@ -17993,7 +18004,6 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 
                          &totalEntryCountNewest,
                          &totalEntrySizeNewest,
-                         &totalEntryContentSizeNewest,
                          &totalFileCountNewest,
                          &totalFileSizeNewest,
                          &totalImageCountNewest,
@@ -18008,6 +18018,9 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 
                          &totalStorageCount,
                          &totalStorageSize,
+                         &totalOKStorageCount,
+                         &totalUpdateRequestedStorageCount,
+                         &totalErrorStorageCount,
                          &totalDeletedStorageCount
                         );
   if (error != ERROR_NONE)
@@ -18018,11 +18031,16 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                       "totalEntityCount=%u \
+                       totalNormalEntityCount=%u \
+                       totalFullEntityCount=%u \
+                       totalIncrementalEntityCount=%u \
+                       totalDifferentialEntityCount=%u \
+                       totalContinuousEntityCount=%u \
+                       totalLockedEntityCount=%u \
                        totalDeletedEntityCount=%u \
                        \
                        totalEntryCount=%u \
                        totalEntrySize=%"PRIu64" \
-                       totalEntryContentSize=%"PRIu64" \
                        totalFileCount=%u \
                        totalFileSize=%"PRIu64" \
                        totalImageCount=%u \
@@ -18035,7 +18053,6 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
                        \
                        totalEntryCountNewest=%u \
                        totalEntrySizeNewest=%"PRIu64" \
-                       totalEntryContentSizeNewest=%"PRIu64" \
                        totalFileCountNewest=%u \
                        totalFileSizeNewest=%"PRIu64" \
                        totalImageCountNewest=%u \
@@ -18050,14 +18067,22 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
                        \
                        totalStorageCount=%u \
                        totalStorageSize=%"PRIu64" \
+                       totalOKStorageCount=%u \
+                       totalUpdateRequestedStorageCount=%u \
+                       totalErrorStorageCount=%u \
                        totalDeletedStorageCount=%u \
                       ",
-                      totalEntityCount,
+                      totalNormalEntityCount+totalFullEntityCount+totalIncrementalEntityCount+totalDifferentialEntityCount+totalContinuousEntityCount,
+                      totalNormalEntityCount,
+                      totalFullEntityCount,
+                      totalIncrementalEntityCount,
+                      totalDifferentialEntityCount,
+                      totalContinuousEntityCount,
+                      totalLockedEntityCount,
                       totalDeletedEntityCount,
 
                       totalEntryCount,
                       totalEntrySize,
-                      totalEntryContentSize,
                       totalFileCount,
                       totalFileSize,
                       totalImageCount,
@@ -18070,7 +18095,6 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 
                       totalEntryCountNewest,
                       totalEntrySizeNewest,
-                      totalEntryContentSizeNewest,
                       totalFileCountNewest,
                       totalFileSizeNewest,
                       totalImageCountNewest,
@@ -18085,6 +18109,9 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 
                       totalStorageCount,
                       totalStorageSize,
+                      totalOKStorageCount,
+                      totalUpdateRequestedStorageCount,
+                      totalErrorStorageCount,
                       totalDeletedStorageCount
                      );
 
@@ -19722,9 +19749,10 @@ LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandl
 *            [newestOnly=yes|no]
 *            [selectedOnly=yes|no]
 *          Result:
+*            totalStorageCount<n>
+*            totalStorageSize<n [bytes]>
 *            totalEntryCount=<n>
 *            totalEntrySize=<n [bytes]>
-*            totalEntryContentSize=<n [bytes]>
 \***********************************************************************/
 
 LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
@@ -19735,7 +19763,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   bool       selectedOnly;
   Errors     error;
   uint       totalStorageCount,totalEntryCount;
-  uint64     totalStorageSize,totalEntrySize,totalEntryContentSize;
+  uint64     totalStorageSize,totalEntrySize;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -19783,8 +19811,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
                                &totalStorageCount,
                                &totalStorageSize,
                                &totalEntryCount,
-                               &totalEntrySize,
-                               &totalEntryContentSize
+                               &totalEntrySize
                               );
   if (error != ERROR_NONE)
   {
@@ -19795,12 +19822,11 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
 
   // send data
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                      "totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" totalEntryContentSize=%"PRIu64"",
+                      "totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                       totalStorageCount,
                       totalStorageSize,
                       totalEntryCount,
-                      totalEntrySize,
-                      totalEntryContentSize
+                      totalEntrySize
                      );
 
   // free resources

@@ -3912,7 +3912,7 @@ if (false) {
         final Button widgetShowAgain;
         composite = new Composite(dialog,SWT.NONE);
         composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-        composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+        Widgets.layout(composite,0,0,TableLayoutData.NSWE);
         {
           // message
           label = Widgets.newImage(composite,Widgets.loadImage(shell.getDisplay(),"question.png"));
@@ -3941,7 +3941,7 @@ if (false) {
         // buttons
         composite = new Composite(dialog,SWT.NONE);
         composite.setLayout(new TableLayout(0.0,1.0));
-        composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+        Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
         {
           button = Widgets.newButton(composite,"Open browser");
           button.setFocus();
@@ -4037,23 +4037,23 @@ if (false) {
       // message
       composite = new Composite(dialog,SWT.NONE);
       composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NSWE));
+      Widgets.layout(composite,0,0,TableLayoutData.NSWE);
       {
         label = new Label(composite,SWT.LEFT);
         label.setImage(IMAGE_INFO);
-        label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W,0,0,10));
+        Widgets.layout(label,0,0,TableLayoutData.W,0,0,10);
 
         label = new Label(composite,SWT.LEFT|SWT.WRAP);
         label.setText("BAR control "+Version.STRING+".\n"+
                       "\n"+
                       BARControl.tr("Written by Torsten Rupp")+"\n"
                      );
-        label.setLayoutData(new TableLayoutData(0,1,TableLayoutData.NS|TableLayoutData.W,0,0,4));
+        Widgets.layout(label,0,1,TableLayoutData.NS|TableLayoutData.W,0,0,4);
 
         button = new Button(composite,SWT.CENTER);
         button.setToolTipText(BARControl.tr("Copy version info to clipboard."));
         button.setImage(IMAGE_CLIPBOARD);
-        button.setLayoutData(new TableLayoutData(0,2,TableLayoutData.NE));
+        Widgets.layout(button,0,2,TableLayoutData.NE);
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -4069,11 +4069,11 @@ if (false) {
       // buttons
       composite = new Composite(dialog,SWT.NONE);
       composite.setLayout(new TableLayout(0.0,1.0));
-      composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4));
+      Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
       {
         button = new Button(composite,SWT.CENTER);
         button.setText(BARControl.tr("Close"));
-        button.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT));
+        Widgets.layout(button,0,0,TableLayoutData.NONE,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT);
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -5147,15 +5147,15 @@ if (false) {
     final Button  widgetLoginButton;
     composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
-    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+    Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
       label = new Label(composite,SWT.LEFT);
       label.setText(BARControl.tr("Server")+":");
-      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
+      Widgets.layout(label,0,0,TableLayoutData.W);
 
       subComposite = new Composite(composite,SWT.NONE);
       subComposite.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0},2));
-      subComposite.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
+      Widgets.layout(subComposite,0,1,TableLayoutData.WE);
       {
         widgetName = Widgets.newCombo(subComposite,SWT.LEFT|SWT.BORDER);
         widgetName.setItems(serverData);
@@ -5170,7 +5170,7 @@ if (false) {
 
         label = new Label(subComposite,SWT.LEFT);
         label.setText(BARControl.tr("TLS"));
-        label.setLayoutData(new TableLayoutData(0,2,TableLayoutData.W));
+        Widgets.layout(label,0,2,TableLayoutData.W);
 
         widgetTLSMode = Widgets.newOptionMenu(subComposite);
         Widgets.setOptionMenuItems(widgetTLSMode,new Object[]{BARControl.tr("none" ),BARServer.TLSModes.NONE,
@@ -5198,7 +5198,7 @@ if (false) {
 
         subComposite = new Composite(composite,SWT.NONE);
         subComposite.setLayout(new TableLayout(null,0.0,2));
-        subComposite.setLayoutData(new TableLayoutData(2,1,TableLayoutData.WE));
+        Widgets.layout(subComposite,2,1,TableLayoutData.WE);
         {
           widgetRoleBasic = Widgets.newRadio(subComposite,BARControl.tr("Basic"));
           widgetRoleBasic.setSelection(loginData.role == Roles.BASIC);
@@ -5224,7 +5224,7 @@ if (false) {
     // buttons
     composite = new Composite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(0.0,1.0));
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
+    Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
       widgetLoginButton = Widgets.newButton(composite);
       widgetLoginButton.setText(BARControl.tr("Login"));
@@ -5487,27 +5487,28 @@ if (false) {
 
     composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
-    composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+    Widgets.layout(composite,0,0,TableLayoutData.WE);
     {
       label = Widgets.newLabel(composite);
       label.setText(BARControl.tr("Wait for pairing")+":");
-      label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
+      Widgets.layout(label,0,0,TableLayoutData.W);
 
       widgetProgressBar = new ProgressBar(composite);
-      widgetProgressBar.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
+      Widgets.layout(widgetProgressBar,0,1,TableLayoutData.WE);
 
       label = Widgets.newLabel(composite);
       label.setText(BARControl.tr("Master")+":");
       label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
+      Widgets.layout(label,1,0,TableLayoutData.W);
 
       widgetMasterName = Widgets.newView(composite);
-      widgetMasterName.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE));
+      Widgets.layout(widgetMasterName,1,1,TableLayoutData.WE);
     }
 
     // buttons
     composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(0.0,1.0));
-    composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
+    Widgets.layout(composite,1,0,TableLayoutData.WE);
     {
       widgetOKButton = Widgets.newButton(composite);
       widgetOKButton.setText(BARControl.tr("OK"));
@@ -6696,72 +6697,79 @@ if (false) {
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long   totalEntityCount            = valueMap.getLong  ("totalEntityCount"           );
-                                         long   totalDeletedEntityCount     = valueMap.getLong  ("totalDeletedEntityCount"    );
+                                         long   totalNormalEntityCount           = valueMap.getLong  ("totalNormalEntityCount"          );
+                                         long   totalFullEntityCount             = valueMap.getLong  ("totalFullEntityCount"            );
+                                         long   totalIncrementalEntityCount      = valueMap.getLong  ("totalIncrementalEntityCount"     );
+                                         long   totalDifferentialEntityCount     = valueMap.getLong  ("totalDifferentialEntityCount"    );
+                                         long   totalContinuousEntityCount       = valueMap.getLong  ("totalContinuousEntityCount"      );
+                                         long   totalLockedEntityCount           = valueMap.getLong  ("totalLockedEntityCount"          );
+                                         long   totalDeletedEntityCount          = valueMap.getLong  ("totalDeletedEntityCount"         );
 
-                                         long   totalEntryCount             = valueMap.getLong  ("totalEntryCount"            );
-                                         long   totalEntrySize              = valueMap.getLong  ("totalEntrySize",            Long.MAX_VALUE);
-                                         long   totalFileCount              = valueMap.getLong  ("totalFileCount"             );
-                                         long   totalFileSize               = valueMap.getLong  ("totalFileSize",             Long.MAX_VALUE);
-                                         long   totalImageCount             = valueMap.getLong  ("totalImageCount"            );
-                                         long   totalImageSize              = valueMap.getLong  ("totalImageSize",            Long.MAX_VALUE);
-                                         long   totalDirectoryCount         = valueMap.getLong  ("totalDirectoryCount"        );
-                                         long   totalLinkCount              = valueMap.getLong  ("totalLinkCount"             );
-                                         long   totalHardlinkCount          = valueMap.getLong  ("totalHardlinkCount"         );
-                                         long   totalHardlinkSize           = valueMap.getLong  ("totalHardlinkSize",         Long.MAX_VALUE);
-                                         long   totalSpecialCount           = valueMap.getLong  ("totalSpecialCount"          );
+                                         long   totalEntryCount                  = valueMap.getLong  ("totalEntryCount"                 );
+                                         long   totalEntrySize                   = valueMap.getLong  ("totalEntrySize",                 Long.MAX_VALUE);
+                                         long   totalFileCount                   = valueMap.getLong  ("totalFileCount"                  );
+                                         long   totalFileSize                    = valueMap.getLong  ("totalFileSize",                  Long.MAX_VALUE);
+                                         long   totalImageCount                  = valueMap.getLong  ("totalImageCount"                 );
+                                         long   totalImageSize                   = valueMap.getLong  ("totalImageSize",                 Long.MAX_VALUE);
+                                         long   totalDirectoryCount              = valueMap.getLong  ("totalDirectoryCount"             );
+                                         long   totalLinkCount                   = valueMap.getLong  ("totalLinkCount"                  );
+                                         long   totalHardlinkCount               = valueMap.getLong  ("totalHardlinkCount"              );
+                                         long   totalHardlinkSize                = valueMap.getLong  ("totalHardlinkSize",              Long.MAX_VALUE);
+                                         long   totalSpecialCount                = valueMap.getLong  ("totalSpecialCount"               );
 
-                                         long   totalEntryCountNewest       = valueMap.getLong  ("totalEntryCountNewest"      );
-                                         long   totalEntrySizeNewest        = valueMap.getLong  ("totalEntrySizeNewest",      Long.MAX_VALUE);
-                                         long   totalFileCountNewest        = valueMap.getLong  ("totalFileCountNewest"       );
-                                         long   totalFileSizeNewest         = valueMap.getLong  ("totalFileSizeNewest",       Long.MAX_VALUE);
-                                         long   totalImageCountNewest       = valueMap.getLong  ("totalImageCountNewest"      );
-                                         long   totalImageSizeNewest        = valueMap.getLong  ("totalImageSizeNewest",      Long.MAX_VALUE);
-                                         long   totalDirectoryCountNewest   = valueMap.getLong  ("totalDirectoryCountNewest"  );
-                                         long   totalLinkCountNewest        = valueMap.getLong  ("totalLinkCountNewest"       );
-                                         long   totalHardlinkCountNewest    = valueMap.getLong  ("totalHardlinkCountNewest"   );
-                                         long   totalHardlinkSizeNewest     = valueMap.getLong  ("totalHardlinkSizeNewest",   Long.MAX_VALUE);
-                                         long   totalSpecialCountNewest     = valueMap.getLong  ("totalSpecialCountNewest"    );
+                                         long   totalEntryCountNewest            = valueMap.getLong  ("totalEntryCountNewest"           );
+                                         long   totalEntrySizeNewest             = valueMap.getLong  ("totalEntrySizeNewest",           Long.MAX_VALUE);
+                                         long   totalFileCountNewest             = valueMap.getLong  ("totalFileCountNewest"            );
+                                         long   totalFileSizeNewest              = valueMap.getLong  ("totalFileSizeNewest",            Long.MAX_VALUE);
+                                         long   totalImageCountNewest            = valueMap.getLong  ("totalImageCountNewest"           );
+                                         long   totalImageSizeNewest             = valueMap.getLong  ("totalImageSizeNewest",           Long.MAX_VALUE);
+                                         long   totalDirectoryCountNewest        = valueMap.getLong  ("totalDirectoryCountNewest"       );
+                                         long   totalLinkCountNewest             = valueMap.getLong  ("totalLinkCountNewest"            );
+                                         long   totalHardlinkCountNewest         = valueMap.getLong  ("totalHardlinkCountNewest"        );
+                                         long   totalHardlinkSizeNewest          = valueMap.getLong  ("totalHardlinkSizeNewest",        Long.MAX_VALUE);
+                                         long   totalSpecialCountNewest          = valueMap.getLong  ("totalSpecialCountNewest"         );
 
-                                         long   totalSkippedEntryCount      = valueMap.getLong  ("totalSkippedEntryCount"     );
+                                         long   totalSkippedEntryCount           = valueMap.getLong  ("totalSkippedEntryCount"          );
 
-                                         long   totalStorageCount           = valueMap.getLong  ("totalStorageCount"          );
-                                         long   totalStorageSize            = valueMap.getLong  ("totalStorageSize",          Long.MAX_VALUE);
-                                         long   totalDeletedStorageCount    = valueMap.getLong  ("totalDeletedStorageCount"   );
+                                         long   totalStorageCount                = valueMap.getLong  ("totalStorageCount"               );
+                                         long   totalStorageSize                 = valueMap.getLong  ("totalStorageSize",               Long.MAX_VALUE);
+                                         long   totalOKStorageCount              = valueMap.getLong  ("totalOKStorageCount"             );
+                                         long   totalUpdateRequestedStorageCount = valueMap.getLong  ("totalUpdateRequestedStorageCount");
+                                         long   totalErrorStorageCount           = valueMap.getLong  ("totalErrorStorageCount"          );
+                                         long   totalDeletedStorageCount         = valueMap.getLong  ("totalDeletedStorageCount"        );
 
-                                         System.out.println("Entities");
-                                         System.out.println(String.format("  total             : %d",totalEntityCount                                                                       ));
-                                         System.out.println(String.format("  deleted           : %d",totalDeletedEntityCount                                                                ));
-                                         System.out.println("Storages:");
-                                         System.out.println(String.format("  total             : %d",totalStorageCount                                                                      ));
-                                         System.out.println(String.format("  total size        : %s (%d bytes)",Units.formatByteSize(totalStorageSize),totalStorageSize                      ));
-                                         System.out.println(String.format("  deleted           : %d",totalDeletedStorageCount                                                               ));
-                                         System.out.println("Entries");
-                                         System.out.println(String.format("  total             : %d",totalEntryCount                                                                        ));
-                                         System.out.println(String.format("  total size        : %s (%d bytes)",Units.formatByteSize(totalEntrySize),totalEntrySize                          ));
-                                         System.out.println(String.format("  files             : %d",totalFileCount                                                                         ));
-                                         System.out.println(String.format("  file size         : %s (%d bytes)",Units.formatByteSize(totalFileSize),totalFileSize                            ));
-                                         System.out.println(String.format("  images            : %d",totalImageCount                                                                        ));
-                                         System.out.println(String.format("  image size        : %s (%d bytes)",Units.formatByteSize(totalImageSize),totalImageSize                          ));
-                                         System.out.println(String.format("  directories       : %d",totalDirectoryCount                                                                    ));
-                                         System.out.println(String.format("  links             : %d",totalLinkCount                                                                         ));
-                                         System.out.println(String.format("  hardlinks         : %d",totalHardlinkCount                                                                     ));
-                                         System.out.println(String.format("  hardlink size     : %s (%d bytes)",Units.formatByteSize(totalHardlinkSize),totalHardlinkSize                    ));
-                                         System.out.println(String.format("  special           : %d",totalSpecialCount                                                                      ));
-                                         System.out.println("Newest entries:");
-                                         System.out.println(String.format("  total             : %d",totalEntryCountNewest                                                                  ));
-                                         System.out.println(String.format("  total size        : %s (%d bytes)",Units.formatByteSize(totalEntrySizeNewest),totalEntrySizeNewest              ));
-                                         System.out.println(String.format("  files             : %d",totalFileCountNewest                                                                   ));
-                                         System.out.println(String.format("  file size         : %s (%d bytes)",Units.formatByteSize(totalFileSizeNewest),totalFileSizeNewest                ));
-                                         System.out.println(String.format("  images            : %d",totalImageCountNewest                                                                  ));
-                                         System.out.println(String.format("  image size        : %s (%d bytes)",Units.formatByteSize(totalImageSizeNewest),totalImageSizeNewest              ));
-                                         System.out.println(String.format("  directories       : %d",totalDirectoryCountNewest                                                              ));
-                                         System.out.println(String.format("  links             : %d",totalLinkCountNewest                                                                   ));
-                                         System.out.println(String.format("  hardlinks         : %d",totalHardlinkCountNewest                                                               ));
-                                         System.out.println(String.format("  hardlink size     : %s (%d bytes)",Units.formatByteSize(totalHardlinkSizeNewest),totalHardlinkSizeNewest        ));
-                                         System.out.println(String.format("  special           : %d",totalSpecialCountNewest                                                                ));
-                                         System.out.println("Skipped:");
-                                         System.out.println(String.format("  total             : %d",totalSkippedEntryCount                                                                 ));
+                                         System.out.println(String.format("Entities: %d", totalNormalEntityCount
+                                                                                         +totalFullEntityCount
+                                                                                         +totalIncrementalEntityCount
+                                                                                         +totalDifferentialEntityCount
+                                                                                         +totalContinuousEntityCount                                                                                            ));
+                                         System.out.println(String.format("  Normal          : %d",totalNormalEntityCount                                                                                       ));
+                                         System.out.println(String.format("  Full            : %d",totalFullEntityCount                                                                                         ));
+                                         System.out.println(String.format("  Incremental     : %d",totalIncrementalEntityCount                                                                                  ));
+                                         System.out.println(String.format("  Differential    : %d",totalDifferentialEntityCount                                                                                 ));
+                                         System.out.println(String.format("  Continuous      : %d",totalContinuousEntityCount                                                                                   ));
+                                         System.out.println(String.format("  Locked          : %d",totalLockedEntityCount                                                                                       ));
+                                         System.out.println(String.format("  Deleted         : %d",totalDeletedEntityCount                                                                                      ));
+                                         System.out.println(String.format("Storages: %d,  %s (%d bytes)",totalStorageCount,Units.formatByteSize(totalStorageSize),totalStorageSize                              ));
+                                         System.out.println(String.format("  OK              : %d",totalOKStorageCount                                                                             ));
+                                         System.out.println(String.format("  Update requested: %d",totalUpdateRequestedStorageCount                                                                             ));
+                                         System.out.println(String.format("  Error           : %d",totalErrorStorageCount                                                                                       ));
+                                         System.out.println(String.format("  Deleted         : %d",totalDeletedStorageCount                                                                                     ));
+                                         System.out.println(String.format("Entries: %d, %s (%d bytes)",totalEntryCount,Units.formatByteSize(totalEntrySize),totalEntrySize                                      ));
+                                         System.out.println(String.format("  Files           : %d, %s (%d bytes)",totalFileCount,Units.formatByteSize(totalFileSize),totalFileSize                              ));
+                                         System.out.println(String.format("  Images          : %d, %s (%d bytes)",totalImageCount,Units.formatByteSize(totalImageSize),totalImageSize                           ));
+                                         System.out.println(String.format("  Directories     : %d",totalDirectoryCount                                                                                          ));
+                                         System.out.println(String.format("  Links           : %d",totalLinkCount                                                                                               ));
+                                         System.out.println(String.format("  Hardlinks       : %d, %s (%d bytes)",totalHardlinkCount,Units.formatByteSize(totalHardlinkSize),totalHardlinkSize                  ));
+                                         System.out.println(String.format("  Special         : %d",totalSpecialCount                                                                                            ));
+                                         System.out.println(String.format("Newest entries: %d, %s (%d bytes)",totalEntryCountNewest,Units.formatByteSize(totalEntrySizeNewest),totalEntrySizeNewest             ));
+                                         System.out.println(String.format("  Files           : %d, %s (%d bytes)",totalFileCountNewest,Units.formatByteSize(totalFileSizeNewest),totalFileSizeNewest            ));
+                                         System.out.println(String.format("  Images          : %d, %s (%d bytes)",totalImageCountNewest,Units.formatByteSize(totalImageSizeNewest),totalImageSizeNewest         ));
+                                         System.out.println(String.format("  Directories     : %d",totalDirectoryCountNewest                                                                                    ));
+                                         System.out.println(String.format("  Links           : %d",totalLinkCountNewest                                                                                         ));
+                                         System.out.println(String.format("  Hardlinks       : %d, %s (%d bytes)",totalHardlinkCountNewest,Units.formatByteSize(totalHardlinkSizeNewest),totalHardlinkSizeNewest));
+                                         System.out.println(String.format("  Special         : %d",totalSpecialCountNewest                                                                                      ));
+                                         System.out.println(String.format("Skipped: %d",totalSkippedEntryCount                                                                                                  ));
                                        }
                                      }
                                     );

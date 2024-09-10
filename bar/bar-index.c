@@ -7703,24 +7703,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            "type=?",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_DIFFERENTIAL)
-                           ),
-                           NULL  // group
-                          );
-  if (error != ERROR_NONE)
-  {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
-    return;
-  }
-  printf("  Differential    : %u\n",n);
-
-  error = Database_getUInt(databaseHandle,
-                           &n,
-                           "entities",
-                           "COUNT(id)",
-                           "type=?",
-                           DATABASE_FILTERS
-                           (
                              DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_INCREMENTAL)
                            ),
                            NULL  // group
@@ -7731,6 +7713,24 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
     return;
   }
   printf("  Incremental     : %u\n",n);
+
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities",
+                           "COUNT(id)",
+                           "type=?",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(CHUNK_CONST_ARCHIVE_TYPE_DIFFERENTIAL)
+                           ),
+                           NULL  // group
+                          );
+  if (error != ERROR_NONE)
+  {
+    printError("get entities data fail (error: %s)!",Error_getText(error));
+    return;
+  }
+  printf("  Differential    : %u\n",n);
 
   error = Database_getUInt(databaseHandle,
                            &n,
@@ -7766,6 +7766,23 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
     return;
   }
   printf("  Locked          : %u\n",n);
+
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities",
+                           "COUNT(id)",
+                           "deletedFlag=TRUE",
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL  // group
+                           );
+  if (error != ERROR_NONE)
+  {
+    printError("get entities data fail (error: %s)!",Error_getText(error));
+    return;
+  }
+  printf("  Deleted         : %u\n",n);
 
   printf("Storages:");
   if (verboseFlag && !quietFlag)
@@ -7861,26 +7878,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
   }
   printf("  Deleted         : %u\n",n);
 
-  printf("Entries:");
-  if (verboseFlag && !quietFlag)
-  {
-    // show number of entries
-    error = Database_getUInt(databaseHandle,
-                             &n,
-                             "entries",
-                             "COUNT(id)",
-                             DATABASE_FILTERS_NONE,
-                             NULL  // group
-                            );
-    if (error != ERROR_NONE)
-    {
-      printError("get storage data fail (error: %s)!",Error_getText(error));
-      return;
-    }
-    printf(" %u",n);
-  }
-  printf("\n");
-
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -7890,7 +7887,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          UNUSED_VARIABLE(valueCount);
                          UNUSED_VARIABLE(userData);
 
-                         printf("  Total           : %u, %.1lf %s (%"PRIu64" bytes)\n",
+                         printf("Entries: %u, %.1lf %s (%"PRIu64" bytes)\n",
                                 values[0].u,
                                 getByteSize(values[1].u64),
                                 getByteUnitShort(values[1].u64),
@@ -8171,26 +8168,6 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
     return;
   }
 
-  printf("Newest entries:");
-  if (verboseFlag && !quietFlag)
-  {
-    // show number of newest entries
-    error = Database_getUInt(databaseHandle,
-                             &n,
-                             "entriesNewest",
-                             "COUNT(id)",
-                             DATABASE_FILTERS_NONE,
-                             NULL  // group
-                            );
-    if (error != ERROR_NONE)
-    {
-      printError("get storage data fail (error: %s)!",Error_getText(error));
-      return;
-    }
-    printf(" %u",n);
-  }
-  printf("\n");
-
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -8200,7 +8177,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                          UNUSED_VARIABLE(valueCount);
                          UNUSED_VARIABLE(userData);
 
-                         printf("  Total           : %u, %.1lf %s (%"PRIu64" bytes)\n",
+                         printf("Newest entries: %u, %.1lf %s (%"PRIu64" bytes)\n",
                                 values[0].u,
                                 getByteSize(values[1].u64),
                                 getByteUnitShort(values[1].u64),

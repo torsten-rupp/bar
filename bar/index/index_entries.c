@@ -1028,8 +1028,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             uint          *totalStorageCount,
                             uint64        *totalStorageSize,
                             uint          *totalEntryCount,
-                            uint64        *totalEntrySize,
-                            uint64        *totalEntryContentSize
+                            uint64        *totalEntrySize
                            )
 {
   Errors error;
@@ -1050,7 +1049,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   if (totalStorageSize      != NULL) (*totalStorageSize     ) = 0LL;
   if (totalEntryCount       != NULL) (*totalEntryCount      ) = 0;
   if (totalEntrySize        != NULL) (*totalEntrySize       ) = 0LL;
-  if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -1928,90 +1926,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     #ifdef INDEX_DEBUG_LIST_INFO
       t0 = Misc_getTimestamp();
     #endif /* INDEX_DEBUG_LIST_INFO */
-
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      char sqlString[MAX_SQL_COMMAND_LENGTH];
-
-      // get entry content size
-      if (newestOnly)
-      {
-        // no content size known
-        error = ERROR_NONE;
-        if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
-      }
-      else
-      {
-        if (String_isEmpty(entryIdsString))
-        {
-          // no storages selected, no entries selected -> get aggregated data from entities
-          error = Database_get(&indexHandle->databaseHandle,
-                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                               {
-                                 assert(values != NULL);
-                                 assert(valueCount == 1);
-
-                                 UNUSED_VARIABLE(userData);
-                                 UNUSED_VARIABLE(valueCount);
-
-                                 if (totalEntryContentSize != NULL) (*totalEntryContentSize) = values[0].u64;
-
-                                 return ERROR_NONE;
-                               },NULL),
-                               NULL,  // changedRowCount
-                               DATABASE_TABLES
-                               (
-                                 "entities \
-                                    LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                 "
-                               ),
-                               DATABASE_FLAG_NONE,
-                               DATABASE_COLUMNS
-                               (
-                                 DATABASE_COLUMN_UINT64("SUM(entities.totalEntrySize)")
-                               ),
-                               stringFormat(sqlString,sizeof(sqlString),
-                                            "    entities.deletedFlag!=TRUE \
-                                             AND %s \
-                                            ",
-                                            String_cString(filterString)
-                                           ),
-                               DATABASE_FILTERS
-                               (
-                               ),
-                               NULL,  // groupBy
-                               NULL,  // orderby
-                               0LL,
-                               1LL
-                             );
-        }
-        else
-        {
-          // no content size known
-          error = ERROR_NONE;
-          if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
-        }
-      }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      return ERROR_NONE;
-    });
-    assertx(   (error == ERROR_NONE)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY),
-            "%s",Error_getText(error)
-           );
-
-    #ifdef INDEX_DEBUG_LIST_INFO
-      t1 = Misc_getTimestamp();
-      fprintf(stderr,"%s, %d: totalEntryContentSize=%"PRIu64"\n",__FILE__,__LINE__,*totalEntryContentSize);
-      fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
-      fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
-    #endif
   }
   else /* !String_isEmpty(ftsName) */
   {
@@ -2150,28 +2064,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     #ifdef INDEX_DEBUG_LIST_INFO
       t1 = Misc_getTimestamp();
       fprintf(stderr,"%s, %d: totalEntryCount=%lu totalEntrySize_=%"PRIu64"\n",__FILE__,__LINE__,*totalEntryCount,*totalEntrySize);
-      fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
-      fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
-    #endif
-
-    // get total entry content size if possible
-    #ifdef INDEX_DEBUG_LIST_INFO
-      t0 = Misc_getTimestamp();
-    #endif /* INDEX_DEBUG_LIST_INFO */
-
-    // no content size known
-    error = ERROR_NONE;
-    if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
-
-    assertx(   (error == ERROR_NONE)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT)
-            || (Error_getCode(error) == ERROR_CODE_DATABASE_BUSY),
-            "%s",Error_getText(error)
-           );
-
-    #ifdef INDEX_DEBUG_LIST_INFO
-      t1 = Misc_getTimestamp();
-      fprintf(stderr,"%s, %d: totalEntryContentSize=%"PRIu64"\n",__FILE__,__LINE__,*totalEntryContentSize);
       fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
       fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
     #endif
