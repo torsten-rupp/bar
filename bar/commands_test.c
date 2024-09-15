@@ -1577,7 +1577,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
 
   // init storage
   error = Storage_init(&storageInfo,
-NULL, // masterSocketHandle
+                       NULL, // masterSocketHandle
                        storageSpecifier,
                        testInfo->jobOptions,
                        &globalOptions.maxBandWidthList,

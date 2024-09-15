@@ -2953,17 +2953,6 @@ void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
 
-JobOptions* Job_duplicateOptions(const JobOptions *fromJobOptions)
-{
-  JobOptions *jobOptions = (JobOptions*)malloc(sizeof(JobOptions));
-  if (jobOptions != NULL)
-  {
-    Job_copyOptions(jobOptions,fromJobOptions);
-  }
-
-  return jobOptions;
-}
-
 void Job_doneOptions(JobOptions *jobOptions)
 {
   assert(jobOptions != NULL);
@@ -3011,12 +3000,6 @@ void Job_doneOptions(JobOptions *jobOptions)
   String_delete(jobOptions->includeFileListFileName);
 
   String_delete(jobOptions->uuid);
-}
-
-void Job_freeOptions(JobOptions *jobOptions)
-{
-  Job_doneOptions(jobOptions);
-  free(jobOptions);
 }
 
 void Job_duplicatePersistenceList(PersistenceList *persistenceList, const PersistenceList *fromPersistenceList)

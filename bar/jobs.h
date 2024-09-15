@@ -1597,17 +1597,6 @@ void Job_initOptions(JobOptions *jobOptions);
 void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
 
 /***********************************************************************\
-* Name   : Job_duplicateOptions
-* Purpose: duplicate job options
-* Input  : fromJobOptions - source job options
-* Output : -
-* Return : job options
-* Notes  : -
-\***********************************************************************/
-
-JobOptions* Job_duplicateOptions(const JobOptions *fromJobOptions);
-
-/***********************************************************************\
 * Name   : Job_doneOptions
 * Purpose: done job options
 * Input  : jobOptions - job options
@@ -1617,17 +1606,6 @@ JobOptions* Job_duplicateOptions(const JobOptions *fromJobOptions);
 \***********************************************************************/
 
 void Job_doneOptions(JobOptions *jobOptions);
-
-/***********************************************************************\
-* Name   : Job_freeOptions
-* Purpose: free job options
-* Input  : jobOptions - job options
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Job_freeOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
 * Name   : Job_duplicatePersistenceList

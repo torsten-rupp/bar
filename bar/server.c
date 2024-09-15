@@ -2560,19 +2560,20 @@ LOCAL Errors testStorage(IndexHandle             *indexHandle,
   }
 
   // find job name, job options (if possible)
-  String     jobName     = String_new();
-  JobOptions *jobOptions = NULL;
+  String     jobName = String_new();
+  JobOptions jobOptions;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode != NULL)
     {
       String_set(jobName,jobNode->name);
-      jobOptions = Job_duplicateOptions(&jobNode->job.options);
+      Job_copyOptions(&jobOptions, &jobNode->job.options);
     }
     else
     {
       String_set(jobName,jobUUID);
+      Job_initOptions(&jobOptions);
     }
   }
 
@@ -2582,14 +2583,14 @@ LOCAL Errors testStorage(IndexHandle             *indexHandle,
   StringList_append(&storageNameList,storageName);
   error = testStorages(indexHandle,
                        &storageNameList,
-                       jobOptions,
+                       &jobOptions,
                        CALLBACK_(testRunningInfoFunction,testRunningInfoUserData),
                        CALLBACK_(isAbortedFunction,isAbortedUserData)
                       );
   if (isQuit())
   {
     StringList_done(&storageNameList);
-    Job_doneOptions(jobOptions);
+    Job_doneOptions(&jobOptions);
     String_delete(jobName);
     String_delete(storageName);
     return ERROR_INTERRUPTED;
@@ -2622,7 +2623,7 @@ LOCAL Errors testStorage(IndexHandle             *indexHandle,
 
   // free resources
   StringList_done(&storageNameList);
-  Job_doneOptions(jobOptions);
+  Job_doneOptions(&jobOptions);
   String_delete(jobName);
   String_delete(storageName);
 
@@ -2683,19 +2684,20 @@ LOCAL Errors testEntity(IndexHandle             *indexHandle,
   }
 
   // find job name, job options (if possible)
-  String     jobName     = String_new();
-  JobOptions *jobOptions = NULL;
+  String     jobName = String_new();
+  JobOptions jobOptions;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode != NULL)
     {
       String_set(jobName,jobNode->name);
-      jobOptions = Job_duplicateOptions(&jobNode->job.options);
+      Job_copyOptions(&jobOptions, &jobNode->job.options);
     }
     else
     {
       String_set(jobName,jobUUID);
+      Job_initOptions(&jobOptions);
     }
   }
 
@@ -2726,7 +2728,7 @@ LOCAL Errors testEntity(IndexHandle             *indexHandle,
   {
     String_delete(storageName);
     StringList_done(&storageNameList);
-    Job_doneOptions(jobOptions);
+    Job_doneOptions(&jobOptions);
     String_delete(jobName);
     return error;
   }
@@ -2760,7 +2762,7 @@ LOCAL Errors testEntity(IndexHandle             *indexHandle,
   // test all storages of entity
   error = testStorages(indexHandle,
                        &storageNameList,
-                       jobOptions,
+                       &jobOptions,
                        CALLBACK_(testRunningInfoFunction,testRunningInfoUserData),
                        CALLBACK_(isAbortedFunction,isAbortedUserData)
                       );
@@ -2768,7 +2770,7 @@ LOCAL Errors testEntity(IndexHandle             *indexHandle,
   {
     String_delete(storageName);
     StringList_done(&storageNameList);
-    Job_doneOptions(jobOptions);
+    Job_doneOptions(&jobOptions);
     String_delete(jobName);
     return ERROR_INTERRUPTED;
   }
@@ -2800,7 +2802,7 @@ LOCAL Errors testEntity(IndexHandle             *indexHandle,
   // free resources
   String_delete(storageName);
   StringList_done(&storageNameList);
-  Job_doneOptions(jobOptions);
+  Job_doneOptions(&jobOptions);
   String_delete(jobName);
 
   return error;
@@ -3006,7 +3008,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
     if (error == ERROR_NONE)
     {
       // get storage specified job options (if possible)
-      JobOptions *jobOptions = NULL;
+      JobOptions jobOptions;
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
         jobNode = Job_findByUUID(jobUUID);
@@ -3014,7 +3016,11 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
         if (jobNode != NULL)
         {
           Storage_parseName(&storageSpecifier,jobNode->job.storageName);
-          jobOptions = Job_duplicateOptions(&jobNode->job.options);
+          Job_copyOptions(&jobOptions, &jobNode->job.options);
+        }
+        else
+        {
+          Job_initOptions(&jobOptions);
         }
       }
 
@@ -3030,7 +3036,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
         error = Storage_init(&storageInfo,
                              NULL,  // masterIO
                              &storageSpecifier,
-                             jobOptions,
+                             &jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
                              SERVER_CONNECTION_PRIORITY_HIGH,
                              CALLBACK_(NULL,NULL),  // storageUpdateProgress
@@ -3047,7 +3053,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
           error = Storage_init(&storageInfo,
                                NULL,  // masterIO
                                &storageSpecifier,
-                               jobOptions,
+                               &jobOptions,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                CALLBACK_(NULL,NULL),  // storageUpdateProgress
@@ -3065,7 +3071,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
         error = Storage_init(&storageInfo,
                              NULL,  // masterIO
                              &storageSpecifier,
-                             jobOptions,
+                             &jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
                              SERVER_CONNECTION_PRIORITY_HIGH,
                              CALLBACK_(NULL,NULL),  // storageUpdateProgress
@@ -3087,7 +3093,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
           error = Storage_init(&storageInfo,
                                NULL,  // masterIO
                                &storageSpecifier,
-                               jobOptions,
+                               &jobOptions,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                CALLBACK_(NULL,NULL),  // storageUpdateProgress
@@ -3104,7 +3110,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
             error = Storage_init(&storageInfo,
                                  NULL,  // masterIO
                                  &storageSpecifier,
-                                 jobOptions,
+                                 &jobOptions,
                                  &globalOptions.indexDatabaseMaxBandWidthList,
                                  SERVER_CONNECTION_PRIORITY_HIGH,
                                  CALLBACK_(NULL,NULL),  // storageUpdateProgress
@@ -3122,7 +3128,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
           error = Storage_init(&storageInfo,
                                NULL,  // masterIO
                                &storageSpecifier,
-                               jobOptions,
+                               &jobOptions,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                CALLBACK_(NULL,NULL),  // storageUpdateProgress
@@ -3158,10 +3164,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
         Storage_done(&storageInfo);
       }
 
-      if (jobOptions != NULL)
-      {
-        Job_freeOptions(jobOptions);
-      }
+      Job_doneOptions(&jobOptions);
     }
     Storage_doneSpecifier(&storageSpecifier);
     if (isQuit())
