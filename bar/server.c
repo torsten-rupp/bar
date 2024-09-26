@@ -2477,33 +2477,6 @@ LOCAL Errors testStorages(IndexHandle             *indexHandle,
     return ERROR_INTERRUPTED;
   }
 
-  // log
-  StringListIterator stringListIterator;
-  String             storageName;
-  STRINGLIST_ITERATE(storageNameList,stringListIterator,storageName)
-  {
-    if (error == ERROR_NONE)
-    {
-      logMessage(NULL,  // logHandle,
-                 LOG_TYPE_ALWAYS,
-                 "Tested storage '%s'",
-                 String_cString(storageName)
-                );
-    }
-    else
-    {
-      if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
-      {
-        logMessage(NULL,  // logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Test storage '%s' fail (error: %s)",
-                   String_cString(storageName),
-                   Error_getText(error)
-                  );
-      }
-    }
-  }
-
   // free resources
 
   return error;
@@ -5593,8 +5566,7 @@ fprintf(stderr,"%s:%d: lock\n",__FILE__,__LINE__);
             if (!INDEX_ID_IS_NONE(entityId))
             {
               // unlock
-fprintf(stderr,"%s:%d: unlock\n",__FILE__,__LINE__);
-              Index_unlockEntity(&indexHandle,entityId);
+              (void)Index_unlockEntity(&indexHandle,entityId);
             }
 
             // done storage

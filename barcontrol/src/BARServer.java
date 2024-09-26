@@ -3469,7 +3469,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   */
   public static synchronized boolean isLockedSet()
   {
-    return setLockCounter != 0;
+    return setLockCounter > 0;
   }
 
   /** set boolean value on BAR server

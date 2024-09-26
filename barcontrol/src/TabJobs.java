@@ -7560,6 +7560,7 @@ public class TabJobs
             {
               try
               {
+                BARServer.setJobOption(selectedJobData.uuid,"ftp-login-name",storageLoginName.getString());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)
@@ -7575,6 +7576,7 @@ public class TabJobs
             {
               try
               {
+                BARServer.setJobOption(selectedJobData.uuid,"ftp-password",storageLoginPassword.getString());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)
@@ -7642,6 +7644,7 @@ public class TabJobs
             {
               try
               {
+                BARServer.setJobOption(selectedJobData.uuid,"ssh-login-port",storageHostPort.getInteger());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)
@@ -7657,6 +7660,7 @@ public class TabJobs
             {
               try
               {
+                BARServer.setJobOption(selectedJobData.uuid,"ssh-login-name",storageLoginName.getString());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)
@@ -7672,6 +7676,7 @@ public class TabJobs
             {
               try
               {
+                BARServer.setJobOption(selectedJobData.uuid,"ssh-password",storageLoginPassword.getString());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)
@@ -7772,6 +7777,7 @@ public class TabJobs
             {
               try
               {
+                BARServer.setJobOption(selectedJobData.uuid,"webdav-port",storageHostPort.getInteger());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)
@@ -7787,6 +7793,7 @@ public class TabJobs
             {
               try
               {
+                BARServer.setJobOption(selectedJobData.uuid,"webdav-login-name",storageLoginName.getString());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)
@@ -7802,6 +7809,7 @@ public class TabJobs
             {
               try
               {
+                BARServer.setJobOption(selectedJobData.uuid,"webdav-password",storageLoginPassword.getString());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)
@@ -7900,6 +7908,7 @@ public class TabJobs
             {
               try
               {
+                BARServer.setJobOption(selectedJobData.uuid,"smb-login-name",storageLoginName.getString());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)
@@ -7915,6 +7924,7 @@ public class TabJobs
             {
               try
               {
+                BARServer.setJobOption(selectedJobData.uuid,"smb-password",storageLoginPassword.getString());
                 BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
               }
               catch (Exception exception)

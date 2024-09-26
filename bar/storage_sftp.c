@@ -1100,6 +1100,10 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     }
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
     {
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(storageInfo->storageSpecifier.loginName));
+Password_dump(storageInfo->storageSpecifier.loginPassword);
+Password_dump(&sshServer.password);
+Password_dump(&defaultSSHPassword);
       error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
                || !Password_isEmpty(&sshServer.password)
                || !Password_isEmpty(&defaultSSHPassword)
@@ -1857,6 +1861,7 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                             | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
                             30*MS_PER_SECOND
                            );
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     if (error != ERROR_NONE)
     {
       free(storageHandle->sftp.readAheadBuffer.data);
@@ -1893,6 +1898,7 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                      );
       Network_disconnect(&storageHandle->sftp.socketHandle);
       free(storageHandle->sftp.readAheadBuffer.data);
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       return error;
     }
 
@@ -1915,6 +1921,7 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
       (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
       Network_disconnect(&storageHandle->sftp.socketHandle);
       free(storageHandle->sftp.readAheadBuffer.data);
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       return error;
     }
 
@@ -1936,6 +1943,7 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
       (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
       Network_disconnect(&storageHandle->sftp.socketHandle);
       free(storageHandle->sftp.readAheadBuffer.data);
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       return error;
     }
     storageHandle->sftp.size = sftpAttributes.filesize;

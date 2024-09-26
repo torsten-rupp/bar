@@ -381,6 +381,25 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
     }
     printInfo(2,"    \b\b\b\b");
 
+    // get size/fragment info
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
+    }
+    else
+    {
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
+    }
+    stringClear(fragmentString);
+    if (fragmentSize < fileInfo.size)
+    {
+      stringFormat(fragmentString,sizeof(fragmentString),
+                   ", fragment %*"PRIu64"..%*"PRIu64,
+                   stringInt64Length(fileInfo.size),fragmentOffset,
+                   stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                  );
+    }
+
     if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
     {
       SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -423,25 +442,6 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
       return error;
     }
 
-    // get size/fragment info
-    if (globalOptions.humanFormatFlag)
-    {
-      getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
-    }
-    else
-    {
-      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
-    }
-    stringClear(fragmentString);
-    if (fragmentSize < fileInfo.size)
-    {
-      stringFormat(fragmentString,sizeof(fragmentString),
-                   ", fragment %*"PRIu64"..%*"PRIu64,
-                   stringInt64Length(fileInfo.size),fragmentOffset,
-                   stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
-                  );
-    }
-
     // update running info
     SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
@@ -453,11 +453,21 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
 
     // output
     printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
+    logMessage(testInfo->logHandle,
+               LOG_TYPE_INFO,
+               "Tested file '%s'",
+               String_cString(fileName)
+              );
   }
   else
   {
     // skip
     printInfo(2,"  Test file      '%s'...skipped\n",String_cString(fileName));
+    logMessage(testInfo->logHandle,
+               LOG_TYPE_INFO,
+               "Test file '%s' skipped",
+               String_cString(fileName)
+              );
   }
 
   // close archive entry
@@ -618,6 +628,25 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
     }
     printInfo(2,"    \b\b\b\b");
 
+    // get size/fragment info
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(sizeString,sizeof(sizeString),blockCount*(uint64)deviceInfo.blockSize);
+    }
+    else
+    {
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
+    }
+    stringClear(fragmentString);
+    if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+    {
+      stringFormat(fragmentString,sizeof(fragmentString),
+                   ", fragment %*"PRIu64"..%*"PRIu64,
+                   stringInt64Length(deviceInfo.size),blockOffset*deviceInfo.blockSize,
+                   stringInt64Length(deviceInfo.size),blockOffset*deviceInfo.blockSize+(blockCount*deviceInfo.blockSize)-1LL
+                  );
+    }
+
     if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
     {
       SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -660,25 +689,6 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
       return error;
     }
 
-    // get size/fragment info
-    if (globalOptions.humanFormatFlag)
-    {
-      getHumanSizeString(sizeString,sizeof(sizeString),blockCount*(uint64)deviceInfo.blockSize);
-    }
-    else
-    {
-      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
-    }
-    stringClear(fragmentString);
-    if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
-    {
-      stringFormat(fragmentString,sizeof(fragmentString),
-                   ", fragment %*"PRIu64"..%*"PRIu64,
-                   stringInt64Length(deviceInfo.size),blockOffset*deviceInfo.blockSize,
-                   stringInt64Length(deviceInfo.size),blockOffset*deviceInfo.blockSize+(blockCount*deviceInfo.blockSize)-1LL
-                  );
-    }
-
     // update running info
     SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
@@ -690,11 +700,21 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
 
     // output
     printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
+    logMessage(testInfo->logHandle,
+               LOG_TYPE_INFO,
+               "Tested image '%s'",
+               String_cString(deviceName)
+              );
   }
   else
   {
     // skip
     printInfo(2,"  Test image     '%s'...skipped\n",String_cString(deviceName));
+    logMessage(testInfo->logHandle,
+               LOG_TYPE_INFO,
+               "Test image '%s' skipped",
+               String_cString(deviceName)
+              );
   }
 
   // close archive entry
@@ -789,6 +809,11 @@ LOCAL Errors testDirectoryEntry(TestInfo          *testInfo,
     }
 
     printInfo(1,"OK\n");
+    logMessage(testInfo->logHandle,
+               LOG_TYPE_INFO,
+               "Tested directory '%s'",
+               String_cString(directoryName)
+              );
 
     // free resources
   }
@@ -796,6 +821,11 @@ LOCAL Errors testDirectoryEntry(TestInfo          *testInfo,
   {
     // skip
     printInfo(2,"  Test directory '%s'...skipped\n",String_cString(directoryName));
+    logMessage(testInfo->logHandle,
+               LOG_TYPE_INFO,
+               "Test directory '%s' skipped",
+               String_cString(directoryName)
+              );
   }
 
   // close archive entry
@@ -886,8 +916,6 @@ LOCAL Errors testLinkEntry(TestInfo          *testInfo,
       return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(linkName));
     }
 
-    printInfo(1,"OK\n");
-
     // update running info
     SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
@@ -897,12 +925,24 @@ LOCAL Errors testLinkEntry(TestInfo          *testInfo,
       updateRunningInfo(testInfo,TRUE);
     }
 
+    printInfo(1,"OK\n");
+    logMessage(testInfo->logHandle,
+               LOG_TYPE_INFO,
+               "Tested link '%s'",
+               String_cString(linkName)
+              );
+
     // free resources
   }
   else
   {
     // skip
     printInfo(2,"  Test link      '%s'...skipped\n",String_cString(linkName));
+    logMessage(testInfo->logHandle,
+               LOG_TYPE_INFO,
+               "Test link '%s' skipped",
+               String_cString(linkName)
+              );
   }
 
   // close archive file
@@ -1018,6 +1058,25 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
         updateRunningInfo(testInfo,FALSE);
       }
 
+      // get size/fragment info
+      if (globalOptions.humanFormatFlag)
+      {
+        getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
+      }
+      else
+      {
+        stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
+      }
+      stringClear(fragmentString);
+      if (fragmentSize < fileInfo.size)
+      {
+        stringFormat(fragmentString,sizeof(fragmentString),
+                     ", fragment %*"PRIu64"..%*"PRIu64,
+                     stringInt64Length(fileInfo.size),fragmentOffset,
+                     stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                    );
+      }
+
       if (!testedDataFlag && (error == ERROR_NONE))
       {
         // read hard link content
@@ -1097,25 +1156,6 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
           break;
         }
 
-        // get size/fragment info
-        if (globalOptions.humanFormatFlag)
-        {
-          getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
-        }
-        else
-        {
-          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
-        }
-        stringClear(fragmentString);
-        if (fragmentSize < fileInfo.size)
-        {
-          stringFormat(fragmentString,sizeof(fragmentString),
-                       ", fragment %*"PRIu64"..%*"PRIu64,
-                       stringInt64Length(fileInfo.size),fragmentOffset,
-                       stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
-                      );
-        }
-
         // update running info
         SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
@@ -1131,25 +1171,6 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
       }
       else
       {
-        // get size/fragment info
-        if (globalOptions.humanFormatFlag)
-        {
-          getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
-        }
-        else
-        {
-          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
-        }
-        stringClear(fragmentString);
-        if (fragmentSize < fileInfo.size)
-        {
-          stringFormat(fragmentString,sizeof(fragmentString),
-                       ", fragment %*"PRIu64"..%*"PRIu64,
-                       stringInt64Length(fileInfo.size),fragmentOffset,
-                       stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
-                      );
-        }
-
         if (error == ERROR_NONE)
         {
           printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
@@ -1164,6 +1185,11 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
     {
       // skip
       printInfo(2,"  Test hard link '%s'...skipped\n",String_cString(fileName));
+      logMessage(testInfo->logHandle,
+                 LOG_TYPE_INFO,
+                 "Test hard link '%s' skipped",
+                 String_cString(fileName)
+                );
     }
   }
   if (error != ERROR_NONE)
@@ -1256,8 +1282,6 @@ LOCAL Errors testSpecialEntry(TestInfo          *testInfo,
       return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
     }
 
-    printInfo(1,"OK\n");
-
     // update running info
     SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
@@ -1267,12 +1291,24 @@ LOCAL Errors testSpecialEntry(TestInfo          *testInfo,
       updateRunningInfo(testInfo,TRUE);
     }
 
+    printInfo(1,"OK\n");
+    logMessage(testInfo->logHandle,
+               LOG_TYPE_INFO,
+               "Tested special entry '%s'",
+               String_cString(fileName)
+              );
+
     // free resources
   }
   else
   {
     // skip
     printInfo(2,"  Test special   '%s'...skipped\n",String_cString(fileName));
+      logMessage(testInfo->logHandle,
+                 LOG_TYPE_INFO,
+                 "Test special entry '%s' skipped",
+                 String_cString(fileName)
+                );
   }
 
   // close archive entry
@@ -1831,6 +1867,11 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
                                    ? "OK\n"
                                    : "FAIL!\n"
                                 );
+    logMessage(testInfo->logHandle,
+               LOG_TYPE_INFO,
+               "Tested storage '%s'",
+               String_cString(printableStorageName)
+              );
 
   // output signature error/warning
   if (!Crypt_isValidSignatureState(allCryptSignatureState))
@@ -1930,6 +1971,7 @@ NULL,  //               requestedAbortFlag,
                             &storageSpecifier,
                             NULL  // fileName
                            );
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         if (error == ERROR_NONE)
         {
           someStorageFound = TRUE;

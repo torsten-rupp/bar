@@ -2511,13 +2511,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           {
             if (createInfo->jobOptions->skipUnreadableFlag)
             {
-              printWarning("x1Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
-              logMessage(createInfo->logHandle,
-                         LOG_TYPE_ENTRY_ACCESS_DENIED,
-                         "Access denied '%s' (error: %s)",
-                         String_cString(name),
-                         Error_getText(error)
-                        );
+              printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
             }
             else
             {
@@ -2526,6 +2520,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                          Error_getText(error)
                         );
             }
+            logMessage(createInfo->logHandle,
+                       LOG_TYPE_ENTRY_ACCESS_DENIED,
+                       "Access denied '%s' (error: %s)",
+                       String_cString(name),
+                       Error_getText(error)
+                      );
 
             STATUS_INFO_UPDATE(createInfo,name,NULL)
             {
@@ -2875,12 +2875,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           if (createInfo->jobOptions->skipUnreadableFlag)
           {
             printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(path),Error_getText(error));
-            logMessage(createInfo->logHandle,
-                       LOG_TYPE_ENTRY_ACCESS_DENIED,
-                       "Access denied '%s' (error: %s)",
-                       String_cString(path),
-                       Error_getText(error)
-                      );
           }
           else
           {
@@ -2889,6 +2883,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                        Error_getText(error)
                       );
           }
+          logMessage(createInfo->logHandle,
+                     LOG_TYPE_ENTRY_ACCESS_DENIED,
+                     "Access denied '%s' (error: %s)",
+                     String_cString(path),
+                     Error_getText(error)
+                    );
 
           STATUS_INFO_UPDATE(createInfo,name,NULL)
           {
@@ -3149,13 +3149,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                         {
                                           if (createInfo->jobOptions->skipUnreadableFlag)
                                           {
-                                            printWarning("x3Cannot get info for '%s' (error: %s) - skipped",String_cString(fileName),Error_getText(error));
-                                            logMessage(createInfo->logHandle,
-                                                       LOG_TYPE_ENTRY_ACCESS_DENIED,
-                                                       "Access denied '%s' (error: %s)",
-                                                       String_cString(fileName),
-                                                       Error_getText(error)
-                                                      );
+                                            printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(fileName),Error_getText(error));
                                           }
                                           else
                                           {
@@ -3164,6 +3158,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                        Error_getText(error)
                                                       );
                                           }
+                                          logMessage(createInfo->logHandle,
+                                                     LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                                     "Access denied '%s' (error: %s)",
+                                                     String_cString(fileName),
+                                                     Error_getText(error)
+                                                    );
 
                                           STATUS_INFO_UPDATE(createInfo,name,NULL)
                                           {
@@ -3632,13 +3632,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             {
                               if (createInfo->jobOptions->skipUnreadableFlag)
                               {
-                                printWarning("x4Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
-                                logMessage(createInfo->logHandle,
-                                           LOG_TYPE_ENTRY_ACCESS_DENIED,
-                                           "Access denied '%s' (error: %s)",
-                                           String_cString(name),
-                                           Error_getText(error)
-                                          );
+                                printWarning("Cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
                               }
                               else
                               {
@@ -3647,6 +3641,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                            Error_getText(error)
                                           );
                               }
+                              logMessage(createInfo->logHandle,
+                                         LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                         "Access denied '%s' (error: %s)",
+                                         String_cString(name),
+                                         Error_getText(error)
+                                        );
 
                               STATUS_INFO_UPDATE(createInfo,name,NULL)
                               {
@@ -6093,7 +6093,6 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
                 fragmentInfoString,
                 compressionRatioString
                );
-
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
                  "Added file '%s' (%"PRIu64" bytes%s%s)",
