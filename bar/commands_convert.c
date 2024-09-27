@@ -2563,7 +2563,6 @@ Errors Command_convert(const StringList        *storageNameList,
   ConvertInfo                convertInfo;
   StringNode                 *stringNode;
   String                     storageName;
-  Errors                     failError;
   bool                       someStorageFound;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
@@ -2586,7 +2585,6 @@ Errors Command_convert(const StringList        *storageNameList,
                   logHandle
                  );
 
-  failError        = ERROR_NONE;
   someStorageFound = FALSE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
@@ -2598,10 +2596,10 @@ Errors Command_convert(const StringList        *storageNameList,
                  String_cString(storageName),
                  Error_getText(error)
                 );
-      if (failError == ERROR_NONE) failError = error;
+      if (convertInfo.failError == ERROR_NONE) convertInfo.failError = error;
       continue;
     }
-    DEBUG_TESTCODE() { failError = DEBUG_TESTCODE_ERROR(); break; }
+    DEBUG_TESTCODE() { convertInfo.failError = DEBUG_TESTCODE_ERROR(); break; }
 
     error = ERROR_UNKNOWN;
 
@@ -2618,6 +2616,10 @@ Errors Command_convert(const StringList        *storageNameList,
         if (error == ERROR_NONE)
         {
           someStorageFound = TRUE;
+        }
+        else
+        {
+          if (convertInfo.failError == ERROR_NONE) convertInfo.failError = error;
         }
       }
     }
@@ -2664,7 +2666,7 @@ Errors Command_convert(const StringList        *storageNameList,
                                   );
             if (error != ERROR_NONE)
             {
-              if (failError == ERROR_NONE) failError = error;
+              if (convertInfo.failError == ERROR_NONE) convertInfo.failError = error;
             }
           }
           someStorageFound = TRUE;
@@ -2677,32 +2679,17 @@ Errors Command_convert(const StringList        *storageNameList,
 
     if (error != ERROR_NONE)
     {
-      if (failError == ERROR_NONE) failError = error;
+      if (convertInfo.failError == ERROR_NONE) convertInfo.failError = error;
       continue;
     }
 
-    if (failError != ERROR_NONE) break;
+    if (convertInfo.failError != ERROR_NONE) break;
   }
-  if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
+  if ((convertInfo.failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
   {
     printError("no matching storage files found!");
-    failError = ERROR_FILE_NOT_FOUND_;
+    convertInfo.failError = ERROR_FILE_NOT_FOUND_;
   }
-
-  // get error
-// TODO:
-#if 0
-  if ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
-  {
-    error = convertInfo.failError;
-  }
-  else
-  {
-    error = ERROR_ABORTED;
-  }
-#else
-error = convertInfo.failError;
-#endif
 
   // done convert info
   doneConvertInfo(&convertInfo);
@@ -2711,12 +2698,12 @@ error = convertInfo.failError;
   Storage_doneSpecifier(&storageSpecifier);
 
   // output info
-  if (error != ERROR_NONE)
+  if (convertInfo.failError != ERROR_NONE)
   {
-    printInfo(1,tr("Convert fail: %s\n"),Error_getText(error));
+    printInfo(1,tr("Convert fail: %s\n"),Error_getText(convertInfo.failError));
   }
 
-  return failError;
+  return convertInfo.failError;
 }
 
 #ifdef __cplusplus

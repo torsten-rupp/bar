@@ -2371,6 +2371,10 @@ NULL,  //               requestedAbortFlag,
         {
           someStorageFound = TRUE;
         }
+        else
+        {
+          if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
+        }
       }
     }
 

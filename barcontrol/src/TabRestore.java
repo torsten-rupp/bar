@@ -1025,7 +1025,7 @@ public class TabRestore
      */
     public String getInfo()
     {
-      return String.format("#%d: %s",id,!name.isEmpty() ? name : "unknown");
+      return String.format("#%d '%s'",id,!name.isEmpty() ? name : "unknown");
     }
 
     /** compare index data
@@ -1221,7 +1221,7 @@ Dprintf.dprintf("");
      */
     public String getInfo()
     {
-      return String.format("#%d: %s",id,archiveType.toString());
+      return String.format("#%d %s",id,archiveType.toString());
     }
 
     /** write storage index data object to object stream
@@ -1514,7 +1514,7 @@ Dprintf.dprintf("");
      */
     public String getInfo()
     {
-      return String.format("#%d: %s, %s",id,!jobName.isEmpty() ? jobName : "unknown",name);
+      return String.format("#%d '%s', '%s'",id,!jobName.isEmpty() ? jobName : "unknown",name);
     }
 
     /** set index state
@@ -7873,7 +7873,7 @@ Dprintf.dprintf("");
             }
             catch (Exception exception)
             {
-              Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+              Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n{0}!\n\n(error: {1})",info,exception.getMessage()));
               BARControl.logThrowable(exception);
               return false;
             }
@@ -7995,7 +7995,7 @@ Dprintf.dprintf("");
           }
           catch (Exception exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n{0}!\n\n(error: {1})",info,exception.getMessage()));
             BARControl.logThrowable(exception);
             break;
           }
@@ -8106,7 +8106,7 @@ Dprintf.dprintf("");
           }
           catch (Exception exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n{0}!\n\n(error: {1})",info,exception.getMessage()));
             BARControl.logThrowable(exception);
             break;
           }
@@ -8218,7 +8218,7 @@ Dprintf.dprintf("");
           }
           catch (Exception exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+            Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n{0}!\n\n(error: {1})",info,exception.getMessage()));
             BARControl.logThrowable(exception);
             break;
           }
@@ -8348,7 +8348,6 @@ Dprintf.dprintf("");
                                              busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? (double)storageDoneSize/(double)storageTotalSize : 100.0);
                                              busyDialog.updateText       (1,"%s",valueMap.getString("entryName"));
                                              busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? (double)entryTotalSize/(double)entryTotalSize : 100.0);
-Dprintf.dprintf("valueMap=%s",valueMap);
 
                                              if (busyDialog.isAborted())
                                              {
@@ -8362,7 +8361,7 @@ Dprintf.dprintf("valueMap=%s",valueMap);
               }
               catch (Exception exception)
               {
-                busyDialog.updateList(info);
+                busyDialog.updateList(info+": "+exception.getMessage());
               }
 
               n++;
@@ -8457,7 +8456,7 @@ Dprintf.dprintf("valueMap=%s",valueMap);
               }
               catch (Exception exception)
               {
-                Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+                Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n{0}!\n\n(error: {1})",info,exception.getMessage()));
                 BARControl.logThrowable(exception);
               }
             }
@@ -9129,7 +9128,7 @@ Dprintf.dprintf("valueMap=%s",valueMap);
                     @Override
                     public void run()
                     {
-                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n{0}!\n\n(error: {1})",info,exception.getMessage()));
                     }
                   });
                 }

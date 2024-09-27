@@ -1100,10 +1100,6 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     }
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
     {
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(storageInfo->storageSpecifier.loginName));
-Password_dump(storageInfo->storageSpecifier.loginPassword);
-Password_dump(&sshServer.password);
-Password_dump(&defaultSSHPassword);
       error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
                || !Password_isEmpty(&sshServer.password)
                || !Password_isEmpty(&defaultSSHPassword)

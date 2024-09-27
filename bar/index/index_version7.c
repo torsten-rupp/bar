@@ -1020,7 +1020,6 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                                                                        fromEntityId
                                                                       );
 
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); __B();
                                ProgressInfo_init(&subProgressInfo,
                                                  progressInfo,
                                                  32,  // filterWindowSize

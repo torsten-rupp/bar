@@ -156,22 +156,22 @@ LOCAL void initTestInfo(TestInfo                      *testInfo,
   assert(testInfo != NULL);
 
   // init variables
-  testInfo->includeEntryList          = includeEntryList;
-  testInfo->excludePatternList        = excludePatternList;
-  testInfo->jobOptions                = jobOptions;
+  testInfo->includeEntryList        = includeEntryList;
+  testInfo->excludePatternList      = excludePatternList;
+  testInfo->jobOptions              = jobOptions;
 
-  testInfo->logHandle                 = logHandle;
+  testInfo->logHandle               = logHandle;
 
-  testInfo->failError                 = ERROR_NONE;
+  testInfo->failError               = ERROR_NONE;
 
   testInfo->testRunningInfoFunction = testRunningInfoFunction;
   testInfo->testRunningInfoUserData = testRunningInfoUserData;
-  testInfo->pauseTestFlag             = pauseTestFlag;
-  testInfo->requestedAbortFlag        = requestedAbortFlag;
-  testInfo->getNamePasswordFunction   = getNamePasswordFunction;
-  testInfo->getNamePasswordUserData   = getNamePasswordUserData;
-  testInfo->isAbortedFunction         = isAbortedFunction;
-  testInfo->isAbortedUserData         = isAbortedUserData;
+  testInfo->pauseTestFlag           = pauseTestFlag;
+  testInfo->requestedAbortFlag      = requestedAbortFlag;
+  testInfo->getNamePasswordFunction = getNamePasswordFunction;
+  testInfo->getNamePasswordUserData = getNamePasswordUserData;
+  testInfo->isAbortedFunction       = isAbortedFunction;
+  testInfo->isAbortedUserData       = isAbortedUserData;
 
   if (!Semaphore_init(&testInfo->fragmentListLock,SEMAPHORE_TYPE_BINARY))
   {
@@ -1971,10 +1971,13 @@ NULL,  //               requestedAbortFlag,
                             &storageSpecifier,
                             NULL  // fileName
                            );
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         if (error == ERROR_NONE)
         {
           someStorageFound = TRUE;
+        }
+        else
+        {
+          if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
         }
       }
     }
@@ -2018,9 +2021,9 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
              )
           {
             error = testArchive(&testInfo,
-                                       &storageSpecifier,
-                                       fileName
-                                      );
+                                &storageSpecifier,
+                                fileName
+                               );
             if (error != ERROR_NONE)
             {
               if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
