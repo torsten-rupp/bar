@@ -8091,24 +8091,17 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
   }
   assert(BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
-  if (BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
-  {
-    // send value
-    value = String_new();
-    ConfigValue_formatInit(&configValueFormat,
-                           &BAR_CONFIG_VALUES[i],
-                           CONFIG_VALUE_FORMAT_MODE_VALUE,
-                           &globalOptions
-                          );
-    ConfigValue_format(&configValueFormat,value);
-    ConfigValue_formatDone(&configValueFormat);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",value);
-    String_delete(value);
-  }
-  else
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DEPRECATED_OR_IGNORED_VALUE,"%S",name);
-  }
+  // send value
+  value = String_new();
+  ConfigValue_formatInit(&configValueFormat,
+                         &BAR_CONFIG_VALUES[i],
+                         CONFIG_VALUE_FORMAT_MODE_VALUE,
+                         &globalOptions
+                        );
+  ConfigValue_format(&configValueFormat,value);
+  ConfigValue_formatDone(&configValueFormat);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",value);
+  String_delete(value);
 
   // free resources
   String_delete(name);

@@ -1458,7 +1458,7 @@ bool CmdOption_parse(const char              *argv[],
                      const char              *warningPrefix
                     )
 {
-  bool       collectArgumentsFlag;
+  bool       finalPass;
   uint       i;
   uint       priority;
   bool       endOfOptionsFlag;
@@ -1476,7 +1476,7 @@ bool CmdOption_parse(const char              *argv[],
   assert(commandLineOptions != NULL);
 
   // get min./max. option priority, set arguments collect flag
-  collectArgumentsFlag = FALSE;
+  finalPass = FALSE;
   if (minPriority == CMD_PRIORITY_ANY)
   {
     minPriority = MAX_UINT;
@@ -1492,19 +1492,7 @@ bool CmdOption_parse(const char              *argv[],
     {
       maxPriority = MAX(maxPriority,commandLineOptions[i].priority);
     }
-    collectArgumentsFlag = TRUE;
-  }
-
-  // reset increment options
-  for (i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
-  {
-    if (   (commandLineOptions[i].type == CMD_OPTION_TYPE_INCREMENT)
-        && IS_IN_RANGE(minPriority,commandLineOptions[i].priority,maxPriority)
-       )
-    {
-      assert(commandLineOptions[i].variable.increment != NULL);
-      (*commandLineOptions[i].variable.increment) = commandLineOptions[i].defaultValue.increment;
-    }
+    finalPass = TRUE;
   }
 
   // parse options
@@ -1694,7 +1682,9 @@ bool CmdOption_parse(const char              *argv[],
             #endif /* NDEBUG */
           }
 
-          if (commandLineOptions[j].priority == priority)
+          if (   (commandLineOptions[j].priority == priority)
+              && (finalPass || (commandLineOptions[j].type != CMD_OPTION_TYPE_INCREMENT))
+             )
           {
             // process option
             stringFormat(option,sizeof(option),"--%s",name);
@@ -1839,7 +1829,9 @@ bool CmdOption_parse(const char              *argv[],
                 break;
             }
 
-            if (commandLineOptions[j].priority == priority)
+            if (   (commandLineOptions[j].priority == priority)
+                && (finalPass || (commandLineOptions[j].type != CMD_OPTION_TYPE_INCREMENT))
+               )
             {
               // process option
               stringFormat(option,sizeof(option),"-%s",name);
@@ -1868,7 +1860,7 @@ bool CmdOption_parse(const char              *argv[],
       }
       else
       {
-        if (collectArgumentsFlag && (priority >= maxPriority))
+        if (finalPass && (priority >= maxPriority))
         {
           // add argument
           argv[argumentsCount] = argv[i];
@@ -1879,7 +1871,7 @@ bool CmdOption_parse(const char              *argv[],
       i++;
     }
   }
-  if (collectArgumentsFlag)
+  if (finalPass)
   {
     (*argc) = argumentsCount;
   }

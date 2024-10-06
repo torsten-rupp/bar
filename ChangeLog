@@ -6,6 +6,7 @@
   * BARControl: added test function
   * fixed execute pre/post commands: run also for slave jobs
   * fixed locking entities when adding storages to index
+  * fixed handling verbose level: do not reset in service script
 
 2024-07-13 24a
   * fixed long blocking of database at clean
