@@ -364,7 +364,7 @@ public class Settings
      */
     public String toString()
     {
-      return name+((port != DEFAULT_SERVER_PORT) ? ":"+port : "");
+      return name+":"+port;
     }
   }
 
@@ -618,18 +618,15 @@ public class Settings
   public static boolean                        debugFakeTLSFlag                = false;
   public static boolean                        debugQuitServerFlag             = false;
 
-  // server name
+  // server
   public static String                         serverName                      = null;
+  public static int                            serverPort                      = -1;
+  public static int                            serverTLSPort                   = -1;
 
   // deprecated
-  @SettingValue(name="server-name",type=String.class,deprecated=true)
   public static LinkedHashSet<String>          serverNames                     = new LinkedHashSet<String>();
   @SettingValue(name="server-password",deprecated=true)
   public static String                         serverPassword                  = null;
-  @SettingValue(name="server-port",deprecated=true)
-  public static int                            serverPort                      = DEFAULT_SERVER_PORT;
-  @SettingValue(name="server-tls-port",deprecated=true)
-  public static int                            serverTLSPort                   = DEFAULT_SERVER_TLS_PORT;
 
   // ----------------------- native functions ---------------------------
 
@@ -678,8 +675,20 @@ public class Settings
    * @param port server port
    * @return server
    */
-  public static Server getServer(String name, int port)
+  public static Server xxxgetServer(String name, int port)
   {
+    // try to select first available name/port
+    Server lastServer = getLastServer();
+    if ((name == null) && (lastServer != null))
+    {
+      name = lastServer.name;
+    }
+    if ((port == -1) && (lastServer != null))
+    {
+      port = lastServer.port;
+    }
+
+    // find server
     for (Server server : servers)
     {
       if (server.name.equals(name) && (server.port == port))
@@ -687,6 +696,7 @@ public class Settings
         return server;
       }
     }
+
     return null;
   }
 
@@ -707,19 +717,26 @@ public class Settings
   }
 
   /** add or update server
-   * @param name server name
-   * @param port server port
-   * @param password server password
+   * @param server server
    */
-  public static void addServer(String name, int port, String password)
+  public static void addServer(Server server)
   {
-    Server server = new Server(name,port,password);
     servers.remove(server);
     servers.add(server);
     while (servers.size() > MAX_SERVER_HISTORY)
     {
       servers.remove(0);
     }
+  }
+
+  /** add or update server
+   * @param name server name
+   * @param port server port
+   * @param password server password
+   */
+  public static void addServer(String name, int port, String password)
+  {
+    addServer(new Server(name,port,password));
   }
 
   /** check if basic role enabled

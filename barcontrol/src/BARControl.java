@@ -3512,13 +3512,6 @@ public class BARControl
       System.exit(ExitCodes.OK);
     }
 
-    // add/update server
-    Settings.servers.add(new Settings.Server(Settings.DEFAULT_SERVER_NAME,Settings.DEFAULT_SERVER_PORT));
-    if (Settings.serverName != null)
-    {
-      Settings.servers.add(new Settings.Server(Settings.serverName,Settings.serverPort));
-    }
-
     // check arguments
 //TODO: check PEM
 if (false) {
@@ -6074,10 +6067,23 @@ if (false) {
 
       // server login data
       Settings.Server server = null;
-      if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverPort    != -1) ? Settings.serverPort    : Settings.DEFAULT_SERVER_PORT    );
-      if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
-      if ((server == null)) server = Settings.getServer(Settings.DEFAULT_SERVER_NAME,(Settings.serverPort    != -1) ? Settings.serverPort    : Settings.DEFAULT_SERVER_PORT    );
-      if ((server == null)) server = Settings.getServer(Settings.DEFAULT_SERVER_NAME,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
+      if      (Settings.serverName != null)
+      {
+        server = Settings.getLastServer().clone();
+        server.name = Settings.serverName;
+        if (Settings.serverPort != -1) server.port = Settings.serverPort;
+        Settings.addServer(server);
+      }
+      else if (Settings.serverPort != -1)
+      {
+        server = Settings.getLastServer().clone();
+        server.port = Settings.serverPort;
+        Settings.addServer(server);
+      }
+      else
+      {
+        server = Settings.getLastServer();
+      }
       BARServer.TLSModes tlsMode = BARServer.TLSModes.TRY;
       if (Settings.serverForceTLS) tlsMode = BARServer.TLSModes.FORCE;
       if (Settings.serverNoTLS)    tlsMode = BARServer.TLSModes.NONE;
