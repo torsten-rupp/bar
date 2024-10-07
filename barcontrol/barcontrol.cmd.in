@@ -1,17 +1,17 @@
 @echo off
 
-if exist %~dp0barcontrol-windows.jar ( java.exe @JAVA_FLAGS@ -cp %~dp0barcontrol-windows.jar DataModel )
-if exist %~dp0barcontrol-windows_64.jar ( java.exe @JAVA_FLAGS@ -cp %~dp0barcontrol-windows_64.jar DataModel )
+if exist "%~dp0barcontrol-windows.jar" ( java.exe @JAVA_FLAGS@ -cp "%~dp0barcontrol-windows.jar" DataModel )
+if exist "%~dp0barcontrol-windows_64.jar" ( java.exe @JAVA_FLAGS@ -cp "%~dp0barcontrol-windows_64.jar" DataModel )
 if errorlevel 64 goto 64
 if errorlevel 32 goto 32
 goto error
 
 :64
-  java.exe @JAVA_FLAGS@ -jar %~dp0barcontrol-windows_64.jar %*
+  java.exe @JAVA_FLAGS@ -jar "%~dp0barcontrol-windows_64.jar" %*
 goto end
 
 :32
-  java.exe @JAVA_FLAGS@ -jar %~dp0barcontrol-windows.jar %*
+  java.exe @JAVA_FLAGS@ -jar "%~dp0barcontrol-windows.jar" %*
 goto end
 
 :error

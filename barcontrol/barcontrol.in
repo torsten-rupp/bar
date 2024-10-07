@@ -54,7 +54,7 @@ case $HOST_PLATFORM in
       exit 1
     fi
 
-    $JAVA $JAVA_FLAGS -cp $BASE_DIRECTORY/barcontrol-linux.jar DataModel
+    $JAVA $JAVA_FLAGS -cp "$BASE_DIRECTORY/barcontrol-linux.jar" DataModel
     rc=$?
     if   test $rc -eq 32; then
       BARCONTROL_JAR="$BASE_DIRECTORY/barcontrol-linux.jar"
@@ -102,14 +102,14 @@ if test $rc -eq 0; then
   xset -q 1>/dev/null 2>/dev/null
   rc=$?
   if test $rc -ne 0; then
-    echo >&2 "ERROR: cannot connect to X11 server. Please check DISPLAY variable and rights to connect to X11 server."
+    echo >&2 "ERROR: cannot connect to X11 server. Please check DISPLAY variable and permissions to connect to X11 server."
     exit 1
   fi
 fi
 
 # run main
 # Note: do not use GTK3. Buggy with SWT 4.4
-SWT_GTK3=0 $JAVA $JAVA_FLAGS -jar $BARCONTROL_JAR "$@"
+SWT_GTK3=0 $JAVA $JAVA_FLAGS -jar "$BARCONTROL_JAR" "$@"
 rc=$?
 
 exit $rc
