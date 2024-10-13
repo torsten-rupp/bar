@@ -16,6 +16,8 @@
 
 #include "common/global.h"
 #include "common/arrays.h"
+#include "common/cstrings.h"
+#include "common/strings.h"
 
 #include "cmdoptions.h"
 
@@ -345,13 +347,13 @@ LOCAL bool getIntegerOption(int                   *value,
   UNUSED_VARIABLE(warningPrefix);
 
   // split number, unit
-  i = strlen(string);
+  i = stringLength(string);
   if (i > 0)
   {
     while ((i > 0) && !isdigit(string[i-1])) { i--; }
 //TODO: stringSub
-    j = MIN(i,               sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
-    j = MIN(strlen(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
+    j = MIN(i,                     sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
+    j = MIN(stringLength(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
   }
   else
   {
@@ -457,13 +459,13 @@ LOCAL bool getInteger64Option(int64                 *value,
   UNUSED_VARIABLE(warningPrefix);
 
   // split number, unit
-  i = strlen(string);
+  i = stringLength(string);
   if (i > 0)
   {
     while ((i > 0) && !isdigit(string[i-1])) { i--; }
 //TODO: stringSub
-    j = MIN(i,               sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
-    j = MIN(strlen(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
+    j = MIN(i,                     sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
+    j = MIN(stringLength(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
   }
   else
   {
@@ -643,13 +645,13 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         assert(commandLineOption->variable.d != NULL);
 
         // split number, unit
-        i = strlen(value);
+        i = stringLength(value);
         if (i > 0)
         {
           while ((i > 0) && !isdigit(value[i-1])) { i--; }
 //TODO: stringSub
-          n = MIN(i,              sizeof(number  )-1); strncpy(number,  &value[0],n); number  [n] = '\0';
-          n = MIN(strlen(value)-i,sizeof(unitName)-1); strncpy(unitName,&value[i],n); unitName[n]   = '\0';
+          n = MIN(i,                    sizeof(number  )-1); strncpy(number,  &value[0],n); number  [n] = '\0';
+          n = MIN(stringLength(value)-i,sizeof(unitName)-1); strncpy(unitName,&value[i],n); unitName[n]   = '\0';
         }
         else
         {
@@ -955,7 +957,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         if (outputHandle != NULL)
         {
           errorMessage[sizeof(errorMessage)-1] = '\0';
-          if (strlen(errorMessage) > 0)
+          if (stringLength(errorMessage) > 0)
           {
             fprintf(outputHandle,
                     "%sInvalid value '%s' for option '%s' (error: %s)!\n",
@@ -1013,7 +1015,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         if (outputHandle != NULL)
         {
           errorMessage[sizeof(errorMessage)-1] = '\0';
-          if (strlen(errorMessage) > 0)
+          if (stringLength(errorMessage) > 0)
           {
             fprintf(outputHandle,
                     "%sInvalid value '%s' for deprecated option '%s' (error: %s)!\n",
@@ -2035,7 +2037,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
       }
 
       // name length
-      n += 2 + strlen(commandLineOptions[i].name); // --name
+      n += 2 + stringLength(commandLineOptions[i].name); // --name
 
       // value length
       switch (commandLineOptions[i].type)
@@ -2049,7 +2051,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             ITERATE_UNITS(unit,commandLineOptions[i].integerOption.units)
             {
               if (j > 0) n += 1; // |
-              n += strlen(unit->name); // unit
+              n += stringLength(unit->name); // unit
               j++;
             }
             n += 1; // ]
@@ -2064,7 +2066,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             ITERATE_UNITS(unit,commandLineOptions[i].integer64Option.units)
             {
               if (j > 0) n += 1; // |
-              n += strlen(unit->name); // unit
+              n += stringLength(unit->name); // unit
               j++;
             }
             n += 1; // ]
@@ -2093,7 +2095,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           n += 2; // =<
           if (commandLineOptions[i].selectOption.descriptionArgument != NULL)
           {
-            n += strlen(commandLineOptions[i].selectOption.descriptionArgument);
+            n += stringLength(commandLineOptions[i].selectOption.descriptionArgument);
           }
           else
           {
@@ -2105,9 +2107,9 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           n += 2; // =<
           if (commandLineOptions[i].stringOption.descriptionArgument != NULL)
           {
-            n += strlen(commandLineOptions[i].stringOption.descriptionArgument);
+            n += stringLength(commandLineOptions[i].stringOption.descriptionArgument);
             n += 3; // ,[<
-            n += strlen(commandLineOptions[i].stringOption.descriptionArgument);
+            n += stringLength(commandLineOptions[i].stringOption.descriptionArgument);
             n += 5; // >...]
           }
           else
@@ -2121,7 +2123,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
           n += 2; // =<
           if (commandLineOptions[i].stringOption.descriptionArgument != NULL)
           {
-            n += strlen(commandLineOptions[i].stringOption.descriptionArgument);
+            n += stringLength(commandLineOptions[i].stringOption.descriptionArgument);
           }
           else
           {
@@ -2135,7 +2137,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             n += 2; // =<
             if (commandLineOptions[i].specialOption.descriptionArgument != NULL)
             {
-              n += strlen(commandLineOptions[i].specialOption.descriptionArgument);
+              n += stringLength(commandLineOptions[i].specialOption.descriptionArgument);
             }
             else
             {
@@ -2177,7 +2179,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
       }
       else
       {
-        printSpaces(outputHandle,strlen(PREFIX));
+        printSpaces(outputHandle,stringLength(PREFIX));
       }
 
       // output name
@@ -2313,8 +2315,8 @@ void CmdOption_printHelp(FILE                    *outputHandle,
       (void)fputs(name,outputHandle);
 
       // output descriptions
-      assert(maxNameLength >= strlen(name));
-      printSpaces(outputHandle,maxNameLength-strlen(name));
+      assert(maxNameLength >= stringLength(name));
+      printSpaces(outputHandle,maxNameLength-stringLength(name));
       if (commandLineOptions[i].description != NULL)
       {
         // get description
@@ -2331,7 +2333,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             UNUSED_RESULT(fputc(' ',outputHandle));
             UNUSED_RESULT(fwrite(description,1,stringLength(description),outputHandle));
             UNUSED_RESULT(fputc('\n',outputHandle));
-            printSpaces(outputHandle,strlen(PREFIX)+maxNameLength);
+            printSpaces(outputHandle,stringLength(PREFIX)+maxNameLength);
 
             token = separator+1;
             separator = strchr(token,'\n');
@@ -2448,14 +2450,14 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             maxValueLength = 0;
             ITERATE_SELECT(select,commandLineOptions[i].selectOption.selects)
             {
-              maxValueLength = MAX(strlen(select->name),maxValueLength);
+              maxValueLength = MAX(stringLength(select->name),maxValueLength);
             }
 
             ITERATE_SELECT(select,commandLineOptions[i].selectOption.selects)
             {
-              printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?2:0)+1);
+              printSpaces(outputHandle,stringLength(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?2:0)+1);
               (void)fputs(select->name,outputHandle);
-              printSpaces(outputHandle,maxValueLength-strlen(select->name));
+              printSpaces(outputHandle,maxValueLength-stringLength(select->name));
               (void)fputs(": ",outputHandle);
               (void)fputs(select->description,outputHandle);
               if (select->value == commandLineOptions[i].defaultValue.select)
@@ -2473,14 +2475,14 @@ void CmdOption_printHelp(FILE                    *outputHandle,
             maxValueLength = 0;
             ITERATE_SET(set,commandLineOptions[i].setOption.sets)
             {
-              maxValueLength = MAX(strlen(set->name),maxValueLength);
+              maxValueLength = MAX(stringLength(set->name),maxValueLength);
             }
 
             ITERATE_SET(set,commandLineOptions[i].setOption.sets)
             {
-              printSpaces(outputHandle,strlen(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?2:0)+1);
+              printSpaces(outputHandle,stringLength(PREFIX)+maxNameLength+((commandLineOptions[i].description != NULL)?2:0)+1);
               (void)fputs(set->name,outputHandle);
-              printSpaces(outputHandle,maxValueLength-strlen(set->name));
+              printSpaces(outputHandle,maxValueLength-stringLength(set->name));
               (void)fputs(": ",outputHandle);
               (void)fputs(set->description,outputHandle);
               if (set->value == commandLineOptions[i].defaultValue.set)
