@@ -4349,6 +4349,10 @@ LOCAL Errors bar(int argc, const char *argv[])
     printf("  SQLite     %s\n",!stringIsEmpty(VERSION_SQLITE    ) ? VERSION_SQLITE     : "(not included)");
     printf("  MariaDB    %s\n",!stringIsEmpty(VERSION_MARIADB   ) ? VERSION_MARIADB    : "(not included)");
     printf("  PostgreSQL %s\n",!stringIsEmpty(VERSION_POSTGRESQL) ? VERSION_POSTGRESQL : "(not included)");
+    printf("  PAR2       %s\n",!stringIsEmpty(VERSION_PAR2      ) ? VERSION_PAR2       : "(not included)");
+    printf("  isofs      %s\n",!stringIsEmpty(VERSION_ISOFS     ) ? VERSION_ISOFS      : "(not included)");
+    printf("  burn       %s\n",!stringIsEmpty(VERSION_BURN      ) ? VERSION_BURN       : "(not included)");
+    printf("  libmount   %s\n",!stringIsEmpty(VERSION_LIBMOUNT  ) ? VERSION_LIBMOUNT   : "(not included)");
 
     return ERROR_NONE;
   }
