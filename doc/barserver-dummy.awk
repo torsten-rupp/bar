@@ -415,7 +415,7 @@ BEGIN {
 /^[0-9]+ INDEX_ENTITY_LIST/ {
   send($1,0,0,"jobUUID=1 scheduleUUID=1 entityId=2786 archiveType='full' createdDateTime=1582011128 lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0 expireDateTime=0");
   send($1,0,0,"jobUUID=1 scheduleUUID=2 entityId=2802 archiveType='full' createdDateTime=1582021128 lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0 expireDateTime=0");
-  send($1,0,0,"jobUUID=1 scheduleUUID=3 entityId=2818 archiveType='incremental' createdDateTime=1582031128 lastErrorMessage='' totalSize=0 totalEntryCount=0 totalEntrySize=0 expireDateTime=0");
+  send($1,0,0,"jobUUID=1 scheduleUUID=3 entityId=2818 archiveType='incremental' createdDateTime=1582031128 lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0 expireDateTime=0");
   send($1,1,0);
   next;
 }

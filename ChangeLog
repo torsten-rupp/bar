@@ -1,4 +1,4 @@
-2024-09-01 25
+2024-10-20 25
   * removed directory aggregate data from index: hardly used,
     save space and time
   * integrated libmount to mount/umount. Used when --mount-command,
@@ -7,6 +7,9 @@
   * fixed execute pre/post commands: run also for slave jobs
   * fixed locking entities when adding storages to index
   * fixed handling verbose level: do not reset in service script
+  * fixed start script: quotes (bug #13)
+  * BARControl: fixed store of default server (bug #12)
+  * fixed increment options: verbose level (bug #11)
 
 2024-07-13 24a
   * fixed long blocking of database at clean

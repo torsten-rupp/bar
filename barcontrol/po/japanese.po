@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-10-19 04:27+0200\n"
+"POT-Creation-Date: 2024-10-20 02:44+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -2442,104 +2442,104 @@ msgstr "インデックスに追加"
 msgid "network"
 msgstr ""
 
-#: src/BARServer.java:1869 src/BARServer.java:1876 src/BARServer.java:2025
-#: src/BARServer.java:2190 src/BARServer.java:2197 src/BARServer.java:2343
+#: src/BARServer.java:1868 src/BARServer.java:1875 src/BARServer.java:2024
+#: src/BARServer.java:2189 src/BARServer.java:2196 src/BARServer.java:2342
 #, fuzzy, java-format
 msgid "Connection to host ''{0}:{1}'' failed (error: {2})"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:1883 src/BARServer.java:1894 src/BARServer.java:2032
-#: src/BARServer.java:2043 src/BARServer.java:2204 src/BARServer.java:2215
-#: src/BARServer.java:2350 src/BARServer.java:2361
+#: src/BARServer.java:1882 src/BARServer.java:1893 src/BARServer.java:2031
+#: src/BARServer.java:2042 src/BARServer.java:2203 src/BARServer.java:2214
+#: src/BARServer.java:2349 src/BARServer.java:2360
 #, fuzzy, java-format
 msgid "TLS/SSL failure: {0}"
 msgstr "ソースファイル選択"
 
-#: src/BARServer.java:1901 src/BARServer.java:2050 src/BARServer.java:2064
-#: src/BARServer.java:2222 src/BARServer.java:2368
+#: src/BARServer.java:1900 src/BARServer.java:2049 src/BARServer.java:2063
+#: src/BARServer.java:2221 src/BARServer.java:2367
 #, fuzzy, java-format
 msgid "Host ''{0}:{1}'' unreachable (error: {2})"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:1908 src/BARServer.java:2229 src/BARServer.java:2375
-#: src/BARServer.java:2451
+#: src/BARServer.java:1907 src/BARServer.java:2228 src/BARServer.java:2374
+#: src/BARServer.java:2450
 #, fuzzy, java-format
 msgid "Connection to host ''{0}:{1}'' refused"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:1915 src/BARServer.java:2236 src/BARServer.java:2382
-#: src/BARServer.java:2458
+#: src/BARServer.java:1914 src/BARServer.java:2235 src/BARServer.java:2381
+#: src/BARServer.java:2457
 #, fuzzy, java-format
 msgid "Host ''{0}:{1}'' unreachable (error: no route to host)"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:1922 src/BARServer.java:2071 src/BARServer.java:2243
-#: src/BARServer.java:2389 src/BARServer.java:2465
+#: src/BARServer.java:1921 src/BARServer.java:2070 src/BARServer.java:2242
+#: src/BARServer.java:2388 src/BARServer.java:2464
 #, fuzzy, java-format
 msgid "Unknown host ''{0}:{1}''"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:2057
+#: src/BARServer.java:2056
 #, fuzzy, java-format
 msgid "Connection to host ''{0}:{1}''refused"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:2492
+#: src/BARServer.java:2491
 #, fuzzy
 msgid "No server ports specified"
 msgstr "曜日設定切り替え。"
 
-#: src/BARServer.java:2521
+#: src/BARServer.java:2520
 #, java-format
 msgid "Incompatible protocol version for ''{0}:{1}'': : expected {2}, got {3}"
 msgstr ""
 
-#: src/BARServer.java:2541 src/BARServer.java:2545
+#: src/BARServer.java:2540 src/BARServer.java:2544
 #, fuzzy, java-format
 msgid "''{0}:{1}'': {2}"
 msgstr "タスク''{0}''をスタートできません（エラー: {1}）"
 
-#: src/BARServer.java:2821 src/BARServer.java:3427
+#: src/BARServer.java:2820 src/BARServer.java:3426
 #, fuzzy, java-format
 msgid "input/output error: {0}"
 msgstr "タスクを一時停止できません（エラー: {0}）"
 
-#: src/BARServer.java:4181 src/BARServer.java:4207
+#: src/BARServer.java:4180 src/BARServer.java:4206
 #, fuzzy
 msgid "Password encryption fail"
 msgstr "接続ミス"
 
-#: src/BARServer.java:5382 src/BARServer.java:5504
+#: src/BARServer.java:5381 src/BARServer.java:5503
 msgid "No result from server"
 msgstr ""
 
-#: src/BARServer.java:5388
+#: src/BARServer.java:5387
 msgid "Invalid response from server: expected SESSION"
 msgstr ""
 
-#: src/BARServer.java:5392
+#: src/BARServer.java:5391
 msgid "Invalid response from server: expected parameters"
 msgstr ""
 
-#: src/BARServer.java:5397
+#: src/BARServer.java:5396
 msgid "No session id"
 msgstr ""
 
-#: src/BARServer.java:5466
+#: src/BARServer.java:5465
 #, fuzzy
 msgid "Init password cipher fail"
 msgstr "WebDAVログインパスワード"
 
-#: src/BARServer.java:5512
+#: src/BARServer.java:5511
 #, java-format
 msgid "Invalid response from server: incomplete response ''{0}''"
 msgstr ""
 
-#: src/BARServer.java:5520
+#: src/BARServer.java:5519
 msgid "Invalid response from server: no command id"
 msgstr ""
 
-#: src/BARServer.java:5532
+#: src/BARServer.java:5531 src/BARServer.java:5543
 msgid "Invalid response from server: parameters"
 msgstr ""
 
