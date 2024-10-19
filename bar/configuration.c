@@ -8424,7 +8424,7 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("help-internal",                     0,  1,0,globalOptions.helpInternalFlag,                                                                                   "output help to internal options"                                          ),
 
   // deprecated
-  CMD_OPTION_DEPRECATED   ("server-jobs-directory",             0,  1,1,&globalOptions.jobsDirectory,                        CmdOption_parseDeprecatedStringOption,NULL,1,                 "jobs-directory"                                                           ),
+  CMD_OPTION_DEPRECATED   ("server-jobs-directory",             0,  1,1,&globalOptions.jobsDirectory,                        CmdOption_parseDeprecatedStringOption,NULL,1,                "jobs-directory"                                                           ),
   CMD_OPTION_DEPRECATED   ("mount-device",                      0,  1,2,&globalOptions.mountList,                            cmdOptionParseDeprecatedMountDevice,NULL,1,                  "device to mount/unmount"                                                  ),
   CMD_OPTION_DEPRECATED   ("stop-on-error",                     0,  1,2,&globalOptions.noStopOnErrorFlag,                    cmdOptionParseDeprecatedStopOnError,NULL,0,                  "no-stop-on-error"                                                         ),
 

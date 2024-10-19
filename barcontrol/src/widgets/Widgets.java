@@ -3301,7 +3301,6 @@ does not work on Windows? Even cursor keys trigger traversal event?
     label = new Label(composite,style|SWT.BORDER);
     label.setText("0");
 
-
     return label;
   }
 

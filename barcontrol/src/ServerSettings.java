@@ -2745,6 +2745,20 @@ public class ServerSettings
                                      6
                                     );
       Widgets.layout(spinner,0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
+      Widgets.addModifyListener(new WidgetModifyListener(spinner,verbose)
+      {
+        @Override
+        public void modified(Control control, WidgetVariable verbose)
+        {
+          if (verbose.getInteger() >= 3)
+          {
+            Dialogs.warning(shell,
+                            Dialogs.booleanFieldUpdater(Settings.class,"showVerboseWarning"),
+                            BARControl.tr("A verbose level of 3 or higher may slow down your system and flood the log file.")
+                           );
+          }
+        }
+      });
 
       label = Widgets.newLabel(composite,BARControl.tr("Log")+":");
       Widgets.layout(label,1,0,TableLayoutData.NW);

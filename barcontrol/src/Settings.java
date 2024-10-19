@@ -603,6 +603,8 @@ public class Settings
   public static Boolean                        showNewVersionInformation       = new Boolean(true);
   @SettingValue
   public static Boolean                        showSlaveDisconnected           = new Boolean(true);
+  @SettingValue
+  public static Boolean                        showVerboseWarning              = new Boolean(true);
 
   public static boolean                        longFormatFlag                  = false;
   public static boolean                        noHeaderFooterFlag              = false;
