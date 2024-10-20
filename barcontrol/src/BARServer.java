@@ -1808,7 +1808,6 @@ sslSocket.addHandshakeCompletedListener(new HandshakeCompletedListener()
 {
   public void handshakeCompleted(HandshakeCompletedEvent event)
   {
-System.out.println("xxxxxxxx");
     try
     {
       for (Certificate c : event.getPeerCertificates())
@@ -5527,7 +5526,7 @@ throw new Error("NYI");
         if (valueMap != null)
         {
           valueMap.clear();
-          if (!StringParser.parse(data[3],valueMap))
+          if ((data.length < 4) || !StringParser.parse(data[3],valueMap))
           {
             throw new CommunicationError(BARControl.tr("Invalid response from server: parameters"));
           }
@@ -5535,7 +5534,14 @@ throw new Error("NYI");
       }
       else
       {
-        throw new BARException(errorCode,data[3]);
+        if (data.length >= 4)
+        {
+          throw new BARException(errorCode,data[3]);
+        }
+        else
+        {
+          throw new CommunicationError(BARControl.tr("Invalid response from server: parameters"));
+        }
       }
     }
   }
