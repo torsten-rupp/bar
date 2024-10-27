@@ -2233,7 +2233,7 @@ Dprintf.dprintf("");
                                      String lastErrorData        = valueMap.getString("lastErrorData"       );
                                      long   totalSize            = valueMap.getLong  ("totalSize",          0L);
                                      long   totalEntryCount      = valueMap.getLong  ("totalEntryCount",    0L);
-                                     long   totalEntrySize       = valueMap.getLong  ("totalEntrySize",     Long.MAX_VALUE);
+                                     long   totalEntrySize       = valueMap.getLong  ("totalEntrySize",     0L);
 
                                      UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
                                                                                      jobUUID,
@@ -2386,7 +2386,7 @@ Dprintf.dprintf("");
                                      long         totalSize        = valueMap.getLong  ("totalSize",      0L);
                                      long         totalEntryCount  = valueMap.getLong  ("totalEntryCount",0L);
                                      long         totalEntrySize   = valueMap.getLong  ("totalEntrySize", 0L);
-                                     long         expireDateTime   = valueMap.getLong  ("expireDateTime", );
+                                     long         expireDateTime   = valueMap.getLong  ("expireDateTime"  );
 
                                      // add entity data index
                                      EntityIndexData entityIndexData = new EntityIndexData(entityId,
@@ -10615,7 +10615,7 @@ Dprintf.dprintf("");
 //                                         long           totalCount       = valueMap.getLong  ("totalCount");
 //                                         long           totalSize        = valueMap.getLong  ("totalSize");
                                          String         storageName      = valueMap.getString("storageName"      );
-                                         long           storageDoneSize  = valueMap.getLong  ("storageDoneSize", );
+                                         long           storageDoneSize  = valueMap.getLong  ("storageDoneSize", 0L);
                                          long           storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
                                          String         entryName        = valueMap.getString("entryName"        );
                                          long           entryDoneSize    = valueMap.getLong  ("entryDoneSize",   0L);
