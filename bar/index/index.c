@@ -960,9 +960,9 @@ LOCAL void outputProgressInfo(uint  progress,
     stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
                  " / %5.1f%% %5uh:%02umin:%02us %c",
                  (float)progress/10.0,
-                 estimatedRestTime/(60*60),
-                 estimatedRestTime%(60*60)/60,
-                 estimatedRestTime%60,
+                 estimatedRestTime/S_PER_HOUR,
+                 (estimatedRestTime%S_PER_HOUR)/S_PER_MINUTE,
+                 estimatedRestTime%S_PER_MINUTE,
                  WHEEL[wheelIndex]
                 );
   }
@@ -1150,9 +1150,9 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                    "INDEX",
                                    "%0.1f%%, estimated rest time %uh:%02umin:%02us",
                                    (float)progress/10.0,
-                                   (uint)((estimatedRestTime/US_PER_SECOND)/3600LL),
-                                   (uint)(((estimatedRestTime/US_PER_SECOND)%3600LL)/60),
-                                   (uint)((estimatedRestTime/US_PER_SECOND)%60LL)
+                                   (uint)((estimatedRestTime)/S_PER_HOUR),
+                                   (uint)(((estimatedRestTime)%S_PER_HOUR)/S_PER_MINUTE),
+                                   (uint)((estimatedRestTime)%S_PER_MINUTE)
                                   );
                     },NULL),
                     "Import"
