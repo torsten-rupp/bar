@@ -2231,8 +2231,8 @@ Dprintf.dprintf("");
                                      long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
                                      int    lastErrorCode        = valueMap.getInt   ("lastErrorCode"       );
                                      String lastErrorData        = valueMap.getString("lastErrorData"       );
-                                     long   totalSize            = valueMap.getLong  ("totalSize"           );
-                                     long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                     long   totalSize            = valueMap.getLong  ("totalSize",          0L);
+                                     long   totalEntryCount      = valueMap.getLong  ("totalEntryCount",    0L);
                                      long   totalEntrySize       = valueMap.getLong  ("totalEntrySize",     Long.MAX_VALUE);
 
                                      UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
@@ -2376,17 +2376,17 @@ Dprintf.dprintf("");
                                    @Override
                                    public void handle(int i, ValueMap valueMap)
                                    {
-                                     long         entityId         = valueMap.getLong  ("entityId"                      );
-                                     String       jobUUID          = valueMap.getString("jobUUID"                       );
-                                     String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
-                                     ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                     long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
-                                     int          lastErrorCode    = valueMap.getInt   ("lastErrorCode"                 );
-                                     String       lastErrorData    = valueMap.getString("lastErrorData"                 );
-                                     long         totalSize        = valueMap.getLong  ("totalSize"                     );
-                                     long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
-                                     long         totalEntrySize   = valueMap.getLong  ("totalEntrySize",               Long.MAX_VALUE);
-                                     long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
+                                     long         entityId         = valueMap.getLong  ("entityId"        );
+                                     String       jobUUID          = valueMap.getString("jobUUID"         );
+                                     String       scheduleUUID     = valueMap.getString("scheduleUUID"    );
+                                     ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",    ArchiveTypes.class);
+                                     long         createdDateTime  = valueMap.getLong  ("createdDateTime" );
+                                     int          lastErrorCode    = valueMap.getInt   ("lastErrorCode"   );
+                                     String       lastErrorData    = valueMap.getString("lastErrorData"   );
+                                     long         totalSize        = valueMap.getLong  ("totalSize",      0L);
+                                     long         totalEntryCount  = valueMap.getLong  ("totalEntryCount",0L);
+                                     long         totalEntrySize   = valueMap.getLong  ("totalEntrySize", 0L);
+                                     long         expireDateTime   = valueMap.getLong  ("expireDateTime", );
 
                                      // add entity data index
                                      EntityIndexData entityIndexData = new EntityIndexData(entityId,
@@ -7454,9 +7454,9 @@ Dprintf.dprintf("");
                                    long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
                                    int    lastErrorCode        = valueMap.getInt   ("lastErrorCode"       );
                                    String lastErrorData        = valueMap.getString("lastErrorData"       );
-                                   long   totalSize            = valueMap.getLong  ("totalSize"           );
-                                   long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                   long   totalEntrySize       = valueMap.getLong  ("totalEntrySize",     Long.MAX_VALUE);
+                                   long   totalSize            = valueMap.getLong  ("totalSize",          0L);
+                                   long   totalEntryCount      = valueMap.getLong  ("totalEntryCount",    0L);
+                                   long   totalEntrySize       = valueMap.getLong  ("totalEntrySize",     0L);
 
                                    // add UUID index data
                                    assignToUUIDIndexDataList.add(new UUIDIndexData(uuidId,
@@ -7483,17 +7483,17 @@ Dprintf.dprintf("");
                                  @Override
                                  public void handle(int i, ValueMap valueMap)
                                  {
-                                   long         entityId         = valueMap.getLong  ("entityId"                      );
-                                   String       jobUUID          = valueMap.getString("jobUUID"                       );
-                                   String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
-                                   ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                   long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
-                                   int          lastErrorCode    = valueMap.getInt   ("lastErrorCode"                 );
-                                   String       lastErrorData    = valueMap.getString("lastErrorData"                 );
-                                   long         totalSize        = valueMap.getLong  ("totalSize"                     );
-                                   long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
-                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize",               Long.MAX_VALUE);
-                                   long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
+                                   long         entityId         = valueMap.getLong  ("entityId"        );
+                                   String       jobUUID          = valueMap.getString("jobUUID"         );
+                                   String       scheduleUUID     = valueMap.getString("scheduleUUID"    );
+                                   ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",    ArchiveTypes.class);
+                                   long         createdDateTime  = valueMap.getLong  ("createdDateTime" );
+                                   int          lastErrorCode    = valueMap.getInt   ("lastErrorCode"   );
+                                   String       lastErrorData    = valueMap.getString("lastErrorData"   );
+                                   long         totalSize        = valueMap.getLong  ("totalSize",      0L);
+                                   long         totalEntryCount  = valueMap.getLong  ("totalEntryCount",0L);
+                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize", 0L);
+                                   long         expireDateTime   = valueMap.getLong  ("expireDateTime"  );
 
                                    // get entity data list
                                    java.util.List<EntityIndexData> entityIndexDataList = assignToEntityIndexDataMap.get(jobUUID);
@@ -8583,14 +8583,14 @@ Dprintf.dprintf("");
                                          @Override
                                          public void handle(int i, ValueMap valueMap)
                                          {
-                                           long   storageId  = valueMap.getLong  ("storageId");
-                                           String name       = valueMap.getString("name");
-                                           long   n          = valueMap.getLong  ("n");
-                                           long   size       = valueMap.getLong  ("size");
-//                                           int    doneCount  = valueMap.getInt   ("doneCount");
-                                           long   doneSize   = valueMap.getLong  ("doneSize");
-//                                           int    totalCount = valueMap.getInt   ("totalCount");
-                                           long   totalSize  = valueMap.getLong  ("totalSize");
+                                           long   storageId  = valueMap.getLong  ("storageId"    );
+                                           String name       = valueMap.getString("name"         );
+                                           long   n          = valueMap.getLong  ("n"            );
+                                           long   size       = valueMap.getLong  ("size",        0L);
+//                                           int    doneCount  = valueMap.getInt   ("doneCount",0L);
+                                           long   doneSize   = valueMap.getLong  ("doneSize",    0L);
+//                                           int    totalCount = valueMap.getInt   ("totalCount",0L);
+                                           long   totalSize  = valueMap.getLong  ("totalSize",   0L);
 
                                            busyDialog.updateText(0,name);
                                            busyDialog.updateProgressBar(0,n);
@@ -10609,17 +10609,17 @@ Dprintf.dprintf("");
                                        public void handle(int i, ValueMap valueMap)
                                        {
                                          RestoreStates  state            = valueMap.getEnum  ("state",           RestoreStates.class);
-                                         long           doneCount        = valueMap.getLong  ("doneCount"                           );
-                                         long           doneSize         = valueMap.getLong  ("doneSize"                            );
+                                         long           doneCount        = valueMap.getLong  ("doneCount"        );
+                                         long           doneSize         = valueMap.getLong  ("doneSize"         );
 // TODO: use
 //                                         long           totalCount       = valueMap.getLong  ("totalCount");
 //                                         long           totalSize        = valueMap.getLong  ("totalSize");
-                                         String         storageName      = valueMap.getString("storageName"                         );
-                                         long           storageDoneSize  = valueMap.getLong  ("storageDoneSize"                     );
-                                         long           storageTotalSize = valueMap.getLong  ("storageTotalSize"                    );
-                                         String         entryName        = valueMap.getString("entryName"                           );
-                                         long           entryDoneSize    = valueMap.getLong  ("entryDoneSize"                       );
-                                         long           entryTotalSize   = valueMap.getLong  ("entryTotalSize"                      );
+                                         String         storageName      = valueMap.getString("storageName"      );
+                                         long           storageDoneSize  = valueMap.getLong  ("storageDoneSize", );
+                                         long           storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
+                                         String         entryName        = valueMap.getString("entryName"        );
+                                         long           entryDoneSize    = valueMap.getLong  ("entryDoneSize",   0L);
+                                         long           entryTotalSize   = valueMap.getLong  ("entryTotalSize",  0L);
 
 //                                         storageCount[0]++;
                                          switch (state)

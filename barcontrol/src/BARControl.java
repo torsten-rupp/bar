@@ -6897,15 +6897,15 @@ if (false) {
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long         uuid            = valueMap.getLong  ("uuid"                          );
-                                         String       jobUUID         = valueMap.getString("jobUUID"                       );
-                                         String       jobName         = valueMap.getString("jobName"                       );
-                                         long         entityId        = valueMap.getLong  ("entityId"                      );
-                                         ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                         long         createdDateTime = valueMap.getLong  ("createdDateTime"               );
-                                         long         totalSize       = valueMap.getLong  ("totalSize"                     );
-                                         long         totalEntryCount = valueMap.getLong  ("totalEntryCount"               );
-                                         long         totalEntrySize  = valueMap.getLong  ("totalEntrySize"                );
+                                         long         uuid            = valueMap.getLong  ("uuid"            );
+                                         String       jobUUID         = valueMap.getString("jobUUID"         );
+                                         String       jobName         = valueMap.getString("jobName"         );
+                                         long         entityId        = valueMap.getLong  ("entityId"        );
+                                         ArchiveTypes archiveType     = valueMap.getEnum  ("archiveType",    ArchiveTypes.class);
+                                         long         createdDateTime = valueMap.getLong  ("createdDateTime" );
+                                         long         totalSize       = valueMap.getLong  ("totalSize",      0L);
+                                         long         totalEntryCount = valueMap.getLong  ("totalEntryCount",0L);
+                                         long         totalEntrySize  = valueMap.getLong  ("totalEntrySize", 0L);
 
                                          System.out.println(String.format("%8d %8d %-12s %-14s %14d %14d %-19s %s",
                                                                           getDatabaseId(entityId),
