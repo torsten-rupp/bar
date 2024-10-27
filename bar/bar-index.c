@@ -1376,9 +1376,9 @@ LOCAL void outputProgressInfo(uint  progress,
       stringAppendFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
                          " / %5.1f%% %5uh:%02umin:%02us %c",
                          (float)progress/10.0,
-                         estimatedRestTime/(60*60),
-                         estimatedRestTime%(60*60)/60,
-                         estimatedRestTime%60,
+                         estimatedRestTime/S_PER_HOUR,
+                         (estimatedRestTime%S_PER_HOUR)/S_PER_MINUTE,
+                         estimatedRestTime%S_PER_MINUTE,
                          WHEEL[wheelIndex]
                         );
     }
@@ -1434,9 +1434,9 @@ LOCAL void formatProgressInfo(uint  progress,
       stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
                    "%5.1f%% %5uh:%02umin:%02us",
                    (float)progress/10.0,
-                   estimatedRestTime/(60*60),
-                   estimatedRestTime%(60*60)/60,
-                   estimatedRestTime%60
+                   estimatedRestTime/S_PER_HOUR,
+                   (estimatedRestTime%S_PER_HOUR)/S_PER_MINUTE,
+                   estimatedRestTime%S_PER_MINUTE
                   );
     }
     else
