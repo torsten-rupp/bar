@@ -1403,6 +1403,16 @@ bool ConfigValue_parseDeprecatedString(void       *userData,
                                        uint       errorMessageSize
                                       );
 
+/***********************************************************************\
+* Name   : ConfigValue_isCommentLine
+* Purpose: check if line is empty or a know a comment
+* Input  : configValues - config values
+*          line         - line
+* Output : -
+* Return : TRUE iff line is empty or a known comment
+* Notes  : -
+\***********************************************************************/
+
 bool ConfigValue_isCommentLine(const ConfigValue configValues[], ConstString line);
 
 /***********************************************************************\
