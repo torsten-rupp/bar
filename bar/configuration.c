@@ -3877,9 +3877,17 @@ LOCAL bool configValueDeprecatedForceTLSParse(void *userData, void *variable, co
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  (*(TLSModes*)variable) = TLS_MODE_FORCE;
+  bool forceTLS = FALSE;
+  if (ConfigValue_parseDeprecatedBoolean(userData,&forceTLS,name,value,errorMessage,errorMessageSize))
+  {
+    (*(TLSModes*)variable) = (forceTLS) ? TLS_MODE_FORCE : TLS_MODE_NONE;
 
-  return TRUE;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 
 /***********************************************************************\
@@ -4720,22 +4728,7 @@ LOCAL bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  // unquote/unescape
-  string = String_newCString(value);
-  String_unquote(string,STRING_QUOTES);
-  String_unescape(string,
-                  STRING_ESCAPE_CHARACTER,
-                  STRING_ESCAPE_CHARACTERS_MAP_TO,
-                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                );
-
-  String_set(*((String*)variable),string);
-
-  // free resources
-  String_delete(string);
-
-  return TRUE;
+  return ConfigValue_parseDeprecatedString(userData,variable,name,value,errorMessage,errorMessageSize);
 }
 
 /***********************************************************************\
@@ -4797,7 +4790,11 @@ LOCAL bool configValueDeprecatedScheduleMinKeepParse(void *userData, void *varia
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  ((ScheduleNode*)variable)->minKeep                   = strtol(value,NULL,0);
+  if (!stringToInt(value,&((ScheduleNode*)variable)->minKeep,NULL))
+  {
+    stringFormat(errorMessage,errorMessageSize,"expected number");
+    return FALSE;
+  }
   ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
 
   return TRUE;
@@ -4828,7 +4825,11 @@ LOCAL bool configValueDeprecatedScheduleMaxKeepParse(void *userData, void *varia
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  ((ScheduleNode*)variable)->maxKeep                   = strtol(value,NULL,0);
+  if (!stringToInt(value,&((ScheduleNode*)variable)->maxKeep,NULL))
+  {
+    stringFormat(errorMessage,errorMessageSize,"expected number");
+    return FALSE;
+  }
   ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
 
   return TRUE;
@@ -4859,7 +4860,11 @@ LOCAL bool configValueDeprecatedScheduleMaxAgeParse(void *userData, void *variab
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  ((ScheduleNode*)variable)->maxAge                    = strtol(value,NULL,0);
+  if (!stringToInt(value,&((ScheduleNode*)variable)->maxAge,NULL))
+  {
+    stringFormat(errorMessage,errorMessageSize,"expected number");
+    return FALSE;
+  }
   ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
 
   return TRUE;

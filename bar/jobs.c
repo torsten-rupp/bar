@@ -1944,17 +1944,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
 
 bool Job_read(JobNode *jobNode)
 {
-  Errors     error;
-  FileHandle fileHandle;
-  bool       failFlag;
-  uint       lineNb;
-  String     line;
-  StringList commentList;
-  String     s;
-  String     name,value;
-  long       nextIndex;
-  uint       i,firstValueIndex,lastValueIndex;
-
+  Errors error;
   assert(jobNode != NULL);
   assert(jobNode->fileName != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -1970,6 +1960,7 @@ bool Job_read(JobNode *jobNode)
   clearOptions(&jobNode->job.options);
 
   // open file
+  FileHandle fileHandle;
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -1981,15 +1972,19 @@ bool Job_read(JobNode *jobNode)
   }
 
   // parse file
-  failFlag    = FALSE;
-  line        = String_new();
-  lineNb      = 0;
+  bool   failed        = FALSE;
+  bool   hasDeprecated = FALSE;
+  String line          = String_new();
+  uint   lineNb        = 0;
+  StringList commentList;
   StringList_init(&commentList);
-  s           = String_new();
-  name        = String_new();
-  value       = String_new();
-  while (File_getLine(&fileHandle,line,&lineNb,NULL) && !failFlag)
+  String s             = String_new();
+  String name          = String_new();
+  String value         = String_new();
+  while (File_getLine(&fileHandle,line,&lineNb,NULL) && !failed)
   {
+    long nextIndex;
+
     // parse line
     if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
     {
@@ -2002,8 +1997,6 @@ bool Job_read(JobNode *jobNode)
       String_remove(line,STRING_BEGIN,2);
       StringList_append(&commentList,line);
     }
-// TODO:
-#if 1
     else if (String_parse(line,STRING_BEGIN,"#%S=",&nextIndex,name))
     {
       uint i;
@@ -2023,7 +2016,6 @@ bool Job_read(JobNode *jobNode)
         }
       }
     }
-#endif
     else if (String_startsWithChar(line,'#'))
     {
       // ignore other commented lines
@@ -2034,11 +2026,12 @@ bool Job_read(JobNode *jobNode)
       const ScheduleNode *existingScheduleNode;
 
       // find section
-      i = ConfigValue_findSection(JOB_CONFIG_VALUES,
-                                  "schedule",
-                                  &firstValueIndex,
-                                  &lastValueIndex
-                                 );
+      uint firstValueIndex,lastValueIndex;
+      uint i = ConfigValue_findSection(JOB_CONFIG_VALUES,
+                                       "schedule",
+                                       &firstValueIndex,
+                                       &lastValueIndex
+                                      );
       assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'schedule'");
       UNUSED_VARIABLE(i);
 
@@ -2081,7 +2074,7 @@ bool Job_read(JobNode *jobNode)
           else
           {
             printError("unknown value '%s' in %s, line %ld",String_cString(name),String_cString(jobNode->fileName),lineNb);
-            failFlag = TRUE;
+            failed = TRUE;
           }
         }
         else
@@ -2091,7 +2084,7 @@ bool Job_read(JobNode *jobNode)
                      lineNb,
                      String_cString(line)
                     );
-          failFlag = TRUE;
+          failed = TRUE;
         }
       }
       File_ungetLine(&fileHandle,line,&lineNb);
@@ -2145,11 +2138,12 @@ bool Job_read(JobNode *jobNode)
       const PersistenceNode *existingPersistenceNode;
 
       // find section
-      i = ConfigValue_findSection(JOB_CONFIG_VALUES,
-                                  "persistence",
-                                  &firstValueIndex,
-                                  &lastValueIndex
-                                 );
+      uint firstValueIndex,lastValueIndex;
+      uint i = ConfigValue_findSection(JOB_CONFIG_VALUES,
+                                       "persistence",
+                                       &firstValueIndex,
+                                       &lastValueIndex
+                                      );
       assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'persistence'");
       UNUSED_VARIABLE(i);
 
@@ -2194,7 +2188,7 @@ bool Job_read(JobNode *jobNode)
             else
             {
               printError("unknown value '%s' in %s, line %ld",String_cString(name),String_cString(jobNode->fileName),lineNb);
-              failFlag = TRUE;
+              failed = TRUE;
             }
           }
           else
@@ -2204,7 +2198,7 @@ bool Job_read(JobNode *jobNode)
                        lineNb,
                        String_cString(line)
                       );
-            failFlag = TRUE;
+            failed = TRUE;
           }
         }
         File_ungetLine(&fileHandle,line,&lineNb);
@@ -2246,7 +2240,7 @@ bool Job_read(JobNode *jobNode)
         }
         File_ungetLine(&fileHandle,line,&lineNb);
 
-        failFlag = TRUE;
+        failed = TRUE;
       }
     }
     else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
@@ -2259,6 +2253,7 @@ bool Job_read(JobNode *jobNode)
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
+    uint i,firstValueIndex,lastValueIndex;
       i = ConfigValue_find(JOB_CONFIG_VALUES,
                            CONFIG_VALUE_INDEX_NONE,
                            CONFIG_VALUE_INDEX_NONE,
@@ -2285,11 +2280,13 @@ bool Job_read(JobNode *jobNode)
                           jobNode,
                           &commentList
                          );
+
+        hasDeprecated = (JOB_CONFIG_VALUES[i].type == CONFIG_VALUE_TYPE_DEPRECATED);
       }
       else
       {
         printError("unknown value '%s' in %s, line %ld",String_cString(name),String_cString(jobNode->fileName),lineNb);
-        failFlag = TRUE;
+        failed = TRUE;
       }
     }
     else
@@ -2299,7 +2296,7 @@ bool Job_read(JobNode *jobNode)
                  lineNb,
                  String_cString(line)
                 );
-      failFlag = TRUE;
+      failed = TRUE;
     }
   }
   String_delete(value);
@@ -2313,7 +2310,7 @@ bool Job_read(JobNode *jobNode)
   jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
 
   // check if failed
-  if (failFlag)
+  if (failed)
   {
     return FALSE;
   }
@@ -2322,13 +2319,13 @@ bool Job_read(JobNode *jobNode)
   (void)Job_readScheduleInfo(jobNode);
 
   // reset job modified
-  jobNode->modifiedFlag               = FALSE;
+  jobNode->modifiedFlag               = hasDeprecated;
   jobNode->includeExcludeModifiedFlag = FALSE;
   jobNode->mountModifiedFlag          = FALSE;
   jobNode->scheduleModifiedFlag       = FALSE;
   jobNode->persistenceModifiedFlag    = FALSE;
 
-  return failFlag;
+  return TRUE;
 }
 
 Errors Job_rereadAll(ConstString jobsDirectory)
@@ -2412,7 +2409,6 @@ Errors Job_rereadAll(ConstString jobsDirectory)
         }
 
         // reset modified flag
-        jobNode->modifiedFlag               = FALSE;
         jobNode->includeExcludeModifiedFlag = FALSE;
         jobNode->mountModifiedFlag          = FALSE;
         jobNode->scheduleModifiedFlag       = FALSE;

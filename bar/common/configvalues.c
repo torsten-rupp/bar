@@ -1640,7 +1640,7 @@ LOCAL bool parseValue(const ConfigValue    *configValue,
           if (configValue->deprecatedValue.newName != NULL)
           {
             message = (configValue->deprecatedValue.parse != NULL)
-                        ? "Configuration value '%s' in section '%s' is deprecated. Use '%s' instead"
+                        ? "Configuration value '%s' in section '%s' is deprecated. Replaced by '%s'"
                         : "Configuration value '%s' in section '%s' is deprecated - skipped. Use '%s' instead";
             reportMessage(warningReportFunction,
                           warningReportUserData,
@@ -1653,7 +1653,7 @@ LOCAL bool parseValue(const ConfigValue    *configValue,
           else
           {
             message = (configValue->deprecatedValue.parse != NULL)
-                        ? "Configuration value '%s' in section '%s' is deprecated"
+                        ? "Configuration value '%s' in section '%s' is deprecated - replaced"
                         : "Configuration value '%s' in section '%s' is deprecated - skipped";
             reportMessage(warningReportFunction,
                           warningReportUserData,
@@ -1668,7 +1668,7 @@ LOCAL bool parseValue(const ConfigValue    *configValue,
           if (configValue->deprecatedValue.newName != NULL)
           {
             message = (configValue->deprecatedValue.parse != NULL)
-                        ? "Configuration value '%s' is deprecated. Use '%s' instead"
+                        ? "Configuration value '%s' is deprecated. Replaced by '%s'"
                         : "Configuration value '%s' is deprecated - skipped. Use '%s' instead";
             reportMessage(warningReportFunction,
                           warningReportUserData,
@@ -1680,7 +1680,7 @@ LOCAL bool parseValue(const ConfigValue    *configValue,
           else
           {
             message = (configValue->deprecatedValue.parse != NULL)
-                        ? "Configuration value '%s' is deprecated"
+                        ? "Configuration value '%s' is deprecated - replaced"
                         : "Configuration value '%s' is deprecated - skipped";
             reportMessage(warningReportFunction,
                           warningReportUserData,
@@ -3326,7 +3326,11 @@ bool ConfigValue_parseDeprecatedInteger(void       *userData,
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  (*(int*)variable) = strtol(value,NULL,0);
+  if (!stringToInt(value,variable,NULL))
+  {
+    stringFormat(errorMessage,errorMessageSize,"expected integer value");
+    return FALSE;
+  }
 
   return TRUE;
 }
@@ -3347,12 +3351,22 @@ bool ConfigValue_parseDeprecatedInteger64(void       *userData,
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  (*(int64*)variable) = strtoll(value,NULL,0);
+  if (!stringToInt64(value,variable,NULL))
+  {
+    stringFormat(errorMessage,errorMessageSize,"expected integer value");
+    return FALSE;
+  }
 
   return TRUE;
 }
 
-bool ConfigValue_parseDeprecatedString(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+bool ConfigValue_parseDeprecatedString(void       *userData,
+                                       void       *variable,
+                                       const char *name,
+                                       const char *value,
+                                       char       errorMessage[],
+                                       uint       errorMessageSize
+                                      )
 {
   String string;
 
