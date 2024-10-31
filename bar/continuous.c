@@ -1834,12 +1834,12 @@ Errors Continuous_init(const char *databaseURI)
   Dictionary_init(&notifyHandles,
                   CALLBACK_(NULL,NULL),  // dictionaryCopyFunction
                   CALLBACK_(NULL,NULL),  // dictionaryFreeFunction
-                  CALLBACK_(NULL,NULL)  // dictionaryCompareFunction
+                  CALLBACK_(NULL,NULL)   // dictionaryCompareFunction
                  );
   Dictionary_init(&notifyNames,
                   CALLBACK_(NULL,NULL),  // dictionaryCopyFunction
                   CALLBACK_(NULL,NULL),  // dictionaryFreeFunction
-                  CALLBACK_(NULL,NULL)  // dictionaryCompareFunction
+                  CALLBACK_(NULL,NULL)   // dictionaryCompareFunction
                  );
 
   #if   defined(PLATFORM_LINUX)

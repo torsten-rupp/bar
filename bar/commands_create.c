@@ -322,7 +322,7 @@ LOCAL void initCreateInfo(CreateInfo          *createInfo,
 
   createInfo->logHandle                             = logHandle;
 
-  Dictionary_init(&createInfo->namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Dictionary_init(&createInfo->namesDictionary,DICTIONARY_BYTE_INIT_ENTRY,DICTIONARY_BYTE_DONE_ENTRY,DICTIONARY_BYTE_COMPARE_ENTRY);
 
   createInfo->storeIncrementalFileInfoFlag          = FALSE;
 
@@ -1551,12 +1551,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   assert(createInfo->jobOptions != NULL);
 
   // initialize variables
-  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL)))
+  if (!Dictionary_init(&duplicateNamesDictionary,DICTIONARY_BYTE_INIT_ENTRY,DICTIONARY_BYTE_DONE_ENTRY,DICTIONARY_BYTE_COMPARE_ENTRY))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   name = String_new();
-  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(freeHardlinkInfo,NULL),CALLBACK_(NULL,NULL)))
+  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_INIT_ENTRY,DICTIONARY_BYTE_DONE_ENTRY,DICTIONARY_BYTE_COMPARE_ENTRY))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -2459,12 +2459,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   assert(createInfo->jobOptions != NULL);
 
   // initialize variables
-  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL)))
+  if (!Dictionary_init(&duplicateNamesDictionary,DICTIONARY_BYTE_INIT_ENTRY,DICTIONARY_BYTE_DONE_ENTRY,DICTIONARY_BYTE_COMPARE_ENTRY))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   name = String_new();
-  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(freeHardlinkInfo,NULL),CALLBACK_(NULL,NULL)))
+  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_INIT_ENTRY,DICTIONARY_BYTE_DONE_ENTRY,DICTIONARY_BYTE_COMPARE_ENTRY))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
