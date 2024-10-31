@@ -65,8 +65,8 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
 {
   typedef union
   {
-    void       *value;
-    DatabaseId *id;
+    intptr_t   value;
+    DatabaseId id;
   } ValueData;
 
   Errors     error;
@@ -150,15 +150,13 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(DatabaseHandle *oldDatabaseHand
                            fragmentOffset = values[1].u64;
                            fragmentSize   = values[2].u64;
 
-                           if (Dictionary_find(storageIdDictionary,
-                                               &fromStorageId,
-                                               sizeof(DatabaseId),
-                                               &valueData.value,
-                                               NULL
-                                              )
+                           if (Dictionary_findValue(storageIdDictionary,
+                                                    fromStorageId,
+                                                    &valueData.value
+                                                   )
                               )
                            {
-                             toStorageId = *valueData.id;
+                             toStorageId = valueData.id;
 
                              DIMPORT("import file fragment %ld -> %ld: offset=%"PRIi64" size=%"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
                              error = Database_insert(newDatabaseHandle,
@@ -231,8 +229,8 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
 {
   typedef union
   {
-    void       *value;
-    DatabaseId *id;
+    intptr_t   value;
+    DatabaseId id;
   } ValueData;
 
   Errors     error;
@@ -315,15 +313,13 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(DatabaseHandle *oldDatabaseHan
                            fragmentOffset = values[1].u64;
                            fragmentSize   = values[2].u64;
 
-                           if (Dictionary_find(storageIdDictionary,
-                                               &fromStorageId,
-                                               sizeof(DatabaseId),
-                                               &valueData.value,
-                                               NULL
-                                              )
+                           if (Dictionary_findValue(storageIdDictionary,
+                                                    fromStorageId,
+                                                    &valueData.value
+                                                   )
                               )
                            {
-                             toStorageId = *valueData.id;
+                             toStorageId = valueData.id;
 
                              DIMPORT("import image fragment %ld -> %ld: offset=%"PRIi64" size=%"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
                              error = Database_insert(newDatabaseHandle,
@@ -396,8 +392,8 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
 {
   typedef union
   {
-    void       *value;
-    DatabaseId *id;
+    intptr_t   value;
+    DatabaseId id;
   } ValueData;
 
   Errors     error;
@@ -480,15 +476,13 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(DatabaseHandle *oldDatabase
                            fragmentOffset = values[1].u64;
                            fragmentSize   = values[2].u64;
 
-                           if (Dictionary_find(storageIdDictionary,
-                                               &fromStorageId,
-                                               sizeof(DatabaseId),
-                                               &valueData.value,
-                                               NULL
-                                              )
+                           if (Dictionary_findValue(storageIdDictionary,
+                                                    fromStorageId,
+                                                    &valueData.value
+                                                   )
                               )
                            {
-                             toStorageId = *valueData.id;
+                             toStorageId = valueData.id;
 
                              DIMPORT("import hardlink fragment %ld -> %ld: offset=%"PRIi64" size=%"PRIi64"",fromStorageId,toStorageId,fragmentOffset,fragmentSize);
                              error = Database_insert(newDatabaseHandle,
@@ -563,8 +557,8 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
 {
   typedef union
   {
-    void       *value;
-    DatabaseId *id;
+    intptr_t   value;
+    DatabaseId id;
   } ValueData;
 
   Errors error;
@@ -616,15 +610,13 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
                                    fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
                                    assert(fromStorageId != DATABASE_ID_NONE);
 
-                                   if (Dictionary_find(storageIdDictionary,
-                                                       &fromStorageId,
-                                                       sizeof(DatabaseId),
-                                                       &valueData.value,
-                                                       NULL
-                                                      )
+                                   if (Dictionary_findValue(storageIdDictionary,
+                                                            fromStorageId,
+                                                            &valueData.value
+                                                           )
                                       )
                                    {
-                                     toStorageId = *valueData.id;
+                                     toStorageId = valueData.id;
 
                                      (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
                                      (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
@@ -671,15 +663,13 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
 
                                    fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
                                    assert(fromStorageId != DATABASE_ID_NONE);
-                                   if (Dictionary_find(storageIdDictionary,
-                                                       &fromStorageId,
-                                                       sizeof(DatabaseId),
-                                                       &valueData.value,
-                                                       NULL
-                                                      )
+                                   if (Dictionary_findValue(storageIdDictionary,
+                                                            fromStorageId,
+                                                            &valueData.value
+                                                           )
                                       )
                                    {
-                                     toStorageId = *valueData.id;
+                                     toStorageId = valueData.id;
 
                                      (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
                                      (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
@@ -736,15 +726,13 @@ LOCAL Errors upgradeFromVersion7_importEntry(DatabaseHandle *oldDatabaseHandle,
 
                                    fromStorageId = Database_getTableColumnId(fromColumnInfo,"storageId",DATABASE_ID_NONE);
                                    assert(fromStorageId != DATABASE_ID_NONE);
-                                   if (Dictionary_find(storageIdDictionary,
-                                                       &fromStorageId,
-                                                       sizeof(DatabaseId),
-                                                       &valueData.value,
-                                                       NULL
-                                                      )
+                                   if (Dictionary_findValue(storageIdDictionary,
+                                                            fromStorageId,
+                                                            &valueData.value
+                                                           )
                                       )
                                    {
-                                     toStorageId = *valueData.id;
+                                     toStorageId = valueData.id;
 
                                      (void)Database_setTableColumnId(toColumnInfo,"entryId",toEntryId);
                                      (void)Database_setTableColumnId(toColumnInfo,"storageId",toStorageId);
@@ -938,7 +926,7 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
 
   // init variables
   error = ERROR_NONE;
-  Dictionary_init(&storageIdDictionary,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Dictionary_initValue(&storageIdDictionary);
 
   // transfer uuids (if not exists, ignore errors)
   (void)Database_copyTable(oldDatabaseHandle,
@@ -1078,12 +1066,10 @@ LOCAL Errors importIndexVersion7(DatabaseHandle *oldDatabaseHandle,
                                                             DIMPORT("import storage %ld -> %ld: %s",fromStorageId,toStorageId,Database_getTableColumnCString(fromColumnInfo,"name",NULL));
                                                             (void)Database_setTableColumnEnum(toColumnInfo,"state",Database_getTableColumnEnum(fromColumnInfo,"state",INDEX_STATE_OK));
 
-                                                            Dictionary_add(&storageIdDictionary,
-                                                                           &fromStorageId,
-                                                                           sizeof(DatabaseId),
-                                                                           &toStorageId,
-                                                                           sizeof(DatabaseId)
-                                                                          );
+                                                            Dictionary_addValue(&storageIdDictionary,
+                                                                                fromStorageId,
+                                                                                toStorageId
+                                                                               );
 
                                                             return ERROR_NONE;
                                                           },NULL),

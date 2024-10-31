@@ -83,7 +83,7 @@ LOCAL const uint TABLE_SIZES[] =
 
 LOCAL_INLINE ulong modulo(ulong n, ulong m)
 {
-  return n%m;
+  return n % m;
 }
 
 /***********************************************************************\
@@ -97,7 +97,7 @@ LOCAL_INLINE ulong modulo(ulong n, ulong m)
 
 LOCAL_INLINE ulong addModulo(ulong n, uint d, ulong m)
 {
-  return (n+d)%m;
+  return (n+d) % m;
 }
 
 /***********************************************************************\
@@ -111,7 +111,7 @@ LOCAL_INLINE ulong addModulo(ulong n, uint d, ulong m)
 
 LOCAL_INLINE ulong subModulo(ulong n, uint d, ulong m)
 {
-  return (n+m-d)%m;
+  return (n+m-d) % m;
 }
 #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING */
 
@@ -143,81 +143,87 @@ LOCAL_INLINE ulong rotHash(ulong hash, uint n)
 /***********************************************************************\
 * Name   : calculateHash
 * Purpose: calculate hash
-* Input  : keyData   - key data
+* Input  : key       - key data
 *          keyLength - length of key data
 * Output : -
 * Return : hash value
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ulong calculateHash(const void *keyData, ulong keyLength)
+LOCAL ulong calculateHash(const void *key, ulong keyLength)
 {
-  ulong      hashBytes[4];
-  const byte *p;
-  uint       z;
-
-  assert(keyData != NULL);
-
-  p = (const byte*)keyData;
-
-  hashBytes[0] = (keyLength > 0)?(*p):0; p++;
-  hashBytes[1] = (keyLength > 1)?(*p):0; p++;
-  hashBytes[2] = (keyLength > 2)?(*p):0; p++;
-  hashBytes[3] = (keyLength > 3)?(*p):0; p++;
-  for (z = 4; z < keyLength; z++)
+  if (keyLength > 0)
   {
-    hashBytes[z%4] ^= (*p); p++;
-  }
+    assert(key != NULL);
 
-  return (ulong)(hashBytes[3] << 24) |
-         (ulong)(hashBytes[2] << 16) |
-         (ulong)(hashBytes[1] <<  8) |
-         (ulong)(hashBytes[0] <<  0);
+    const byte *p = (const byte*)key;
+
+    ulong hashBytes[4];
+    hashBytes[0] = (keyLength > 0)?(*p):0; p++;
+    hashBytes[1] = (keyLength > 1)?(*p):0; p++;
+    hashBytes[2] = (keyLength > 2)?(*p):0; p++;
+    hashBytes[3] = (keyLength > 3)?(*p):0; p++;
+    for (size_t i = 4; i < keyLength; i++)
+    {
+      hashBytes[i % 4] ^= (*p); p++;
+    }
+
+    return (ulong)(hashBytes[3] << 24) |
+           (ulong)(hashBytes[2] << 16) |
+           (ulong)(hashBytes[1] <<  8) |
+           (ulong)(hashBytes[0] <<  0);
+  }
+  else
+  {
+    return (intptr_t)key;
+  }
 }
 
 /***********************************************************************\
 * Name   : equalsEntry
 * Purpose: check if entry is equal to data
-* Input  : entry                     - entry
-*          hash                      - data hash value
-*          keyData                   - key data
-*          keyLength                 - length of key data
-*          dictionaryCompareFunction - compare function or NULL for
-*                                      default compare
-*          dictionaryCompareUserData - compare function user data
+* Input  : entry                          - entry
+*          hash                           - data hash value
+*          key                            - key data
+*          keyLength                      - length of key data
+*          dictionaryCompareEntryFunction - compare function or NULL for
+*                                           default compare
+*          dictionaryCompareEntryUserData - compare function user data
 * Output : -
 * Return : TRUE if entry is equal, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE bool equalsEntry(const DictionaryEntry     *entry,
-                              ulong                     hash,
-                              const void                *keyData,
-                              ulong                     keyLength,
-                              DictionaryCompareFunction dictionaryCompareFunction,
-                              void                      *dictionaryCompareUserData
+LOCAL_INLINE bool equalsEntry(const DictionaryEntry          *entry,
+                              ulong                          hash,
+                              const void                     *key,
+                              ulong                          keyLength,
+                              DictionaryCompareEntryFunction dictionaryCompareEntryFunction,
+                              void                           *dictionaryCompareEntryUserData
                              )
 {
   assert(entry != NULL);
-  assert(keyData != NULL);
 
   if (   (hash == entry->hash)
-      && (entry->keyData != NULL)
       && (entry->keyLength == keyLength))
   {
-    if (dictionaryCompareFunction != NULL)
+    if      (dictionaryCompareEntryFunction != NULL)
     {
-      if (dictionaryCompareFunction(dictionaryCompareUserData,entry->keyData,keyData,keyLength))
+      if (dictionaryCompareEntryFunction(entry->key,key,keyLength,dictionaryCompareEntryUserData))
+      {
+        return TRUE;
+      }
+    }
+    else if (keyLength > 0)
+    {
+      if (memcmp(entry->key,key,keyLength) == 0)
       {
         return TRUE;
       }
     }
     else
     {
-      if (memcmp(entry->keyData,keyData,keyLength) == 0)
-      {
-        return TRUE;
-      }
+      return entry->key == key;
     }
   }
 
@@ -227,111 +233,109 @@ LOCAL_INLINE bool equalsEntry(const DictionaryEntry     *entry,
 /***********************************************************************\
 * Name   : findEntryIndex
 * Purpose: find entry index of entry in table
-* Input  : entryTable                - entry table
-*          hash                      - data hash value
-*          keyData                   - key data
-*          keyLength                 - length of key data
-*          dictionaryCompareFunction - compare function or NULL for
-*                                      default compare
-*          dictionaryCompareUserData - compare function user data
+* Input  : entryTable                     - entry table
+*          hash                           - data hash value
+*          key                            - key data
+*          keyLength                      - length of key data
+*          dictionaryCompareEntryFunction - compare function or NULL for
+*                                           default compare
+*          dictionaryCompareEntryUserData - compare function user data
 * Output : -
 * Return : index of -1 if entry not found
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int findEntryIndex(DictionaryEntryTable      *entryTable,
-                         ulong                     hash,
-                         const void                *keyData,
-                         ulong                     keyLength,
-                         DictionaryCompareFunction dictionaryCompareFunction,
-                         void                      *dictionaryCompareUserData
-                        )
+LOCAL ssize_t findEntryIndex(DictionaryEntryTable           *entryTable,
+                             ulong                          hash,
+                             const void                     *key,
+                             ulong                          keyLength,
+                             DictionaryCompareEntryFunction dictionaryCompareEntryFunction,
+                             void                           *dictionaryCompareEntryUserData
+                            )
 {
-  uint z,i;
-  int  entryIndex;
+  size_t entryIndex;
 
   assert(entryTable != NULL);
-  assert(keyData != NULL);
 
-  for (z = 0; z <= entryTable->sizeIndex; z++)
+  for (size_t z = 0; z <= entryTable->sizeIndex; z++)
   {
     #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_LINEAR_PROBING
-      for (i = 0; i < LINEAR_PROBING_COUNT; i++)
+      for (size_t i = 0; i < LINEAR_PROBING_COUNT; i++)
       {
         entryIndex = addModulo(hash,i,TABLE_SIZES[z]);
-        if (   !entryTable->entries[entryIndex].removeFlag
+        if (   entryTable->entries[entryIndex].isUsed
             && equalsEntry(&entryTable->entries[entryIndex],
                            hash,
-                           keyData,
+                           key,
                            keyLength,
-                           dictionaryCompareFunction,
-                           dictionaryCompareUserData
+                           dictionaryCompareEntryFunction,
+                           dictionaryCompareEntryUserData
                           )
            )
         {
-          return entryIndex;
+          return (ssize_t)entryIndex;
         }
       }
     #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_LINEAR_PROBING */
     #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING
       entryIndex = modulo(hash,TABLE_SIZES[z]);
-      if (   !entryTable->entries[entryIndex].removeFlag
+      if (   entryTable->entries[entryIndex].isUsed
           && equalsEntry(&entryTable->entries[entryIndex],
                          hash,
-                         keyData,
+                         key,
                          keyLength,
-                         dictionaryCompareFunction,
-                         dictionaryCompareUserData
+                         dictionaryCompareEntryFunction,
+                         dictionaryCompareEntryUserData
                         )
          )
       {
-        return entryIndex;
+        return (ssize_t)entryIndex;
       }
-      for (i = 1; i < QUADRATIC_PROBING_COUNT; i++)
+      for (size_t i = 1; i < QUADRATIC_PROBING_COUNT; i++)
       {
         entryIndex = addModulo(hash,i*i,TABLE_SIZES[z]);
-        if (   !entryTable->entries[entryIndex].removeFlag
+        if (   entryTable->entries[entryIndex].isUsed
             && equalsEntry(&entryTable->entries[entryIndex],
                            hash,
-                           keyData,
+                           key,
                            keyLength,
-                           dictionaryCompareFunction,
-                           dictionaryCompareUserData
+                           dictionaryCompareEntryFunction,
+                           dictionaryCompareEntryUserData
                           )
            )
         {
-          return entryIndex;
+          return (ssize_t)entryIndex;
         }
         entryIndex = subModulo(hash,i*i,TABLE_SIZES[z]);
-        if (   !entryTable->entries[entryIndex].removeFlag
+        if (   entryTable->entries[entryIndex].isUsed
             && equalsEntry(&entryTable->entries[entryIndex],
                            hash,
-                           keyData,
+                           key,
                            keyLength,
-                           dictionaryCompareFunction,
-                           dictionaryCompareUserData
+                           dictionaryCompareEntryFunction,
+                           dictionaryCompareEntryUserData
                           )
            )
         {
-          return entryIndex;
+          return (ssize_t)entryIndex;
         }
       }
     #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING */
     #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_REHASH
-      for (i = 0; i < REHASHING_COUNT; i++)
+      for (size_t i = 0; i < REHASHING_COUNT; i++)
       {
         entryIndex = rotHash(hash,i)%TABLE_SIZES[z];
-        if (   !entryTable->entries[entryIndex].removeFlag
+        if (   entryTable->entries[entryIndex].isUsed
             && equalsEntry(&entryTable->entries[entryIndex],
                            hash,
-                           keyData,
+                           key,
                            keyLength,
-                           dictionaryCompareFunction,
-                           dictionaryCompareUserData
+                           dictionaryCompareEntryFunction,
+                           dictionaryCompareEntryUserData
                           )
            )
         {
-          return entryIndex;
+          return (ssize_t)entryIndex;
         }
       }
     #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_REHASH */
@@ -350,22 +354,21 @@ LOCAL int findEntryIndex(DictionaryEntryTable      *entryTable,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int findFreeEntryIndex(DictionaryEntryTable *entryTable,
-                             ulong                hash
-                            )
+LOCAL ssize_t findFreeEntryIndex(DictionaryEntryTable *entryTable,
+                                 ulong                hash
+                                )
 {
-  uint z,i;
-  int  entryIndex;
+  ssize_t entryIndex;
 
   assert(entryTable != NULL);
 
-  for (z = 0; z <= entryTable->sizeIndex; z++)
+  for (size_t z = 0; z <= entryTable->sizeIndex; z++)
   {
     #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_LINEAR_PROBING
-      for (i = 0; i < LINEAR_PROBING_COUNT; i++)
+      for (size_t i = 0; i < LINEAR_PROBING_COUNT; i++)
       {
         entryIndex = addModulo(hash,i,TABLE_SIZES[z]);
-        if (entryTable->entries[entryIndex].keyData == NULL)
+        if (!entryTable->entries[entryIndex].isUsed)
         {
           return entryIndex;
         }
@@ -373,29 +376,29 @@ LOCAL int findFreeEntryIndex(DictionaryEntryTable *entryTable,
     #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_LINEAR_PROBING */
     #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING
       entryIndex = modulo(hash,TABLE_SIZES[z]);
-      if (entryTable->entries[entryIndex].keyData == NULL)
+      if (!entryTable->entries[entryIndex].isUsed)
       {
         return entryIndex;
       }
-      for (i = 0; i < QUADRATIC_PROBING_COUNT; i++)
+      for (size_t i = 0; i < QUADRATIC_PROBING_COUNT; i++)
       {
         entryIndex = addModulo(hash,i*i,TABLE_SIZES[z]);
-        if (entryTable->entries[entryIndex].keyData == NULL)
+        if (!entryTable->entries[entryIndex].isUsed)
         {
           return entryIndex;
         }
         entryIndex = subModulo(hash,i*i,TABLE_SIZES[z]);
-        if (entryTable->entries[entryIndex].keyData == NULL)
+        if (!entryTable->entries[entryIndex].isUsed)
         {
           return entryIndex;
         }
       }
     #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING */
     #if COLLISION_ALGORITHM==COLLISION_ALGORITHM_REHASH
-      for (i = 0; i < REHASHING_COUNT; i++)
+      for (size_t i = 0; i < REHASHING_COUNT; i++)
       {
         entryIndex = rotHash(hash,i)%TABLE_SIZES[z];
-        if (entryTable->entries[entryIndex].keyData == NULL)
+        if (!entryTable->entries[entryIndex].isUsed)
         {
           return entryIndex;
         }
@@ -409,10 +412,10 @@ LOCAL int findFreeEntryIndex(DictionaryEntryTable *entryTable,
 /***********************************************************************\
 * Name   : findEntry
 * Purpose: find entry in hash table
-* Input  : dictionary                - dictionary
-*          hash                      - data hash value
-*          keyData                   - key data
-*          keyLength                 - length of key data
+* Input  : dictionary - dictionary
+*          hash       - data hash value
+*          key        - key data
+*          keyLength  - length of key data
 * Output : dictionaryEntryTable - dictionary entry table
 *          index                - index in table
 * Return : TRUE if entry found, FALSE otherwise
@@ -421,38 +424,35 @@ LOCAL int findFreeEntryIndex(DictionaryEntryTable *entryTable,
 
 LOCAL bool findEntry(Dictionary           *dictionary,
                      ulong                hash,
-                     const void           *keyData,
+                     const void           *key,
                      ulong                keyLength,
                      DictionaryEntryTable **dictionaryEntryTable,
-                     uint                 *index
+                     size_t               *index
                     )
 {
-  uint z;
   uint tableIndex;
-  int  i;
 
   assert(dictionary != NULL);
-  assert(keyData != NULL);
   assert(dictionaryEntryTable != NULL);
   assert(index != NULL);
 
   (*dictionaryEntryTable) = NULL;
-  (*index)                = -1;
-  z = 0;
+  (*index)                = 0;
+  size_t z = 0;
   while ((z < dictionary->entryTableCount) && ((*dictionaryEntryTable) == NULL))
   {
-    tableIndex = (hash+z)%dictionary->entryTableCount;
-    i = findEntryIndex(&dictionary->entryTables[tableIndex],
-                       hash,
-                       keyData,
-                       keyLength,
-                       dictionary->dictionaryCompareFunction,
-                       dictionary->dictionaryCompareUserData
-                      );
+    tableIndex = (hash+z) % dictionary->entryTableCount;
+    ssize_t i = findEntryIndex(&dictionary->entryTables[tableIndex],
+                               hash,
+                               key,
+                               keyLength,
+                               dictionary->dictionaryCompareEntryFunction,
+                               dictionary->dictionaryCompareEntryUserData
+                              );
     if (i >= 0)
     {
       (*dictionaryEntryTable) = &dictionary->entryTables[tableIndex];
-      (*index)                = i;
+      (*index)                = (size_t)i;
     }
     z++;
   }
@@ -474,30 +474,28 @@ LOCAL bool findEntry(Dictionary           *dictionary,
 LOCAL bool findFreeEntry(Dictionary           *dictionary,
                          ulong                hash,
                          DictionaryEntryTable **dictionaryEntryTable,
-                         uint                 *index
+                         size_t               *index
                         )
 {
-  uint z;
   uint tableIndex;
-  int  i;
 
   assert(dictionary != NULL);
   assert(dictionaryEntryTable != NULL);
   assert(index != NULL);
 
   (*dictionaryEntryTable) = NULL;
-  (*index)                = -1;
-  z = 0;
+  (*index)                = 0;
+  size_t z = 0;
   while ((z < dictionary->entryTableCount) && ((*dictionaryEntryTable) == NULL))
   {
     tableIndex = (hash+z)%dictionary->entryTableCount;
-    i = findFreeEntryIndex(&dictionary->entryTables[tableIndex],
-                           hash
-                          );
+    ssize_t i = findFreeEntryIndex(&dictionary->entryTables[tableIndex],
+                                   hash
+                                  );
     if (i >= 0)
     {
       (*dictionaryEntryTable) = &dictionary->entryTables[tableIndex];
-      (*index)                = i;
+      (*index)                = (size_t)i;
     }
     z++;
   }
@@ -532,25 +530,47 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
 
 /*---------------------------------------------------------------------*/
 
+bool Dictionary_byteInitEntry(const void *fromValue, void *toValue, ulong length, void *userData)
+{
+  assert(toValue != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  if (fromValue != NULL)
+  {
+    memcpy(toValue,fromValue,length);
+  }
+
+  return TRUE;
+}
+
+bool Dictionary_valueCompareEntry(const void *value0, const void *value1, ulong valueLength, void *userData)
+{
+  UNUSED_VARIABLE(valueLength);
+  UNUSED_VARIABLE(userData);
+
+  return value0 == value1;
+}
+
 #ifdef NDEBUG
-  bool Dictionary_init(Dictionary                *dictionary,
-                       DictionaryCopyFunction    dictionaryCopyFunction,
-                       void                      *dictionaryCopyUserData,
-                       DictionaryFreeFunction    dictionaryFreeFunction,
-                       void                      *dictionaryFreeUserData,
-                       DictionaryCompareFunction dictionaryCompareFunction,
-                       void                      *dictionaryCompareUserData
+  bool Dictionary_init(Dictionary                     *dictionary,
+                       DictionaryInitEntryFunction    dictionaryInitEntryFunction,
+                       void                           *dictionaryInitEntryUserData,
+                       DictionaryDoneEntryFunction    dictionaryDoneEntryFunction,
+                       void                           *dictionaryDoneEntryUserData,
+                       DictionaryCompareEntryFunction dictionaryCompareEntryFunction,
+                       void                           *dictionaryCompareEntryUserData
                       )
 #else /* not NDEBUG */
-  bool __Dictionary_init(const char                *__fileName__,
-                         ulong                     __lineNb__,
-                         Dictionary                *dictionary,
-                         DictionaryCopyFunction    dictionaryCopyFunction,
-                         void                      *dictionaryCopyUserData,
-                         DictionaryFreeFunction    dictionaryFreeFunction,
-                         void                      *dictionaryFreeUserData,
-                         DictionaryCompareFunction dictionaryCompareFunction,
-                         void                      *dictionaryCompareUserData
+  bool __Dictionary_init(const char                    *__fileName__,
+                         ulong                         __lineNb__,
+                         Dictionary                    *dictionary,
+                         DictionaryInitEntryFunction    dictionaryInitEntryFunction,
+                         void                           *dictionaryInitEntryUserData,
+                         DictionaryDoneEntryFunction    dictionaryDoneEntryFunction,
+                         void                           *dictionaryDoneEntryUserData,
+                         DictionaryCompareEntryFunction dictionaryCompareEntryFunction,
+                         void                           *dictionaryCompareEntryUserData
                         )
 #endif /* NDEBUG */
 {
@@ -564,6 +584,7 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   dictionary->entryTables = (DictionaryEntryTable*)malloc(sizeof(DictionaryEntryTable)*1);
   if (dictionary->entryTables == NULL)
   {
+    Semaphore_done(&dictionary->lock);
     return FALSE;
   }
   dictionary->entryTableCount = 1;
@@ -572,17 +593,18 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   if (dictionary->entryTables[0].entries == NULL)
   {
     free(dictionary->entryTables);
+    Semaphore_done(&dictionary->lock);
     return FALSE;
   }
   dictionary->entryTables[0].sizeIndex  = 0;
   dictionary->entryTables[0].entryCount = 0;
 
-  dictionary->dictionaryCopyFunction    = dictionaryCopyFunction;
-  dictionary->dictionaryCopyUserData    = dictionaryCopyUserData;
-  dictionary->dictionaryFreeFunction    = dictionaryFreeFunction;
-  dictionary->dictionaryFreeUserData    = dictionaryFreeUserData;
-  dictionary->dictionaryCompareFunction = dictionaryCompareFunction;
-  dictionary->dictionaryCompareUserData = dictionaryCompareUserData;
+  dictionary->dictionaryInitEntryFunction    = dictionaryInitEntryFunction;
+  dictionary->dictionaryInitEntryUserData    = dictionaryInitEntryUserData;
+  dictionary->dictionaryDoneEntryFunction    = dictionaryDoneEntryFunction;
+  dictionary->dictionaryDoneEntryUserData    = dictionaryDoneEntryUserData;
+  dictionary->dictionaryCompareEntryFunction = dictionaryCompareEntryFunction;
+  dictionary->dictionaryCompareEntryUserData = dictionaryCompareEntryUserData;
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(dictionary,Dictionary);
@@ -602,7 +624,6 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
                         )
 #endif /* NDEBUG */
 {
-  uint i;
   uint index;
 
   assert(dictionary != NULL);
@@ -615,28 +636,33 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   #endif /* NDEBUG */
 
   // free resources
-  for (i = 0; i < dictionary->entryTableCount; i++)
+  for (size_t i = 0; i < dictionary->entryTableCount; i++)
   {
     assert(dictionary->entryTables[i].entries != NULL);
 
     for (index = 0; index < TABLE_SIZES[dictionary->entryTables[i].sizeIndex]; index++)
     {
-      if (dictionary->entryTables[i].entries[index].keyData != NULL)
+      if (dictionary->entryTables[i].entries[index].isUsed)
       {
-        if (dictionary->dictionaryFreeFunction != NULL)
+        assert(dictionary->entryTables[i].entryCount > 0);
+
+        if (dictionary->dictionaryDoneEntryFunction != NULL)
         {
-          dictionary->dictionaryFreeFunction(dictionary->entryTables[i].entries[index].data,
-                                             dictionary->entryTables[i].entries[index].length,
-                                             dictionary->dictionaryFreeUserData
-                                            );
+          dictionary->dictionaryDoneEntryFunction(dictionary->entryTables[i].entries[index].value,
+                                                  dictionary->entryTables[i].entries[index].valueLength,
+                                                  dictionary->dictionaryDoneEntryUserData
+                                                 );
         }
-        if (dictionary->entryTables[i].entries[index].allocatedFlag)
+        if (dictionary->entryTables[i].entries[index].isAllocated)
         {
-          assert(dictionary->entryTables[i].entries[index].data != NULL);
-          free(dictionary->entryTables[i].entries[index].data);
+          assert(dictionary->entryTables[i].entries[index].value != NULL);
+          free(dictionary->entryTables[i].entries[index].value);
         }
 
-        free(dictionary->entryTables[i].entries[index].keyData);
+        if (dictionary->entryTables[i].entries[index].keyLength > 0)
+        {
+          free(dictionary->entryTables[i].entries[index].key);
+        }
       }
     }
     free(dictionary->entryTables[i].entries);
@@ -661,26 +687,32 @@ void Dictionary_clear(Dictionary *dictionary)
 
       for (index = 0; index < TABLE_SIZES[dictionary->entryTables[i].sizeIndex]; index++)
       {
-        if (dictionary->entryTables[i].entries[index].keyData != NULL)
+        if (dictionary->entryTables[i].entries[index].isUsed)
         {
-          if (dictionary->dictionaryFreeFunction != NULL)
+          assert(dictionary->entryTables[i].entryCount > 0);
+
+          if (dictionary->dictionaryDoneEntryFunction != NULL)
           {
-            dictionary->dictionaryFreeFunction(dictionary->entryTables[i].entries[index].data,
-                                               dictionary->entryTables[i].entries[index].length,
-                                               dictionary->dictionaryFreeUserData
-                                              );
+            dictionary->dictionaryDoneEntryFunction(dictionary->entryTables[i].entries[index].value,
+                                                    dictionary->entryTables[i].entries[index].valueLength,
+                                                    dictionary->dictionaryDoneEntryUserData
+                                                   );
           }
-          if (dictionary->entryTables[i].entries[index].allocatedFlag)
+          if (dictionary->entryTables[i].entries[index].isAllocated)
           {
-            assert(dictionary->entryTables[i].entries[index].data != NULL);
-            free(dictionary->entryTables[i].entries[index].data);
-            dictionary->entryTables[i].entries[index].allocatedFlag = FALSE;
+            assert(dictionary->entryTables[i].entries[index].value != NULL);
+            free(dictionary->entryTables[i].entries[index].value);
+            dictionary->entryTables[i].entries[index].isAllocated = FALSE;
           }
 
-          free(dictionary->entryTables[i].entries[index].keyData);
+          if (dictionary->entryTables[i].entries[index].keyLength > 0)
+          {
+            free(dictionary->entryTables[i].entries[index].key);
+          }
 
-          dictionary->entryTables[i].entries[index].hash    = 0;
-          dictionary->entryTables[i].entries[index].keyData = NULL;
+          dictionary->entryTables[i].entries[index].isUsed = FALSE;
+
+          dictionary->entryTables[i].entryCount--;
         }
       }
     }
@@ -707,40 +739,16 @@ ulong Dictionary_count(Dictionary *dictionary)
   return count;
 }
 
-bool Dictionary_byteCopy(const void *fromData, void *toData, ulong length, void *userData)
-{
-  assert(toData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  if (fromData != NULL)
-  {
-    memcpy(toData,fromData,length);
-  }
-
-  return TRUE;
-}
-
-void Dictionary_byteFree(void *data, ulong length, void *userData)
-{
-  assert(data != NULL);
-
-  UNUSED_VARIABLE(length);
-  UNUSED_VARIABLE(userData);
-
-  free(data);
-}
-
 bool Dictionary_add(Dictionary *dictionary,
-                    const void *keyData,
+                    const void *key,
                     ulong      keyLength,
-                    const void *data,
-                    ulong      length
+                    const void *value,
+                    ulong      valueLength
                    )
 {
   ulong                hash;
   DictionaryEntryTable *dictionaryEntryTable;
-  uint                 entryIndex;
+  size_t               entryIndex;
   void                 *newData;
   uint                 tableIndex;
   uint                 newSizeIndex;
@@ -750,39 +758,39 @@ bool Dictionary_add(Dictionary *dictionary,
 
   assert(dictionary != NULL);
 
-  hash = calculateHash(keyData,keyLength);
+  hash = calculateHash(key,keyLength);
 
   SEMAPHORE_LOCKED_DO(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // update entry
-    if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&entryIndex))
+    if (findEntry(dictionary,hash,key,keyLength,&dictionaryEntryTable,&entryIndex))
     {
       assert(dictionaryEntryTable->entries != NULL);
 
-      if (dictionary->dictionaryCopyFunction != NULL)
+      if (dictionary->dictionaryInitEntryFunction != NULL)
       {
         // allocate/resize data memory
-        if (dictionaryEntryTable->entries[entryIndex].length != length)
+        if (dictionaryEntryTable->entries[entryIndex].valueLength != valueLength)
         {
           // re-allocate data memory
-          newData = realloc(dictionaryEntryTable->entries[entryIndex].data,length);
+          newData = realloc(dictionaryEntryTable->entries[entryIndex].value,valueLength);
           if (newData == NULL)
           {
             Semaphore_unlock(&dictionary->lock);
             return FALSE;
           }
 
-          dictionaryEntryTable->entries[entryIndex].data          = newData;
-          dictionaryEntryTable->entries[entryIndex].length        = length;
-          dictionaryEntryTable->entries[entryIndex].allocatedFlag = TRUE;
+          dictionaryEntryTable->entries[entryIndex].value       = newData;
+          dictionaryEntryTable->entries[entryIndex].valueLength = valueLength;
+          dictionaryEntryTable->entries[entryIndex].isAllocated = TRUE;
         }
 
-        // copy data
-        if (!dictionary->dictionaryCopyFunction(data,
-                                                dictionaryEntryTable->entries[entryIndex].data,
-                                                length,
-                                                dictionary->dictionaryCopyUserData
-                                               )
+        // init data
+        if (!dictionary->dictionaryInitEntryFunction(value,
+                                                     dictionaryEntryTable->entries[entryIndex].value,
+                                                     valueLength,
+                                                     dictionary->dictionaryInitEntryUserData
+                                                    )
            )
         {
           Semaphore_unlock(&dictionary->lock);
@@ -792,24 +800,25 @@ bool Dictionary_add(Dictionary *dictionary,
       else
       {
         // free old entry
-        if (dictionary->dictionaryFreeFunction != NULL)
+        if (dictionary->dictionaryDoneEntryFunction != NULL)
         {
-          dictionary->dictionaryFreeFunction(dictionaryEntryTable->entries[entryIndex].data,
-                                             dictionaryEntryTable->entries[entryIndex].length,
-                                             dictionary->dictionaryFreeUserData
-                                            );
+          dictionary->dictionaryDoneEntryFunction(dictionaryEntryTable->entries[entryIndex].value,
+                                                  dictionaryEntryTable->entries[entryIndex].valueLength,
+                                                  dictionary->dictionaryDoneEntryUserData
+                                                 );
         }
-        if (dictionaryEntryTable->entries[entryIndex].allocatedFlag)
+        if (dictionaryEntryTable->entries[entryIndex].isAllocated)
         {
-          free(dictionaryEntryTable->entries[entryIndex].data);
+          free(dictionaryEntryTable->entries[entryIndex].value);
         }
 
         // use orginal data
-        dictionaryEntryTable->entries[entryIndex].data          = (void*)data;
-        dictionaryEntryTable->entries[entryIndex].allocatedFlag = FALSE;
+        dictionaryEntryTable->entries[entryIndex].value       = (void*)value;
+        dictionaryEntryTable->entries[entryIndex].isAllocated = FALSE;
       }
 
       Semaphore_unlock(&dictionary->lock);
+
       return TRUE;
     }
 
@@ -818,53 +827,64 @@ bool Dictionary_add(Dictionary *dictionary,
     {
       assert(dictionaryEntryTable->entries != NULL);
 
-      // allocate key memory
-      dictionaryEntryTable->entries[entryIndex].keyData = malloc(keyLength);
-      if (dictionaryEntryTable->entries[entryIndex].keyData == NULL)
-      {
-        Semaphore_unlock(&dictionary->lock);
-        return FALSE;
-      }
-
-      // copy key data
+      // init key
       dictionaryEntryTable->entries[entryIndex].hash = hash;
-      memcpy(dictionaryEntryTable->entries[entryIndex].keyData,keyData,keyLength);
-      dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
-
-      if (dictionary->dictionaryCopyFunction != NULL)
+      if (keyLength > 0)
       {
-        // allocate data memory
-        newData = malloc(length);
-        if (newData == NULL)
+        // allocate key memory
+        dictionaryEntryTable->entries[entryIndex].key = malloc(keyLength);
+        if (dictionaryEntryTable->entries[entryIndex].key == NULL)
         {
-          free(dictionaryEntryTable->entries[entryIndex].keyData);
           Semaphore_unlock(&dictionary->lock);
           return FALSE;
         }
 
-        // copy data
-        if (!dictionary->dictionaryCopyFunction(data,
-                                                newData,
-                                                length,
-                                                dictionary->dictionaryCopyUserData
-                                               )
+        // copy key data
+        memcpy(dictionaryEntryTable->entries[entryIndex].key,key,keyLength);
+      }
+      else
+      {
+        // use key data directly
+        dictionaryEntryTable->entries[entryIndex].key = (void*)key;
+      }
+      dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
+
+      if (dictionary->dictionaryInitEntryFunction != NULL)
+      {
+        // allocate data memory
+        newData = malloc(valueLength);
+        if (newData == NULL)
+        {
+          free(dictionaryEntryTable->entries[entryIndex].key);
+          Semaphore_unlock(&dictionary->lock);
+          return FALSE;
+        }
+
+        // init data
+        if (!dictionary->dictionaryInitEntryFunction(value,
+                                                     newData,
+                                                     valueLength,
+                                                     dictionary->dictionaryInitEntryUserData
+                                                    )
            )
         {
           free(newData);
-          free(dictionaryEntryTable->entries[entryIndex].keyData);
+          free(dictionaryEntryTable->entries[entryIndex].key);
           Semaphore_unlock(&dictionary->lock);
           return FALSE;
         }
-        dictionaryEntryTable->entries[entryIndex].data          = newData;
-        dictionaryEntryTable->entries[entryIndex].allocatedFlag = TRUE;
+        dictionaryEntryTable->entries[entryIndex].value       = newData;
+        dictionaryEntryTable->entries[entryIndex].isAllocated = TRUE;
       }
       else
       {
         // use orginal data
-        dictionaryEntryTable->entries[entryIndex].data          = (void*)data;
-        dictionaryEntryTable->entries[entryIndex].allocatedFlag = FALSE;
+        dictionaryEntryTable->entries[entryIndex].value       = (void*)value;
+        dictionaryEntryTable->entries[entryIndex].isAllocated = FALSE;
       }
-      dictionaryEntryTable->entries[entryIndex].length = length;
+
+      dictionaryEntryTable->entries[entryIndex].isUsed      = TRUE;
+      dictionaryEntryTable->entries[entryIndex].valueLength = valueLength;
 
       dictionaryEntryTable->entryCount++;
 
@@ -940,53 +960,63 @@ bool Dictionary_add(Dictionary *dictionary,
     {
       assert(dictionaryEntryTable->entries != NULL);
 
-      // allocate key memory
-      dictionaryEntryTable->entries[entryIndex].keyData = malloc(keyLength);
-      if (dictionaryEntryTable->entries[entryIndex].keyData == NULL)
-      {
-        Semaphore_unlock(&dictionary->lock);
-        return FALSE;
-      }
-
-      // copy key data
+      // init key
       dictionaryEntryTable->entries[entryIndex].hash = hash;
-      memcpy(dictionaryEntryTable->entries[entryIndex].keyData,keyData,keyLength);
-      dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
-
-      if (dictionary->dictionaryCopyFunction != NULL)
+      if (keyLength > 0)
       {
-        // allocate data memory
-        newData = malloc(length);
-        if (newData == NULL)
+        // allocate key memory
+        dictionaryEntryTable->entries[entryIndex].key = malloc(keyLength);
+        if (dictionaryEntryTable->entries[entryIndex].key == NULL)
         {
-          free(dictionaryEntryTable->entries[entryIndex].keyData);
           Semaphore_unlock(&dictionary->lock);
           return FALSE;
         }
 
-        // copy data
-        if (!dictionary->dictionaryCopyFunction(data,
-                                                newData,
-                                                length,
-                                                dictionary->dictionaryCopyUserData
-                                               )
+        // copy key data
+        memcpy(dictionaryEntryTable->entries[entryIndex].key,key,keyLength);
+      }
+      else
+      {
+        dictionaryEntryTable->entries[entryIndex].key = (void*)key;
+      }
+      dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
+
+      if (dictionary->dictionaryInitEntryFunction != NULL)
+      {
+        // allocate data memory
+        newData = malloc(valueLength);
+        if (newData == NULL)
+        {
+          free(dictionaryEntryTable->entries[entryIndex].key);
+          Semaphore_unlock(&dictionary->lock);
+          return FALSE;
+        }
+
+        // init data
+        if (!dictionary->dictionaryInitEntryFunction(value,
+                                                     newData,
+                                                     valueLength,
+                                                     dictionary->dictionaryInitEntryUserData
+                                                    )
            )
         {
           free(newData);
-          free(dictionaryEntryTable->entries[entryIndex].keyData);
+          free(dictionaryEntryTable->entries[entryIndex].key);
           Semaphore_unlock(&dictionary->lock);
           return FALSE;
         }
-        dictionaryEntryTable->entries[entryIndex].data          = newData;
-        dictionaryEntryTable->entries[entryIndex].allocatedFlag = TRUE;
+        dictionaryEntryTable->entries[entryIndex].value       = newData;
+        dictionaryEntryTable->entries[entryIndex].isAllocated = TRUE;
       }
       else
       {
         // use orginal data
-        dictionaryEntryTable->entries[entryIndex].data          = (void*)data;
-        dictionaryEntryTable->entries[entryIndex].allocatedFlag = FALSE;
+        dictionaryEntryTable->entries[entryIndex].value       = (void*)value;
+        dictionaryEntryTable->entries[entryIndex].isAllocated = FALSE;
       }
-      dictionaryEntryTable->entries[entryIndex].length = length;
+
+      dictionaryEntryTable->entries[entryIndex].isUsed      = TRUE;
+      dictionaryEntryTable->entries[entryIndex].valueLength = valueLength;
 
       dictionaryEntryTable->entryCount++;
 
@@ -1016,52 +1046,66 @@ bool Dictionary_add(Dictionary *dictionary,
 
     dictionaryEntryTable = &entryTables[dictionary->entryTableCount-1];
     entryIndex = rotHash(hash,0)%TABLE_SIZES[0];
-    dictionaryEntryTable->entries[entryIndex].keyData = malloc(keyLength);
-    if (dictionaryEntryTable->entries[entryIndex].keyData == NULL)
-    {
-      Semaphore_unlock(&dictionary->lock);
-      return FALSE;
-    }
 
+
+    // init key
     dictionaryEntryTable->entries[entryIndex].hash = hash;
-
-    memcpy(dictionaryEntryTable->entries[entryIndex].keyData,keyData,keyLength);
-    dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
-
-    if (dictionary->dictionaryCopyFunction != NULL)
+    if (keyLength > 0)
     {
-      // allocate data memory
-      newData = malloc(length);
-      if (newData == NULL)
+      dictionaryEntryTable->entries[entryIndex].key = malloc(keyLength);
+      if (dictionaryEntryTable->entries[entryIndex].key == NULL)
       {
-        free(dictionaryEntryTable->entries[entryIndex].keyData);
         Semaphore_unlock(&dictionary->lock);
         return FALSE;
       }
 
-      // copy data
-      if (!dictionary->dictionaryCopyFunction(data,
-                                              newData,
-                                              length,
-                                              dictionary->dictionaryCopyUserData
-                                             )
+      memcpy(dictionaryEntryTable->entries[entryIndex].key,key,keyLength);
+    }
+    else
+    {
+      dictionaryEntryTable->entries[entryIndex].key = (void*)key;
+    }
+    dictionaryEntryTable->entries[entryIndex].keyLength = keyLength;
+
+    if (dictionary->dictionaryInitEntryFunction != NULL)
+    {
+      // allocate data memory
+      newData = malloc(valueLength);
+      if (newData == NULL)
+      {
+        if (keyLength > 0)
+        {
+          free(dictionaryEntryTable->entries[entryIndex].key);
+        }
+        Semaphore_unlock(&dictionary->lock);
+        return FALSE;
+      }
+
+      // init data
+      if (!dictionary->dictionaryInitEntryFunction(value,
+                                                   newData,
+                                                   valueLength,
+                                                   dictionary->dictionaryInitEntryUserData
+                                                  )
          )
       {
         free(newData);
-        free(dictionaryEntryTable->entries[entryIndex].keyData);
+        free(dictionaryEntryTable->entries[entryIndex].key);
         Semaphore_unlock(&dictionary->lock);
         return FALSE;
       }
-      dictionaryEntryTable->entries[entryIndex].data          = newData;
-      dictionaryEntryTable->entries[entryIndex].allocatedFlag = TRUE;
+      dictionaryEntryTable->entries[entryIndex].value       = newData;
+      dictionaryEntryTable->entries[entryIndex].isAllocated = TRUE;
     }
     else
     {
       // use orginal data
-      dictionaryEntryTable->entries[entryIndex].data          = (void*)data;
-      dictionaryEntryTable->entries[entryIndex].allocatedFlag = FALSE;
+      dictionaryEntryTable->entries[entryIndex].value       = (void*)value;
+      dictionaryEntryTable->entries[entryIndex].isAllocated = FALSE;
     }
-    dictionaryEntryTable->entries[entryIndex].length = length;
+
+    dictionaryEntryTable->entries[entryIndex].isUsed      = TRUE;
+    dictionaryEntryTable->entries[entryIndex].valueLength = valueLength;
 
     dictionaryEntryTable->entryCount++;
   }
@@ -1070,75 +1114,76 @@ bool Dictionary_add(Dictionary *dictionary,
 }
 
 void Dictionary_remove(Dictionary *dictionary,
-                       const void *keyData,
+                       const void *key,
                        ulong      keyLength
                       )
 {
   ulong                hash;
   DictionaryEntryTable *dictionaryEntryTable;
-  uint                 entryIndex;
+  size_t               entryIndex;
 
   assert(dictionary != NULL);
-  assert(keyData != NULL);
 
-  hash = calculateHash(keyData,keyLength);
+  hash = calculateHash(key,keyLength);
 
   SEMAPHORE_LOCKED_DO(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&entryIndex))
+    if (findEntry(dictionary,hash,key,keyLength,&dictionaryEntryTable,&entryIndex))
     {
       assert(dictionaryEntryTable->entries != NULL);
       assert(dictionaryEntryTable->entryCount > 0);
 
-      if (dictionary->dictionaryFreeFunction != NULL)
+      if (dictionary->dictionaryDoneEntryFunction != NULL)
       {
-        dictionary->dictionaryFreeFunction(dictionaryEntryTable->entries[entryIndex].data,
-                                           dictionaryEntryTable->entries[entryIndex].length,
-                                           dictionary->dictionaryFreeUserData
-                                          );
+        dictionary->dictionaryDoneEntryFunction(dictionaryEntryTable->entries[entryIndex].value,
+                                                dictionaryEntryTable->entries[entryIndex].valueLength,
+                                                dictionary->dictionaryDoneEntryUserData
+                                               );
       }
-      if (dictionaryEntryTable->entries[entryIndex].allocatedFlag)
+      if (dictionaryEntryTable->entries[entryIndex].isAllocated)
       {
-        assert(dictionaryEntryTable->entries[entryIndex].data != NULL);
-        free(dictionaryEntryTable->entries[entryIndex].data);
-        dictionaryEntryTable->entries[entryIndex].allocatedFlag = FALSE;
+        assert(dictionaryEntryTable->entries[entryIndex].value != NULL);
+        free(dictionaryEntryTable->entries[entryIndex].value);
+        dictionaryEntryTable->entries[entryIndex].isAllocated = FALSE;
       }
 
-      free(dictionaryEntryTable->entries[entryIndex].keyData);
+      if (dictionaryEntryTable->entries[entryIndex].keyLength > 0)
+      {
+        free(dictionaryEntryTable->entries[entryIndex].key);
+      }
 
-      dictionaryEntryTable->entries[entryIndex].hash    = 0;
-      dictionaryEntryTable->entries[entryIndex].keyData = NULL;
+      dictionaryEntryTable->entries[entryIndex].isUsed  = FALSE;
+
       dictionaryEntryTable->entryCount--;
     }
   }
 }
 
 bool Dictionary_find(Dictionary *dictionary,
-                     const void *keyData,
+                     const void *key,
                      ulong      keyLength,
-                     void       **data,
-                     ulong      *length
+                     void       **value,
+                     ulong      *valueLength
                     )
 {
   ulong                hash;
   bool                 foundFlag;
   DictionaryEntryTable *dictionaryEntryTable;
-  uint                 index;
+  size_t               index;
 
   assert(dictionary != NULL);
-  assert(keyData != NULL);
 
-  hash = calculateHash(keyData,keyLength);
+  hash = calculateHash(key,keyLength);
 
   foundFlag = FALSE;
   SEMAPHORE_LOCKED_DO(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
-    if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&index))
+    if (findEntry(dictionary,hash,key,keyLength,&dictionaryEntryTable,&index))
     {
       assert(dictionaryEntryTable->entries != NULL);
 
-      if (data   != NULL) (*data)   = (void*)dictionaryEntryTable->entries[index].data;
-      if (length != NULL) (*length) = dictionaryEntryTable->entries[index].length;
+      if (value       != NULL) (*value)       = (void*)dictionaryEntryTable->entries[index].value;
+      if (valueLength != NULL) (*valueLength) = dictionaryEntryTable->entries[index].valueLength;
       foundFlag = TRUE;
     }
   }
@@ -1173,10 +1218,10 @@ void Dictionary_doneIterator(DictionaryIterator *dictionaryIterator)
 }
 
 bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
-                        const void         **keyData,
+                        const void         **key,
                         ulong              *keyLength,
-                        void               **data,
-                        ulong              *length
+                        void               **value,
+                        ulong              *valueLength
                        )
 {
   bool            foundFlag;
@@ -1184,10 +1229,10 @@ bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
 
   assert(dictionaryIterator != NULL);
 
-  if (keyData   != NULL) (*keyData)   = NULL;
-  if (keyLength != NULL) (*keyLength) = 0;
-  if (data      != NULL) (*data)      = NULL;
-  if (length    != NULL) (*length)    = 0;
+  if (key         != NULL) (*key)         = NULL;
+  if (keyLength   != NULL) (*keyLength)   = 0;
+  if (value       != NULL) (*value)       = NULL;
+  if (valueLength != NULL) (*valueLength) = 0;
 
   foundFlag = FALSE;
   if (dictionaryIterator->i < dictionaryIterator->dictionary->entryTableCount)
@@ -1201,12 +1246,12 @@ bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
       dictionaryEntry = &dictionaryIterator->dictionary->entryTables[dictionaryIterator->i].entries[dictionaryIterator->j];
 
       // check if used/empty
-      if (dictionaryEntry->keyData != NULL)
+      if (dictionaryEntry->isUsed)
       {
-        if (keyData   != NULL) (*keyData)   = dictionaryEntry->keyData;
-        if (keyLength != NULL) (*keyLength) = dictionaryEntry->keyLength;
-        if (data      != NULL) (*data)      = (void*)dictionaryEntry->data;
-        if (length    != NULL) (*length)    = dictionaryEntry->length;
+        if (key         != NULL) (*key)         = dictionaryEntry->key;
+        if (keyLength   != NULL) (*keyLength)   = dictionaryEntry->keyLength;
+        if (value       != NULL) (*value)       = (void*)dictionaryEntry->value;
+        if (valueLength != NULL) (*valueLength) = dictionaryEntry->valueLength;
         foundFlag = TRUE;
       }
 
@@ -1236,10 +1281,10 @@ bool Dictionary_iterate(Dictionary                *dictionary,
 {
   DictionaryIterator dictionaryIterator;
   bool               okFlag;
-  const void         *keyData;
+  const void         *key;
   ulong              keyLength;
-  void               *data;
-  ulong              length;
+  void               *value;
+  ulong              valueLength;
 
   assert(dictionary != NULL);
   assert(dictionaryIterateFunction != NULL);
@@ -1247,18 +1292,18 @@ bool Dictionary_iterate(Dictionary                *dictionary,
   okFlag = TRUE;
   Dictionary_initIterator(&dictionaryIterator,dictionary);
   while (   Dictionary_getNext(&dictionaryIterator,
-                               &keyData,
+                               &key,
                                &keyLength,
-                               &data,
-                               &length
+                               &value,
+                               &valueLength
                               )
          && okFlag
         )
   {
-    okFlag = dictionaryIterateFunction(keyData,
+    okFlag = dictionaryIterateFunction(key,
                                        keyLength,
-                                       data,
-                                       length,
+                                       value,
+                                       valueLength,
                                        dictionaryIterateUserData
                                       );
   }
@@ -1273,19 +1318,30 @@ void Dictionary_debugDump(Dictionary *dictionary)
 {
   assert(dictionary != NULL);
 
+  ulong n = 0;
   Dictionary_iterate(dictionary,
-                     CALLBACK_INLINE(bool,(const void *keyData,
+                     CALLBACK_INLINE(bool,(const void *key,
                                            ulong      keyLength,
-                                           void       *data,
-                                           ulong      length,
+                                           void       *value,
+                                           ulong      valueLength,
                                            void       *userData
                                           ),
                      {
-                       UNUSED_VARIABLE(keyLength);
-                       UNUSED_VARIABLE(length);
                        UNUSED_VARIABLE(userData);
 
-                       fwrite(keyData,1,keyLength,stdout); printf(": %p %lu\n",(const char*)data,length);
+                       printf("%4u %p %lu ",n,key,keyLength);
+                       for (size_t i = 0; i < keyLength; i++)
+                       {
+                         printf("%02x",((const byte*)key)[i]);
+                       }
+                       printf(": ");
+                       printf("%p %lu ",value,valueLength);
+                       for (size_t i = 0; i < valueLength; i++)
+                       {
+                         printf("%02x",((const byte*)value)[i]);
+                       }
+                       printf("\n");
+                       n++;
 
                        return TRUE;
                      },

@@ -202,7 +202,7 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   {
     HALT_FATAL_ERROR("Cannot initialize name dictionary semaphore!");
   }
-  Dictionary_init(&restoreInfo->namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Dictionary_init(&restoreInfo->namesDictionary,DICTIONARY_BYTE_INIT_ENTRY,DICTIONARY_BYTE_DONE_ENTRY,DICTIONARY_BYTE_COMPARE_ENTRY);
 
   if (!Semaphore_init(&restoreInfo->fragmentListLock,SEMAPHORE_TYPE_BINARY))
   {

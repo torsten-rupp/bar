@@ -2526,7 +2526,7 @@ LOCAL void indexThreadCode(void)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
-                    "Done import %d old index databases",
+                    "Done import %d old index database(s)",
                     oldDatabaseCount
                    );
       }
