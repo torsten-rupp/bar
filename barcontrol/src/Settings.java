@@ -253,7 +253,8 @@ public class Settings
       for (double size : paneSizes.sizes)
       {
         if (buffer.length() > 0) buffer.append(',');
-        buffer.append(String.format("%.1f",size*100.0));
+        // Note: only integer to avoid ,.-problem with different locales
+        buffer.append(String.format("%d",(int)(size*100.0)));
       }
       return buffer.toString();
     }
