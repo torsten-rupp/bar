@@ -2460,6 +2460,9 @@ LOCAL Errors testStorages(IndexHandle             *indexHandle,
 
   assert(indexHandle != NULL);
 
+// TODO: remove indexHandle
+  UNUSED_VARIABLE(indexHandle);
+
   // test storage file
   error = Command_test(storageNameList,
                        NULL,  // includeEntryList,
@@ -2988,7 +2991,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
 
         if (jobNode != NULL)
         {
-          Storage_parseName(&storageSpecifier,jobNode->job.storageName);
           Job_copyOptions(&jobOptions, &jobNode->job.options);
         }
         else
@@ -3117,15 +3119,50 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
       // delete storage file
       if (error == ERROR_NONE)
       {
+        // delete storage
         if (Storage_exists(&storageInfo,
                            NULL  // archiveName
                           )
            )
         {
-          // delete storage
           error = Storage_delete(&storageInfo,
                                  NULL  // archiveName
                                 );
+          if (error == ERROR_NONE)
+          {
+            if (createdDateTime > 0LL)
+            {
+              logMessage(NULL,  // logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Deleted storage #%"PRIi64": '%s', created at %s",
+                         INDEX_DATABASE_ID(storageId),
+                         String_cString(storageName),
+                         String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,TIME_TYPE_LOCAL,NULL))
+                        );
+            }
+            else
+            {
+              logMessage(NULL,  // logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Deleted storage #%"PRIi64": '%s'",
+                         INDEX_DATABASE_ID(storageId),
+                         String_cString(storageName)
+                        );
+            }
+          }
+          else
+          {
+            if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+            {
+              logMessage(NULL,  // logHandle,
+                         LOG_TYPE_ALWAYS,
+                         "Delete storage #%"PRIi64": '%s' fail (error: %s)",
+                         INDEX_DATABASE_ID(storageId),
+                         String_cString(storageName),
+                         Error_getText(error)
+                        );
+            }
+          }
         }
 
         // prune empty directories
@@ -3140,6 +3177,12 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
       Job_doneOptions(&jobOptions);
     }
     Storage_doneSpecifier(&storageSpecifier);
+    if (error != ERROR_NONE)
+    {
+      String_delete(string);
+      String_delete(storageName);
+      return error;
+    }
     if (isQuit())
     {
       String_delete(string);
@@ -3148,49 +3191,15 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
     }
 
     // purge index
-    if (error == ERROR_NONE)
+    error = IndexStorage_purge(indexHandle,
+                               storageId,
+                               NULL  // progressInfo
+                              );
+    if (error != ERROR_NONE)
     {
-      error = IndexStorage_purge(indexHandle,
-                                 storageId,
-                                 NULL  // progressInfo
-                                );
-    }
-
-    // log
-    if (error == ERROR_NONE)
-    {
-      if (createdDateTime > 0LL)
-      {
-        logMessage(NULL,  // logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Deleted storage #%"PRIi64": '%s', created at %s",
-                   INDEX_DATABASE_ID(storageId),
-                   String_cString(storageName),
-                   String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,TIME_TYPE_LOCAL,NULL))
-                  );
-      }
-      else
-      {
-        logMessage(NULL,  // logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Deleted storage #%"PRIi64": '%s'",
-                   INDEX_DATABASE_ID(storageId),
-                   String_cString(storageName)
-                  );
-      }
-    }
-    else
-    {
-      if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
-      {
-        logMessage(NULL,  // logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Delete storage #%"PRIi64": '%s' fail (error: %s)",
-                   INDEX_DATABASE_ID(storageId),
-                   String_cString(storageName),
-                   Error_getText(error)
-                  );
-      }
+      String_delete(string);
+      String_delete(storageName);
+      return error;
     }
   }
 
@@ -3198,7 +3207,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
   String_delete(string);
   String_delete(storageName);
 
-  return error;
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -3333,12 +3342,53 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
     if (!INDEX_ID_IS_NONE(deleteStorageId))
     {
       error = deleteStorage(indexHandle,deleteStorageId);
+      if (error == ERROR_NONE)
+      {
+        if (createdDateTime > 0LL)
+        {
+          logMessage(NULL,  // logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Deleted entity #%"PRIi64": job '%s', created at %s",
+                     INDEX_DATABASE_ID(entityId),
+                     String_cString(jobName),
+                     String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,TIME_TYPE_LOCAL,NULL))
+                    );
+        }
+        else
+        {
+          logMessage(NULL,  // logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Deleted entity #%"PRIi64": job '%s'",
+                     INDEX_DATABASE_ID(entityId),
+                     String_cString(jobName)
+                    );
+        }
+      }
+      else
+      {
+        if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+        {
+          logMessage(NULL,  // logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Delete entity #%"PRIi64": job '%s' fail (error: %s)",
+                     INDEX_DATABASE_ID(entityId),
+                     String_cString(jobName),
+                     Error_getText(error)
+                    );
+        }
+      }
     }
   }
   while (   !INDEX_ID_IS_NONE(deleteStorageId)
          && (error == ERROR_NONE)
          && !isQuit()
         );
+  if (error != ERROR_NONE)
+  {
+    String_delete(string);
+    String_delete(jobName);
+    return error;
+  }
   if (isQuit())
   {
     String_delete(string);
@@ -3347,46 +3397,12 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   }
 
   // delete entity index
-  if (error == ERROR_NONE)
+  error = Index_deleteEntity(indexHandle,entityId);
+  if (error != ERROR_NONE)
   {
-    error = Index_deleteEntity(indexHandle,entityId);
-  }
-
-  // log
-  if (error == ERROR_NONE)
-  {
-    if (createdDateTime > 0LL)
-    {
-      logMessage(NULL,  // logHandle,
-                 LOG_TYPE_ALWAYS,
-                 "Deleted entity #%"PRIi64": job '%s', created at %s",
-                 INDEX_DATABASE_ID(entityId),
-                 String_cString(jobName),
-                 String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,TIME_TYPE_LOCAL,NULL))
-                );
-    }
-    else
-    {
-      logMessage(NULL,  // logHandle,
-                 LOG_TYPE_ALWAYS,
-                 "Deleted entity #%"PRIi64": job '%s'",
-                 INDEX_DATABASE_ID(entityId),
-                 String_cString(jobName)
-                );
-    }
-  }
-  else
-  {
-    if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
-    {
-      logMessage(NULL,  // logHandle,
-                 LOG_TYPE_ALWAYS,
-                 "Delete entity #%"PRIi64": job '%s' fail (error: %s)",
-                 INDEX_DATABASE_ID(entityId),
-                 String_cString(jobName),
-                 Error_getText(error)
-                );
-    }
+    String_delete(string);
+    String_delete(jobName);
+    return error;
   }
 
   // free resources
@@ -3481,7 +3497,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                                )
         )
   {
-    (void)deleteEntity(indexHandle,entityId);
+    error = deleteEntity(indexHandle,entityId);
   }
   Index_doneList(&indexQueryHandle);
   if (error != ERROR_NONE)
@@ -3495,16 +3511,27 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
 
   // delete UUID
   error = Index_deleteUUID(indexHandle,uuidId);
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Deleted UUID '%s'",
+               String_cString(jobUUID)
+              );
+  }
+  else
+  {
+    if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Delete UUID '%s' fail (error: %s)",
+                 String_cString(jobUUID),
+                 Error_getText(error)
+                );
+    }
     return error;
   }
-//TODO: better info?
-  logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             "Deleted UUID '%s'",
-             String_cString(jobUUID)
-            );
 
   return ERROR_NONE;
 }
@@ -4031,6 +4058,8 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                          )
                 {
                   // over max-keep limit -> find oldest entry of same type and persistence
+
+                  // mark expired entity+oldest entity as processed
                   Array_append(&entityIdArray,&jobEntityNode->entityId);
                   do
                   {
@@ -4069,8 +4098,6 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                             NULL,
                             NULL
                            );
-
-                  // mark expired entity+oldest entity as processed
                 }
                 else if  (   (jobEntityNode->persistenceNode->maxAge != AGE_FOREVER)
                           && (age > (uint)jobEntityNode->persistenceNode->maxAge)
@@ -5391,8 +5418,8 @@ LOCAL void updateIndexThreadCode(void)
 
           // collect possible login passwords for server
           List_clear(&loginList);
-          login.name     = storageSpecifier.loginName;
-          login.password = storageSpecifier.loginPassword;
+          login.name     = storageSpecifier.userName;
+          login.password = &storageSpecifier.password;
           JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
             JOB_LIST_ITERATE(jobNode)
@@ -5401,11 +5428,11 @@ LOCAL void updateIndexThreadCode(void)
               if (   (error == ERROR_NONE)
                   && (storageSpecifier.type == addStorageSpecifier.type)
                   && String_equals(storageSpecifier.hostName,addStorageSpecifier.hostName)
-                  && !Password_isEmpty(storageSpecifier.loginPassword)
+                  && !Password_isEmpty(&storageSpecifier.password)
                   && !List_contains(&loginList,NULL,CALLBACK_((ListNodeEqualsFunction)loginEquals,&login))
                  )
               {
-                addLogin(&loginList,storageSpecifier.loginName,storageSpecifier.loginPassword);
+                addLogin(&loginList,storageSpecifier.userName,&storageSpecifier.password);
               }
             }
           }
@@ -5431,8 +5458,8 @@ LOCAL void updateIndexThreadCode(void)
           loginFlag = (error == ERROR_NONE);
           LIST_ITERATEX(&loginList,loginNode,!loginFlag)
           {
-            String_set(addStorageSpecifier.loginName,loginNode->name);
-            Password_set(addStorageSpecifier.loginPassword,loginNode->password);
+            String_set(addStorageSpecifier.userName,loginNode->name);
+            Password_set(&addStorageSpecifier.password,loginNode->password);
             error = Storage_init(&storageInfo,
                                  NULL,  // masterIO
                                  &addStorageSpecifier,
@@ -8920,7 +8947,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
                               serverNode->server.id,
                               serverNode->server.name,
                               "FTP",
-                              serverNode->server.ftp.loginName,
+                              serverNode->server.ftp.userName,
                               serverNode->server.maxConnectionCount,
                               serverNode->server.maxStorageSize
                              );
@@ -8932,7 +8959,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
                               serverNode->server.name,
                               "SSH",
                               serverNode->server.ssh.port,
-                              serverNode->server.ssh.loginName,
+                              serverNode->server.ssh.userName,
                               serverNode->server.maxConnectionCount,
                               serverNode->server.maxStorageSize
                              );
@@ -8944,7 +8971,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
                               serverNode->server.name,
                               "WEBDAV",
                               serverNode->server.webDAV.port,
-                              serverNode->server.webDAV.loginName,
+                              serverNode->server.webDAV.userName,
                               serverNode->server.maxConnectionCount,
                               serverNode->server.maxStorageSize
                              );
@@ -8956,7 +8983,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
                               serverNode->server.name,
                               "WEBDAVS",
                               serverNode->server.webDAV.port,
-                              serverNode->server.webDAV.loginName,
+                              serverNode->server.webDAV.userName,
                               serverNode->server.maxConnectionCount,
                               serverNode->server.maxStorageSize
                              );
@@ -8967,7 +8994,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
                               serverNode->server.id,
                               serverNode->server.name,
                               "SMB",
-                              serverNode->server.smb.loginName,
+                              serverNode->server.smb.userName,
                               serverNode->server.smb.shareName,
                               serverNode->server.maxConnectionCount,
                               serverNode->server.maxStorageSize
@@ -9014,7 +9041,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   String      name;
   ServerTypes serverType;
   uint        port;
-  String      loginName;
+  String      userName;
   String      password;
 // TODO:
   String      share;
@@ -9029,6 +9056,8 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
+// TODO: use share
+UNUSED_VARIABLE(share);
 
   // get name, server type, login name, port, password, public/private key, max. connections, max. storage size
   name = String_new();
@@ -9050,11 +9079,11 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     String_delete(name);
     return;
   }
-  loginName = String_new();
-  if (!StringMap_getString(argumentMap,"loginName",loginName,NULL))
+  userName = String_new();
+  if (!StringMap_getString(argumentMap,"loginName",userName,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"loginName=<name>");
-    String_delete(loginName);
+    String_delete(userName);
     String_delete(name);
     return;
   }
@@ -9079,7 +9108,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     case SERVER_TYPE_FILE:
       break;
     case SERVER_TYPE_FTP:
-      String_set(serverNode->server.ftp.loginName,loginName);
+      String_set(serverNode->server.ftp.userName,userName);
       if (!String_isEmpty(password))
       {
         Password_setString(&serverNode->server.ftp.password,password);
@@ -9087,7 +9116,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       break;
     case SERVER_TYPE_SSH:
       serverNode->server.ssh.port = port;
-      String_set(serverNode->server.ssh.loginName,loginName);
+      String_set(serverNode->server.ssh.userName,userName);
       if (!String_isEmpty(password))
       {
         Password_setString(&serverNode->server.ssh.password,password);
@@ -9098,7 +9127,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     case SERVER_TYPE_WEBDAV:
     case SERVER_TYPE_WEBDAVS:
       serverNode->server.webDAV.port = port;
-      String_set(serverNode->server.webDAV.loginName,loginName);
+      String_set(serverNode->server.webDAV.userName,userName);
       if (!String_isEmpty(password))
       {
         Password_setString(&serverNode->server.webDAV.password,password);
@@ -9107,7 +9136,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
       Configuration_setKeyString(&serverNode->server.webDAV.privateKey,NULL,privateKey);
       break;
     case SERVER_TYPE_SMB:
-      String_set(serverNode->server.smb.loginName,loginName);
+      String_set(serverNode->server.smb.userName,userName);
       if (!String_isEmpty(password))
       {
         Password_setString(&serverNode->server.smb.password,password);
@@ -9132,7 +9161,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
-    String_delete(loginName);
+    String_delete(userName);
     String_delete(name);
     return;
   }
@@ -9143,7 +9172,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   String_delete(privateKey);
   String_delete(publicKey);
   String_delete(password);
-  String_delete(loginName);
+  String_delete(userName);
   String_delete(name);
 }
 
@@ -9176,7 +9205,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   String      name;
   ServerTypes serverType;
   uint        port;
-  String      loginName;
+  String      userName;
   String      password;
   String      publicKey;
   String      privateKey;
@@ -9215,11 +9244,11 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     String_delete(name);
     return;
   }
-  loginName = String_new();
-  if (!StringMap_getString(argumentMap,"loginName",loginName,NULL))
+  userName = String_new();
+  if (!StringMap_getString(argumentMap,"loginName",userName,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"loginName=<name>");
-    String_delete(loginName);
+    String_delete(userName);
     String_delete(name);
     return;
   }
@@ -9243,7 +9272,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
       String_delete(privateKey);
       String_delete(publicKey);
       String_delete(password);
-      String_delete(loginName);
+      String_delete(userName);
       String_delete(name);
       return;
     }
@@ -9257,7 +9286,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
       case SERVER_TYPE_FILE:
         break;
       case SERVER_TYPE_FTP:
-        String_set(serverNode->server.ftp.loginName,loginName);
+        String_set(serverNode->server.ftp.userName,userName);
         if (!String_isEmpty(password))
         {
           Password_setString(&serverNode->server.ftp.password,password);
@@ -9265,7 +9294,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         break;
       case SERVER_TYPE_SSH:
         serverNode->server.ssh.port = port;
-        String_set(serverNode->server.ssh.loginName,loginName);
+        String_set(serverNode->server.ssh.userName,userName);
         if (!String_isEmpty(password))
         {
           Password_setString(&serverNode->server.ssh.password,password);
@@ -9276,7 +9305,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
       case SERVER_TYPE_WEBDAV:
       case SERVER_TYPE_WEBDAVS:
         serverNode->server.webDAV.port = port;
-        String_set(serverNode->server.webDAV.loginName,loginName);
+        String_set(serverNode->server.webDAV.userName,userName);
         if (!String_isEmpty(password))
         {
           Password_setString(&serverNode->server.webDAV.password,password);
@@ -9285,7 +9314,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
         Configuration_setKeyString(&serverNode->server.webDAV.privateKey,NULL,privateKey);
         break;
       case SERVER_TYPE_SMB:
-        String_set(serverNode->server.smb.loginName,loginName);
+        String_set(serverNode->server.smb.userName,userName);
         if (!String_isEmpty(password))
         {
           Password_setString(&serverNode->server.smb.password,password);
@@ -9305,7 +9334,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
       String_delete(privateKey);
       String_delete(publicKey);
       String_delete(password);
-      String_delete(loginName);
+      String_delete(userName);
       String_delete(name);
       return;
     }
@@ -9317,7 +9346,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
   String_delete(privateKey);
   String_delete(publicKey);
   String_delete(password);
-  String_delete(loginName);
+  String_delete(userName);
   String_delete(name);
 }
 

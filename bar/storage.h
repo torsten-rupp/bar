@@ -198,8 +198,8 @@ typedef struct
   String       hostName;                                     // host name
   uint         hostPort;                                     // host port
   bool         sslFlag;                                      // TRUE for SSL
-  String       loginName;                                    // login name
-  Password     *loginPassword;                               // login password
+  String       userName;                                     // user name
+  Password     password;                                     // password
   String       shareName;                                    // SMB/CIFS share name
   String       deviceName;                                   // optical/device name
 
@@ -280,14 +280,8 @@ typedef struct
       struct
       {
         uint                    serverId;                     // id of allocated server
-//        String                  hostName;                     // ssh server host name
-//        uint                    hostPort;                     // ssh server port number
-//        String                  loginName;                    // ssh login name
-//        Password                *password;                    // ssh login password
-//        String                  sshPublicKeyFileName;         // ssh public key file name
-//        String                  sshPrivateKeyFileName;        // ssh private key file name
-        Key                     publicKey;                      // ssh public key data (ssh,scp,sftp)
-        Key                     privateKey;                     // ssh private key data (ssh,scp,sftp)
+        Key                     publicKey;                    // ssh public key data (ssh,scp,sftp)
+        Key                     privateKey;                   // ssh private key data (ssh,scp,sftp)
         StorageBandWidthLimiter bandWidthLimiter;             // band width limiter data
       } ssh;
     #endif /* HAVE_SSH2 */
@@ -297,8 +291,6 @@ typedef struct
       struct
       {
         uint                    serverId;                     // id of allocated server
-        String                  sshPublicKeyFileName;         // ssh public key file name
-        String                  sshPrivateKeyFileName;        // ssh private key file name
         Key                     publicKey;                    // ssh public key data (ssh,scp,sftp)
         Key                     privateKey;                   // ssh private key data (ssh,scp,sftp)
         StorageBandWidthLimiter bandWidthLimiter;             // band width limiter data
@@ -310,8 +302,6 @@ typedef struct
       struct
       {
         uint                    serverId;                     // id of allocated server
-        String                  sshPublicKeyFileName;         // ssh public key file name
-        String                  sshPrivateKeyFileName;        // ssh private key file name
         Key                     publicKey;                    // ssh public key data (ssh,scp,sftp)
         Key                     privateKey;                   // ssh private key data (ssh,scp,sftp)
         StorageBandWidthLimiter bandWidthLimiter;             // band width limiter data
@@ -897,15 +887,15 @@ INLINE bool Storage_isInFileSystem(const StorageSpecifier *storageSpecifier)
 * Name   : Storage_parseFTPSpecifier
 * Purpose: parse FTP specifier:
 *            [<login name>[:<login password>]@]<host name>[:<host port>]
-* Input  : ftpSpecifier  - FTP specifier string
-*          hostName      - host name variable (can be NULL)
-*          hostPort      - host port variable (can be NULL)
-*          loginName     - login name variable (can be NULL)
-*          loginPassword - login password variable (can be NULL)
-* Output : hostName      - host name
-*          hostPort      - host port
-*          loginName     - login name
-*          loginPassword - login password
+* Input  : ftpSpecifier - FTP specifier string
+*          hostName     - host name variable (can be NULL)
+*          hostPort     - host port variable (can be NULL)
+*          userName     - user name variable (can be NULL)
+*          password     - password variable (can be NULL)
+* Output : hostName - host name
+*          hostPort - host port
+*          userName - user name
+*          password - password
 * Return : TRUE if FTP specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
@@ -913,8 +903,8 @@ INLINE bool Storage_isInFileSystem(const StorageSpecifier *storageSpecifier)
 bool Storage_parseFTPSpecifier(ConstString ftpSpecifier,
                                String      hostName,
                                uint        *hostPort,
-                               String      loginName,
-                               Password    *loginPassword
+                               String      userName,
+                               Password    *password
                               );
 
 /***********************************************************************\
@@ -924,10 +914,10 @@ bool Storage_parseFTPSpecifier(ConstString ftpSpecifier,
 * Input  : sshSpecifier - ssh specifier string
 *          hostName     - host name variable (can be NULL)
 *          hostPort     - host port number variable (can be NULL)
-*          loginName    - login name variable (can be NULL)
+*          userName     - user name variable (can be NULL)
 * Output : hostName  - host name (can be NULL)
 *          hostPort  - host port number (can be NULL)
-*          loginName - login name (can be NULL)
+*          userName  - user name (can be NULL)
 * Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
@@ -935,7 +925,7 @@ bool Storage_parseFTPSpecifier(ConstString ftpSpecifier,
 bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
                                String      hostName,
                                uint        *hostPort,
-                               String      loginName
+                               String      userName
                               );
 
 /***********************************************************************\
@@ -945,11 +935,11 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
 * Input  : sshSpecifier - ssh specifier string
 *          hostName     - host name variable (can be NULL)
 *          hostPort     - host port number variable (can be NULL)
-*          loginName    - login name variable (can be NULL)
-* Output : hostName      - host name (can be NULL)
-*          hostPort      - host port number (can be NULL)
-*          loginName     - login name (can be NULL)
-*          loginPassword - login password
+*          userName     - user name variable (can be NULL)
+* Output : hostName - host name (can be NULL)
+*          hostPort - host port number (can be NULL)
+*          userName - user name (can be NULL)
+*          password - password
 * Return : TRUE if ssh specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
@@ -957,8 +947,8 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
 bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
                                String      hostName,
                                uint        *hostPort,
-                               String      loginName,
-                               Password    *loginPassword
+                               String      userName,
+                               Password    *password
                               );
 
 /***********************************************************************\
@@ -968,11 +958,11 @@ bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
 * Input  : sftpSpecifier - sftp specifier string
 *          hostName      - host name variable (can be NULL)
 *          hostPort      - host port number variable (can be NULL)
-*          loginName     - login name variable (can be NULL)
-* Output : hostName      - host name (can be NULL)
-*          hostPort      - host port number (can be NULL)
-*          loginName     - login name (can be NULL)
-*          loginPassword - login password
+*          userName      - user name variable (can be NULL)
+* Output : hostName - host name (can be NULL)
+*          hostPort - host port number (can be NULL)
+*          userName - user name (can be NULL)
+*          password - password
 * Return : TRUE if sfto specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
@@ -980,8 +970,8 @@ bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
 bool Storage_parseSFTPSpecifier(ConstString sftpSpecifier,
                                 String      hostName,
                                 uint        *hostPort,
-                                String      loginName,
-                                Password    *loginPassword
+                                String      userName,
+                                Password    *password
                                );
 
 /***********************************************************************\
@@ -991,12 +981,12 @@ bool Storage_parseSFTPSpecifier(ConstString sftpSpecifier,
 * Input  : webdavSpecifier - WebDAV specifier string
 *          hostName        - host name variable (can be NULL)
 *          hostPort        - host port number variable (can be NULL)
-*          loginName       - login name variable (can be NULL)
-*          loginPassword   - login password variable (can be NULL)
-* Output : hostName      - host name (can be NULL)
-*          hostPort      - host port number (can be NULL)
-*          loginName     - login name (can be NULL)
-*          loginPassword - login password
+*          userName        - user name variable (can be NULL)
+*          password        - password variable (can be NULL)
+* Output : hostName - host name (can be NULL)
+*          hostPort - host port number (can be NULL)
+*          userName - user name (can be NULL)
+*          password - password
 * Return : TRUE if WebDAV specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
@@ -1004,8 +994,8 @@ bool Storage_parseSFTPSpecifier(ConstString sftpSpecifier,
 bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
                                   String      hostName,
                                   uint        *hostPort,
-                                  String      loginName,
-                                  Password    *loginPassword
+                                  String      userName,
+                                  Password    *password
                                  );
 
 /***********************************************************************\
@@ -1014,20 +1004,20 @@ bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
 *            [<login name>[:<login password>]@]<host name>
 * Input  : smbSpecifier  - SMB specifier string
 *          hostName      - host name variable (can be NULL)
-*          loginName     - login name variable (can be NULL)
+*          userName      - user name variable (can be NULL)
 *          share         - share name variable (can be NULL)
-* Output : hostName      - host name (can be NULL)
-*          loginName     - login name (can be NULL)
-*          loginPassword - login password
-*          shareName     - share name
+* Output : hostName  - host name (can be NULL)
+*          userName  - user name (can be NULL)
+*          password  - password
+*          shareName - share name
 * Return : TRUE if SMB specifier parsed, FALSE if specifier invalid
 * Notes  : -
 \***********************************************************************/
 
 bool Storage_parseSMBSpecifier(ConstString sftpSpecifier,
                                String      hostName,
-                               String      loginName,
-                               Password    *loginPassword,
+                               String      userName,
+                               Password    *password,
                                String      shareName
                               );
 
@@ -1735,9 +1725,9 @@ Errors Storage_copy(StorageInfo                 *fromStorageInfo,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_rename(const StorageInfo *storageInfo,
-                      ConstString       oldArchiveName,
-                      ConstString       newArchiveName
+Errors Storage_rename(StorageInfo *storageInfo,
+                      ConstString oldArchiveName,
+                      ConstString newArchiveName
                      );
 
 /***********************************************************************\

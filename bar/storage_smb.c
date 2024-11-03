@@ -104,8 +104,8 @@ LOCAL void StorageSMB_doneAll(void)
 * Purpose: parse SMB/CIFS specifier
 * Input  : smbSpecifier - SMB/CIFS specifier
 * Output : hostName      - host name
-*          loginName     - login name
-*          loginPassword - login password
+*          userName      - user name
+*          password      - password
 *          shareName     - share name
 * Return : TRUE iff parsed
 * Notes  : -
@@ -113,8 +113,8 @@ LOCAL void StorageSMB_doneAll(void)
 
 LOCAL bool StorageSMB_parseSpecifier(ConstString smbSpecifier,
                                      String      hostName,
-                                     String      loginName,
-                                     Password    *loginPassword,
+                                     String      userName,
+                                     Password    *password,
                                      String      shareName
                                     )
 {
@@ -126,42 +126,42 @@ LOCAL bool StorageSMB_parseSpecifier(ConstString smbSpecifier,
 
   assert(smbSpecifier != NULL);
   assert(hostName != NULL);
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
   String_clear(hostName);
-  String_clear(loginName);
-  if (loginPassword != NULL) Password_clear(loginPassword);
+  String_clear(userName);
+  if (password != NULL) Password_clear(password);
   String_clear(shareName);
 
   s = String_new();
   t = String_new();
-  if      (String_matchCString(smbSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?):([^:]*?)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,shareName,NULL))
+  if      (String_matchCString(smbSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?):([^:]*?)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,shareName,NULL))
   {
     // <login name>:<login password>@<host name>:<share>
-    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
-    if (loginPassword != NULL) Password_setString(loginPassword,s);
+    String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (password != NULL) Password_setString(password,s);
 
     result = TRUE;
   }
-  else if (String_matchCString(smbSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(smbSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>:<login password>@<host name>
-    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
-    if (loginPassword != NULL) Password_setString(loginPassword,s);
+    String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (password != NULL) Password_setString(password,s);
 
     result = TRUE;
   }
-  else if (String_matchCString(smbSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+):([^:]*?)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,shareName,NULL))
+  else if (String_matchCString(smbSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+):([^:]*?)/{0,1}$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,shareName,NULL))
   {
     // <login name>@<host name>:<share>
-    if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (userName != NULL) String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
 
     result = TRUE;
   }
-  else if (String_matchCString(smbSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(smbSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+)/{0,1}$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>@<host name>
-    if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (userName != NULL) String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
 
     result = TRUE;
   }
@@ -253,13 +253,13 @@ LOCAL String StorageSMB_getName(String                 string,
   }
 
   String_appendCString(string,"smb://");
-  if (!String_isEmpty(storageSpecifier->loginName))
+  if (!String_isEmpty(storageSpecifier->userName))
   {
-    String_append(string,storageSpecifier->loginName);
-    if (!Password_isEmpty(storageSpecifier->loginPassword))
+    String_append(string,storageSpecifier->userName);
+    if (!Password_isEmpty(&storageSpecifier->password))
     {
       String_appendChar(string,':');
-      PASSWORD_DEPLOY_DO(plainPassword,storageSpecifier->loginPassword)
+      PASSWORD_DEPLOY_DO(plainPassword,&storageSpecifier->password)
       {
         String_appendCString(string,plainPassword);
       }
@@ -337,8 +337,8 @@ LOCAL void StorageSMB_getPrintableName(String                 string,
 * Name   : initSMBLogin
 * Purpose: init SMB/CIFS login
 * Input  : hostName                - host name
-*          loginName               - login name
-*          loginPassword           - login password
+*          userName                - user name
+*          password                - password
 *          jobOptions              - job options
 *          getNamePasswordFunction - get password call-back (can be
 *                                    NULL)
@@ -349,8 +349,8 @@ LOCAL void StorageSMB_getPrintableName(String                 string,
 \***********************************************************************/
 
 LOCAL bool initSMBLogin(ConstString             hostName,
-                        String                  loginName,
-                        Password                *loginPassword,
+                        String                  userName,
+                        Password                *password,
                         const JobOptions        *jobOptions,
                         GetNamePasswordFunction getNamePasswordFunction,
                         void                    *getNamePasswordUserData
@@ -360,8 +360,8 @@ LOCAL bool initSMBLogin(ConstString             hostName,
   bool   initFlag;
 
   assert(!String_isEmpty(hostName));
-  assert(loginName != NULL);
-  assert(loginPassword != NULL);
+  assert(userName != NULL);
+  assert(password != NULL);
 
   initFlag = FALSE;
 
@@ -376,10 +376,10 @@ LOCAL bool initSMBLogin(ConstString             hostName,
           case RUN_MODE_INTERACTIVE:
             if (Password_isEmpty(&defaultSMBPassword))
             {
-              s = !String_isEmpty(loginName)
-                    ? String_format(String_new(),"SMB login password for %S@%S",loginName,hostName)
+              s = !String_isEmpty(userName)
+                    ? String_format(String_new(),"SMB login password for %S@%S",userName,hostName)
                     : String_format(String_new(),"SMB login password for %S",hostName);
-              if (Password_input(loginPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+              if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
               {
                 initFlag = TRUE;
               }
@@ -387,7 +387,7 @@ LOCAL bool initSMBLogin(ConstString             hostName,
             }
             else
             {
-              Password_set(loginPassword,&defaultSMBPassword);
+              Password_set(password,&defaultSMBPassword);
               initFlag = TRUE;
             }
             break;
@@ -395,11 +395,11 @@ LOCAL bool initSMBLogin(ConstString             hostName,
           case RUN_MODE_SERVER:
             if (getNamePasswordFunction != NULL)
             {
-              s = !String_isEmpty(loginName)
-                    ? String_format(String_new(),"%S@%S",loginName,hostName)
+              s = !String_isEmpty(userName)
+                    ? String_format(String_new(),"%S@%S",userName,hostName)
                     : String_format(String_new(),"%S",hostName);
-              if (getNamePasswordFunction(loginName,
-                                          loginPassword,
+              if (getNamePasswordFunction(userName,
+                                          password,
                                           PASSWORD_TYPE_SMB,
                                           String_cString(s),
                                           TRUE,
@@ -485,10 +485,10 @@ LOCAL void smb2DoneSharePath(String shareName,
 /***********************************************************************\
 * Name   : smb2ConnectShare
 * Purpose: connect SMB/CIFS share
-* Input  : hostName      - host name
-*          loginName     - login name
-*          loginPassword - login password
-*          shareName     - SMB/CIFS share name
+* Input  : hostName  - host name
+*          userName  - user name
+*          password  - password
+*          shareName - SMB/CIFS share name
 * Output : smbContext - SMB context
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -496,8 +496,8 @@ LOCAL void smb2DoneSharePath(String shareName,
 
 LOCAL Errors smb2ConnectShare(struct smb2_context **smbContext,
                               ConstString         hostName,
-                              ConstString         loginName,
-                              const Password      *loginPassword,
+                              ConstString         userName,
+                              const Password      *password,
                               ConstString         shareName
                              )
 {
@@ -517,7 +517,7 @@ LOCAL Errors smb2ConnectShare(struct smb2_context **smbContext,
   smb2_set_security_mode(*smbContext, SMB2_NEGOTIATE_SIGNING_ENABLED);
 // TODO: number
   smb2_set_authentication(*smbContext, 1);
-  PASSWORD_DEPLOY_DO(plainPassword,loginPassword)
+  PASSWORD_DEPLOY_DO(plainPassword,password)
   {
     smb2_set_password(*smbContext,plainPassword);
   }
@@ -526,7 +526,7 @@ LOCAL Errors smb2ConnectShare(struct smb2_context **smbContext,
   smbErrorCode = smb2_connect_share(*smbContext,
                                     String_cString(hostName),
                                     String_cString(shareName),
-                                    String_cString(loginName)
+                                    String_cString(userName)
                                    );
   assert(smbErrorCode <= 0);
   if (smbErrorCode != 0)
@@ -559,11 +559,11 @@ LOCAL void smb2DisconnectShare(struct smb2_context *smbContext)
 /***********************************************************************\
 * Name   : smb2stat
 * Purpose: get SMB/CIFS file status
-* Input  : hostName      - host name
-*          loginName     - login name
-*          loginPassword - login password
-*          shareName     - SMB/CIFS share name
-*          path          - file/directory path
+* Input  : hostName  - host name
+*          userName  - user name
+*          password  - password
+*          shareName - SMB/CIFS share name
+*          path      - file/directory path
 * Output : smbStatus - SMB/CIFS status
 * Return : -
 * Notes  : -
@@ -571,8 +571,8 @@ LOCAL void smb2DisconnectShare(struct smb2_context *smbContext)
 
 LOCAL Errors smb2stat(struct smb2_stat_64 *smbStatus,
                       ConstString         hostName,
-                      ConstString         loginName,
-                      const Password      *loginPassword,
+                      ConstString         userName,
+                      const Password      *password,
                       ConstString         shareName,
                       ConstString         path
                      )
@@ -583,8 +583,8 @@ LOCAL Errors smb2stat(struct smb2_stat_64 *smbStatus,
 
   error = smb2ConnectShare(&smbContext,
                            hostName,
-                           loginName,
-                           loginPassword,
+                           userName,
+                           password,
                            shareName
                           );
   if (error == ERROR_NONE)
@@ -607,29 +607,29 @@ LOCAL Errors smb2stat(struct smb2_stat_64 *smbStatus,
 /***********************************************************************\
 * Name   : checkSMBLogin
 * Purpose: check if SMB/CIFS login is possible
-* Input  : hostName      - host name
-*          loginName     - login name
-*          loginPassword - login password
-*          shareName     - SMB/CIFS share name
+* Input  : hostName  - host name
+*          userName  - user name
+*          password  - password
+*          shareName - SMB/CIFS share name
 * Output : -
 * Return : ERROR_NONE if login is possible, error code otherwise
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors checkSMBLogin(ConstString hostName,
-                           ConstString loginName,
-                           Password    *loginPassword,
+                           ConstString userName,
+                           Password    *password,
                            ConstString shareName
                           )
 {
   struct smb2_context *smbContext;
   Errors              error;
 
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
   printInfo(5,"SMB: host %s\n",String_cString(hostName));
 
-  error = smb2ConnectShare(&smbContext,hostName,loginName,loginPassword,shareName);
+  error = smb2ConnectShare(&smbContext,hostName,userName,password,shareName);
   if (error == ERROR_NONE)
   {
     smb2DisconnectShare(smbContext);
@@ -684,9 +684,10 @@ UNUSED_VARIABLE(storageSpecifier);
     // get SMB/CIFS server settings
     storageInfo->smb.serverId = Configuration_initSMBServerSettings(&smbServer,storageInfo->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&smbServer,{ Configuration_doneSMBServerSettings(&smbServer); });
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,smbServer.loginName);
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_set(storageInfo->storageSpecifier.userName,smbServer.userName);
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("LOGNAME"));
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("USER"));
+    if (Password_isEmpty(&storageInfo->storageSpecifier.password)) Password_set(&storageInfo->storageSpecifier.password,&smbServer.password);
     if (String_isEmpty(storageInfo->storageSpecifier.shareName)) String_set(storageInfo->storageSpecifier.shareName,smbServer.shareName);
     if (String_isEmpty(storageInfo->storageSpecifier.shareName)) String_setCString(storageInfo->storageSpecifier.shareName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.shareName)) String_setCString(storageInfo->storageSpecifier.shareName,getenv("USER"));
@@ -709,36 +710,36 @@ UNUSED_VARIABLE(storageSpecifier);
 
     // check if SMB login is possible
     error = ERROR_SMB_AUTHENTICATION;
-    if ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+    if ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && !Password_isEmpty(&storageInfo->storageSpecifier.password))
     {
       error = checkSMBLogin(storageInfo->storageSpecifier.hostName,
-                            storageInfo->storageSpecifier.loginName,
-                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->storageSpecifier.userName,
+                            &storageInfo->storageSpecifier.password,
                             shareName
                            );
     }
     if ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && !Password_isEmpty(&smbServer.password))
     {
       error = checkSMBLogin(storageInfo->storageSpecifier.hostName,
-                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.userName,
                             &smbServer.password,
                             shareName
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storageInfo->storageSpecifier.loginPassword,&smbServer.password);
+        Password_set(&storageInfo->storageSpecifier.password,&smbServer.password);
       }
     }
     if ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && !Password_isEmpty(&smbServer.password))
     {
       error = checkSMBLogin(storageInfo->storageSpecifier.hostName,
-                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.userName,
                             &defaultSMBPassword,
                             shareName
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storageInfo->storageSpecifier.loginPassword,&defaultSMBPassword);
+        Password_set(&storageInfo->storageSpecifier.password,&defaultSMBPassword);
       }
     }
     if (Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION)
@@ -748,16 +749,16 @@ UNUSED_VARIABLE(storageSpecifier);
       while ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
         if (initSMBLogin(storageInfo->storageSpecifier.hostName,
-                         storageInfo->storageSpecifier.loginName,
-                         storageInfo->storageSpecifier.loginPassword,
+                         storageInfo->storageSpecifier.userName,
+                         &storageInfo->storageSpecifier.password,
                          jobOptions,
                          CALLBACK_(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                         )
            )
         {
           error = checkSMBLogin(storageInfo->storageSpecifier.hostName,
-                                storageInfo->storageSpecifier.loginName,
-                                storageInfo->storageSpecifier.loginPassword,
+                                storageInfo->storageSpecifier.userName,
+                                &storageInfo->storageSpecifier.password,
                                 shareName
                                );
         }
@@ -766,7 +767,7 @@ UNUSED_VARIABLE(storageSpecifier);
     }
     if (Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION)
     {
-      error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
+      error = (   !Password_isEmpty(&storageInfo->storageSpecifier.password)
                || !Password_isEmpty(&smbServer.password)
                || !Password_isEmpty(&defaultSMBPassword)
               )
@@ -777,7 +778,7 @@ UNUSED_VARIABLE(storageSpecifier);
     // store password as default SMB/CIFS password
     if (error == ERROR_NONE)
     {
-      Password_set(&defaultSMBPassword,storageInfo->storageSpecifier.loginPassword);
+      Password_set(&defaultSMBPassword,&storageInfo->storageSpecifier.password);
     }
 
     if (error != ERROR_NONE)
@@ -1020,8 +1021,8 @@ LOCAL bool StorageSMB_exists(const StorageInfo *storageInfo, ConstString archive
 
     existsFlag = (smb2stat(&smbStatus,
                            storageInfo->storageSpecifier.hostName,
-                           storageInfo->storageSpecifier.loginName,
-                           storageInfo->storageSpecifier.loginPassword,
+                           storageInfo->storageSpecifier.userName,
+                           &storageInfo->storageSpecifier.password,
                            shareName,
                            path
                           ) == ERROR_NONE
@@ -1064,8 +1065,8 @@ LOCAL bool StorageSMB_isFile(const StorageInfo *storageInfo, ConstString archive
 
     isFileFlag =    (smb2stat(&smbStatus,
                               storageInfo->storageSpecifier.hostName,
-                              storageInfo->storageSpecifier.loginName,
-                              storageInfo->storageSpecifier.loginPassword,
+                              storageInfo->storageSpecifier.userName,
+                              &storageInfo->storageSpecifier.password,
                               shareName,
                               path
                              ) == ERROR_NONE
@@ -1109,8 +1110,8 @@ LOCAL bool StorageSMB_isDirectory(const StorageInfo *storageInfo, ConstString ar
 
     isDirectoryFlag =    (smb2stat(&smbStatus,
                                    storageInfo->storageSpecifier.hostName,
-                                   storageInfo->storageSpecifier.loginName,
-                                   storageInfo->storageSpecifier.loginPassword,
+                                   storageInfo->storageSpecifier.userName,
+                                   &storageInfo->storageSpecifier.password,
                                    shareName,
                                    path
                                   ) == ERROR_NONE
@@ -1259,8 +1260,8 @@ LOCAL Errors StorageSMB_create(StorageHandle *storageHandle,
     // connect share
     error = smb2ConnectShare(&storageHandle->smb.context,
                              storageHandle->storageInfo->storageSpecifier.hostName,
-                             storageHandle->storageInfo->storageSpecifier.loginName,
-                             storageHandle->storageInfo->storageSpecifier.loginPassword,
+                             storageHandle->storageInfo->storageSpecifier.userName,
+                             &storageHandle->storageInfo->storageSpecifier.password,
                              shareName
                             );
     if (error != ERROR_NONE)
@@ -1373,8 +1374,8 @@ LOCAL Errors StorageSMB_open(StorageHandle *storageHandle,
     // connect share
     error = smb2ConnectShare(&storageHandle->smb.context,
                              storageHandle->storageInfo->storageSpecifier.hostName,
-                             storageHandle->storageInfo->storageSpecifier.loginName,
-                             storageHandle->storageInfo->storageSpecifier.loginPassword,
+                             storageHandle->storageInfo->storageSpecifier.userName,
+                             &storageHandle->storageInfo->storageSpecifier.password,
                              shareName
                             );
     if (error != ERROR_NONE)
@@ -2000,8 +2001,8 @@ LOCAL Errors StorageSMB_makeDirectory(const StorageInfo *storageInfo,
 
     error = smb2ConnectShare(&smbContext,
                              storageInfo->storageSpecifier.hostName,
-                             storageInfo->storageSpecifier.loginName,
-                             storageInfo->storageSpecifier.loginPassword,
+                             storageInfo->storageSpecifier.userName,
+                             &storageInfo->storageSpecifier.password,
                              shareName
                             );
     if (error == ERROR_NONE)
@@ -2054,8 +2055,8 @@ LOCAL Errors StorageSMB_delete(const StorageInfo *storageInfo,
 
     error = smb2ConnectShare(&smbContext,
                              storageInfo->storageSpecifier.hostName,
-                             storageInfo->storageSpecifier.loginName,
-                             storageInfo->storageSpecifier.loginPassword,
+                             storageInfo->storageSpecifier.userName,
+                             &storageInfo->storageSpecifier.password,
                              shareName
                             );
     if (error == ERROR_NONE)
@@ -2105,8 +2106,8 @@ Errors StorageSMB_getInfo(FileInfo          *fileInfo,
                               SOCKET_TYPE_SSH,
                               storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.loginName,
-                              storageInfo->storageSpecifier.loginPassword,
+                              storageInfo->storageSpecifier.userName,
+                              storageInfo->storageSpecifier.password,
                               NULL,  // caData
                               0,     // caLength
                               NULL,  // certData
@@ -2189,9 +2190,9 @@ LOCAL Errors StorageSMB_openDirectoryList(StorageDirectoryListHandle *storageDir
     // get SMB/CIFS server settings
     storageDirectoryListHandle->smb.serverId = Configuration_initSMBServerSettings(&smbServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&smbServer,{ Configuration_doneSMBServerSettings(&smbServer); });
-    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,smbServer.loginName);
-    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_set(storageDirectoryListHandle->storageSpecifier.userName,smbServer.userName);
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_setCString(storageDirectoryListHandle->storageSpecifier.userName,getenv("LOGNAME"));
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_setCString(storageDirectoryListHandle->storageSpecifier.userName,getenv("USER"));
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.shareName)) String_set(storageDirectoryListHandle->storageSpecifier.shareName,smbServer.shareName);
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.shareName)) String_setCString(storageDirectoryListHandle->storageSpecifier.shareName,getenv("LOGNAME"));
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.shareName)) String_setCString(storageDirectoryListHandle->storageSpecifier.shareName,getenv("USER"));
@@ -2215,24 +2216,24 @@ LOCAL Errors StorageSMB_openDirectoryList(StorageDirectoryListHandle *storageDir
 
     // check if SMB/CIFS login is possible
     error = ERROR_SMB_AUTHENTICATION;
-    if ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword))
+    if ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && !Password_isEmpty(&storageDirectoryListHandle->storageSpecifier.password))
     {
       error = checkSMBLogin(storageDirectoryListHandle->storageSpecifier.hostName,
-                            storageDirectoryListHandle->storageSpecifier.loginName,
-                            storageDirectoryListHandle->storageSpecifier.loginPassword,
+                            storageDirectoryListHandle->storageSpecifier.userName,
+                            &storageDirectoryListHandle->storageSpecifier.password,
                             shareName
                            );
     }
     if ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && !Password_isEmpty(&smbServer.password))
     {
       error = checkSMBLogin(storageDirectoryListHandle->storageSpecifier.hostName,
-                            storageDirectoryListHandle->storageSpecifier.loginName,
+                            storageDirectoryListHandle->storageSpecifier.userName,
                             &smbServer.password,
                             shareName
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,&smbServer.password);
+        Password_set(&storageDirectoryListHandle->storageSpecifier.password,&smbServer.password);
       }
     }
     if (Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION)
@@ -2242,8 +2243,8 @@ LOCAL Errors StorageSMB_openDirectoryList(StorageDirectoryListHandle *storageDir
       while ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
         if (initSMBLogin(storageDirectoryListHandle->storageSpecifier.hostName,
-                         storageDirectoryListHandle->storageSpecifier.loginName,
-                         storageDirectoryListHandle->storageSpecifier.loginPassword,
+                         storageDirectoryListHandle->storageSpecifier.userName,
+                         &storageDirectoryListHandle->storageSpecifier.password,
                          jobOptions,
 // TODO:
 CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHandle->getNamePasswordFunction,storageDirectoryListHandle->getNamePasswordUserData)
@@ -2251,8 +2252,8 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
            )
         {
           error = checkSMBLogin(storageDirectoryListHandle->storageSpecifier.hostName,
-                                storageDirectoryListHandle->storageSpecifier.loginName,
-                                storageDirectoryListHandle->storageSpecifier.loginPassword,
+                                storageDirectoryListHandle->storageSpecifier.userName,
+                                &storageDirectoryListHandle->storageSpecifier.password,
                                 shareName
                                );
         }
@@ -2261,7 +2262,7 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
     }
     if (Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION)
     {
-      error = (   !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword)
+      error = (   !Password_isEmpty(&storageDirectoryListHandle->storageSpecifier.password)
                || !Password_isEmpty(&smbServer.password)
                || !Password_isEmpty(&defaultSMBPassword)
               )
@@ -2275,13 +2276,13 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
     }
 
     // store password as default SMB/CIFS password
-    Password_set(&defaultSMBPassword,storageDirectoryListHandle->storageSpecifier.loginPassword);
+    Password_set(&defaultSMBPassword,&storageDirectoryListHandle->storageSpecifier.password);
 
     // connect share
     error = smb2ConnectShare(&storageDirectoryListHandle->smb.context,
                              storageDirectoryListHandle->storageSpecifier.hostName,
-                             storageDirectoryListHandle->storageSpecifier.loginName,
-                             storageDirectoryListHandle->storageSpecifier.loginPassword,
+                             storageDirectoryListHandle->storageSpecifier.userName,
+                             &storageDirectoryListHandle->storageSpecifier.password,
                              shareName
                             );
     if (error != ERROR_NONE)

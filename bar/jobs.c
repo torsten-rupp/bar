@@ -489,7 +489,7 @@ LOCAL void initOptionsFTPServer(FTPServer *ftpServer)
   assert(ftpServer != NULL);
 //  assert(globalOptions.defaultFTPServer != NULL);
 
-  ftpServer->loginName = String_new();
+  ftpServer->userName = String_new();
   Password_initDuplicate(&ftpServer->password,&globalOptions.defaultFTPServer.ftp.password);
 }
 
@@ -508,7 +508,7 @@ LOCAL void duplicateOptionsFTPServer(FTPServer *ftpServer, const FTPServer *from
   assert(ftpServer != NULL);
   assert(fromFTPServer != NULL);
 
-  ftpServer->loginName = String_duplicate(fromFTPServer->loginName);
+  ftpServer->userName = String_duplicate(fromFTPServer->userName);
   Password_initDuplicate(&ftpServer->password,&fromFTPServer->password);
 }
 
@@ -525,7 +525,7 @@ LOCAL void clearOptionsFTPServer(FTPServer *ftpServer)
 {
   assert(ftpServer != NULL);
 
-  String_clear(ftpServer->loginName);
+  String_clear(ftpServer->userName);
   Password_clear(&ftpServer->password);
 }
 
@@ -543,7 +543,7 @@ LOCAL void doneOptionsFTPServer(FTPServer *ftpServer)
   assert(ftpServer != NULL);
 
   Password_done(&ftpServer->password);
-  String_delete(ftpServer->loginName);
+  String_delete(ftpServer->userName);
 }
 
 /***********************************************************************\
@@ -560,8 +560,8 @@ LOCAL void initOptionsSSHServer(SSHServer *sshServer)
   assert(sshServer != NULL);
 //  assert(globalOptions.defaultSSHServer != NULL);
 
-  sshServer->port      = 0;
-  sshServer->loginName = String_new();
+  sshServer->port     = 0;
+  sshServer->userName = String_new();
   Password_initDuplicate(&sshServer->password,&globalOptions.defaultSSHServer.ssh.password);
   Configuration_duplicateKey(&sshServer->publicKey,&globalOptions.defaultSSHServer.ssh.publicKey);
   Configuration_duplicateKey(&sshServer->privateKey,&globalOptions.defaultSSHServer.ssh.privateKey);
@@ -582,8 +582,8 @@ LOCAL void duplicateOptionsSSHServer(SSHServer *sshServer, const SSHServer *from
   assert(sshServer != NULL);
   assert(fromSSHServer != NULL);
 
-  sshServer->port      = fromSSHServer->port;
-  sshServer->loginName = String_duplicate(fromSSHServer->loginName);
+  sshServer->port     = fromSSHServer->port;
+  sshServer->userName = String_duplicate(fromSSHServer->userName);
   Password_initDuplicate(&sshServer->password,&fromSSHServer->password);
   Configuration_duplicateKey(&sshServer->publicKey,&fromSSHServer->publicKey);
   Configuration_duplicateKey(&sshServer->privateKey,&fromSSHServer->privateKey);
@@ -603,7 +603,7 @@ LOCAL void clearOptionsSSHServer(SSHServer *sshServer)
   assert(sshServer != NULL);
 
   sshServer->port = 0;
-  String_clear(sshServer->loginName);
+  String_clear(sshServer->userName);
   Password_clear(&sshServer->password);
   Configuration_clearKey(&sshServer->publicKey);
   Configuration_clearKey(&sshServer->privateKey);
@@ -625,7 +625,7 @@ LOCAL void doneOptionsSSHServer(SSHServer *sshServer)
   Configuration_doneKey(&sshServer->privateKey);
   Configuration_doneKey(&sshServer->publicKey);
   Password_done(&sshServer->password);
-  String_delete(sshServer->loginName);
+  String_delete(sshServer->userName);
 }
 
 /***********************************************************************\
@@ -641,7 +641,7 @@ LOCAL void initOptionsWebDAVServer(WebDAVServer *webDAVServer)
 {
   assert(webDAVServer != NULL);
 
-  webDAVServer->loginName = String_new();
+  webDAVServer->userName = String_new();
   Password_initDuplicate(&webDAVServer->password,&globalOptions.defaultWebDAVServer.webDAV.password);
   Configuration_duplicateKey(&webDAVServer->publicKey,&globalOptions.defaultWebDAVServer.webDAV.publicKey);
   Configuration_duplicateKey(&webDAVServer->privateKey,&globalOptions.defaultWebDAVServer.webDAV.privateKey);
@@ -662,7 +662,7 @@ LOCAL void duplicateOptionsWebDAVServer(WebDAVServer *webDAVServer, const WebDAV
   assert(webDAVServer != NULL);
   assert(fromWebDAVServer != NULL);
 
-  webDAVServer->loginName = String_duplicate(fromWebDAVServer->loginName);
+  webDAVServer->userName = String_duplicate(fromWebDAVServer->userName);
   Password_initDuplicate(&webDAVServer->password,&fromWebDAVServer->password);
   Configuration_duplicateKey(&webDAVServer->publicKey,&fromWebDAVServer->publicKey);
   Configuration_duplicateKey(&webDAVServer->privateKey,&fromWebDAVServer->privateKey);
@@ -681,7 +681,7 @@ LOCAL void clearOptionsWebDAVServer(WebDAVServer *webDAVServer)
 {
   assert(webDAVServer != NULL);
 
-  String_clear(webDAVServer->loginName);
+  String_clear(webDAVServer->userName);
   Password_clear(&webDAVServer->password);
   Configuration_clearKey(&webDAVServer->publicKey);
   Configuration_clearKey(&webDAVServer->privateKey);
@@ -703,7 +703,7 @@ LOCAL void doneOptionsWebDAVServer(WebDAVServer *webDAVServer)
   Configuration_doneKey(&webDAVServer->privateKey);
   Configuration_doneKey(&webDAVServer->publicKey);
   Password_done(&webDAVServer->password);
-  String_delete(webDAVServer->loginName);
+  String_delete(webDAVServer->userName);
 }
 
 /***********************************************************************\
@@ -719,7 +719,7 @@ LOCAL void initOptionsSMBServer(SMBServer *smbServer)
 {
   assert(smbServer != NULL);
 
-  smbServer->loginName = String_new();
+  smbServer->userName = String_new();
   Password_initDuplicate(&smbServer->password,&globalOptions.defaultSMBServer.smb.password);
 }
 
@@ -738,7 +738,7 @@ LOCAL void duplicateOptionsSMBServer(SMBServer *smbServer, const SMBServer *from
   assert(smbServer != NULL);
   assert(fromSMBServer != NULL);
 
-  smbServer->loginName = String_duplicate(fromSMBServer->loginName);
+  smbServer->userName = String_duplicate(fromSMBServer->userName);
   Password_initDuplicate(&smbServer->password,&fromSMBServer->password);
 }
 
@@ -755,7 +755,7 @@ LOCAL void clearOptionsSMBServer(SMBServer *smbServer)
 {
   assert(smbServer != NULL);
 
-  String_clear(smbServer->loginName);
+  String_clear(smbServer->userName);
   Password_clear(&smbServer->password);
 }
 
@@ -773,7 +773,7 @@ LOCAL void doneOptionsSMBServer(SMBServer *smbServer)
   assert(smbServer != NULL);
 
   Password_done(&smbServer->password);
-  String_delete(smbServer->loginName);
+  String_delete(smbServer->userName);
 }
 
 /***********************************************************************\
@@ -2314,6 +2314,58 @@ bool Job_read(JobNode *jobNode)
   {
     return FALSE;
   }
+
+  // init values from storage name
+  StorageSpecifier storageSpecifier;
+  Storage_initSpecifier(&storageSpecifier);
+  error = Storage_parseName(&storageSpecifier,jobNode->job.storageName);
+  if (error == ERROR_NONE)
+  {
+    switch (storageSpecifier.type)
+    {
+      case STORAGE_TYPE_NONE:
+        break;
+      case STORAGE_TYPE_FILESYSTEM:
+        break;
+      case STORAGE_TYPE_FTP:
+        if (String_isEmpty(jobNode->job.options.ftpServer.userName)) String_set(jobNode->job.options.ftpServer.userName,storageSpecifier.userName);
+        if (Password_isEmpty(&jobNode->job.options.ftpServer.password)) Password_set(&jobNode->job.options.ftpServer.password,&storageSpecifier.password);
+        break;
+      case STORAGE_TYPE_SSH:
+      case STORAGE_TYPE_SCP:
+      case STORAGE_TYPE_SFTP:
+// TODO: add port in storage name
+//        if (jobNode->job.options.sshServer.port == 0) jobNode->job.options.sshServer.port = storageSpecifier.port;
+        if (String_isEmpty(jobNode->job.options.sshServer.userName)) String_set(jobNode->job.options.sshServer.userName,storageSpecifier.userName);
+        if (Password_isEmpty(&jobNode->job.options.sshServer.password)) Password_set(&jobNode->job.options.sshServer.password,&storageSpecifier.password);
+        break;
+      case STORAGE_TYPE_WEBDAV:
+      case STORAGE_TYPE_WEBDAVS:
+// TODO: add port in storage name
+//        if (jobNode->job.options.webDAVServer.port == 0) jobNode->job.options.webDAVServer.port = storageSpecifier.port;
+        if (String_isEmpty(jobNode->job.options.webDAVServer.userName)) String_set(jobNode->job.options.webDAVServer.userName,storageSpecifier.userName);
+        if (Password_isEmpty(&jobNode->job.options.webDAVServer.password)) Password_set(&jobNode->job.options.webDAVServer.password,&storageSpecifier.password);
+        break;
+      case STORAGE_TYPE_SMB:
+        if (String_isEmpty(jobNode->job.options.smbServer.userName)) String_set(jobNode->job.options.smbServer.userName,storageSpecifier.userName);
+        if (Password_isEmpty(&jobNode->job.options.smbServer.password)) Password_set(&jobNode->job.options.smbServer.password,&storageSpecifier.password);
+        break;
+      case STORAGE_TYPE_CD:
+      case STORAGE_TYPE_DVD:
+      case STORAGE_TYPE_BD:
+        break;
+      case STORAGE_TYPE_DEVICE:
+        break;
+      case STORAGE_TYPE_ANY:
+        break;
+      case STORAGE_TYPE_UNKNOWN:
+        #ifndef NDEBUG
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        #endif /* NDEBUG */
+        break;
+    }
+  }
+  Storage_doneSpecifier(&storageSpecifier);
 
   // read schedule info (ignore errors)
   (void)Job_readScheduleInfo(jobNode);
