@@ -591,27 +591,28 @@ LOCAL Errors sftpMakeDirectory(SocketHandle *socketHandle,
 
 /***********************************************************************\
 * Name   : sftpUnlink
-* Purpose: sftp unlink file
+* Purpose: sftp unlink file/directory
 * Input  : socketHandle - socket handle
-*          fileName     - file name
+*          name         - name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 LOCAL Errors sftpUnlink(SocketHandle *socketHandle,
-                        ConstString  fileName
+                        ConstString  name
                        )
 {
   Errors       error;
   #ifdef HAVE_SSH2
-    int          ssh2ErrorCode;
-    uint         retries;
-    LIBSSH2_SFTP *sftp;
+    int                     ssh2ErrorCode;
+    uint                    retries;
+    LIBSSH2_SFTP            *sftp;
+    LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
   #endif /* HAVE_SSH2 */
 
   assert(socketHandle != NULL);
-  assert(fileName != NULL);
+  assert(name != NULL);
 
   #ifdef HAVE_SSH2
     // init SFTP session
@@ -629,14 +630,32 @@ LOCAL Errors sftpUnlink(SocketHandle *socketHandle,
 
     if (sftp != NULL)
     {
-      // delete file
       error   = ERROR_UNKNOWN;
       retries = 0;
       do
       {
-        ssh2ErrorCode = libssh2_sftp_unlink(sftp,
-                                            String_cString(fileName)
-                                           );
+        ssh2ErrorCode = libssh2_sftp_lstat(sftp,
+                                           String_cString(name),
+                                           &sftpAttributes
+                                          );
+        if      (ssh2ErrorCode == 0)
+        {
+          if (LIBSSH2_SFTP_S_ISDIR (sftpAttributes.permissions))
+          {
+            // remove direcotry
+            ssh2ErrorCode = libssh2_sftp_rmdir(sftp,
+                                               String_cString(name)
+                                              );
+          }
+          else
+          {
+            // delete file
+            ssh2ErrorCode = libssh2_sftp_unlink(sftp,
+                                                String_cString(name)
+                                               );
+          }
+        }
+
         if      (ssh2ErrorCode == 0)
         {
           error = ERROR_NONE;
@@ -730,8 +749,8 @@ LOCAL void StorageSFTP_doneAll(void)
 * Input  : sftpSpecifier - SFTP specifier
 * Output : hostName      - host name
 *          hostPort      - host port
-*          loginName     - login name
-*          loginPassword - login password
+*          userName      - user name
+*          password      - password
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
@@ -739,8 +758,8 @@ LOCAL void StorageSFTP_doneAll(void)
 LOCAL bool StorageSFTP_parseSpecifier(ConstString sftpSpecifier,
                                       String      hostName,
                                       uint        *hostPort,
-                                      String      loginName,
-                                      Password    *loginPassword
+                                      String      userName,
+                                      Password    *password
                                      )
 {
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
@@ -751,36 +770,36 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sftpSpecifier,
 
   assert(sftpSpecifier != NULL);
   assert(hostName != NULL);
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
   String_clear(hostName);
   if (hostPort != NULL) (*hostPort) = 0;
-  String_clear(loginName);
-  if (loginPassword != NULL) Password_clear(loginPassword);
+  String_clear(userName);
+  if (password != NULL) Password_clear(password);
 
   s = String_new();
   t = String_new();
-  if      (String_matchCString(sftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,t,NULL))
+  if      (String_matchCString(sftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,t,NULL))
   {
     // <login name>:<login password>@<host name>:<host port>
-    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
-    if (loginPassword != NULL) Password_setString(loginPassword,s);
+    String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (password != NULL) Password_setString(password,s);
     if (hostPort != NULL) (*hostPort) = (uint)String_toInteger(t,STRING_BEGIN,NULL,NULL,0);
 
     result = TRUE;
   }
-  else if (String_matchCString(sftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(sftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>:<login password>@<host name>
-    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
-    if (loginPassword != NULL) Password_setString(loginPassword,s);
+    String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (password != NULL) Password_setString(password,s);
 
     result = TRUE;
   }
-  else if (String_matchCString(sftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
+  else if (String_matchCString(sftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,s,NULL))
   {
     // <login name>@<host name>:<host port>
-    if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (userName != NULL) String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
     if (hostPort != NULL)
     {
       if (!String_isEmpty(s)) (*hostPort) = (uint)String_toInteger(s,STRING_BEGIN,NULL,NULL,0);
@@ -788,10 +807,10 @@ LOCAL bool StorageSFTP_parseSpecifier(ConstString sftpSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(sftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(sftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+)/{0,1}$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>@<host name>
-    if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (userName != NULL) String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
 
     result = TRUE;
   }
@@ -886,13 +905,13 @@ LOCAL String StorageSFTP_getName(String                 string,
   }
 
   String_appendCString(string,"sftp://");
-  if (!String_isEmpty(storageSpecifier->loginName))
+  if (!String_isEmpty(storageSpecifier->userName))
   {
-    String_append(string,storageSpecifier->loginName);
-    if (!Password_isEmpty(storageSpecifier->loginPassword))
+    String_append(string,storageSpecifier->userName);
+    if (!Password_isEmpty(&storageSpecifier->password))
     {
       String_appendChar(string,':');
-      PASSWORD_DEPLOY_DO(plainPassword,storageSpecifier->loginPassword)
+      PASSWORD_DEPLOY_DO(plainPassword,&storageSpecifier->password)
       {
         String_appendCString(string,plainPassword);
       }
@@ -995,18 +1014,17 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
   #ifdef HAVE_SSH2
     // init variables
     AutoFree_init(&autoFreeList);
-    storageInfo->sftp.sshPublicKeyFileName   = NULL;
-    storageInfo->sftp.sshPrivateKeyFileName  = NULL;
     initBandWidthLimiter(&storageInfo->sftp.bandWidthLimiter,maxBandWidthList);
     AUTOFREE_ADD(&autoFreeList,&storageInfo->sftp.bandWidthLimiter,{ doneBandWidthLimiter(&storageInfo->sftp.bandWidthLimiter); });
 
     // get SSH server settings
     storageInfo->sftp.serverId = Configuration_initSSHServerSettings(&sshServer,storageInfo->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&sshServer,{ Configuration_doneSSHServerSettings(&sshServer); });
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,sshServer.loginName);
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_set(storageInfo->storageSpecifier.userName,sshServer.userName);
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("LOGNAME"));
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("USER"));
     if (storageInfo->storageSpecifier.hostPort == 0) storageInfo->storageSpecifier.hostPort = sshServer.port;
+    if (Password_isEmpty(&storageInfo->storageSpecifier.password)) Password_set(&storageInfo->storageSpecifier.password,&sshServer.password);
     Configuration_duplicateKey(&storageInfo->sftp.publicKey, &sshServer.publicKey );
     Configuration_duplicateKey(&storageInfo->sftp.privateKey,&sshServer.privateKey);
     AUTOFREE_ADD(&autoFreeList,&storageInfo->sftp.publicKey,{ Configuration_doneKey(&storageInfo->sftp.publicKey); });
@@ -1027,12 +1045,12 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
 
     // check if SSH login is possible
     error = ERROR_SSH_AUTHENTICATION;
-    if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+    if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(&storageInfo->storageSpecifier.password))
     {
       error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
-                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->storageSpecifier.userName,
+                            &storageInfo->storageSpecifier.password,
                             storageInfo->sftp.publicKey.data,
                             storageInfo->sftp.publicKey.length,
                             storageInfo->sftp.privateKey.data,
@@ -1043,7 +1061,7 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     {
       error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.userName,
                             &sshServer.password,
                             storageInfo->sftp.publicKey.data,
                             storageInfo->sftp.publicKey.length,
@@ -1052,14 +1070,14 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storageInfo->storageSpecifier.loginPassword,&sshServer.password);
+        Password_set(&storageInfo->storageSpecifier.password,&sshServer.password);
       }
     }
     if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(&sshServer.password))
     {
       error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.userName,
                             &defaultSSHPassword,
                             storageInfo->sftp.publicKey.data,
                             storageInfo->sftp.publicKey.length,
@@ -1068,7 +1086,7 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storageInfo->storageSpecifier.loginPassword,&defaultSSHPassword);
+        Password_set(&storageInfo->storageSpecifier.password,&defaultSSHPassword);
       }
     }
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
@@ -1078,8 +1096,8 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
       while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
         if (initSSHLogin(storageInfo->storageSpecifier.hostName,
-                         storageInfo->storageSpecifier.loginName,
-                         storageInfo->storageSpecifier.loginPassword,
+                         storageInfo->storageSpecifier.userName,
+                         &storageInfo->storageSpecifier.password,
                          jobOptions,
                          CALLBACK_(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                         )
@@ -1087,8 +1105,8 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
         {
           error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                                 storageInfo->storageSpecifier.hostPort,
-                                storageInfo->storageSpecifier.loginName,
-                                storageInfo->storageSpecifier.loginPassword,
+                                storageInfo->storageSpecifier.userName,
+                                &storageInfo->storageSpecifier.password,
                                 storageInfo->sftp.publicKey.data,
                                 storageInfo->sftp.publicKey.length,
                                 storageInfo->sftp.privateKey.data,
@@ -1100,7 +1118,7 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     }
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
     {
-      error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
+      error = (   !Password_isEmpty(&storageInfo->storageSpecifier.password)
                || !Password_isEmpty(&sshServer.password)
                || !Password_isEmpty(&defaultSSHPassword)
               )
@@ -1111,7 +1129,7 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     // store password as default SSH password
     if (error == ERROR_NONE)
     {
-      Password_set(&defaultSSHPassword,storageInfo->storageSpecifier.loginPassword);
+      Password_set(&defaultSSHPassword,&storageInfo->storageSpecifier.password);
     }
 
     if (error != ERROR_NONE)
@@ -1339,7 +1357,9 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageSFTP_exists(StorageInfo *storageInfo,
+                              ConstString archiveName
+                             )
 {
   bool   existsFlag;
   #ifdef HAVE_SSH2
@@ -1358,8 +1378,8 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
                               SOCKET_TYPE_SSH,
                               storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.loginName,
-                              storageInfo->storageSpecifier.loginPassword,
+                              storageInfo->storageSpecifier.userName,
+                              &storageInfo->storageSpecifier.password,
                               NULL,  // caData
                               0,     // caLength
                               NULL,  // certData
@@ -1404,7 +1424,9 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageSFTP_isFile(StorageInfo *storageInfo,
+                              ConstString archiveName
+                             )
 {
   bool         isFileFlag;
   #ifdef HAVE_SSH2
@@ -1424,8 +1446,8 @@ LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiv
                               SOCKET_TYPE_SSH,
                               storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.loginName,
-                              storageInfo->storageSpecifier.loginPassword,
+                              storageInfo->storageSpecifier.userName,
+                              &storageInfo->storageSpecifier.password,
                               NULL,  // caData
                               0,     // caLength
                               NULL,  // certData
@@ -1472,7 +1494,9 @@ LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiv
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool StorageSFTP_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageSFTP_isDirectory(StorageInfo *storageInfo,
+                                   ConstString archiveName
+                                  )
 {
   bool isDirectoryFlag;
   #ifdef HAVE_SSH2
@@ -1492,8 +1516,8 @@ LOCAL bool StorageSFTP_isDirectory(const StorageInfo *storageInfo, ConstString a
                               SOCKET_TYPE_SSH,
                               storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.loginName,
-                              storageInfo->storageSpecifier.loginPassword,
+                              storageInfo->storageSpecifier.userName,
+                              &storageInfo->storageSpecifier.password,
                               NULL,  // caData
                               0,     // caLength
                               NULL,  // certData
@@ -1661,8 +1685,8 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                             SOCKET_TYPE_SSH,
                             storageHandle->storageInfo->storageSpecifier.hostName,
                             storageHandle->storageInfo->storageSpecifier.hostPort,
-                            storageHandle->storageInfo->storageSpecifier.loginName,
-                            storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            storageHandle->storageInfo->storageSpecifier.userName,
+                            &storageHandle->storageInfo->storageSpecifier.password,
                             NULL,  // caData
                             0,     // caLength
                             NULL,  // certData
@@ -1842,8 +1866,8 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                             SOCKET_TYPE_SSH,
                             storageHandle->storageInfo->storageSpecifier.hostName,
                             storageHandle->storageInfo->storageSpecifier.hostPort,
-                            storageHandle->storageInfo->storageSpecifier.loginName,
-                            storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            storageHandle->storageInfo->storageSpecifier.userName,
+                            &storageHandle->storageInfo->storageSpecifier.password,
                             NULL,  // caData
                             0,     // caLength
                             NULL,  // certData
@@ -1857,7 +1881,6 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                             | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
                             30*MS_PER_SECOND
                            );
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     if (error != ERROR_NONE)
     {
       free(storageHandle->sftp.readAheadBuffer.data);
@@ -1894,7 +1917,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
                      );
       Network_disconnect(&storageHandle->sftp.socketHandle);
       free(storageHandle->sftp.readAheadBuffer.data);
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       return error;
     }
 
@@ -1917,7 +1939,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
       Network_disconnect(&storageHandle->sftp.socketHandle);
       free(storageHandle->sftp.readAheadBuffer.data);
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       return error;
     }
 
@@ -1939,7 +1960,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
       Network_disconnect(&storageHandle->sftp.socketHandle);
       free(storageHandle->sftp.readAheadBuffer.data);
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       return error;
     }
     storageHandle->sftp.size = sftpAttributes.filesize;
@@ -2497,8 +2517,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors StorageSFTP_makeDirectory(const StorageInfo *storageInfo,
-                                       ConstString       directoryName
+LOCAL Errors StorageSFTP_makeDirectory(StorageInfo *storageInfo,
+                                       ConstString directoryName
                                       )
 {
   Errors       error;
@@ -2516,8 +2536,8 @@ LOCAL Errors StorageSFTP_makeDirectory(const StorageInfo *storageInfo,
                             SOCKET_TYPE_SSH,
                             storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
-                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->storageSpecifier.userName,
+                            &storageInfo->storageSpecifier.password,
                             NULL,  // caData
                             0,     // caLength
                             NULL,  // certData
@@ -2562,8 +2582,8 @@ LOCAL Errors StorageSFTP_makeDirectory(const StorageInfo *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
-                                ConstString       archiveName
+LOCAL Errors StorageSFTP_delete(StorageInfo *storageInfo,
+                                ConstString archiveName
                                )
 {
   Errors       error;
@@ -2581,8 +2601,8 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
                             SOCKET_TYPE_SSH,
                             storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
-                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->storageSpecifier.userName,
+                            &storageInfo->storageSpecifier.password,
                             NULL,  // caData
                             0,     // caLength
                             NULL,  // certData
@@ -2642,8 +2662,8 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
                               SOCKET_TYPE_SSH,
                               storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.loginName,
-                              storageInfo->storageSpecifier.loginPassword,
+                              storageInfo->storageSpecifier.userName,
+                              storageInfo->storageSpecifier.password,
                               NULL,  // caData
                               0,     // caLength
                               NULL,  // certData
@@ -2741,9 +2761,9 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
     // get SSH server settings
     storageDirectoryListHandle->sftp.serverId = Configuration_initSSHServerSettings(&sshServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&sshServer,{ Configuration_doneSSHServerSettings(&sshServer); });
-    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,sshServer.loginName);
-    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_set(storageDirectoryListHandle->storageSpecifier.userName,sshServer.userName);
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_setCString(storageDirectoryListHandle->storageSpecifier.userName,getenv("LOGNAME"));
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_setCString(storageDirectoryListHandle->storageSpecifier.userName,getenv("USER"));
     if (storageDirectoryListHandle->storageSpecifier.hostPort == 0) storageDirectoryListHandle->storageSpecifier.hostPort = sshServer.port;
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
     {
@@ -2761,12 +2781,12 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
 
     // check if SSH login is possible
     error = ERROR_SSH_AUTHENTICATION;
-    if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword))
+    if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(&storageDirectoryListHandle->storageSpecifier.password))
     {
       error = checkSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                             storageDirectoryListHandle->storageSpecifier.hostPort,
-                            storageDirectoryListHandle->storageSpecifier.loginName,
-                            storageDirectoryListHandle->storageSpecifier.loginPassword,
+                            storageDirectoryListHandle->storageSpecifier.userName,
+                            &storageDirectoryListHandle->storageSpecifier.password,
                             sshServer.publicKey.data,
                             sshServer.publicKey.length,
                             sshServer.privateKey.data,
@@ -2777,7 +2797,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
     {
       error = checkSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                             storageDirectoryListHandle->storageSpecifier.hostPort,
-                            storageDirectoryListHandle->storageSpecifier.loginName,
+                            storageDirectoryListHandle->storageSpecifier.userName,
                             &sshServer.password,
                             sshServer.publicKey.data,
                             sshServer.publicKey.length,
@@ -2786,7 +2806,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,&sshServer.password);
+        Password_set(&storageDirectoryListHandle->storageSpecifier.password,&sshServer.password);
       }
     }
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
@@ -2796,8 +2816,8 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
       while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
         if (initSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
-                         storageDirectoryListHandle->storageSpecifier.loginName,
-                         storageDirectoryListHandle->storageSpecifier.loginPassword,
+                         storageDirectoryListHandle->storageSpecifier.userName,
+                         &storageDirectoryListHandle->storageSpecifier.password,
                          jobOptions,
 // TODO:
 CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHandle->getNamePasswordFunction,storageDirectoryListHandle->getNamePasswordUserData)
@@ -2806,8 +2826,8 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
         {
           error = checkSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                                 storageDirectoryListHandle->storageSpecifier.hostPort,
-                                storageDirectoryListHandle->storageSpecifier.loginName,
-                                storageDirectoryListHandle->storageSpecifier.loginPassword,
+                                storageDirectoryListHandle->storageSpecifier.userName,
+                                &storageDirectoryListHandle->storageSpecifier.password,
                                 sshServer.publicKey.data,
                                 sshServer.publicKey.length,
                                 sshServer.privateKey.data,
@@ -2819,7 +2839,7 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
     }
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
     {
-      error = (   !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword)
+      error = (   !Password_isEmpty(&storageDirectoryListHandle->storageSpecifier.password)
                || !Password_isEmpty(&sshServer.password)
                || !Password_isEmpty(&defaultSSHPassword)
               )
@@ -2833,14 +2853,14 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
     }
 
     // store password as default SSH password
-    Password_set(&defaultSSHPassword,storageDirectoryListHandle->storageSpecifier.loginPassword);
+    Password_set(&defaultSSHPassword,&storageDirectoryListHandle->storageSpecifier.password);
 
     // connect
     error = Network_connect(&storageDirectoryListHandle->sftp.socketHandle,
                             SOCKET_TYPE_SSH,
                             storageDirectoryListHandle->storageSpecifier.hostName,
                             storageDirectoryListHandle->storageSpecifier.hostPort,
-                            storageDirectoryListHandle->storageSpecifier.loginName,
+                            storageDirectoryListHandle->storageSpecifier.userName,
                             &defaultSSHPassword,
                             NULL,  // caData
                             0,     // caLength

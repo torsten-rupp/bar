@@ -11015,7 +11015,10 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
     {
       String_appendFormat(sqlString," ORDER BY %s",orderBy);
     }
-    String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+    if (limit < DATABASE_UNLIMITED)
+    {
+      String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+    }
     if (offset > 0LL)
     {
       String_appendFormat(sqlString," OFFSET %"PRIu64,offset);
@@ -14170,7 +14173,10 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   {
     String_appendFormat(sqlSelectString," ORDER BY %s",orderBy);
   }
-  String_appendFormat(sqlSelectString," LIMIT %"PRIu64,limit);
+  if (limit < DATABASE_UNLIMITED)
+  {
+    String_appendFormat(sqlSelectString," LIMIT %"PRIu64,limit);
+  }
   if (offset > 0LL)
   {
     String_appendFormat(sqlSelectString," OFFSET %"PRIu64,offset);
@@ -16622,7 +16628,10 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   {
     String_appendFormat(sqlString," ORDER BY %s",orderBy);
   }
-  String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+  if (limit < DATABASE_UNLIMITED)
+  {
+    String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+  }
   if (offset > 0LL)
   {
     String_appendFormat(sqlString," OFFSET %"PRIu64,offset);
@@ -16887,7 +16896,10 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+      if (limit < DATABASE_UNLIMITED)
+      {
+        String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+      }
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
@@ -17006,7 +17018,10 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+      if (limit < DATABASE_UNLIMITED)
+      {
+        String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+      }
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
@@ -17321,7 +17336,10 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
   {
     String_appendFormat(sqlString," ORDER BY %s",orderBy);
   }
-  String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+  if (limit < DATABASE_UNLIMITED)
+  {
+    String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+  }
   if (offset > 0LL)
   {
     String_appendFormat(sqlString," OFFSET %"PRIu64,offset);
@@ -17770,7 +17788,10 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
     {
       String_appendFormat(sqlString," ORDER BY %s",orderBy);
     }
-    String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+    if (limit < DATABASE_UNLIMITED)
+    {
+      String_appendFormat(sqlString," LIMIT %"PRIu64,limit);
+    }
     if (offset > 0LL)
     {
       String_appendFormat(sqlString," OFFSET %"PRIu64,offset);

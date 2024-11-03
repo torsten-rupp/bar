@@ -577,11 +577,11 @@ UNUSED_VARIABLE(scheduleCustomText);
 
   SET_OPTION_BOOLEAN  ("storage-on-master",         jobOptions->storageOnMasterFlag);
 
-  SET_OPTION_STRING   ("ftp-login-name",            jobOptions->ftpServer.loginName         );
+  SET_OPTION_STRING   ("ftp-login-name",            jobOptions->ftpServer.userName          );
   SET_OPTION_PASSWORD ("ftp-password",              &jobOptions->ftpServer.password         );
 
   SET_OPTION_INTEGER  ("ssh-port",                  jobOptions->sshServer.port              );
-  SET_OPTION_STRING   ("ssh-login-name",            jobOptions->sshServer.loginName         );
+  SET_OPTION_STRING   ("ssh-login-name",            jobOptions->sshServer.userName          );
   SET_OPTION_PASSWORD ("ssh-password",              &jobOptions->sshServer.password         );
   SET_OPTION_STRING   ("ssh-public-key",            Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length));
   SET_OPTION_STRING   ("ssh-private-key",           Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length));

@@ -1329,7 +1329,7 @@ void Dictionary_debugDump(Dictionary *dictionary)
                      {
                        UNUSED_VARIABLE(userData);
 
-                       printf("%4u %p %lu ",n,key,keyLength);
+                       printf("%4lu %p %lu ",n,key,keyLength);
                        for (size_t i = 0; i < keyLength; i++)
                        {
                          printf("%02x",((const byte*)key)[i]);

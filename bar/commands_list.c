@@ -3328,9 +3328,9 @@ NULL, // masterSocketHandle
         {
           // get SSH server settings
           Configuration_initSSHServerSettings(&sshServer,storageSpecifier->hostName,jobOptions);
-          if (String_isEmpty(storageSpecifier->loginName)) String_set(storageSpecifier->loginName,sshServer.loginName);
-          if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("LOGNAME"));
-          if (String_isEmpty(storageSpecifier->loginName)) String_setCString(storageSpecifier->loginName,getenv("USER"));
+          if (String_isEmpty(storageSpecifier->userName)) String_set(storageSpecifier->userName,sshServer.userName);
+          if (String_isEmpty(storageSpecifier->userName)) String_setCString(storageSpecifier->userName,getenv("LOGNAME"));
+          if (String_isEmpty(storageSpecifier->userName)) String_setCString(storageSpecifier->userName,getenv("USER"));
           if (storageSpecifier->hostPort == 0) storageSpecifier->hostPort = sshServer.port;
           if (String_isEmpty(storageSpecifier->hostName))
           {
@@ -3368,7 +3368,7 @@ NULL, // masterSocketHandle
                                   SOCKET_TYPE_SSH,
                                   storageSpecifier->hostName,
                                   storageSpecifier->hostPort,
-                                  storageSpecifier->loginName,
+                                  storageSpecifier->userName,
                                   &sshServer.password,
                                   NULL,  // caData
                                   0,     // caLength
@@ -3388,7 +3388,7 @@ NULL, // masterSocketHandle
             Password_init(&sshPassword);
 
             s = String_newCString("SSH login password for ");
-            if (!String_isEmpty(storageSpecifier->loginName)) String_appendFormat(s,"%S@",storageSpecifier->loginName);
+            if (!String_isEmpty(storageSpecifier->userName)) String_appendFormat(s,"%S@",storageSpecifier->userName);
             String_appendFormat(s,"%S",storageSpecifier->hostName);
             Password_input(&sshPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY);
             String_delete(s);
@@ -3397,7 +3397,7 @@ NULL, // masterSocketHandle
                                     SOCKET_TYPE_SSH,
                                     storageSpecifier->hostName,
                                     storageSpecifier->hostPort,
-                                    storageSpecifier->loginName,
+                                    storageSpecifier->userName,
                                     &sshPassword,
                                     NULL,  // caData
                                     0,     // caLength

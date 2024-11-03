@@ -1,3 +1,11 @@
+2024-11-01 25a
+  * fixed key constrain failed on database import (bug #16)
+  * fixed estimated rest tmie for database import (bug #17)
+  * fixed delete storages on (sftp-) server (bug #21)
+  * BARControl: fixed exception if server return an invalid
+    size value (bug #15)
+  * BARControl: fixed wrong stored pane sizes (bug #14)
+
 2024-10-20 25
   * removed directory aggregate data from index: hardly used,
     save space and time

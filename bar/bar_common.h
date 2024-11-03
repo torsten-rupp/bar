@@ -591,16 +591,16 @@ typedef struct
 // FTP server settings
 typedef struct
 {
-  String           loginName;                                 // login name
-  Password         password;                                  // login password
+  String           userName;                                  // user name
+  Password         password;                                  // password
 } FTPServer;
 
 // SSH server settings
 typedef struct
 {
   uint             port;                                      // server port (ssh,scp,sftp)
-  String           loginName;                                 // login name
-  Password         password;                                  // login password
+  String           userName;                                  // user name
+  Password         password;                                  // password
   Key              publicKey;                                 // public key data (ssh,scp,sftp)
   Key              privateKey;                                // private key data (ssh,scp,sftp)
 } SSHServer;
@@ -609,8 +609,8 @@ typedef struct
 typedef struct
 {
   uint             port;                                      // server port
-  String           loginName;                                 // login name
-  Password         password;                                  // login password
+  String           userName;                                  // user name
+  Password         password;                                  // password
   Key              publicKey;                                 // public key data
   Key              privateKey;                                // private key data
 } WebDAVServer;
@@ -618,8 +618,8 @@ typedef struct
 // SMB/CIFS server settings
 typedef struct
 {
-  String           loginName;                                 // login name
-  Password         password;                                  // login password
+  String           userName;                                  // user name
+  Password         password;                                  // password
   String           shareName;                                 // share name
 } SMBServer;
 

@@ -68,8 +68,8 @@
 * Name   : initFTPLogin
 * Purpose: init FTP login
 * Input  : hostName                - host name
-*          loginName               - login name
-*          loginPassword           - password
+*          userName                - user name
+*          password                - password
 *          jobOptions              - job options
 *          getNamePasswordFunction - get password call-back (can be
 *                                    NULL)
@@ -80,8 +80,8 @@
 \***********************************************************************/
 
 LOCAL bool initFTPLogin(ConstString             hostName,
-                        String                  loginName,
-                        Password                *loginPassword,
+                        String                  userName,
+                        Password                *password,
                         const JobOptions        *jobOptions,
                         GetNamePasswordFunction getNamePasswordFunction,
                         void                    *getNamePasswordUserData
@@ -91,8 +91,8 @@ LOCAL bool initFTPLogin(ConstString             hostName,
   bool   initFlag;
 
   assert(!String_isEmpty(hostName));
-  assert(loginName != NULL);
-  assert(loginPassword != NULL);
+  assert(userName != NULL);
+  assert(password != NULL);
 
   initFlag = FALSE;
 
@@ -107,10 +107,10 @@ LOCAL bool initFTPLogin(ConstString             hostName,
           case RUN_MODE_INTERACTIVE:
             if (Password_isEmpty(&defaultFTPPassword))
             {
-              s = !String_isEmpty(loginName)
-                    ? String_format(String_new(),"FTP login password for %S@%S",loginName,hostName)
+              s = !String_isEmpty(userName)
+                    ? String_format(String_new(),"FTP login password for %S@%S",userName,hostName)
                     : String_format(String_new(),"FTP login password for %S",hostName);
-              if (Password_input(loginPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+              if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
               {
                 initFlag = TRUE;
               }
@@ -118,7 +118,7 @@ LOCAL bool initFTPLogin(ConstString             hostName,
             }
             else
             {
-              Password_set(loginPassword,&defaultFTPPassword);
+              Password_set(password,&defaultFTPPassword);
               initFlag = TRUE;
             }
             break;
@@ -126,11 +126,11 @@ LOCAL bool initFTPLogin(ConstString             hostName,
           case RUN_MODE_SERVER:
             if (getNamePasswordFunction != NULL)
             {
-              s = !String_isEmpty(loginName)
-                    ? String_format(String_new(),"%S@%S",loginName,hostName)
+              s = !String_isEmpty(userName)
+                    ? String_format(String_new(),"%S@%S",userName,hostName)
                     : String_format(String_new(),"%S",hostName);
-              if (getNamePasswordFunction(loginName,
-                                          loginPassword,
+              if (getNamePasswordFunction(userName,
+                                          password,
                                           PASSWORD_TYPE_FTP,
                                           String_cString(s),
                                           TRUE,
@@ -159,16 +159,16 @@ LOCAL bool initFTPLogin(ConstString             hostName,
 /***********************************************************************\
 * Name   : setFTPLogin
 * Purpose: set FTP login
-* Input  : curlHandle    - CURL handle
-*          loginName     - login name
-*          loginPassword - login password
-*          timeout       - timeout [ms]
+* Input  : curlHandle - CURL handle
+*          userName   - user name
+*          password   - password
+*          timeout    - timeout [ms]
 * Output : -
 * Return : CURLE_OK if no error, CURL error code otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL CURLcode setFTPLogin(CURL *curlHandle, ConstString loginName, Password *loginPassword, long timeout)
+LOCAL CURLcode setFTPLogin(CURL *curlHandle, ConstString userName, Password *password, long timeout)
 {
   CURLcode curlCode;
 
@@ -208,11 +208,11 @@ LOCAL CURLcode setFTPLogin(CURL *curlHandle, ConstString loginName, Password *lo
   // set login
   if (curlCode == CURLE_OK)
   {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(loginName));
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(userName));
   }
   if (curlCode == CURLE_OK)
   {
-    PASSWORD_DEPLOY_DO(plainPassword,loginPassword)
+    PASSWORD_DEPLOY_DO(plainPassword,password)
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainPassword);
     }
@@ -244,10 +244,10 @@ LOCAL CURLcode setFTPLogin(CURL *curlHandle, ConstString loginName, Password *lo
 /***********************************************************************\
 * Name   : checkFTPLogin
 * Purpose: check if FTP login is possible
-* Input  : hostName      - host name
-*          hostPort      - host port or 0
-*          loginName     - login name
-*          loginPassword - login password
+* Input  : hostName - host name
+*          hostPort - host port or 0
+*          userName - user name
+*          password - password
 * Output : -
 * Return : ERROR_NONE if login is possible, error code otherwise
 * Notes  : -
@@ -255,8 +255,8 @@ LOCAL CURLcode setFTPLogin(CURL *curlHandle, ConstString loginName, Password *lo
 
 LOCAL Errors checkFTPLogin(ConstString hostName,
                            uint        hostPort,
-                           ConstString loginName,
-                           Password    *loginPassword
+                           ConstString userName,
+                           Password    *password
                           )
 {
   #if   defined(HAVE_CURL)
@@ -284,7 +284,7 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
     if (hostPort != 0) String_appendFormat(url,":%d",hostPort);
 
     // init FTP connect
-    curlCode = setFTPLogin(curlHandle,loginName,loginPassword,FTP_TIMEOUT);
+    curlCode = setFTPLogin(curlHandle,userName,password,FTP_TIMEOUT);
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
@@ -827,8 +827,8 @@ LOCAL void StorageFTP_doneAll(void)
 LOCAL bool StorageFTP_parseSpecifier(ConstString ftpSpecifier,
                                      String      hostName,
                                      uint        *hostPort,
-                                     String      loginName,
-                                     Password    *loginPassword
+                                     String      userName,
+                                     Password    *password
                                     )
 {
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
@@ -839,44 +839,44 @@ LOCAL bool StorageFTP_parseSpecifier(ConstString ftpSpecifier,
 
   assert(ftpSpecifier != NULL);
   assert(hostName != NULL);
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
   String_clear(hostName);
   if (hostPort != NULL) (*hostPort) = 0;
-  String_clear(loginName);
-  if (loginPassword != NULL) Password_clear(loginPassword);
+  String_clear(userName);
+  if (password != NULL) Password_clear(password);
 
   s = String_new();
   t = String_new();
-  if      (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,t,NULL))
+  if      (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,t,NULL))
   {
     // <login name>:<login password>@<host name>:<host port>
-    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
-    if (loginPassword != NULL) Password_setString(loginPassword,s);
+    String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (password != NULL) Password_setString(password,s);
     if (hostPort != NULL) (*hostPort) = (uint)String_toInteger(t,STRING_BEGIN,NULL,NULL,0);
 
     result = TRUE;
   }
-  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>:<login password>@<host name>
-    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
-    if (loginPassword != NULL) Password_setString(loginPassword,s);
+    String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (password != NULL) Password_setString(password,s);
 
     result = TRUE;
   }
-  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
+  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,s,NULL))
   {
     // <login name>@<host name>:<host port>
-    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
     if (hostPort != NULL) (*hostPort) = (uint)String_toInteger(s,STRING_BEGIN,NULL,NULL,0);
 
     result = TRUE;
   }
-  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(ftpSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>@<host name>
-    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
 
     result = TRUE;
   }
@@ -947,13 +947,13 @@ LOCAL void StorageFTP_getName(String                 string,
   }
 
   String_appendCString(string,"ftp://");
-  if (!String_isEmpty(storageSpecifier->loginName))
+  if (!String_isEmpty(storageSpecifier->userName))
   {
-    String_append(string,storageSpecifier->loginName);
-    if (!Password_isEmpty(storageSpecifier->loginPassword))
+    String_append(string,storageSpecifier->userName);
+    if (!Password_isEmpty(&storageSpecifier->password))
     {
       String_appendChar(string,':');
-      PASSWORD_DEPLOY_DO(plainPassword,storageSpecifier->loginPassword)
+      PASSWORD_DEPLOY_DO(plainPassword,&storageSpecifier->password)
       {
         String_appendCString(string,plainPassword);
       }
@@ -998,9 +998,9 @@ LOCAL void StorageFTP_getPrintableName(String                 string,
   }
 
   String_appendCString(string,"ftp://");
-  if (!String_isEmpty(storageSpecifier->loginName))
+  if (!String_isEmpty(storageSpecifier->userName))
   {
-    String_append(string,storageSpecifier->loginName);
+    String_append(string,storageSpecifier->userName);
     String_appendChar(string,'@');
   }
   String_append(string,storageSpecifier->hostName);
@@ -1046,9 +1046,10 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
 
       // get FTP server settings
       storageInfo->ftp.serverId = Configuration_initFTPServerSettings(&ftpServer,storageInfo->storageSpecifier.hostName,jobOptions);
-      if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,ftpServer.loginName);
-      if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
-      if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
+      if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_set(storageInfo->storageSpecifier.userName,ftpServer.userName);
+      if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("LOGNAME"));
+      if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("USER"));
+      if (Password_isEmpty(&storageInfo->storageSpecifier.password)) Password_set(&storageInfo->storageSpecifier.password,&ftpServer.password);
       if (String_isEmpty(storageInfo->storageSpecifier.hostName))
       {
         Configuration_doneFTPServerSettings(&ftpServer);
@@ -1066,36 +1067,36 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
 
       // check FTP login, get correct password
       error = ERROR_FTP_AUTHENTICATION;
-      if ((Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+      if ((Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION) && !Password_isEmpty(&storageInfo->storageSpecifier.password))
       {
         error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.loginName,
-                              storageInfo->storageSpecifier.loginPassword
+                              storageInfo->storageSpecifier.userName,
+                              &storageInfo->storageSpecifier.password
                              );
       }
       if ((Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION) && !Password_isEmpty(&ftpServer.password))
       {
         error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.loginName,
+                              storageInfo->storageSpecifier.userName,
                               &ftpServer.password
                              );
         if (error == ERROR_NONE)
         {
-          Password_set(storageInfo->storageSpecifier.loginPassword,&ftpServer.password);
+          Password_set(&storageInfo->storageSpecifier.password,&ftpServer.password);
         }
       }
       if ((Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION) && !Password_isEmpty(&ftpServer.password))
       {
         error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.loginName,
+                              storageInfo->storageSpecifier.userName,
                               &defaultFTPPassword
                              );
         if (error == ERROR_NONE)
         {
-          Password_set(storageInfo->storageSpecifier.loginPassword,&defaultFTPPassword);
+          Password_set(&storageInfo->storageSpecifier.password,&defaultFTPPassword);
         }
       }
       if (Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION)
@@ -1105,8 +1106,8 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
         while ((Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
         {
           if (initFTPLogin(storageInfo->storageSpecifier.hostName,
-                           storageInfo->storageSpecifier.loginName,
-                           storageInfo->storageSpecifier.loginPassword,
+                           storageInfo->storageSpecifier.userName,
+                           &storageInfo->storageSpecifier.password,
                            jobOptions,
                            CALLBACK_(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                           )
@@ -1114,8 +1115,8 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
           {
             error = checkFTPLogin(storageInfo->storageSpecifier.hostName,
                                   storageInfo->storageSpecifier.hostPort,
-                                  storageInfo->storageSpecifier.loginName,
-                                  storageInfo->storageSpecifier.loginPassword
+                                  storageInfo->storageSpecifier.userName,
+                                  &storageInfo->storageSpecifier.password
                                  );
           }
           retries++;
@@ -1123,7 +1124,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
       }
       if (Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION)
       {
-        error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
+        error = (   !Password_isEmpty(&storageInfo->storageSpecifier.password)
                  || !Password_isEmpty(&ftpServer.password)
                  || !Password_isEmpty(&defaultFTPPassword)
                 )
@@ -1134,7 +1135,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
       // store password as default password
       if (error == ERROR_NONE)
       {
-        Password_set(&defaultFTPPassword,storageInfo->storageSpecifier.loginPassword);
+        Password_set(&defaultFTPPassword,&storageInfo->storageSpecifier.password);
       }
 
       if (error != ERROR_NONE)
@@ -1319,7 +1320,9 @@ LOCAL Errors StorageFTP_unloadVolume(const StorageInfo *storageInfo)
   return ERROR_NONE;
 }
 
-LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageFTP_exists(StorageInfo *storageInfo,
+                             ConstString archiveName
+                            )
 {
   bool existsFlag;
   #if   defined(HAVE_CURL)
@@ -1365,8 +1368,8 @@ LOCAL bool StorageFTP_exists(const StorageInfo *storageInfo, ConstString archive
 
     // set FTP connect
     curlCode = setFTPLogin(curlHandle,
-                           storageInfo->storageSpecifier.loginName,
-                           storageInfo->storageSpecifier.loginPassword,
+                           storageInfo->storageSpecifier.userName,
+                           &storageInfo->storageSpecifier.password,
                            FTP_TIMEOUT
                           );
     if (curlCode != CURLE_OK)
@@ -1524,8 +1527,8 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
 
     // set FTP connect
     curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
-                           storageHandle->storageInfo->storageSpecifier.loginName,
-                           storageHandle->storageInfo->storageSpecifier.loginPassword,
+                           storageHandle->storageInfo->storageSpecifier.userName,
+                           &storageHandle->storageInfo->storageSpecifier.password,
                            FTP_TIMEOUT
                           );
     if (curlCode != CURLE_OK)
@@ -1739,8 +1742,8 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
 
     // set FTP login
     curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
-                           storageHandle->storageInfo->storageSpecifier.loginName,
-                           storageHandle->storageInfo->storageSpecifier.loginPassword,
+                           storageHandle->storageInfo->storageSpecifier.userName,
+                           &storageHandle->storageInfo->storageSpecifier.password,
                            FTP_TIMEOUT
                           );
     if (curlCode != CURLE_OK)
@@ -2393,9 +2396,9 @@ LOCAL uint64 StorageFTP_getSize(StorageHandle *storageHandle)
   return size;
 }
 
-LOCAL Errors StorageFTP_rename(const StorageInfo *storageInfo,
-                               ConstString       fromArchiveName,
-                               ConstString       toArchiveName
+LOCAL Errors StorageFTP_rename(StorageInfo *storageInfo,
+                               ConstString fromArchiveName,
+                               ConstString toArchiveName
                               )
 {
   Errors error;
@@ -2411,8 +2414,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   return error;
 }
 
-LOCAL Errors StorageFTP_makeDirectory(const StorageInfo *storageInfo,
-                                      ConstString       directoryName
+LOCAL Errors StorageFTP_makeDirectory(StorageInfo *storageInfo,
+                                      ConstString directoryName
                                      )
 {
   #if   defined(HAVE_CURL)
@@ -2460,8 +2463,8 @@ LOCAL Errors StorageFTP_makeDirectory(const StorageInfo *storageInfo,
 
     // set FTP connect
     curlCode = setFTPLogin(curlHandle,
-                           storageInfo->storageSpecifier.loginName,
-                           storageInfo->storageSpecifier.loginPassword,
+                           storageInfo->storageSpecifier.userName,
+                           &storageInfo->storageSpecifier.password,
                            FTP_TIMEOUT
                           );
     if (curlCode != CURLE_OK)
@@ -2517,8 +2520,8 @@ LOCAL Errors StorageFTP_makeDirectory(const StorageInfo *storageInfo,
   #endif /* HAVE_CURL || HAVE_FTP */
 }
 
-LOCAL Errors StorageFTP_delete(const StorageInfo *storageInfo,
-                               ConstString       archiveName
+LOCAL Errors StorageFTP_delete(StorageInfo *storageInfo,
+                               ConstString archiveName
                               )
 {
   Errors            error;
@@ -2563,8 +2566,8 @@ LOCAL Errors StorageFTP_delete(const StorageInfo *storageInfo,
 
       // delete file
       curlCode = setFTPLogin(curlHandle,
-                             storageInfo->storageSpecifier.loginName,
-                             storageInfo->storageSpecifier.loginPassword,
+                             storageInfo->storageSpecifier.userName,
+                             &storageInfo->storageSpecifier.password,
                              FTP_TIMEOUT
                             );
       if (curlCode == CURLE_OK)
@@ -2653,9 +2656,9 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
   #if   defined(HAVE_CURL)
     // get FTP server settings
     getFTPServerSettings(storageInfo->storageSpecifier.hostName,storageInfo->jobOptions,&server);
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,ftpServer.loginName);
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_set(storageInfo->storageSpecifier.userName,ftpServer.userName);
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("LOGNAME"));
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("USER"));
     if (String_isEmpty(storageInfo->storageSpecifier.hostName))
     {
       return ERROR_NO_HOST_NAME;
@@ -2696,8 +2699,8 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
     ftpCommand = String_appendFormat(String_new(),"*DIR %S",infoFileName);
     curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
     curlCode = setFTPLogin(curlHandle,
-                           storageInfo->storageSpecifier.loginName,
-                           storageInfo->storageSpecifier.loginPassword,
+                           storageInfo->storageSpecifier.userName,
+                           storageInfo->storageSpecifier.password,
                            FTP_TIMEOUT
                           );
     if (curlCode == CURLE_OK)
@@ -2793,9 +2796,9 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     // get FTP server settings
     storageDirectoryListHandle->ftp.serverId = Configuration_initFTPServerSettings(&ftpServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&ftpServer,{ Configuration_doneFTPServerSettings(&ftpServer); });
-    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_set(storageDirectoryListHandle->storageSpecifier.loginName,ftpServer.loginName);
-    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.loginName)) String_setCString(storageDirectoryListHandle->storageSpecifier.loginName,getenv("USER"));
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_set(storageDirectoryListHandle->storageSpecifier.userName,ftpServer.userName);
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_setCString(storageDirectoryListHandle->storageSpecifier.userName,getenv("LOGNAME"));
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_setCString(storageDirectoryListHandle->storageSpecifier.userName,getenv("USER"));
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
     {
       AutoFree_cleanup(&autoFreeList);
@@ -2812,24 +2815,24 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
 
     // check FTP login, get correct password
     error = ERROR_FTP_SESSION_FAIL;
-    if ((Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL) && !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword))
+    if ((Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL) && !Password_isEmpty(&storageDirectoryListHandle->storageSpecifier.password))
     {
       error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                             storageDirectoryListHandle->storageSpecifier.hostPort,
-                            storageDirectoryListHandle->storageSpecifier.loginName,
-                            storageDirectoryListHandle->storageSpecifier.loginPassword
+                            storageDirectoryListHandle->storageSpecifier.userName,
+                            &storageDirectoryListHandle->storageSpecifier.password
                            );
     }
     if ((Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL) && !Password_isEmpty(&ftpServer.password))
     {
       error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                             storageDirectoryListHandle->storageSpecifier.hostPort,
-                            storageDirectoryListHandle->storageSpecifier.loginName,
+                            storageDirectoryListHandle->storageSpecifier.userName,
                             &ftpServer.password
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storageDirectoryListHandle->storageSpecifier.loginPassword,&ftpServer.password);
+        Password_set(&storageDirectoryListHandle->storageSpecifier.password,&ftpServer.password);
       }
     }
     if (Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL)
@@ -2837,8 +2840,8 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
       // initialize default password
       while (   (Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL)
              && initFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
-                             storageDirectoryListHandle->storageSpecifier.loginName,
-                             storageDirectoryListHandle->storageSpecifier.loginPassword,
+                             storageDirectoryListHandle->storageSpecifier.userName,
+                             &storageDirectoryListHandle->storageSpecifier.password,
                              jobOptions,
 //TODO
                              CALLBACK_(NULL,NULL) // CALLBACK_(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
@@ -2847,13 +2850,13 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
       {
         error = checkFTPLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                               storageDirectoryListHandle->storageSpecifier.hostPort,
-                              storageDirectoryListHandle->storageSpecifier.loginName,
-                              storageDirectoryListHandle->storageSpecifier.loginPassword
+                              storageDirectoryListHandle->storageSpecifier.userName,
+                              &storageDirectoryListHandle->storageSpecifier.password
                              );
       }
       if (Error_getCode(error) == ERROR_CODE_FTP_SESSION_FAIL)
       {
-        error = (   !Password_isEmpty(storageDirectoryListHandle->storageSpecifier.loginPassword)
+        error = (   !Password_isEmpty(&storageDirectoryListHandle->storageSpecifier.password)
                  || !Password_isEmpty(&ftpServer.password)
                  || !Password_isEmpty(&defaultFTPPassword)
                 )
@@ -2864,7 +2867,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
       // store password as default password
       if (error == ERROR_NONE)
       {
-        Password_set(&defaultFTPPassword,storageDirectoryListHandle->storageSpecifier.loginPassword);
+        Password_set(&defaultFTPPassword,&storageDirectoryListHandle->storageSpecifier.password);
       }
     }
     if (error != ERROR_NONE)
@@ -2895,8 +2898,8 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
 
     // read directory
     curlCode = setFTPLogin(curlHandle,
-                           storageDirectoryListHandle->storageSpecifier.loginName,
-                           storageDirectoryListHandle->storageSpecifier.loginPassword,
+                           storageDirectoryListHandle->storageSpecifier.userName,
+                           &storageDirectoryListHandle->storageSpecifier.password,
                            FTP_TIMEOUT
                           );
     if (curlCode == CURLE_OK)

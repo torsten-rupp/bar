@@ -179,7 +179,6 @@ rest time
 - purge backup archives on exhausted free disk space
 - code formater
 - coding style guide
-- error correction codes
 - support continuous jobs for slave
 - assign-to progress update
 - test+compare in job dialog
@@ -191,7 +190,6 @@ rest time
 - purge backup archives on exhausted free disk space
 - win32: postresql client library
 - run pre/post command in standard mode (not only server)
-- libmount
 - BARControl: menu entries for Debian, XFCE
 
 

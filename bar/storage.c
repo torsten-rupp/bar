@@ -557,8 +557,8 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 * Name   : initSSHLogin
 * Purpose: init SSH login
 * Input  : hostName                - host name
-*          loginName               - login name
-*          loginPassword           - login password
+*          userName                - user name
+*          password                - password
 *          jobOptions              - job options
 *          getNamePasswordFunction - get password call-back (can be
 *                                    NULL)
@@ -569,8 +569,8 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 \***********************************************************************/
 
 LOCAL bool initSSHLogin(ConstString             hostName,
-                        String                  loginName,
-                        Password                *loginPassword,
+                        String                  userName,
+                        Password                *password,
                         const JobOptions        *jobOptions,
                         GetNamePasswordFunction getNamePasswordFunction,
                         void                    *getNamePasswordUserData
@@ -580,8 +580,8 @@ LOCAL bool initSSHLogin(ConstString             hostName,
   bool   initFlag;
 
   assert(!String_isEmpty(hostName));
-  assert(loginName != NULL);
-  assert(loginPassword != NULL);
+  assert(userName != NULL);
+  assert(password != NULL);
 
   initFlag = FALSE;
 
@@ -596,10 +596,10 @@ LOCAL bool initSSHLogin(ConstString             hostName,
           case RUN_MODE_INTERACTIVE:
             if (Password_isEmpty(&defaultSSHPassword))
             {
-              s = !String_isEmpty(loginName)
-                    ? String_format(String_new(),"SSH login password for %S@%S",loginName,hostName)
+              s = !String_isEmpty(userName)
+                    ? String_format(String_new(),"SSH login password for %S@%S",userName,hostName)
                     : String_format(String_new(),"SSH login password for %S",hostName);
-              if (Password_input(loginPassword,String_cString(s),PASSWORD_INPUT_MODE_ANY))
+              if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
               {
                 initFlag = TRUE;
               }
@@ -607,7 +607,7 @@ LOCAL bool initSSHLogin(ConstString             hostName,
             }
             else
             {
-              Password_set(loginPassword,&defaultSSHPassword);
+              Password_set(password,&defaultSSHPassword);
               initFlag = TRUE;
             }
             break;
@@ -615,11 +615,11 @@ LOCAL bool initSSHLogin(ConstString             hostName,
           case RUN_MODE_SERVER:
             if (getNamePasswordFunction != NULL)
             {
-              s = !String_isEmpty(loginName)
-                    ? String_format(String_new(),"%S@%S",loginName,hostName)
+              s = !String_isEmpty(userName)
+                    ? String_format(String_new(),"%S@%S",userName,hostName)
                     : String_format(String_new(),"%S",hostName);
-              if (getNamePasswordFunction(loginName,
-                                          loginPassword,
+              if (getNamePasswordFunction(userName,
+                                          password,
                                           PASSWORD_TYPE_SSH,
                                           String_cString(s),
                                           TRUE,
@@ -650,8 +650,8 @@ LOCAL bool initSSHLogin(ConstString             hostName,
 * Purpose: check if SSH login is possible
 * Input  : hostName         - host name
 *          hostPort         - host SSH port
-*          loginName        - login name
-*          loginPassword    - login password
+*          userName         - user name
+*          password         - password
 *          publicKey        - SSH public key
 *          publicKeyLength  - SSH public key length
 *          privateKey       - SSH private key
@@ -663,8 +663,8 @@ LOCAL bool initSSHLogin(ConstString             hostName,
 
 LOCAL Errors checkSSHLogin(ConstString hostName,
                            uint        hostPort,
-                           ConstString loginName,
-                           Password    *loginPassword,
+                           ConstString userName,
+                           Password    *password,
                            const void  *publicKeyData,
                            uint        publicKeyLength,
                            const void  *privateKeyData,
@@ -674,15 +674,15 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
   SocketHandle socketHandle;
   Errors       error;
 
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
   printInfo(5,"SSH: host %s:%d\n",String_cString(hostName),hostPort);
   error = Network_connect(&socketHandle,
                           SOCKET_TYPE_SSH,
                           hostName,
                           hostPort,
-                          loginName,
-                          loginPassword,
+                          userName,
+                          password,
                           NULL,  // caData
                           0,     // caLength
                           NULL,  // certData
@@ -1099,8 +1099,8 @@ void Storage_doneAll(void)
   storageSpecifier->type                 = STORAGE_TYPE_NONE;
   storageSpecifier->hostName             = String_new();
   storageSpecifier->hostPort             = 0;
-  storageSpecifier->loginName            = String_new();
-  storageSpecifier->loginPassword        = Password_new();
+  storageSpecifier->userName             = String_new();
+  Password_init(&storageSpecifier->password);
   storageSpecifier->shareName            = String_new();
   storageSpecifier->deviceName           = String_new();
   storageSpecifier->archiveName          = String_new();
@@ -1134,8 +1134,8 @@ void Storage_doneAll(void)
   destinationStorageSpecifier->type                 = sourceStorageSpecifier->type;
   destinationStorageSpecifier->hostName             = String_duplicate(sourceStorageSpecifier->hostName);
   destinationStorageSpecifier->hostPort             = sourceStorageSpecifier->hostPort;
-  destinationStorageSpecifier->loginName            = String_duplicate(sourceStorageSpecifier->loginName);
-  destinationStorageSpecifier->loginPassword        = Password_duplicate(sourceStorageSpecifier->loginPassword);
+  destinationStorageSpecifier->userName             = String_duplicate(sourceStorageSpecifier->userName);
+  Password_initDuplicate(&destinationStorageSpecifier->password,&sourceStorageSpecifier->password);
   destinationStorageSpecifier->shareName            = String_duplicate(sourceStorageSpecifier->shareName);
   destinationStorageSpecifier->deviceName           = String_duplicate(sourceStorageSpecifier->deviceName);
   destinationStorageSpecifier->archiveName          = String_duplicate(sourceStorageSpecifier->archiveName);
@@ -1186,8 +1186,8 @@ void Storage_doneAll(void)
   String_delete(storageSpecifier->archiveName);
   String_delete(storageSpecifier->deviceName);
   String_delete(storageSpecifier->shareName);
-  Password_delete(storageSpecifier->loginPassword);
-  String_delete(storageSpecifier->loginName);
+  Password_done(&storageSpecifier->password);
+  String_delete(storageSpecifier->userName);
   String_delete(storageSpecifier->hostName);
 }
 
@@ -1252,21 +1252,21 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
 bool Storage_parseFTPSpecifier(ConstString ftpSpecifier,
                                String      hostName,
                                uint        *hostPort,
-                               String      loginName,
-                               Password    *loginPassword
+                               String      userName,
+                               Password    *password
                               )
 {
   assert(ftpSpecifier != NULL);
   assert(hostName != NULL);
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
-  return StorageFTP_parseSpecifier(ftpSpecifier,hostName,hostPort,loginName,loginPassword);
+  return StorageFTP_parseSpecifier(ftpSpecifier,hostName,hostPort,userName,password);
 }
 
 bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
                                String      hostName,
                                uint        *hostPort,
-                               String      loginName
+                               String      userName
                               )
 {
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
@@ -1277,17 +1277,17 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
 
   assert(sshSpecifier != NULL);
   assert(hostName != NULL);
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
   String_clear(hostName);
   if (hostPort != NULL) (*hostPort) = 0;
-  String_clear(loginName);
+  String_clear(userName);
 
   s = String_new();
-  if      (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
+  if      (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,s,NULL))
   {
     // <login name>@<host name>:<host port>
-    if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (userName != NULL) String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
     if (hostPort != NULL)
     {
       if (!String_isEmpty(s)) (*hostPort) = (uint)String_toInteger(s,STRING_BEGIN,NULL,NULL,0);
@@ -1295,10 +1295,10 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+)/{0,1}$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>@<host name>
-    if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (userName != NULL) String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
 
     result = TRUE;
   }
@@ -1331,58 +1331,58 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
 bool Storage_parseSCPSpecifier(ConstString scpSpecifier,
                                String      hostName,
                                uint        *hostPort,
-                               String      loginName,
-                               Password    *loginPassword
+                               String      userName,
+                               Password    *password
                               )
 {
   assert(scpSpecifier != NULL);
   assert(hostName != NULL);
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
-  return StorageSCP_parseSpecifier(scpSpecifier,hostName,hostPort,loginName,loginPassword);
+  return StorageSCP_parseSpecifier(scpSpecifier,hostName,hostPort,userName,password);
 }
 
 bool Storage_parseSFTPSpecifier(ConstString sftpSpecifier,
                                 String      hostName,
                                 uint        *hostPort,
-                                String      loginName,
-                                Password    *loginPassword
+                                String      userName,
+                                Password    *password
                                )
 {
   assert(sftpSpecifier != NULL);
   assert(hostName != NULL);
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
-  return StorageSFTP_parseSpecifier(sftpSpecifier,hostName,hostPort,loginName,loginPassword);
+  return StorageSFTP_parseSpecifier(sftpSpecifier,hostName,hostPort,userName,password);
 }
 
 bool Storage_parseWebDAVSpecifier(ConstString webdavSpecifier,
                                   String      hostName,
                                   uint        *hostPort,
-                                  String      loginName,
-                                  Password    *loginPassword
+                                  String      userName,
+                                  Password    *password
                                  )
 {
   assert(webdavSpecifier != NULL);
   assert(hostName != NULL);
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
-  return StorageWebDAV_parseSpecifier(webdavSpecifier,hostName,hostPort,loginName,loginPassword);
+  return StorageWebDAV_parseSpecifier(webdavSpecifier,hostName,hostPort,userName,password);
 }
 
 bool Storage_parseSMBSpecifier(ConstString smbSpecifier,
                                String      hostName,
-                               String      loginName,
-                               Password    *loginPassword,
+                               String      userName,
+                               Password    *password,
                                String      shareName
                               )
 {
   assert(smbSpecifier != NULL);
   assert(hostName != NULL);
-  assert(loginName != NULL);
+  assert(userName != NULL);
   assert(shareName != NULL);
 
-  return StorageSMB_parseSpecifier(smbSpecifier,hostName,loginName,loginPassword,shareName);
+  return StorageSMB_parseSpecifier(smbSpecifier,hostName,userName,password,shareName);
 }
 
 bool Storage_parseOpticalSpecifier(ConstString opticalSpecifier,
@@ -1454,8 +1454,8 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
 
   String_clear(storageSpecifier->hostName);
   storageSpecifier->hostPort = 0;
-  String_clear(storageSpecifier->loginName);
-  Password_clear(storageSpecifier->loginPassword);
+  String_clear(storageSpecifier->userName);
+  Password_clear(&storageSpecifier->password);
   String_clear(storageSpecifier->deviceName);
 
   if      (String_startsWithCString(storageName,"ftp://"))
@@ -1473,8 +1473,8 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
       if (!Storage_parseFTPSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
-                                     storageSpecifier->loginName,
-                                     storageSpecifier->loginPassword
+                                     storageSpecifier->userName,
+                                     &storageSpecifier->password
                                     )
          )
       {
@@ -1504,7 +1504,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
       if (!Storage_parseSSHSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
-                                     storageSpecifier->loginName
+                                     storageSpecifier->userName
                                     )
          )
       {
@@ -1534,8 +1534,8 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
       if (!Storage_parseSCPSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
-                                     storageSpecifier->loginName,
-                                     storageSpecifier->loginPassword
+                                     storageSpecifier->userName,
+                                     &storageSpecifier->password
                                     )
          )
       {
@@ -1565,8 +1565,8 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
       if (!StorageSFTP_parseSpecifier(string,
                                       storageSpecifier->hostName,
                                       &storageSpecifier->hostPort,
-                                      storageSpecifier->loginName,
-                                      storageSpecifier->loginPassword
+                                      storageSpecifier->userName,
+                                      &storageSpecifier->password
                                      )
          )
       {
@@ -1595,8 +1595,8 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
       if (!Storage_parseWebDAVSpecifier(string,
                                         storageSpecifier->hostName,
                                         &storageSpecifier->hostPort,
-                                        storageSpecifier->loginName,
-                                        storageSpecifier->loginPassword
+                                        storageSpecifier->userName,
+                                        &storageSpecifier->password
                                        )
          )
       {
@@ -1625,8 +1625,8 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
       if (!Storage_parseWebDAVSpecifier(string,
                                         storageSpecifier->hostName,
                                         &storageSpecifier->hostPort,
-                                        storageSpecifier->loginName,
-                                        storageSpecifier->loginPassword
+                                        storageSpecifier->userName,
+                                        &storageSpecifier->password
                                        )
          )
       {
@@ -1654,8 +1654,8 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
       String_trimEnd(string,"/");
       if (!Storage_parseSMBSpecifier(string,
                                      storageSpecifier->hostName,
-                                     storageSpecifier->loginName,
-                                     storageSpecifier->loginPassword,
+                                     storageSpecifier->userName,
+                                     &storageSpecifier->password,
                                      storageSpecifier->shareName
                                     )
          )
@@ -2133,7 +2133,7 @@ uint Storage_getServerSettings(Server                 *server,
           // get server settings
           serverId  = existingServerNode->server.id;
           Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_FTP);
-          server->ftp.loginName = String_duplicate(existingServerNode->server.ftp.loginName);
+          server->ftp.userName = String_duplicate(existingServerNode->server.ftp.userName);
           Password_set(&server->ftp.password,&existingServerNode->server.ftp.password);
           server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->server.writePreProcessCommand )
                                                                ? existingServerNode->server.writePreProcessCommand
@@ -2162,7 +2162,7 @@ uint Storage_getServerSettings(Server                 *server,
           serverId  = existingServerNode->server.id;
           Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_SSH);
           server->ssh.port      = existingServerNode->server.ssh.port;
-          server->ssh.loginName = String_duplicate(existingServerNode->server.ssh.loginName);
+          server->ssh.userName = String_duplicate(existingServerNode->server.ssh.userName);
           Password_set(&server->ssh.password,&existingServerNode->server.ssh.password);
           Configuration_duplicateKey(&server->ssh.publicKey,&existingServerNode->server.ssh.publicKey);
           Configuration_duplicateKey(&server->ssh.privateKey,&existingServerNode->server.ssh.privateKey);
@@ -2192,7 +2192,7 @@ uint Storage_getServerSettings(Server                 *server,
           serverId  = existingServerNode->server.id;
           Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_SSH);
           server->ssh.port      = existingServerNode->server.ssh.port;
-          server->ssh.loginName = String_duplicate(existingServerNode->server.ssh.loginName);
+          server->ssh.userName = String_duplicate(existingServerNode->server.ssh.userName);
           Password_set(&server->ssh.password,&existingServerNode->server.ssh.password);
           Configuration_duplicateKey(&server->ssh.publicKey,&existingServerNode->server.ssh.publicKey);
           Configuration_duplicateKey(&server->ssh.privateKey,&existingServerNode->server.ssh.privateKey);
@@ -2222,7 +2222,7 @@ uint Storage_getServerSettings(Server                 *server,
           serverId = existingServerNode->server.id;
           Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_WEBDAV);
           server->webDAV.port      = existingServerNode->server.webDAV.port;
-          server->webDAV.loginName = String_duplicate(existingServerNode->server.webDAV.loginName);
+          server->webDAV.userName = String_duplicate(existingServerNode->server.webDAV.userName);
           Password_set(&server->webDAV.password,&existingServerNode->server.webDAV.password);
           Configuration_duplicateKey(&server->webDAV.publicKey,&existingServerNode->server.webDAV.publicKey);
           Configuration_duplicateKey(&server->webDAV.privateKey,&existingServerNode->server.webDAV.privateKey);
@@ -2252,7 +2252,7 @@ uint Storage_getServerSettings(Server                 *server,
           serverId = existingServerNode->server.id;
           Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_WEBDAVS);
           server->webDAV.port      = existingServerNode->server.webDAV.port;
-          server->webDAV.loginName = String_duplicate(existingServerNode->server.webDAV.loginName);
+          server->webDAV.userName = String_duplicate(existingServerNode->server.webDAV.userName);
           Password_set(&server->webDAV.password,&existingServerNode->server.webDAV.password);
           Configuration_duplicateKey(&server->webDAV.publicKey,&existingServerNode->server.webDAV.publicKey);
           Configuration_duplicateKey(&server->webDAV.privateKey,&existingServerNode->server.webDAV.privateKey);
@@ -2281,7 +2281,7 @@ uint Storage_getServerSettings(Server                 *server,
           // get server settings
           serverId = existingServerNode->server.id;
           Configuration_initServer(server,existingServerNode->server.name,SERVER_TYPE_SMB);
-          server->smb.loginName = String_duplicate(existingServerNode->server.smb.loginName);
+          server->smb.userName = String_duplicate(existingServerNode->server.smb.userName);
           Password_set(&server->smb.password,&existingServerNode->server.smb.password);
           server->smb.shareName = String_duplicate(existingServerNode->server.smb.shareName);
           server->writePreProcessCommand  = String_duplicate(!String_isEmpty(existingServerNode->server.writePreProcessCommand )
@@ -4290,9 +4290,9 @@ Errors Storage_copy(StorageInfo                 *fromStorageInfo,
   return ERROR_NONE;
 }
 
-Errors Storage_rename(const StorageInfo *storageInfo,
-                      ConstString       fromArchiveName,
-                      ConstString       toArchiveName
+Errors Storage_rename(StorageInfo *storageInfo,
+                      ConstString fromArchiveName,
+                      ConstString toArchiveName
                      )
 {
   Errors error;

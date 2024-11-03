@@ -157,8 +157,8 @@ LOCAL void StorageSCP_doneAll(void)
 LOCAL bool StorageSCP_parseSpecifier(ConstString sshSpecifier,
                                      String      hostName,
                                      uint        *hostPort,
-                                     String      loginName,
-                                     Password    *loginPassword
+                                     String      userName,
+                                     Password    *password
                                     )
 {
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
@@ -169,36 +169,36 @@ LOCAL bool StorageSCP_parseSpecifier(ConstString sshSpecifier,
 
   assert(sshSpecifier != NULL);
   assert(hostName != NULL);
-  assert(loginName != NULL);
+  assert(userName != NULL);
 
   String_clear(hostName);
   if (hostPort != NULL) (*hostPort) = 0;
-  String_clear(loginName);
-  if (loginPassword != NULL) Password_clear(loginPassword);
+  String_clear(userName);
+  if (password != NULL) Password_clear(password);
 
   s = String_new();
   t = String_new();
-  if      (String_matchCString(sshSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,t,NULL))
+  if      (String_matchCString(sshSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,t,NULL))
   {
     // <login name>:<login password>@<host name>:<host port>
-    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
-    if (loginPassword != NULL) Password_setString(loginPassword,s);
+    String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (password != NULL) Password_setString(password,s);
     if (hostPort != NULL) (*hostPort) = (uint)String_toInteger(t,STRING_BEGIN,NULL,NULL,0);
 
     result = TRUE;
   }
-  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,loginName,s,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>:<login password>@<host name>
-    String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
-    if (loginPassword != NULL) Password_setString(loginPassword,s);
+    String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (password != NULL) Password_setString(password,s);
 
     result = TRUE;
   }
-  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,s,NULL))
+  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,s,NULL))
   {
     // <login name>@<host name>:<host port>
-    if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (userName != NULL) String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
     if (hostPort != NULL)
     {
       if (!String_isEmpty(s)) (*hostPort) = (uint)String_toInteger(s,STRING_BEGIN,NULL,NULL,0);
@@ -206,10 +206,10 @@ LOCAL bool StorageSCP_parseSpecifier(ConstString sshSpecifier,
 
     result = TRUE;
   }
-  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+)/{0,1}$",NULL,STRING_NO_ASSIGN,loginName,STRING_NO_ASSIGN,hostName,NULL))
+  else if (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^/]+)/{0,1}$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,NULL))
   {
     // <login name>@<host name>
-    if (loginName != NULL) String_mapCString(loginName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
+    if (userName != NULL) String_mapCString(userName,STRING_BEGIN,LOGINNAME_MAP_FROM,LOGINNAME_MAP_TO,SIZE_OF_ARRAY(LOGINNAME_MAP_FROM),NULL);
 
     result = TRUE;
   }
@@ -283,13 +283,13 @@ LOCAL String StorageSCP_getName(String                 string,
   }
 
   String_appendCString(string,"scp://");
-  if (!String_isEmpty(storageSpecifier->loginName))
+  if (!String_isEmpty(storageSpecifier->userName))
   {
-    String_append(string,storageSpecifier->loginName);
-    if (!Password_isEmpty(storageSpecifier->loginPassword))
+    String_append(string,storageSpecifier->userName);
+    if (!Password_isEmpty(&storageSpecifier->password))
     {
       String_appendChar(string,':');
-      PASSWORD_DEPLOY_DO(plainPassword,storageSpecifier->loginPassword)
+      PASSWORD_DEPLOY_DO(plainPassword,&storageSpecifier->password)
       {
         String_appendCString(string,plainPassword);
       }
@@ -368,18 +368,17 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
   #ifdef HAVE_SSH2
     // init variables
     AutoFree_init(&autoFreeList);
-    storageInfo->scp.sshPublicKeyFileName   = NULL;
-    storageInfo->scp.sshPrivateKeyFileName  = NULL;
     initBandWidthLimiter(&storageInfo->scp.bandWidthLimiter,maxBandWidthList);
     AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.bandWidthLimiter,{ doneBandWidthLimiter(&storageInfo->scp.bandWidthLimiter); });
 
     // get SSH server settings
     storageInfo->scp.serverId = Configuration_initSSHServerSettings(&sshServer,storageInfo->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&sshServer,{ Configuration_doneSSHServerSettings(&sshServer); });
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_set(storageInfo->storageSpecifier.loginName,sshServer.loginName);
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
-    if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_set(storageInfo->storageSpecifier.userName,sshServer.userName);
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("LOGNAME"));
+    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("USER"));
     if (storageInfo->storageSpecifier.hostPort == 0) storageInfo->storageSpecifier.hostPort = sshServer.port;
+    if (Password_isEmpty(&storageInfo->storageSpecifier.password)) Password_set(&storageInfo->storageSpecifier.password,&sshServer.password);
     Configuration_duplicateKey(&storageInfo->scp.publicKey, &sshServer.publicKey );
     Configuration_duplicateKey(&storageInfo->scp.privateKey,&sshServer.privateKey);
     AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.publicKey,{ Configuration_doneKey(&storageInfo->scp.publicKey); });
@@ -400,12 +399,12 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
 
     // check if SSH login, get correct password
     error = ERROR_SSH_AUTHENTICATION;
-    if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(storageInfo->storageSpecifier.loginPassword))
+    if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(&storageInfo->storageSpecifier.password))
     {
       error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
-                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->storageSpecifier.userName,
+                            &storageInfo->storageSpecifier.password,
                             storageInfo->scp.publicKey.data,
                             storageInfo->scp.publicKey.length,
                             storageInfo->scp.privateKey.data,
@@ -416,7 +415,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     {
       error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.userName,
                             &sshServer.password,
                             storageInfo->scp.publicKey.data,
                             storageInfo->scp.publicKey.length,
@@ -425,14 +424,14 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storageInfo->storageSpecifier.loginPassword,&sshServer.password);
+        Password_set(&storageInfo->storageSpecifier.password,&sshServer.password);
       }
     }
     if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(&sshServer.password))
     {
       error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.userName,
                             &defaultSSHPassword,
                             storageInfo->scp.publicKey.data,
                             storageInfo->scp.publicKey.length,
@@ -441,7 +440,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
                            );
       if (error == ERROR_NONE)
       {
-        Password_set(storageInfo->storageSpecifier.loginPassword,&defaultSSHPassword);
+        Password_set(&storageInfo->storageSpecifier.password,&defaultSSHPassword);
       }
     }
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
@@ -452,7 +451,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
       while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
         if  (initSSHLogin(storageInfo->storageSpecifier.hostName,
-                          storageInfo->storageSpecifier.loginName,
+                          storageInfo->storageSpecifier.userName,
                           &password,
                           jobOptions,
                           CALLBACK_(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
@@ -461,7 +460,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
         {
           error = checkSSHLogin(storageInfo->storageSpecifier.hostName,
                                 storageInfo->storageSpecifier.hostPort,
-                                storageInfo->storageSpecifier.loginName,
+                                storageInfo->storageSpecifier.userName,
                                 &password,
                                 storageInfo->scp.publicKey.data,
                                 storageInfo->scp.publicKey.length,
@@ -470,7 +469,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
                                );
           if (error == ERROR_NONE)
           {
-            Password_set(storageInfo->storageSpecifier.loginPassword,&password);
+            Password_set(&storageInfo->storageSpecifier.password,&password);
           }
         }
         retries++;
@@ -479,7 +478,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     }
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
     {
-      error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
+      error = (   !Password_isEmpty(&storageInfo->storageSpecifier.password)
                || !Password_isEmpty(&sshServer.password)
                || !Password_isEmpty(&defaultSSHPassword)
               )
@@ -490,7 +489,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     // store password as default password
     if (error == ERROR_NONE)
     {
-      Password_set(&defaultSSHPassword,storageInfo->storageSpecifier.loginPassword);
+      Password_set(&defaultSSHPassword,&storageInfo->storageSpecifier.password);
     }
     assert(error != ERROR_UNKNOWN);
     if (error != ERROR_NONE)
@@ -664,7 +663,9 @@ LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL bool StorageSCP_exists(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageSCP_exists(StorageInfo *storageInfo,
+                             ConstString archiveName
+                            )
 {
   bool existsFlag;
   #ifdef HAVE_SSH2
@@ -686,8 +687,8 @@ LOCAL bool StorageSCP_exists(const StorageInfo *storageInfo, ConstString archive
                             SOCKET_TYPE_SSH,
                             storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
-                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->storageSpecifier.userName,
+                            &storageInfo->storageSpecifier.password,
                             NULL,  // caData
                             0,     // caLength
                             NULL,  // certData
@@ -730,7 +731,9 @@ LOCAL bool StorageSCP_exists(const StorageInfo *storageInfo, ConstString archive
   return existsFlag;
 }
 
-LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageSCP_isFile(StorageInfo *storageInfo,
+                             ConstString archiveName
+                            )
 {
   bool result;
   #ifdef HAVE_SSH2
@@ -752,8 +755,8 @@ LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archive
                             SOCKET_TYPE_SSH,
                             storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
-                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->storageSpecifier.userName,
+                            &storageInfo->storageSpecifier.password,
                             NULL,  // caData
                             0,     // caLength
                             NULL,  // certData
@@ -800,7 +803,9 @@ LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archive
   return result;
 }
 
-LOCAL bool StorageSCP_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
+LOCAL bool StorageSCP_isDirectory(StorageInfo *storageInfo,
+                                  ConstString archiveName
+                                 )
 {
   bool result;
   #ifdef HAVE_SSH2
@@ -822,8 +827,8 @@ LOCAL bool StorageSCP_isDirectory(const StorageInfo *storageInfo, ConstString ar
                             SOCKET_TYPE_SSH,
                             storageInfo->storageSpecifier.hostName,
                             storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.loginName,
-                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->storageSpecifier.userName,
+                            &storageInfo->storageSpecifier.password,
                             NULL,  // caData
                             0,     // caLength
                             NULL,  // certData
@@ -952,8 +957,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                             SOCKET_TYPE_SSH,
                             storageHandle->storageInfo->storageSpecifier.hostName,
                             storageHandle->storageInfo->storageSpecifier.hostPort,
-                            storageHandle->storageInfo->storageSpecifier.loginName,
-                            storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            storageHandle->storageInfo->storageSpecifier.userName,
+                            &storageHandle->storageInfo->storageSpecifier.password,
                             NULL,  // caData
                             0,     // caLength
                             NULL,  // certData
@@ -1058,8 +1063,8 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
                             SOCKET_TYPE_SSH,
                             storageHandle->storageInfo->storageSpecifier.hostName,
                             storageHandle->storageInfo->storageSpecifier.hostPort,
-                            storageHandle->storageInfo->storageSpecifier.loginName,
-                            storageHandle->storageInfo->storageSpecifier.loginPassword,
+                            storageHandle->storageInfo->storageSpecifier.userName,
+                            &storageHandle->storageInfo->storageSpecifier.password,
                             NULL,  // caData
                             0,     // caLength
                             NULL,  // certData
