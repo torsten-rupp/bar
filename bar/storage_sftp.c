@@ -1737,31 +1737,28 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
       return error;
     }
 
-    // create directory if not existing
+    // create directories if not existing
     directoryName = File_getDirectoryName(String_new(),fileName);
-    if (!String_isEmpty(directoryName))
+    String name = String_new();
+    FILE_PATH_ITERATEX(directoryName,name,TRUE,error == ERROR_NONE)
     {
       if (libssh2_sftp_lstat(storageHandle->sftp.sftp,
-                             String_cString(directoryName),
+                             String_cString(name),
                              &sftpAttributes
                             ) == 0
          )
       {
         // check if directory
-        if (!LIBSSH2_SFTP_S_ISDIR (sftpAttributes.permissions))
+        if (!LIBSSH2_SFTP_S_ISDIR(sftpAttributes.permissions))
         {
-          error = ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(directoryName));
-          String_delete(directoryName);
-          (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-          Network_disconnect(&storageHandle->sftp.socketHandle);
-          return error;
+          error = ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(name));
         }
       }
       else
       {
         // create directory
         if (libssh2_sftp_mkdir(storageHandle->sftp.sftp,
-                               String_cString(directoryName),
+                               String_cString(name),
                                sftpGetPermissions(File_getDefaultDirectoryPermissions())
                               ) != 0
            )
@@ -1772,17 +1769,20 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
           error = ERRORX_(SSH,
                           libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)),
                           "create '%s' fail: %s",
-                          String_cString(directoryName),
+                          String_cString(name),
                           ssh2ErrorText
                          );
-          String_delete(directoryName);
-          (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-          Network_disconnect(&storageHandle->sftp.socketHandle);
-          return error;
         }
       }
     }
+    String_delete(name);
     String_delete(directoryName);
+    if (error != ERROR_NONE)
+    {
+      (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+      Network_disconnect(&storageHandle->sftp.socketHandle);
+      return error;
+    }
 
     // create file
     storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
