@@ -1384,6 +1384,112 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, ConstString *na
   return String_getNextToken(stringTokenizer,name,NULL);
 }
 
+void File_initIteratePath(FilePathIterator *filePathIterator, ConstString path, bool appendFlag)
+{
+  assert(filePathIterator != NULL);
+
+  String_initTokenizer(&filePathIterator->stringTokenizer,path,STRING_BEGIN,FILE_PATH_SEPARATOR_CHARS,NULL,TRUE);
+  filePathIterator->appendFlag    = appendFlag;
+  filePathIterator->separatorFlag = File_isAbsoluteFileName(path);
+  filePathIterator->path          = String_new();
+}
+
+void File_initIteratePathCString(FilePathIterator *filePathIterator, const char *path, bool appendFlag)
+{
+  assert(filePathIterator != NULL);
+
+  String_initTokenizerCString(&filePathIterator->stringTokenizer,path,FILE_PATH_SEPARATOR_CHARS,NULL,TRUE);
+  filePathIterator->path          = String_new();
+  filePathIterator->separatorFlag = File_isAbsoluteFileNameCString(path);
+  filePathIterator->appendFlag    = appendFlag;
+}
+
+bool File_getNextIteratePath(FilePathIterator *filePathIterator, String variable, bool condition)
+{
+  assert(filePathIterator != NULL);
+  assert(variable != NULL);
+
+  bool hasNext = FALSE;
+  if (condition)
+  {
+    ConstString token;
+    if (filePathIterator->separatorFlag)
+    {
+      String_setChar(filePathIterator->path,FILE_PATH_SEPARATOR_CHAR);
+      filePathIterator->separatorFlag = FALSE;
+      hasNext = TRUE;
+    }
+    else if (String_getNextToken(&filePathIterator->stringTokenizer,&token,NULL))
+    {
+      if (filePathIterator->appendFlag)
+      {
+        File_appendFileName(filePathIterator->path,token);
+      }
+      else
+      {
+        String_set(filePathIterator->path,token);
+      }
+      hasNext = TRUE;
+    }
+  }
+
+  if (hasNext)
+  {
+    String_set(variable,filePathIterator->path);
+  }
+  else
+  {
+    String_clear(variable);
+    String_delete(filePathIterator->path);
+    String_doneTokenizer(&filePathIterator->stringTokenizer);
+  }
+
+  return hasNext;
+}
+
+bool File_getNextIteratePathCString(FilePathIterator *filePathIterator, const char **variable, bool condition)
+{
+  assert(filePathIterator != NULL);
+  assert(variable != NULL);
+
+  bool hasNext = FALSE;
+  if (condition)
+  {
+    ConstString token;
+    if (filePathIterator->separatorFlag)
+    {
+      String_setChar(filePathIterator->path,FILE_PATH_SEPARATOR_CHAR);
+      filePathIterator->separatorFlag = FALSE;
+      hasNext = TRUE;
+    }
+    else if (String_getNextToken(&filePathIterator->stringTokenizer,&token,NULL))
+    {
+      if (filePathIterator->appendFlag)
+      {
+        File_appendFileName(filePathIterator->path,token);
+      }
+      else
+      {
+        String_set(filePathIterator->path,token);
+      }
+      hasNext = TRUE;
+    }
+  }
+
+  if (hasNext)
+  {
+    (*variable) = String_cString(filePathIterator->path);
+  }
+  else
+  {
+    (*variable) = NULL;
+    String_delete(filePathIterator->path);
+    String_doneTokenizer(&filePathIterator->stringTokenizer);
+  }
+
+  return hasNext;
+}
+
 /*---------------------------------------------------------------------*/
 
 String File_getSystemDirectory(String path, FileSystemPathTypes fileSystemPathType, ConstString subDirectory)
@@ -4982,6 +5088,7 @@ Errors File_makeDirectory(ConstString     pathName,
   if      (!File_exists(directoryName))
   {
     // create root-directory
+
     // set owner/group
     if (   (userId  != FILE_DEFAULT_USER_ID)
         || (groupId != FILE_DEFAULT_GROUP_ID)

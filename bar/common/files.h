@@ -359,6 +359,14 @@ typedef struct
   uint   maxFileNameLength;
 } FileSystemInfo;
 
+typedef struct
+{
+  StringTokenizer stringTokenizer;
+  bool            separatorFlag;
+  bool            appendFlag;
+  String          path;
+} FilePathIterator;
+
 #ifndef NDEBUG
 /***********************************************************************\
 * Name   : FileDumpInfoFunction
@@ -386,6 +394,37 @@ typedef bool(*FileDumpInfoFunction)(const FileHandle *fileHandle,
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+/***********************************************************************\
+* Name   : __FILE_PATH_ITERATE, FILE_ITERATE_CPATH
+* Purpose: iterate over file path parts
+* Input  : path       - path to iterate
+*          appendFlag - append to path
+*          condition  - condition
+* Output : variable - path
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define __FILE_PATH_ITERATE(filePathIterator,path,variable,appendFlag,condition) \
+  FilePathIterator filePathIterator; \
+  for (File_initIteratePath(&filePathIterator,path,appendFlag); \
+       File_getNextIteratePath(&filePathIterator,variable,condition); \
+      )
+#define FILE_PATH_ITERATE(path,variable,appendFlag) \
+  __FILE_PATH_ITERATE(__GLOBAL_CONCAT(__filePathIterator,__COUNTER__),path,variable,appendFlag,TRUE)
+#define FILE_PATH_ITERATEX(path,variable,appendFlag,condition) \
+  __FILE_PATH_ITERATE(__GLOBAL_CONCAT(__filePathIterator,__COUNTER__),path,variable,appendFlag,condition)
+
+#define __FILE_PATH_ITERATE_CSTRING(filePathIterator,path,variable,appendFlag,condition) \
+  FilePathIterator filePathIterator; \
+  for (File_initIteratePathCString(&filePathIterator,path,appendFlag); \
+       File_getNextIteratePathCString(&filePathIterator,&variable,condition); \
+      )
+#define FILE_PATH_ITERATE_CSTRING(path,variable,appendFlag) \
+  __FILE_PATH_ITERATE_CSTRING(__GLOBAL_CONCAT(__filePathIterator,__COUNTER__),path,variable,appendFlag,TRUE)
+#define FILE_PATH_ITERATEX_CSTRING(path,variable,appendFlag,condition) \
+  __FILE_PATH_ITERATE_CSTRING(__GLOBAL_CONCAT(__filePathIterator,__COUNTER__),path,variable,appendFlag,condition)
 
 #ifndef NDEBUG
   #define File_getTmpFile(...)             __File_getTmpFile(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -616,6 +655,33 @@ void File_doneSplitFileName(StringTokenizer *stringTokenizer);
 \***********************************************************************/
 
 bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, ConstString *name);
+
+/***********************************************************************\
+* Name   : File_iteratePathInit, File_initIteratePathCString
+* Purpose: initialize path iterator
+* Input  : filePathIterator - file path iterator variable
+*          path             - path
+*          appendFlag       - TRUE to append path
+* Output : variable - path
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void File_initIteratePath(FilePathIterator *filePathIterator, ConstString path, bool appendFlag);
+void File_initIteratePathCString(FilePathIterator *filePathIterator, const char *path, bool appendFlag);
+
+/***********************************************************************\
+* Name   : File_iteratePathNext, File_getNextIteratePathCString
+* Purpose: get next path from path iterator
+* Input  : filePathIterator - file path iterator
+           condition        - condition
+* Output : variable - path
+* Return : TRUE if has next path segment
+* Notes  : -
+\***********************************************************************/
+
+bool File_getNextIteratePath(FilePathIterator *filePathIterator, String variable, bool condition);
+bool File_getNextIteratePathCString(FilePathIterator *filePathIterator, const char **variable, bool condition);
 
 /*---------------------------------------------------------------------*/
 

@@ -2059,7 +2059,7 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Removed storage #%"PRIu64" from index: %s, created at %s",
+              "Removed storage #%"PRIu64" from index '%s', created at %s",
               storageId,
               String_cString(name),
               (createdDateTime != 0LL)
