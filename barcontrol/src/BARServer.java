@@ -1077,6 +1077,7 @@ class ReadThread extends Thread
                 catch (Throwable throwable)
                 {
                   // ignored
+                  BARControl.logThrowable(throwable);
                 }
               }
 
@@ -1130,6 +1131,7 @@ class ReadThread extends Thread
       }
       catch (final InternalError error)
       {
+        BARControl.printInternalError(error);
         if (!quitFlag && (display != null))
         {
           display.asyncExec(new Runnable()
@@ -1140,23 +1142,12 @@ class ReadThread extends Thread
             }
           });
         }
-        BARControl.printInternalError(error);
+        BARControl.logThrowable(error);
         System.exit(ExitCodes.INTERNAL_ERROR);
       }
       catch (final Throwable throwable)
       {
-        if (display != null)
-        {
-          display.asyncExec(new Runnable()
-          {
-            public void run()
-            {
-              BARControl.showFatalError(throwable);
-            }
-          });
-        }
-        BARControl.printInternalError(throwable);
-        System.exit(ExitCodes.INTERNAL_ERROR);
+        BARControl.internalError(throwable);
       }
     }
   }
@@ -1456,8 +1447,10 @@ class CommandThread extends Thread
         // try to send abort result
         BARServer.sendResult(command.id,1,true,0,"action=ABORT");
 
-        BARControl.printInternalError(throwable);
-        System.exit(ExitCodes.INTERNAL_ERROR);
+        if (Settings.debugLevel > 0)
+        {
+          BARControl.internalError(throwable);
+        }
       }
     }
   }
@@ -2626,8 +2619,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       if (Settings.debugLevel > 0)
       {
-        BARControl.printInternalError(throwable);
-        System.exit(ExitCodes.INTERNAL_ERROR);
+        BARControl.internalError(throwable);
       }
     }
 
@@ -2657,8 +2649,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         if (Settings.debugLevel > 0)
         {
-          BARControl.printInternalError(throwable);
-          System.exit(ExitCodes.INTERNAL_ERROR);
+          BARControl.internalError(throwable);
         }
       }
     }

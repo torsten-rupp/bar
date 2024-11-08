@@ -1890,9 +1890,11 @@ Dprintf.dprintf("");
             }
             catch (Throwable throwable)
             {
-              // internal error
-              BARServer.disconnect();
-              BARControl.internalError(throwable);
+              if (Settings.debugLevel > 0)
+              {
+                BARServer.disconnect();
+                BARControl.internalError(throwable);
+              }
             }
           }
           finally
@@ -1972,7 +1974,6 @@ Dprintf.dprintf("");
       }
       catch (Throwable throwable)
       {
-        // internal error
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
@@ -2296,14 +2297,11 @@ Dprintf.dprintf("");
         {
           public void run()
           {
-            if (!widgetStorageTree.isDisposed())
+            for (TreeItem treeItem : removeTreeItemSet)
             {
-              for (TreeItem treeItem : removeTreeItemSet)
+              if (!treeItem.isDisposed())
               {
-                if (!treeItem.isDisposed())
-                {
-                  Widgets.removeTreeItem(treeItem);
-                }
+                Widgets.removeTreeItem(treeItem);
               }
             }
           }
@@ -2418,7 +2416,7 @@ Dprintf.dprintf("");
         {
           public void run()
           {
-            if (!widgetStorageTree.isDisposed())
+            if (!uuidTreeItem.isDisposed())
             {
               final IndexDataComparator<EntityIndexData> indexDataComparator = IndexDataComparator.getInstance(IndexDataComparator.SortModes.CREATED_DATETIME);
 
@@ -2454,19 +2452,16 @@ Dprintf.dprintf("");
         {
           public void run()
           {
-            if (!widgetStorageTree.isDisposed())
+            for (TreeItem treeItem : removeTreeItemSet)
             {
-              for (TreeItem treeItem : removeTreeItemSet)
+              if (!treeItem.isDisposed())
               {
-                if (!treeItem.isDisposed())
-                {
-                  IndexData indexData = (IndexData)treeItem.getData();
-                  Widgets.removeTreeItem(treeItem);
+                IndexData indexData = (IndexData)treeItem.getData();
+                Widgets.removeTreeItem(treeItem);
 
-                  if (indexData != null)
-                  {
-                    setStorageList(indexData.id,false);
-                  }
+                if (indexData != null)
+                {
+                  setStorageList(indexData.id,false);
                 }
               }
             }
@@ -2697,28 +2692,29 @@ Dprintf.dprintf("");
         {
           public void run()
           {
-            if (!widgetStorageTree.isDisposed())
+            for (TreeItem treeItem : removeTreeItemSet)
             {
-              for (TreeItem treeItem : removeTreeItemSet)
+              if (!treeItem.isDisposed())
               {
-                if (!treeItem.isDisposed())
-                {
-                  IndexData indexData = (IndexData)treeItem.getData();
-                  Widgets.removeTreeItem(treeItem);
+                IndexData indexData = (IndexData)treeItem.getData();
+                Widgets.removeTreeItem(treeItem);
 
-                  if (indexData != null)
-                  {
-                    setStorageList(indexData.id,false);
-                  }
+                if (indexData != null)
+                {
+                  setStorageList(indexData.id,false);
                 }
               }
             }
           }
         });
       }
-      catch (Exception exception)
+      catch (Throwable throwable)
       {
-        // ignored
+        if (Settings.debugLevel > 0)
+        {
+          BARServer.disconnect();
+          BARControl.internalError(throwable);
+        }
       }
     }
 
@@ -3039,17 +3035,19 @@ Dprintf.dprintf("");
                 if ((offset+i) < n)
                 {
                   TableItem tableItem = widgetStorageTable.getItem(offset+i);
-
-                  Widgets.updateTableItem(tableItem,
-                                          (Object)storageIndexData,
-                                          storageIndexData.name,
-                                          storageIndexData.hostName,
-                                          Units.formatByteSize(storageIndexData.totalEntrySize),
-                                          "",  // date/time drawn in event handler
-                                          storageIndexData.indexState.toString()
-                                         );
-                  tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
-                  tableItem.setBackground(storageIndexData.jobUUID.isEmpty() ? COLOR_NO_JOB_INFO : null);
+                  if (!tableItem.isDisposed())
+                  {
+                    Widgets.updateTableItem(tableItem,
+                                            (Object)storageIndexData,
+                                            storageIndexData.name,
+                                            storageIndexData.hostName,
+                                            Units.formatByteSize(storageIndexData.totalEntrySize),
+                                            "",  // date/time drawn in event handler
+                                            storageIndexData.indexState.toString()
+                                           );
+                    tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
+                    tableItem.setBackground(storageIndexData.jobUUID.isEmpty() ? COLOR_NO_JOB_INFO : null);
+                  }
                 }
 
                 i++;
@@ -3431,9 +3429,11 @@ Dprintf.dprintf("");
           }
           catch (Throwable throwable)
           {
-            // internal error
-            BARServer.disconnect();
-            BARControl.internalError(throwable);
+            if (Settings.debugLevel > 0)
+            {
+              BARServer.disconnect();
+              BARControl.internalError(throwable);
+            }
           }
           finally
           {
@@ -3508,7 +3508,6 @@ Dprintf.dprintf("");
       }
       catch (Throwable throwable)
       {
-        // internal error
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
@@ -4038,65 +4037,67 @@ Dprintf.dprintf("");
                 if ((offset+i) < n)
                 {
                   TableItem tableItem = widgetEntryTable.getItem(offset+i);
-
-                  switch (entryIndexData.entryType)
+                  if (!tableItem.isDisposed())
                   {
-                    case FILE:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.getText(),
-                                              Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
-                      break;
-                    case IMAGE:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.getText(),
-                                              Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
-                      break;
-                    case DIRECTORY:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.getText(),
-                                              (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
-                      break;
-                    case LINK:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.getText(),
-                                              "",
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
-                      break;
-                    case HARDLINK:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.getText(),
-                                              Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
-                      break;
-                    case SPECIAL:
-                      Widgets.updateTableItem(tableItem,
-                                              (Object)entryIndexData,
-                                              entryIndexData.name,
-                                              entryIndexData.entryType.getText(),
-                                              Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                             );
-                      break;
+                    switch (entryIndexData.entryType)
+                    {
+                      case FILE:
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryIndexData,
+                                                entryIndexData.name,
+                                                entryIndexData.entryType.getText(),
+                                                Units.formatByteSize(entryIndexData.size),
+                                                SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                               );
+                        break;
+                      case IMAGE:
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryIndexData,
+                                                entryIndexData.name,
+                                                entryIndexData.entryType.getText(),
+                                                Units.formatByteSize(entryIndexData.size),
+                                                SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                               );
+                        break;
+                      case DIRECTORY:
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryIndexData,
+                                                entryIndexData.name,
+                                                entryIndexData.entryType.getText(),
+                                                (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
+                                                SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                               );
+                        break;
+                      case LINK:
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryIndexData,
+                                                entryIndexData.name,
+                                                entryIndexData.entryType.getText(),
+                                                "",
+                                                SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                               );
+                        break;
+                      case HARDLINK:
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryIndexData,
+                                                entryIndexData.name,
+                                                entryIndexData.entryType.getText(),
+                                                Units.formatByteSize(entryIndexData.size),
+                                                SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                               );
+                        break;
+                      case SPECIAL:
+                        Widgets.updateTableItem(tableItem,
+                                                (Object)entryIndexData,
+                                                entryIndexData.name,
+                                                entryIndexData.entryType.getText(),
+                                                Units.formatByteSize(entryIndexData.size),
+                                                SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                               );
+                        break;
+                    }
+                    tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
                   }
-                  tableItem.setChecked(checkedEntryIdSet.contains(entryIndexData.id));
                 }
 
                 i++;
@@ -7529,7 +7530,11 @@ Dprintf.dprintf("");
     }
     catch (Throwable throwable)
     {
-      BARControl.logThrowable(throwable);
+      if (Settings.debugLevel > 0)
+      {
+        BARServer.disconnect();
+        BARControl.internalError(throwable);
+      }
     }
   }
 
@@ -9178,9 +9183,11 @@ Dprintf.dprintf("");
             }
             catch (Throwable throwable)
             {
-              // internal error
-              BARServer.disconnect();
-              BARControl.internalError(throwable);
+              if (Settings.debugLevel > 0)
+              {
+                BARServer.disconnect();
+                BARControl.internalError(throwable);
+              }
             }
 
             // update
@@ -9330,9 +9337,11 @@ Dprintf.dprintf("");
               }
               catch (Throwable throwable)
               {
-                // internal error
-                BARServer.disconnect();
-                BARControl.internalError(throwable);
+                if (Settings.debugLevel > 0)
+                {
+                  BARServer.disconnect();
+                  BARControl.internalError(throwable);
+                }
               }
 
               updateStorageTreeTableThread.triggerUpdate();
@@ -9613,9 +9622,11 @@ Dprintf.dprintf("");
             }
             catch (Throwable throwable)
             {
-              // internal error
-              BARServer.disconnect();
-              BARControl.internalError(throwable);
+              if (Settings.debugLevel > 0)
+              {
+                BARServer.disconnect();
+                BARControl.internalError(throwable);
+              }
             }
           }
         });
@@ -10715,9 +10726,11 @@ Dprintf.dprintf("");
           }
           catch (Throwable throwable)
           {
-            // internal error
-            BARServer.disconnect();
-            BARControl.internalError(throwable);
+            if (Settings.debugLevel > 0)
+            {
+              BARServer.disconnect();
+              BARControl.internalError(throwable);
+            }
           }
           finally
           {
