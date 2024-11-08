@@ -826,11 +826,10 @@ public class TabJobs
       }
       catch (Throwable throwable)
       {
-        BARControl.logThrowable(throwable);
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.exit(ExitCodes.FAIL);
+          BARControl.internalError(throwable);
         }
       }
     }
@@ -10187,7 +10186,6 @@ throw new Error("NYI");
       }
       catch (Throwable throwable)
       {
-        // internal error
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();

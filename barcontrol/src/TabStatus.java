@@ -3157,7 +3157,11 @@ public class TabStatus
     }
     catch (Throwable throwable)
     {
-      // ignored
+      if (Settings.debugLevel > 0)
+      {
+        BARServer.disconnect();
+        BARControl.internalError(throwable);
+      }
     }
   }
 
@@ -3386,8 +3390,11 @@ public class TabStatus
           }
           catch (Exception exception)
           {
-            BARServer.disconnect();
-            BARControl.internalError(exception);
+            if (Settings.debugLevel > 0)
+            {
+              BARServer.disconnect();
+              BARControl.internalError(exception);
+            }
           }
         }
       });

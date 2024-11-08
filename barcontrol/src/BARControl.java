@@ -3327,6 +3327,7 @@ public class BARControl
   {
     printInternalError(throwable);
     showFatalError(throwable);
+    logThrowable(throwable);
     System.exit(ExitCodes.INTERNAL_ERROR);
   }
 
