@@ -670,6 +670,17 @@ LOCAL String StorageOptical_getName(String                 string,
   return string;
 }
 
+/***********************************************************************\
+* Name   : StorageOptical_getPrintableName
+* Purpose: get printable storage name (without password)
+* Input  : string           - name variable (can be NULL)
+*          storageSpecifier - storage specifier string
+*          archiveName      - archive name (can be NULL)
+* Output : -
+* Return : printable storage name
+* Notes  : if archiveName is NULL file name from storageSpecifier is used
+\***********************************************************************/
+
 LOCAL void StorageOptical_getPrintableName(String                 string,
                                            const StorageSpecifier *storageSpecifier,
                                            ConstString            archiveName
@@ -741,9 +752,21 @@ LOCAL void StorageOptical_getPrintableName(String                 string,
   }
 }
 
-LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
-                                 const StorageSpecifier *storageSpecifier,
-                                 const JobOptions       *jobOptions
+/***********************************************************************\
+* Name   : StorageOptical_init
+* Purpose: init new storage
+* Input  : storageInfo                     - storage info variable
+*          jobOptions                      - job options or NULL
+*          maxBandWidthList                - list with max. band width
+*                                            to use [bits/s] or NULL
+*          serverConnectionPriority        - server connection priority
+* Output : storageInfo - initialized storage info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors StorageOptical_init(StorageInfo      *storageInfo,
+                                 const JobOptions *jobOptions
                                 )
 {
   Errors         error;
@@ -753,10 +776,10 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   String         fileBaseName,destinationFileName;
 
   assert(storageInfo != NULL);
-  assert(storageSpecifier != NULL);
-  assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
-
-  UNUSED_VARIABLE(storageSpecifier);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_CD)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD)
+        );
 
   // get device name
   if (String_isEmpty(storageInfo->storageSpecifier.deviceName))

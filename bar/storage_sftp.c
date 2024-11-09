@@ -981,7 +981,6 @@ LOCAL void StorageSFTP_getPrintableName(String                 string,
 * Name   : StorageSFTP_init
 * Purpose: init new storage
 * Input  : storageInfo                     - storage info variable
-*          storageSpecifier                - storage specifier structure
 *          jobOptions                      - job options or NULL
 *          maxBandWidthList                - list with max. band width
 *                                            to use [bits/s] or NULL
@@ -992,7 +991,6 @@ LOCAL void StorageSFTP_getPrintableName(String                 string,
 \***********************************************************************/
 
 LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
-                              const StorageSpecifier     *storageSpecifier,
                               const JobOptions           *jobOptions,
                               BandWidthList              *maxBandWidthList,
                               ServerConnectionPriorities serverConnectionPriority
@@ -1006,10 +1004,7 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
-  assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_SFTP);
-
-  UNUSED_VARIABLE(storageSpecifier);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   #ifdef HAVE_SSH2
     // init variables

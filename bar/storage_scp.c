@@ -306,6 +306,17 @@ LOCAL String StorageSCP_getName(String                 string,
   return string;
 }
 
+/***********************************************************************\
+* Name   : StorageSCP_getPrintableName
+* Purpose: get printable storage name (without password)
+* Input  : string           - name variable (can be NULL)
+*          storageSpecifier - storage specifier string
+*          archiveName      - archive name (can be NULL)
+* Output : -
+* Return : printable storage name
+* Notes  : if archiveName is NULL file name from storageSpecifier is used
+\***********************************************************************/
+
 LOCAL void StorageSCP_getPrintableName(String                 string,
                                        const StorageSpecifier *storageSpecifier,
                                        ConstString            fileName
@@ -344,8 +355,20 @@ LOCAL void StorageSCP_getPrintableName(String                 string,
   }
 }
 
+/***********************************************************************\
+* Name   : StorageSCP_init
+* Purpose: init new storage
+* Input  : storageInfo                     - storage info variable
+*          jobOptions                      - job options or NULL
+*          maxBandWidthList                - list with max. band width
+*                                            to use [bits/s] or NULL
+*          serverConnectionPriority        - server connection priority
+* Output : storageInfo - initialized storage info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
-                             const StorageSpecifier     *storageSpecifier,
                              const JobOptions           *jobOptions,
                              BandWidthList              *maxBandWidthList,
                              ServerConnectionPriorities serverConnectionPriority
@@ -361,9 +384,6 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
-  assert(storageSpecifier != NULL);
-
-  UNUSED_VARIABLE(storageSpecifier);
 
   #ifdef HAVE_SSH2
     // init variables

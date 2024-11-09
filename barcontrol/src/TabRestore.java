@@ -4188,7 +4188,7 @@ Dprintf.dprintf("");
   private final SimpleDateFormat SIMPLE_DATE_FORMAT3 = new SimpleDateFormat("HH:mm:ss");
 
   // index data comparator
-  final Comparator<IndexData> indexIdComperator = new Comparator<IndexData>()
+  final Comparator<IndexData> indexIdComparator = new Comparator<IndexData>()
   {
     /** compare index data ids
      * @param indexData1,indexData2 index data

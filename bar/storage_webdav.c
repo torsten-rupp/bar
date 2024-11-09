@@ -1194,6 +1194,17 @@ LOCAL String StorageWebDAV_getName(String                 string,
   return string;
 }
 
+/***********************************************************************\
+* Name   : StorageWebDAV_getPrintableName
+* Purpose: get printable storage name (without password)
+* Input  : string           - name variable (can be NULL)
+*          storageSpecifier - storage specifier string
+*          archiveName      - archive name (can be NULL)
+* Output : -
+* Return : printable storage name
+* Notes  : if archiveName is NULL file name from storageSpecifier is used
+\***********************************************************************/
+
 LOCAL void StorageWebDAV_getPrintableName(String                 string,
                                           const StorageSpecifier *storageSpecifier,
                                           ConstString            fileName
@@ -1243,8 +1254,20 @@ LOCAL void StorageWebDAV_getPrintableName(String                 string,
   }
 }
 
+/***********************************************************************\
+* Name   : StorageWebDAV_init
+* Purpose: init new storage
+* Input  : storageInfo                     - storage info variable
+*          jobOptions                      - job options or NULL
+*          maxBandWidthList                - list with max. band width
+*                                            to use [bits/s] or NULL
+*          serverConnectionPriority        - server connection priority
+* Output : storageInfo - initialized storage info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
-                                const StorageSpecifier     *storageSpecifier,
                                 const JobOptions           *jobOptions,
                                 BandWidthList              *maxBandWidthList,
                                 ServerConnectionPriorities serverConnectionPriority
@@ -1266,8 +1289,6 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
   #ifdef HAVE_CURL
     UNUSED_VARIABLE(serverConnectionPriority);
   #endif /* HAVE_CURL */
-
-  UNUSED_VARIABLE(storageSpecifier);
 
   #ifdef HAVE_CURL
     // init variables
@@ -1328,7 +1349,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
                                storageInfo->webdav.publicKey.length,
                                storageInfo->webdav.privateKey.data,
                                storageInfo->webdav.privateKey.length,
-                               storageSpecifier->archiveName
+                               storageInfo->storageSpecifier.archiveName
                               );
     }
     if ((Error_getCode(error) == ERROR_CODE_WEBDAV_AUTHENTICATION) && !Password_isEmpty(&webDAVServer.password))
@@ -1342,7 +1363,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
                                storageInfo->webdav.publicKey.length,
                                storageInfo->webdav.privateKey.data,
                                storageInfo->webdav.privateKey.length,
-                               storageSpecifier->archiveName
+                               storageInfo->storageSpecifier.archiveName
                               );
       if (error == ERROR_NONE)
       {
@@ -1360,7 +1381,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
                                storageInfo->webdav.publicKey.length,
                                storageInfo->webdav.privateKey.data,
                                storageInfo->webdav.privateKey.length,
-                               storageSpecifier->archiveName
+                               storageInfo->storageSpecifier.archiveName
                               );
       if (error == ERROR_NONE)
       {
@@ -1391,7 +1412,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
                                    storageInfo->webdav.publicKey.length,
                                    storageInfo->webdav.privateKey.data,
                                    storageInfo->webdav.privateKey.length,
-                                   storageSpecifier->archiveName
+                                   storageInfo->storageSpecifier.archiveName
                                   );
           if (error == ERROR_NONE)
           {

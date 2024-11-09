@@ -972,6 +972,17 @@ LOCAL void StorageFTP_getName(String                 string,
   }
 }
 
+/***********************************************************************\
+* Name   : StorageFTP_getPrintableName
+* Purpose: get printable storage name (without password)
+* Input  : string           - name variable (can be NULL)
+*          storageSpecifier - storage specifier string
+*          archiveName      - archive name (can be NULL)
+* Output : -
+* Return : printable storage name
+* Notes  : if archiveName is NULL file name from storageSpecifier is used
+\***********************************************************************/
+
 LOCAL void StorageFTP_getPrintableName(String                 string,
                                        const StorageSpecifier *storageSpecifier,
                                        ConstString            archiveName
@@ -1015,8 +1026,20 @@ LOCAL void StorageFTP_getPrintableName(String                 string,
   }
 }
 
+/***********************************************************************\
+* Name   : StorageFTP_init
+* Purpose: init new storage
+* Input  : storageInfo                     - storage info variable
+*          jobOptions                      - job options or NULL
+*          maxBandWidthList                - list with max. band width
+*                                            to use [bits/s] or NULL
+*          serverConnectionPriority        - server connection priority
+* Output : storageInfo - initialized storage info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
-                             const StorageSpecifier     *storageSpecifier,
                              const JobOptions           *jobOptions,
                              BandWidthList              *maxBandWidthList,
                              ServerConnectionPriorities serverConnectionPriority
@@ -1028,14 +1051,11 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
   #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
 
   assert(storageInfo != NULL);
-  assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_FTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
 
   #if !defined(HAVE_CURL) && !defined(HAVE_FTP)
     UNUSED_VARIABLE(serverConnectionPriority);
   #endif /* !defined(HAVE_CURL) && !defined(HAVE_FTP) */
-
-  UNUSED_VARIABLE(storageSpecifier);
 
   #if   defined(HAVE_CURL)
     {

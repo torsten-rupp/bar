@@ -2423,45 +2423,36 @@ uint Storage_getServerSettings(Server                 *server,
         error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
-// TODO: remove parameter storageSpecifier
         UNUSED_VARIABLE(maxBandWidthList);
-        error = StorageFile_init(storageInfo,storageSpecifier,jobOptions);
+        error = StorageFile_init(storageInfo,jobOptions);
         break;
       case STORAGE_TYPE_FTP:
-// TODO: remove parameter storageSpecifier
-        error = StorageFTP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
+        error = StorageFTP_init(storageInfo,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_SSH:
-// TODO: remove parameter storageSpecifier
         UNUSED_VARIABLE(maxBandWidthList);
         error = ERROR_FUNCTION_NOT_SUPPORTED;
         break;
       case STORAGE_TYPE_SCP:
-// TODO: remove parameter storageSpecifier
-        error = StorageSCP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
+        error = StorageSCP_init(storageInfo,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_SFTP:
-// TODO: remove parameter storageSpecifier
-        error = StorageSFTP_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
+        error = StorageSFTP_init(storageInfo,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_WEBDAV:
       case STORAGE_TYPE_WEBDAVS:
-// TODO: remove parameter storageSpecifier
-        error = StorageWebDAV_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
+        error = StorageWebDAV_init(storageInfo,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_SMB:
-// TODO: remove parameter storageSpecifier
-        error = StorageSMB_init(storageInfo,storageSpecifier,jobOptions,maxBandWidthList,serverConnectionPriority);
+        error = StorageSMB_init(storageInfo,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
       case STORAGE_TYPE_CD:
       case STORAGE_TYPE_DVD:
       case STORAGE_TYPE_BD:
-// TODO: remove parameter storageSpecifier
-        error = StorageOptical_init(storageInfo,storageSpecifier,jobOptions);
+        error = StorageOptical_init(storageInfo,jobOptions);
         break;
       case STORAGE_TYPE_DEVICE:
-// TODO: remove parameter storageSpecifier
-        error = StorageDevice_init(storageInfo,storageSpecifier,jobOptions);
+        error = StorageDevice_init(storageInfo,jobOptions);
         break;
       default:
         UNUSED_VARIABLE(maxBandWidthList);

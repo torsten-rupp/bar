@@ -110,6 +110,17 @@ LOCAL String StorageFile_getName(String                 string,
   return string;
 }
 
+/***********************************************************************\
+* Name   : StorageFile_getPrintableName
+* Purpose: get printable storage name (without password)
+* Input  : string           - name variable (can be NULL)
+*          storageSpecifier - storage specifier string
+*          archiveName      - archive name (can be NULL)
+* Output : -
+* Return : printable storage name
+* Notes  : if archiveName is NULL file name from storageSpecifier is used
+\***********************************************************************/
+
 LOCAL void StorageFile_getPrintableName(String                 string,
                                         const StorageSpecifier *storageSpecifier,
                                         ConstString            archiveName
@@ -141,16 +152,26 @@ LOCAL void StorageFile_getPrintableName(String                 string,
   }
 }
 
-LOCAL Errors StorageFile_init(StorageInfo            *storageInfo,
-                              const StorageSpecifier *storageSpecifier,
-                              const JobOptions       *jobOptions
+/***********************************************************************\
+* Name   : StorageFile_init
+* Purpose: init new storage
+* Input  : storageInfo                     - storage info variable
+*          jobOptions                      - job options or NULL
+*          maxBandWidthList                - list with max. band width
+*                                            to use [bits/s] or NULL
+*          serverConnectionPriority        - server connection priority
+* Output : storageInfo - initialized storage info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors StorageFile_init(StorageInfo      *storageInfo,
+                              const JobOptions *jobOptions
                              )
 {
   assert(storageInfo != NULL);
-  assert(storageSpecifier != NULL);
 
   UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(storageSpecifier);
   UNUSED_VARIABLE(jobOptions);
 
   return ERROR_NONE;

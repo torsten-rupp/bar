@@ -654,8 +654,6 @@ LOCAL Errors checkSMBLogin(ConstString hostName,
 \***********************************************************************/
 
 LOCAL Errors StorageSMB_init(StorageInfo                *storageInfo,
-// TODO: unused
-const StorageSpecifier *storageSpecifier,
                              const JobOptions           *jobOptions,
                              BandWidthList              *maxBandWidthList,
                              ServerConnectionPriorities serverConnectionPriority
@@ -670,10 +668,7 @@ const StorageSpecifier *storageSpecifier,
   #endif /* HAVE_SMB2 */
 
   assert(storageInfo != NULL);
-  assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_SMB);
-
-UNUSED_VARIABLE(storageSpecifier);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
   #ifdef HAVE_SMB2
     // init variables

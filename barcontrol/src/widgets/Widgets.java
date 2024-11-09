@@ -4688,7 +4688,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
   /** insert list item
    * @param list list
-   * @param comparator list item comperator
+   * @param comparator list item comparator
    * @param list item data
    * @param text list text
    * @return list item
@@ -7245,7 +7245,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
   /** insert table item
    * @param table table
-   * @param comparator table item comperator
+   * @param comparator table item comparator
    * @param data item data
    * @param values values list
    * @return new table item
@@ -7323,7 +7323,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
   /** insert table item
    * @param table table
-   * @param comparator table item comperator
+   * @param comparator table item comparator
    * @param data item data
    * @param values values list
    * @return table item
@@ -8924,7 +8924,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** insert tree item
    * @param tree tree widget
-   * @param comparator tree item comperator
+   * @param comparator tree item comparator
    * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
@@ -9497,7 +9497,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** update or insert tree item
    * @param tree tree widget
-   * @param comparator tree item comperator
+   * @param comparator tree item comparator
    * @param data item data
    * @param image image
    * @param flags flags; see TREE_ITEM_FLAG_...
@@ -9689,7 +9689,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** update or insert tree item
    * @param tree tree widget
-   * @param comparator tree item comperator
+   * @param comparator tree item comparator
    * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
@@ -9834,7 +9834,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** update or insert tree item
    * @param parentTreeItem parent tree item
-   * @param comparator tree item comperator
+   * @param comparator tree item comparator
    * @param data item data
    * @param image image
    * @param flags flags; see TREE_ITEM_FLAG_...
@@ -10077,7 +10077,7 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
 
   /** update or insert tree item
    * @param parentTreeItem parent tree item
-   * @param comparator tree item comperator
+   * @param comparator tree item comparator
    * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
@@ -10896,7 +10896,7 @@ private static void printTree(Tree tree)
    * @param treeItem tree item
    * @param subTreeItems sub-tree items to sort
    * @param sortDirection sort directory (SWT.UP, SWT.DOWN)
-   * @param comparator comperator to compare two tree items
+   * @param comparator comparator to compare two tree items
    */
   private static <T> void sortSubTreeColumn(Tree tree, TreeItem treeItem, TreeItem[] subTreeItems, int sortDirection, Comparator<T> comparator)
   {
@@ -10934,7 +10934,7 @@ private static void printTree(Tree tree)
    * @param tree tree
    * @param subTreeItems sub-tree items to sort
    * @param sortDirection sort directory (SWT.UP, SWT.DOWN)
-   * @param comparator comperator to compare two tree items
+   * @param comparator comparator to compare two tree items
    */
   private static <T> void sortTreeColumn(Tree tree, TreeItem[] subTreeItems, int sortDirection, Comparator<T> comparator)
   {
