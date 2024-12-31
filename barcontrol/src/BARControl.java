@@ -3887,9 +3887,9 @@ if (false) {
         Text      text;
         Button    button;
 
-        String version = String.format("%s.%s%s%s",
+        String version = String.format("%s%s%s%s%s",
                                        homepageVersionMajor,
-                                       homepageVersionMinor,
+                                       (!homepageVersionMinor.isEmpty() ? "." : ""),homepageVersionMinor,
                                        homepageVersionPatch,
                                        (homepageVersionRevision != null) ? " (revision "+homepageVersionRevision+")" : ""
                                       );
@@ -6757,7 +6757,7 @@ if (false) {
                                          System.out.println(String.format("  Continuous      : %d",totalContinuousEntityCount                                                                                   ));
                                          System.out.println(String.format("  Locked          : %d",totalLockedEntityCount                                                                                       ));
                                          System.out.println(String.format("  Deleted         : %d",totalDeletedEntityCount                                                                                      ));
-                                         System.out.println(String.format("Storages: %d,  %s (%d bytes)",totalStorageCount,Units.formatByteSize(totalStorageSize),totalStorageSize                              ));
+                                         System.out.println(String.format("Storages: %d, %s (%d bytes)",totalStorageCount,Units.formatByteSize(totalStorageSize),totalStorageSize                              ));
                                          System.out.println(String.format("  OK              : %d",totalOKStorageCount                                                                             ));
                                          System.out.println(String.format("  Update requested: %d",totalUpdateRequestedStorageCount                                                                             ));
                                          System.out.println(String.format("  Error           : %d",totalErrorStorageCount                                                                                       ));
