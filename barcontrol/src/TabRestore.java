@@ -8313,32 +8313,31 @@ Dprintf.dprintf("");
             int n = 0;
             for (IndexData indexData : indexDataHashSet)
             {
-              final String info = indexData.getInfo();
+              String info    = indexData.getInfo();
+              String command = null;
+              if      (indexData instanceof UUIDIndexData)
+              {
+                command = StringParser.format("STORAGE_TEST jobUUID=%'S",
+                                              ((UUIDIndexData)indexData).jobUUID
+                                             );
+              }
+              else if (indexData instanceof EntityIndexData)
+              {
+                command = StringParser.format("STORAGE_TEST entityId=%lld",
+                                              indexData.id
+                                             );
+              }
+              else if (indexData instanceof StorageIndexData)
+              {
+                command = StringParser.format("STORAGE_TEST storageId=%lld",
+                                              indexData.id
+                                             );
+              }
 
               try
               {
-                String command = null;
-                if      (indexData instanceof UUIDIndexData)
-                {
-                  command = StringParser.format("STORAGE_TEST jobUUID=%'S",
-                                                ((UUIDIndexData)indexData).jobUUID
-                                               );
-                }
-                else if (indexData instanceof EntityIndexData)
-                {
-                  command = StringParser.format("STORAGE_TEST entityId=%lld",
-                                                indexData.id
-                                               );
-                }
-                else if (indexData instanceof StorageIndexData)
-                {
-                  command = StringParser.format("STORAGE_TEST storageId=%lld",
-                                                indexData.id
-                                               );
-                }
-
                 BARServer.executeCommand(command,
-                                         2,  // debugLevel
+0,//                                         2,  // debugLevel
                                          new Command.ResultHandler()
                                          {
                                            @Override
@@ -10611,7 +10610,6 @@ Dprintf.dprintf("");
                                              );
                 break;
             }
-//            final int storageCount[] = new int[]{0};
             BARServer.executeCommand(command,
                                      0,  // debugLevel
                                      new Command.ResultHandler()
@@ -10619,41 +10617,44 @@ Dprintf.dprintf("");
                                        @Override
                                        public void handle(int i, ValueMap valueMap)
                                        {
-                                         RestoreStates  state            = valueMap.getEnum  ("state",           RestoreStates.class);
-                                         long           doneCount        = valueMap.getLong  ("doneCount"                           );
-                                         long           doneSize         = valueMap.getLong  ("doneSize"                            );
-// TODO: use
-//                                         long           totalCount       = valueMap.getLong  ("totalCount");
-//                                         long           totalSize        = valueMap.getLong  ("totalSize");
-                                         String         storageName      = valueMap.getString("storageName"      );
-                                         long           storageDoneSize  = valueMap.getLong  ("storageDoneSize", 0L);
-                                         long           storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
-                                         String         entryName        = valueMap.getString("entryName"        );
-                                         long           entryDoneSize    = valueMap.getLong  ("entryDoneSize",   0L);
-                                         long           entryTotalSize   = valueMap.getLong  ("entryTotalSize",  0L);
-
-//                                         storageCount[0]++;
+                                         RestoreStates  state = valueMap.getEnum  ("state",RestoreStates.class);
                                          switch (state)
                                          {
                                            case NONE:
                                              break;
                                            case RUNNING:
-                                             busyDialog.updateProgressBar(0,(data.totalStorageCount > 0L) ? ((double)doneCount*100.0)/(double)data.totalStorageCount : 0.0);
-                                             busyDialog.updateText(1,"%s",storageName);
-                                             busyDialog.updateProgressBar(1,(storageTotalSize > 0L) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
-                                             busyDialog.updateText(2,"%s",entryName);
-                                             busyDialog.updateProgressBar(2,(entryTotalSize > 0L) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
+                                             {
+                                               long           doneCount        = valueMap.getLong  ("doneCount"                           );
+                                               long           doneSize         = valueMap.getLong  ("doneSize"                            );
+// TODO: use
+//                                               long           totalCount       = valueMap.getLong  ("totalCount");
+//                                               long           totalSize        = valueMap.getLong  ("totalSize");
+                                               String         storageName      = valueMap.getString("storageName"      );
+                                               long           storageDoneSize  = valueMap.getLong  ("storageDoneSize", 0L);
+                                               long           storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
+                                               String         entryName        = valueMap.getString("entryName"        );
+                                               long           entryDoneSize    = valueMap.getLong  ("entryDoneSize",   0L);
+                                               long           entryTotalSize   = valueMap.getLong  ("entryTotalSize",  0L);
+
+                                               busyDialog.updateProgressBar(0,(data.totalStorageCount > 0L) ? ((double)doneCount*100.0)/(double)data.totalStorageCount : 0.0);
+                                               busyDialog.updateText(1,"%s",storageName);
+                                               busyDialog.updateProgressBar(1,(storageTotalSize > 0L) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
+                                               busyDialog.updateText(2,"%s",entryName);
+                                               busyDialog.updateProgressBar(2,(entryTotalSize > 0L) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
+                                             }
                                              break;
                                            case RESTORED:
-                                             busyDialog.updateProgressBar(0,(data.totalStorageCount > 0L) ? ((double)doneCount*100.0)/(double)data.totalStorageCount : 0.0);
-                                             busyDialog.updateText(1,"%s",storageName);
-                                             busyDialog.updateProgressBar(1,(storageTotalSize > 0L) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
-                                             busyDialog.updateText(2,"%s",entryName);
-                                             busyDialog.updateProgressBar(2,(entryTotalSize > 0L) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
+                                             busyDialog.updateProgressBar(0,100.0);
+                                             busyDialog.updateProgressBar(1,100.0);
+                                             busyDialog.updateProgressBar(2,100.0);
                                              break;
                                            case FAILED:
-                                             busyDialog.updateList(!entryName.isEmpty() ? entryName : storageName);
-                                             errorCount[0]++;
+                                             {
+                                               String storageName = valueMap.getString("storageName");
+                                               String entryName   = valueMap.getString("entryName"  );
+                                               busyDialog.updateList(!entryName.isEmpty() ? entryName : storageName);
+                                               errorCount[0]++;
+                                             }
                                              break;
                                          }
 
