@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-01 09:36+0100\n"
+"POT-Creation-Date: 2025-01-01 13:21+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -6804,7 +6804,7 @@ msgstr "最新エントリー限定"
 msgid "Failed entries"
 msgstr "エントリ合計"
 
-#: src/TabRestore.java:10683 src/TabRestore.java:10697
+#: src/TabRestore.java:10683 src/TabRestore.java:10696
 #, fuzzy, java-format
 msgid ""
 "Cannot restore:\n"
@@ -6817,7 +6817,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:10712
+#: src/TabRestore.java:10710
 #, fuzzy, java-format
 msgid ""
 "Error while restoring:\n"
@@ -6828,7 +6828,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabRestore.java:10724
+#: src/TabRestore.java:10722
 #, fuzzy, java-format
 msgid ""
 "Connection error while restoring\n"

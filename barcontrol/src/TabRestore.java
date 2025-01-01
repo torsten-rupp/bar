@@ -10617,7 +10617,7 @@ Dprintf.dprintf("");
                                        @Override
                                        public void handle(int i, ValueMap valueMap)
                                        {
-                                         RestoreStates  state = valueMap.getEnum  ("state",RestoreStates.class);
+                                         RestoreStates state = valueMap.getEnum  ("state",RestoreStates.class);
                                          switch (state)
                                          {
                                            case NONE:
@@ -10673,7 +10673,7 @@ Dprintf.dprintf("");
           }
           catch (final BARException exception)
           {
-            if ((exception.code != BARException.NONE) && (exception.code != BARException.ABORTED))
+            if (exception.code != BARException.ABORTED)
             {
               display.syncExec(new Runnable()
               {
@@ -10683,9 +10683,8 @@ Dprintf.dprintf("");
                   Dialogs.error(shell,BARControl.tr("Cannot restore:\n\n{0}",exception.getMessage()));
                 }
               });
-              busyDialog.close();
-              return;
             }
+            busyDialog.close();
           }
           catch (final Exception exception)
           {
@@ -10698,29 +10697,28 @@ Dprintf.dprintf("");
               }
             });
             busyDialog.close();
-            return;
           }
 //TODO: pass to caller?
           catch (final CommunicationError error)
           {
+            busyDialog.close();
             display.syncExec(new Runnable()
             {
               @Override
               public void run()
               {
-                busyDialog.close();
                 Dialogs.error(shell,BARControl.tr("Error while restoring:\n\n{0}",error.getMessage()));
                }
             });
           }
           catch (final ConnectionError error)
           {
+            busyDialog.close();
             display.syncExec(new Runnable()
             {
               @Override
               public void run()
               {
-                busyDialog.close();
                 Dialogs.error(shell,BARControl.tr("Connection error while restoring\n\n(error: {0})",error.getMessage()));
                }
             });
