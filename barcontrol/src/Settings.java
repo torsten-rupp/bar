@@ -619,6 +619,7 @@ public class Settings
   public static boolean                        debugIgnoreProtocolVersion      = false;
   public static boolean                        debugFakeTLSFlag                = false;
   public static boolean                        debugQuitServerFlag             = false;
+  public static boolean                        debugNoVersionInfoFlag          = false;
 
   // server
   public static String                         serverName                      = null;

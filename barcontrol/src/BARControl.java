@@ -3005,6 +3005,7 @@ public class BARControl
     new Option("--debug-ignore-protocol-version",null,Options.Types.BOOLEAN,    "debugIgnoreProtocolVersion"),
     new Option("--debug-fake-tls",               null,Options.Types.BOOLEAN,    "debugFakeTLSFlag"),
     new Option("--debug-quit-server",            null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
+    new Option("--debug-no-version-info",        null,Options.Types.BOOLEAN,    "debugNoVersionInfoFlag"),
 
     // deprecated
     new Option("--no-ssl",                       null,Options.Types.BOOLEAN,    "serverNoTLS"),
@@ -3447,6 +3448,7 @@ public class BARControl
       System.out.println("         --debug-ignore-protocol-version            - ignore protocol version");
       System.out.println("         --debug-fake-tls                           - fake TLS connections");
       System.out.println("         --debug-quit-server                        - send quit-command to server");
+      System.out.println("         --debug-no-version-info                    - do not show version info dialog");
     }
   }
 
@@ -3787,7 +3789,10 @@ if (false) {
             }
           }
 
-          if (Settings.showNewVersionInformation && (System.currentTimeMillis() > (lastVersionCheckedTimestamp+VERSION_CHECK_TIME)))
+          if (   Settings.showNewVersionInformation
+              && (System.currentTimeMillis() > (lastVersionCheckedTimestamp+VERSION_CHECK_TIME))
+              && !Settings.debugNoVersionInfoFlag
+             )
           {
             // get version on homepage, show warning dialog
             getServerVersionInfo();
