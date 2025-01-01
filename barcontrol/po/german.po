@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-01 08:28+0100\n"
+"POT-Creation-Date: 2025-01-01 13:23+0100\n"
 "PO-Revision-Date: 2023-06-25 11:36+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -6397,7 +6397,7 @@ msgstr "Einträge wiederherstellen in: {0}"
 msgid "Failed entries"
 msgstr "Fehlgeschlagene Einträge"
 
-#: src/TabRestore.java:10683 src/TabRestore.java:10697
+#: src/TabRestore.java:10683 src/TabRestore.java:10696
 #, java-format
 msgid ""
 "Cannot restore:\n"
@@ -6408,7 +6408,7 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabRestore.java:10712
+#: src/TabRestore.java:10710
 #, java-format
 msgid ""
 "Error while restoring:\n"
@@ -6419,7 +6419,7 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabRestore.java:10724
+#: src/TabRestore.java:10722
 #, java-format
 msgid ""
 "Connection error while restoring\n"
