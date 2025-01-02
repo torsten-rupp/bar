@@ -2353,8 +2353,8 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
 
 LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  char           user[3+1],group[3+1],world[3+1];
-  uint           i;
+  char            user[3+1],group[3+1],world[3+1];
+  uint            i;
   FilePermissions permission;
 
   assert(variable != NULL);
@@ -4710,8 +4710,6 @@ LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValue
 
 LOCAL bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  String string;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -4721,7 +4719,7 @@ LOCAL bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, 
   UNUSED_VARIABLE(errorMessageSize);
 
   // unquote/unescape
-  string = String_newCString(value);
+  String string = String_newCString(value);
   String_unquote(string,STRING_QUOTES);
   String_unescape(string,
                   STRING_ESCAPE_CHARACTER,
@@ -5420,10 +5418,14 @@ LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueOperations o
         String      line   = (String)data;
         char        userName[256],groupName[256];
 
-        if (owner != NULL)
+        if (   (owner != NULL)
+            && (   (owner->userId  != FILE_DEFAULT_USER_ID )
+                || (owner->groupId != FILE_DEFAULT_GROUP_ID)
+               )
+           )
         {
-          if (Misc_userIdToUserName  (userName, sizeof(userName), owner->userId )) return FALSE;
-          if (Misc_groupIdToGroupName(groupName,sizeof(groupName),owner->groupId)) return FALSE;
+          Misc_userIdToUserName  (userName, sizeof(userName), owner->userId );
+          Misc_groupIdToGroupName(groupName,sizeof(groupName),owner->groupId);
           String_appendFormat(line,"%s:%s",userName,groupName);
 
           (*formatUserData) = NULL;
@@ -5457,8 +5459,8 @@ LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueOperations o
 
 LOCAL bool configValuePermissionsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  char           user[3+1],group[3+1],world[3+1];
-  uint           i;
+  char            user[3+1],group[3+1],world[3+1];
+  uint            i;
   FilePermissions permission;
 
   assert(variable != NULL);
@@ -5544,8 +5546,6 @@ LOCAL bool configValuePermissionsParse(void *userData, void *variable, const cha
 
 LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
-  ;
-
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
@@ -5568,9 +5568,11 @@ LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueOperat
     case CONFIG_VALUE_OPERATION_FORMAT:
       {
         const FilePermissions *filePermission = (FilePermissions*)(*formatUserData);
-        String               line            = (String)data;
+        String                line            = (String)data;
 
-        if (filePermission != NULL)
+        if (   (filePermission != NULL)
+            && ((*filePermission) != FILE_DEFAULT_PERMISSIONS)
+           )
         {
           String_appendChar(line,IS_SET(*filePermission,FILE_PERMISSION_USER_READ ) ? 'r' : '-');
           String_appendChar(line,IS_SET(*filePermission,FILE_PERMISSION_USER_READ ) ? 'r' : '-');
