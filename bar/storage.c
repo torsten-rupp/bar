@@ -563,7 +563,8 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 *          getNamePasswordFunction - get password call-back (can be
 *                                    NULL)
 *          getNamePasswordUserData - user data for get password call-back
-* Output : -
+* Output : userName - user name
+*          password - password
 * Return : TRUE if SSH password intialized, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -3328,6 +3329,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
 #endif /* NDEBUG */
 {
   Errors error;
+fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(archiveName));
 
   assert(storageHandle != NULL);
   assert(storageInfo != NULL);

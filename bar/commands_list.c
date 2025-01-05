@@ -3568,19 +3568,19 @@ NULL, // masterSocketHandle
 
               if      (String_equalsCString(type,"FILE"))
               {
-                String               fileName;
-                uint64               fileSize;
-                uint64               dateTime;
-                uint32               userId,groupId;
-                FilePermissions      permissions;
-                uint64               archiveFileSize;
-                CompressAlgorithms   deltaCompressAlgorithm;
-                CompressAlgorithms   byteCompressAlgorithm;
-                CryptAlgorithms      cryptAlgorithm;
-                CryptTypes           cryptType;
-                String               deltaSourceName;
-                uint64               deltaSourceSize;
-                uint64               fragmentOffset,fragmentSize;
+                String             fileName;
+                uint64             fileSize;
+                uint64             dateTime;
+                uint32             userId,groupId;
+                FilePermissions    permissions;
+                uint64             archiveFileSize;
+                CompressAlgorithms deltaCompressAlgorithm;
+                CompressAlgorithms byteCompressAlgorithm;
+                CryptAlgorithms    cryptAlgorithm;
+                CryptTypes         cryptType;
+                String             deltaSourceName;
+                uint64             deltaSourceSize;
+                uint64             fragmentOffset,fragmentSize;
 
                 // initialize variables
                 fileName        = String_new();
@@ -3915,19 +3915,19 @@ NULL, // masterSocketHandle
               }
               else if (String_equalsCString(type,"HARDLINK"))
               {
-                String               fileName;
-                uint64               fileSize;
-                uint64               dateTime;
-                uint32               userId,groupId;
-                FilePermissions      permissions;
-                uint64               archiveFileSize;
-                CompressAlgorithms   deltaCompressAlgorithm;
-                CompressAlgorithms   byteCompressAlgorithm;
-                CryptAlgorithms      cryptAlgorithm;
-                CryptTypes           cryptType;
-                String               deltaSourceName;
-                uint64               deltaSourceSize;
-                uint64               fragmentOffset,fragmentSize;
+                String             fileName;
+                uint64             fileSize;
+                uint64             dateTime;
+                uint32             userId,groupId;
+                FilePermissions    permissions;
+                uint64             archiveFileSize;
+                CompressAlgorithms deltaCompressAlgorithm;
+                CompressAlgorithms byteCompressAlgorithm;
+                CryptAlgorithms    cryptAlgorithm;
+                CryptTypes         cryptType;
+                String             deltaSourceName;
+                uint64             deltaSourceSize;
+                uint64             fragmentOffset,fragmentSize;
 
                 // initialize variables
                 fileName        = String_new();

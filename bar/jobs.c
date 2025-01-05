@@ -3002,6 +3002,26 @@ void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
 
+void Job_getOptions(String jobName, JobOptions *jobOptions, ConstString uuid)
+{
+  assert(jobOptions != NULL);
+
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    const JobNode *jobNode = Job_findByUUID(uuid);
+    if (jobNode != NULL)
+    {
+      String_set(jobName,jobNode->name);
+      Job_copyOptions(jobOptions,&jobNode->job.options);
+    }
+    else
+    {
+      String_set(jobName,uuid);
+      Job_initOptions(jobOptions);
+    }
+  }
+}
+
 void Job_doneOptions(JobOptions *jobOptions)
 {
   assert(jobOptions != NULL);

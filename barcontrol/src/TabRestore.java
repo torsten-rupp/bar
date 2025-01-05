@@ -10617,7 +10617,7 @@ Dprintf.dprintf("");
                                        @Override
                                        public void handle(int i, ValueMap valueMap)
                                        {
-                                         RestoreStates state = valueMap.getEnum  ("state",RestoreStates.class);
+                                         RestoreStates state = valueMap.getEnum("state",RestoreStates.class);
                                          switch (state)
                                          {
                                            case NONE:
@@ -10650,9 +10650,17 @@ Dprintf.dprintf("");
                                              break;
                                            case FAILED:
                                              {
+                                               int    errorNumber = valueMap.getInt   ("errorNumber");
+                                               String errorData   = valueMap.getString("errorData");
                                                String storageName = valueMap.getString("storageName");
                                                String entryName   = valueMap.getString("entryName"  );
-                                               busyDialog.updateList(!entryName.isEmpty() ? entryName : storageName);
+
+                                               StringBuilder line = new StringBuilder();
+                                               if (!storageName.isEmpty()) line.append(storageName);
+                                               if (line.length() > 0) line.append(": ");
+                                               if (!entryName.isEmpty()) line.append(entryName);
+                                               busyDialog.updateList("%s",line.toString());
+
                                                errorCount[0]++;
                                              }
                                              break;

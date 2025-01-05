@@ -54,10 +54,11 @@ typedef void(*RestoreRunningInfoFunction)(const RunningInfo *runningInfo,
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*RestoreHandleErrorFunction)(Errors            error,
-                                            const RunningInfo *runningInfo,
-                                            void              *userData
-                                           );
+typedef Errors(*RestoreErrorHandlerFunction)(ConstString storageName,
+                                             ConstString entryName,
+                                             Errors      error,
+                                             void        *userData
+                                            );
 
 /***************************** Variables *******************************/
 
@@ -78,12 +79,12 @@ typedef Errors(*RestoreHandleErrorFunction)(Errors            error,
 *          includeEntryList             - include entry list
 *          excludePatternList           - exclude pattern list
 *          jobOptions                   - job options
-*          restoreRunningInfoFunction    - running info call back
+*          restoreRunningInfoFunction   - running info call back
 *                                         function (can be NULL)
-*          restoreRunningInfoUserData    - user data for running info
+*          restoreRunningInfoUserData   - user data for running info
 *                                         function
-*          handleErrorFunction          - error call back (can be NULL)
-*          handleErrorUserData          - user data for error call back
+*          restoreErrorHandlerFunction  - error call back (can be NULL)
+*          restoreErrorHandlerUserData  - user data for error call back
 *          getNamePasswordFunction      - get password call back (can be
 *                                         NULL)
 *          getNamePasswordUserData      - user data for get password call
@@ -105,8 +106,8 @@ Errors Command_restore(const StringList           *storageNameList,
                        JobOptions                 *jobOptions,
                        RestoreRunningInfoFunction restoreRunningInfoFunction,
                        void                       *restoreRunningInfoUserData,
-                       RestoreHandleErrorFunction handleErrorFunction,
-                       void                       *handleErrorUserData,
+                       RestoreErrorHandlerFunction restoreErrorHandlerFunction,
+                       void                       *restoreErrorHandlerUserData,
                        GetNamePasswordFunction    getNamePasswordFunction,
                        void                       *getNamePasswordUserData,
                        IsPauseFunction            isPauseFunction,

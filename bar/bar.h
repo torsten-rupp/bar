@@ -748,7 +748,8 @@ const char *getPasswordTypeText(PasswordTypes passwordType);
 *                          otherwise (print warning if password seems to
 *                          be a weak password)
 *          userData      - (not used)
-* Output : password - password
+* Output : name     - name
+*          password - password
 * Return : ERROR_NONE or error code
 * Notes  :
 \***********************************************************************/
