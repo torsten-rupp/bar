@@ -7975,6 +7975,7 @@ Errors Command_create(ServerIO                     *masterIO,
 
   // get printable storage name
   Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+fprintf(stderr,"%s:%d: printableStorageName=%s\n",__FILE__,__LINE__,String_cString(printableStorageName));
 
   // get hostname, username
   Network_getHostName(hostName);

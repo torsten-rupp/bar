@@ -418,12 +418,12 @@ LOCAL Errors sftpStat(SocketHandle *socketHandle,
             else if (LIBSSH2_SFTP_S_ISFIFO(sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_SPECIAL;
             else if (LIBSSH2_SFTP_S_ISSOCK(sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_SPECIAL;
             else                                                  fileInfo->type = FILE_TYPE_UNKNOWN;
-            fileInfo->size            = (uint64)sftpAttributes.filesize;
-            fileInfo->timeLastAccess  = (uint64)sftpAttributes.atime;
-            fileInfo->timeModified    = (uint64)sftpAttributes.mtime;
-            fileInfo->userId          = sftpAttributes.uid;
-            fileInfo->groupId         = sftpAttributes.gid;
-            fileInfo->permissions     = (FilePermissions)sftpAttributes.permissions;
+            fileInfo->size           = (uint64)sftpAttributes.filesize;
+            fileInfo->timeLastAccess = (uint64)sftpAttributes.atime;
+            fileInfo->timeModified   = (uint64)sftpAttributes.mtime;
+            fileInfo->userId         = sftpAttributes.uid;
+            fileInfo->groupId        = sftpAttributes.gid;
+            fileInfo->permissions    = (FilePermissions)sftpAttributes.permissions;
           }
 
           error = ERROR_NONE;
@@ -972,7 +972,7 @@ LOCAL void StorageSFTP_getPrintableName(String                 string,
   }
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(string,'/');
+    if (!String_startsWithChar(storageFileName,'/')) String_appendChar(string,'/');
     String_append(string,storageFileName);
   }
 }
@@ -1090,6 +1090,9 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
       retries = 0;
       while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+debugPrintStackTrace();
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
         if (initSSHLogin(storageInfo->storageSpecifier.hostName,
                          storageInfo->storageSpecifier.userName,
                          &storageInfo->storageSpecifier.password,
@@ -2810,6 +2813,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
       retries = 0;
       while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         if (initSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                          storageDirectoryListHandle->storageSpecifier.userName,
                          &storageDirectoryListHandle->storageSpecifier.password,

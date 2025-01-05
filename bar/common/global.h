@@ -1480,9 +1480,9 @@ typedef byte* BitSet;
 // TODO: remove
   #define DEBUG_TESTCODE2(name,codeBody) \
     void (*__testcode__ ## __LINE__)(const char*) = ({ \
-                                          auto void __closure__(const char *); \
-                                          void __closure__(const char *__testCodeName__)codeBody __closure__; \
-                                        }); \
+                                                      auto void __closure__(const char *); \
+                                                      void __closure__(const char *__testCodeName__)codeBody __closure__; \
+                                                    }); \
     if (debugIsTestCodeEnabled(__FILE__,__LINE__,__FUNCTION__,__COUNTER__)) { __testcode__ ## __LINE__(name); }
 #else /* not NDEBUG */
   #define DEBUG_TESTCODE(name) \

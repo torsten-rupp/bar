@@ -4513,7 +4513,7 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
 //TODO: implement
       #endif /* PLATFORM_... */
 
-      // set last permissions
+      // set permissions
       #ifdef HAVE_CHMOD
         if (chmod(fileName,(mode_t)fileInfo->permissions) != 0)
         {
@@ -5044,8 +5044,6 @@ Errors File_makeDirectory(ConstString     pathName,
                           bool            ignoreExistingFlag
                          )
 {
-  #define PERMISSION_DIRECTORY (FILE_PERMISSION_USER_EXECUTE|FILE_PERMISSION_GROUP_EXECUTE|FILE_PERMISSION_OTHER_EXECUTE)
-
   String          directoryName;
   String          parentDirectoryName;
   mode_t          currentCreationMask;
@@ -5118,7 +5116,7 @@ Errors File_makeDirectory(ConstString     pathName,
     {
       #ifdef HAVE_CHMOD
         if (chmod(String_cString(directoryName),
-                  ((mode_t)permissions|PERMISSION_DIRECTORY) & ~currentCreationMask
+                  ((mode_t)permissions|FILE_PERMISSION_DIRECTORY) & ~currentCreationMask
                  ) != 0
            )
         {
@@ -5162,9 +5160,9 @@ Errors File_makeDirectory(ConstString     pathName,
           File_deleteFileName(directoryName);
           return error;
         }
-        if (   ((fileStat.st_mode & PERMISSION_DIRECTORY) != PERMISSION_DIRECTORY)
+        if (   ((fileStat.st_mode & FILE_PERMISSION_DIRECTORY) != FILE_PERMISSION_DIRECTORY)
             && (chmod(String_cString(parentDirectoryName),
-                      (fileStat.st_mode|PERMISSION_DIRECTORY) & ~currentCreationMask
+                      (fileStat.st_mode|FILE_PERMISSION_DIRECTORY) & ~currentCreationMask
                      ) != 0
                )
            )
@@ -5234,7 +5232,7 @@ Errors File_makeDirectory(ConstString     pathName,
           // set permission
           #ifdef HAVE_CHMOD
             if (chmod(String_cString(directoryName),
-                      ((mode_t)permissions|PERMISSION_DIRECTORY) & ~currentCreationMask
+                      ((mode_t)permissions|FILE_PERMISSION_DIRECTORY) & ~currentCreationMask
                      ) != 0
                )
             {
@@ -5264,8 +5262,6 @@ Errors File_makeDirectory(ConstString     pathName,
   File_deleteFileName(directoryName);
 
   return ERROR_NONE;
-
-  #undef PERMISSION_DIRECTORY
 }
 
 Errors File_makeDirectoryCString(const char      *pathName,

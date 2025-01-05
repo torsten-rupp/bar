@@ -476,13 +476,13 @@ LOCAL size_t curlFTPParseDirectoryListCallback(const void *buffer,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseFTPDirectoryLine(String         line,
-                                 String         fileName,
-                                 FileTypes      *type,
-                                 int64          *size,
-                                 uint64         *timeModified,
-                                 uint32         *userId,
-                                 uint32         *groupId,
+LOCAL bool parseFTPDirectoryLine(String          line,
+                                 String          fileName,
+                                 FileTypes       *type,
+                                 int64           *size,
+                                 uint64          *timeModified,
+                                 uint32          *userId,
+                                 uint32          *groupId,
                                  FilePermissions *permission
                                 )
 {
@@ -1021,7 +1021,7 @@ LOCAL void StorageFTP_getPrintableName(String                 string,
   }
   if (!String_isEmpty(storageFileName))
   {
-    String_appendChar(string,'/');
+    if (!String_startsWithChar(storageFileName,'/')) String_appendChar(string,'/');
     String_append(string,storageFileName);
   }
 }

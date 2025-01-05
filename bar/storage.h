@@ -662,7 +662,7 @@ typedef struct
         uint64          timeModified;
         uint32          userId;
         uint32          groupId;
-        FilePermissions  permission;
+        FilePermissions permission;
         bool            entryReadFlag;                        // TRUE if entry read
 */
       } webdav;

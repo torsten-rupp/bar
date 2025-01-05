@@ -56,38 +56,38 @@
 // restore information
 typedef struct
 {
-  StorageSpecifier                 *storageSpecifier;                     // storage specifier structure
-  const EntryList                  *includeEntryList;                     // list of included entries
-  const PatternList                *excludePatternList;                   // list of exclude patterns
-  JobOptions                       *jobOptions;
+  StorageSpecifier           *storageSpecifier;                     // storage specifier structure
+  const EntryList            *includeEntryList;                     // list of included entries
+  const PatternList          *excludePatternList;                   // list of exclude patterns
+  JobOptions                 *jobOptions;
 
-  LogHandle                        *logHandle;                            // log handle
+  LogHandle                  *logHandle;                            // log handle
 
-  Semaphore                        namesDictionaryLock;
-  Dictionary                       namesDictionary;                       // dictionary with files (used for detecting overwrite existing files)
+  Semaphore                  namesDictionaryLock;
+  Dictionary                 namesDictionary;                       // dictionary with files (used for detecting overwrite existing files)
 
-  RestoreRunningInfoFunction restoreRunningInfoFunction;             // update running info call-back
-  void                             *restoreRunningInfoUserData;            // user data for update running info call-back
-  RestoreHandleErrorFunction       restoreHandleErrorFunction;                   // handle error call-back
-  void                             *restoreHandleErrorUserData;                  // user data for handle error call-back
-  GetNamePasswordFunction          getNamePasswordFunction;               // get name/password call-back
-  void                             *getNamePasswordUserData;              // user data for get password call-back
-  IsPauseFunction                  isPauseFunction;                       // check for pause call-back
-  void                             *isPauseUserData;                      // user data for check for pause call-back
-  IsAbortedFunction                isAbortedFunction;                     // check for aborted call-back
-  void                             *isAbortedUserData;                    // user data for check for aborted call-back
+  RestoreRunningInfoFunction restoreRunningInfoFunction;            // update running info call-back
+  void                       *restoreRunningInfoUserData;           // user data for update running info call-back
+  RestoreErrorHandlerFunction restoreErrorHandlerFunction;            // handle error call-back
+  void                       *restoreErrorHandlerUserData;           // user data for handle error call-back
+  GetNamePasswordFunction    getNamePasswordFunction;               // get name/password call-back
+  void                       *getNamePasswordUserData;              // user data for get password call-back
+  IsPauseFunction            isPauseFunction;                       // check for pause call-back
+  void                       *isPauseUserData;                      // user data for check for pause call-back
+  IsAbortedFunction          isAbortedFunction;                     // check for aborted call-back
+  void                       *isAbortedUserData;                    // user data for check for aborted call-back
 
-  MsgQueue                         entryMsgQueue;                         // queue with entries to store
+  MsgQueue                   entryMsgQueue;                         // queue with entries to store
 
-  Errors                           failError;                             // failure error
+  Errors                     failError;                             // failure error
 
-  Semaphore                        fragmentListLock;
-  FragmentList                     fragmentList;                          // entry fragments
+  Semaphore                  fragmentListLock;
+  FragmentList               fragmentList;                          // entry fragments
 
-  Semaphore                        runningInfoLock;
-  RunningInfo                      runningInfo;                           // running info
-  const FragmentNode               *runningInfoCurrentFragmentNode;       // current fragment node in running info
-  uint64                           runningInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
+  Semaphore                  runningInfoLock;
+  RunningInfo                runningInfo;                           // running info
+  const FragmentNode         *runningInfoCurrentFragmentNode;       // current fragment node in running info
+  uint64                     runningInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
 } RestoreInfo;
 
 // entry message send to restore threads
@@ -140,12 +140,12 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 *          compressExcludePatternList - exclude compression pattern list
 *          jobOptions                 - job options
 *          storageNameCustomText      - storage name custome text or NULL
-*          restoreRunningInfoFunction  - running info function call-back
+*          restoreRunningInfoFunction - running info function call-back
 *                                       (can be NULL)
-*          restoreRunningInfoUserData  - user data for running info
+*          restoreRunningInfoUserData - user data for running info
 *                                       function
-*          restoreHandleErrorFunction        - get password call-back
-*          restoreHandleErrorUserData        - user data for get password
+*          restoreErrorHandlerFunction - get password call-back
+*          restoreErrorHandlerUserData - user data for get password
 *          getNamePasswordFunction    - get name/password call-back
 *          getNamePasswordUserData    - user data for get password
 *          pauseRestoreFlag           - pause restore flag (can be
@@ -157,22 +157,22 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
-                           StorageSpecifier                *storageSpecifier,
-                           const EntryList                 *includeEntryList,
-                           const PatternList               *excludePatternList,
-                           JobOptions                      *jobOptions,
+LOCAL void initRestoreInfo(RestoreInfo                *restoreInfo,
+                           StorageSpecifier           *storageSpecifier,
+                           const EntryList            *includeEntryList,
+                           const PatternList          *excludePatternList,
+                           JobOptions                 *jobOptions,
                            RestoreRunningInfoFunction restoreRunningInfoFunction,
-                           void                            *restoreRunningInfoUserData,
-                           RestoreHandleErrorFunction      restoreHandleErrorFunction,
-                           void                            *restoreHandleErrorUserData,
-                           GetNamePasswordFunction         getNamePasswordFunction,
-                           void                            *getNamePasswordUserData,
-                           IsPauseFunction                 isPauseFunction,
-                           void                            *isPauseUserData,
-                           IsAbortedFunction               isAbortedFunction,
-                           void                            *isAbortedUserData,
-                           LogHandle                       *logHandle
+                           void                       *restoreRunningInfoUserData,
+                           RestoreErrorHandlerFunction restoreErrorHandlerFunction,
+                           void                       *restoreErrorHandlerUserData,
+                           GetNamePasswordFunction    getNamePasswordFunction,
+                           void                       *getNamePasswordUserData,
+                           IsPauseFunction            isPauseFunction,
+                           void                       *isPauseUserData,
+                           IsAbortedFunction          isAbortedFunction,
+                           void                       *isAbortedUserData,
+                           LogHandle                  *logHandle
                           )
 {
   assert(restoreInfo != NULL);
@@ -187,10 +187,10 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
 
   restoreInfo->failError                            = ERROR_NONE;
 
-  restoreInfo->restoreRunningInfoFunction            = restoreRunningInfoFunction;
-  restoreInfo->restoreRunningInfoUserData            = restoreRunningInfoUserData;
-  restoreInfo->restoreHandleErrorFunction                  = restoreHandleErrorFunction;
-  restoreInfo->restoreHandleErrorUserData                  = restoreHandleErrorUserData;
+  restoreInfo->restoreRunningInfoFunction           = restoreRunningInfoFunction;
+  restoreInfo->restoreRunningInfoUserData           = restoreRunningInfoUserData;
+  restoreInfo->restoreErrorHandlerFunction           = restoreErrorHandlerFunction;
+  restoreInfo->restoreErrorHandlerUserData           = restoreErrorHandlerUserData;
   restoreInfo->getNamePasswordFunction              = getNamePasswordFunction;
   restoreInfo->getNamePasswordUserData              = getNamePasswordUserData;
   restoreInfo->isPauseFunction                      = isPauseFunction;
@@ -509,23 +509,33 @@ LOCAL void runningInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name, c
 * Name   : handleError
 * Purpose: handle restore error
 * Input  : restoreInfo - restore info
+*          storageName - storage name (can be NULL)
+*          entryName   - entry name (can be NULL)
 *          error       - error code
 * Input  : -
 * Output : -
-* Return : new error code
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors handleError(RestoreInfo *restoreInfo, Errors error)
+LOCAL Errors handleError(const RestoreInfo *restoreInfo, ConstString storageName, ConstString entryName, Errors error)
 {
-  assert(restoreInfo != NULL);
+  assert(error != ERROR_NONE);
 
-  if (restoreInfo->restoreHandleErrorFunction != NULL)
+  logMessage(restoreInfo->logHandle,
+             LOG_TYPE_ALWAYS,
+             "Restore '%s' from '%s' fail (error: %s)",
+             String_cString(entryName),
+             String_cString(storageName),
+             Error_getText(error)
+            );
+  if (restoreInfo->restoreErrorHandlerFunction != NULL)
   {
-    error = restoreInfo->restoreHandleErrorFunction(error,
-                                             &restoreInfo->runningInfo,
-                                             restoreInfo->restoreHandleErrorUserData
-                                            );
+    error = restoreInfo->restoreErrorHandlerFunction(storageName,
+                                                     entryName,
+                                                     error,
+                                                     restoreInfo->restoreErrorHandlerUserData
+                                                    );
   }
 
   return error;
@@ -743,6 +753,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
+    error = handleError(restoreInfo,archiveHandle->printableStorageName,NULL,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -788,12 +799,14 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
             case RESTORE_ENTRY_MODE_STOP:
               // stop
               printInfo(1,"stopped (file exists)\n");
-              error = !restoreInfo->jobOptions->noStopOnErrorFlag
-                        ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
-                        : ERROR_NONE;
+              error = handleError(restoreInfo,
+                                  archiveHandle->printableStorageName,
+                                  destinationFileName,
+                                  ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                                 );
               Semaphore_unlock(&restoreInfo->namesDictionaryLock);
               AutoFree_cleanup(&autoFreeList);
-              return error;
+              return !restoreInfo->jobOptions->noStopOnErrorFlag ? error : ERROR_NONE;
             case RESTORE_ENTRY_MODE_RENAME:
               // rename new entry
               getUniqName(destinationFileName);
@@ -803,6 +816,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               error = File_open(&fileHandle,destinationFileName,FILE_OPEN_CREATE);
               if (error != ERROR_NONE)
               {
+                error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
                 Semaphore_unlock(&restoreInfo->namesDictionaryLock);
                 AutoFree_cleanup(&autoFreeList);
                 return error;
@@ -849,9 +863,14 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                           fragmentOffset,
                           (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
                          );
+                error = handleError(restoreInfo,
+                                    archiveHandle->printableStorageName,
+                                    destinationFileName,
+                                    ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                                   );
                 Semaphore_unlock(&restoreInfo->fragmentListLock);
                 AutoFree_cleanup(&autoFreeList);
-                return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+                return error;
               case RESTORE_ENTRY_MODE_RENAME:
                 // rename new entry
                 getUniqName(destinationFileName);
@@ -902,6 +921,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -932,6 +952,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                    String_cString(destinationFileName),
                    Error_getText(error)
                   );
+        error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -948,6 +969,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -962,6 +984,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                    String_cString(destinationFileName),
                    Error_getText(error)
                   );
+        error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -1016,6 +1039,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     }
     if      (error != ERROR_NONE)
     {
+      error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -1091,6 +1115,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
+            error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
@@ -1119,6 +1144,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
+            error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
@@ -1144,6 +1170,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
+            error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
@@ -1297,6 +1324,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
+    error = handleError(restoreInfo,archiveHandle->printableStorageName,NULL,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -1358,9 +1386,14 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                           blockOffset*(uint64)deviceInfo.blockSize,
                           ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
                          );
+                error = handleError(restoreInfo,
+                                    archiveHandle->printableStorageName,
+                                    destinationDeviceName,
+                                    ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationDeviceName))
+                                   );
                 Semaphore_unlock(&restoreInfo->fragmentListLock);
                 AutoFree_cleanup(&autoFreeList);
-                return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+                return error;
               case RESTORE_ENTRY_MODE_RENAME:
                 // rename new entry
                 getUniqName(destinationDeviceName);
@@ -1372,6 +1405,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                   error = File_open(&fileHandle,destinationDeviceName,FILE_OPEN_CREATE);
                   if (error != ERROR_NONE)
                   {
+                    error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationDeviceName,error);
                     Semaphore_unlock(&restoreInfo->namesDictionaryLock);
                     AutoFree_cleanup(&autoFreeList);
                     return error;
@@ -1421,6 +1455,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationDeviceName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -1448,6 +1483,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationDeviceName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -1471,6 +1507,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationDeviceName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -1488,6 +1525,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                        String_cString(destinationDeviceName),
                        Error_getText(error)
                       );
+            error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationDeviceName,error);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
@@ -1496,7 +1534,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       if (error != ERROR_NONE)
       {
         AutoFree_cleanup(&autoFreeList);
-        return error;
+        return handleError(restoreInfo,archiveHandle->printableStorageName,destinationDeviceName,error);
       }
 
       // seek to fragment position
@@ -1532,6 +1570,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       }
       if (error != ERROR_NONE)
       {
+        error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationDeviceName,error);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -1616,6 +1655,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     }
     if      (error != ERROR_NONE)
     {
+      error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationDeviceName,error);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -1754,7 +1794,6 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
   ArchiveEntryInfo          archiveEntryInfo;
   FileInfo                  fileInfo;
   String                    destinationFileName;
-//            FileInfo localFileInfo;
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -1780,6 +1819,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
+    error = handleError(restoreInfo,archiveHandle->printableStorageName,NULL,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -1825,12 +1865,16 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
             case RESTORE_ENTRY_MODE_STOP:
               // stop
               printInfo(1,"stopped (directory exists)\n");
-              error = !restoreInfo->jobOptions->noStopOnErrorFlag
-                        ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
-                        : ERROR_NONE;
+              error = handleError(restoreInfo,
+                                  archiveHandle->printableStorageName,
+                                  destinationFileName,
+                                  ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                                 );
               Semaphore_unlock(&restoreInfo->namesDictionaryLock);
               AutoFree_cleanup(&autoFreeList);
-              return error;
+              return !restoreInfo->jobOptions->noStopOnErrorFlag
+                       ? error
+                       : ERROR_NONE;
               break;
             case RESTORE_ENTRY_MODE_RENAME:
               // rename new entry
@@ -1873,6 +1917,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -1902,6 +1947,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                    String_cString(destinationFileName),
                    Error_getText(error)
                   );
+        error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -1912,8 +1958,9 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       // set file time, file permission
       if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
       {
-        fileInfo.permissions = globalOptions.permissions;
+        fileInfo.permissions = globalOptions.permissions | FILE_PERMISSION_DIRECTORY;
       }
+
       error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
@@ -1926,6 +1973,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -1954,6 +2002,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -1979,6 +2028,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -2085,6 +2135,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
+    error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -2133,12 +2184,16 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                         "stopped (link exists)\n",
                         String_cString(destinationFileName)
                        );
-              error = !restoreInfo->jobOptions->noStopOnErrorFlag
-                        ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
-                        : ERROR_NONE;
+              error = handleError(restoreInfo,
+                                  archiveHandle->printableStorageName,
+                                  destinationFileName,
+                                  ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                                 );
               Semaphore_unlock(&restoreInfo->namesDictionaryLock);
               AutoFree_cleanup(&autoFreeList);
-              return error;
+              return !restoreInfo->jobOptions->noStopOnErrorFlag
+                        ? error
+                        : ERROR_NONE;;
             case RESTORE_ENTRY_MODE_RENAME:
               // rename new entry
               getUniqName(destinationFileName);
@@ -2180,6 +2235,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -2205,6 +2261,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                    String_cString(fileName),
                    Error_getText(error)
                   );
+        error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -2229,6 +2286,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -2257,6 +2315,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -2380,6 +2439,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
+    error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -2431,12 +2491,16 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               case RESTORE_ENTRY_MODE_STOP:
                 // stop
                 printInfo(1,"stopped (hardlink exists)\n");
-                error = !restoreInfo->jobOptions->noStopOnErrorFlag
-                          ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
-                          : ERROR_NONE;
+                error = handleError(restoreInfo,
+                                    archiveHandle->printableStorageName,
+                                    destinationFileName,
+                                    ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                                   );
                 Semaphore_unlock(&restoreInfo->namesDictionaryLock);
                 AutoFree_cleanup(&autoFreeList);
-                return error;
+                return !restoreInfo->jobOptions->noStopOnErrorFlag
+                          ? error
+                          : ERROR_NONE;;
               case RESTORE_ENTRY_MODE_RENAME:
                 // rename new entry
                 getUniqName(destinationFileName);
@@ -2446,6 +2510,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 error = File_open(&fileHandle,destinationFileName,FILE_OPEN_CREATE);
                 if (error != ERROR_NONE)
                 {
+                  error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
                   Semaphore_unlock(&restoreInfo->namesDictionaryLock);
                   AutoFree_cleanup(&autoFreeList);
                   return error;
@@ -2493,9 +2558,14 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                             fragmentOffset,
                             (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1:fragmentOffset
                            );
+                  error = handleError(restoreInfo,
+                                      archiveHandle->printableStorageName,
+                                      destinationFileName,
+                                      ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                                     );
                   Semaphore_unlock(&restoreInfo->fragmentListLock);
                   AutoFree_cleanup(&autoFreeList);
-                  return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
+                  return error;
                 case RESTORE_ENTRY_MODE_RENAME:
                   // rename new entry
                   getUniqName(destinationFileName);
@@ -2544,6 +2614,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
+            error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
@@ -2578,6 +2649,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
+            error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
@@ -2594,6 +2666,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
+              error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
               AutoFree_cleanup(&autoFreeList);
               return error;
             }
@@ -2608,6 +2681,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
+            error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
@@ -2666,6 +2740,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
         if      (error != ERROR_NONE)
         {
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -2741,6 +2816,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
+                error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
                 AutoFree_cleanup(&autoFreeList);
                 return error;
               }
@@ -2769,6 +2845,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
+                error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
                 AutoFree_cleanup(&autoFreeList);
                 return error;
               }
@@ -2794,6 +2871,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
+                error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
                 AutoFree_cleanup(&autoFreeList);
                 return error;
               }
@@ -2851,6 +2929,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
+            error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
@@ -2956,6 +3035,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
+    error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -2995,12 +3075,16 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
           case RESTORE_ENTRY_MODE_STOP:
             // stop
             printInfo(1,"stopped (special exists)\n");
-            error = !restoreInfo->jobOptions->noStopOnErrorFlag
-                      ? ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
-                      : ERROR_NONE;
+            error = handleError(restoreInfo,
+                                archiveHandle->printableStorageName,
+                                destinationFileName,
+                                ERRORX_(FILE_EXISTS_,0,"%s",String_cString(destinationFileName))
+                               );
             Semaphore_unlock(&restoreInfo->namesDictionaryLock);
             AutoFree_cleanup(&autoFreeList);
-            return error;
+            return !restoreInfo->jobOptions->noStopOnErrorFlag
+                      ? error
+                      : ERROR_NONE;;
             break;
           case RESTORE_ENTRY_MODE_RENAME:
             // rename new entry
@@ -3042,6 +3126,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -3070,6 +3155,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                    String_cString(fileName),
                    Error_getText(error)
                   );
+        error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -3094,6 +3180,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -3122,6 +3209,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
+          error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -3426,11 +3514,11 @@ LOCAL Errors restoreArchive(RestoreInfo      *restoreInfo,
 
   // init variables
   AutoFree_init(&autoFreeList);
-  printableStorageName = String_new();
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // get printable storage name
+  printableStorageName = String_new();
   Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // init running info
   SEMAPHORE_LOCKED_DO(&restoreInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -3462,7 +3550,7 @@ NULL, // masterIO
                String_cString(printableStorageName),
                Error_getText(error)
               );
-    error = handleError(restoreInfo,error);
+    handleError(restoreInfo,printableStorageName,NULL,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -3474,9 +3562,9 @@ NULL, // masterIO
     printError("storage not found '%s'!",
                String_cString(printableStorageName)
               );
-    error = handleError(restoreInfo,ERRORX_(ARCHIVE_NOT_FOUND,0,"%s",String_cString(printableStorageName)));
+    error = handleError(restoreInfo,printableStorageName,NULL,ERROR_ARCHIVE_NOT_FOUND);
     AutoFree_cleanup(&autoFreeList);
-    return error;
+    return ERROR_ARCHIVE_NOT_FOUND;
   }
 
   // open archive
@@ -3494,7 +3582,7 @@ NULL, // masterIO
                String_cString(printableStorageName),
                Error_getText(error)
               );
-    error = handleError(restoreInfo,error);
+    handleError(restoreInfo,printableStorageName,NULL,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -3515,7 +3603,7 @@ NULL, // masterIO
       else
       {
         // signature error
-        error = handleError(restoreInfo,error);
+        handleError(restoreInfo,printableStorageName,NULL,error);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -3528,7 +3616,7 @@ NULL, // masterIO
         printError("invalid signature in '%s'!",
                    String_cString(printableStorageName)
                   );
-        (void)handleError(restoreInfo,error);
+        (void)handleError(restoreInfo,printableStorageName,NULL,error);
         AutoFree_cleanup(&autoFreeList);
         return ERROR_INVALID_SIGNATURE;
       }
@@ -3606,7 +3694,10 @@ NULL, // masterIO
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      if (restoreInfo->failError == ERROR_NONE) restoreInfo->failError = handleError(restoreInfo,error);
+      if (restoreInfo->failError == ERROR_NONE)
+      {
+        restoreInfo->failError = handleError(restoreInfo,printableStorageName,NULL,error);
+      }
       break;
     }
 
@@ -3742,8 +3833,8 @@ Errors Command_restore(const StringList           *storageNameList,
                        JobOptions                 *jobOptions,
                        RestoreRunningInfoFunction restoreRunningInfoFunction,
                        void                       *restoreRunningInfoUserData,
-                       RestoreHandleErrorFunction restoreHandleErrorFunction,
-                       void                       *restoreHandleErrorUserData,
+                       RestoreErrorHandlerFunction restoreErrorHandlerFunction,
+                       void                       *restoreErrorHandlerUserData,
                        GetNamePasswordFunction    getNamePasswordFunction,
                        void                       *getNamePasswordUserData,
                        IsPauseFunction            isPauseFunction,
@@ -3778,7 +3869,7 @@ Errors Command_restore(const StringList           *storageNameList,
                   excludePatternList,
                   jobOptions,
                   CALLBACK_(restoreRunningInfoFunction,restoreRunningInfoUserData),
-                  CALLBACK_(restoreHandleErrorFunction,restoreHandleErrorUserData),
+                  CALLBACK_(restoreErrorHandlerFunction,restoreErrorHandlerUserData),
                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                   CALLBACK_(isPauseFunction,isPauseUserData),
                   CALLBACK_(isAbortedFunction,isAbortedUserData),
@@ -3792,9 +3883,9 @@ Errors Command_restore(const StringList           *storageNameList,
     restoreInfo.runningInfo.progress.done.size  = 0LL;
     updateRunningInfo(&restoreInfo,TRUE);
   }
-  error            = ERROR_NONE;
-  abortFlag        = FALSE;
-  someStorageFound = FALSE;
+  error                       = ERROR_NONE;
+  abortFlag                   = FALSE;
+  someStorageFound            = FALSE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
     // pause
@@ -3829,7 +3920,7 @@ Errors Command_restore(const StringList           *storageNameList,
                               );
         if (error != ERROR_NONE)
         {
-          if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
+          if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
         }
         someStorageFound = TRUE;
       }
@@ -3873,7 +3964,10 @@ Errors Command_restore(const StringList           *storageNameList,
                                 );
           if (error != ERROR_NONE)
           {
-            if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
+            if (restoreInfo.failError == ERROR_NONE)
+            {
+              restoreInfo.failError = error;
+            }
           }
           someStorageFound = TRUE;
         }
@@ -3924,7 +4018,10 @@ Errors Command_restore(const StringList           *storageNameList,
             FragmentList_print(stdout,4,fragmentNode,TRUE);
           }
           error = ERRORX_(ENTRY_INCOMPLETE,0,"%s",String_cString(fragmentNode->name));
-          if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = handleError(&restoreInfo,error);
+          if (restoreInfo.failError == ERROR_NONE)
+          {
+            restoreInfo.failError = handleError(&restoreInfo,NULL,fragmentNode->name,error);
+          }
         }
 
         if (fragmentNode->userData != NULL)

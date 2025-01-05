@@ -206,6 +206,24 @@ void EntryList_move(EntryList       *toEntryList,
                    );
 
 /***********************************************************************\
+* Name   : EntryList_contains
+* Purpose: check if entry in list
+* Input  : entryList   - entry list
++          type        - entry type; see ENTRY_TYPE_*
+*          string      - string
+*          patternType - pattern type; see PATTERN_TYPE_*
+* Output : -
+* Return : TRUE iff entry in list
+* Notes  : -
+\***********************************************************************/
+
+bool EntryList_contains(EntryList    *entryList,
+                        EntryTypes   type,
+                        ConstString  string,
+                        PatternTypes patternType
+                       );
+
+/***********************************************************************\
 * Name   : EntryList_append, EntryList_appendCString
 * Purpose: add entry to entry list
 * Input  : entryList   - entry list

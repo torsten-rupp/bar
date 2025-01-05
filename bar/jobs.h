@@ -1597,6 +1597,20 @@ void Job_initOptions(JobOptions *jobOptions);
 void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
 
 /***********************************************************************\
+* Name   : Job_getOptions
+* Purpose: get job name and options of job
+* Input  : jobName    - job name variable (can be NULL)
+*          jobOptions - job options variable
+*          uuid       - job UUID
+* Output : jobName    - job name or UUID
+*          jobOptions - initialized job options
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_getOptions(String jobName, JobOptions *jobOptions, ConstString uuid);
+
+/***********************************************************************\
 * Name   : Job_doneOptions
 * Purpose: done job options
 * Input  : jobOptions - job options
@@ -1606,6 +1620,8 @@ void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
 \***********************************************************************/
 
 void Job_doneOptions(JobOptions *jobOptions);
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Job_duplicatePersistenceList
@@ -1629,6 +1645,8 @@ void Job_duplicatePersistenceList(PersistenceList *persistenceList, const Persis
 \***********************************************************************/
 
 void Job_donePersistenceList(PersistenceList *persistenceList);
+
+// ----------------------------------------------------------------------
 
 /***********************************************************************\
 * Name   : Job_addSlave

@@ -281,6 +281,25 @@ void EntryList_move(EntryList       *toEntryList,
   List_move(toEntryList,NULL,fromEntryList,fromEntryListFromNode,fromEntryListToNode);
 }
 
+bool EntryList_contains(EntryList    *entryList,
+                        EntryTypes   type,
+                        ConstString  string,
+                        PatternTypes patternType
+                       )
+{
+  assert(entryList != NULL);
+  assert(string != NULL);
+
+  EntryNode *entryNode;
+
+  return LIST_CONTAINS(entryList,
+                       entryNode,
+                          (entryNode->type == type)
+                       && (entryNode->patternType == patternType)
+                       && String_equals(entryNode->string,string)
+                      );
+}
+
 Errors EntryList_append(EntryList    *entryList,
                         EntryTypes   type,
                         ConstString  string,

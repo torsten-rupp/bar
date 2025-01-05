@@ -62,7 +62,7 @@
 #include "index/index.h"
 #include "index/index_storages.h"
 #include "continuous.h"
-#if HAVE_BREAKPAD
+#ifdef HAVE_BREAKPAD
   #include "minidump.h"
 #endif /* HAVE_BREAKPAD */
 
@@ -445,7 +445,7 @@ LOCAL Errors initAll(void)
   #ifndef NDEBUG
     debugDumpStackTraceAddOutput(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,fatalLogMessage,NULL);
   #endif /* not NDEBUG */
-  #if HAVE_BREAKPAD
+  #ifdef HAVE_BREAKPAD
     if (!MiniDump_init())
     {
       UNUSED_RESULT(fprintf(stderr,"Warning: Cannot initialize crash dump handler. No crash dumps will be created.\n"));
@@ -789,7 +789,7 @@ LOCAL void doneAll(void)
   #endif /* HAVE_SIGACTION */
 
   // deinitialize crash dump handler
-  #if HAVE_BREAKPAD
+  #ifdef HAVE_BREAKPAD
     MiniDump_done();
   #endif /* HAVE_BREAKPAD */
 }

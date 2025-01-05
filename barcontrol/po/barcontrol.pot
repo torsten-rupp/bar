@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-01 13:21+0100\n"
+"POT-Creation-Date: 2025-01-04 14:22+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5486,7 +5486,7 @@ msgstr ""
 msgid "Failed"
 msgstr ""
 
-#: src/TabRestore.java:8358 src/TabRestore.java:10663
+#: src/TabRestore.java:8358 src/TabRestore.java:10671
 msgid "Aborting"
 msgstr ""
 
@@ -5829,7 +5829,7 @@ msgstr ""
 msgid "Failed entries"
 msgstr ""
 
-#: src/TabRestore.java:10683 src/TabRestore.java:10696
+#: src/TabRestore.java:10691 src/TabRestore.java:10704
 #, java-format
 msgid ""
 "Cannot restore:\n"
@@ -5837,7 +5837,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabRestore.java:10710
+#: src/TabRestore.java:10718
 #, java-format
 msgid ""
 "Error while restoring:\n"
@@ -5845,7 +5845,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabRestore.java:10722
+#: src/TabRestore.java:10730
 #, java-format
 msgid ""
 "Connection error while restoring\n"
