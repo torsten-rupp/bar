@@ -1359,7 +1359,7 @@ String Misc_formatDateTime(String string, uint64 dateTime, TimeTypes timeType, c
   }
   assert(tm != NULL);
 
-  if (format == NULL) format = "%c";
+  if (format == NULL) format = DATE_TIME_FORMAT_DEFAULT;
 
   // allocate buffer and format date/time
   bufferSize = START_BUFFER_SIZE;
@@ -1422,7 +1422,7 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
   }
   assert(tm != NULL);
 
-  if (format == NULL) format = "%c";
+  if (format == NULL) format = DATE_TIME_FORMAT_DEFAULT;
 
   // allocate buffer and format date/time
   length = strftime(buffer,bufferSize-1,format,tm);

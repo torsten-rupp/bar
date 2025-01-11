@@ -33,8 +33,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define DATE_TIME_FORMAT_DEFAULT "%Y-%m-%d %H:%M:%S %Z"
-#define DATE_TIME_FORMAT_ISO     "%F %T %Z"
+#define DATE_TIME_FORMAT_DEFAULT "%F %T %Z"  // ISO format
 #define DATE_TIME_FORMAT_LOCALE  "%c"
 
 // month, day names

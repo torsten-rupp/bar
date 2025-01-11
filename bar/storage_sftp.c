@@ -1090,9 +1090,6 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
       retries = 0;
       while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-debugPrintStackTrace();
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
         if (initSSHLogin(storageInfo->storageSpecifier.hostName,
                          storageInfo->storageSpecifier.userName,
                          &storageInfo->storageSpecifier.password,

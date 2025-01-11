@@ -6949,38 +6949,51 @@ LOCAL void jobThreadCode(void)
       case JOB_TYPE_NONE:
         break;
       case JOB_TYPE_CREATE:
-        if      (jobNode->requestedAbortFlag)
         {
-          // aborted
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Aborted job '%s'%s%s",
-                     String_cString(jobName),
-                     !String_isEmpty(jobNode->abortedByInfo) ? " by " : "",
-                     String_cString(jobNode->abortedByInfo)
-                    );
-        }
-        else if (jobNode->runningInfo.error != ERROR_NONE)
-        {
-          // error
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Done job '%s' (error: %s)",
-                     String_cString(jobName),
-                     Error_getText(jobNode->runningInfo.error)
-                    );
-        }
-        else
-        {
-          // success
-          logMessage(&logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Done job '%s' (duration: %"PRIu64"h:%02umin:%02us)",
-                     String_cString(jobName),
-                     (executeEndDateTime-executeStartDateTime) / (60LL*60LL),
-                     (uint)((executeEndDateTime-executeStartDateTime) / 60LL) % 60LL,
-                     (uint)((executeEndDateTime-executeStartDateTime) % 60LL)
-                    );
+          if      (jobNode->requestedAbortFlag)
+          {
+            // aborted
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Aborted job '%s'%s%s",
+                       String_cString(jobName),
+                       !String_isEmpty(jobNode->abortedByInfo) ? " by " : "",
+                       String_cString(jobNode->abortedByInfo)
+                      );
+          }
+          else if (jobNode->runningInfo.error != ERROR_NONE)
+          {
+            // error
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Done job '%s' (error: %s)",
+                       String_cString(jobName),
+                       Error_getText(jobNode->runningInfo.error)
+                      );
+          }
+          else
+          {
+            // success
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Done job '%s' (duration: %"PRIu64"h:%02umin:%02us)",
+                       String_cString(jobName),
+                       (executeEndDateTime-executeStartDateTime) / (60LL*60LL),
+                       (uint)((executeEndDateTime-executeStartDateTime) / 60LL) % 60LL,
+                       (uint)((executeEndDateTime-executeStartDateTime) % 60LL)
+                      );
+          }
+
+          if (nextScheduleDateTime < MAX_UINT64)
+          {
+            char buffer[64];
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Next schedule job '%s' at %s",
+                       !String_isEmpty(nextJobName) ? String_cString(nextJobName) : String_cString(nextJobUUID),
+                       Misc_formatDateTimeCString(buffer,sizeof(buffer),nextScheduleDateTime,TIME_TYPE_LOCAL,NULL)
+                      );
+          }
         }
         break;
       case JOB_TYPE_RESTORE:
@@ -21742,10 +21755,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     resultMap = StringMap_new();
 
     // request password
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(name));
-fprintf(stderr,"%s:%d: passwordType=%d\n",__FILE__,__LINE__,passwordType);
-fprintf(stderr,"%s:%d: text=%s\n",__FILE__,__LINE__,text);
-debugPrintStackTrace();
     error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
                                   60*MS_PER_S,
                                   resultMap,
