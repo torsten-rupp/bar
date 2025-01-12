@@ -2,6 +2,7 @@
   * fixed write config values permission, owner
   * log next schedule
   * use ISO date/time as default format
+  * fix parse+format file permission string (bug #25)
   * BARControl: fixed abort restore: close dialog
   * BARControl: fixed restore dialog values
 

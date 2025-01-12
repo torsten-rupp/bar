@@ -604,8 +604,13 @@ LOCAL MountNode *newMountNodeCString(const char *mountName, const char *deviceNa
 /***********************************************************************\
 * Name   : cmdOptionParseString
 * Purpose: command line option call back for parsing string
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -636,8 +641,13 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 /***********************************************************************\
 * Name   : cmdOptionParseNewEntityUUID
 * Purpose: command line option call back for new entity UUID
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -675,8 +685,13 @@ LOCAL bool cmdOptionParseNewEntityUUID(void *userData, void *variable, const cha
 /***********************************************************************\
 * Name   : cmdOptionParseConfigFile
 * Purpose: command line option call back for parsing configuration file
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -701,8 +716,13 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
 * Name   : cmdOptionParseEntryPattern
 * Purpose: command line option call back for parsing include
 *          patterns
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -767,8 +787,13 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
 /***********************************************************************\
 * Name   : cmdOptionParsePattern
 * Purpose: command line option call back for parsing patterns
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -808,8 +833,13 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
 /***********************************************************************\
 * Name   : cmdOptionParseMount
 * Purpose: command line option call back for mounts
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -877,8 +907,13 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
 /***********************************************************************\
 * Name   : cmdOptionParseDeltaSource
 * Purpose: command line option call back for parsing delta patterns
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -921,8 +956,13 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
 /***********************************************************************\
 * Name   : cmdOptionParseCompressAlgorithms
 * Purpose: command line option call back for parsing compress algorithm
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -985,8 +1025,13 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, cons
 /***********************************************************************\
 * Name   : cmdOptionParseCryptAlgorithms
 * Purpose: command line option call back for parsing crypt algorithms
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2178,8 +2223,13 @@ LOCAL void doneGlobalOptions(void)
 /***********************************************************************\
 * Name   : cmdOptionParseBandWidth
 * Purpose: command line option call back for parsing band width settings
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2215,8 +2265,13 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 /***********************************************************************\
 * Name   : cmdOptionParseOwner
 * Purpose: command line option call back for parsing owner
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2290,8 +2345,13 @@ LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *n
 /***********************************************************************\
 * Name   : cmdOptionParseOwner
 * Purpose: command line option call back for parsing owner
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2345,16 +2405,20 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
 /***********************************************************************\
 * Name   : cmdOptionParsePermissions
 * Purpose: command line option call back for parsing permissions
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
-  char            user[3+1],group[3+1],world[3+1];
-  uint            i;
+  char            user[3+1],group[3+1],other[3+1];
   FilePermissions permission;
 
   assert(variable != NULL);
@@ -2370,50 +2434,17 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
   {
     permission = (FilePermissions)atol(value);
   }
-  else if (String_scanCString(value,"%4s:%4s:%4s",user,group,world))
+  else if (String_scanCString(value,"%4s:%4s:%4s",user,group,other))
   {
-    for (i = 0; i < stringLength(user); i++)
-    {
-      if (toupper(user[i]) == 'R') permission |= FILE_PERMISSION_USER_READ;
-      if (toupper(user[i]) == 'W') permission |= FILE_PERMISSION_USER_WRITE;
-      if (toupper(user[i]) == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
-    }
-    for (i = 0; i < stringLength(group); i++)
-    {
-      if (toupper(group[i]) == 'R') permission |= FILE_PERMISSION_GROUP_READ;
-      if (toupper(group[i]) == 'W') permission |= FILE_PERMISSION_GROUP_WRITE;
-      if (toupper(group[i]) == 'X') permission |= FILE_PERMISSION_GROUP_EXECUTE;
-    }
-    for (i = 0; i < stringLength(world); i++)
-    {
-      if (toupper(world[i]) == 'R') permission |= FILE_PERMISSION_OTHER_READ;
-      if (toupper(world[i]) == 'W') permission |= FILE_PERMISSION_OTHER_WRITE;
-      if (toupper(world[i]) == 'X') permission |= FILE_PERMISSION_OTHER_EXECUTE;
-    }
+    permission = File_parsePermissions(user,group,other);
   }
   else if (String_scanCString(value,"%4s:%4s",user,group))
   {
-    for (i = 0; i < stringLength(user); i++)
-    {
-      if (toupper(user[i]) == 'R') permission |= FILE_PERMISSION_USER_READ;
-      if (toupper(user[i]) == 'W') permission |= FILE_PERMISSION_USER_WRITE;
-      if (toupper(user[i]) == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
-    }
-    for (i = 0; i < stringLength(group); i++)
-    {
-      if (toupper(group[i]) == 'R') permission |= FILE_PERMISSION_GROUP_READ;
-      if (toupper(group[i]) == 'W') permission |= FILE_PERMISSION_GROUP_WRITE;
-      if (toupper(group[i]) == 'X') permission |= FILE_PERMISSION_GROUP_EXECUTE;
-    }
+    permission = File_parsePermissions(user,group,NULL);
   }
   else if (stringLength(value) == 3)
   {
-    for (i = 0; i < stringLength(value); i++)
-    {
-      if (toupper(value[i]) == 'R') permission |= FILE_PERMISSION_USER_READ;
-      if (toupper(value[i]) == 'W') permission |= FILE_PERMISSION_USER_WRITE;
-      if (toupper(value[i]) == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
-    }
+    permission = File_parsePermissions(user,NULL,NULL);
   }
   else
   {
@@ -2430,8 +2461,13 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
 /***********************************************************************\
 * Name   : cmdOptionParsePassword
 * Purpose: command line option call back for parsing password
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2456,8 +2492,13 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
 * Name   : cmdOptionParseHashData
 * Purpose: command line option call back for parsing password to hash
 *          data
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2492,8 +2533,13 @@ LOCAL bool cmdOptionParseHashData(void *userData, void *variable, const char *na
 /***********************************************************************\
 * Name   : cmdOptionReadCertificateFile
 * Purpose: command line option call back for reading certificate file
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2568,8 +2614,13 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 /***********************************************************************\
 * Name   : cmdOptionReadKeyFile
 * Purpose: command line option call back for reading key file
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2640,8 +2691,13 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 /***********************************************************************\
 * Name   : cmdOptionParseKey
 * Purpose: command line option call back for get key data
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2738,8 +2794,13 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
 /***********************************************************************\
 * Name   : cmdOptionParseSSHKey
 * Purpose: command line option call back for get TLS key data
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2836,8 +2897,13 @@ LOCAL bool cmdOptionParseSSHKey(void *userData, void *variable, const char *name
 /***********************************************************************\
 * Name   : cmdOptionParseArchiveFileModeOverwrite
 * Purpose: command line option call back for archive file mode overwrite
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2873,8 +2939,13 @@ LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *userData, void *variable
 * Name   : cmdOptionParseRestoreEntryModeOverwrite
 * Purpose: command line option call back for restore entry mode
 *          overwrite
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2909,8 +2980,13 @@ LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *userData, void *variabl
 /***********************************************************************\
 * Name   : cmdOptionParseDeprecatedMountDevice
 * Purpose: command line option call back for archive files overwrite mode
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -2945,8 +3021,13 @@ LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, c
 * Name   : cmdOptionParseDeprecatedStopOnError
 * Purpose: command line option call back for deprecated option
 *          stop-on-error
-* Input  : -
-* Output : -
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -5459,8 +5540,7 @@ LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueOperations o
 
 LOCAL bool configValuePermissionsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
-  char            user[3+1],group[3+1],world[3+1];
-  uint            i;
+  char            user[3+1],group[3+1],other[3+1];
   FilePermissions permission;
 
   assert(variable != NULL);
@@ -5475,50 +5555,17 @@ LOCAL bool configValuePermissionsParse(void *userData, void *variable, const cha
   {
     permission = (FilePermissions)atol(value);
   }
-  else if (String_scanCString(value,"%4s:%4s:%4s",user,group,world))
+  else if (String_scanCString(value,"%4s:%4s:%4s",user,group,other))
   {
-    for (i = 0; i < stringLength(user); i++)
-    {
-      if (toupper(user[i])  == 'R') permission |= FILE_PERMISSION_USER_READ;
-      if (toupper(user[i])  == 'W') permission |= FILE_PERMISSION_USER_WRITE;
-      if (toupper(user[i])  == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
-    }
-    for (i = 0; i < stringLength(group); i++)
-    {
-      if (toupper(group[i]) == 'R') permission |= FILE_PERMISSION_GROUP_READ;
-      if (toupper(group[i]) == 'W') permission |= FILE_PERMISSION_GROUP_WRITE;
-      if (toupper(group[i]) == 'X') permission |= FILE_PERMISSION_GROUP_EXECUTE;
-    }
-    for (i = 0; i < stringLength(world); i++)
-    {
-      if (toupper(world[i]) == 'R') permission |= FILE_PERMISSION_OTHER_READ;
-      if (toupper(world[i]) == 'W') permission |= FILE_PERMISSION_OTHER_WRITE;
-      if (toupper(world[i]) == 'X') permission |= FILE_PERMISSION_OTHER_EXECUTE;
-    }
+    permission = File_parsePermissions(user,group,other);
   }
   else if (String_scanCString(value,"%4s:%4s",user,group))
   {
-    for (i = 0; i < stringLength(user); i++)
-    {
-      if (toupper(user[i])  == 'R') permission |= FILE_PERMISSION_USER_READ;
-      if (toupper(user[i])  == 'W') permission |= FILE_PERMISSION_USER_WRITE;
-      if (toupper(user[i])  == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
-    }
-    for (i = 0; i < stringLength(group); i++)
-    {
-      if (toupper(group[i]) == 'R') permission |= FILE_PERMISSION_GROUP_READ;
-      if (toupper(group[i]) == 'W') permission |= FILE_PERMISSION_GROUP_WRITE;
-      if (toupper(group[i]) == 'X') permission |= FILE_PERMISSION_GROUP_EXECUTE;
-    }
+    permission = File_parsePermissions(user,group,NULL);
   }
   else if (stringLength(value) == 3)
   {
-    for (i = 0; i < stringLength(value); i++)
-    {
-      if (toupper(value[i])  == 'R') permission |= FILE_PERMISSION_USER_READ;
-      if (toupper(value[i])  == 'W') permission |= FILE_PERMISSION_USER_WRITE;
-      if (toupper(value[i])  == 'X') permission |= FILE_PERMISSION_USER_EXECUTE;
-    }
+    permission = File_parsePermissions(user,NULL,NULL);
   }
   else
   {
