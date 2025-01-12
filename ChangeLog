@@ -1,5 +1,14 @@
-2024-09-01 26
+2025-02-01 26
   * automatic replace deprecated configuration values by new value
+  * BARControl: add total progress to test dialog
+  * BARControl: add general commands to server settings dialog
+
+2025-01-31 25b
+  * fixed write config values permission, owner
+  * log next schedule
+  * use ISO date/time as default format
+  * BARControl: fixed abort restore: close dialog
+  * BARControl: fixed restore dialog values
 
 2024-11-01 25a
   * fixed key constrain failed on database import (bug #16)

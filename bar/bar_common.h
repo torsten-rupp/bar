@@ -107,8 +107,8 @@
 #define DEFAULT_VERBOSE_LEVEL_INTERACTIVE         1
 #define DEFAULT_SERVER_DEBUG_LEVEL                0
 
-#define MOUNT_COMMAND                             "mount -p 0 %directory"
-#define MOUNT_DEVICE_COMMAND                      "mount -p 0 %device %directory"
+#define MOUNT_COMMAND                             "mount %directory"
+#define MOUNT_DEVICE_COMMAND                      "mount %device %directory"
 #define UNMOUNT_COMMAND                           "umount %directory"
 
 #ifdef HAVE_ISOFS

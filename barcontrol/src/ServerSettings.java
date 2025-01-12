@@ -950,6 +950,12 @@ public class ServerSettings
 //    WidgetVariable          indexDatabaseMaxBandWidth  = new WidgetVariable<String>("index-database-max-band-width",""   );
     WidgetVariable          indexDatabaseKeepTime      = new WidgetVariable<String >("index-database-keep-time",      ""   );
 
+    WidgetVariable          mountCommand               = new WidgetVariable<String >("mount-command",                 ""   );
+    WidgetVariable          mountDeviceCommand         = new WidgetVariable<String >("mount-device-command",          ""   );
+    WidgetVariable          unmountCommand             = new WidgetVariable<String >("unmount-command",               ""   );
+    WidgetVariable          preCommand                 = new WidgetVariable<String >("pre-command",                   ""   );
+    WidgetVariable          postCommand                = new WidgetVariable<String >("post-command",                  ""   );
+
     WidgetVariable          cdDevice                   = new WidgetVariable<String >("cd-device",                     ""   );
     WidgetVariable          cdRequestVolumeCommand     = new WidgetVariable<String >("cd-request-volume-command",     ""   );
     WidgetVariable          cdUnloadCommand            = new WidgetVariable<String >("cd-unload-volume-command",      ""   );
@@ -1994,6 +2000,73 @@ public class ServerSettings
     {
       subTabFolder = Widgets.newTabFolder(composite);
       Widgets.layout(subTabFolder,0,0,TableLayoutData.NSWE);
+
+      subComposite = Widgets.addTab(subTabFolder,BARControl.tr("General"));
+      subComposite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
+      Widgets.layout(subComposite,0,0,TableLayoutData.NSWE,0,0,4);
+      {
+        row = 0;
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Mount")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subSubComposite = BARWidgets.newFile(subComposite,
+                                             BARControl.tr("Command to mount device via mount point."),
+                                             mountCommand,
+                                             new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                         },
+                                             "*"
+                                            );
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
+        row++;
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Mount device")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subSubComposite = BARWidgets.newFile(subComposite,
+                                             BARControl.tr("Commadn to mount device with name."),
+                                             mountDeviceCommand,
+                                             new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                         },
+                                             "*"
+                                            );
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
+        row++;
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Unmount")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subSubComposite = BARWidgets.newFile(subComposite,
+                                             BARControl.tr("Command to unmount device."),
+                                             unmountCommand,
+                                             new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                         },
+                                             "*"
+                                            );
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
+        row++;
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Pre command")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subSubComposite = BARWidgets.newFile(subComposite,
+                                             BARControl.tr("Command to execute before job is started."),
+                                             preCommand,
+                                             new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                         },
+                                             "*"
+                                            );
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
+        row++;
+
+        label = Widgets.newLabel(subComposite,BARControl.tr("Post command")+":");
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        subSubComposite = BARWidgets.newFile(subComposite,
+                                             BARControl.tr("Command to execute after job terminated."),
+                                             postCommand,
+                                             new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                         },
+                                             "*"
+                                            );
+        Widgets.layout(subSubComposite,row,1,TableLayoutData.WE,0,0,0,0,200,SWT.DEFAULT);
+        row++;
+      }
 
       subComposite = Widgets.addTab(subTabFolder,BARControl.tr("CD"));
       subComposite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
@@ -3354,7 +3427,7 @@ public class ServerSettings
     {
       int i = 0;
 
-      busyDialog[0].setMaximum(86);
+      busyDialog[0].setMaximum(92+1+1+1);
       {
         BARServer.lockSet();
       }
@@ -3374,6 +3447,12 @@ public class ServerSettings
         BARServer.getServerOption(indexDatabaseAutoUpdate    ); busyDialog[0].updateProgressBar(i); i++;
 //        BARServer.getServerOption(indexDatabaseMaxBandWidth  ); busyDialog[0].updateProgressBar(i); i++;
         BARServer.getServerOption(indexDatabaseKeepTime      ); busyDialog[0].updateProgressBar(i); i++;
+
+        BARServer.getServerOption(mountCommand               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(mountDeviceCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(unmountCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(preCommand                 ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.getServerOption(postCommand                ); busyDialog[0].updateProgressBar(i); i++;
 
         BARServer.getServerOption(cdDevice                   ); busyDialog[0].updateProgressBar(i); i++;
         BARServer.getServerOption(cdRequestVolumeCommand     ); busyDialog[0].updateProgressBar(i); i++;
@@ -3593,7 +3672,7 @@ public class ServerSettings
     {
       int i = 0;
 
-      busyDialog[0].setMaximum(85);
+      busyDialog[0].setMaximum(92+1+1+1);
 
       try
       {
@@ -3611,6 +3690,12 @@ public class ServerSettings
         BARServer.setServerOption(indexDatabaseAutoUpdate    ); busyDialog[0].updateProgressBar(i); i++;
   //      BARServer.setServerOption(indexDatabaseMaxBandWidth  ); busyDialog[0].updateProgressBar(i); i++;
         BARServer.setServerOption(indexDatabaseKeepTime      ); busyDialog[0].updateProgressBar(i); i++;
+
+        BARServer.setServerOption(mountCommand               ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(mountDeviceCommand         ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(unmountCommand             ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(preCommand                 ); busyDialog[0].updateProgressBar(i); i++;
+        BARServer.setServerOption(postCommand                ); busyDialog[0].updateProgressBar(i); i++;
 
         BARServer.setServerOption(cdDevice                   ); busyDialog[0].updateProgressBar(i); i++;
         BARServer.setServerOption(cdRequestVolumeCommand     ); busyDialog[0].updateProgressBar(i); i++;
