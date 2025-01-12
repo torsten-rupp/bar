@@ -3522,15 +3522,15 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
       if      (clazz == Boolean.class)
       {
-        data = (T)new Boolean(resultMap.getBoolean("value",false));
+        data = (T)Boolean.valueOf(resultMap.getBoolean("value",false));
       }
       else if (clazz == Integer.class)
       {
-        data = (T)new Integer(resultMap.getInt("value",0));
+        data = (T)Integer.valueOf(resultMap.getInt("value",0));
       }
       else if (clazz == Long.class)
       {
-        data = (T)new Long(resultMap.getLong("value",0L));
+        data = (T)Long.valueOf(resultMap.getLong("value",0L));
       }
       else if (clazz == String.class)
       {
@@ -3541,15 +3541,15 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       if      (clazz == Boolean.class)
       {
-        data = (T)new Boolean(false);
+        data = (T)Boolean.valueOf(false);
       }
       else if (clazz == Integer.class)
       {
-        data = (T)new Integer(0);
+        data = (T)Integer.valueOf(0);
       }
       else if (clazz == Long.class)
       {
-        data = (T)new Long(0L);
+        data = (T)Long.valueOf(0L);
       }
       else if (clazz == String.class)
       {
@@ -3797,15 +3797,15 @@ throw new Error("NYI");
 
     if      (clazz == Boolean.class)
     {
-      data = (T)new Boolean(resultMap.getBoolean("value"));
+      data = (T)Boolean.valueOf(resultMap.getBoolean("value"));
     }
     else if (clazz == Integer.class)
     {
-      data = (T)new Integer(resultMap.getInt("value"));
+      data = (T)Integer.valueOf(resultMap.getInt("value"));
     }
     else if (clazz == Long.class)
     {
-      data = (T)new Long(resultMap.getLong("value"));
+      data = (T)Long.valueOf(resultMap.getLong("value"));
     }
     else if (clazz == String.class)
     {
@@ -3892,15 +3892,15 @@ throw new Error("NYI");
 
     if      (clazz == Boolean.class)
     {
-      data = (T)new Boolean(resultMap.getBoolean("value"));
+      data = (T)Boolean.valueOf(resultMap.getBoolean("value"));
     }
     else if (clazz == Integer.class)
     {
-      data = (T)new Integer(resultMap.getInt("value"));
+      data = (T)Integer.valueOf(resultMap.getInt("value"));
     }
     else if (clazz == Long.class)
     {
-      data = (T)new Long(resultMap.getLong("value"));
+      data = (T)Long.valueOf(resultMap.getLong("value"));
     }
     else if (clazz == String.class)
     {

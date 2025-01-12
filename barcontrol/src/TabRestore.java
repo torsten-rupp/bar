@@ -621,7 +621,7 @@ public class TabRestore
       }
       else
       {
-        result = new Long(indexData1.id).compareTo(indexData2.id);
+        result = Long.valueOf(indexData1.id).compareTo(indexData2.id);
         if (result != 0)
         {
           boolean doneFlag = false;
@@ -638,13 +638,13 @@ public class TabRestore
               case CREATED_DATETIME:
                 long date1 = indexData1.getDateTime();
                 long date2 = indexData2.getDateTime();
-                result = new Long(date1).compareTo(date2);
+                result = Long.valueOf(date1).compareTo(date2);
                 nextSortMode = SortModes.STATE;
                 break;
               case SIZE:
                 long size1 = indexData1.getTotalSize();
                 long size2 = indexData2.getTotalSize();
-                result = new Long(size1).compareTo(size2);
+                result = Long.valueOf(size1).compareTo(size2);
                 nextSortMode = SortModes.CREATED_DATETIME;
                 break;
               case STATE:
@@ -7752,7 +7752,7 @@ Dprintf.dprintf("");
 
     if (!indexDataHashSet.isEmpty())
     {
-      Long dateTime = new Long(0);
+      Long dateTime = Long.valueOf(0);
       if (archiveType != ArchiveTypes.UNKNOWN)
       {
         // guess a date

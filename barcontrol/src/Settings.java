@@ -591,20 +591,20 @@ public class Settings
   // flags
 //TODO: preference dialog
   @SettingValue
-  public static Boolean                        showNoneTLSWarning              = new Boolean(true);
+  public static Boolean                        showNoneTLSWarning              = Boolean.valueOf(true);
 //TODO: preference dialog
   @SettingValue
-  public static Boolean                        showEntriesExceededInfo         = new Boolean(true);
+  public static Boolean                        showEntriesExceededInfo         = Boolean.valueOf(true);
 //TODO: preference dialog
   @SettingValue
-  public static Boolean                        showEntriesMarkInfo             = new Boolean(true);
+  public static Boolean                        showEntriesMarkInfo             = Boolean.valueOf(true);
 //TODO: preference dialog
   @SettingValue
-  public static Boolean                        showNewVersionInformation       = new Boolean(true);
+  public static Boolean                        showNewVersionInformation       = Boolean.valueOf(true);
   @SettingValue
-  public static Boolean                        showSlaveDisconnected           = new Boolean(true);
+  public static Boolean                        showSlaveDisconnected           = Boolean.valueOf(true);
   @SettingValue
-  public static Boolean                        showVerboseWarning              = new Boolean(true);
+  public static Boolean                        showVerboseWarning              = Boolean.valueOf(true);
 
   public static boolean                        longFormatFlag                  = false;
   public static boolean                        noHeaderFooterFlag              = false;

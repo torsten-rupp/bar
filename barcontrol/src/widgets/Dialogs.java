@@ -541,7 +541,7 @@ class BooleanFieldUpdater
   {
     try
     {
-      field.set(object,new Boolean(value));
+      field.set(object,Boolean.valueOf(value));
     }
     catch (IllegalAccessException exception)
     {
@@ -7594,7 +7594,7 @@ class Dialogs
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            close(dialog,new Integer(widgetInteger.getSelection()));
+            close(dialog,Integer.valueOf(widgetInteger.getSelection()));
           }
         });
 
@@ -7766,7 +7766,7 @@ class Dialogs
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             int newValue = (widgetSlider.getSelection() / increment) * increment;
-            close(dialog,new Integer(newValue));
+            close(dialog,Integer.valueOf(newValue));
           }
         });
 
@@ -7782,7 +7782,7 @@ class Dialogs
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            close(dialog,new Integer(value));
+            close(dialog,Integer.valueOf(value));
           }
         });
       }

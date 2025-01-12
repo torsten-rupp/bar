@@ -14821,7 +14821,7 @@ throw new Error("NYI");
                                                                BARControl.tr("8 h"),   8*60
                                                               }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetInterval,new Integer(scheduleData.interval));
+        Widgets.setSelectedOptionMenuItem(widgetInterval,Integer.valueOf(scheduleData.interval));
         Widgets.layout(widgetInterval,0,0,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,BARControl.tr("Active time")+":");
@@ -15504,7 +15504,7 @@ throw new Error("NYI");
                                                               "10",10
                                                              }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMinKeep,new Integer(persistenceData.minKeep));
+        Widgets.setSelectedOptionMenuItem(widgetMinKeep,Integer.valueOf(persistenceData.minKeep));
         Widgets.layout(widgetMinKeep,0,1,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,BARControl.tr("max")+".:",Settings.hasNormalRole());
@@ -15525,7 +15525,7 @@ throw new Error("NYI");
                                                               "10",10
                                                              }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,new Integer(persistenceData.maxKeep));
+        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,Integer.valueOf(persistenceData.maxKeep));
         Widgets.layout(widgetMaxKeep,0,3,TableLayoutData.W);
 
         label = Widgets.newLabel(subComposite,BARControl.tr("age")+":",Settings.hasExpertRole());
@@ -15555,7 +15555,7 @@ throw new Error("NYI");
                                                              BARControl.tr("5 years"),5*365
                                                             }
                                   );
-        Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(persistenceData.maxAge));
+        Widgets.setSelectedOptionMenuItem(widgetMaxAge,Integer.valueOf(persistenceData.maxAge));
         Widgets.layout(widgetMaxAge,0,5,TableLayoutData.W);
       }
 
