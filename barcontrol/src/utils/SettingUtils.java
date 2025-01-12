@@ -1645,7 +1645,7 @@ public class SettingUtils
                         else if (type == Integer.class)
                         {
                           int value = Integer.parseInt(string);
-                          field.set(null,new Integer(value));
+                          field.set(null,Integer.valueOf(value));
                         }
                         else if (type == long.class)
                         {
@@ -1655,7 +1655,7 @@ public class SettingUtils
                         else if (type == Long.class)
                         {
                           long value = Long.parseLong(string);
-                          field.set(null,new Long(value));
+                          field.set(null,Long.valueOf(value));
                         }
                         else if (type == double.class)
                         {
@@ -1665,7 +1665,7 @@ public class SettingUtils
                         else if (type == Double.class)
                         {
                           double value = Double.parseDouble(string);
-                          field.set(null,new Double(value));
+                          field.set(null,Double.valueOf(value));
                         }
                         else if (type == boolean.class)
                         {
@@ -1675,7 +1675,7 @@ public class SettingUtils
                         else if (type == Boolean.class)
                         {
                           boolean value = StringUtils.parseBoolean(string);
-                          field.set(null,new Boolean(value));
+                          field.set(null,Boolean.valueOf(value));
                         }
                         else if (type == String.class)
                         {

@@ -3705,7 +3705,7 @@ if (false) {
       }
       else
       {
-        classModifiedMap.put(file,new Long(file.lastModified()));
+        classModifiedMap.put(file,Long.valueOf(file.lastModified()));
       }
     }
     while (directoryList.size() > 0)
@@ -3722,7 +3722,7 @@ if (false) {
           }
           else
           {
-            classModifiedMap.put(file,new Long(file.lastModified()));
+            classModifiedMap.put(file,Long.valueOf(file.lastModified()));
           }
         }
       }

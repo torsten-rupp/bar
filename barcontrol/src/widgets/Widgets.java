@@ -212,7 +212,7 @@ class WidgetVariable<T>
     this.name   = name;
     this.type   = Boolean.class;
     this.values = null;
-    this.value  = (T)new Boolean(b);
+    this.value  = (T)Boolean.valueOf(b);
   }
   WidgetVariable(boolean b)
   {
@@ -223,7 +223,7 @@ class WidgetVariable<T>
     this.name   = name;
     this.type   = Integer.class;
     this.values = null;
-    this.value  = (T)new Integer(i);
+    this.value  = (T)Integer.valueOf(i);
   }
   WidgetVariable(int i)
   {
@@ -234,7 +234,7 @@ class WidgetVariable<T>
     this.name   = name;
     this.type   = Long.class;
     this.values = null;
-    this.value  = (T)new Long(l);
+    this.value  = (T)Long.valueOf(l);
   }
   WidgetVariable(long l)
   {
@@ -245,7 +245,7 @@ class WidgetVariable<T>
     this.name   = name;
     this.type   = Double.class;
     this.values = null;
-    this.value  = (T)new Double(d);
+    this.value  = (T)Double.valueOf(d);
   }
   WidgetVariable(double d)
   {
@@ -374,7 +374,7 @@ class WidgetVariable<T>
 
     changedFlag = ((Boolean)this.value != value);
 
-    this.value = (T)new Boolean(value);
+    this.value = (T)Boolean.valueOf(value);
     Widgets.modified(this);
 
     return changedFlag;
@@ -392,7 +392,7 @@ class WidgetVariable<T>
 
     changedFlag = ((Integer)this.value != value);
 
-    this.value = (T)new Integer(value);
+    this.value = (T)Integer.valueOf(value);
     Widgets.modified(this);
 
     return changedFlag;
@@ -410,7 +410,7 @@ class WidgetVariable<T>
 
     changedFlag = ((Long)this.value != value);
 
-    this.value = (T)new Long(value);
+    this.value = (T)Long.valueOf(value);
     Widgets.modified(this);
 
     return changedFlag;
@@ -428,7 +428,7 @@ class WidgetVariable<T>
 
     changedFlag = ((Double)this.value != value);
 
-    this.value = (T)new Double(value);
+    this.value = (T)Double.valueOf(value);
     Widgets.modified(this);
 
     return changedFlag;
