@@ -1944,6 +1944,14 @@ NULL,  //               requestedAbortFlag,
                logHandle
               );
 
+  // update running info
+  SEMAPHORE_LOCKED_DO(&testInfo.runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    testInfo.runningInfo.progress.done.count  = 0;
+    testInfo.runningInfo.progress.total.count = StringList_count(storageNameList);
+    updateRunningInfo(&testInfo,FALSE);
+  }
+
   someStorageFound = FALSE;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
@@ -2038,6 +2046,13 @@ NULL,  //               requestedAbortFlag,
       }
     }
 
+    // update running info
+    SEMAPHORE_LOCKED_DO(&testInfo.runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      testInfo.runningInfo.progress.done.count++;
+      updateRunningInfo(&testInfo,FALSE);
+    }
+
     if (error != ERROR_NONE)
     {
       if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
@@ -2048,6 +2063,12 @@ NULL,  //               requestedAbortFlag,
   {
     printError("no matching storage files found!");
     testInfo.failError = ERROR_FILE_NOT_FOUND_;
+  }
+
+  // final update running info
+  SEMAPHORE_LOCKED_DO(&testInfo.runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    updateRunningInfo(&testInfo,TRUE);
   }
 
   if (   (testInfo.failError == ERROR_NONE)

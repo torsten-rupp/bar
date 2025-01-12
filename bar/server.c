@@ -17491,9 +17491,7 @@ LOCAL void serverCommand_storageTest(ClientInfo *clientInfo, IndexHandle *indexH
                         testCommandInfo->id,
                         FALSE,
                         ERROR_NONE,
-// TODO: rename totalEntryCount -> totalCount
-// TODO: rename totalEntrySize -> totalSize
-                        "doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64"",
+                        "doneCount=%lu doneSize=%"PRIu64" totalCount=%lu totalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64"",
                         runningInfo->progress.done.count,
                         runningInfo->progress.done.size,
                         runningInfo->progress.total.count,

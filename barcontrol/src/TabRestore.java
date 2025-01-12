@@ -8284,7 +8284,7 @@ Dprintf.dprintf("");
                                                    500,
                                                    300,
                                                    null,
-                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE,
+                                                   BusyDialog.TEXT1|BusyDialog.TEXT2|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.PROGRESS_BAR2|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE,
                                                    250  // max. lines
                                                   );
       busyDialog.updateText(3,"%s",BARControl.tr("Failed")+":");
@@ -8310,7 +8310,6 @@ Dprintf.dprintf("");
           }
           try
           {
-            int n = 0;
             for (IndexData indexData : indexDataHashSet)
             {
               String info    = indexData.getInfo();
@@ -8337,26 +8336,29 @@ Dprintf.dprintf("");
               try
               {
                 BARServer.executeCommand(command,
-0,//                                         2,  // debugLevel
+                                         2,  // debugLevel
                                          new Command.ResultHandler()
                                          {
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
+                                             long doneCount        = valueMap.getLong("doneCount");
+                                             long totalCount       = valueMap.getLong("totalCount");
                                              long storageDoneSize  = valueMap.getLong("storageDoneSize");
                                              long storageTotalSize = valueMap.getLong("storageTotalSize");
                                              long entryDoneSize    = valueMap.getLong("entryDoneSize");
                                              long entryTotalSize   = valueMap.getLong("entryTotalSize");
 
-                                             busyDialog.updateText       (0,"%s",valueMap.getString("storageName"));
-                                             busyDialog.updateProgressBar(0,(storageTotalSize > 0) ? (double)storageDoneSize/(double)storageTotalSize : 100.0);
-                                             busyDialog.updateText       (1,"%s",valueMap.getString("entryName"));
-                                             busyDialog.updateProgressBar(1,(entryTotalSize > 0) ? (double)entryTotalSize/(double)entryTotalSize : 100.0);
+                                             busyDialog.updateProgressBar(0,(totalCount > 0) ? (double)doneCount/(double)totalCount : 100.0);
+                                             busyDialog.updateText       (1,"%s",valueMap.getString("storageName"));
+                                             busyDialog.updateProgressBar(1,(storageTotalSize > 0) ? (double)storageDoneSize/(double)storageTotalSize : 100.0);
+                                             busyDialog.updateText       (2,"%s",valueMap.getString("entryName"));
+                                             busyDialog.updateProgressBar(2,(entryTotalSize > 0) ? (double)entryTotalSize/(double)entryTotalSize : 100.0);
 
                                              if (busyDialog.isAborted())
                                              {
-                                               busyDialog.updateText(0,"%s",BARControl.tr("Aborting")+"\u2026");
-                                               busyDialog.updateText(1,"");
+                                               busyDialog.updateText(1,"%s",BARControl.tr("Aborting")+"\u2026");
+                                               busyDialog.updateText(2,"%s",BARControl.tr("Aborting")+"\u2026");
                                                abort();
                                              }
                                            }
@@ -8367,9 +8369,6 @@ Dprintf.dprintf("");
               {
                 busyDialog.updateList(info+": "+exception.getMessage());
               }
-
-              n++;
-              busyDialog.updateProgressBar(0,n);
             }
 
             // done busy dialog

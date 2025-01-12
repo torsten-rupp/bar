@@ -3320,7 +3320,6 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
 #endif /* NDEBUG */
 {
   Errors error;
-fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(archiveName));
 
   assert(storageHandle != NULL);
   assert(storageInfo != NULL);
