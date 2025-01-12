@@ -2621,6 +2621,7 @@ ifeq (@HAVE_USER_TEST@,1)
 	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/hardlink2.dat` = $(TEST_USER)
 	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/fifo` = $(TEST_USER)
 	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/fifo.ext` = $(TEST_USER)
+	# Note: character+block device are emulated in restore
 	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/character_device` = $(TEST_USER)
 	test `$(STAT) --printf=%U $(INTERMEDIATE_DIR)/restore/data/block_device` = $(TEST_USER)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --owner=:$(TEST_USER) $(LOG))
@@ -2633,13 +2634,14 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar --skip-unreadable $(TEST_FILES) $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -x $(INTERMEDIATE_DIR)/test.bar --destination $(INTERMEDIATE_DIR)/restore -# data/zero128.dat -# data/sub_dir -# data/sub_dir.ext -# 'data/hardlink*.dat' -# data/fifo -# data/fifo.ext -# data/character_device -# data/block_device --permissions=rw:rw:rw --no-stop-on-attribute-error $(LOG))
 	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/zero128.dat` = 666
-	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/sub_dir` = 666
-	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/sub_dir.ext` = 666
+	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/sub_dir` = 777
+	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/sub_dir.ext` = 777
 	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/hardlink.dat` = 666
 	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/hardlink1.dat` = 666
 	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/hardlink2.dat` = 666
 	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/fifo` = 666
 	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/fifo.ext` = 666
+	# Note: character+block device are emulated in restore
 	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/character_device` = 666
 	test `$(STAT) --printf=%a $(INTERMEDIATE_DIR)/restore/data/block_device` = 666
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) --permissions=r--:r--:r-- $(LOG))

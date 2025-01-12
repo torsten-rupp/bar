@@ -3487,51 +3487,95 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 
 /*---------------------------------------------------------------------*/
 
-FilePermissions File_stringToPermission(const char *string)
+FilePermissions File_parsePermissions(const char *user, const char *group, const char *other)
 {
-  FilePermissions permissions;
-  uint            n;
+  FilePermissions permissions = FILE_PERMISSION_NONE;
 
-  assert(string != NULL);
+  if (user != NULL)
+  {
+    for (size_t i = 0; i < stringLength(user); i++)
+    {
+      switch (user[i])
+      {
+        case 'r': permissions |= FILE_PERMISSION_USER_READ; break;
+        case 'w': permissions |= FILE_PERMISSION_USER_WRITE; break;
+        case 'x': permissions |= FILE_PERMISSION_USER_EXECUTE; break;
+        case 's': permissions |= FILE_PERMISSION_USER_EXECUTE | FILE_PERMISSION_USER_SET_ID; break;
+        case 'S': permissions |= FILE_PERMISSION_USER_SET_ID; break;
+      }
+    }
+  }
 
-  permissions = FILE_PERMISSION_NONE;
+  if (group != NULL)
+  {
+    for (size_t i = 0; i < stringLength(group); i++)
+    {
+      switch (group[i])
+      {
+        case 'r': permissions |= FILE_PERMISSION_GROUP_READ; break;
+        case 'w': permissions |= FILE_PERMISSION_GROUP_WRITE; break;
+        case 'x': permissions |= FILE_PERMISSION_GROUP_EXECUTE; break;
+        case 's': permissions |= FILE_PERMISSION_GROUP_EXECUTE | FILE_PERMISSION_GROUP_SET_ID; break;
+        case 'S': permissions |= FILE_PERMISSION_GROUP_SET_ID; break;
+      }
+    }
+  }
 
-  n = stringLength(string);
-  if ((n >= 1) && (toupper(string[0]) == 'R')) permissions |= FILE_PERMISSION_USER_READ;
-  if ((n >= 2) && (toupper(string[1]) == 'W')) permissions |= FILE_PERMISSION_USER_WRITE;
-  if ((n >= 3) && (toupper(string[2]) == 'X')) permissions |= FILE_PERMISSION_USER_EXECUTE;
-  if ((n >= 3) && (toupper(string[2]) == 'S')) permissions |= FILE_PERMISSION_USER_SET_ID;
-  if ((n >= 4) && (toupper(string[3]) == 'R')) permissions |= FILE_PERMISSION_GROUP_READ;
-  if ((n >= 5) && (toupper(string[4]) == 'W')) permissions |= FILE_PERMISSION_GROUP_WRITE;
-  if ((n >= 6) && (toupper(string[5]) == 'X')) permissions |= FILE_PERMISSION_GROUP_EXECUTE;
-  if ((n >= 6) && (toupper(string[5]) == 'S')) permissions |= FILE_PERMISSION_GROUP_SET_ID;
-  if ((n >= 7) && (toupper(string[6]) == 'R')) permissions |= FILE_PERMISSION_OTHER_READ;
-  if ((n >= 8) && (toupper(string[7]) == 'W')) permissions |= FILE_PERMISSION_OTHER_WRITE;
-  if ((n >= 9) && (toupper(string[8]) == 'X')) permissions |= FILE_PERMISSION_OTHER_EXECUTE;
-  if ((n >= 9) && (toupper(string[8]) == 'T')) permissions |= FILE_PERMISSION_STICKY_BIT;
+  if (other != NULL)
+  {
+    for (size_t i = 0; i < stringLength(other); i++)
+    {
+      switch (other[i])
+      {
+        case 'r': permissions |= FILE_PERMISSION_OTHER_READ; break;
+        case 'w': permissions |= FILE_PERMISSION_OTHER_WRITE; break;
+        case 'x': permissions |= FILE_PERMISSION_OTHER_EXECUTE; break;
+        case 't': permissions |= FILE_PERMISSION_OTHER_EXECUTE | FILE_PERMISSION_STICKY_BIT; break;
+        case 'T': permissions |= FILE_PERMISSION_STICKY_BIT; break;
+      }
+    }
+  }
 
   return permissions;
 }
 
-const char *File_permissionToString(char *string, uint stringSize, FilePermissions permissions)
+const char *File_permissionToString(char *string, uint stringSize, FilePermissions permissions, bool addColonSeparators)
 {
   assert(string != NULL);
   assert(stringSize > 0);
 
-  memset(string,'-',stringSize-1);
-  if ((stringSize >= 1) && ((permissions & FILE_PERMISSION_USER_READ    ) != 0)) string[0] = 'r';
-  if ((stringSize >= 2) && ((permissions & FILE_PERMISSION_USER_WRITE   ) != 0)) string[1] = 'w';
-  if ((stringSize >= 3) && ((permissions & FILE_PERMISSION_USER_EXECUTE ) != 0)) string[2] = 'x';
-  if ((stringSize >= 3) && ((permissions & FILE_PERMISSION_USER_SET_ID  ) != 0)) string[2] = 's';
-  if ((stringSize >= 4) && ((permissions & FILE_PERMISSION_GROUP_READ   ) != 0)) string[3] = 'r';
-  if ((stringSize >= 5) && ((permissions & FILE_PERMISSION_GROUP_WRITE  ) != 0)) string[4] = 'w';
-  if ((stringSize >= 6) && ((permissions & FILE_PERMISSION_GROUP_EXECUTE) != 0)) string[5] = 'x';
-  if ((stringSize >= 6) && ((permissions & FILE_PERMISSION_GROUP_SET_ID ) != 0)) string[5] = 's';
-  if ((stringSize >= 7) && ((permissions & FILE_PERMISSION_OTHER_READ   ) != 0)) string[6] = 'r';
-  if ((stringSize >= 8) && ((permissions & FILE_PERMISSION_OTHER_WRITE  ) != 0)) string[7] = 'w';
-  if ((stringSize >= 9) && ((permissions & FILE_PERMISSION_OTHER_EXECUTE) != 0)) string[8] = 'x';
-  if ((stringSize >= 9) && ((permissions & FILE_PERMISSION_STICKY_BIT   ) != 0)) string[8] = 't';
-  string[stringSize-1] = NUL;
+  stringSet(string,stringSize,addColonSeparators ? "---:---:---" : "---------");
+
+  size_t i = 0;
+
+  if ((stringSize >= (i+1)) && ((permissions & FILE_PERMISSION_USER_READ    ) != 0)) string[i+0] = 'r';
+  if ((stringSize >= (i+2)) && ((permissions & FILE_PERMISSION_USER_WRITE   ) != 0)) string[i+1] = 'w';
+  if (stringSize >= (i+3))
+  {
+    if ((permissions & FILE_PERMISSION_USER_EXECUTE ) != 0) string[i+2] = 'x';
+    if ((permissions & FILE_PERMISSION_USER_SET_ID  ) != 0) string[i+2] = ((permissions & FILE_PERMISSION_USER_EXECUTE) != 0) ? 's' : 'S';
+  }
+  i += (addColonSeparators ? 4 : 3);
+
+  if ((stringSize >= (i+1)) && ((permissions & FILE_PERMISSION_GROUP_READ   ) != 0)) string[i+0] = 'r';
+  if ((stringSize >= (i+2)) && ((permissions & FILE_PERMISSION_GROUP_WRITE  ) != 0)) string[i+1] = 'w';
+  if (stringSize >= (i+3))
+  {
+    if ((permissions & FILE_PERMISSION_GROUP_EXECUTE) != 0) string[i+2] = 'x';
+    if ((permissions & FILE_PERMISSION_GROUP_SET_ID ) != 0) string[i+2] = ((permissions & FILE_PERMISSION_GROUP_EXECUTE) != 0) ? 's' : 'S';
+  }
+  i += (addColonSeparators ? 4 : 3);
+
+  if ((stringSize >= (i+1)) && ((permissions & FILE_PERMISSION_OTHER_READ   ) != 0)) string[i+0] = 'r';
+  if ((stringSize >= (i+2)) && ((permissions & FILE_PERMISSION_OTHER_WRITE  ) != 0)) string[i+1] = 'w';
+  if (stringSize >= (i+3))
+  {
+    if ((permissions & FILE_PERMISSION_OTHER_EXECUTE) != 0) string[i+2] = 'x';
+    if ((permissions & FILE_PERMISSION_STICKY_BIT   ) != 0) string[i+2] = ((permissions & FILE_PERMISSION_OTHER_EXECUTE) != 0) ? 't' : 'T';
+  }
+  i += 3;
+
+  string[MIN(stringSize-1,i)] = NUL;
 
   return string;
 }

@@ -4455,6 +4455,11 @@ LOCAL Errors bar(int argc, const char *argv[])
   {
     return ERROR_INVALID_ARGUMENT;
   }
+  if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
+  {
+    char buffer[320];
+    printWarning("non default restore permissions '%s' set!",File_permissionToString(buffer,sizeof(buffer),globalOptions.permissions,TRUE));
+  }
 
   // save configuration
   if (globalOptions.saveConfigurationFileName != NULL)

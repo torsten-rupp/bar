@@ -1934,6 +1934,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     // create directory
     if (!restoreInfo->jobOptions->dryRun)
     {
+      // create directory
       error = File_makeDirectory(destinationFileName,
                                  FILE_DEFAULT_USER_ID,
                                  FILE_DEFAULT_GROUP_ID,
@@ -1951,11 +1952,8 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-    }
 
-    if (!restoreInfo->jobOptions->dryRun)
-    {
-      // set file time, file permission
+      // set file directory, directory permission
       if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
       {
         fileInfo.permissions = globalOptions.permissions | FILE_PERMISSION_DIRECTORY;

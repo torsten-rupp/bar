@@ -547,7 +547,7 @@ LOCAL void printFileInfo(uint               prefixWidth,
   }
   else
   {
-    File_permissionToString(permissionString,sizeof(permissionString),permissions);
+    File_permissionToString(permissionString,sizeof(permissionString),permissions,FALSE);
   }
 
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
@@ -919,7 +919,7 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   }
   else
   {
-    File_permissionToString(permissionString,sizeof(permissionString),permissions);
+    File_permissionToString(permissionString,sizeof(permissionString),permissions,FALSE);
   }
 
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
@@ -1044,7 +1044,7 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   }
   else
   {
-    File_permissionToString(permissionString,sizeof(permissionString),permissions);
+    File_permissionToString(permissionString,sizeof(permissionString),permissions,FALSE);
   }
 
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
@@ -1199,7 +1199,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   }
   else
   {
-    File_permissionToString(permissionString,sizeof(permissionString),permissions);
+    File_permissionToString(permissionString,sizeof(permissionString),permissions,FALSE);
   }
 
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
@@ -1448,7 +1448,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
   }
   else
   {
-    File_permissionToString(permissionsString,sizeof(permissionsString),permissions);
+    File_permissionToString(permissionsString,sizeof(permissionsString),permissions,FALSE);
   }
 
   TEXT_MACROS_INIT(textMacros)
@@ -4461,7 +4461,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       }
       else
       {
-        File_permissionToString(permissionsString,sizeof(permissionsString),directoryEntryNode->fileInfo.permissions);
+        File_permissionToString(permissionsString,sizeof(permissionsString),directoryEntryNode->fileInfo.permissions,FALSE);
       }
       TEXT_MACRO_X_CSTRING("%dateTime",   dateTimeString,              NULL);
       TEXT_MACRO_X_CSTRING("%user",       userName,                    NULL);

@@ -1275,28 +1275,31 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : File_stringToPermission
+* Name   : File_parsePermissions
 * Purpose: convert string to file permission
-* Input  : string - string
+* Input  : user  - user permission string (can be NULL)
+*          group - group permission string (can be NULL)
+*          other - other permission string (can be NULL)
 * Output : -
 * Return : file permissions
 * Notes  : -
 \***********************************************************************/
 
-FilePermissions File_stringToPermission(const char *string);
+FilePermissions File_parsePermissions(const char *user, const char *group, const char *other);
 
 /***********************************************************************\
 * Name   : File_permissionToString
 * Purpose: convert file permission to string
-* Input  : string      - string variable
-*          stringSize  - max. size of string
-*          permissions - file permission
+* Input  : string             - string variable
+*          stringSize         - max. size of string
+*          permissions        - file permission
+*          addColonSeparators - TRUE to insert ';'
 * Output : -
 * Return : string
 * Notes  : -
 \***********************************************************************/
 
-const char *File_permissionToString(char *string, uint stringSize, FilePermissions permissions);
+const char *File_permissionToString(char *string, uint stringSize, FilePermissions permissions, bool addColonSeparators);
 
 /***********************************************************************\
 * Name   : File_getType
