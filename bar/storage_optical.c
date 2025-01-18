@@ -2625,7 +2625,7 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
               {
                 if (memcmp(buffer0,buffer1,readBytes) != 0)
                 {
-                  error = ERRORX_(ENTRIES_DIFFER,0,"%s",String_cString(fileName));
+                  error = ERRORX_(VERIFY_OPTICAL_DISK,0,"%s",String_cString(fileName));
                 }
               }
               else

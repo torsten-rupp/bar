@@ -3211,7 +3211,7 @@ public class TabStatus
       // start
       try
       {
-        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s noStorage=%y dryRun=%y",
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s testCreatedArchives=no noStorage=%y dryRun=%y",
                                                      selectedJobData.uuid,
                                                      archiveType.toString(),
                                                      noStorageFlag,

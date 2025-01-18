@@ -20,13 +20,10 @@ ToDo
 - barcontrol: file separator character
 - rename archive.? -> archives.?
 - remove "Function" in lists.h types
-- barcontrol: change *gif -> *png
 - general handling of strings containing LF, CR..
 - progress bar when writing CDs
 - when writing a DVD do not write more data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - dvd: eject last disk
-- storage on Samba server directly
-- support SMB without mounting
 - disable CTS in crypt and fill last block with random data: this avoid that the
   blocks are reordered because of CTS (block n and n-1 are exchanged!) and blocks
   must be written and read with identically buffer sizes! For writting single blocks
@@ -37,7 +34,6 @@ ToDo
 - execute VACUUM on database/enable auto-vacuum?
 - combine full-backup and incremental-backup into new full-backup
 - limit used bandwidth when creating index (all data is transmitted?)
-- add allocator of connection (ftp, scp, sftp) and limit number of connections
 - configure check for LIBSSH2_SEND_FUNC, LIBSSH2_RECV_FUNC
 - support for password wallet KWallet, GnomeKeyring
 - support Windows Volume Shadow Copy Service

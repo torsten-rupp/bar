@@ -626,21 +626,28 @@ ERROR OPTICAL_DRIVE_NOT_FOUND
   }
 
 ERROR OPEN_OPTICAL_DISK
-  stringSet(errorText,sizeof(errorText),TR("open CD/DVD/BD disk failed"));
+  stringSet(errorText,sizeof(errorText),TR("open CD/DVD/BD failed"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR READ_OPTICAL_DISK
-  stringSet(errorText,sizeof(errorText),TR("read CD/DVD/BD disk failed"));
+  stringSet(errorText,sizeof(errorText),TR("read CD/DVD/BD failed"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR WRITE_OPTICAL_DISK
-  stringSet(errorText,sizeof(errorText),TR("write CD/DVD/BD disk failed"));
+  stringSet(errorText,sizeof(errorText),TR("write CD/DVD/BD failed"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR VERIFY_OPTICAL_DISK
+  stringSet(errorText,sizeof(errorText),TR("verify CD/DVD/BD content failed"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);

@@ -6241,7 +6241,7 @@ if (false) {
           // start job
           try
           {
-            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s dryRun=no",
+            BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s testCreatedArchives=no noStorage=no dryRun=no",
                                                          jobUUID,
                                                          Settings.archiveType.toString()
                                                         ),
