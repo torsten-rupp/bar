@@ -2197,6 +2197,7 @@ Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
   return removeEntry(databaseHandle,databaseId);
 }
 
+// TODO: remove, obsolete
 Errors Continuous_getEntry(DatabaseHandle *databaseHandle,
                            const char     *jobUUID,
                            const char     *scheduleUUID,

@@ -4286,7 +4286,7 @@ UNUSED_VARIABLE(storageVolumeRequestUserData);
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    CALLBACK_(NULL,NULL),
-                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S archiveType=%s dryRun=%y noStorage=%y",
+                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S archiveType=%s testCreatedArchives=no noStorage=%y dryRun=%y",
                                    jobUUID,
                                    scheduleUUID,
                                    NULL,  // scheduleCustomText

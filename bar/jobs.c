@@ -1336,8 +1336,6 @@ JobNode *Job_new(JobTypes    jobType,
   jobNode->abortedByInfo                    = String_new();
   jobNode->volumeNumber                     = 0;
   jobNode->volumeUnloadFlag                 = FALSE;
-// TODO: remove
-//  resetRunningInfo(&jobNode->runningInfo);
 
   jobNode->executionCount.normal            = 0L;
   jobNode->executionCount.full              = 0L;
