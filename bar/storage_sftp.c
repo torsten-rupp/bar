@@ -2810,7 +2810,6 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
       retries = 0;
       while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         if (initSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
                          storageDirectoryListHandle->storageSpecifier.userName,
                          &storageDirectoryListHandle->storageSpecifier.password,

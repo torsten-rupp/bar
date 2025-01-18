@@ -375,7 +375,6 @@ void MsgQueue_unlock(MsgQueue *msgQueue)
   unlock(msgQueue);
 }
 
-
 bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, long timeout)
 {
   TimeoutInfo timeoutInfo;
@@ -459,17 +458,20 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
              && (List_count(&msgQueue->list) >= msgQueue->maxMsgs)
             )
       {
-        waitModified(msgQueue,WAIT_FOREVER);
+        // work-around: wait with timeout to handle lost wake-ups
+        (void)waitModified(msgQueue,5000);
       }
       assert(msgQueue->endOfMsgFlag || List_count(&msgQueue->list) < msgQueue->maxMsgs);
     }
 
     // put message
     List_append(&msgQueue->list,msgNode);
+//fprintf(stderr,"%s:%d: appended %d\n",__FILE__,__LINE__,msgQueue->list.count);
 
     // signal modify
     msgQueue->modifiedFlag = TRUE;
   }
+//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
 
   return TRUE;
 }
@@ -482,7 +484,10 @@ void MsgQueue_wait(MsgQueue *msgQueue)
   {
     if (!msgQueue->endOfMsgFlag)
     {
-      waitModified(msgQueue,WAIT_FOREVER);
+      // work-around: wait with timeout to handle lost wake-ups
+      while (!waitModified(msgQueue,5000))
+      {
+      }
     }
   }
 }

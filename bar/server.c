@@ -5450,7 +5450,6 @@ LOCAL void updateIndexThreadCode(void)
             if (!INDEX_ID_IS_NONE(entityId))
             {
               // lock
-fprintf(stderr,"%s:%d: lock\n",__FILE__,__LINE__);
               Index_lockEntity(&indexHandle,entityId);
             }
 
@@ -6984,6 +6983,7 @@ LOCAL void jobThreadCode(void)
                       );
           }
 
+// TODO: nextScheduleDateTime could be 0
           if (nextScheduleDateTime < MAX_UINT64)
           {
             char buffer[64];
@@ -12905,6 +12905,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 
     // format and send result
     // Note: remote jobs status is updated in jobThreadRun->Connector_create()
+// TODO: rename totalEntry* -> total*
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "state=%s errorCode=%u errorNumber=%d errorData=%'S doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeDone=%lf entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu volumeRequest=%s volumeRequestNumber=%d messageCode=%s messageText=%'S",
                         Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),

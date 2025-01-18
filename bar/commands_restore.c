@@ -1236,7 +1236,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     printInfo(2,"  Restore file      '%s'...skipped\n",String_cString(fileName));
 
     restoreInfo->runningInfo.progress.skipped.count++;
-    restoreInfo->runningInfo.progress.skipped.size += (uint64)fileInfo.size;
+    restoreInfo->runningInfo.progress.skipped.size += fileInfo.size;
     updateRunningInfo(restoreInfo,FALSE);
   }
 
