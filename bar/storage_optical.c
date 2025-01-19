@@ -2023,12 +2023,16 @@ LOCAL Errors writeISOSource(StorageInfo *storageInfo, struct burn_drive_info *bu
           // write image
           burn_set_signal_handling(NULL, NULL, 0x30);
           burn_disc_write(burnWriteOptions,burnDisc);
-          while (burn_drive_get_status(burnDriveInfo->drive,NULL) == BURN_DRIVE_SPAWNING)
+          while (   !Storage_isAborted(storageInfo)
+                 && (burn_drive_get_status(burnDriveInfo->drive,NULL) == BURN_DRIVE_SPAWNING)
+                )
           {
             Misc_mdelay(100);
           }
           struct burn_progress burnProgress;
-          while (burn_drive_get_status(burnDriveInfo->drive,&burnProgress) != BURN_DRIVE_IDLE)
+          while (   !Storage_isAborted(storageInfo)
+                 && (burn_drive_get_status(burnDriveInfo->drive,&burnProgress) != BURN_DRIVE_IDLE)
+                )
           {
             if (burnProgress.sectors > 0)
             {
@@ -2056,7 +2060,7 @@ LOCAL Errors writeISOSource(StorageInfo *storageInfo, struct burn_drive_info *bu
             case RUN_MODE_SERVER:
               break;
           }
-          if (burn_is_aborting(0) < 0)
+          if (Storage_isAborted(storageInfo) || (burn_is_aborting(0) < 0))
           {
             error = ERROR_ABORTED;
           }
@@ -2600,14 +2604,14 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
                                                 );
               if (n == ISO_BLOCKSIZE)
               {
-                if (memcmp(buffer0,buffer1,readBytes) != 0)
+                if (!memEquals(buffer0,readBytes,buffer1,readBytes))
                 {
-                  error = ERRORX_(ENTRIES_DIFFER,0,"%s",String_cString(fileName));
+                  error = ERRORX_(VERIFY_OPTICAL_DISK,0,"'%s' at offset %"PRIu64,String_cString(fileName),(uint64)blockIndex*ISO_BLOCKSIZE);
                 }
               }
               else
               {
-                error = ERRORX_(READ_OPTICAL_DISK,0,"%s",String_cString(fileName));
+                error = ERRORX_(READ_OPTICAL_DISK,0,"'%s' at offset %",String_cString(fileName),(uint64)blockIndex*ISO_BLOCKSIZE);
               }
             }
             blockIndex++;
