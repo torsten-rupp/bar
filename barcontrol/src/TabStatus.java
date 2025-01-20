@@ -3010,13 +3010,15 @@ public class TabStatus
             storageProgress.set      (getProgress(valueMap.getLong("storageDoneSize"),valueMap.getLong("storageTotalSize")));
             volumeNumber.set         (valueMap.getLong("volumeNumber"));
             volumeDone.set           (valueMap.getDouble("volumeDone"));
-            totalEntriesProgress.set (getProgress(doneCount.getLong()+skippedEntryCount.getLong()+errorEntryCount.getLong(),
+
+            totalEntriesProgress.set (getProgress(doneCount.getLong(),
                                                   totalEntryCount.getLong()
                                                  )
                                      );
-            totalBytesProgress.set   (getProgress(doneSize.getLong()+skippedEntrySize.getLong()+errorEntrySize.getLong(),
-                                                  totalEntrySize.getLong())
-                                                 );
+            totalBytesProgress.set   (getProgress(doneSize.getLong(),
+                                                  totalEntrySize.getLong()
+                                                 )
+                                     );
             volumeRequestNumber.set  (valueMap.getInt("volumeRequestNumber"));
 
             // trigger update job state listeners
