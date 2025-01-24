@@ -1004,7 +1004,7 @@ public class TabStatus
   TabStatus(TabFolder parentTabFolder, int accelerator)
   {
     TableColumn tableColumn;
-    Menu        menu,subMenu;
+    Menu        menu,subMenu,subSubMenu;
     MenuItem    menuItem;
     Group       group;
     Composite   composite,subComposite;
@@ -1500,35 +1500,128 @@ public class TabStatus
           }
         });
 
-        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("dry-run"),BARServer.isMaster());
-        menuItem.addSelectionListener(new SelectionListener()
+        subSubMenu = Widgets.addMenu(subMenu,BARControl.tr("dry-run"),BARServer.isMaster() && Settings.hasNormalRole());
         {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          menuItem = Widgets.addMenuItem(subSubMenu,BARControl.tr("normal"),BARServer.isMaster());
+          menuItem.addSelectionListener(new SelectionListener()
           {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            if (selectedJobData != null)
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
             {
-              jobStart(ArchiveTypes.NORMAL,false,true);
             }
-          }
-        });
-        addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
-        {
-          @Override
-          public void handle(Widget widget, JobData jobData)
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              if (selectedJobData != null)
+              {
+                jobStart(ArchiveTypes.NORMAL,false,true);
+              }
+            }
+          });
+          addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
           {
-            MenuItem menuItem = (MenuItem)widget;
-            menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
-                                && (jobData.state != JobData.States.NO_STORAGE )
-                                && (jobData.state != JobData.States.DRY_RUNNING)
-                                && (jobData.state != JobData.States.WAITING    )
-                               );
-          }
-        });
+            @Override
+            public void handle(Widget widget, JobData jobData)
+            {
+              MenuItem menuItem = (MenuItem)widget;
+              menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                  && (jobData.state != JobData.States.NO_STORAGE )
+                                  && (jobData.state != JobData.States.DRY_RUNNING)
+                                  && (jobData.state != JobData.States.WAITING    )
+                                 );
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(subSubMenu,BARControl.tr("full"),BARServer.isMaster());
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              if (selectedJobData != null)
+              {
+                jobStart(ArchiveTypes.FULL,false,true);
+              }
+            }
+          });
+          addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+          {
+            @Override
+            public void handle(Widget widget, JobData jobData)
+            {
+              MenuItem menuItem = (MenuItem)widget;
+              menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                  && (jobData.state != JobData.States.NO_STORAGE )
+                                  && (jobData.state != JobData.States.DRY_RUNNING)
+                                  && (jobData.state != JobData.States.WAITING    )
+                                 );
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(subSubMenu,BARControl.tr("incremental"),BARServer.isMaster());
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              if (selectedJobData != null)
+              {
+                jobStart(ArchiveTypes.INCREMENTAL,false,true);
+              }
+            }
+          });
+          addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+          {
+            @Override
+            public void handle(Widget widget, JobData jobData)
+            {
+              MenuItem menuItem = (MenuItem)widget;
+              menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                  && (jobData.state != JobData.States.NO_STORAGE )
+                                  && (jobData.state != JobData.States.DRY_RUNNING)
+                                  && (jobData.state != JobData.States.WAITING    )
+                                 );
+            }
+          });
+
+          menuItem = Widgets.addMenuItem(subSubMenu,BARControl.tr("differential"),BARServer.isMaster());
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              if (selectedJobData != null)
+              {
+                jobStart(ArchiveTypes.DIFFERENTIAL,false,true);
+              }
+            }
+          });
+          addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+          {
+            @Override
+            public void handle(Widget widget, JobData jobData)
+            {
+              MenuItem menuItem = (MenuItem)widget;
+              menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                  && (jobData.state != JobData.States.NO_STORAGE )
+                                  && (jobData.state != JobData.States.DRY_RUNNING)
+                                  && (jobData.state != JobData.States.WAITING    )
+                                 );
+            }
+          });
+        }
       }
 
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Abort")+"\u2026",BARServer.isMaster());
@@ -3274,17 +3367,23 @@ public class TabStatus
   }
 
   /** start selected job
+   * @param archiveType archive type
+   * @param noStorageFlag true for no storage
+   */
+  private void jobStart(ArchiveTypes archiveType, boolean noStorageFlag)
+  {
+    jobStart(archiveType,noStorageFlag,false);
+  }
+
+  /** start selected job
    */
   private void jobStart()
   {
     if (selectedJobData != null)
     {
-      ArchiveTypes archiveType;
-      boolean      noStorageFlag,dryRunFlag;
-
       // get archive type
-      archiveType = ArchiveTypes.NORMAL;
-      dryRunFlag  = false;
+      ArchiveTypes archiveType   = ArchiveTypes.NORMAL;
+      boolean      noStorageFlag = false;
       switch (Dialogs.select(shell,
                              BARControl.tr("Confirmation"),
                              BARControl.tr("Start job ''{0}''?",selectedJobData.name.replaceAll("&","&&")),
@@ -3293,7 +3392,6 @@ public class TabStatus
                                           BARControl.tr("Incremental"),
                                           Settings.hasExpertRole() ? BARControl.tr("Differential") : null,
                                           Settings.hasExpertRole() ? BARControl.tr("No storage") : null,
-                                          Settings.hasExpertRole() ? BARControl.tr("Dry-run") : null,
                                           BARControl.tr("Cancel")
                                          },
                              new String[]{BARControl.tr("Store all files."),
@@ -3301,24 +3399,22 @@ public class TabStatus
                                           BARControl.tr("Store all files and create incremental data file."),
                                           BARControl.tr("Store changed files since last incremental or full storage and update incremental data file."),
                                           BARControl.tr("Store changed files since last full storage."),
-                                          BARControl.tr("Collect all files and create incremental info data (bid-files) only."),
-                                          BARControl.tr("Collect and process all files, but do not create archives.")
+                                          null
                                          },
                              4
                             )
              )
       {
-        case 0: archiveType = ArchiveTypes.NORMAL;       noStorageFlag = false; dryRunFlag = false; break;
-        case 1: archiveType = ArchiveTypes.FULL;         noStorageFlag = false; dryRunFlag = false; break;
-        case 2: archiveType = ArchiveTypes.INCREMENTAL;  noStorageFlag = false; dryRunFlag = false; break;
-        case 3: archiveType = ArchiveTypes.DIFFERENTIAL; noStorageFlag = false; dryRunFlag = false; break;
-        case 4: archiveType = ArchiveTypes.FULL;         noStorageFlag = true;  dryRunFlag = false; break;
-        case 5: archiveType = ArchiveTypes.NORMAL;       noStorageFlag = false; dryRunFlag = true;  break;
+        case 0: archiveType = ArchiveTypes.NORMAL;       noStorageFlag = false; break;
+        case 1: archiveType = ArchiveTypes.FULL;         noStorageFlag = false; break;
+        case 2: archiveType = ArchiveTypes.INCREMENTAL;  noStorageFlag = false; break;
+        case 3: archiveType = ArchiveTypes.DIFFERENTIAL; noStorageFlag = false; break;
+        case 4: archiveType = ArchiveTypes.FULL;         noStorageFlag = true;  break;
         default: return;
       }
 
       // start
-      jobStart(archiveType,noStorageFlag,dryRunFlag);
+      jobStart(archiveType,noStorageFlag);
     }
   }
 
