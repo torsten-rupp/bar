@@ -942,7 +942,7 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
   error = Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
   if (error != ERROR_NONE)
   {
-    printError("no valid database URI '%s'",databaseURI);
+    printError(_("no valid database URI '%s'"),databaseURI);
     return error;
   }
   switch (databaseSpecifier.type)
@@ -1022,7 +1022,7 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
   }
   if (error != ERROR_NONE)
   {
-    printError("cannot open database '%s' (error: %s)!",String_cString(printableDataseURI),Error_getText(error));
+    printError(_("cannot open database '%s' (error: %s)!"),String_cString(printableDataseURI),Error_getText(error));
     String_delete(printableDataseURI);
     Database_doneSpecifier(&databaseSpecifier);
     return error;
@@ -1235,7 +1235,7 @@ LOCAL Errors createTablesViewsIndicesTriggers(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("create database fail (error: %s)!",Error_getText(error));
+    printError(_("create database fail (error: %s)!"),Error_getText(error));
     return error;
   }
   printInfo("OK  \n");
@@ -1556,7 +1556,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
                        );
   if (error != ERROR_NONE)
   {
-    printError("open database fail (error: %s)!",Error_getText(error));
+    printError(_("open database fail (error: %s)!"),Error_getText(error));
     Database_doneSpecifier(&databaseSpecifier);
     return error;
   }
@@ -1573,7 +1573,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
                           );
   if (error != ERROR_NONE)
   {
-    printError("get database version fail (error: %s)!",Error_getText(error));    String_delete(printableDatabaseURI);
+    printError(_("get database version fail (error: %s)!"),Error_getText(error));    String_delete(printableDatabaseURI);
     Database_doneSpecifier(&databaseSpecifier);
     return error;
   }
@@ -1644,7 +1644,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
   }
   if (error != ERROR_NONE)
   {
-    printError("import database fail: %s!",Error_getText(error));
+    printError(_("import database fail: %s!"),Error_getText(error));
     return error;
   }
 
@@ -1681,7 +1681,7 @@ LOCAL bool checkIntegrity(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("quick integrity check fail (error: %s)!",Error_getText(error));
+    printError(_("quick integrity check fail (error: %s)!"),Error_getText(error));
     return FALSE;
   }
 
@@ -1694,7 +1694,7 @@ LOCAL bool checkIntegrity(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("foreign key check fail (error: %s)!",Error_getText(error));
+    printError(_("foreign key check fail (error: %s)!"),Error_getText(error));
     return FALSE;
   }
 
@@ -1707,7 +1707,7 @@ LOCAL bool checkIntegrity(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!",Error_getText(error));
+    printError(_("integrity check fail (error: %s)!"),Error_getText(error));
     return FALSE;
   }
 
@@ -1754,7 +1754,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned entry fragments check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned entry fragments check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -1782,7 +1782,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned file entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned file entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  image entries without fragments...   ");
@@ -1808,7 +1808,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned image entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned image entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (uint64)n;
   printInfo("  hardlink entries without fragments...");
@@ -1834,7 +1834,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned hardlink entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned hardlink entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -1863,7 +1863,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned file entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned file entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without image entry...       ");
@@ -1890,7 +1890,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned image entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned image entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without directory entry...   ");
@@ -1917,7 +1917,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned directory entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned directory entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without link entry...        ");
@@ -1944,7 +1944,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned link entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned link entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without hardlink entry...    ");
@@ -1971,7 +1971,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned hardlink entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned hardlink entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without special entry...     ");
@@ -1998,7 +1998,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned special entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned special entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -2030,7 +2030,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned file entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned file entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -2053,7 +2053,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("storages name check fail (error: %s)!",Error_getText(error));
+    printError(_("storages name check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -2078,7 +2078,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("invalid storages check fail (error: %s)!",Error_getText(error));
+    printError(_("invalid storages check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -2110,7 +2110,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned entities check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned entities check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -2138,7 +2138,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       else
       {
         printInfo("FAIL!\n");
-        printError("orphaned FTS entries check fail (error: %s)!",Error_getText(error));
+        printError(_("orphaned FTS entries check fail (error: %s)!"),Error_getText(error));
       }
       totalCount += (ulong)n;
 
@@ -2163,7 +2163,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       else
       {
         printInfo("FAIL!\n");
-        printError("orphaned FTS storages check fail (error: %s)!",Error_getText(error));
+        printError(_("orphaned FTS storages check fail (error: %s)!"),Error_getText(error));
       }
       totalCount += (ulong)n;
       break;
@@ -2191,7 +2191,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       else
       {
         printInfo("FAIL!\n");
-        printError("orphaned FTS entries check fail (error: %s)!",Error_getText(error));
+        printError(_("orphaned FTS entries check fail (error: %s)!"),Error_getText(error));
       }
       totalCount += (ulong)n;
 
@@ -2216,7 +2216,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
       else
       {
         printInfo("FAIL!\n");
-        printError("orphaned FTS storages fail (error: %s)!",Error_getText(error));
+        printError(_("orphaned FTS storages fail (error: %s)!"),Error_getText(error));
       }
       totalCount += (ulong)n;
       break;
@@ -2243,13 +2243,13 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("orphaned newest entries check fail (error: %s)!",Error_getText(error));
+    printError(_("orphaned newest entries check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += (ulong)n;
 
   if (totalCount > 0LL)
   {
-    printWarning("found %lu orphaned entries. Clean is recommented",totalCount);
+    printWarning(_("found %lu orphaned entries. Clean is recommented"),totalCount);
   }
 
   // free resources
@@ -2324,13 +2324,13 @@ LOCAL ulong checkDuplicates(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("duplicates check fail (error: %s)!",Error_getText(error));
+    printError(_("duplicates check fail (error: %s)!"),Error_getText(error));
   }
   totalCount += n;
 
   if (totalCount > 0LL)
   {
-    printWarning("found %lu duplicate entries. Clean is recommented",totalCount);
+    printWarning(_("found %lu duplicate entries. Clean is recommented"),totalCount);
   }
 
   // free resources
@@ -2366,7 +2366,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
-    printError("get tables fail (error: %s)!",Error_getText(error));
+    printError(_("get tables fail (error: %s)!"),Error_getText(error));
     StringList_done(&tableNameList);
     return;
   }
@@ -2409,7 +2409,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
-    printError("optimize table '%s' fail (error: %s)!",String_cString(name),Error_getText(error));
+    printError(_("optimize table '%s' fail (error: %s)!"),String_cString(name),Error_getText(error));
     StringList_done(&tableNameList);
     return;
   }
@@ -2422,7 +2422,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
-    printError("get indizes fail (error: %s)!",Error_getText(error));
+    printError(_("get indizes fail (error: %s)!"),Error_getText(error));
     return;
   }
   initProgress(StringList_count(&tableNameList));
@@ -2464,7 +2464,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
-    printError("optimize index '%s' fail (error: %s)!",String_cString(name),Error_getText(error));
+    printError(_("optimize index '%s' fail (error: %s)!"),String_cString(name),Error_getText(error));
     StringList_done(&tableNameList);
     return;
   }
@@ -2692,7 +2692,7 @@ LOCAL Errors createTriggers(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("create triggers fail (error: %s)!",Error_getText(error));
+    printError(_("create triggers fail (error: %s)!"),Error_getText(error));
     return error;
   }
 
@@ -2708,7 +2708,7 @@ LOCAL Errors createTriggers(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("create triggers fail (error: %s)!",Error_getText(error));
+    printError(_("create triggers fail (error: %s)!"),Error_getText(error));
     return error;
   }
 
@@ -2738,7 +2738,7 @@ LOCAL void printTableNames(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     StringList_done(&tableNameList);
-    printError("cannot get table names (error: %s)!",Error_getText(error));
+    printError(_("cannot get table names (error: %s)!"),Error_getText(error));
     return;
   }
   STRINGLIST_ITERATE(&tableNameList,stringListIterator,tableName)
@@ -2769,7 +2769,7 @@ LOCAL void printIndexNames(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     StringList_done(&indexNameList);
-    printError("cannot get index names (error: %s)!",Error_getText(error));
+    printError(_("cannot get index names (error: %s)!"),Error_getText(error));
     return;
   }
   STRINGLIST_ITERATE(&indexNameList,stringListIterator,indexName)
@@ -2800,7 +2800,7 @@ LOCAL void printTriggerNames(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     StringList_done(&triggerNameList);
-    printError("cannot get trigger names (error: %s)!",Error_getText(error));
+    printError(_("cannot get trigger names (error: %s)!"),Error_getText(error));
     return;
   }
   STRINGLIST_ITERATE(&triggerNameList,stringListIterator,triggerName)
@@ -2913,7 +2913,7 @@ LOCAL Errors createIndizes(DatabaseHandle *databaseHandle)
   assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
-    printError("create indizes fail (error: %s)!",Error_getText(error));
+    printError(_("create indizes fail (error: %s)!"),Error_getText(error));
     return error;
   }
   (void)Database_flush(databaseHandle);
@@ -3269,7 +3269,7 @@ LOCAL Errors createFTSIndizes(DatabaseHandle *databaseHandle)
   assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
-    printError("create FTS indizes fail (error: %s)!",Error_getText(error));
+    printError(_("create FTS indizes fail (error: %s)!"),Error_getText(error));
     return error;
   }
   (void)Database_flush(databaseHandle);
@@ -3296,7 +3296,7 @@ LOCAL Errors reindex(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("reindex fail (error: %s)!",Error_getText(error));
+    printError(_("reindex fail (error: %s)!"),Error_getText(error));
     return error;
   }
 
@@ -4063,7 +4063,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     {
       doneProgress();
       printInfo("FAIL\n");
-      printError("collect newest fail (error: %s)!",Error_getText(error));
+      printError(_("collect newest fail (error: %s)!"),Error_getText(error));
       return error;
     }
     printProgress(1);
@@ -4080,7 +4080,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     {
       doneProgress();
       printInfo("FAIL\n");
-      printError("collect newest fail (error: %s)!",Error_getText(error));
+      printError(_("collect newest fail (error: %s)!"),Error_getText(error));
       return error;
     }
     printProgress(2);
@@ -4113,7 +4113,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     if (error != ERROR_NONE)
     {
       printInfo("FAIL\n");
-      printError("create newest fail (error: %s)!",Error_getText(error));
+      printError(_("create newest fail (error: %s)!"),Error_getText(error));
       return error;
     }
     (void)Database_flush(databaseHandle);
@@ -4133,7 +4133,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     if (error != ERROR_NONE)
     {
       printInfo("FAIL\n");
-      printError("create newest fail (error: %s)!",Error_getText(error));
+      printError(_("create newest fail (error: %s)!"),Error_getText(error));
       return error;
     }
     (void)Database_flush(databaseHandle);
@@ -4163,7 +4163,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     if (error != ERROR_NONE)
     {
       printInfo("FAIL\n");
-      printError("create newest fail (error: %s)!",Error_getText(error));
+      printError(_("create newest fail (error: %s)!"),Error_getText(error));
       return error;
     }
     (void)Database_flush(databaseHandle);
@@ -4224,7 +4224,7 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
   if (error != ERROR_NONE)
   {
     String_delete(entityIdsString);
-    printError("create aggregates fail (error: %s)!",Error_getText(error));
+    printError(_("create aggregates fail (error: %s)!"),Error_getText(error));
     return error;
   }
 
@@ -4452,7 +4452,7 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
                            if (error != ERROR_NONE)
                            {
                              printInfo("FAIL!\n");
-                             printError("create aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
+                             printError(_("create aggregates fail for entity #%"PRIi64" (error: %s)!"),entityId,Error_getText(error));
                              return error;
                            }
 
@@ -4641,7 +4641,7 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
                            if (error != ERROR_NONE)
                            {
                              printInfo("FAIL!\n");
-                             printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
+                             printError(_("create newest aggregates fail for entity #%"PRIi64" (error: %s)!"),entityId,Error_getText(error));
                              return error;
                            }
 
@@ -4685,7 +4685,7 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
   {
     doneProgress();
     printInfo("FAIL\n");
-    printError("create aggregates fail (error: %s)!",Error_getText(error));
+    printError(_("create aggregates fail (error: %s)!"),Error_getText(error));
     String_delete(entityIdsString);
     return error;
   }
@@ -4750,7 +4750,7 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
   if (error != ERROR_NONE)
   {
     String_delete(storageIdsString);
-    printError("create aggregates fail (error: %s)!",Error_getText(error));
+    printError(_("create aggregates fail (error: %s)!"),Error_getText(error));
     return error;
   }
 
@@ -5377,7 +5377,7 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
                            if (error != ERROR_NONE)
                            {
                              printInfo("FAIL!\n");
-                             printError("create aggregates fail for storage #%"PRIi64" (error: %s)!",storageId,Error_getText(error));
+                             printError(_("create aggregates fail for storage #%"PRIi64" (error: %s)!"),storageId,Error_getText(error));
                              return error;
                            }
 
@@ -5421,7 +5421,7 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
   {
     doneProgress();
     printInfo("FAIL\n");
-    printError("create aggregates fail (error: %s)!",Error_getText(error));
+    printError(_("create aggregates fail (error: %s)!"),Error_getText(error));
     String_delete(storageIdsString);
     return error;
   }
@@ -5499,7 +5499,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5537,7 +5537,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5575,7 +5575,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5613,7 +5613,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5655,7 +5655,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5696,7 +5696,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5737,7 +5737,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5790,7 +5790,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5842,7 +5842,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5894,7 +5894,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5946,7 +5946,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -5998,7 +5998,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -6050,7 +6050,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -6163,7 +6163,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -6191,7 +6191,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -6221,7 +6221,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -6267,7 +6267,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -6445,7 +6445,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL\n");
-    printError("clean orphaned fail (error: %s)!",Error_getText(error));
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(storageName);
     return error;
@@ -6868,7 +6868,7 @@ LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
-    printError("clean duplicates fail (error: %s)!",Error_getText(error));
+    printError(_("clean duplicates fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(name);
     return error;
@@ -6901,7 +6901,7 @@ LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
-    printError("clean duplicates fail (error: %s)!",Error_getText(error));
+    printError(_("clean duplicates fail (error: %s)!"),Error_getText(error));
     Array_done(&ids);
     String_delete(name);
     return error;
@@ -6960,7 +6960,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
                          );
   if (error != ERROR_NONE)
   {
-    printError("purge deleted fail (error: %s)!",Error_getText(error));
+    printError(_("purge deleted fail (error: %s)!"),Error_getText(error));
     Array_done(&entryIds);
     Array_done(&storageIds);
     return error;
@@ -7334,7 +7334,7 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
   }
   if (error != ERROR_NONE)
   {
-    printError("purge deleted fail (error: %s)!",Error_getText(error));
+    printError(_("purge deleted fail (error: %s)!"),Error_getText(error));
     Array_done(&entryIds);
     Array_done(&storageIds);
     return error;
@@ -7386,7 +7386,7 @@ LOCAL Errors vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
-    printError("vacuum fail (error: %s)!",Error_getText(error));
+    printError(_("vacuum fail (error: %s)!"),Error_getText(error));
     return error;
   }
   printInfo("OK\n");
@@ -7633,7 +7633,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get meta data fail (error: %s)!",Error_getText(error));
+    printError(_("get meta data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -7653,7 +7653,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                             );
     if (error != ERROR_NONE)
     {
-      printError("get entities data fail (error: %s)!",Error_getText(error));
+      printError(_("get entities data fail (error: %s)!"),Error_getText(error));
       return;
     }
     printf(" %u",n);
@@ -7673,7 +7673,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            );
   if (error != ERROR_NONE)
   {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
+    printError(_("get entities data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  Normal          : %u\n",n);
@@ -7691,7 +7691,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
+    printError(_("get entities data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  Full            : %u\n",n);
@@ -7709,7 +7709,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
+    printError(_("get entities data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  Incremental     : %u\n",n);
@@ -7727,7 +7727,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
+    printError(_("get entities data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  Differential    : %u\n",n);
@@ -7745,7 +7745,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            );
   if (error!= ERROR_NONE)
   {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
+    printError(_("get entities data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  Continuous      : %u\n",n);
@@ -7762,7 +7762,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            );
   if (error != ERROR_NONE)
   {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
+    printError(_("get entities data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  Locked          : %u\n",n);
@@ -7779,7 +7779,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                            );
   if (error != ERROR_NONE)
   {
-    printError("get entities data fail (error: %s)!",Error_getText(error));
+    printError(_("get entities data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  Deleted         : %u\n",n);
@@ -7800,7 +7800,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                             );
     if (error != ERROR_NONE)
     {
-      printError("get storage data fail (error: %s)!",Error_getText(error));
+      printError(_("get storage data fail (error: %s)!"),Error_getText(error));
       return;
     }
     printf(" %u",n);
@@ -7820,7 +7820,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    printError("get storage data fail (error: %s)!",Error_getText(error));
+    printError(_("get storage data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  OK              : %u\n",n);
@@ -7838,7 +7838,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    printError("get storage data fail (error: %s)!",Error_getText(error));
+    printError(_("get storage data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  Update requested: %u\n",n);
@@ -7856,7 +7856,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    printError("get storage data fail (error: %s)!",Error_getText(error));
+    printError(_("get storage data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  Error           : %u\n",n);
@@ -7873,7 +7873,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    printError("get storage data fail (error: %s)!",Error_getText(error));
+    printError(_("get storage data fail (error: %s)!"),Error_getText(error));
     return;
   }
   printf("  Deleted         : %u\n",n);
@@ -7918,7 +7918,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -7962,7 +7962,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8006,7 +8006,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8044,7 +8044,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8082,7 +8082,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8126,7 +8126,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8164,7 +8164,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8208,7 +8208,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8252,7 +8252,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8296,7 +8296,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8334,7 +8334,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8372,7 +8372,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8416,7 +8416,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8454,7 +8454,7 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entries data fail (error: %s)!",Error_getText(error));
+    printError(_("get entries data fail (error: %s)!"),Error_getText(error));
     return;
   }
 }
@@ -8701,7 +8701,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                       );
   if (error != ERROR_NONE)
   {
-    printError("get UUID data fail (error: %s)!",Error_getText(error));
+    printError(_("get UUID data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -8914,7 +8914,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entity data fail (error: %s)!",Error_getText(error));
+    printError(_("get entity data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -9176,7 +9176,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                       );
   if (error != ERROR_NONE)
   {
-    printError("get storage data fail (error: %s)!",Error_getText(error));
+    printError(_("get storage data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -9392,7 +9392,7 @@ DATABASE_FLAG_DEBUG|                       DATABASE_FLAG_FETCH_ALL,
                       );
   if (error != ERROR_NONE)
   {
-    printError("get entity data fail (error: %s)!",Error_getText(error));
+    printError(_("get entity data fail (error: %s)!"),Error_getText(error));
     return;
   }
 
@@ -9592,7 +9592,7 @@ int main(int argc, const char *argv[])
   // check arguments
   if (databaseURI == NULL)
   {
-    printError("no database URI given!");
+    printError(_("no database URI given!"));
     doneEncodingConverter();
 
     CmdOption_done(COMMAND_LINE_OPTIONS);
@@ -9628,7 +9628,7 @@ int main(int argc, const char *argv[])
   error = Database_setEnabledForeignKeys(&databaseHandle,foreignKeysFlag);
   if (error != ERROR_NONE)
   {
-    printError("cannot set foreign key support (error: %s)",Error_getText(error));
+    printError(_("cannot set foreign key support (error: %s)"),Error_getText(error));
 
     closeDatabase(&databaseHandle);
     doneEncodingConverter();
@@ -10293,7 +10293,7 @@ int main(int argc, const char *argv[])
       String_delete(s);
       if (error != ERROR_NONE)
       {
-        printError("SQL command '%s' fail: %s!",String_cString(command),Error_getText(error));
+        printError(_("SQL command '%s' fail: %s!"),String_cString(command),Error_getText(error));
 
         doneEncodingConverter();
         CmdOption_done(COMMAND_LINE_OPTIONS);
@@ -10313,7 +10313,7 @@ int main(int argc, const char *argv[])
       error = Database_beginTransaction(&databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER);
       if (error != ERROR_NONE)
       {
-        printError("init transaction fail: %s!",Error_getText(error));
+        printError(_("init transaction fail: %s!"),Error_getText(error));
 
         doneEncodingConverter();
         CmdOption_done(COMMAND_LINE_OPTIONS);
@@ -10339,7 +10339,7 @@ int main(int argc, const char *argv[])
                           );
       if (error != ERROR_NONE)
       {
-        printError("SQL command '%s' fail: %s!",l,Error_getText(error));
+        printError(_("SQL command '%s' fail: %s!"),l,Error_getText(error));
 
         doneEncodingConverter();
         CmdOption_done(COMMAND_LINE_OPTIONS);
@@ -10357,7 +10357,7 @@ int main(int argc, const char *argv[])
       error = Database_endTransaction(&databaseHandle);
       if (error != ERROR_NONE)
       {
-        printError("done transaction fail: %s!",Error_getText(error));
+        printError(_("done transaction fail: %s!"),Error_getText(error));
 
         doneEncodingConverter();
         CmdOption_done(COMMAND_LINE_OPTIONS);

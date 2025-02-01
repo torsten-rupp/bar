@@ -1616,11 +1616,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 if (createInfo->jobOptions->skipUnreadableFlag)
                 {
-                  printWarning("cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
+                  printWarning(_("cannot get info for '%s' (error: %s) - skipped"),String_cString(name),Error_getText(error));
                 }
                 else
                 {
-                  printError("cannot get info for '%s' (error: %s)",
+                  printError(_("cannot get info for '%s' (error: %s)"),
                              String_cString(name),
                              Error_getText(error)
                             );
@@ -2001,7 +2001,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       {
         if (collectorType == COLLECTOR_TYPE_ENTRIES)
         {
-          printError("cannot initialize continuous database (error: %s)!",
+          printError(_("cannot initialize continuous database (error: %s)!"),
                      Error_getText(error)
                     );
         }
@@ -2088,11 +2088,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           {
             if (createInfo->jobOptions->skipUnreadableFlag)
             {
-              printWarning("cannot get info for '%s' (error: %s) - skipped",String_cString(path),Error_getText(error));
+              printWarning(_("cannot get info for '%s' (error: %s) - skipped"),String_cString(path),Error_getText(error));
             }
             else
             {
-              printError("cannot get info for '%s' (error: %s)",
+              printError(_("cannot get info for '%s' (error: %s)"),
                          String_cString(path),
                          Error_getText(error)
                         );
@@ -2164,7 +2164,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       case ENTRY_TYPE_IMAGE:
                         if (collectorType == COLLECTOR_TYPE_ENTRIES)
                         {
-                          printWarning("'%s' is not a device",String_cString(name));
+                          printWarning(_("'%s' is not a device"),String_cString(name));
                         }
                         break;
                       default:
@@ -2230,7 +2230,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       case ENTRY_TYPE_IMAGE:
                         if (collectorType == COLLECTOR_TYPE_ENTRIES)
                         {
-                          printWarning("'%s' is not a device",String_cString(name));
+                          printWarning(_("'%s' is not a device"),String_cString(name));
                         }
                         break;
                       default:
@@ -2275,7 +2275,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     {
                       if (collectorType == COLLECTOR_TYPE_ENTRIES)
                       {
-                        printError("Cannot read directory '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
+                        printError(_("cannot read directory '%s' (error: %s) - skipped"),String_cString(name),Error_getText(error));
                         logMessage(createInfo->logHandle,
                                    LOG_TYPE_ENTRY_ACCESS_DENIED,
                                    "Access denied '%s' (error: %s)",
@@ -2299,7 +2299,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     {
                       if (collectorType == COLLECTOR_TYPE_ENTRIES)
                       {
-                        printError("Cannot access '%s' (error: %s) - skipped",String_cString(fileName),Error_getText(error));
+                        printError(_("cannot access '%s' (error: %s) - skipped"),String_cString(fileName),Error_getText(error));
                         logMessage(createInfo->logHandle,
                                    LOG_TYPE_ENTRY_ACCESS_DENIED,
                                    "Access denied '%s' (error: %s)",
@@ -2370,7 +2370,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                   case ENTRY_TYPE_IMAGE:
                                     if (collectorType == COLLECTOR_TYPE_ENTRIES)
                                     {
-                                      printWarning("'%s' is not a device",String_cString(fileName));
+                                      printWarning(_("'%s' is not a device"),String_cString(fileName));
                                     }
                                     break;
                                   default:
@@ -2428,11 +2428,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                           {
                                             if (createInfo->jobOptions->skipUnreadableFlag)
                                             {
-                                              printWarning("cannot get info for '%s' (error: %s) - skipped",String_cString(fileName),Error_getText(error));
+                                              printWarning(_("cannot get info for '%s' (error: %s) - skipped"),String_cString(fileName),Error_getText(error));
                                             }
                                             else
                                             {
-                                              printError("cannot get info for '%s' (error: %s)",
+                                              printError(_("cannot get info for '%s' (error: %s)"),
                                                          String_cString(fileName),
                                                          Error_getText(error)
                                                         );
@@ -2628,7 +2628,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       {
                                         if (collectorType == COLLECTOR_TYPE_ENTRIES)
                                         {
-                                          printError("Cannot access '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
+                                          printError(_("cannot access '%s' (error: %s) - skipped"),String_cString(name),Error_getText(error));
                                           logMessage(createInfo->logHandle,
                                                      LOG_TYPE_ENTRY_ACCESS_DENIED,
                                                      "Access denied '%s' (error: %s)",
@@ -2797,11 +2797,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             {
                               if (createInfo->jobOptions->skipUnreadableFlag)
                               {
-                                printWarning("cannot get info for '%s' (error: %s) - skipped",String_cString(path),Error_getText(error));
+                                printWarning(_("cannot get info for '%s' (error: %s) - skipped"),String_cString(path),Error_getText(error));
                               }
                               else
                               {
-                                printError("cannot get info for '%s' (error: %s)",
+                                printError(_("cannot get info for '%s' (error: %s)"),
                                            String_cString(path),
                                            Error_getText(error)
                                           );
@@ -3055,11 +3055,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             {
                               if (createInfo->jobOptions->skipUnreadableFlag)
                               {
-                                printWarning("cannot get info for '%s' (error: %s) - skipped",String_cString(name),Error_getText(error));
+                                printWarning(_("cannot get info for '%s' (error: %s) - skipped"),String_cString(name),Error_getText(error));
                               }
                               else
                               {
-                                printError("cannot get info for '%s' (error: %s)",
+                                printError(_("cannot get info for '%s' (error: %s)"),
                                            String_cString(name),
                                            Error_getText(error)
                                           );
@@ -3160,7 +3160,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           {
             if (collectorType == COLLECTOR_TYPE_ENTRIES)
             {
-              printError("no matching entry found for '%s'!",
+              printError(_("no matching entry found for '%s'!"),
                          String_cString(includeEntryNode->string)
                         );
               logMessage(createInfo->logHandle,
@@ -4221,7 +4221,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->createdDateTime,TRUE);
       if (error != ERROR_NONE)
       {
-        printError("cannot pre-process storage (error: %s)!",
+        printError(_("cannot pre-process storage (error: %s)!"),
                    Error_getText(error)
                   );
         createInfo->failError = error;
@@ -4273,7 +4273,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
-        printError("cannot get info for file '%s' (error: %s)",
+        printError(_("cannot get info for file '%s' (error: %s)"),
                    String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
@@ -4333,7 +4333,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
-        printError("cannot pre-process file '%s' (error: %s)!",
+        printError(_("cannot pre-process file '%s' (error: %s)!"),
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -4383,7 +4383,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
         printInfo(0,"FAIL!\n");
-        printError("cannot open file '%s' (error: %s)!",
+        printError(_("cannot open file '%s' (error: %s)!"),
                    String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
@@ -4528,7 +4528,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       else if (createInfo->failError != ERROR_NONE)
       {
         printInfo(0,"FAIL!\n");
-        printError("cannot store '%s' (error: %s)!",
+        printError(_("cannot store '%s' (error: %s)!"),
                    String_cString(printableStorageName),
                    Error_getText(createInfo->failError)
                   );
@@ -4546,7 +4546,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
           printInfo(0,"FAIL!\n");
-          printError("cannot test '%s' (error: %s)!",
+          printError(_("cannot test '%s' (error: %s)!"),
                      String_cString(printableStorageName),
                      Error_getText(createInfo->failError)
                     );
@@ -4575,7 +4575,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
           printInfo(0,"FAIL!\n");
-          printError("cannot create PAR2 files for '%s' (error: %s)!",
+          printError(_("cannot create PAR2 files for '%s' (error: %s)!"),
                      String_cString(printableStorageName),
                      Error_getText(createInfo->failError)
                     );
@@ -4627,7 +4627,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
             printInfo(1,"FAIL\n");
-            printError("cannot update index for storage '%s' (error: %s)!",
+            printError(_("cannot update index for storage '%s' (error: %s)!"),
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
@@ -4661,7 +4661,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
             printInfo(1,"FAIL\n");
-            printError("cannot update index for storage '%s' (error: %s)!",
+            printError(_("cannot update index for storage '%s' (error: %s)!"),
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
@@ -4696,7 +4696,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
             printInfo(1,"FAIL\n");
-            printError("cannot delete old index for storage '%s' (error: %s)!",
+            printError(_("cannot delete old index for storage '%s' (error: %s)!"),
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
@@ -4786,7 +4786,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
               printInfo(1,"FAIL\n");
-              printError("cannot delete old index for storage '%s' (error: %s)!",
+              printError(_("cannot delete old index for storage '%s' (error: %s)!"),
                          String_cString(printableStorageName),
                          Error_getText(error)
                         );
@@ -4840,7 +4840,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
           printInfo(1,"FAIL\n");
-          printError("cannot update index for storage '%s' (error: %s)!",
+          printError(_("cannot update index for storage '%s' (error: %s)!"),
                      String_cString(printableStorageName),
                      Error_getText(error)
                     );
@@ -4866,7 +4866,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = Storage_postProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->createdDateTime,FALSE);
       if (error != ERROR_NONE)
       {
-        printError("cannot post-process storage file '%s' (error: %s)!",
+        printError(_("cannot post-process storage file '%s' (error: %s)!"),
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -4881,7 +4881,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = File_delete(storageMsg.intermediateFileName,FALSE);
       if (error != ERROR_NONE)
       {
-        printWarning("cannot delete file '%s' (error: %s)!",
+        printWarning(_("cannot delete file '%s' (error: %s)!"),
                      String_cString(storageMsg.intermediateFileName),
                      Error_getText(error)
                     );
@@ -4916,7 +4916,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     error = File_delete(storageMsg.intermediateFileName,FALSE);
     if (error != ERROR_NONE)
     {
-      printWarning("cannot delete file '%s' (error: %s)!",
+      printWarning(_("cannot delete file '%s' (error: %s)!"),
                    String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
@@ -4940,7 +4940,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = Storage_postProcess(&createInfo->storageInfo,NULL,createInfo->createdDateTime,TRUE);
       if (error != ERROR_NONE)
       {
-        printError("cannot post-process storage (error: %s)!",
+        printError(_("cannot post-process storage (error: %s)!"),
                    Error_getText(error)
                   );
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
@@ -5277,7 +5277,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("cannot get extended attributes for '%s' (error: %s)",
+      printError(_("cannot get extended attributes for '%s' (error: %s)"),
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -5325,7 +5325,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("cannot open file '%s' (error: %s)",
+      printError(_("cannot open file '%s' (error: %s)"),
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -5388,7 +5388,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot create new archive file entry '%s' (error: %s)",
+      printError(_("cannot create new archive file entry '%s' (error: %s)"),
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -5539,7 +5539,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
       else
       {
         printInfo(1,"FAIL\n");
-        printError("cannot store file entry (error: %s)!",
+        printError(_("cannot store file entry (error: %s)!"),
                    Error_getText(error)
                   );
 
@@ -5566,7 +5566,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot close archive file entry (error: %s)!",
+      printError(_("cannot close archive file entry (error: %s)!"),
                  Error_getText(error)
                 );
 
@@ -5746,7 +5746,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   if (deviceInfo->blockSize > bufferSize)
   {
     printInfo(1,"FAIL\n");
-    printError("device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")",
+    printError(_("device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")"),
                deviceInfo->blockSize,
                String_cString(deviceName),
                bufferSize
@@ -5765,7 +5765,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   if (deviceInfo->blockSize <= 0)
   {
     printInfo(1,"FAIL\n");
-    printError("invalid device block size for '%s'",
+    printError(_("invalid device block size for '%s'"),
                String_cString(deviceName)
               );
 
@@ -5809,7 +5809,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("cannot open device '%s' (error: %s)",
+      printError(_("cannot open device '%s' (error: %s)"),
                  String_cString(deviceName),
                  Error_getText(error)
                 );
@@ -5882,7 +5882,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot create new archive image entry '%s' (error: %s)",
+      printError(_("cannot create new archive image entry '%s' (error: %s)"),
                  String_cString(deviceName),
                  Error_getText(error)
                 );
@@ -6044,7 +6044,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       else
       {
         printInfo(1,"FAIL\n");
-        printError("cannot store image entry (error: %s)!",
+        printError(_("cannot store image entry (error: %s)!"),
                    Error_getText(error)
                   );
 
@@ -6071,7 +6071,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot close archive image entry (error: %s)!",
+      printError(_("cannot close archive image entry (error: %s)!"),
                  Error_getText(error)
                 );
 
@@ -6269,7 +6269,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("cannot get extended attributes for '%s' (error: %s)",
+      printError(_("cannot get extended attributes for '%s' (error: %s)"),
                  String_cString(directoryName),
                  Error_getText(error)
                 );
@@ -6302,7 +6302,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot create new archive directory entry '%s' (error: %s)",
+      printError(_("cannot create new archive directory entry '%s' (error: %s)"),
                  String_cString(directoryName),
                  Error_getText(error)
                 );
@@ -6331,7 +6331,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot close archive directory entry (error: %s)!",
+      printError(_("cannot close archive directory entry (error: %s)!"),
                  Error_getText(error)
                 );
 
@@ -6454,7 +6454,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("cannot get extended attributes for '%s' (error: %s)",
+      printError(_("cannot get extended attributes for '%s' (error: %s)"),
                  String_cString(linkName),
                  Error_getText(error)
                 );
@@ -6502,7 +6502,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
       else
       {
         printInfo(1,"FAIL\n");
-        printError("cannot read link '%s' (error: %s)",
+        printError(_("cannot read link '%s' (error: %s)"),
                    String_cString(linkName),
                    Error_getText(error)
                   );
@@ -6535,7 +6535,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot create new archive link entry '%s' (error: %s)",
+      printError(_("cannot create new archive link entry '%s' (error: %s)"),
                  String_cString(linkName),
                  Error_getText(error)
                 );
@@ -6565,7 +6565,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot close archive link entry (error: %s)!",
+      printError(_("cannot close archive link entry (error: %s)!"),
                  Error_getText(error)
                 );
 
@@ -6684,7 +6684,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   {
     if      (createInfo->jobOptions->noStopOnAttributeErrorFlag)
     {
-      printWarning("cannot not get extended attributes for '%s' - continue (error: %s)!",
+      printWarning(_("cannot not get extended attributes for '%s' - continue (error: %s)!"),
                    String_cString(StringList_first(fileNameList,NULL)),
                    Error_getText(error)
                   );
@@ -6720,7 +6720,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("cannot get extended attributes for '%s' (error: %s)",
+      printError(_("cannot get extended attributes for '%s' (error: %s)"),
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
@@ -6768,7 +6768,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("cannot open hardlink '%s' (error: %s)",
+      printError(_("cannot open hardlink '%s' (error: %s)"),
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
@@ -6830,7 +6830,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot create new archive hardlink entry '%s' (error: %s)",
+      printError(_("cannot create new archive hardlink entry '%s' (error: %s)"),
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
@@ -6985,7 +6985,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       else
       {
         printInfo(1,"FAIL\n");
-        printError("cannot store hardlink entry (error: %s)!",
+        printError(_("cannot store hardlink entry (error: %s)!"),
                    Error_getText(error)
                   );
 
@@ -7013,7 +7013,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot close archive hardlink entry (error: %s)!",
+      printError(_("cannot close archive hardlink entry (error: %s)!"),
                  Error_getText(error)
                 );
 
@@ -7210,7 +7210,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("cannot get extended attributes for '%s' (error: %s)",
+      printError(_("cannot get extended attributes for '%s' (error: %s)"),
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -7243,7 +7243,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot create new archive special entry '%s' (error: %s)",
+      printError(_("cannot create new archive special entry '%s' (error: %s)"),
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -7266,7 +7266,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot close archive special entry (error: %s)!",
+      printError(_("cannot close archive special entry (error: %s)!"),
                  Error_getText(error)
                 );
 
@@ -7606,7 +7606,7 @@ Errors Command_create(ServerIO                     *masterIO,
   // check if storage name given
   if (String_isEmpty(storageName))
   {
-    printError("no storage name given!");
+    printError(_("no storage name given!"));
     AutoFree_cleanup(&autoFreeList);
     return ERROR_NO_STORAGE_NAME;
   }
@@ -7616,7 +7616,7 @@ Errors Command_create(ServerIO                     *masterIO,
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
-    printError("cannot initialize storage '%s' (error: %s)",
+    printError(_("cannot initialize storage '%s' (error: %s)"),
                String_cString(storageName),
                Error_getText(error)
               );
@@ -7634,7 +7634,7 @@ Errors Command_create(ServerIO                     *masterIO,
     error = Index_open(&indexHandle,masterIO,INDEX_TIMEOUT);
     if (error != ERROR_NONE)
     {
-      printError("cannot open index (error: %s)",
+      printError(_("cannot open index (error: %s)"),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
@@ -7695,7 +7695,7 @@ Errors Command_create(ServerIO                     *masterIO,
                       );
   if (error != ERROR_NONE)
   {
-    printError("cannot initialize storage '%s' (error: %s)",
+    printError(_("cannot initialize storage '%s' (error: %s)"),
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -7712,7 +7712,7 @@ Errors Command_create(ServerIO                     *masterIO,
   if (!Storage_isWritable(&createInfo.storageInfo,directoryName))
   {
     error = ERRORX_(WRITE_FILE,0,"%s",String_cString(storageSpecifier.archiveName));
-    printError("cannot write storage (error: no write access for '%s')!",
+    printError(_("cannot write storage (error: no write access for '%s')!"),
                String_cString(storageSpecifier.archiveName)
               );
     String_delete(directoryName);
@@ -7771,7 +7771,7 @@ Errors Command_create(ServerIO                     *masterIO,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("cannot read incremental list file '%s' (error: %s)",
+        printError(_("cannot read incremental list file '%s' (error: %s)"),
                    String_cString(incrementalListFileName),
                    Error_getText(error)
                   );
@@ -7819,7 +7819,7 @@ Errors Command_create(ServerIO                     *masterIO,
       error = Index_newUUID(&indexHandle,jobUUID,&uuidId);
       if (error != ERROR_NONE)
       {
-        printError("cannot create index for '%s' (error: %s)!",
+        printError(_("cannot create index for '%s' (error: %s)!"),
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -7841,7 +7841,7 @@ Errors Command_create(ServerIO                     *masterIO,
                            );
     if (error != ERROR_NONE)
     {
-      printError("cannot create index for '%s' (error: %s)!",
+      printError(_("cannot create index for '%s' (error: %s)!"),
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
@@ -7881,7 +7881,7 @@ Errors Command_create(ServerIO                     *masterIO,
                         );
   if (error != ERROR_NONE)
   {
-    printError("cannot create archive file '%s' (error: %s)",
+    printError(_("cannot create archive file '%s' (error: %s)"),
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -7935,7 +7935,7 @@ Errors Command_create(ServerIO                     *masterIO,
   error = Archive_close(&createInfo.archiveHandle,TRUE);
   if (error != ERROR_NONE)
   {
-    printError("cannot close archive '%s' (error: %s)",
+    printError(_("cannot close archive '%s' (error: %s)"),
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -7966,7 +7966,7 @@ Errors Command_create(ServerIO                     *masterIO,
                                    );
     if (error != ERROR_NONE)
     {
-      printError("cannot create index for '%s' (error: %s)!",
+      printError(_("cannot create index for '%s' (error: %s)!"),
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
@@ -7978,7 +7978,7 @@ Errors Command_create(ServerIO                     *masterIO,
                                  );
     if (error != ERROR_NONE)
     {
-      printError("cannot create index for '%s' (error: %s)!",
+      printError(_("cannot create index for '%s' (error: %s)!"),
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
@@ -7999,7 +7999,7 @@ Errors Command_create(ServerIO                     *masterIO,
       error = Index_pruneEntity(&indexHandle,entityId);
       if (error != ERROR_NONE)
       {
-        printError("cannot delete empty entity for '%s' (error: %s)!",
+        printError(_("cannot delete empty entity for '%s' (error: %s)!"),
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -8013,10 +8013,10 @@ Errors Command_create(ServerIO                     *masterIO,
       error = Index_deleteEntity(&indexHandle,entityId);
       if (error != ERROR_NONE)
       {
-        printWarning("cannot delete entity for '%s' (error: %s)!",
-                   String_cString(printableStorageName),
-                   Error_getText(error)
-                  );
+        printWarning(_("cannot delete entity for '%s' (error: %s)!"),
+                     String_cString(printableStorageName),
+                     Error_getText(error)
+                    );
       }
     }
   }
@@ -8102,7 +8102,7 @@ Errors Command_create(ServerIO                     *masterIO,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("cannot write incremental list file '%s' (error: %s)",
+      printError(_("cannot write incremental list file '%s' (error: %s)"),
                  String_cString(incrementalListFileName),
                  Error_getText(error)
                 );
@@ -8126,7 +8126,7 @@ Errors Command_create(ServerIO                     *masterIO,
   error = unmountAll(&jobOptions->mountList);
   if (error != ERROR_NONE)
   {
-    printWarning("cannot unmount devices (error: %s)",
+    printWarning(_("cannot unmount devices (error: %s)"),
                  Error_getText(error)
                 );
   }

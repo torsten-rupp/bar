@@ -6380,7 +6380,7 @@ UNUSED_VARIABLE(storageInfo);
     }
     else
     {
-      printWarning(tr("No BAR header found! This may be a broken archive or not an archive"));
+      printWarning(_("no BAR header found! This may be a broken archive or not an archive"));
     }
   }
   ungetNextChunkHeader(archiveHandle,&chunkHeader);
@@ -6963,7 +6963,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
           {
             if (IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
-              printWarning("skipped unknown chunk '%s' at offset %"PRIu64" in '%s'",
+              printWarning(_("skipped unknown chunk '%s' at offset %"PRIu64" in '%s'"),
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -7134,7 +7134,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
     else
     {
       // no delta source -> print warning and disable delta compress
-      printWarning("file '%s' not delta compressed (no source file found)",String_cString(fileName));
+      printWarning(_("file '%s' not delta compressed (no source file found)"),String_cString(fileName));
       logMessage(archiveHandle->logHandle,
                  LOG_TYPE_WARNING,
                  "File '%s' not delta compressed (no source file found)\n",
@@ -7553,7 +7553,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
     else
     {
       // no delta source -> print warning and disable delta compress
-      printWarning("image of devicee '%s' not delta compressed (no source file found)",String_cString(deviceName));
+      printWarning(_("image of devicee '%s' not delta compressed (no source file found)"),String_cString(deviceName));
       logMessage(archiveHandle->logHandle,
                  LOG_TYPE_WARNING,
                  "Image of device '%s' not delta compressed (no source file found)\n",
@@ -8439,7 +8439,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
     else
     {
       // no delta source -> print warning and disable delta compress
-      printWarning("file '%s' not delta compressed (no source file found)",String_cString(StringList_first(fileNameList,NULL)));
+      printWarning(_("file '%s' not delta compressed (no source file found)"),String_cString(StringList_first(fileNameList,NULL)));
       logMessage(archiveHandle->logHandle,
                  LOG_TYPE_WARNING,
                  "File '%s' not delta compressed (no source file found)",
@@ -9449,7 +9449,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
           {
             if (IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
-              printWarning("skipped unknown chunk '%s' at offset %"PRIu64" in '%s'",
+              printWarning(_("skipped unknown chunk '%s' at offset %"PRIu64" in '%s'"),
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -9830,7 +9830,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'",
+              printWarning(_("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'"),
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -10442,7 +10442,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'",
+              printWarning(_("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'"),
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -10998,7 +10998,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'",
+              printWarning(_("skipped unknown sub-chunk '%s' (offset %"PRIu64") in '%s'"),
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -11454,7 +11454,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
+              printWarning(_("skipped unknown sub-chunk '%s' (offset %"PRIu64")"),
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -11879,7 +11879,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
+              printWarning(_("skipped unknown sub-chunk '%s' (offset %"PRIu64")"),
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -12530,7 +12530,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
+              printWarning(_("skipped unknown sub-chunk '%s' (offset %"PRIu64")"),
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -12987,7 +12987,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("skipped unknown sub-chunk '%s' (offset %"PRIu64")",
+              printWarning(_("skipped unknown sub-chunk '%s' (offset %"PRIu64")"),
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)

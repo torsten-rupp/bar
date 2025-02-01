@@ -335,7 +335,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
   // add file entry directly if no matching entry found in directory
   if (deltaSourceNode == NULL)
   {
-    printWarning("no matching entry for delta source '%s' found",
+    printWarning(_("no matching entry for delta source '%s' found"),
                  String_cString(printableStorageName)
                 );
 
@@ -491,7 +491,7 @@ UNUSED_VARIABLE(id);
   // add file entry directly if no matching entry found in directory
   if (deltaSourceNode == NULL)
   {
-    printWarning("no matching entry for delta source '%s' found",
+    printWarning(_("no matching entry for delta source '%s' found"),
                  String_cString(printableStorageName)
                 );
 

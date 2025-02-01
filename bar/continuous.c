@@ -1493,7 +1493,7 @@ LOCAL void continuousThreadCode(void)
   error = Continuous_open(&databaseHandle);
   if (error != ERROR_NONE)
   {
-    printError("cannot initialize continuous database (error: %s)!",
+    printError(_("cannot initialize continuous database (error: %s)!"),
                Error_getText(error)
               );
     String_delete(absoluteName);
@@ -1845,9 +1845,9 @@ Errors Continuous_init(const char *databaseURI)
   #if   defined(PLATFORM_LINUX)
     // check number of possible notifies
     n = getMaxNotifyWatches();
-    if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
+    if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning(_("low number of notify watches %lu. Please check settings in '%s'!"),n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
     n = getMaxNotifyInstances();
-    if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
+    if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning(_("low number of notify instances %lu. Please check settings in '%s'!"),n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
 
     // init inotify
     inotifyHandle = inotify_init();

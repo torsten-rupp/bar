@@ -385,7 +385,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     error = File_getInfo(&fileInfo,storageMsg.intermediateFileName);
     if (error != ERROR_NONE)
     {
-      printError("cannot get information for file '%s' (error: %s)!",
+      printError(_("cannot get information for file '%s' (error: %s)!"),
                  String_cString(storageMsg.intermediateFileName),
                  Error_getText(error)
                 );
@@ -409,7 +409,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     if (error != ERROR_NONE)
     {
       printInfo(0,"FAIL!\n");
-      printError("cannot open file '%s' (error: %s)!",
+      printError(_("cannot open file '%s' (error: %s)!"),
                  String_cString(storageMsg.intermediateFileName),
                  Error_getText(error)
                 );
@@ -429,7 +429,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       if (error != ERROR_NONE)
       {
         printInfo(0,"FAIL!\n");
-        printError("cannot store '%s' (error: %s)",
+        printError(_("cannot store '%s' (error: %s)"),
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -457,7 +457,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       if (error != ERROR_NONE)
       {
         printInfo(0,"FAIL!\n");
-        printError("cannot store '%s' (error: %s)",
+        printError(_("cannot store '%s' (error: %s)"),
                    String_cString(convertInfo->destinationArchiveHandle.archiveName),
                    Error_getText(error)
                   );
@@ -475,7 +475,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         if (error != ERROR_NONE)
         {
           printInfo(0,"FAIL!\n");
-          printError("cannot read file '%s' (error: %s)!",
+          printError(_("cannot read file '%s' (error: %s)!"),
                      String_cString(printableStorageName),
                      Error_getText(error)
                     );
@@ -488,7 +488,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         if (error != ERROR_NONE)
         {
           printInfo(0,"FAIL!\n");
-          printError("cannot write file '%s' (error: %s)!",
+          printError(_("cannot write file '%s' (error: %s)!"),
                      String_cString(printableStorageName),
                      Error_getText(error)
                     );
@@ -534,7 +534,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
           else
           {
             printInfo(0,"FAIL!\n");
-            printError("cannot store '%s' (error: %s)",
+            printError(_("cannot store '%s' (error: %s)"),
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
@@ -553,7 +553,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
           if (error != ERROR_NONE)
           {
             printInfo(0,"FAIL!\n");
-            printError("cannot read file '%s' (error: %s)!",
+            printError(_("cannot read file '%s' (error: %s)!"),
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
@@ -573,7 +573,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
             else
             {
               printInfo(0,"FAIL!\n");
-              printError("cannot write file '%s' (error: %s)!",
+              printError(_("cannot write file '%s' (error: %s)!"),
                          String_cString(printableStorageName),
                          Error_getText(error)
                         );
@@ -628,7 +628,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       if (error != ERROR_NONE)
       {
         printInfo(0,"FAIL!\n");
-        printError("cannot store '%s' (error: %s)",
+        printError(_("cannot store '%s' (error: %s)"),
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -646,7 +646,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     error = File_delete(storageMsg.intermediateFileName,FALSE);
     if (error != ERROR_NONE)
     {
-      printWarning("cannot delete file '%s' (error: %s)!",
+      printWarning(_("cannot delete file '%s' (error: %s)!"),
                    String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
@@ -665,7 +665,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     error = File_delete(storageMsg.intermediateFileName,FALSE);
     if (error != ERROR_NONE)
     {
-      printWarning("cannot delete file '%s' (error: %s)!",
+      printWarning(_("cannot delete file '%s' (error: %s)!"),
                    String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
                   );
@@ -742,7 +742,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                                );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'file' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'file' entry from storage '%s' (error: %s)!"),
                String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -809,7 +809,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                               );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive file '%s' (error: %s)",
+    printError(_("cannot create new archive file '%s' (error: %s)"),
                String_cString(fileName),
                Error_getText(error)
               );
@@ -831,7 +831,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
-      printError("cannot read content of 'file' entry '%s' (error: %s)!",
+      printError(_("cannot read content of 'file' entry '%s' (error: %s)!"),
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -844,7 +844,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
     if (error != ERROR_NONE)
     {
       printInfo(0,"FAIL!\n");
-      printError("cannot write content of 'file' entry '%s' (error: %s)!",
+      printError(_("cannot write content of 'file' entry '%s' (error: %s)!"),
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -873,7 +873,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printInfo(1,"FAIL\n");
-    printError("cannot close archive file entry '%s' (error: %s)!",
+    printError(_("cannot close archive file entry '%s' (error: %s)!"),
                String_cString(fileName),
                Error_getText(error)
               );
@@ -895,14 +895,14 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
       && !Compress_isCompressed(byteCompressAlgorithm)
       && !Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of file entry '%s'",String_cString(fileName));
+    printWarning(_("unexpected data at end of file entry '%s'"),String_cString(fileName));
   }
 
   // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'file' entry fail (error: %s)",Error_getText(error));
+    printWarning(_("close 'file' entry fail (error: %s)"),Error_getText(error));
   }
 
   // free resources
@@ -968,7 +968,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                 );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'image' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'image' entry from storage '%s' (error: %s)!"),
                String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -978,7 +978,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
   if (deviceInfo.blockSize > bufferSize)
   {
-    printError("device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")",
+    printError(_("device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")"),
                deviceInfo.blockSize,
                String_cString(deviceName),
                bufferSize
@@ -1046,7 +1046,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive image entry '%s' (error: %s)!",
+    printError(_("cannot create new archive image entry '%s' (error: %s)!"),
                String_cString(deviceName),
                Error_getText(error)
               );
@@ -1065,7 +1065,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
-      printError("cannot read content of 'image' entry '%s' (error: %s)!",
+      printError(_("cannot read content of 'image' entry '%s' (error: %s)!"),
                  String_cString(deviceName),
                  Error_getText(error)
                 );
@@ -1078,7 +1078,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
     if (error != ERROR_NONE)
     {
       printInfo(0,"FAIL!\n");
-      printError("cannot write content of 'image' entry '%s' (error: %s)!",
+      printError(_("cannot write content of 'image' entry '%s' (error: %s)!"),
                  String_cString(deviceName),
                  Error_getText(error)
                 );
@@ -1106,7 +1106,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printInfo(1,"FAIL\n");
-    printError("cannot close archive image entry (error: %s)!",
+    printError(_("cannot close archive image entry (error: %s)!"),
                Error_getText(error)
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
@@ -1126,14 +1126,14 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
       && !Compress_isCompressed(byteCompressAlgorithm)
       && !Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of image entry '%s'",String_cString(deviceName));
+    printWarning(_("unexpected data at end of image entry '%s'"),String_cString(deviceName));
   }
 
   // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'image' entry fail (error: %s)",Error_getText(error));
+    printWarning(_("close 'image' entry fail (error: %s)"),Error_getText(error));
     // ignore error
   }
 
@@ -1184,7 +1184,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
                                     );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'directory' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'directory' entry from storage '%s' (error: %s)!"),
                String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1216,7 +1216,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
                                    );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive directory entry '%s' (error: %s)",
+    printError(_("cannot create new archive directory entry '%s' (error: %s)"),
                String_cString(directoryName),
                Error_getText(error)
               );
@@ -1232,7 +1232,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printInfo(1,"FAIL\n");
-    printError("cannot close archive directory entry (error: %s)!",
+    printError(_("cannot close archive directory entry (error: %s)!"),
                Error_getText(error)
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
@@ -1246,14 +1246,14 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   // check if all data read
   if (!Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of directory entry '%s'",String_cString(directoryName));
+    printWarning(_("unexpected data at end of directory entry '%s'"),String_cString(directoryName));
   }
 
   // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'directory' entry fail (error: %s)",Error_getText(error));
+    printWarning(_("close 'directory' entry fail (error: %s)"),Error_getText(error));
   }
 
   // free resources
@@ -1307,7 +1307,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'link' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'link' entry from storage '%s' (error: %s)!"),
                String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1342,7 +1342,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printInfo(1,"FAIL\n");
-    printError("cannot create new archive link entry '%s' (error: %s)",
+    printError(_("cannot create new archive link entry '%s' (error: %s)"),
                String_cString(linkName),
                Error_getText(error)
               );
@@ -1358,7 +1358,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printInfo(1,"FAIL\n");
-    printError("cannot close archive link entry '%s' (error: %s)!",
+    printError(_("cannot close archive link entry '%s' (error: %s)!"),
                String_cString(linkName),
                Error_getText(error)
               );
@@ -1374,14 +1374,14 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   // check if all data read
   if (!Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of link entry '%s'",String_cString(linkName));
+    printWarning(_("unexpected data at end of link entry '%s'"),String_cString(linkName));
   }
 
   // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'link' entry fail (error: %s)",Error_getText(error));
+    printWarning(_("close 'link' entry fail (error: %s)"),Error_getText(error));
   }
 
   // free resources
@@ -1450,7 +1450,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                    );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'hard link' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'hard link' entry from storage '%s' (error: %s)!"),
                String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1513,7 +1513,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                   );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive hardlink entry '%s' (error: %s)",
+    printError(_("cannot create new archive hardlink entry '%s' (error: %s)"),
                String_cString(StringList_first(&fileNameList,NULL)),
                Error_getText(error)
               );
@@ -1535,7 +1535,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
-      printError("cannot read content of 'hard link' entry '%s' (error: %s)!",
+      printError(_("cannot read content of 'hard link' entry '%s' (error: %s)!"),
                  String_cString(StringList_first(&fileNameList,NULL)),
                  Error_getText(error)
                 );
@@ -1548,7 +1548,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
     if (error != ERROR_NONE)
     {
       printInfo(0,"FAIL!\n");
-      printError("cannot write content of 'hard link' entry '%s' (error: %s)!",
+      printError(_("cannot write content of 'hard link' entry '%s' (error: %s)!"),
                  String_cString(StringList_first(&fileNameList,NULL)),
                  Error_getText(error)
                 );
@@ -1575,7 +1575,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printInfo(1,"FAIL\n");
-    printError("cannot close archive hard link entry '%s' (error: %s)!",
+    printError(_("cannot close archive hard link entry '%s' (error: %s)!"),
                String_cString(StringList_first(&fileNameList,NULL)),
                Error_getText(error)
               );
@@ -1597,14 +1597,14 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
       && !Compress_isCompressed(byteCompressAlgorithm)
       && !Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of hard link entry '%s'",String_cString(StringList_first(&fileNameList,NULL)));
+    printWarning(_("unexpected data at end of hard link entry '%s'"),String_cString(StringList_first(&fileNameList,NULL)));
   }
 
   // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'hard link' entry fail (error: %s)",Error_getText(error));
+    printWarning(_("close 'hard link' entry fail (error: %s)"),Error_getText(error));
   }
 
   // free resources
@@ -1655,7 +1655,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
                                   );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'special' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'special' entry from storage '%s' (error: %s)!"),
                String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1687,7 +1687,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
                                  );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive special entry '%s' (error: %s)",
+    printError(_("cannot create new archive special entry '%s' (error: %s)"),
                String_cString(fileName),
                Error_getText(error)
               );
@@ -1703,7 +1703,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printInfo(1,"FAIL\n");
-    printError("cannot close archive special entry '%s' (error: %s)!",
+    printError(_("cannot close archive special entry '%s' (error: %s)!"),
                String_cString(fileName),
                Error_getText(error)
               );
@@ -1718,14 +1718,14 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   // check if all data read
   if (!Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of special entry '%s'",String_cString(fileName));
+    printWarning(_("unexpected data at end of special entry '%s'"),String_cString(fileName));
   }
 
   // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'special' entry fail (error: %s)",Error_getText(error));
+    printWarning(_("close 'special' entry fail (error: %s)"),Error_getText(error));
   }
 
   // free resources
@@ -1791,7 +1791,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                                );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'meta' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'meta' entry from storage '%s' (error: %s)!"),
                String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1832,7 +1832,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                               );
   if (error != ERROR_NONE)
   {
-    printError("cannot create new archive 'meta' entry (error: %s)",
+    printError(_("cannot create new archive 'meta' entry (error: %s)"),
                Error_getText(error)
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
@@ -1848,7 +1848,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   if (error != ERROR_NONE)
   {
     printInfo(1,"FAIL\n");
-    printError("cannot close archive 'meta' entry (error: %s)!",
+    printError(_("cannot close archive 'meta' entry (error: %s)!"),
                Error_getText(error)
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
@@ -1863,14 +1863,14 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   // check if all data read
   if (!Archive_eofData(&sourceArchiveEntryInfo))
   {
-    printWarning("unexpected data at end of 'meta' entry");
+    printWarning(_("unexpected data at end of 'meta' entry"));
   }
 
   // close source archive entry
   error = Archive_closeEntry(&sourceArchiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'meta' entry fail (error: %s)",Error_getText(error));
+    printWarning(_("close 'meta' entry fail (error: %s)"),Error_getText(error));
   }
 
   // free resources
@@ -2033,7 +2033,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
                                   );
         if (error != ERROR_NONE)
         {
-          printError("cannot open archive '%s' (error: %s)!",
+          printError(_("cannot open archive '%s' (error: %s)!"),
                      String_cString(entryMsg.archiveHandle->printableStorageName),
                      Error_getText(error)
                     );
@@ -2058,7 +2058,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
       error = Archive_seek(&sourceArchiveHandle,entryMsg.offset);
       if (error != ERROR_NONE)
       {
-        printError("cannot read storage '%s' (error: %s)!",
+        printError(_("cannot read storage '%s' (error: %s)!"),
                    String_cString(sourceArchiveHandle.printableStorageName),
                    Error_getText(error)
                   );
@@ -2173,7 +2173,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                       );
   if (error != ERROR_NONE)
   {
-    printError("cannot initialize storage '%s' (error: %s)!",
+    printError(_("cannot initialize storage '%s' (error: %s)!"),
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -2186,7 +2186,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   // check if storage exists
   if (!Storage_exists(&convertInfo->sourceStorageInfo,archiveName))
   {
-    printError("storage not found '%s'!",
+    printError(_("storage not found '%s'!"),
                String_cString(printableStorageName)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -2204,7 +2204,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                       );
   if (error != ERROR_NONE)
   {
-    printError("cannot open archive '%s' (error: %s)!",
+    printError(_("cannot open archive '%s' (error: %s)!"),
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -2240,7 +2240,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
       if (convertInfo->newJobOptions->forceVerifySignaturesFlag)
       {
         // signature error
-        printError("invalid signature in '%s'!",
+        printError(_("invalid signature in '%s'!"),
                    String_cString(printableStorageName)
                   );
         AutoFree_cleanup(&autoFreeList);
@@ -2249,7 +2249,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
       else
       {
         // print signature warning
-        printWarning("invalid signature in '%s'!",
+        printWarning(_("invalid signature in '%s'!"),
                      String_cString(printableStorageName)
                     );
       }
@@ -2272,7 +2272,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                       );
   if (error != ERROR_NONE)
   {
-    printError("cannot initialize storage '%s' (error: %s)!",
+    printError(_("cannot initialize storage '%s' (error: %s)!"),
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -2335,7 +2335,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                         );
   if (error != ERROR_NONE)
   {
-    printError("cannot create temporary storage for '%s' (error: %s)",
+    printError(_("cannot create temporary storage for '%s' (error: %s)"),
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -2403,7 +2403,7 @@ convertThreadCount = 1;
                                        );
     if (error != ERROR_NONE)
     {
-      printError("cannot read next entry from storage '%s' (error: %s)!",
+      printError(_("cannot read next entry from storage '%s' (error: %s)!"),
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
@@ -2487,7 +2487,7 @@ convertThreadCount = 1;
   if (error != ERROR_NONE)
   {
     if (!isPrintInfo(1)) printInfo(0,"FAIL\n");
-    printError("cannot close archive '%s' (error: %s)",
+    printError(_("cannot close archive '%s' (error: %s)"),
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -2527,14 +2527,14 @@ convertThreadCount = 1;
   {
     if (convertInfo->newJobOptions->forceVerifySignaturesFlag)
     {
-      printError("invalid signature in '%s'!",
+      printError(_("invalid signature in '%s'!"),
                  String_cString(printableStorageName)
                 );
       if (convertInfo->failError == ERROR_NONE) convertInfo->failError = ERROR_INVALID_SIGNATURE;
     }
     else
     {
-      printWarning("invalid signature in '%s'!",
+      printWarning(_("invalid signature in '%s'!"),
                    String_cString(printableStorageName)
                   );
     }
@@ -2592,7 +2592,7 @@ Errors Command_convert(const StringList        *storageNameList,
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
-      printError("invalid storage '%s' (error: %s)!",
+      printError(_("invalid storage '%s' (error: %s)!"),
                  String_cString(storageName),
                  Error_getText(error)
                 );
@@ -2687,7 +2687,7 @@ Errors Command_convert(const StringList        *storageNameList,
   }
   if ((convertInfo.failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
   {
-    printError("no matching storage files found!");
+    printError(_("no matching storage files found!"));
     convertInfo.failError = ERROR_FILE_NOT_FOUND_;
   }
 

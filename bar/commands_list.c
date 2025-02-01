@@ -2517,7 +2517,7 @@ NULL, // masterSocketHandle
             if (jobOptions->forceVerifySignaturesFlag)
             {
               // signature error
-              printError("invalid signature in '%s'!",
+              printError(_("invalid signature in '%s'!"),
                          String_cString(printableStorageName)
                         );
               (void)Archive_close(&archiveHandle,FALSE);
@@ -2528,7 +2528,7 @@ NULL, // masterSocketHandle
             else
             {
               // print signature warning
-              printWarning("invalid signature in '%s'!",
+              printWarning(_("invalid signature in '%s'!"),
                            String_cString(printableStorageName)
                           );
             }
@@ -2602,7 +2602,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'file' entry from storage '%s' (error: %s)!",
+                    printError(_("cannot read 'file' entry from storage '%s' (error: %s)!"),
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -2671,7 +2671,7 @@ NULL, // masterSocketHandle
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
-                    printWarning("close 'file' entry fail (error: %s)",Error_getText(error));
+                    printWarning(_("close 'file' entry fail (error: %s)"),Error_getText(error));
                   }
 
                   // free resources
@@ -2722,7 +2722,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'image' entry from storage '%s' (error: %s)!",
+                    printError(_("cannot read 'image' entry from storage '%s' (error: %s)!"),
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -2784,7 +2784,7 @@ NULL, // masterSocketHandle
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
-                    printWarning("close 'image' entry fail (error: %s)",Error_getText(error));
+                    printWarning(_("close 'image' entry fail (error: %s)"),Error_getText(error));
                   }
 
                   // free resources
@@ -2822,7 +2822,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'directory' entry from storage '%s' (error: %s)!",
+                    printError(_("cannot read 'directory' entry from storage '%s' (error: %s)!"),
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -2874,7 +2874,7 @@ NULL, // masterSocketHandle
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
-                    printWarning("close 'directory' entry fail (error: %s)",Error_getText(error));
+                    printWarning(_("close 'directory' entry fail (error: %s)"),Error_getText(error));
                   }
 
                   // free resources
@@ -2914,7 +2914,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'link' entry from storage '%s' (error: %s)!",
+                    printError(_("cannot read 'link' entry from storage '%s' (error: %s)!"),
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -2969,7 +2969,7 @@ NULL, // masterSocketHandle
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
-                    printWarning("close 'link' entry fail (error: %s)",Error_getText(error));
+                    printWarning(_("close 'link' entry fail (error: %s)"),Error_getText(error));
                   }
 
                   // free resources
@@ -3021,7 +3021,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'hard link' entry from storage '%s' (error: %s)!",
+                    printError(_("cannot read 'hard link' entry from storage '%s' (error: %s)!"),
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -3093,7 +3093,7 @@ NULL, // masterSocketHandle
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
-                    printWarning("close 'hard link' entry fail (error: %s)",Error_getText(error));
+                    printWarning(_("close 'hard link' entry fail (error: %s)"),Error_getText(error));
                   }
 
                   // free resources
@@ -3131,7 +3131,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'special' entry from storage '%s' (error: %s)!",
+                    printError(_("cannot read 'special' entry from storage '%s' (error: %s)!"),
                                String_cString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -3187,7 +3187,7 @@ NULL, // masterSocketHandle
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
-                    printWarning("close 'special' entry fail (error: %s)",Error_getText(error));
+                    printWarning(_("close 'special' entry fail (error: %s)"),Error_getText(error));
                   }
 
                   // free resources
@@ -3232,7 +3232,7 @@ NULL, // masterSocketHandle
                   {
 //TODO: remove
 #if 0
-                    printError("cannot read 'meta' entry from storage '%s' (error: %s)!",
+                    printError(_("cannot read 'meta' entry from storage '%s' (error: %s)!"),
                                Storage_getPrintableNameCString(storageSpecifier,fileName),
                                Error_getText(error)
                               );
@@ -3263,7 +3263,7 @@ NULL, // masterSocketHandle
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
-                    printWarning("close 'special' entry fail (error: %s)",Error_getText(error));
+                    printWarning(_("close 'special' entry fail (error: %s)"),Error_getText(error));
                   }
 
                   // free resources
@@ -3336,7 +3336,7 @@ NULL, // masterSocketHandle
           {
 //TODO: remove
 #if 0
-            printError("no host name given!");
+            printError(_("no host name given!"));
 #endif
             Configuration_doneSSHServerSettings(&sshServer);
             error = ERROR_NO_HOST_NAME;
@@ -3346,7 +3346,7 @@ NULL, // masterSocketHandle
           {
 //TODO: remove
 #if 0
-            printError("cannot SSH public key given!");
+            printError(_("cannot SSH public key given!"));
 #endif
             Configuration_doneSSHServerSettings(&sshServer);
             error = ERROR_NO_SSH_PUBLIC_KEY;
@@ -3356,7 +3356,7 @@ NULL, // masterSocketHandle
           {
 //TODO: remove
 #if 0
-            printError("cannot SSH private key given!");
+            printError(_("cannot SSH private key given!"));
 #endif
             Configuration_doneSSHServerSettings(&sshServer);
             error = ERROR_NO_SSH_PRIVATE_KEY;
@@ -3419,7 +3419,7 @@ NULL, // masterSocketHandle
           {
 //TODO: remove
 #if 0
-            printError("cannot connect to '%s:%d' (error: %s)!",
+            printError(_("cannot connect to '%s:%d' (error: %s)!"),
                        String_cString(storageSpecifier->hostName),
                        storageSpecifier->hostPort,
                        Error_getText(error)
@@ -3446,7 +3446,7 @@ NULL, // masterSocketHandle
         {
 //TODO: remove
 #if 0
-          printError("cannot execute remote BAR program '%s' (error: %s)!",
+          printError(_("cannot execute remote BAR program '%s' (error: %s)!"),
                      String_cString(line),
                      Error_getText(error)
                     );
@@ -3461,7 +3461,7 @@ NULL, // masterSocketHandle
           exitcode = Network_terminate(&networkExecuteHandle);
 //TODO: remove
 #if 0
-          printError("no response from remote BAR program (error: %s, exitcode %d)!",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
+          printError(_("no response from remote BAR program (error: %s, exitcode %d)!"),!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
 #endif
           String_delete(line);
           (void)Network_terminate(&networkExecuteHandle);
@@ -3474,7 +3474,7 @@ NULL, // masterSocketHandle
           Network_executeReadLine(&networkExecuteHandle,NETWORK_EXECUTE_IO_TYPE_STDERR,line,TIMEOUT);
 //TODO: remove
 #if 0
-          printError("invalid response from remote BAR program (error: %s, exitcode %d)!",!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
+          printError(_("invalid response from remote BAR program (error: %s, exitcode %d)!"),!String_isEmpty(line) ? String_cString(line) : "unknown",exitcode);
 #endif
           String_delete(line);
           (void)Network_terminate(&networkExecuteHandle);
@@ -3485,7 +3485,7 @@ NULL, // masterSocketHandle
         {
 //TODO: remove
 #if 0
-          printError("invalid BAR major protocol version (expected: %d, got %d)!",SERVER_PROTOCOL_VERSION_MAJOR,protocolVersionMajor);
+          printError(_("invalid BAR major protocol version (expected: %d, got %d)!"),SERVER_PROTOCOL_VERSION_MAJOR,protocolVersionMajor);
 #endif
           String_delete(line);
           (void)Network_terminate(&networkExecuteHandle);
@@ -3494,7 +3494,7 @@ NULL, // masterSocketHandle
         }
         if (protocolVersionMinor != SERVER_PROTOCOL_VERSION_MINOR)
         {
-          printWarning("invalid BAR minor protocol version (expected: %d, got %d)!",SERVER_PROTOCOL_VERSION_MAJOR,protocolVersionMinor);
+          printWarning(_("invalid BAR minor protocol version (expected: %d, got %d)!"),SERVER_PROTOCOL_VERSION_MAJOR,protocolVersionMinor);
         }
         String_delete(line);
 
@@ -3664,7 +3664,7 @@ NULL, // masterSocketHandle
                 }
                 else
                 {
-                  printWarning("parse 'file' entry '%s' fail",String_cString(arguments));
+                  printWarning(_("parse 'file' entry '%s' fail"),String_cString(arguments));
                 }
 
                 // free resources
@@ -3757,7 +3757,7 @@ NULL, // masterSocketHandle
                 }
                 else
                 {
-                  printWarning("parse 'image' entry '%s' fail",String_cString(arguments));
+                  printWarning(_("parse 'image' entry '%s' fail"),String_cString(arguments));
                 }
 
                 // free resources
@@ -3830,7 +3830,7 @@ NULL, // masterSocketHandle
                 }
                 else
                 {
-                  printWarning("parse 'directory' entry '%s' fail",String_cString(arguments));
+                  printWarning(_("parse 'directory' entry '%s' fail"),String_cString(arguments));
                 }
 
                 // free resources
@@ -3906,7 +3906,7 @@ NULL, // masterSocketHandle
                 }
                 else
                 {
-                  printWarning("parse 'link' entry '%s' fail",String_cString(arguments));
+                  printWarning(_("parse 'link' entry '%s' fail"),String_cString(arguments));
                 }
 
                 // free resources
@@ -4011,7 +4011,7 @@ NULL, // masterSocketHandle
                 }
                 else
                 {
-                  printWarning("parse 'hardlink' entry '%s' fail",String_cString(arguments));
+                  printWarning(_("parse 'hardlink' entry '%s' fail"),String_cString(arguments));
                 }
 
                 // free resources
@@ -4092,7 +4092,7 @@ NULL, // masterSocketHandle
                 }
                 else
                 {
-                  printWarning("parse 'special' entry '%s' fail",String_cString(arguments));
+                  printWarning(_("parse 'special' entry '%s' fail"),String_cString(arguments));
                 }
 
                 // free resources
@@ -4110,7 +4110,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               }
               else
               {
-                printWarning("unknown entry '%s' fail",String_cString(line));
+                printWarning(_("unknown entry '%s' fail"),String_cString(line));
               }
             }
           }
@@ -4143,7 +4143,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     case STORAGE_TYPE_DEVICE:
 //TODO: remove
 #if 0
-      printError("list archives on device is still not supported!");
+      printError(_("list archives on device is still not supported!"));
 #endif
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
@@ -4538,7 +4538,7 @@ Errors Command_list(StringList              *storageNameList,
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
-      printError("invalid storage '%s' (error: %s)!",
+      printError(_("invalid storage '%s' (error: %s)!"),
                  String_cString(storageName),
                  Error_getText(error)
                 );
@@ -4641,7 +4641,7 @@ Errors Command_list(StringList              *storageNameList,
 
     if (error != ERROR_NONE)
     {
-      printError("cannot read storage '%s' (error: %s)!",
+      printError(_("cannot read storage '%s' (error: %s)!"),
                  String_cString(storageName),
                  Error_getText(error)
                 );
@@ -4650,7 +4650,7 @@ Errors Command_list(StringList              *storageNameList,
   }
   if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
   {
-    printError("no matching storage files found!");
+    printError(_("no matching storage files found!"));
     failError = ERROR_FILE_NOT_FOUND_;
   }
 

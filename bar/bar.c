@@ -155,7 +155,7 @@ LOCAL void openLog(void)
     if (!String_isEmpty(globalOptions.logFileName))
     {
       logFile = fopen(String_cString(globalOptions.logFileName),"a");
-      if (logFile == NULL) printWarning("cannot open log file '%s' (error: %s)!",String_cString(globalOptions.logFileName),strerror(errno));
+      if (logFile == NULL) printWarning(_("cannot open log file '%s' (error: %s)!"),String_cString(globalOptions.logFileName),strerror(errno));
     }
   }
 }
@@ -198,7 +198,7 @@ LOCAL void reopenLog(void)
     {
       fclose(logFile);
       logFile = fopen(String_cString(globalOptions.logFileName),"a");
-      if (logFile == NULL) printWarning("cannot re-open log file '%s' (error: %s)!",String_cString(globalOptions.logFileName),strerror(errno));
+      if (logFile == NULL) printWarning(_("cannot re-open log file '%s' (error: %s)!"),String_cString(globalOptions.logFileName),strerror(errno));
     }
   }
 }
@@ -1734,7 +1734,7 @@ void purgeMounts(bool forceFlag)
           error = Device_umount(globalOptions.unmountCommand,mountedNode->name);
           if (error != ERROR_NONE)
           {
-            printWarning("cannot unmount '%s' (error: %s)",
+            printWarning(_("cannot unmount '%s' (error: %s)"),
                          String_cString(mountedNode->name),
                          Error_getText(error)
                         );
@@ -2374,14 +2374,14 @@ LOCAL bool readFromJob(ConstString fileName)
                           {
                             UNUSED_VARIABLE(userData);
 
-                            printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
+                            printError(_("%s in %s, line %ld"),errorMessage,String_cString(fileName),lineNb);
                             failFlag = TRUE;
                           },NULL),
                           CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
                           {
                             UNUSED_VARIABLE(userData);
 
-                            printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
+                            printWarning(_("%s in %s, line %ld"),warningMessage,String_cString(fileName),lineNb);
                           },NULL),
                           NULL  // variable
                          );
@@ -2946,7 +2946,7 @@ LOCAL Errors runServer(void)
   error = createPIDFile();
   if (error != ERROR_NONE)
   {
-    printError("cannot create PID file",Error_getText(error));
+    printError(_("cannot create PID file"),Error_getText(error));
     closeLog();
     return error;
   }
@@ -2957,7 +2957,7 @@ LOCAL Errors runServer(void)
     error = Job_rereadAll(globalOptions.jobsDirectory);
     if (error != ERROR_NONE)
     {
-      printError("cannot read jobs from '%s' (error: %s)",
+      printError(_("cannot read jobs from '%s' (error: %s)"),
                  String_cString(globalOptions.jobsDirectory),
                  Error_getText(error)
                 );
@@ -2977,7 +2977,7 @@ LOCAL Errors runServer(void)
   error = Continuous_init(globalOptions.continuousDatabaseFileName);
   if (error != ERROR_NONE)
   {
-    printWarning("continuous support is not available (reason: %s)",Error_getText(error));
+    printWarning(_("continuous support is not available (reason: %s)"),Error_getText(error));
   }
   Job_updateAllNotifies();
 
@@ -3672,7 +3672,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     error = Database_parseSpecifier(&databaseSpecifier,String_cString(globalOptions.indexDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
     if (error != ERROR_NONE)
     {
-      printError("no valid database URI '%s'",String_cString(globalOptions.indexDatabaseURI));
+      printError(_("no valid database URI '%s'"),String_cString(globalOptions.indexDatabaseURI));
       AutoFree_cleanup(&autoFreeList);
       return ERROR_DATABASE;
     }
@@ -3682,7 +3682,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     error = Index_init(&databaseSpecifier,CALLBACK_(NULL,NULL));
     if (error != ERROR_NONE)
     {
-      printError("cannot init index database '%s' (error: %s)!",
+      printError(_("cannot init index database '%s' (error: %s)!"),
                  String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
@@ -3695,7 +3695,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     error = Continuous_init(globalOptions.continuousDatabaseFileName);
     if (error != ERROR_NONE)
     {
-      printWarning("continuous support is not available (reason: %s)",Error_getText(error));
+      printWarning(_("continuous support is not available (reason: %s)"),Error_getText(error));
     }
     AUTOFREE_ADD(&autoFreeList,globalOptions.continuousDatabaseFileName,{ Continuous_done(); });
     Job_updateAllNotifies();
@@ -3704,7 +3704,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     error = Index_open(&indexHandle,NULL,INDEX_TIMEOUT);
     if (error != ERROR_NONE)
     {
-      printError("cannot open index database '%s' (error: %s)!",
+      printError(_("cannot open index database '%s' (error: %s)!"),
                  String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
@@ -3736,7 +3736,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
         error = File_openCString(&fileHandle,argv[i],FILE_OPEN_READ);
         if (error != ERROR_NONE)
         {
-          printError("cannot open file '%s' (error: %s)!",
+          printError(_("cannot open file '%s' (error: %s)!"),
                      argv[i],
                      Error_getText(error)
                     );
@@ -3771,7 +3771,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
         }
         if (error != ERROR_NONE)
         {
-          printError("cannot list chunks of file '%s' (error: %s)!",
+          printError(_("cannot list chunks of file '%s' (error: %s)!"),
                      argv[i],
                      Error_getText(error)
                     );
@@ -3816,7 +3816,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexRemoveStorage);
       if (error != ERROR_NONE)
       {
-        printError("cannot parse storage name '%s' (error: %s)!",
+        printError(_("cannot parse storage name '%s' (error: %s)!"),
                    globalOptions.debug.indexRemoveStorage,
                    Error_getText(error)
                   );
@@ -3844,7 +3844,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                                  )
          )
       {
-        printError("cannot find storage '%S'!",
+        printError(_("cannot find storage '%S'!"),
                    globalOptions.debug.indexRemoveStorage
                   );
         AutoFree_cleanup(&autoFreeList);
@@ -3858,7 +3858,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                                 );
       if (error != ERROR_NONE)
       {
-        printError("cannot delete storage '%S' (error: %s)!",
+        printError(_("cannot delete storage '%S' (error: %s)!"),
                    globalOptions.debug.indexRemoveStorage,
                    Error_getText(error)
                   );
@@ -3882,7 +3882,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexAddStorage);
       if (error != ERROR_NONE)
       {
-        printError("cannot parse storage name '%s' (error: %s)!",
+        printError(_("cannot parse storage name '%s' (error: %s)!"),
                    globalOptions.debug.indexAddStorage,
                    Error_getText(error)
                   );
@@ -3906,7 +3906,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                           );
       if (error != ERROR_NONE)
       {
-        printError("cannot initialize storage '%s' (error: %s)!",
+        printError(_("cannot initialize storage '%s' (error: %s)!"),
                    globalOptions.debug.indexAddStorage,
                    Error_getText(error)
                   );
@@ -3943,7 +3943,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                                   );
         if (error != ERROR_NONE)
         {
-          printError("cannot delete storage '%s' (error: %s)!",
+          printError(_("cannot delete storage '%s' (error: %s)!"),
                      String_cString(globalOptions.debug.indexAddStorage),
                      Error_getText(error)
                     );
@@ -3994,7 +3994,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                                  );
           if (error != ERROR_NONE)
           {
-            printError("cannot create new entity for storage '%s' (error: %s)!",
+            printError(_("cannot create new entity for storage '%s' (error: %s)!"),
                        String_cString(globalOptions.debug.indexAddStorage),
                        Error_getText(error)
                       );
@@ -4004,7 +4004,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
         }
         else if (error != ERROR_NONE)
         {
-          printError("cannot create new entity for storage '%s' (error: %s)!",
+          printError(_("cannot create new entity for storage '%s' (error: %s)!"),
                      String_cString(globalOptions.debug.indexAddStorage),
                      Error_getText(error)
                     );
@@ -4028,7 +4028,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                               );
       if (error != ERROR_NONE)
       {
-        printError("cannot create new storage for '%s' (error: %s)!",
+        printError(_("cannot create new storage for '%s' (error: %s)!"),
                    String_cString(globalOptions.debug.indexAddStorage),
                    Error_getText(error)
                   );
@@ -4092,7 +4092,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       }
       if (error != ERROR_NONE)
       {
-        printError("cannot set state of storage '%s' (error: %s)!",
+        printError(_("cannot set state of storage '%s' (error: %s)!"),
                    String_cString(globalOptions.debug.indexAddStorage),
                    Error_getText(error)
                   );
@@ -4122,7 +4122,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexRefreshStorage);
       if (error != ERROR_NONE)
       {
-        printError("cannot parse storage name '%s' (error: %s)!",
+        printError(_("cannot parse storage name '%s' (error: %s)!"),
                    globalOptions.debug.indexRefreshStorage,
                    Error_getText(error)
                   );
@@ -4150,7 +4150,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                                   )
          )
       {
-        printError("cannot find storage '%S'!",
+        printError(_("cannot find storage '%S'!"),
                    globalOptions.debug.indexRefreshStorage
                   );
         AutoFree_cleanup(&autoFreeList);
@@ -4173,7 +4173,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                           );
       if (error != ERROR_NONE)
       {
-        printError("cannot initialize storage '%S' (error: %s)!",
+        printError(_("cannot initialize storage '%S' (error: %s)!"),
                    globalOptions.debug.indexRefreshStorage,
                    Error_getText(error)
                   );
@@ -4238,7 +4238,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       }
       if (error != ERROR_NONE)
       {
-        printError("cannot refresh storage '%S' (error: %s)!",
+        printError(_("cannot refresh storage '%S' (error: %s)!"),
                    globalOptions.debug.indexRefreshStorage,
                    Error_getText(error)
                   );
@@ -4458,7 +4458,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
   {
     char buffer[320];
-    printWarning("non default restore permissions '%s' set!",File_permissionToString(buffer,sizeof(buffer),globalOptions.permissions,TRUE));
+    printWarning(_("non default restore permissions '%s' set!"),File_permissionToString(buffer,sizeof(buffer),globalOptions.permissions,TRUE));
   }
 
   // save configuration

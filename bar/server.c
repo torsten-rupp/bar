@@ -2028,7 +2028,7 @@ LOCAL void schedulerThreadCode(void)
     Errors error = Continuous_open(&continuousDatabaseHandle);
     if (error != ERROR_NONE)
     {
-      printError("cannot initialize continuous database (error: %s)!",
+      printError(_("cannot initialize continuous database (error: %s)!"),
                  Error_getText(error)
                 );
       return;
@@ -12453,7 +12453,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       error = Job_write(jobNode);
       if (error != ERROR_NONE)
       {
-        printWarning("cannot create job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
+        printWarning(_("cannot create job '%s' (error: %s)"),String_cString(jobNode->fileName),Error_getText(error));
       }
 
       // add new job to list
@@ -12588,7 +12588,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     error = Job_write(newJobNode);
     if (error != ERROR_NONE)
     {
-      printWarning("cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
+      printWarning(_("cannot update job '%s' (error: %s)"),String_cString(jobNode->fileName),Error_getText(error));
     }
 
     // write initial schedule info
@@ -23807,7 +23807,7 @@ Errors Server_socket(void)
                                 );
       if (error != ERROR_NONE)
       {
-        printError("cannot create directory '%s' (error: %s)",
+        printError(_("cannot create directory '%s' (error: %s)"),
                    String_cString(globalOptions.jobsDirectory),
                    Error_getText(error)
                   );
@@ -23817,7 +23817,7 @@ Errors Server_socket(void)
     }
     if (!File_isDirectory(globalOptions.jobsDirectory))
     {
-      printError("'%s' is not a directory!",String_cString(globalOptions.jobsDirectory));
+      printError(_("'%s' is not a directory!"),String_cString(globalOptions.jobsDirectory));
       AutoFree_cleanup(&autoFreeList);
       return ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(globalOptions.jobsDirectory));
     }
@@ -23832,7 +23832,7 @@ Errors Server_socket(void)
     error = Database_parseSpecifier(&databaseSpecifier,String_cString(globalOptions.indexDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
     if (error != ERROR_NONE)
     {
-      printError("no valid database URI '%s'",globalOptions.indexDatabaseURI);
+      printError(_("no valid database URI '%s'"),globalOptions.indexDatabaseURI);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -23841,7 +23841,7 @@ Errors Server_socket(void)
     error = Index_init(&databaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
-      printError("cannot init index database '%s' (error: %s)!",
+      printError(_("cannot init index database '%s' (error: %s)!"),
                  String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
@@ -23862,7 +23862,7 @@ Errors Server_socket(void)
     error = Index_open(&indexHandle,NULL,INDEX_TIMEOUT);
     if (error != ERROR_NONE)
     {
-      printError("cannot open index database (error: %s)!",
+      printError(_("cannot open index database (error: %s)!"),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
@@ -23894,7 +23894,7 @@ Errors Server_socket(void)
     }
     else
     {
-      printError("cannot initialize server at port %u (error: %s)!",
+      printError(_("cannot initialize server at port %u (error: %s)!"),
                  globalOptions.serverPort,
                  Error_getText(error)
                 );
@@ -23927,7 +23927,7 @@ Errors Server_socket(void)
         }
         else
         {
-          printError("cannot initialize TLS/SSL server at port %u (error: %s)!",
+          printError(_("cannot initialize TLS/SSL server at port %u (error: %s)!"),
                      globalOptions.serverTLSPort,
                      Error_getText(error)
                     );
@@ -23935,31 +23935,31 @@ Errors Server_socket(void)
           return error;
         }
       #else /* not HAVE_GNU_TLS */
-        printWarning("TLS/SSL is not supported!");
+        printWarning(_("TLS/SSL is not supported!"));
       #endif /* HAVE_GNU_TLS */
     }
     else
     {
-      if (!Configuration_isCertificateAvailable(&globalOptions.serverCert)) printWarning("no certificate data (bar-server-cert.pem file) - TLS server not started");
-      if (!Configuration_isKeyAvailable(&globalOptions.serverKey)) printWarning("no key data (bar-server-key.pem file) - TLS server not started");
+      if (!Configuration_isCertificateAvailable(&globalOptions.serverCert)) printWarning(_("no certificate data (bar-server-cert.pem file) - TLS server not started"));
+      if (!Configuration_isKeyAvailable(&globalOptions.serverKey)) printWarning(_("no key data (bar-server-key.pem file) - TLS server not started"));
     }
   }
   if (!serverFlag && !serverTLSFlag)
   {
     if ((globalOptions.serverPort == 0) && (globalOptions.serverTLSPort == 0))
     {
-      printError("cannot start any server (error: no port numbers specified)!");
+      printError(_("cannot start any server (error: no port numbers specified)!"));
     }
     else
     {
-      printError("cannot start any server!");
+      printError(_("cannot start any server!"));
     }
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_ARGUMENT;
   }
   if (!Configuration_isHashAvailable(&globalOptions.serverPasswordHash))
   {
-    printWarning("no server password set!");
+    printWarning(_("no server password set!"));
   }
 
   // initial update statics data
@@ -24057,7 +24057,7 @@ Errors Server_socket(void)
   #ifndef NDEBUG
     if (globalOptions.debug.serverLevel >= 1)
     {
-      printWarning("server is running in debug mode. No authorization is done, auto-pairing and additional debug commands are enabled!");
+      printWarning(_("server is running in debug mode. No authorization is done, auto-pairing and additional debug commands are enabled!"));
     }
   #endif
 
@@ -24211,14 +24211,14 @@ Errors Server_socket(void)
             }
             else
             {
-              printError("cannot establish client connection (error: %s)!",
+              printError(_("cannot establish client connection (error: %s)!"),
                          Error_getText(error)
                         );
             }
           }
           else
           {
-            printError("establish client connection rejected (error: too many clients)!");
+            printError(_("establish client connection rejected (error: too many clients)!"));
             rejectNetworkClient(&serverSocketHandle);
           }
         }
@@ -24272,14 +24272,14 @@ Errors Server_socket(void)
             }
             else
             {
-              printError("cannot establish client TLS connection (error: %s)!",
+              printError(_("cannot establish client TLS connection (error: %s)!"),
                          Error_getText(error)
                         );
             }
           }
           else
           {
-            printError("establish client connection rejected (error: too many clients)!");
+            printError(_("establish client connection rejected (error: too many clients)!"));
             rejectNetworkClient(&serverSocketHandle);
           }
         }
@@ -24666,7 +24666,7 @@ Errors Server_batch(int inputDescriptor,
     error = Database_parseSpecifier(&databaseSpecifier,String_cString(globalOptions.indexDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
     if (error != ERROR_NONE)
     {
-      printError("no valid database URI '%s'",String_cString(globalOptions.indexDatabaseURI));
+      printError(_("no valid database URI '%s'"),String_cString(globalOptions.indexDatabaseURI));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -24675,7 +24675,7 @@ Errors Server_batch(int inputDescriptor,
     error = Index_init(&databaseSpecifier,CALLBACK_(isMaintenanceTime,NULL));
     if (error != ERROR_NONE)
     {
-      printError("cannot init index database '%s' (error: %s)!",
+      printError(_("cannot init index database '%s' (error: %s)!"),
                  String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
@@ -24695,7 +24695,7 @@ Errors Server_batch(int inputDescriptor,
     error = Index_open(&indexHandle,NULL,INDEX_TIMEOUT);
     if (error != ERROR_NONE)
     {
-      printError("cannot open index database (error: %s)!",
+      printError(_("cannot open index database (error: %s)!"),
                  Error_getText(error)
                 );
       AutoFree_cleanup(&autoFreeList);
@@ -24749,7 +24749,7 @@ Errors Server_batch(int inputDescriptor,
   #ifndef NDEBUG
     if (globalOptions.debug.serverLevel >= 1)
     {
-      printWarning("server is running in debug mode. No authorization is done and additional debug commands are enabled!");
+      printWarning(_("server is running in debug mode. No authorization is done and additional debug commands are enabled!"));
     }
   #endif
 

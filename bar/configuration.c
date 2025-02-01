@@ -7346,7 +7346,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
                                 UNUSED_VARIABLE(userData);
 
                                 if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                printError("%s in section '%s' in %s, line %ld",errorMessage,sectionName,String_cString(fileName),*lineNb);
+                                printError(_("%s in section '%s' in %s, line %ld"),errorMessage,sectionName,String_cString(fileName),*lineNb);
                                 error = ERROR_CONFIG;
                               },NULL),
                               CALLBACK_INLINE(void,(const char *warningMessage, void *userData),
@@ -7354,7 +7354,7 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
                                 UNUSED_VARIABLE(userData);
 
                                 if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,sectionName,String_cString(fileName),*lineNb);
+                                printWarning(_("%s in section '%s' in %s, line %ld"),warningMessage,sectionName,String_cString(fileName),*lineNb);
                               },NULL),
                               variable,
                               &commentList
@@ -8057,7 +8057,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
                                 UNUSED_VARIABLE(userData);
 
                                 if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
-                                printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
+                                printError(_("%s in %s, line %ld"),errorMessage,String_cString(fileName),lineNb);
                                 error = ERROR_CONFIG;
                               },NULL),
                               CALLBACK_INLINE(void,(const char *warningMessage, void *userData),

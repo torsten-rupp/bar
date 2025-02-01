@@ -316,7 +316,7 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
                                );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'file' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'file' entry from storage '%s' (error: %s)!"),
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -353,7 +353,7 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("cannot read content of archive '%s' (error: %s)!",
+        printError(_("cannot read content of archive '%s' (error: %s)!"),
                    String_cString(archiveHandle->printableStorageName),
                    Error_getText(error)
                   );
@@ -436,7 +436,7 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
     {
       error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of file entry '%s'!",String_cString(fileName));
+      printError(_("unexpected data at end of file entry '%s'!"),String_cString(fileName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       return error;
@@ -474,7 +474,7 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printError("closing 'file' entry fail (error: %s)!",
+    printError(_("closing 'file' entry fail (error: %s)!"),
                Error_getText(error)
               );
     String_delete(fileName);
@@ -551,7 +551,7 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
                                 );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'image' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'image' entry from storage '%s' (error: %s)!"),
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -560,7 +560,7 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
   }
   if (deviceInfo.blockSize > bufferSize)
   {
-    printError("device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")",
+    printError(_("device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")"),
                deviceInfo.blockSize,
                String_cString(deviceName),
                BUFFER_SIZE
@@ -600,7 +600,7 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("cannot read content of archive '%s' (error: %s)!",
+        printError(_("cannot read content of archive '%s' (error: %s)!"),
                    String_cString(archiveHandle->printableStorageName),
                    Error_getText(error)
                   );
@@ -683,7 +683,7 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
     {
       error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(deviceName));
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of image entry '%s'!",String_cString(deviceName));
+      printError(_("unexpected data at end of image entry '%s'!"),String_cString(deviceName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(deviceName);
       return error;
@@ -721,7 +721,7 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printError("closing 'image' entry fail (error: %s)!",
+    printError(_("closing 'image' entry fail (error: %s)!"),
                Error_getText(error)
               );
     String_delete(deviceName);
@@ -775,7 +775,7 @@ LOCAL Errors testDirectoryEntry(TestInfo          *testInfo,
                                     );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'directory' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'directory' entry from storage '%s' (error: %s)!"),
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -793,7 +793,7 @@ LOCAL Errors testDirectoryEntry(TestInfo          *testInfo,
     if (!Archive_eofData(&archiveEntryInfo))
     {
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of directory entry '%s'!",String_cString(directoryName));
+      printError(_("unexpected data at end of directory entry '%s'!"),String_cString(directoryName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(directoryName);
       return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(directoryName));
@@ -832,7 +832,7 @@ LOCAL Errors testDirectoryEntry(TestInfo          *testInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printError("closing 'directory' entry fail (error: %s)!",
+    printError(_("closing 'directory' entry fail (error: %s)!"),
                Error_getText(error)
               );
     String_delete(directoryName);
@@ -889,7 +889,7 @@ LOCAL Errors testLinkEntry(TestInfo          *testInfo,
                                );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'link' content of archive '%s' (error: %s)!",
+    printError(_("cannot read 'link' content of archive '%s' (error: %s)!"),
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -909,7 +909,7 @@ LOCAL Errors testLinkEntry(TestInfo          *testInfo,
     if (!Archive_eofData(&archiveEntryInfo))
     {
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of link entry '%s'!",String_cString(linkName));
+      printError(_("unexpected data at end of link entry '%s'!"),String_cString(linkName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       String_delete(linkName);
@@ -949,7 +949,7 @@ LOCAL Errors testLinkEntry(TestInfo          *testInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printError("closing 'link' entry fail (error: %s)!",
+    printError(_("closing 'link' entry fail (error: %s)!"),
                Error_getText(error)
               );
     String_delete(fileName);
@@ -1031,7 +1031,7 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
                                    );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'hard link' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'hard link' entry from storage '%s' (error: %s)!"),
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1092,7 +1092,7 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("cannot read content of archive '%s' (error: %s)!",
+            printError(_("cannot read content of archive '%s' (error: %s)!"),
                        String_cString(archiveHandle->printableStorageName),
                        Error_getText(error)
                       );
@@ -1151,7 +1151,7 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
             && !Compress_isCompressed(archiveEntryInfo.hardLink.byteCompressAlgorithm)
             && !Archive_eofData(&archiveEntryInfo))
         {
-          printError("unexpected data at end of hard link entry '%s'!",String_cString(fileName));
+          printError(_("unexpected data at end of hard link entry '%s'!"),String_cString(fileName));
           error = ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
           break;
         }
@@ -1203,7 +1203,7 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printError("closing 'hard link' entry fail (error: %s)!",
+    printError(_("closing 'hard link' entry fail (error: %s)!"),
                Error_getText(error)
               );
     StringList_done(&fileNameList);
@@ -1257,7 +1257,7 @@ LOCAL Errors testSpecialEntry(TestInfo          *testInfo,
                                   );
   if (error != ERROR_NONE)
   {
-    printError("cannot read 'special' entry from storage '%s' (error: %s)!",
+    printError(_("cannot read 'special' entry from storage '%s' (error: %s)!"),
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -1276,7 +1276,7 @@ LOCAL Errors testSpecialEntry(TestInfo          *testInfo,
     if (!Archive_eofData(&archiveEntryInfo))
     {
       printInfo(1,"FAIL!\n");
-      printError("unexpected data at end of special entry '%s'!",String_cString(fileName));
+      printError(_("unexpected data at end of special entry '%s'!"),String_cString(fileName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(fileName));
@@ -1315,7 +1315,7 @@ LOCAL Errors testSpecialEntry(TestInfo          *testInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printError("closing 'special' entry fail (error: %s)!",
+    printError(_("closing 'special' entry fail (error: %s)!"),
                Error_getText(error)
               );
     String_delete(fileName);
@@ -1493,7 +1493,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
                                   );
         if (error != ERROR_NONE)
         {
-          printError("cannot open archive '%s' (error: %s)!",
+          printError(_("cannot open archive '%s' (error: %s)!"),
                      String_cString(entryMsg.archiveHandle->printableStorageName),
                      Error_getText(error)
                     );
@@ -1513,7 +1513,7 @@ LOCAL void testThreadCode(TestInfo *testInfo)
       error = Archive_seek(&archiveHandle,entryMsg.offset);
       if (error != ERROR_NONE)
       {
-        printError("cannot read storage '%s' (error: %s)!",
+        printError(_("cannot read storage '%s' (error: %s)!"),
                    String_cString(entryMsg.archiveHandle->printableStorageName),
                    Error_getText(error)
                   );
@@ -1627,7 +1627,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
                       );
   if (error != ERROR_NONE)
   {
-    printError("cannot initialize storage '%s' (error: %s)!",
+    printError(_("cannot initialize storage '%s' (error: %s)!"),
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -1640,7 +1640,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
   // check if storage exists
   if (!Storage_exists(&storageInfo,archiveName))
   {
-    printError("storage not found '%s'!",
+    printError(_("storage not found '%s'!"),
                String_cString(printableStorageName)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -1658,7 +1658,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
                       );
   if (error != ERROR_NONE)
   {
-    printError("cannot open storage '%s' (error: %s)!",
+    printError(_("cannot open storage '%s' (error: %s)!"),
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -1683,7 +1683,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
       else
       {
         // signature error
-        printError("cannot verify signatures '%s' (error: %s)!",
+        printError(_("cannot verify signatures '%s' (error: %s)!"),
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -1696,7 +1696,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
       if (testInfo->jobOptions->forceVerifySignaturesFlag)
       {
         // signature error
-        printError("invalid signature in '%s'!",
+        printError(_("invalid signature in '%s'!"),
                    String_cString(printableStorageName)
                   );
         AutoFree_cleanup(&autoFreeList);
@@ -1705,7 +1705,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
       else
       {
         // print signature warning
-        printWarning("invalid signature in '%s'",
+        printWarning(_("invalid signature in '%s'"),
                      String_cString(printableStorageName)
                     );
       }
@@ -1768,7 +1768,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
                                        );
     if (error != ERROR_NONE)
     {
-      printError("cannot read next entry from storage '%s' (error: %s)!",
+      printError(_("cannot read next entry from storage '%s' (error: %s)!"),
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
@@ -1878,14 +1878,14 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
   {
     if (testInfo->jobOptions->forceVerifySignaturesFlag)
     {
-      printError("invalid signature in '%s'!",
+      printError(_("invalid signature in '%s'!"),
                  String_cString(printableStorageName)
                 );
       if (testInfo->failError == ERROR_NONE) testInfo->failError = ERROR_INVALID_SIGNATURE;
     }
     else
     {
-      printWarning("invalid signature in '%s'!",
+      printWarning(_("invalid signature in '%s'!"),
                    String_cString(printableStorageName)
                   );
     }
@@ -1959,7 +1959,7 @@ NULL,  //               requestedAbortFlag,
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
-      printError("invalid storage '%s' (error: %s)!",
+      printError(_("invalid storage '%s' (error: %s)!"),
                  String_cString(storageName),
                  Error_getText(error)
                 );
@@ -2061,7 +2061,7 @@ NULL,  //               requestedAbortFlag,
   }
   if ((testInfo.failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
   {
-    printError("no matching storage files found!");
+    printError(_("no matching storage files found!"));
     testInfo.failError = ERROR_FILE_NOT_FOUND_;
   }
 
