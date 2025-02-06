@@ -1,7 +1,8 @@
-2025-01-31 25b
+2025-02-06 25b
   * fixed write config values permission, owner
   * log next schedule
   * use ISO date/time as default format
+  * fixed final restore state (bug #24)
   * fixed parse+format file permission string (bug #25)
   * fixed abort job with destination CD/DVD/BD with internal
     toolchain
