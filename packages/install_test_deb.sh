@@ -61,6 +61,7 @@ echo -n "Update packages..."
 DEBIAN_FRONTEND=noninteractive apt-get -yq update 1>/dev/null 2>/dev/null
 DEBIAN_FRONTEND=noninteractive apt-get -yq install \
   default-jre-headless \
+  procps \
   systemd \
   1>/dev/null 2>$tmpFile
 if test $? -eq 0; then

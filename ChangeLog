@@ -9,6 +9,7 @@
   * BARControl: fixed abort restore: close dialog
   * BARControl: fixed restore dialog values
   * BARCOntrol: fixed total progress count/size
+  * discontinue support for CentOS, changed to AlmaLinux
 
 2024-11-10 25a
   * fixed key constrain failed on database import (bug #16)

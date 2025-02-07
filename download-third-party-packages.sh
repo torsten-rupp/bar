@@ -1642,7 +1642,7 @@ if test $cleanFlag -eq 0; then
          fatalError "symbolic link"
        fi
 
-       # patch to fix defintions for MinGW:
+       # patch to fix definitions for MinGW:
        #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
        # Note: ignore exit code 1: patch may already be applied
        (cd $workingDirectory/libsmb2; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
@@ -2039,7 +2039,7 @@ if test $cleanFlag -eq 0; then
          fatalError "symbolic link"
        fi
 
-       # patch to fix defintions for MinGW:
+       # patch to fix definitions for MinGW:
        #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
        # Note: ignore exit code 1: patch may already be applied
 #       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
@@ -2097,7 +2097,7 @@ if test $cleanFlag -eq 0; then
          fatalError "symbolic link"
        fi
 
-       # patch to fix defintions for MinGW:
+       # patch to fix definitions for MinGW:
        #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
        # Note: ignore exit code 1: patch may already be applied
 #       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
@@ -2125,23 +2125,16 @@ if test $cleanFlag -eq 0; then
      $ECHO_NO_NEW_LINE "Get util-linux ($UTIL_LINUX_VERSION)..."
      directoryName="util-linux-$UTIL_LINUX_VERSION"
 
-     if test ! -d $directoryName; then
-       if test -n "$localDirectory" -a -d $localDirectory/util-linux-$UTIL_LINUX_VERSION; then
-         # Note: make a copy to get usable file permissions (source may be owned by root)
-         $CP -r $localDirectory/util-linux-$UTIL_LINUX_VERSION $directoryName
+     fileName="util-linux-$UTIL_LINUX_VERSION.tar.gz"
+     if test ! -f $fileName; then
+       if test -n "$localDirectory" -a -f $localDirectory/util-linux-$UTIL_LINUX_VERSION.tar.gz; then
+         $LN -s $localDirectory/util-linux-$UTIL_LINUX_VERSION.tar.gz $fileName
          result=1
        else
-         url="https://github.com/util-linux/util-linux.git"
-         $GIT clone $url $directoryName 1>/dev/null 2>/dev/null
+         url="https://github.com/util-linux/util-linux/archive/refs/tags/$UTIL_LINUX_VERSION.tar.gz"
+         $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
-           fatalError "checkout $url -> $directoryName"
-         fi
-         (cd $directoryName; \
-          $GIT checkout $UTIL_LINUX_VERSION 1>/dev/null 2>/dev/null; \
-          install -d m4;
-         )
-         if test $? -ne 0; then
-           fatalError "checkout tag v$UTIL_LINUX_VERSION"
+           fatalError "download $url -> $fileName"
          fi
          result=2
        fi
@@ -2150,12 +2143,17 @@ if test $cleanFlag -eq 0; then
      fi
 
      if test $noDecompressFlag -eq 0; then
+       $TAR xzf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+
        (cd "$workingDirectory"; $LN -sfT $destinationDirectory/util-linux-$UTIL_LINUX_VERSION util-linux)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
 
-       # patch to fix defintions for MinGW:
+       # patch to fix definitions for MinGW:
        #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
        # Note: ignore exit code 1: patch may already be applied
 #       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null

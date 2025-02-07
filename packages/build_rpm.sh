@@ -156,7 +156,7 @@ sed '/^%changelog/q1' < $sourcePath/packages/backup-archiver.spec > $tmpDir/back
 LANG=en_US.utf8 $sourcePath/packages/changelog.pl --type rpm < $sourcePath/ChangeLog >> $tmpDir/backup-archiver.spec
 
 # build rpm package (Note: rpmbuild require access)
-sudo chown $userGroup $distributionFileName
+#sudo /usr/bin/chown $userGroup $distributionFileName
 chmod a+r $distributionFileName
 (
   set -e
@@ -178,7 +178,7 @@ chmod a+r $distributionFileName
 
   # get result
   cp -f $tmpDir/RPMS/*/backup-archiver-[0-9]*.rpm $sourcePath/$rpmFileName
-  chown $userGroup $sourcePath/$rpmFileName
+  /usr/bin/chown $userGroup $sourcePath/$rpmFileName
 
   # get SHA256 hash
   sha256sum $sourcePath/$rpmFileName

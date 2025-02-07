@@ -117,11 +117,11 @@ DISTRIBUTION_NAME           = $(PACKAGE_NAME)-$(VERSION)
 DISTRIBUTION_NAME_ORIG      = $(PACKAGE_NAME)_$(VERSION).orig
 DISTRIBUTION_NAME_GUI       = $(PACKAGE_NAME_GUI)-$(VERSION)
 
-TEST_PACKAGES_CENTOS        := 8
+TEST_PACKAGES_ALMALINUX     := 8
 TEST_PACKAGES_FEDORA        := 37 38 39 40
 TEST_PACKAGES_OPENSUSE_LEAP := 15.1 15.2 15.3 15.4 15.5
 TEST_PACKAGES_DEBIAN        := 10 11 12
-TEST_PACKAGES_UBUNTU        := 20.04 22.04 23.04 23.10
+TEST_PACKAGES_UBUNTU        := 20.04 22.04 24.04
 
 #-------------------------------- functions ----------------------------------
 
@@ -175,7 +175,7 @@ SCRIPTS              = $(SOURCE_DIR)/scripts/barserver-SuSE \
                        $(SOURCE_DIR)/scripts/barserver-RedHat \
                        $(SOURCE_DIR)/scripts/barserver-Mandrake \
                        $(SOURCE_DIR)/scripts/barserver-debian \
-                       $(SOURCE_DIR)/scripts/barserver-CentOS \
+                       $(SOURCE_DIR)/scripts/barserver-AlmaLinux \
                        $(SOURCE_DIR)/scripts/barserver.service \
                        $(SOURCE_DIR)/scripts/logrotate.conf \
 
@@ -291,7 +291,7 @@ help:
 	@$(ECHO) "  install_test[d]"
 	@$(ECHO) ""
 	@$(ECHO) "  install_test_rpm[d]"
-	@$(ECHO) "  install_test_rpm_centos8-x86_64[d]"
+	@$(ECHO) "  install_test_rpm_almalinux8-x86_64[d]"
 	@$(ECHO) "  install_test_rpm_fedora[$(subst $(SPACE),\|,$(TEST_PACKAGES_FEDORA))]-x86_64[d]"
 	@$(ECHO) "  install_test_rpm_opensuse-tumbleweed-x86_64[d]"
 	@$(ECHO) "  install_test_rpm_opensuse-leap[$(subst $(SPACE),\|,$(TEST_PACKAGES_OPENSUSE_LEAP))]-x86_64[d]"
@@ -455,7 +455,7 @@ install_scripts: \
           scripts/barserver-SuSE \
           scripts/barserver-Fedora \
           scripts/barserver-RedHat \
-          scripts/barserver-CentOS \
+          scripts/barserver-AlmaLinux \
           scripts/barserver-Mandrake \
           scripts/barserver-debian \
           scripts/barserver.service
@@ -727,15 +727,15 @@ packages: \
 .PHONY: docker_update update_docker
 docker_update update_docker:
 	# base images
-	$(DOCKER) pull centos:7
+	$(DOCKER) pull almalinux:8
 	$(DOCKER) pull debian:10
 	$(DOCKER) pull ubuntu:22.04
 	#
 	$(INSTALL) download-third-party-packages.sh packages
 	#
-	(cd packages; $(DOCKER) build -f bar-centos7-x86_64.dockerfile -t bar-centos-x86_64:7   --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
-	(cd packages; $(DOCKER) build -f bar-debian10-x86_64.dockerfile -t bar-debian-x86_64:10 --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
-	(cd packages; $(DOCKER) build -f bar-ubuntu-mingw32.dockerfile -t bar-mingw32           --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	(cd packages; $(DOCKER) build -f bar-almalinux8-x86_64.dockerfile -t bar-almalinux-x86_64:8 --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	(cd packages; $(DOCKER) build -f bar-debian10-x86_64.dockerfile -t bar-debian-x86_64:10     --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
+	(cd packages; $(DOCKER) build -f bar-ubuntu-mingw32.dockerfile -t bar-mingw32               --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
 	#
 	$(RMF) packages/download-third-party-packages.sh
 	#
@@ -746,7 +746,7 @@ docker_update update_docker:
 	(cd ci; $(DOCKER) build -f build.dockerfile -t bar --build-arg uid=$(shell id -u jenkins) --build-arg gid=$(shell id -g jenkins) .)
 	#
 	# test packages images
-	$(foreach i,$(TEST_PACKAGES_CENTOS),$(DOCKER) pull centos:$i;)
+	$(foreach i,$(TEST_PACKAGES_ALMALINUX),$(DOCKER) pull almalinux:$i;)
 	#
 	$(foreach i,$(TEST_PACKAGES_FEDORA),$(DOCKER) pull fedora:$i;)
 	#
@@ -845,7 +845,7 @@ clean_rpm:
 
 $(DISTRIBUTION_NAME)-x86_64.rpm: \
   $(DISTRIBUTION_NAME).tar.bz2
-	@$(call functionPrintInfo,Build RPM on CentOS 6 64bit)
+	@$(call functionPrintInfo,Build RPM on AlmaLinux 6 64bit)
 	@( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
@@ -854,7 +854,7 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
-            bar-centos-x86_64:7 setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
+            bar-almalinux-x86_64:8 setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -862,18 +862,22 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
 build_rpm:
 	install -d build/rpm
 	# Note: scl_source to enable gcc 7
-	(cd build/rpm; \
-	 source scl_source enable devtoolset-7; \
-         ../../packages/build_rpm.sh \
-           ../.. \
-           $(PACKAGE_NAME) \
-           ../../$(DISTRIBUTION_NAME).tar.bz2 \
-           $(VERSION) \
-           $(shell id -u):$(shell id -g) \
-           $(DISTRIBUTION_NAME)-x86_64.rpm \
-           $(if $(DEBUG),--debug) \
-           ; \
-        )
+	if test -f /.dockerenv; then \
+    (cd build/rpm; \
+     source scl_source enable devtoolset-7; \
+           ../../packages/build_rpm.sh \
+             ../.. \
+             $(PACKAGE_NAME) \
+             ../../$(DISTRIBUTION_NAME).tar.bz2 \
+             $(VERSION) \
+             $(shell id -u):$(shell id -g) \
+             $(DISTRIBUTION_NAME)-x86_64.rpm \
+             $(if $(DEBUG),--debug) \
+             ; \
+    ); \
+  else \
+    $(ECHO) "ERROR: please run inside a docker container"; \
+  fi
 
 # DEB
 .PHONY: deb debd clean_deb
@@ -929,8 +933,9 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
 .PHONY: build_deb
 build_deb:
 	install -d build/deb
-	(cd build/deb; \
-	 ../../packages/build_deb.sh \
+	if test -f /.dockerenv; then \
+    (cd build/deb; \
+     ../../packages/build_deb.sh \
            ../.. \
            $(PACKAGE_NAME) \
            ../../$(DISTRIBUTION_NAME).tar.bz2 \
@@ -939,7 +944,10 @@ build_deb:
            $(DISTRIBUTION_NAME)-x86_64.deb \
            $(DISTRIBUTION_NAME_GUI)-x86_64.deb \
            $(if $(DEBUG),--debug); \
-        )
+    ); \
+  else \
+    $(ECHO) "ERROR: please run inside a docker container"; \
+  fi
 
 # Windows setup
 .PHONY: win32 win32d clean_win32
@@ -974,16 +982,20 @@ $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@: \
 .PHONY: build_win32
 build_win32:
 	install -d build/win32
-	(cd build/win32; \
-	 ../../packages/build_win32.sh \
-           ../.. \
-           $(PACKAGE_NAME) \
-           ../../$(DISTRIBUTION_NAME).tar.bz2 \
-           $(VERSION) \
-           $(shell id -u):$(shell id -g) \
-           $(PACKAGE_NAME)-setup-$(VERSION) \
-           $(if $(DEBUG),--debug); \
-        )
+	if test -f /.dockerenv; then \
+    (cd build/win32; \
+     ../../packages/build_win32.sh \
+             ../.. \
+             $(PACKAGE_NAME) \
+             ../../$(DISTRIBUTION_NAME).tar.bz2 \
+             $(VERSION) \
+             $(shell id -u):$(shell id -g) \
+             $(PACKAGE_NAME)-setup-$(VERSION) \
+             $(if $(DEBUG),--debug); \
+    ); \
+  else \
+    $(ECHO) "ERROR: please run inside a docker container"; \
+  fi
 
 # install test
 
@@ -1057,19 +1069,19 @@ install_test:
 
 .PHONY: install_test_rpm install_test_rpmd
 install_test_rpm: \
-  install_test_rpm_centos \
+  install_test_rpm_almalinux \
   install_test_rpm_fedora \
   install_test_rpm_opensuse
 install_test_rpmd: \
-  install_test_rpm_centosd \
+  install_test_rpm_almalinuxd \
   install_test_rpm_fedorad \
   install_test_rpm_opensused
 
-.PHONY: install_test_rpm_centos install_test_rpm_centosd
-install_test_rpm_centos: \
-  $(foreach i,$(TEST_PACKAGES_CENTOS),install_test_rpm_centos$i-x86_64)
-install_test_rpm_centosd: \
-  $(foreach i,$(TEST_PACKAGES_CENTOS),install_test_rpm_centos$i-x86_64d)
+.PHONY: install_test_rpm_almalinux install_test_rpm_almalinuxd
+install_test_rpm_almalinux: \
+  $(foreach i,$(TEST_PACKAGES_ALMALINUX),install_test_rpm_almalinux$i-x86_64)
+install_test_rpm_almalinuxd: \
+  $(foreach i,$(TEST_PACKAGES_ALMALINUX),install_test_rpm_almalinux$i-x86_64d)
 
 .PHONY: install_test_rpm_fedora install_test_rpm_fedorad
 install_test_rpm_fedora: \
@@ -1085,14 +1097,14 @@ install_test_rpm_opensused: \
   install_test_rpm_opensuse-tumbleweed-x86_64d \
   $(foreach i,$(TEST_PACKAGES_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64d)
 
-.PHONY: install_test_rpm_centos8-x86_64 install_test_rpm_centos8-x86_64d
-install_test_rpm_centos%-x86_64: $(DISTRIBUTION_NAME)-x86_64.rpm
-	@$(call functionPrintInfo,Test install Centos $* 64bit)
-	$(call functionInstallTestRPM,centos:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
+.PHONY: install_test_rpm_almalinux8-x86_64 install_test_rpm_almalinux8-x86_64d
+install_test_rpm_almalinux%-x86_64: $(DISTRIBUTION_NAME)-x86_64.rpm
+	@$(call functionPrintInfo,Test install AlmaLinux $* 64bit)
+	$(call functionInstallTestRPM,almalinux:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
 	$(call functionPrintResult,OK)
-install_test_rpm_centos%-x86_64d: $(DISTRIBUTION_NAME)-x86_64.rpm
-	@$(call functionPrintInfo,Test install Centos $* 64bit)
-	$(call functionInstallTestRPM,centos:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm,--debug) $(if $(QUIET),1>/dev/null)
+install_test_rpm_almalinux%-x86_64d: $(DISTRIBUTION_NAME)-x86_64.rpm
+	@$(call functionPrintInfo,Test install AlmaLinux $* 64bit)
+	$(call functionInstallTestRPM,almalinux:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm,--debug) $(if $(QUIET),1>/dev/null)
 	$(call functionPrintResult,OK)
 
 .PHONY: install_test_rpm_fedora%-x86_64 install_test_rpm_fedora%-x86_64d
@@ -1198,37 +1210,37 @@ $(DISTRIBUTION_NAME_GUI).zip: \
   barcontrol/barcontrol-macosx_64.jar
 	$(INSTALL) -d tmp/gui/linux
 	$(INSTALL) -t tmp/gui/linux \
-	           -m 775 \
+             -m 775 \
                    barcontrol/barcontrol
 	$(INSTALL) -t tmp/gui/linux \
-	           -m 664 \
+             -m 664 \
                    barcontrol/barcontrol-linux.jar \
                    barcontrol/barcontrol-linux_64.jar
 	#
 	$(INSTALL) -d tmp/gui/windows
 	$(INSTALL) -t tmp/gui/windows \
-	           -m 775 \
+             -m 775 \
                    barcontrol/barcontrol.cmd \
 	                 $(if $(LAUNCH4JC),barcontrol/barcontrol@EXEEXT@)
 	$(INSTALL) -t tmp/gui/windows \
-	           -m 664 \
+             -m 664 \
                    barcontrol/barcontrol-windows.jar \
                    barcontrol/barcontrol-windows_64.jar
 	#
 	$(INSTALL) -d tmp/gui/solaris
 	$(INSTALL) -t tmp/gui/solaris \
-	           -m 775 \
+             -m 775 \
                    barcontrol/barcontrol
 	$(INSTALL) -t tmp/gui/solaris \
-	           -m 664 \
+             -m 664 \
                    barcontrol/barcontrol-solaris.jar
 	#
 	$(INSTALL) -d tmp/gui/macosx
 	$(INSTALL) -t tmp/gui/macosx \
-	           -m 775 \
+             -m 775 \
                    barcontrol/barcontrol
 	$(INSTALL) -t tmp/gui/macosx \
-	           -m 664 \
+             -m 664 \
                    barcontrol/barcontrol-macosx.jar \
                    barcontrol/barcontrol-macosx_64.jar
 

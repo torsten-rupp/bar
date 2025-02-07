@@ -1,14 +1,5 @@
-FROM i386/centos:6
+FROM almalinux:8
 ENV container docker
-
-# fix architecture in repository sources
-RUN sed -i 's/\$basearch/i386/g' /etc/yum.conf
-RUN sed -i 's/\$arch/i686/g' /etc/yum.repos.d/*
-RUN sed -i 's/\$basearch/i386/g' /etc/yum.repos.d/*
-
-# add user for build process
-RUN groupadd -g 1000 build
-RUN useradd -g 1000 -u 1000 build
 
 # update
 RUN yum -y update
@@ -16,48 +7,57 @@ RUN yum -y upgrade
 
 # install packages
 RUN yum -y install \
+  initscripts \
+  openssl \
+  jre \
+  ;
+
+RUN yum -y install \
   bc \
+  less \
+  lua \
+  openssl \
+  psmisc \
+  rsync \
+  socat \
+  ;
+
+RUN yum -y install \
+  autoconf \
+  automake \
+  bison \
   bzip2 \
-  coreutils \
+  cmake \
   curl \
   e2fsprogs \
+  flex \
+  gcc \
+  gcc-c++ \
   gettext \
   git \
-  initscripts \
-  lua \
+  java-1.8.0-openjdk-devel \
+  libtool \
   m4 \
-  mysql-client \
-  openssl \
+  make \
+  mariadb \
   patch \
   pkg-config \
   postgresql \
-  psmisc \
   rpm-build \
-  rsync \
-  socat \
   sqlite \
-  subversion \
   sudo \
   tar \
   tcl \
   unzip \
+  valgrind \
+  valgrind-devel \
   wget \
   xz \
   ;
-# Note: no valgrind available
-RUN yum -y install \
-  gcc \
-  gcc-c++ \
-  java-1.6.0-openjdk-devel \
-  jre \
-  cmake \
-  make \
-  bison \
-  flex \
-  rpm-build \
-  valgrind \
-  devtoolset-7-valgrind-devel \
-  ;
+
+# add user for build process
+RUN groupadd -g 1000 build
+RUN useradd -g 1000 -u 1000 build
 
 # fix systemd
 RUN (cd /lib/systemd/system/sysinit.target.wants/; \
@@ -73,6 +73,9 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; \
     rm -f /lib/systemd/system/anaconda.target.wants/*;
 VOLUME [ "/sys/fs/cgroup" ]
 
+# enable sudo for all
+RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" > /etc/sudoers.d/all
+
 # add external third-party packages
 COPY download-third-party-packages.sh /root
 RUN /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern
@@ -82,5 +85,4 @@ RUN rm -f /root/download-third-party-packages.sh
 RUN install -d /media/home  && chown root /media/home
 VOLUME [ "/media/home" ]
 
-# run
 CMD ["/usr/sbin/init"]
