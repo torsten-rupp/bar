@@ -788,19 +788,23 @@ const char *Crypt_typeToString(CryptTypes cryptType)
 
 void Crypt_randomize(byte *buffer, uint length)
 {
-  #ifdef HAVE_GCRYPT
-  #else /* not HAVE_GCRYPT */
-    uint i;
-  #endif /* HAVE_GCRYPT */
-
   assert(buffer != NULL);
 
   #ifdef HAVE_GCRYPT
     gcry_create_nonce((unsigned char*)buffer,(size_t)length);
   #else /* not HAVE_GCRYPT */
-    for (i = 0; i < length; i++)
+    #if   defined(PLATFORM_LINUX)
+      srandom((unsigned int)time(NULL));
+    #elif defined(PLATFORM_WINDOWS)
+      srand((unsigned int)time(NULL));
+    #endif /* PLATFORM_... */
+    for (uint i = 0; i < length; i++)
     {
-      buffer[i] = (byte)(random()%256);
+      #if   defined(PLATFORM_LINUX)
+        buffer[i] = (byte)(random()%256);
+      #elif defined(PLATFORM_WINDOWS)
+        buffer[i] = (byte)(rand()%256);
+      #endif /* PLATFORM_... */
     }
   #endif /* HAVE_GCRYPT */
 }

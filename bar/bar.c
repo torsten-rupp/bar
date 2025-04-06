@@ -30,6 +30,7 @@
 #if   defined(PLATFORM_LINUX)
 #include <sys/utsname.h>
 #elif defined(PLATFORM_WINDOWS)
+#include <winsock2.h>  // Windows brain dead
 #include <windows.h>
 #endif /* PLATFORM_... */
 
@@ -271,11 +272,12 @@ LOCAL void signalHandler(int signalNumber)
   {
     static char    line[256];
     #if   defined(PLATFORM_LINUX)
-      struct utsname utsname;
     #elif defined(PLATFORM_WINDOWS)
     #endif /* PLATFORM_... */
 
-    stringFormat(line,sizeof(line),"version %s%s\n",
+    UNUSED_RESULT(fprintf(stderr,"FATAL ERROR:\n"));
+
+    stringFormat(line,sizeof(line),"BAR version %s%s\n",
                  VERSION_STRING,
                  #ifndef NDEBUG
                    " debug"
@@ -286,26 +288,51 @@ LOCAL void signalHandler(int signalNumber)
     UNUSED_RESULT(fwrite(line,1,stringLength(line),stderr));
     fatalLogMessage(line,NULL);
 
-    UNUSED_RESULT(fprintf(stderr,"FATAL ERROR:\n"));
+    stringClear(line);
     #if   defined(PLATFORM_LINUX)
+      struct utsname utsname;
       uname(&utsname);
       stringFormat(line,sizeof(line),
-                   "system %s %s %s %s\n",
+                   "%s %s %s %s\n",
                    utsname.sysname,
                    utsname.release,
                    utsname.version,
                    utsname.machine
                   );
     #elif defined(PLATFORM_WINDOWS)
+      String value = String_new();
+      Misc_getRegistryString(value,HKEY_LOCAL_MACHINE,"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion","ProductName");
+      stringFormat(line,sizeof(line),
+                   "%s",
+                   String_cString(value)
+                  );
+      if (Misc_getRegistryString(value,HKEY_LOCAL_MACHINE,"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion","ReleaseId"))
+      {
+        stringAppend(line,sizeof(line),", release ");
+        stringAppendFormat(line,sizeof(line),
+                           String_cString(value)
+                          );
+      }
+      if (Misc_getRegistryString(value,HKEY_LOCAL_MACHINE,"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion","CurrentBuildNumber"))
+      {
+        stringAppend(line,sizeof(line),", build ");
+        stringAppendFormat(line,sizeof(line),
+                           String_cString(value)
+                          );
+      }
+      stringAppendChar(line,sizeof(line),'\n');
+      String_delete(value);
     #endif /* PLATFORM_... */
     UNUSED_RESULT(fwrite(line,1,stringLength(line),stderr));
     fatalLogMessage(line,NULL);
 
-    stringFormat(line,sizeof(line),"signal %d\n",signalNumber);
+    stringFormat(line,sizeof(line),"Signal %d\n",signalNumber);
     UNUSED_RESULT(fwrite(line,1,stringLength(line),stderr));
     fatalLogMessage(line,NULL);
 
     #ifndef NDEBUG
+      UNUSED_RESULT(fprintf(stderr,"Stack trace:\n"));
+      fatalLogMessage("Stack trace:\n",NULL);
       debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1);
     #endif /* NDEBUG */
   }
@@ -4632,11 +4659,9 @@ int main(int argc, const char *argv[])
   error = initEncodingConverter(globalOptions.systemEncoding,globalOptions.consoleEncoding);
   if (error != ERROR_NONE)
   {
-    printError(_("cannot initialize encoding (error: %s)!"),
-               Error_getText(error)
-              );
-    doneAll();
-    return errorToExitcode(error);
+    printWarning(_("cannot initialize encoding (error: %s)!"),
+                 Error_getText(error)
+                );
   }
 
   // change working directory

@@ -3838,7 +3838,7 @@ LOCAL Errors postgresqlExecute(PGconn     *connection,
 
     if (changedRowCount != NULL)
     {
-      stringToUInt64(PQcmdTuples(postgresqlResult),changedRowCount,NULL);
+      stringToULong(PQcmdTuples(postgresqlResult),changedRowCount,NULL);
     }
 
     PQclear(postgresqlResult);
@@ -7840,7 +7840,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
                 // get number of changes
                 if (changedRowCount != NULL)
                 {
-                  stringToUInt64(PQcmdTuples(postgresqlResult),changedRowCount,NULL);
+                  stringToULong(PQcmdTuples(postgresqlResult),changedRowCount,NULL);
                 }
 
                 error = ERROR_NONE;
@@ -8761,6 +8761,7 @@ LOCAL void finalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
 * Notes  : -
 \***********************************************************************/
 
+// TODO: obsolete, remove?
 LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
                             const DatabaseParameter parameters[],
                             uint                    parameterCount

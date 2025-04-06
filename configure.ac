@@ -1730,6 +1730,7 @@ case $host_os in
     AC_SEARCH_STATIC_LIBRARIES(FOLDERID_LocalAppData,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"])
     AC_SEARCH_STATIC_LIBRARIES(PathRemoveFileSpec,shlwapi,[STATIC_LIBRARIES="$STATIC_LIBRARIES shlwapi"],,shlwapi.h)
     AC_SEARCH_STATIC_LIBRARIES(GetUnicastIpAddressTable,iphlpapi ssp,[STATIC_LIBRARIES="$STATIC_LIBRARIES iphlpapi ssp"],,winsock2.h netioapi.h)
+    AC_SEARCH_STATIC_LIBRARIES(NCryptOpenKey,ncrypt,[STATIC_LIBRARIES="$STATIC_LIBRARIES ncrypt"],,windows.h ncrypt.h)
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     ;;
 esac
@@ -4302,7 +4303,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
           linux-* | sunos | solaris* | darwin*)
             if test "$ENABLE_DEBUG" = "yes"; then
               # Note: use configure, because with cmake the external Kerberos libraries are not used
-              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" configure \
+              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -4311,7 +4312,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
                 --disable-werror \
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" ./configure \
+              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \

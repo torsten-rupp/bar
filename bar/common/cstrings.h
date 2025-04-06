@@ -1754,6 +1754,74 @@ static inline bool stringToUInt(const char *string, uint *i, const char **tail)
 }
 
 /***********************************************************************\
+* Name   : stringToLong
+* Purpose: convert string to long-value
+* Input  : string - string
+*          i      - value variable
+*          tail   - tail variable (can be NULL)
+* Output : i    - value
+*          tail - not parsed tail part of string
+* Return : TRUE iff no error
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringToLong(const char *string, long *i, const char **tail)
+{
+  long long int n;
+  char          *s;
+
+  assert(string != NULL);
+  assert(i != NULL);
+
+  n = strtoll(string,&s,0);
+  if (tail != NULL) (*tail) = s;
+  if (((*s) == NUL) || (tail != NULL))
+  {
+    (*i) = (long)n;
+    return TRUE;
+  }
+  else
+  {
+    (*i) = 0;
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
+* Name   : stringToULong
+* Purpose: convert string to ulong-value
+* Input  : string - string
+*          i      - value variable
+*          tail   - tail variable (can be NULL)
+* Output : i    - value
+*          tail - not parsed tail part of string
+* Return : TRUE iff no error
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringToULong(const char *string, ulong *i, const char **tail)
+{
+  long long int n;
+  char          *s;
+
+  assert(string != NULL);
+  assert(i != NULL);
+
+  n = strtoll(string,&s,0);
+  if (tail != NULL) (*tail) = s;
+  if (((*s) == NUL) || (tail != NULL))
+  {
+    (*i) = (ulong)n;
+    return TRUE;
+  }
+  else
+  {
+    (*i) = 0;
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
 * Name   : stringToInt64
 * Purpose: convert string to int64-value
 * Input  : string - string

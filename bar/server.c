@@ -1803,36 +1803,21 @@ LOCAL uint64 getJobSchedule(const JobScheduleNode *jobScheduleNode,
                       if (scheduleDateTime > jobScheduleNode->lastExecutedDateTime)
                       {
                         if      (   (jobScheduleNode->archiveType == ARCHIVE_TYPE_FULL)
-                                 && (   (jobScheduleDateTime == MAX_UINT64)
-// TODO: obsolete
-                                     || (   (jobScheduleNode->archiveType == jobScheduleNode->archiveType)
-                                         && (jobScheduleNode->lastExecutedDateTime < jobScheduleNode->lastExecutedDateTime)
-                                        )
-                                    )
+                                 && (jobScheduleDateTime == MAX_UINT64)
                                 )
                         {
                           // schedule full job
                           jobScheduleDateTime = scheduleDateTime;
                         }
                         else if (   (jobScheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
-                                 && (   (jobScheduleDateTime == MAX_UINT64)
-// TODO: obsolete
-                                     || (   (jobScheduleNode->archiveType == jobScheduleNode->archiveType)
-                                         && (jobScheduleNode->lastExecutedDateTime < jobScheduleNode->lastExecutedDateTime)
-                                        )
-                                    )
+                                 && (jobScheduleDateTime == MAX_UINT64)
                                 )
                         {
                           // schedule normal/differential/incremental job
                           jobScheduleDateTime = scheduleDateTime;
                         }
                         else if (   (jobScheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
-                                 && (   (jobScheduleDateTime == MAX_UINT64)
-// TODO: obsolete
-                                     || (   (jobScheduleNode->archiveType == jobScheduleNode->archiveType)
-                                         && (jobScheduleNode->lastExecutedDateTime < jobScheduleNode->lastExecutedDateTime)
-                                        )
-                                    )
+                                 && (jobScheduleDateTime == MAX_UINT64)
                                  && (scheduleDateTime >= (  jobScheduleNode->lastExecutedDateTime
                                                           + (uint64)jobScheduleNode->interval*S_PER_MINUTE)
                                                          )

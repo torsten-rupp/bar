@@ -1,6 +1,6 @@
-diff -Naur xdelta3-3.0.11.org/testing/delta.h xdelta3-3.0.11/testing/delta.h
+diff -ur xdelta3-3.0.11.org/testing/delta.h xdelta3-3.0.11/testing/delta.h
 --- xdelta3-3.0.11.org/testing/delta.h	2015-03-24 06:38:06.000000000 +0100
-+++ xdelta3-3.0.11/testing/delta.h	2019-11-06 15:01:40.567396407 +0100
++++ xdelta3-3.0.11/testing/delta.h	2025-02-08 02:22:02.317983971 +0100
 @@ -53,13 +53,13 @@
        xd3_winst &winst = stream_.whole_target.inst[i];
        switch (winst.type) {
@@ -18,9 +18,9 @@ diff -Naur xdelta3-3.0.11.org/testing/delta.h xdelta3-3.0.11/testing/delta.h
  	   winst.position, winst.size, winst.addr, winst.mode);
  	break;
        }
-diff -Naur xdelta3-3.0.11.org/testing/file.h xdelta3-3.0.11/testing/file.h
+diff -ur xdelta3-3.0.11.org/testing/file.h xdelta3-3.0.11/testing/file.h
 --- xdelta3-3.0.11.org/testing/file.h	2016-01-08 07:45:07.000000000 +0100
-+++ xdelta3-3.0.11/testing/file.h	2019-11-06 15:01:40.567396407 +0100
++++ xdelta3-3.0.11/testing/file.h	2025-02-08 02:22:02.317983971 +0100
 @@ -66,7 +66,7 @@
      xoff_t pos = 0;
      for (size_t i = 0; i < Size(); i++) {
@@ -39,9 +39,9 @@ diff -Naur xdelta3-3.0.11.org/testing/file.h xdelta3-3.0.11/testing/file.h
      filename_.append(buf);
      unlink(filename_.c_str());
    }
-diff -Naur xdelta3-3.0.11.org/testing/regtest.cc xdelta3-3.0.11/testing/regtest.cc
+diff -ur xdelta3-3.0.11.org/testing/regtest.cc xdelta3-3.0.11/testing/regtest.cc
 --- xdelta3-3.0.11.org/testing/regtest.cc	2015-11-19 04:55:20.000000000 +0100
-+++ xdelta3-3.0.11/testing/regtest.cc	2019-11-06 15:01:40.567396407 +0100
++++ xdelta3-3.0.11/testing/regtest.cc	2025-02-08 02:22:02.318983987 +0100
 @@ -92,7 +92,7 @@
      bool done = false;
      bool done_after_input = false;
@@ -109,9 +109,9 @@ diff -Naur xdelta3-3.0.11.org/testing/regtest.cc xdelta3-3.0.11/testing/regtest.
        T::BLOCK_SIZE, T::WINDOW_SIZE);
    Regtest<T> regtest;
    TEST(TestEmptyInMemory);
-diff -Naur xdelta3-3.0.11.org/xdelta3-blkcache.h xdelta3-3.0.11/xdelta3-blkcache.h
+diff -ur xdelta3-3.0.11.org/xdelta3-blkcache.h xdelta3-3.0.11/xdelta3-blkcache.h
 --- xdelta3-3.0.11.org/xdelta3-blkcache.h	2015-12-18 07:51:52.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3-blkcache.h	2019-11-06 15:01:40.567396407 +0100
++++ xdelta3-3.0.11/xdelta3-blkcache.h	2025-02-08 02:22:02.318983987 +0100
 @@ -245,7 +245,7 @@
  
        if (sfile->size_known)
@@ -216,9 +216,9 @@ diff -Naur xdelta3-3.0.11.org/xdelta3-blkcache.h xdelta3-3.0.11/xdelta3-blkcache
  		blkno, nread, pos, sfile->source_position));
  
    return 0;
-diff -Naur xdelta3-3.0.11.org/xdelta3-decode.h xdelta3-3.0.11/xdelta3-decode.h
+diff -ur xdelta3-3.0.11.org/xdelta3-decode.h xdelta3-3.0.11/xdelta3-decode.h
 --- xdelta3-3.0.11.org/xdelta3-decode.h	2015-12-09 05:45:56.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3-decode.h	2019-11-06 15:01:40.567396407 +0100
++++ xdelta3-3.0.11/xdelta3-decode.h	2025-02-08 02:22:02.318983987 +0100
 @@ -626,6 +626,8 @@
        return ret;
      }
@@ -237,9 +237,9 @@ diff -Naur xdelta3-3.0.11.org/xdelta3-decode.h xdelta3-3.0.11/xdelta3-decode.h
  
        if (a32 != stream->dec_adler32)
  	{
-diff -Naur xdelta3-3.0.11.org/xdelta3-hash.h xdelta3-3.0.11/xdelta3-hash.h
+diff -ur xdelta3-3.0.11.org/xdelta3-hash.h xdelta3-3.0.11/xdelta3-hash.h
 --- xdelta3-3.0.11.org/xdelta3-hash.h	2015-03-24 06:38:06.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3-hash.h	2019-11-06 15:01:40.567396407 +0100
++++ xdelta3-3.0.11/xdelta3-hash.h	2025-02-08 02:22:02.318983987 +0100
 @@ -51,7 +51,7 @@
  
  /* Update the checksum state. */
@@ -265,9 +265,9 @@ diff -Naur xdelta3-3.0.11.org/xdelta3-hash.h xdelta3-3.0.11/xdelta3-hash.h
    UNALIGNED_READ32(state, base+1);
    return (*state) * hash_multiplier;
  }
-diff -Naur xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal.h
+diff -ur xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal.h
 --- xdelta3-3.0.11.org/xdelta3-internal.h	2015-11-03 06:28:17.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3-internal.h	2019-11-06 15:01:40.567396407 +0100
++++ xdelta3-3.0.11/xdelta3-internal.h	2025-02-08 02:22:02.319984003 +0100
 @@ -43,9 +43,6 @@
  int test_compare_files (const char* f0, const char* f1);
  usize_t xd3_bytes_on_srcblk (xd3_source *src, xoff_t blkno);
@@ -278,9 +278,9 @@ diff -Naur xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal
  int xd3_emit_byte (xd3_stream  *stream,
  		   xd3_output **outputp,
  		   uint8_t      code);
-diff -Naur xdelta3-3.0.11.org/xdelta3-main.h xdelta3-3.0.11/xdelta3-main.h
+diff -ur xdelta3-3.0.11.org/xdelta3-main.h xdelta3-3.0.11/xdelta3-main.h
 --- xdelta3-3.0.11.org/xdelta3-main.h	2015-12-27 06:49:53.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3-main.h	2019-11-06 15:01:40.567396407 +0100
++++ xdelta3-3.0.11/xdelta3-main.h	2025-02-08 02:22:02.319984003 +0100
 @@ -593,7 +593,7 @@
  
        if (r >= 100 && r < 1000)
@@ -474,9 +474,9 @@ diff -Naur xdelta3-3.0.11.org/xdelta3-main.h xdelta3-3.0.11/xdelta3-main.h
  	  main_format_millis (end_time - start_time, &tm),
  	  ifile->nread, nwrite, 100.0 * nwrite / ifile->nread);
      }
-diff -Naur xdelta3-3.0.11.org/xdelta3-test.h xdelta3-3.0.11/xdelta3-test.h
+diff -ur xdelta3-3.0.11.org/xdelta3-test.h xdelta3-3.0.11/xdelta3-test.h
 --- xdelta3-3.0.11.org/xdelta3-test.h	2015-11-11 08:04:13.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3-test.h	2019-11-06 15:01:40.571396472 +0100
++++ xdelta3-3.0.11/xdelta3-test.h	2025-02-08 02:22:02.320984019 +0100
 @@ -220,7 +220,7 @@
  {
    char buf[64];
@@ -513,9 +513,9 @@ diff -Naur xdelta3-3.0.11.org/xdelta3-test.h xdelta3-3.0.11/xdelta3-test.h
  	      rptr += strlen (rptr);
  	    }
  
-diff -Naur xdelta3-3.0.11.org/xdelta3.c xdelta3-3.0.11/xdelta3.c
+diff -ur xdelta3-3.0.11.org/xdelta3.c xdelta3-3.0.11/xdelta3.c
 --- xdelta3-3.0.11.org/xdelta3.c	2015-12-27 06:58:11.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3.c	2019-11-06 15:05:09.986795451 +0100
++++ xdelta3-3.0.11/xdelta3.c	2025-02-08 02:22:02.321984036 +0100
 @@ -1130,7 +1130,7 @@
  #define A32_DO8(buf,i)  A32_DO4(buf,i); A32_DO4(buf,i+4);
  #define A32_DO16(buf)   A32_DO8(buf,0); A32_DO8(buf,8);
@@ -791,9 +791,9 @@ diff -Naur xdelta3-3.0.11.org/xdelta3.c xdelta3-3.0.11/xdelta3.c
  		stream->total_in + stream->input_position,
  		stream->srcwin_cksum_pos,
  		target_cksum_pos,
-diff -Naur xdelta3-3.0.11.org/xdelta3.h xdelta3-3.0.11/xdelta3.h
+diff -ur xdelta3-3.0.11.org/xdelta3.h xdelta3-3.0.11/xdelta3.h
 --- xdelta3-3.0.11.org/xdelta3.h	2016-01-08 07:37:14.000000000 +0100
-+++ xdelta3-3.0.11/xdelta3.h	2019-11-06 15:01:40.571396472 +0100
++++ xdelta3-3.0.11/xdelta3.h	2025-04-05 04:07:55.334625807 +0200
 @@ -24,9 +24,15 @@
  #ifndef _XDELTA3_H_
  #define _XDELTA3_H_
@@ -810,7 +810,26 @@ diff -Naur xdelta3-3.0.11.org/xdelta3.h xdelta3-3.0.11/xdelta3.h
  
  #if HAVE_CONFIG_H
  #include "config.h"
-@@ -165,17 +171,17 @@
+@@ -117,12 +123,18 @@
+ /* 64 bit file offsets: uses GetFileSizeEx and SetFilePointerEx.
+  * requires Win2000 or newer version of WinNT */
+ #define WINVER		0x0500
++// avoid duplicate define, 2025-04-05 tr
++#ifndef _WIN32_WINNT
+ #define _WIN32_WINNT	0x0500
++#endif
+ #else /* xoff_t is 32bit */
+ /* 32 bit (DWORD) file offsets: uses GetFileSize and
+  * SetFilePointer. compatible with win9x-me and WinNT4 */
+ #define WINVER		0x0400
++// avoid duplicate define, 2025-04-05 tr
++#ifndef _WIN32_WINNT
+ #define _WIN32_WINNT	0x0400
++#endif
+ #endif /* if XD3_USE_LARGEFILE64 */
+ #endif /* ifndef WINVER */
+ 
+@@ -165,17 +177,17 @@
  typedef uint64_t xoff_t;
  /* Note: The following generates benign warnings in a mingw
   * cross-compiler */
@@ -833,7 +852,7 @@ diff -Naur xdelta3-3.0.11.org/xdelta3.h xdelta3-3.0.11/xdelta3.h
  
  #define SIZEOF_XOFF_T 8
  
-@@ -190,19 +196,19 @@
+@@ -190,19 +202,19 @@
  #endif /* xoff_t is 32 bits */
  
  #define SIZEOF_XOFF_T 4

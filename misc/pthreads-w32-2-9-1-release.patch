@@ -1,12 +1,27 @@
+Common subdirectories: pthreads-w32-2-9-1-release.org/manual and pthreads-w32-2-9-1-release/manual
+diff -u pthreads-w32-2-9-1-release.org/semaphore.h pthreads-w32-2-9-1-release/semaphore.h
 --- pthreads-w32-2-9-1-release.org/semaphore.h	2011-05-30 02:31:01.000000000 +0200
-+++ pthreads-w32-2-9-1-release/semaphore.h	2019-11-04 14:42:11.154413538 +0100
++++ pthreads-w32-2-9-1-release/semaphore.h	2025-04-05 03:54:03.733706990 +0200
 @@ -107,6 +107,9 @@
   *
   */
-
+ 
 +/* required for mode_t, 2019-11-05 tr */
 +#include <sys/types.h>
 +
  #if PTW32_SEMAPHORE_LEVEL >= PTW32_SEMAPHORE_LEVEL_MAX
  #if defined(NEED_ERRNO)
  #include "need_errno.h"
+@@ -115,7 +118,10 @@
+ #endif
+ #endif /* PTW32_SEMAPHORE_LEVEL >= PTW32_SEMAPHORE_LEVEL_MAX */
+ 
++// avoid duplicate define, 2025-04-05 tr
++#ifndef _POSIX_SEMAPHORES
+ #define _POSIX_SEMAPHORES
++#endif
+ 
+ #if defined(__cplusplus)
+ extern "C"
+Only in pthreads-w32-2-9-1-release: semaphore.h~
+Common subdirectories: pthreads-w32-2-9-1-release.org/tests and pthreads-w32-2-9-1-release/tests

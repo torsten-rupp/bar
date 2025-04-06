@@ -49,7 +49,7 @@
 #if   defined(PLATFORM_LINUX)
   #include <pthread.h>
 #elif defined(PLATFORM_WINDOWS)
-  #include <winsock2.h>
+  #include <winsock2.h>  // Windows brain dead
   #include <windows.h>
   #include <pthread.h>
   #include <intrin.h>

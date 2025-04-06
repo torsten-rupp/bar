@@ -8,6 +8,12 @@
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
 
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+#else
+  #error unknown platform
+#endif /* PLATFORM_... */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -1451,7 +1457,7 @@ void debugDumpMemory(const void *address, uint length, bool printAddress)
   while (z < length)
   {
     p = (const byte*)address+z;
-    if (printAddress) fprintf(stderr,"%08lx:",(unsigned long)p);
+    if (printAddress) fprintf(stderr,"%08lx:",(intptr_t)p);
     fprintf(stderr,"%08lx  ",(unsigned long)(p-(byte*)address));
 
     for (j = 0; j < 16; j++)

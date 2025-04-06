@@ -1824,7 +1824,6 @@ Errors Continuous_init(const char *databaseURI)
 {
   bool           createFlag;
   Errors         error;
-  ulong          n;
   DatabaseHandle databaseHandle;
   uint           continuousVersion;
 
@@ -1844,7 +1843,7 @@ Errors Continuous_init(const char *databaseURI)
 
   #if   defined(PLATFORM_LINUX)
     // check number of possible notifies
-    n = getMaxNotifyWatches();
+    ulong n = getMaxNotifyWatches();
     if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning(_("low number of notify watches %lu. Please check settings in '%s'!"),n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
     n = getMaxNotifyInstances();
     if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning(_("low number of notify instances %lu. Please check settings in '%s'!"),n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);

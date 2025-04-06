@@ -72,10 +72,18 @@ Errors Password_initAll(void)
     /* if libgrypt is not available a simple obfuscator is used here to
        avoid plain text passwords in memory as much as possible
     */
-    srandom((unsigned int)time(NULL));
+    #if   defined(PLATFORM_LINUX)
+      srandom((unsigned int)time(NULL));
+    #elif defined(PLATFORM_WINDOWS)
+      srand((unsigned int)time(NULL));
+    #endif /* PLATFORM_... */
     for (z = 0; z < MAX_PASSWORD_LENGTH; z++)
     {
-      obfuscator[z] = (char)(random()%256);
+      #if   defined(PLATFORM_LINUX)
+        obfuscator[z] = (char)(random()%256);
+      #elif defined(PLATFORM_WINDOWS)
+        obfuscator[z] = (char)(rand()%256);
+      #endif /* PLATFORM_... */
     }
   #endif /* not HAVE_GCRYPT */
 
@@ -398,10 +406,18 @@ void Password_random(Password *password, uint length)
   #ifdef HAVE_GCRYPT
     gcry_create_nonce((unsigned char*)password->data,password->dataLength);
   #else /* not HAVE_GCRYPT */
-    srandom((unsigned int)time(NULL));
+    #if   defined(PLATFORM_LINUX)
+      srandom((unsigned int)time(NULL));
+    #elif defined(PLATFORM_WINDOWS)
+      srand((unsigned int)time(NULL));
+    #endif /* PLATFORM_... */
     for (i = 0; i < password->dataLength; i++)
     {
-      password->data[i] = (char)(random()%256)^obfuscator[i];
+      #if   defined(PLATFORM_LINUX)
+        password->data[i] = (char)(random()%256)^obfuscator[i];
+      #elif defined(PLATFORM_WINDOWS)
+        password->data[i] = (char)(rand()%256)^obfuscator[i];
+      #endif /* PLATFORM_... */
     }
   #endif /* HAVE_GCRYPT */
 }
@@ -758,7 +774,9 @@ bool Password_input(Password   *password,
     }
   #elif defined(PLATFORM_WINDOWS)
 // NYI ???
+#ifndef WERROR
 #warning no console input on windows
+#endif
   #endif /* PLATFORM_... */
 
   return okFlag;

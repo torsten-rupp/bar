@@ -16,6 +16,7 @@
 
 #if   defined(PLATFORM_LINUX)
 #elif defined(PLATFORM_WINDOWS)
+  #include <winsock2.h>  // Windows brain dead
   #include <windows.h>
 #endif /* PLATFORM_... */
 

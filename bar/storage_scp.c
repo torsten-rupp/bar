@@ -1014,7 +1014,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                                                      );
     #else /* not HAVE_SSH2_SCP_SEND64 */
       storageHandle->scp.channel = libssh2_scp_send(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                    String_cString(archiveName),
+                                                    String_cString(fileName),
                                                     (int)File_getDefaultFilePermissions(),
                                                     (size_t)fileSize
                                                    );

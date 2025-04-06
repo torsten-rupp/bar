@@ -45,6 +45,8 @@ String tmpDirectory;
 #ifdef HAVE_ICU
   struct
   {
+    bool       isInitialized;
+
     bool       isUTF8System;
 
     Semaphore  lock;
@@ -849,6 +851,8 @@ Errors initEncodingConverter(const char *systemEncoding, const char *consoleEnco
     UErrorCode errorCode = U_ZERO_ERROR;
   #endif // HAVE_ICU
 
+  encodingConverter.isInitialized = FALSE;
+
   #ifdef HAVE_ICU
     encodingConverter.isUTF8System =    stringEqualsIgnoreCase((systemEncoding != NULL) ? systemEncoding : ucnv_getDefaultName(),"UTF-8")
                                      && ((consoleEncoding == NULL) || stringEqualsIgnoreCase(consoleEncoding,"UTF-8"));
@@ -924,13 +928,15 @@ Errors initEncodingConverter(const char *systemEncoding, const char *consoleEnco
     encodingConverter.isUTF8System = TRUE;
   #endif // HAVE_ICU
 
+  encodingConverter.isInitialized = TRUE;
+
   return ERROR_NONE;
 }
 
 void doneEncodingConverter(void)
 {
   #ifdef HAVE_ICU
-    if (!encodingConverter.isUTF8System)
+    if (encodingConverter.isInitialized && !encodingConverter.isUTF8System)
     {
       free(encodingConverter.buffer);
       free(encodingConverter.unicodeChars);
@@ -949,7 +955,7 @@ String convertSystemToUTF8Encoding(String destination, ConstString source)
   if (source != NULL)
   {
     #ifdef HAVE_ICU
-      if (!encodingConverter.isUTF8System)
+      if (encodingConverter.isInitialized && !encodingConverter.isUTF8System)
       {
         SEMAPHORE_LOCKED_DO(&encodingConverter.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
@@ -997,7 +1003,7 @@ String convertUTF8ToSystemEncoding(String destination, ConstString source)
   if (source != NULL)
   {
     #ifdef HAVE_ICU
-      if (!encodingConverter.isUTF8System)
+      if (encodingConverter.isInitialized && !encodingConverter.isUTF8System)
       {
         SEMAPHORE_LOCKED_DO(&encodingConverter.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
@@ -1043,7 +1049,7 @@ String convertSystemToConsoleEncodingAppend(String destination, ConstString sour
   if (source != NULL)
   {
     #ifdef HAVE_ICU
-      if (!encodingConverter.isUTF8System)
+      if (encodingConverter.isInitialized && !encodingConverter.isUTF8System)
       {
         SEMAPHORE_LOCKED_DO(&encodingConverter.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {

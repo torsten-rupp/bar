@@ -106,8 +106,10 @@ LD_DYNAMIC_PREFIX          = -Wl,-Bdynamic
 
 WINDOWS_DLLS               = /usr/lib/gcc/x86_64-w64-mingw32/*-win32/libgcc_s_*.dll \
                              /usr/lib/gcc/x86_64-w64-mingw32/*-win32/libstdc++-6.dll \
-                             /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll \
-                             $(BUILD_DIR)/extern/lib/libpq.dll
+                             /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll
+ifeq (@HAVE_POSTGRESQL@,1)
+WINDOWS_DLLS               += $(BUILD_DIR)/extern/lib/libpq.dll
+endif
 
 ifneq ($(SANITIZER),)
   CC_FLAGS_DEBUG += -fno-sanitize-recover=all -fstack-protector-all

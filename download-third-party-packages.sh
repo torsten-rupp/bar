@@ -2040,9 +2040,9 @@ if test $cleanFlag -eq 0; then
        fi
 
        # patch to fix defintions for MinGW:
-       #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
+       #   diff -Naur libisofs-$LIBISOFS_VERSION.org libisofs-$LIBISOFS_VERSION > libisofs-$LIBISOFS_VERSION-mingw-definitions.patch
        # Note: ignore exit code 1: patch may already be applied
-#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
+#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libisofs-$LIBISOFS_VERSION-mingw-definitions.patch) 1>/dev/null
 #       if test $? -gt 1; then
 #         fatalError "patch"
 #       fi
@@ -2098,9 +2098,9 @@ if test $cleanFlag -eq 0; then
        fi
 
        # patch to fix defintions for MinGW:
-       #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
+       #   diff -Naur libburn-$LIBBURN_VERSION.org libburn-$LIBBURN_VERSION > libburn-$LIBBURN_VERSION-mingw-definitions.patch
        # Note: ignore exit code 1: patch may already be applied
-#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
+#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libburn-$LIBBURN_VERSION-mingw-definitions.patch) 1>/dev/null
 #       if test $? -gt 1; then
 #         fatalError "patch"
 #       fi
@@ -2156,9 +2156,9 @@ if test $cleanFlag -eq 0; then
        fi
 
        # patch to fix defintions for MinGW:
-       #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
+       #   diff -Naur util-linux-$UTIL_LINUX_VERSION.org util-linux-$UTIL_LINUX_VERSION > util-linux-$UTIL_LINUX_VERSION-mingw-definitions.patch
        # Note: ignore exit code 1: patch may already be applied
-#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
+#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/util-linux-$UTIL_LINUX_VERSION-mingw-definitions.patch) 1>/dev/null
 #       if test $? -gt 1; then
 #         fatalError "patch"
 #       fi

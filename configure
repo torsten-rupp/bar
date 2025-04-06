@@ -9114,11 +9114,11 @@ if test x$ac_prog_cxx_stdcxx = xno
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $CXX option to enable C++11 features" >&5
 printf %s "checking for $CXX option to enable C++11 features... " >&6; }
-if test ${ac_cv_prog_cxx_11+y}
+if test ${ac_cv_prog_cxx_cxx11+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-  ac_cv_prog_cxx_11=no
+  ac_cv_prog_cxx_cxx11=no
 ac_save_CXX=$CXX
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -9160,11 +9160,11 @@ if test x$ac_prog_cxx_stdcxx = xno
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $CXX option to enable C++98 features" >&5
 printf %s "checking for $CXX option to enable C++98 features... " >&6; }
-if test ${ac_cv_prog_cxx_98+y}
+if test ${ac_cv_prog_cxx_cxx98+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-  ac_cv_prog_cxx_98=no
+  ac_cv_prog_cxx_cxx98=no
 ac_save_CXX=$CXX
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -11797,6 +11797,70 @@ printf "%s\n" "$ac_cv_search_static_GetUnicastIpAddressTable" >&6; }
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES iphlpapi ssp"
+fi
+
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing NCryptOpenKey" >&5
+printf %s "checking for static library containing NCryptOpenKey... " >&6; }
+if test ${ac_cv_search_static_NCryptOpenKey+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in ncrypt ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo windows.h ncrypt.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z "windows.h ncrypt.h"; then echo "extern void NCryptOpenKey();"; fi`
+                                         return (int)NCryptOpenKey;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_NCryptOpenKey=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_NCryptOpenKey+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_NCryptOpenKey=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_NCryptOpenKey" >&5
+printf "%s\n" "$ac_cv_search_static_NCryptOpenKey" >&6; }
+  ac_result=$ac_cv_search_static_NCryptOpenKey
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES ncrypt"
 fi
 
 
@@ -19809,7 +19873,7 @@ printf "%s\n" "fail (patch)" >&6; }
           linux-* | sunos | solaris* | darwin*)
             if test "$ENABLE_DEBUG" = "yes"; then
               # Note: use configure, because with cmake the external Kerberos libraries are not used
-              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" configure \
+              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -19818,7 +19882,7 @@ printf "%s\n" "fail (patch)" >&6; }
                 --disable-werror \
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" ./configure \
+              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -19849,7 +19913,7 @@ printf "%s\n" "fail (configure)" >&6; }
                 -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
                 -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
                 -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600" \
+                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600 -Dxxx_MSC_VER=1900" \
                 -DCMAKE_INSTALL_PREFIX=$cwd/extern \
                 \
                 -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
@@ -19865,7 +19929,7 @@ printf "%s\n" "fail (configure)" >&6; }
                 -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
                 -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
                 -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600" \
+                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600 -Dxxx_MSC_VER=1900" \
                 -DCMAKE_INSTALL_PREFIX=$cwd/extern \
                 \
                 -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \

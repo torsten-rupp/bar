@@ -1172,7 +1172,6 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
     return ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageInfo);
-    UNUSED_VARIABLE(storageSpecifier);
     UNUSED_VARIABLE(jobOptions);
     UNUSED_VARIABLE(maxBandWidthList);
     UNUSED_VARIABLE(serverConnectionPriority);

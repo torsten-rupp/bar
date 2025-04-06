@@ -49,7 +49,7 @@
   #include <linux/magic.h>
 #elif defined(PLATFORM_WINDOWS)
   #include <fileapi.h>
-  #include <winsock2.h>
+  #include <winsock2.h>  // Windows brain dead
   #include <windows.h>
   #include <shlobj.h>
   #include <combaseapi.h>

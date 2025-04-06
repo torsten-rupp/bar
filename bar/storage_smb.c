@@ -790,7 +790,6 @@ LOCAL Errors StorageSMB_init(StorageInfo                *storageInfo,
     return ERROR_NONE;
   #else /* not HAVE_SMB2 */
     UNUSED_VARIABLE(storageInfo);
-    UNUSED_VARIABLE(storageSpecifier);
     UNUSED_VARIABLE(jobOptions);
     UNUSED_VARIABLE(maxBandWidthList);
     UNUSED_VARIABLE(serverConnectionPriority);

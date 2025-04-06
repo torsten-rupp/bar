@@ -205,7 +205,7 @@ typedef enum
    | SET_VALUE(INDEX_TYPE_SPECIAL) \
   )
 
-typedef ulong IndexTypeSet;
+typedef uint64 IndexTypeSet;
 
 // index id
 typedef struct

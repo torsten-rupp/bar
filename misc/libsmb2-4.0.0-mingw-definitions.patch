@@ -19,12 +19,17 @@ index 88c83cc..84567a5 100644
  
  #endif // ! _ASPRINTF_H_
 diff --git a/include/msvc/sys/socket.h b/include/msvc/sys/socket.h
-index 2bfa367..4588c01 100644
+index 2bfa367..b0ea5cc 100644
 --- a/include/msvc/sys/socket.h
 +++ b/include/msvc/sys/socket.h
-@@ -18,7 +18,10 @@ extern "C" {
+@@ -16,17 +16,24 @@ extern "C" {
  
+ #include <libsmb2.h>
+ 
++// only define if missing, tr 2025-04-04
++#ifndef EBADF
  #define EBADF WSAENOTSOCK
++#endif
  
 +// already defined, tr 2023-10-01
 +#if 0
@@ -33,7 +38,28 @@ index 2bfa367..4588c01 100644
  
  struct iovec
  {
-@@ -51,10 +54,13 @@ inline int readv(t_socket sock, struct iovec *iov, int nvecs)
+   unsigned long iov_len; // from WSABUF
+-  void *iov_base;        
++  void *iov_base;
+ };
+ 
+-inline int writev(t_socket sock, struct iovec *iov, int nvecs)
++// make static inline, tr 2025-04-04
++static inline int writev(t_socket sock, const struct iovec *iov, int nvecs)
+ {
+   DWORD ret;
+ 
+@@ -38,7 +45,8 @@ inline int writev(t_socket sock, struct iovec *iov, int nvecs)
+   return -1;
+ }
+ 
+-inline int readv(t_socket sock, struct iovec *iov, int nvecs)
++// make static inline, tr 2025-04-04
++static inline int readv(t_socket sock, const struct iovec *iov, int nvecs)
+ {
+   DWORD ret;
+   DWORD flags = 0;
+@@ -51,10 +59,13 @@ inline int readv(t_socket sock, struct iovec *iov, int nvecs)
    return -1;
  }
  
@@ -60,6 +86,34 @@ index a916513..fc914d5 100644
  #include <arpa/inet.h>
  #endif /* !_MSC_VER && !PS2_EE_PLATFORM !PS2_IOP_PLATFORM */
  
+diff --git a/lib/init.c b/lib/init.c
+index ed9d49b..126b8b0 100644
+--- a/lib/init.c
++++ b/lib/init.c
+@@ -62,7 +62,8 @@
+ 
+ #include "compat.h"
+ 
+-#ifdef _MSC_VER
++// enable for MS compiler + MinGW
++#if defined(_MSC_VER) || defined(__MINGW32__)
+ #include <errno.h>
+ #define getlogin_r(a,b) ENXIO
+ #define srandom srand
+diff --git a/lib/smb3-seal.c b/lib/smb3-seal.c
+index 964bb34..e4d1b71 100644
+--- a/lib/smb3-seal.c
++++ b/lib/smb3-seal.c
+@@ -53,7 +53,8 @@
+ #include <sys/uio.h>
+ #endif
+ 
+-#ifdef _MSC_VER
++// enable for MS compiler + MinGW
++#if defined(_MSC_VER) || defined(__MINGW32__)
+ #define random rand
+ #endif // _MSC_VER
+ 
 diff --git a/lib/socket.c b/lib/socket.c
 index 123fb5d..4ee0912 100644
 --- a/lib/socket.c
@@ -75,16 +129,17 @@ index 123fb5d..4ee0912 100644
  
  #ifdef HAVE_STDLIB_H
 diff --git a/lib/sync.c b/lib/sync.c
-index 50be6ad..221c569 100644
+index 50be6ad..02ddf62 100644
 --- a/lib/sync.c
 +++ b/lib/sync.c
-@@ -38,6 +38,9 @@
+@@ -38,6 +38,10 @@
  #else
  #include <poll.h>
  #endif
 +// required for Windows, tr 2023-10-02
 +#elif WIN32
 +#include <winsock2.h>
++#include <poll.h>
  #endif
  
  #ifdef HAVE_STRING_H

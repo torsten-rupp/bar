@@ -1030,7 +1030,12 @@ Errors Storage_initAll(void)
     }
   #endif
 
-  struct { Errors(*initAll)(); void(*doneAll)(); } INIT_DONE[] =
+  struct
+  {
+    Errors(*initAll)(void);
+    void(*doneAll)(void);
+  }
+  INIT_DONE[] =
   {
     { StorageFile_initAll,    StorageFile_doneAll    },
     { StorageFTP_initAll,     StorageFTP_doneAll     },

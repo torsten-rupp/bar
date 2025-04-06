@@ -233,7 +233,6 @@ fi
     --patch-directory $projectRoot/misc \
     --no-verbose \
     $ADDITIONAL_DOWNLOAD_FLAGS
-#TODO: enable smbclient
   $projectRoot/configure \
     --host=x86_64-w64-mingw32 \
     --build=x86_64-linux \
@@ -241,7 +240,9 @@ fi
     --disable-link-dynamic \
     --disable-debug-thread-crash-handlers \
     \
-    --disable-smbclient \
+    --disable-libburn \
+    --disable-libmount \
+    \
     --disable-bfd
   make
   make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows

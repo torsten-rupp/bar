@@ -1461,7 +1461,6 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
     return ERROR_NONE;
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageInfo);
-    UNUSED_VARIABLE(storageSpecifier);
     UNUSED_VARIABLE(jobOptions);
     UNUSED_VARIABLE(maxBandWidthList);
     UNUSED_VARIABLE(serverConnectionPriority);

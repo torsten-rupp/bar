@@ -1140,7 +1140,6 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageInfo);
-    UNUSED_VARIABLE(storageSpecifier);
     UNUSED_VARIABLE(jobOptions);
     UNUSED_VARIABLE(maxBandWidthList);
     UNUSED_VARIABLE(serverConnectionPriority);

@@ -629,7 +629,7 @@ NYI: how to do certificate verification?
                              DH_BITS
                             );
     gnutls_transport_set_ptr(socketHandle->gnuTLS.session,
-                             (gnutls_transport_ptr_t)(long)socketHandle->handle
+                             (gnutls_transport_ptr_t)(long long)socketHandle->handle
                             );
     gnutls_transport_set_int(socketHandle->gnuTLS.session,socketHandle->handle);
     if (timeout != WAIT_FOREVER)
