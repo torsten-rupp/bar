@@ -3189,24 +3189,27 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     StringList_done(&nameList);
   }
 
-  // add incomplete hard link entries (not all hard links found) to entry list
-  Dictionary_initIterator(&dictionaryIterator,&hardLinksDictionary);
-  while (Dictionary_getNext(&dictionaryIterator,
-                            &keyData.value,
-                            NULL,
-                            &data.value,
-                            NULL
-                           )
-        )
+  if (collectorType == COLLECTOR_TYPE_ENTRIES)
   {
-    appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                              ENTRY_TYPE_FILE,
-                              &data.hardLinkInfo->nameList,
-                              &data.hardLinkInfo->fileInfo,
-                              !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
-                             );
+    // add incomplete hard link entries (not all hard links found) to entry list
+    Dictionary_initIterator(&dictionaryIterator,&hardLinksDictionary);
+    while (Dictionary_getNext(&dictionaryIterator,
+                              &keyData.value,
+                              NULL,
+                              &data.value,
+                              NULL
+                             )
+          )
+    {
+      appendHardLinkToEntryList(&createInfo->entryMsgQueue,
+                                ENTRY_TYPE_FILE,
+                                &data.hardLinkInfo->nameList,
+                                &data.hardLinkInfo->fileInfo,
+                                !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
+                               );
+    }
+    Dictionary_doneIterator(&dictionaryIterator);
   }
-  Dictionary_doneIterator(&dictionaryIterator);
 
   // free resoures
   Dictionary_done(&hardLinksDictionary);
