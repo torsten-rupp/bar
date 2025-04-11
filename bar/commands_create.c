@@ -1538,8 +1538,8 @@ LOCAL void collector(CreateInfo     *createInfo,
   * Notes  : -
   \***********************************************************************/
 
-  auto void freeHardlinkInfo(const void *data, ulong length, void *userData);
-  void freeHardlinkInfo(const void *data, ulong length, void *userData)
+  auto void freeHardlinkInfo(void *data, ulong length, void *userData);
+  void freeHardlinkInfo(void *data, ulong length, void *userData)
   {
     HardLinkInfo *hardLinkInfo = (HardLinkInfo*)data;
 
@@ -1567,8 +1567,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-// TODO: use freeHardlinkInfo
-  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_INIT_ENTRY,DICTIONARY_BYTE_DONE_ENTRY,DICTIONARY_BYTE_COMPARE_ENTRY))
+  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_INIT_ENTRY,CALLBACK_(freeHardlinkInfo,NULL),DICTIONARY_BYTE_COMPARE_ENTRY))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -2906,7 +2905,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             )
                         {
                           union { void *value; HardLinkInfo *hardLinkInfo; } data;
-                          HardLinkInfo                                       hardLinkInfo;
 
                           if (Dictionary_find(&hardLinksDictionary,
                                               &fileInfo.id,
@@ -2961,6 +2959,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                                   );
                             }
 
+                            HardLinkInfo hardLinkInfo;
                             hardLinkInfo.count = fileInfo.linkCount;
                             StringList_init(&hardLinkInfo.nameList);
                             StringList_append(&hardLinkInfo.nameList,name);

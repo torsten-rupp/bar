@@ -1404,6 +1404,14 @@ void File_initIteratePathCString(FilePathIterator *filePathIterator, const char 
   filePathIterator->appendFlag    = appendFlag;
 }
 
+void File_doneIteratePath(FilePathIterator *filePathIterator)
+{
+  assert(filePathIterator != NULL);
+
+  String_delete(filePathIterator->path);
+  String_doneTokenizer(&filePathIterator->stringTokenizer);
+}
+
 bool File_getNextIteratePath(FilePathIterator *filePathIterator, String variable, bool condition)
 {
   assert(filePathIterator != NULL);
@@ -1440,8 +1448,7 @@ bool File_getNextIteratePath(FilePathIterator *filePathIterator, String variable
   else
   {
     String_clear(variable);
-    String_delete(filePathIterator->path);
-    String_doneTokenizer(&filePathIterator->stringTokenizer);
+    File_doneIteratePath(filePathIterator);
   }
 
   return hasNext;
@@ -1483,8 +1490,7 @@ bool File_getNextIteratePathCString(FilePathIterator *filePathIterator, const ch
   else
   {
     (*variable) = NULL;
-    String_delete(filePathIterator->path);
-    String_doneTokenizer(&filePathIterator->stringTokenizer);
+    File_doneIteratePath(filePathIterator);
   }
 
   return hasNext;

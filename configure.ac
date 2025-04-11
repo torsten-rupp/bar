@@ -885,7 +885,8 @@ AC_SUBST(CC_FLAGS_OPTIMIZE_DEBUG)            dnl addtiional C compiler optimizat
 AC_SUBST(CC_FLAGS_OPTIMIZE_VALGRIND)         dnl addtiional C compiler optimization flags for valgrind version
 AC_SUBST(CC_DEFINES)                         dnl C compiler defines
 AC_SUBST(CC_DEFINES_RELEASE)                 dnl additional C compiler defines for debug version
-AC_SUBST(CC_DEFINES_DEBUG)                   dnl addtioonal C compiler defines for debug version
+AC_SUBST(CC_DEFINES_DEBUG)                   dnl additional C compiler defines for debug version
+AC_SUBST(CC_DEFINES_VALGRIND)                dnl additional C compiler defines for valgrind version
 AC_SUBST(CC_INCLUDES)                        dnl C compiler include paths
 
 AC_SUBST(LD_FLAGS)                           dnl linker flags
@@ -990,6 +991,7 @@ CC_FLAGS_OPTIMIZE_VALGRIND=""
 CC_DEFINES="_GNU_SOURCE"
 CC_DEFINES_RELEASE=""
 CC_DEFINES_DEBUG=""
+CC_DEFINES_VALGRIND=""
 CC_INCLUDES=""
 
 LD_FLAGS="$LDFLAGS"
@@ -1609,6 +1611,7 @@ CC_FLAGS_OPTIMIZE_VALGRIND="$CC_FLAGS_OPTIMIZE_VALGRIND -O2"
 CC_DEFINES="$CC_DEFINES"
 CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
 CC_DEFINES_DEBUG="$CC_DEFINES_DEBUG"
+CC_DEFINES_VALGRIND="$CC_DEFINES_VALGRIND NDEBUG"
 
 case $host_os in
   linux-*)

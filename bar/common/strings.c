@@ -5198,6 +5198,7 @@ String String_quote(String string, char quoteChar, const char *forceQuoteChars)
 
     if (forceQuoteChars != NULL)
     {
+      quoteFlag = FALSE;
       for (i = 0L; i < string->length; i++)
       {
         if (strchr(forceQuoteChars,string->data[i]) != NULL)

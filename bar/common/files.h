@@ -658,7 +658,8 @@ void File_doneSplitFileName(StringTokenizer *stringTokenizer);
 bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, ConstString *name);
 
 /***********************************************************************\
-* Name   : File_iteratePathInit, File_initIteratePathCString
+* Name   : File_initIteratePath, File_initIteratePathCString,
+           File_doneIteratePath
 * Purpose: initialize path iterator
 * Input  : filePathIterator - file path iterator variable
 *          path             - path
@@ -670,6 +671,7 @@ bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, ConstString *na
 
 void File_initIteratePath(FilePathIterator *filePathIterator, ConstString path, bool appendFlag);
 void File_initIteratePathCString(FilePathIterator *filePathIterator, const char *path, bool appendFlag);
+void File_doneIteratePath(FilePathIterator *filePathIterator);
 
 /***********************************************************************\
 * Name   : File_iteratePathNext, File_getNextIteratePathCString
