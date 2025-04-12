@@ -67,7 +67,7 @@ CC_FLAGS_OPTIMIZE          = @CC_FLAGS_OPTIMIZE@
 CC_FLAGS_OPTIMIZE_RELEASE  = @CC_FLAGS_OPTIMIZE_RELEASE@
 CC_FLAGS_OPTIMIZE_DEBUG    = @CC_FLAGS_OPTIMIZE_DEBUG@
 CC_FLAGS_OPTIMIZE_VALGRIND = @CC_FLAGS_OPTIMIZE_DEBUG@
-CC_FLAGS_GCOV              = @CC_FLAGS_GCOV@ -DGCOV -fprofile-arcs -ftest-coverage
+CC_FLAGS_GCOV              = @CC_FLAGS_GCOV@ -DGCOV -fprofile-arcs -ftest-coverage -fprofile-update=atomic
 CC_FLAGS_GPROF             = @CC_FLAGS_GPROF@ -DGPROF -pg
 CC_FLAGS_VALGRIND          = @CC_FLAGS_VALGRIND@ -fno-builtin
 CC_DEFINES                 = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG 'tr(...)=Misc_translate(__VA_ARGS__)'
@@ -1863,7 +1863,7 @@ ifneq ($(GENHTML),)
     --capture \
     --output-file bar-gcov.info
 	$(INSTALL) -d coverage
-	$(GENHTML) -o coverage bar-gcov.info --legend --ignore-errors source
+	$(GENHTML) -o coverage bar-gcov.info --legend --ignore-errors source --synthesize-missing
 	# work-around for bug in genhtml?
 	$(LN) -sfT coverage/gcov.css gcov.css
 else

@@ -1,6 +1,8 @@
 2025-02-01 26
   * automatic replace deprecated configuration values by new value
   * support libsmb2 for Windows port
+  * increased test code coverage
+  * fixed some memory leaks
   * BACControl: upgrade to Java 1.7
   * BARControl: add total progress to test dialog
   * BARControl: add general commands to server settings dialog

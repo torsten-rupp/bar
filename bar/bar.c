@@ -3739,6 +3739,25 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       return error;
     }
     AUTOFREE_ADD(&autoFreeList,&indexHandle,{ Index_close(&indexHandle); });
+
+    // open continuous database
+    if (Continuous_isAvailable())
+    {
+      Errors error = Continuous_open(&continuousDatabaseHandle);
+      if (error != ERROR_NONE)
+      {
+        printError(_("cannot initialize continuous database (error: %s)!"),
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+      AUTOFREE_ADD(&autoFreeList,&continuousDatabaseHandle,{ Continuous_close(&continuousDatabaseHandle); });
+    }
+
+    // init job options
+    Job_initOptions(&jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&jobOptions,{ Job_doneOptions(&jobOptions); });
   }
 
   #ifndef NDEBUG
@@ -4293,6 +4312,10 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       || (globalOptions.debug.indexRefreshStorage != NULL)
      )
   {
+    AUTOFREE_REMOVE(&autoFreeList,&jobOptions);
+    Job_doneOptions(&jobOptions);
+    AUTOFREE_REMOVE(&autoFreeList,&continuousDatabaseHandle);
+    Continuous_close(&continuousDatabaseHandle);
     AUTOFREE_REMOVE(&autoFreeList,&indexHandle);
     Index_close(&indexHandle);
     AUTOFREE_REMOVE(&autoFreeList,printableDatabaseURI);
