@@ -4298,6 +4298,7 @@ tests_file_operations_incremental: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
 	@#
+	# incremental name
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-full.bar --full --incremental-list-file=$(BAR_STORAGE)/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
 	$(INSTALL) -d $(BAR_STORAGE)/new; $(CP) data/random1024.dat $(BAR_STORAGE)/new/random1024-new.dat
@@ -4305,6 +4306,17 @@ tests_file_operations_incremental: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-incremental.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-incremental.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN)-full.bar' '$(BAR_STORAGE)/$(BAR_PATTERN)-incremental.bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
+	@#
+	# special storage name and incremental name
+	@$(call functionCleanTestFiles)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-#%#_%%_%xyz-_.bar --full $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=1 $(LOG))
+	$(INSTALL) -d $(BAR_STORAGE)/new; $(CP) data/random1024.dat $(BAR_STORAGE)/new/random1024-new.dat
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-#%#_%%_%xyz-_.bar --incremental $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=2 $(LOG))
+	@#
+	# incremental name from job UUID
+	$(RMF) $(BAR_STORAGE)/$(BAR_FILE)#%.bid
+	$(INSTALL) -d $(BAR_STORAGE)/new; $(CP) data/random1024.dat $(BAR_STORAGE)/new/random1024-new.dat
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-#%#_%%_%xyz-_.bar --incremental $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --incremental-data-directory=$(BAR_STORAGE) --debug-index-uuid=$(TEST_JOB_UUID) --verbose=2 $(LOG))
 	@#
 	@$(call functionDoneTestFiles)
 	@$(call functionInfoFooter)
