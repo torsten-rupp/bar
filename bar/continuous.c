@@ -2145,8 +2145,8 @@ void Continuous_close(DatabaseHandle *databaseHandle)
 Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
                            const char     *jobUUID,
                            const char     *scheduleUUID,
-                           ScheduleTime   beginTime,
-                           ScheduleTime   endTime,
+                           ScheduleTime   *beginTime,
+                           ScheduleTime   *endTime,
                            ConstString    name
                           )
 {
@@ -2170,10 +2170,12 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
                      NULL,  // weekDay
                      NULL  // isDayLightSaving
                     );
-  if (isInTimeRange(currentHour,currentMinute,
-                    beginTime.hour,beginTime.hour,
-                    endTime.hour,endTime.hour
-                   )
+  if (   (beginTime == NULL)
+      || (endTime == NULL)
+      || isInTimeRange(currentHour,currentMinute,
+                       beginTime->hour,beginTime->hour,
+                       endTime->hour,endTime->hour
+                      )
      )
   {
     error = addEntry(databaseHandle,jobUUID,scheduleUUID,name);

@@ -639,6 +639,39 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 }
 
 /***********************************************************************\
+* Name   : cmdOptionParseStringList
+* Purpose: command line option call back for parsing string list
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseStringList(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (((StringList*)variable) != NULL)
+  {
+    StringList_appendCString((StringList*)variable,value);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : cmdOptionParseNewEntityUUID
 * Purpose: command line option call back for new entity UUID
 * Input  : userData              - user data
@@ -2051,6 +2084,7 @@ LOCAL void initGlobalOptions(void)
     globalOptions.debug.indexAddStorage                         = NULL;
     globalOptions.debug.indexRemoveStorage                      = NULL;
     globalOptions.debug.indexRefreshStorage                     = NULL;
+    StringList_init(&globalOptions.debug.continuousNameList);
   #endif
 }
 
@@ -2067,6 +2101,7 @@ LOCAL void doneGlobalOptions(void)
 {
   // debug/test only
   #ifndef NDEBUG
+    StringList_done(&globalOptions.debug.continuousNameList);
     String_delete(globalOptions.debug.indexRefreshStorage);
     String_delete(globalOptions.debug.indexRemoveStorage);
     String_delete(globalOptions.debug.indexAddStorage);
@@ -8498,6 +8533,7 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("debug-index-add-storage",           0,  2,0,globalOptions.debug.indexAddStorage,                                                                              "add storage to index database","file name"                                ),
   CMD_OPTION_STRING       ("debug-index-remove-storage",        0,  2,0,globalOptions.debug.indexRemoveStorage,                                                                           "remove storage from index database","file name"                           ),
   CMD_OPTION_STRING       ("debug-index-refresh-storage",       0,  2,0,globalOptions.debug.indexRefreshStorage,                                                                          "refresh storage in index database","file name"                            ),
+  CMD_OPTION_SPECIAL      ("debug-continuous-name",             0,  2,3,&globalOptions.debug.continuousNameList,             cmdOptionParseStringList,NULL,1,                             "continupus name","name"                                                   ),
 
   CMD_OPTION_BOOLEAN      ("debug-print-configuration-sha256",  0,  2,0,globalOptions.debug.printConfigurationSHA256,                                                                     "fixed server ids"                                                         ),
   #endif

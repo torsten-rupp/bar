@@ -3319,8 +3319,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         }
         else
         {
-          printError(_("no archive file name given!"));
-          error = ERROR_INVALID_ARGUMENT;
+          printError(_("no storage name given!"));
+          error = ERROR_NO_STORAGE_NAME;
         }
 
         // get include patterns
@@ -3656,6 +3656,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
   DatabaseSpecifier databaseSpecifier;
   String            printableDatabaseURI;
   IndexHandle       indexHandle;
+  DatabaseHandle    continuousDatabaseHandle;
   uint              deletedStorageCount;
   JobOptions        jobOptions;
   StorageSpecifier  storageSpecifier;
@@ -3687,6 +3688,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       || (globalOptions.debug.indexRemoveStorage != NULL)
       || (globalOptions.debug.indexAddStorage != NULL)
       || (globalOptions.debug.indexRefreshStorage != NULL)
+      || !StringList_isEmpty(&globalOptions.debug.continuousNameList)
      )
   {
     // init index database
@@ -3703,9 +3705,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       AutoFree_cleanup(&autoFreeList);
       return ERROR_DATABASE;
     }
-    AUTOFREE_ADD(&autoFreeList,&databaseSpecifier,{ Database_doneSpecifier(&databaseSpecifier); });
     printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
-    AUTOFREE_ADD(&autoFreeList,printableDatabaseURI,{ String_delete(printableDatabaseURI); });
     error = Index_init(&databaseSpecifier,CALLBACK_(NULL,NULL));
     if (error != ERROR_NONE)
     {
@@ -3713,10 +3713,11 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                  String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
+      Database_doneSpecifier(&databaseSpecifier);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    AUTOFREE_ADD(&autoFreeList,globalOptions.indexDatabaseURI,{ Index_done(); });
+    AUTOFREE_ADD(&autoFreeList,&databaseSpecifier,{ Index_done(); String_delete(printableDatabaseURI); Database_doneSpecifier(&databaseSpecifier); });
 
     // init continuous database
     error = Continuous_init(globalOptions.continuousDatabaseFileName);
@@ -3725,7 +3726,6 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       printWarning(_("continuous support is not available (reason: %s)"),Error_getText(error));
     }
     AUTOFREE_ADD(&autoFreeList,globalOptions.continuousDatabaseFileName,{ Continuous_done(); });
-    Job_updateAllNotifies();
 
     // open index
     error = Index_open(&indexHandle,NULL,INDEX_TIMEOUT);
@@ -3739,9 +3739,97 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       return error;
     }
     AUTOFREE_ADD(&autoFreeList,&indexHandle,{ Index_close(&indexHandle); });
+
+    // open continuous database
+    if (Continuous_isAvailable())
+    {
+      Errors error = Continuous_open(&continuousDatabaseHandle);
+      if (error != ERROR_NONE)
+      {
+        printError(_("cannot initialize continuous database (error: %s)!"),
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+    }
+
+    // init job options
+    Job_initOptions(&jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&jobOptions,{ Job_doneOptions(&jobOptions); });
   }
 
   #ifndef NDEBUG
+    if (!StringList_isEmpty(&globalOptions.debug.continuousNameList))
+    {
+      if (argc > 1)
+      {
+        String_setCString(globalOptions.storageName,argv[1]);
+      }
+      else
+      {
+        printError(_("no storage name given!"));
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_NO_STORAGE_NAME;
+      }
+      for (int i = 2; i < argc; i++)
+      {
+        error = EntryList_appendCString(&globalOptions.includeEntryList,ENTRY_TYPE_FILE,argv[i],globalOptions.patternType,NULL);
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
+      }
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_NO_STORAGE_NAME;
+      }
+
+      StringNode *stringNode;
+      String     name;
+      STRINGLIST_ITERATEX(&globalOptions.debug.continuousNameList,stringNode,name,error == ERROR_NONE)
+      {
+        error = Continuous_addEntry(&continuousDatabaseHandle,
+                                    MISC_UUID_NONE,  // jobUUID,
+                                    MISC_UUID_NONE,  // scheduleUUID,
+                                    NULL,  // beginTime,
+                                    NULL,  // endTime,
+                                    name
+                                  );
+      }
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+      error = Command_create(NULL,  // masterIO
+                             MISC_UUID_NONE,  // jobUUID
+                             MISC_UUID_NONE,  // scheduleUUID
+                             NULL,  // scheduleTitle
+                             MISC_UUID_NONE,  // entityUUID
+                             ARCHIVE_TYPE_CONTINUOUS,
+                             globalOptions.storageName,
+                             &globalOptions.includeEntryList,
+                             &globalOptions.excludePatternList,
+                             NULL,  // scheduleCustomText
+                             &jobOptions,
+                             Misc_getCurrentDateTime(),
+                             CALLBACK_(NULL,NULL),  // getPasswordFromConsole
+                             CALLBACK_(NULL,NULL),  // runningInfo
+                             CALLBACK_(NULL,NULL),  // storageRequestVolume
+                             CALLBACK_(NULL,NULL),  // isPauseCreate
+                             CALLBACK_(NULL,NULL),  // isPauseStorage
+                             CALLBACK_(NULL,NULL),  // isAborted
+                             NULL  // logHandle
+                            );
+      if (error != ERROR_NONE)
+      {
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
+    }
+
     if (globalOptions.debug.showChunkIdsFlag)
     {
       const ChunkIO CHUNK_IO_FILE =
@@ -3902,8 +3990,6 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       // add storage to index
       Storage_initSpecifier(&storageSpecifier);
       AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
-      Job_initOptions(&jobOptions);
-      AUTOFREE_ADD(&autoFreeList,&jobOptions,{ Job_doneOptions(&jobOptions); });
 
       // parse storage name, get printable name
       error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexAddStorage);
@@ -4131,8 +4217,6 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       AUTOFREE_REMOVE(&autoFreeList,&storageInfo);
       (void)Storage_done(&storageInfo);
 
-      AUTOFREE_REMOVE(&autoFreeList,&jobOptions);
-      Job_doneOptions(&jobOptions);
       AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
       Storage_doneSpecifier(&storageSpecifier);
     }
@@ -4142,8 +4226,6 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       // refresh storage in index
       Storage_initSpecifier(&storageSpecifier);
       AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
-      Job_initOptions(&jobOptions);
-      AUTOFREE_ADD(&autoFreeList,&jobOptions,{ Job_doneOptions(&jobOptions); });
 
       // parse storage name, get printable name
       error = Storage_parseName(&storageSpecifier,globalOptions.debug.indexRefreshStorage);
@@ -4277,8 +4359,6 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       AUTOFREE_REMOVE(&autoFreeList,&storageInfo);
       (void)Storage_done(&storageInfo);
 
-      AUTOFREE_REMOVE(&autoFreeList,&jobOptions);
-      Job_doneOptions(&jobOptions);
       AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
       Storage_doneSpecifier(&storageSpecifier);
     }
@@ -4291,18 +4371,19 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       || (globalOptions.debug.indexRemoveStorage != NULL)
       || (globalOptions.debug.indexAddStorage != NULL)
       || (globalOptions.debug.indexRefreshStorage != NULL)
+      || !StringList_isEmpty(&globalOptions.debug.continuousNameList)
      )
   {
+    AUTOFREE_REMOVE(&autoFreeList,&jobOptions);
+    Job_doneOptions(&jobOptions);
     AUTOFREE_REMOVE(&autoFreeList,&indexHandle);
     Index_close(&indexHandle);
-    AUTOFREE_REMOVE(&autoFreeList,printableDatabaseURI);
-    String_delete(printableDatabaseURI);
-    AUTOFREE_REMOVE(&autoFreeList,&databaseSpecifier);
-    Database_doneSpecifier(&databaseSpecifier);
     AUTOFREE_REMOVE(&autoFreeList,globalOptions.continuousDatabaseFileName);
     Continuous_done();
-    AUTOFREE_REMOVE(&autoFreeList,globalOptions.indexDatabaseURI);
+    AUTOFREE_REMOVE(&autoFreeList,&databaseSpecifier);
     Index_done();
+    String_delete(printableDatabaseURI);
+    Database_doneSpecifier(&databaseSpecifier);
   }
 
   // free resources
@@ -4599,6 +4680,7 @@ LOCAL Errors bar(int argc, const char *argv[])
            || (globalOptions.debug.indexAddStorage     != NULL)
            || (globalOptions.debug.indexRemoveStorage  != NULL)
            || (globalOptions.debug.indexRefreshStorage != NULL)
+           || !StringList_isEmpty(&globalOptions.debug.continuousNameList)
           )
   {
     error = runDebug(argc,argv);
