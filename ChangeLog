@@ -1,4 +1,4 @@
-2025-02-01 26
+2025-04-19 26
   * automatic replace deprecated configuration values by new value
   * support libsmb2 for Windows port
   * increased test code coverage

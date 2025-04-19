@@ -963,7 +963,7 @@ void RingBuffer_debugPrintStatistics(void)
 
   pthread_mutex_lock(&debugRingBufferLock);
   {
-    fprintf(stderr,"DEBUG: %lu RingBuffer(s) allocated, total %lu bytes\n",
+    fprintf(stderr,"DEBUG: %lu ring buffer(s) allocated, total %lu bytes\n",
             List_count(&debugRingBufferList),
             debugRingBufferList.allocatedMemory
            );

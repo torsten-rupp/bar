@@ -787,6 +787,16 @@ LOCAL void doneAll(void)
   // done secure memory
   doneSecure();
 
+  #ifndef NDEBUG
+    // done debug
+    File_debugDone();
+    RingBuffer_debugDone();
+    Array_debugDone();
+    String_debugDone();
+    debugResourceDone();
+    List_debugDone();
+ #endif
+
   // deinstall signal handlers
   #ifdef HAVE_SIGACTION
     sigfillset(&signalAction.sa_mask);
