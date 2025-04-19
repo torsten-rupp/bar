@@ -61,12 +61,11 @@ CXX_FLAGS                  = @CXX_FLAGS@ -std=c++11 -g
 CXX_WARN_FLAGS             = @CXX_WARN_FLAGS@
 CC_FLAGS_RELEASE           = @CC_FLAGS_RELEASE@
 CC_FLAGS_DEBUG             = @CC_FLAGS_DEBUG@ -finstrument-functions
-CC_FLAGS_VALGRIND          = @CC_FLAGS_DEBUG@
 #-fno-sanitize-recover=all -fstack-protector-all -fsanitize=undefined
 CC_FLAGS_OPTIMIZE          = @CC_FLAGS_OPTIMIZE@
 CC_FLAGS_OPTIMIZE_RELEASE  = @CC_FLAGS_OPTIMIZE_RELEASE@
 CC_FLAGS_OPTIMIZE_DEBUG    = @CC_FLAGS_OPTIMIZE_DEBUG@
-CC_FLAGS_OPTIMIZE_VALGRIND = @CC_FLAGS_OPTIMIZE_DEBUG@
+CC_FLAGS_OPTIMIZE_VALGRIND = @CC_FLAGS_OPTIMIZE_VALGRIND@
 CC_FLAGS_GCOV              = @CC_FLAGS_GCOV@ -DGCOV -fprofile-arcs -ftest-coverage -fprofile-update=atomic
 CC_FLAGS_GPROF             = @CC_FLAGS_GPROF@ -DGPROF -pg
 CC_FLAGS_VALGRIND          = @CC_FLAGS_VALGRIND@ -fno-builtin
