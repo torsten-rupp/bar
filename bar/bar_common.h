@@ -1194,6 +1194,7 @@ typedef struct
     String                    indexAddStorage;                // add storage to index
     String                    indexRemoveStorage;             // remove storage from index
     String                    indexRefreshStorage;            // refresh storage index
+    StringList                continuousNameList;             // continuous names list
 
     bool                      printConfigurationSHA256;
   } debug;

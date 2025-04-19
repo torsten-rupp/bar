@@ -7709,7 +7709,7 @@ Errors Command_create(ServerIO                     *masterIO,
 
 #if 0
 //TODO: useful?
-  // check if write access
+  // check for write access
   directoryName = File_getDirectoryName(String_new(),storageSpecifier.archiveName);
   if (!Storage_isWritable(&createInfo.storageInfo,directoryName))
   {
@@ -7748,6 +7748,7 @@ Errors Command_create(ServerIO                     *masterIO,
                                           &createInfo.storageInfo.storageSpecifier
                                          );
         incrementalFileInfoExistFlag = File_exists(incrementalListFileName);
+fprintf(stderr,"%s:%d: incrementalListFileName=%s %d\n",__FILE__,__LINE__,String_cString(incrementalListFileName),incrementalFileInfoExistFlag);
       }
       if (!incrementalFileInfoExistFlag && (jobUUID != NULL))
       {

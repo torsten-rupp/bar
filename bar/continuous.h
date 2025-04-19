@@ -167,7 +167,7 @@ void Continuous_close(DatabaseHandle *databaseHandle);
 *          indexHandle       - index handle
 *          jobUUID           - job UUID
 *          scheduleUUID      - schedule UUID
-*          beginTime,endTime - begin/end time
+*          beginTime,endTime - begin/end time (can be NULL)
 *          name              - name
 * Output : -
 * Return : ERROR_NONE or error code
@@ -177,8 +177,8 @@ void Continuous_close(DatabaseHandle *databaseHandle);
 Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
                            const char     *jobUUID,
                            const char     *scheduleUUID,
-                           ScheduleTime   beginTime,
-                           ScheduleTime   endTime,
+                           ScheduleTime   *beginTime,
+                           ScheduleTime   *endTime,
                            ConstString    name
                           );
 
