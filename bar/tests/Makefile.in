@@ -4493,8 +4493,8 @@ endif
 	# convert entity uuid
 	@$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c        $(BAR_STORAGE)/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --verbose=2 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --new-entity-uuid --debug-index-uuid=00000001-0000-0000-0000-000000000000 --verbose=2 $(LOG))
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) --convert $(BAR_STORAGE)/$(BAR_FILE).bar $(BAR_OPTIONS) --new-entity-uuid --debug-index-uuid=00000001-0000-0000-0000-000000000000 --verbose=2 $(LOG))
 	test `$(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) --debug-show-chunks $(BAR_STORAGE)/$(BAR_FILE).bar|$(GREP) 'MTA0'|$(WC) -l` == 1
 else
 	@$(ECHO) "convert test: debug functions not available in $(TEST_BAR) - skipped"
