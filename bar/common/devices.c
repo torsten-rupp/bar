@@ -1218,6 +1218,7 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
               return ERRORX_(IO,errno,"%E",errno);
             }
           }
+          stringTokenizerDone(&stringTokenizer);
         }
         else
         {
