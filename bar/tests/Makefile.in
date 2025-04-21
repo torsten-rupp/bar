@@ -2902,7 +2902,8 @@ tests_config-gprof:
 tests_config-valgrind:
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR="$(TEST_BAR_VALGRIND)" tests_config
 
-tests_miscellaneous tests_misc:
+tests_miscellaneous tests_misc: \
+  $(TEST_FILES)
 	@$(call functionInfoBegin,Tests miscellaneous)
 	@$(call functionCleanTestFiles)
 	$(INSTALL) -d $(INTERMEDIATE_DIR)
@@ -2953,10 +2954,10 @@ endif
 	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l sftp://localhost:1234/not_exists.bar    --ssh-password=not_exists    </dev/null 1>/dev/null 2>/dev/null))
 	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l webdav://localhost/not_exists.bar       --webdav-password=not_exists </dev/null 1>/dev/null 2>/dev/null))
 	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l webdav://localhost:1234/not_exists.bar  --webdav-password=not_exists </dev/null 1>/dev/null 2>/dev/null))
-	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l webdavs://localhost/not_exists.bar      --webdav-password=not_exist  </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l webdavs://localhost/not_exists.bar      --webdav-password=not_exists </dev/null 1>/dev/null 2>/dev/null))
 	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l webdavs://localhost:1234/not_exists.bar --webdav-password=not_exists </dev/null 1>/dev/null 2>/dev/null))
-	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l smb://localhost/not_exists.bar          --smb-password=not_exist     </dev/null 1>/dev/null 2>/dev/null))
-	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l smb://localhost/share/not_exists.bar    --smb-password=not_exist     </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l smb://localhost/not_exists.bar          --smb-password=not_exists    </dev/null 1>/dev/null 2>/dev/null))
+	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l smb://localhost/share/not_exists.bar    --smb-password=not_exists    </dev/null 1>/dev/null 2>/dev/null))
 	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l cd:///dev/not_exists.bar                --cd-device=not_exists                  1>/dev/null 2>/dev/null))
 	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l cd:///dev/not_exists:not_exists.bar     --cd-device=not_exists                  1>/dev/null 2>/dev/null))
 	$(call functionTestCheckExitcode,1,1,  ($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(BAR_OPTIONS) -l dvd:///dev/not_exists.bar               --dvd-device=not_exists                 1>/dev/null 2>/dev/null))

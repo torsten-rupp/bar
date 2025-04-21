@@ -52,7 +52,6 @@ ToDo
 - restore image to file instead of a device
 - compression lrzip
 - compression miniz
-- include .nobackup files into archive
 - database lock timeout?
   http://beets.radbox.org/blog/sqlite-nightmare.html
 - higher thread priority for collector thread?
@@ -82,7 +81,6 @@ ToDo
 - barcontrol: test and compare of archives
 - check if crypt password is correct, output error message
 - test archives: CRC? fragments?
-- convert local encoding of names always into UTF8
 - fix error message when connection is refused
 - BARControl: show warning when path does not exists
 - create and error message when /tmp is full
@@ -123,19 +121,14 @@ ToDo
 - filesystem support: partclone
   sudo apt-get install libext2fs-dev
   sudo apt-get install libreiser4-dev
-- restore: only not existing files
 - BARControl: restore dialog: progress bar for processed storages, estimated
 rest time
 - hierachical jobs
-- single thread code: collector sum+collector
 - test after create: chunk-read, test, compare
 - sd_notify() for system service startup
 - scheduler to test archives with report
 - BARControl: test archives function
 - option to local cache of archive before parallel test/compare/diff
-- use libburnia to integrate write cd/dvd/bd
-  https://dev.lovelyhq.com/libburnia/web/wiki
-  https://github.com/svn2github/libburn
 - single input of encrypt password for parallel test/compare
 - maintenance if no schedule pending for x minutes
 - BARControl: restore: show archive for file entry
@@ -160,18 +153,15 @@ rest time
 - scheduler: test jobs
 - BARControl: show installed slave versions
 - BARControl: graphical history of job execution
-- use libmount
 - reload configuration on SIGHUB
 - backup set info file
 - multiple job execution
 - remove constraint from storages table
 - program icon
 - storage: remove running info
-- bar-index: command line parser
 - send email with log on maser for jobs executed on slave
 - restore: skip leaing directory
 - barcontrol: graphical job history
-- use always UTF-8 name encoding
 - purge backup archives on exhausted free disk space
 - code formater
 - coding style guide
@@ -184,7 +174,6 @@ rest time
 - continous jobs for slaves
 - barcontrol: show installed slave versions
 - purge backup archives on exhausted free disk space
-- win32: postresql client library
 - run pre/post command in standard mode (not only server)
 - BARControl: menu entries for Debian, XFCE
 

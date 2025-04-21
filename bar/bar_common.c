@@ -863,7 +863,7 @@ Errors initEncodingConverter(const char *systemEncoding, const char *consoleEnco
       #if defined(PLATFORM_WINDOWS)
         char win32ConsoleEncoding[16];
 
-        // work-around for Windows brain dead: console use a different encoding than the graphicals system...
+        // work-around for Windows brain dead: console use a different encoding than the graphical system...
         if (consoleEncoding == NULL)
         {
           UINT codePage = GetConsoleCP();
