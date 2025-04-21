@@ -59,12 +59,16 @@ void ProgressInfo_init(ProgressInfo         *progressInfo,
   progressInfo->parent           = parentProgressInfo;
   if (filterWindowSize > 0)
   {
-    progressInfo->filterTimes      = (uint64*)malloc(filterWindowSize*sizeof(uint64));;
+    progressInfo->filterTimes = (uint64*)malloc(filterWindowSize*sizeof(uint64));;
     if (progressInfo->filterTimes == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
     progressInfo->filterTimeCount = 0;
+  }
+  else
+  {
+    progressInfo->filterTimes = NULL;
   }
   progressInfo->filterWindowSize = filterWindowSize;
   progressInfo->initFunction     = progressInitFunction;
@@ -103,6 +107,10 @@ void ProgressInfo_done(ProgressInfo *progressInfo)
   }
 
   String_delete(progressInfo->text);
+  if (progressInfo->filterTimes != NULL)
+  {
+    free(progressInfo->filterTimes);
+  }
 }
 
 void ProgressInfo_reset(ProgressInfo *progressInfo, uint64 stepCount)
