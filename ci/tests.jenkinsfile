@@ -166,7 +166,7 @@ def tests()
         }
       }
 
-      timeout(time: 180, unit: 'MINUTES')
+      timeout(time: 240, unit: 'MINUTES')
       {
         stage("Tests")
         {
@@ -290,7 +290,7 @@ sh "echo binaryExtension="+binaryExtension
         }
       }
 
-      timeout(time: 240, unit: 'MINUTES')
+      timeout(time: 300, unit: 'MINUTES')
       {
         stage("Code coverage")
         {
@@ -335,7 +335,7 @@ sh "echo binaryExtension="+binaryExtension
         }
       }
 
-      timeout(time: 180, unit: 'MINUTES')
+      timeout(time: 240, unit: 'MINUTES')
       {
         stage("Profiling")
         {
