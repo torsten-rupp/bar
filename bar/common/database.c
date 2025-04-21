@@ -1657,7 +1657,7 @@ LOCAL void sqlite3FromUnixTime(sqlite3_context *context, int argc, sqlite3_value
   // convert to Unix timestamp
   Misc_formatDateTimeCString(text,sizeof(text),timestamp,TIME_TYPE_GMT,format);
 
-  sqlite3_result_text(context,text,stringLength(text),NULL);
+  sqlite3_result_text(context,text,stringLength(text),SQLITE_TRANSIENT);
 }
 
 /***********************************************************************\
@@ -1685,7 +1685,7 @@ LOCAL void sqlite3Now(sqlite3_context *context, int argc, sqlite3_value *argv[])
   // convert to Unix timestamp
   Misc_formatDateTimeCString(text,sizeof(text),Misc_getCurrentDateTime(),TIME_TYPE_GMT,DATE_TIME_FORMAT_DEFAULT);
 
-  sqlite3_result_text(context,text,stringLength(text),NULL);
+  sqlite3_result_text(context,text,stringLength(text),SQLITE_TRANSIENT);
 }
 
 /***********************************************************************\
@@ -1798,7 +1798,7 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
   directoryName = File_getDirectoryNameCString(String_new(),string);
 
   // store result
-  sqlite3_result_text(context,String_cString(directoryName),-1,SQLITE_TRANSIENT);
+  sqlite3_result_text(context,String_cString(directoryName),String_length(directoryName),SQLITE_TRANSIENT);
 
   // free resources
   String_delete(directoryName);

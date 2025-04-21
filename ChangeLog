@@ -3,6 +3,7 @@
   * support libsmb2 for Windows port
   * increased test code coverage
   * fixed some memory leaks
+  * upgraded SQLite to 3.49.1
   * BACControl: upgrade to Java 1.7
   * BARControl: add total progress to test dialog
   * BARControl: add general commands to server settings dialog
