@@ -10,7 +10,7 @@
 # --------------------------------- constants --------------------------------
 
 CURL="curl"
-CURL_OPTIONS="-L --retry 5 --connect-timeout 60 --max-time 300 --insecure"
+CURL_OPTIONS="-L --retry 5 --connect-timeout 60 --max-time 300 --insecure --fail"
 CP="cp"
 ECHO="echo"
 ECHO_NO_NEW_LINE="echo -n"
@@ -1182,7 +1182,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/nettle-$NETTLE_VERSION.tar.gz $fileName
          result=1
        else
-         url="https://ftp.gnu.org/gnu/nettle/$fileName"
+         url="https://ftpmirror.gnu.org/gnu/nettle/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -1223,7 +1223,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz $fileName
          result=1
        else
-         url="https://ftp.gnu.org/gnu/libidn/$fileName"
+         url="https://ftpmirror.gnu.org/gnu/libidn/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -1311,7 +1311,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/nettle-$NETTLE_VERSION.tar.gz $fileName
          result=1
        else
-         url="https://ftp.gnu.org/gnu/nettle/$fileName"
+         url="https://ftpmirror.gnu.org/gnu/nettle/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -1397,7 +1397,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz $fileName
          result=1
        else
-         url="https://ftp.gnu.org/gnu/libidn/$fileName"
+         url="https://ftpmirror.gnu.org/gnu/libidn/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -1485,7 +1485,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/libiconv-$LIBICONV_VERSION.tar.gz $fileName
          result=1
        else
-         url="https://ftp.gnu.org/pub/gnu/libiconv/$fileName"
+         url="https://ftpmirror.gnu.org/gnu/libiconv/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -1528,7 +1528,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/libcdio-$LIBCDIO_VERSION.tar.bz2 $fileName
          result=1
        else
-         url="https://ftp.gnu.org/gnu/libcdio/$fileName"
+         url="https://ftpmirror.gnu.org/gnu/libcdio/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -2186,7 +2186,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/binutils-$BINUTILS_VERSION.tar.bz2 $fileName
          result=1
        else
-         url="http://ftp.gnu.org/gnu/binutils/$fileName"
+         url="https://ftpmirror.gnu.org/gnu/binutils/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"

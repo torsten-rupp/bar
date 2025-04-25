@@ -1,7 +1,7 @@
 #!groovy
 
 DOCKER_IMAGE_NAME_HOST='bar'
-DOCKER_IMAGE_NAME_WIN32='bar-mingw32'
+DOCKER_IMAGE_NAME_WIN32='bar-win32'
 
 TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
                TEST_USER=jenkins \
@@ -15,7 +15,7 @@ TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
                TEST_WEBDAV_FILE_PATH=/var/www/intermediate \
                TEST_SMB_SHARE=jenkins \
                TEST_SMB_FILE_PATH=/home/jenkins/intermediate \
-               "
+              "
 
 TEST_STEPS = ["basic",
               "compress",

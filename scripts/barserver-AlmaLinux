@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+#	/etc/rc.d/init.d/barserver
+#
+#	BAR server start script
+#	Copyright 2007-2019 Torsten Rupp
+#
+
+### BEGIN INIT INFO
+# Provides:          barserver
+# Required-Start:    $syslog $local_fs $network $remote_fs
+# Required-Stop:     $syslog $local_fs $network $remote_fs
+# Should-Start:      $time ypbind sendmail
+# Should-Stop:       $time ypbind sendmail
+# Default-Start:     3 5
+# Default-Stop:      0 1 2 4 6
+# Short-Description: BAR server daemon
+# Description:       Backup ARchiver server for backup/restore
+### END INIT INFO
+
+NAME=bar
+BAR_BIN=/usr/bin/$NAME
+BAR_CONFIG_FILENAME=/etc/bar/bar.cfg
+BAR_PID_FILENAME=/run/$NAME.pid
+BAR_ARGS="--config $BAR_CONFIG_FILENAME --daemon --pid-file=$BAR_PID_FILENAME --verbose=0 --quiet"
+BAR_SCRIPT_FILENAME=/etc/init.d/barserver
+DESCRIPTION="barserver"
+
+# Source function library.
+. /etc/init.d/functions
+
+# check for binaries
+if test ! -x $BAR_BIN; then
+  echo "$BAR_BIN not installed"
+  exit 5
+fi
+
+# check for configuration file
+if test ! -r $BAR_CONFIG_FILENAME; then
+  echo "$BAR_CONFIG_FILENAME cannot be read"
+  exit 6
+fi
+
+start() {
+	echo -n "Starting BAR server: "
+	daemon $BAR_BIN $BAR_ARGS
+        RETVAL=$?
+	touch /var/lock/subsys/barserver
+	return $RETVAL
+}
+
+stop() {
+	echo -n "Shutting down BAR server: "
+	killproc $BAR_BIN TERM
+        RETVAL=$?
+	rm -f /var/lock/subsys/barserver
+	return $RETVAL
+}
+
+case "$1" in
+    start)
+	start
+	;;
+    stop)
+	stop
+	;;
+    status)
+        status -p $BAR_PID_FILENAME -b $BAR_BIN barserver
+	;;
+    restart)
+    	stop
+	start
+	;;
+    reload)
+	;;
+    condrestart)
+	[ -f /var/lock/subsys/barserver ] && restart || :
+        ;;
+    probe)
+	;;
+    *)
+	echo "Usage: barserver {start|stop|status|restart}"
+	exit 1
+	;;
+esac
+exit $?

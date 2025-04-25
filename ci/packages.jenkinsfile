@@ -1,15 +1,15 @@
 #!groovy
 
 DOCKER_IMAGE_NAME           = "bar"
-DOCKER_IMAGE_NAME_RPM       = "bar-centos-x86_64:7"
-DOCKER_IMAGE_NAME_DEB       = "bar-debian-x86_64:10"
-DOCKER_IMAGE_NAME_WIN32     = "bar-mingw32"
+DOCKER_IMAGE_NAME_RPM       = "bar-rpm"
+DOCKER_IMAGE_NAME_DEB       = "bar-deb"
+DOCKER_IMAGE_NAME_WIN32     = "bar-win32"
 
-TEST_PACKAGES_CENTOS        = ["8"]
-TEST_PACKAGES_FEDORA        = ["37","38","39","40"]
-TEST_PACKAGES_OPENSUSE_LEAP = ["15.1","15.2","15.3","15.4","15.5"]
+TEST_PACKAGES_ALMALINUX     = ["8.10","9.0","9.1","9.2","9.3","9.4","9.5"]
+TEST_PACKAGES_FEDORA        = ["37","38","39","40","41","42"]
+TEST_PACKAGES_OPENSUSE_LEAP = ["15.1","15.2","15.3","15.4","15.5","15.6"]
 TEST_PACKAGES_DEBIAN        = ["10","11","12"]
-TEST_PACKAGES_UBUNTU        = ["20.04","22.04","23.04","23.10"]
+TEST_PACKAGES_UBUNTU        = ["20.04","22.04","23.04","23.10","24.04"]
 
 // build
 def build()
@@ -84,9 +84,9 @@ def build()
         {
           stage("Test RPM packages")
           {
-            for(String item : TEST_PACKAGES_CENTOS)
+            for(String item : TEST_PACKAGES_ALMALINUX)
             {
-              docker.image("centos:${item}").inside('-u root --privileged')
+              docker.image("almalinux:${item}").inside('-u root --privileged')
               {
                 script
                 {

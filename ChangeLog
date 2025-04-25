@@ -7,6 +7,8 @@
   * BACControl: upgrade to Java 1.7
   * BARControl: add total progress to test dialog
   * BARControl: add general commands to server settings dialog
+  * upgrade build+test docker base to Ubuntu 24.04
+  * replaced support for CentOS by AlmaLinux
 
 2025-01-31 25b
   * fixed write config values permission, owner

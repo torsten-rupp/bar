@@ -1,14 +1,12 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 ENV container docker
 
-ARG UID=1000
-ARG GID=1000
-
+# constants
 ARG WINEPREFIX=/tmp/build/.wine
 
-# add user for build process
-RUN groupadd -g $GID build
-RUN useradd -g $GID -u $UID build -m
+# variables
+ARG uid=1000
+ARG gid=1000
 
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
@@ -70,11 +68,16 @@ RUN apt-get -y install --fix-missing \
   ;
 
 # install wine 32bit
-RUN dpkg --add-architecture i386
-RUN apt-get -y update
-RUN apt-get -y install \
-  wine32 \
+RUN    dpkg --add-architecture i386 \
+    && apt-get -y update \
+    && apt-get -y install \
+         wine32 \
   ;
+
+# add user for build process
+RUN    userdel `id -un $uid 2>/dev/null` 2>/dev/null || true \
+    && groupadd -g $gid jenkins || true \
+    && useradd -g $gid -u $uid jenkins -m
 
 # initialize wine prefix
 RUN install -d $WINEPREFIX
@@ -90,11 +93,11 @@ COPY innosetup-5.6.1.exe /tmp
 #RUN pwd
 #RUN ps auxw|grep wine
 #RUN WINEARCH=win32 WINEPREFIX=$WINEPREFIX DISPLAY=:0.0 xvfb-run -e /dev/stdout --auto-servernum wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES
-RUN WINEARCH=win32 WINEPREFIX=$WINEPREFIX DISPLAY=:0.0 xvfb-run -e /dev/stdout wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES
-RUN rm -rf /tmp/wine*
-RUN rm /tmp/innosetup-5.6.1.exe
-RUN WINEPREFIX=$WINEPREFIX wineboot --shutdown
-RUN WINEPREFIX=$WINEPREFIX wineboot --end-session
+RUN    WINEARCH=win32 WINEPREFIX=$WINEPREFIX DISPLAY=:0.0 xvfb-run -e /dev/stdout wine /tmp/innosetup-5.6.1.exe /VERYSILENT /SUPPRESSMSGBOXES \
+    && rm -rf /tmp/wine* \
+    && rm /tmp/innosetup-5.6.1.exe \
+    && WINEPREFIX=$WINEPREFIX wineboot --shutdown \
+    && WINEPREFIX=$WINEPREFIX wineboot --end-session
 #RUN rm -rf /tmp/wine-*
 
 # install wine 64bit
@@ -120,8 +123,8 @@ RUN wget \
   --output-document /tmp/launch4j-3.14-linux-x64.tgz \
   https://sourceforge.net/projects/launch4j/files/launch4j-3/3.14/launch4j-3.14-linux-x64.tgz/download
 #RUN (cd "$WINEPREFIX/drive_c/Program Files"; unzip /tmp/launch4j-3.14-win32)
-RUN (cd /usr/local; tar xf /tmp/launch4j-3.14-linux-x64.tgz)
-RUN rm -f /tmp/launch4j-3.14-win32
+RUN    (cd /usr/local; tar xf /tmp/launch4j-3.14-linux-x64.tgz) \
+    && rm -f /tmp/launch4j-3.14-win32
 
 # create Windows tools archive
 RUN (cd $WINEPREFIX/drive_c; \
@@ -140,8 +143,8 @@ RUN rm -rf $WINEPREFIX
 
 # add external third-party packages
 COPY download-third-party-packages.sh /root
-RUN /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern
-RUN rm /root/download-third-party-packages.sh
+RUN    /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern \
+    && rm /root/download-third-party-packages.sh
 
 # mount /media/home
 RUN mkdir /media/home && chown root /media/home

@@ -1,9 +1,14 @@
 FROM ubuntu:18.04
 ENV container docker
 
+# variables
+ARG uid=1000
+ARG gid=1000
+
 # add user for build process
-RUN groupadd -g 1000 build
-RUN useradd -g 1000 -u 1000 build
+RUN userdel `id -un $uid 2>/dev/null` 2>/dev/null || true
+RUN groupadd -g $gid build || true
+RUN useradd -g $gid -u $uid build -m
 
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive

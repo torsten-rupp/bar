@@ -1,8 +1,9 @@
 FROM debian:10
 ENV container docker
 
-ARG uid=0
-ARG gid=0
+# variables
+ARG uid=1000
+ARG gid=1000
 
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
@@ -65,19 +66,18 @@ RUN apt-get -y install \
   xz-utils \
   ;
 
-# add users
-RUN groupadd -g 1000 build
-RUN useradd -g 1000 -u 1000 build
-RUN groupadd -g ${gid} jenkins
-RUN useradd -m -u ${uid} -g ${gid} -p `openssl passwd jenkins` jenkins
+# add user for build process
+RUN    userdel `id -un $uid 2>/dev/null` 2>/dev/null || true \
+    && groupadd -g $gid jenkins || true \
+    && useradd -g $gid -u $uid jenkins -m
 
 # enable sudo for all
 RUN echo "ALL ALL = (ALL) NOPASSWD: ALL" > /etc/sudoers.d/all
 
 # add external third-party packages
 COPY download-third-party-packages.sh /root
-RUN /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern
-RUN rm -f /root/download-third-party-packages.sh
+RUN    /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern \
+    && rm -f /root/download-third-party-packages.sh
 
 # mounts
 RUN install -d /media/home  && chown root /media/home
