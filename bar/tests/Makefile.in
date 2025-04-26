@@ -110,6 +110,7 @@ CD             = cd
 CHATTR         = chattr
 CHGRP          = chgrp
 CHMOD          = chmod
+CMP            = cmp
 CP             = cp
 CUT            = cut
 CREATEDB       = @CREATEDB@
@@ -532,13 +533,8 @@ TARGETS =
 all: $(TARGETS)
 
 # clean
-clean:
-ifeq (@HAVE_SUDO_COMMAND_CHATTR_A@,1)
-	$(SUDO) -n $(CHATTR) -a data/append-only.dat 2>/dev/null || true
-endif
-ifeq (@HAVE_SUDO_COMMAND_CHATTR_I@,1)
-	$(SUDO) -n $(CHATTR) -i data/immutable.dat 2>/dev/null || true
-endif
+clean: \
+  tests_data_clean
 	$(RMRF) data
 	$(RMRF) $(INTERMEDIATE_DIR)
 	$(RMF) parallel.o global.o strings.o errors.o parallel
@@ -755,13 +751,13 @@ functionExec = \
 # helper function for test files
 functionCleanTestFiles = \
   $(RMRF) $(TEST_FILES_CLEAN); \
-  $(if $(TEST_FILE_PATH),       $(FIND) $(TEST_FILE_PATH)        -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
-  $(if $(TEST_FTP_FILE_PATH),   $(FIND) $(TEST_FTP_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
-  $(if $(TEST_SSH_FILE_PATH),   $(FIND) $(TEST_SSH_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
-  $(if $(TEST_SCP_FILE_PATH),   $(FIND) $(TEST_SCP_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
-  $(if $(TEST_SFTP_FILE_PATH),  $(FIND) $(TEST_SFTP_FILE_PATH)   -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
-  $(if $(TEST_WEBDAV_FILE_PATH),$(FIND) $(TEST_WEBDAV_FILE_PATH) -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
-  $(if $(TEST_SMB_FILE_PATH),   $(FIND) $(TEST_SMB_FILE_PATH)    -mindepth 1 -type f -name '*.bar' | $(XARGS) $(SUDO) -n $(RMF) -v;) \
+  $(if $(TEST_FILE_PATH),       $(FIND) $(TEST_FILE_PATH)        -mindepth 1 -type f -name '*.bar' 2>/dev/null | $(XARGS) $(SUDO) -n $(RMF) -v;) \
+  $(if $(TEST_FTP_FILE_PATH),   $(FIND) $(TEST_FTP_FILE_PATH)    -mindepth 1 -type f -name '*.bar' 2>/dev/null | $(XARGS) $(SUDO) -n $(RMF) -v;) \
+  $(if $(TEST_SSH_FILE_PATH),   $(FIND) $(TEST_SSH_FILE_PATH)    -mindepth 1 -type f -name '*.bar' 2>/dev/null | $(XARGS) $(SUDO) -n $(RMF) -v;) \
+  $(if $(TEST_SCP_FILE_PATH),   $(FIND) $(TEST_SCP_FILE_PATH)    -mindepth 1 -type f -name '*.bar' 2>/dev/null | $(XARGS) $(SUDO) -n $(RMF) -v;) \
+  $(if $(TEST_SFTP_FILE_PATH),  $(FIND) $(TEST_SFTP_FILE_PATH)   -mindepth 1 -type f -name '*.bar' 2>/dev/null | $(XARGS) $(SUDO) -n $(RMF) -v;) \
+  $(if $(TEST_WEBDAV_FILE_PATH),$(FIND) $(TEST_WEBDAV_FILE_PATH) -mindepth 1 -type f -name '*.bar' 2>/dev/null | $(XARGS) $(SUDO) -n $(RMF) -v;) \
+  $(if $(TEST_SMB_FILE_PATH),   $(FIND) $(TEST_SMB_FILE_PATH)    -mindepth 1 -type f -name '*.bar' 2>/dev/null | $(XARGS) $(SUDO) -n $(RMF) -v;) \
   $(CHMOD) o+w $(INTERMEDIATE_DIR) 2>/dev/null || true
 
 # helper function for test databases
@@ -1201,6 +1197,12 @@ tests_data_huge: \
   $(TEST_FILES_HUGE)
 
 tests_data_clean:
+ifeq (@HAVE_SUDO_COMMAND_CHATTR_A@,1)
+	$(SUDO) -n $(CHATTR) -a data/append-only.dat 2>/dev/null || true
+endif
+ifeq (@HAVE_SUDO_COMMAND_CHATTR_I@,1)
+	$(SUDO) -n $(CHATTR) -i data/immutable.dat 2>/dev/null || true
+endif
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(RMF)  $(TEST_CONFIGS)
 	$(RMRF) $(TEST_JOBS_DIRECTORY)
@@ -4187,10 +4189,10 @@ ifeq (@HAVE_XDELTA3@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -d '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
-	$(DIFF) data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
-	$(DIFF) data/delta2/hardlink.dat   $(INTERMEDIATE_DIR)/restore/hardlink.dat
-	$(DIFF) data/delta2/hardlink1.dat  $(INTERMEDIATE_DIR)/restore/hardlink1.dat
-	$(DIFF) data/delta2/hardlink2.dat  $(INTERMEDIATE_DIR)/restore/hardlink2.dat
+	$(CMP) -l data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
+	$(CMP) -l data/delta2/hardlink.dat   $(INTERMEDIATE_DIR)/restore/hardlink.dat
+	$(CMP) -l data/delta2/hardlink1.dat  $(INTERMEDIATE_DIR)/restore/hardlink1.dat
+	$(CMP) -l data/delta2/hardlink2.dat  $(INTERMEDIATE_DIR)/restore/hardlink2.dat
 	@#
 ifeq (@HAVE_BZ2@,1)
 	# delta tests with bzip2
@@ -4199,10 +4201,10 @@ ifeq (@HAVE_BZ2@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -d '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
-	$(DIFF) data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
-	$(DIFF) data/delta2/hardlink.dat   $(INTERMEDIATE_DIR)/restore/hardlink.dat
-	$(DIFF) data/delta2/hardlink1.dat  $(INTERMEDIATE_DIR)/restore/hardlink1.dat
-	$(DIFF) data/delta2/hardlink2.dat  $(INTERMEDIATE_DIR)/restore/hardlink2.dat
+	$(CMP) -l data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
+	$(CMP) -l data/delta2/hardlink.dat   $(INTERMEDIATE_DIR)/restore/hardlink.dat
+	$(CMP) -l data/delta2/hardlink1.dat  $(INTERMEDIATE_DIR)/restore/hardlink1.dat
+	$(CMP) -l data/delta2/hardlink2.dat  $(INTERMEDIATE_DIR)/restore/hardlink2.dat
 endif
 	@#
 ifeq (@HAVE_LZMA@,1)
@@ -4212,10 +4214,10 @@ ifeq (@HAVE_LZMA@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)             -t '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -d '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR)/data/delta2 -x '$(BAR_STORAGE)/$(BAR_PATTERN)-B.bar' --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
-	$(DIFF) data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
-	$(DIFF) data/delta2/hardlink.dat $(INTERMEDIATE_DIR)/restore/hardlink.dat
-	$(DIFF) data/delta2/hardlink1.dat $(INTERMEDIATE_DIR)/restore/hardlink1.dat
-	$(DIFF) data/delta2/hardlink2.dat $(INTERMEDIATE_DIR)/restore/hardlink2.dat
+	$(CMP) -l data/delta2/random512k.dat $(INTERMEDIATE_DIR)/restore/random512k.dat
+	$(CMP) -l data/delta2/hardlink.dat $(INTERMEDIATE_DIR)/restore/hardlink.dat
+	$(CMP) -l data/delta2/hardlink1.dat $(INTERMEDIATE_DIR)/restore/hardlink1.dat
+	$(CMP) -l data/delta2/hardlink2.dat $(INTERMEDIATE_DIR)/restore/hardlink2.dat
 endif
 endif
 	@#
@@ -4241,7 +4243,7 @@ tests_file_operations_large: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x '$(BAR_STORAGE)/$(BAR_PATTERN).bar' $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(INTERMEDIATE_DIR)/restore $(LOG))
 	for z in $(TEST_FILES_LARGE); do \
-          $(DIFF) $$z $(INTERMEDIATE_DIR)/restore/$$z; \
+          $(CMP) -l $$z $(INTERMEDIATE_DIR)/restore/$$z; \
           rc=$$?; \
           if test $$rc -eq 0; then \
             exit $$rc; \
@@ -5842,7 +5844,6 @@ tests_image_operations_check:
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@#
-	@#
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE0) 2>/dev/null $(LOG)
 	@#
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE1) 2>/dev/null $(LOG)
@@ -5862,8 +5863,7 @@ tests_image_operations_diff_image:
 	@$(call functionVerifyParameter,IMAGE0)
 	@$(call functionVerifyParameter,IMAGE1)
 	@#
-	@#
-	$(DIFF) $(IMAGE0) $(IMAGE1)
+	$(CMP) -l $(IMAGE0) $(IMAGE1)
 	@#
 	@$(call functionInfoFooter)
 
