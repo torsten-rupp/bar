@@ -274,13 +274,6 @@ ifeq ($(TEST_COMPRESS_NAMES_HUGE),)
   endif
 endif
 
-# image compress algorithms
-IMAGE_TEST_COMPRESS_NAMES ?= none zip9
-
-ifeq ($(IMAGE_FILESYSTEM_NAMES),)
-  IMAGE_FILESYSTEM_NAMES = raw ext fat reiser
-endif
-
 # supported crypt algorithms
 ifeq ($(MIN_TEST_CRYPT_NAMES),)
   MIN_TEST_CRYPT_NAMES = none
@@ -299,6 +292,14 @@ ifeq ($(TEST_CRYPT_NAMES),)
   ifeq (@HAVE_GCRYPT@,1)
     TEST_CRYPT_NAMES += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
   endif
+endif
+
+# supported image compress algorithms
+ifeq ($(TEST_IMAGE_FILESYSTEM_NAMES),)
+  TEST_IMAGE_FILESYSTEM_NAMES = raw ext fat reiser
+endif
+ifeq ($(TEST_IMAGE_COMPRESS_NAMES),)
+  TEST_IMAGE_COMPRESS_NAMES ?= none zip9
 endif
 
 # additional options
@@ -639,6 +640,10 @@ help_output:
         ifeq (@HAVE_GCRYPT@,1)
 	@$(ECHO) "    3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256"
         endif
+	@$(ECHO) "  TEST_IMAGE_FILESYSTEM_NAMES"
+	@$(ECHO) "    raw ext fat reiser"
+	@$(ECHO) "  TEST_IMAGE_COMPRESS_NAMES"
+	@$(ECHO) "    none zip9"
 	@$(ECHO) "  TEST_INDEX_DATABASES"
 	@$(ECHO) "    sqlite:$(INTERMEDIATE_DIR)/index.db"
         ifeq (@HAVE_MARIADB@,1)
@@ -1643,7 +1648,7 @@ tests7-valgrind tests_convert-valgrind:
 tests8 tests_image: \
   $(TEST_BAR)
 	@$(call functionInfoBegin,Tests 8: image)
-	for compress in $(IMAGE_TEST_COMPRESS_NAMES); do \
+	for compress in $(TEST_IMAGE_COMPRESS_NAMES); do \
             $(MAKE) \
               BAR_STORAGE="$(INTERMEDIATE_DIR)" \
               BAR_FILE="test" \
@@ -4619,7 +4624,7 @@ endif
 
 .PHONY: tests_image_operations
 tests_image_operations: \
-  $(foreach fileSystem,$(IMAGE_FILESYSTEM_NAMES),tests_image_operations_$(fileSystem))
+  $(foreach fileSystem,$(TEST_IMAGE_FILESYSTEM_NAMES),tests_image_operations_$(fileSystem))
 
 .PHONY: tests_image_operations_raw
 tests_image_operations_raw:  \
