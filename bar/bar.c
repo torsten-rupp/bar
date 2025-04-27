@@ -898,22 +898,40 @@ void outputConsole(FILE *file, ConstString string)
         // wipe-out last line
         if (lastOutputLine != NULL)
         {
-          for (i = 0; i < String_length(lastOutputLine); i++)
+          // get visible line output length
+          uint           n = 0;
+          StringIterator stringIterator;
+          char           ch;
+          STRING_CHAR_ITERATE(lastOutputLine,stringIterator,ch)
+          {
+            if (ch != '\b')
+            {
+              n++;
+            }
+            else
+            {
+              assert(n > 0);
+              n--;
+            }
+          }
+
+          // wipe out old line
+          for (i = 0; i < n; i++)
           {
             UNUSED_RESULT(fwrite("\b",1,1,file));
           }
-          for (i = 0; i < String_length(lastOutputLine); i++)
+          for (i = 0; i < n; i++)
           {
             UNUSED_RESULT(fwrite(" ",1,1,file));
           }
-          for (i = 0; i < String_length(lastOutputLine); i++)
+          for (i = 0; i < n; i++)
           {
             UNUSED_RESULT(fwrite("\b",1,1,file));
           }
         }
 
         // get new output line
-        i = STRING_BEGIN;
+        i = 0;
         convertSystemToConsoleEncodingAppend(outputLine,string);
       }
       else
