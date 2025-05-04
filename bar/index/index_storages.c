@@ -2807,6 +2807,7 @@ Errors IndexStorage_prune(IndexHandle *indexHandle,
   storageName = String_new();
 
   // get storage name, state
+  indexState = INDEX_STATE_UNKNOWN;
   error = Database_get(&indexHandle->databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
