@@ -123,6 +123,27 @@ void Configuration_doneAll(void);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
+* Name   : Configuration_isCommandLineOptionSet
+* Purpose: check if command line option is set
+* Input  : variable - variable
+* Output : -
+* Return : TRUE iff command line option is set
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Configuration_isCommandLineOptionSet(const void *variable);
+#if defined(NDEBUG) || defined(__CONFIGURATION_IMPLEMENTATION__)
+INLINE bool Configuration_isCommandLineOptionSet(const void *variable)
+{
+  assert(variable != NULL);
+
+  return CmdOption_isSet(variable);
+}
+#endif /* NDEBUG || __CONFIGURATION_IMPLEMENTATION__ */
+
+// ----------------------------------------------------------------------
+
+/***********************************************************************\
 * Name   : Configuration_isCertificateAvailable
 * Purpose: check if certificate is available
 * Input  : certificate - certificate

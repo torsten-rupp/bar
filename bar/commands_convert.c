@@ -773,9 +773,9 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert file      '%s' (%s bytes%s)...",String_cString(fileName),sizeString,fragmentString);
 
   // set new compression, crypt settings
-  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  if (Configuration_isCommandLineOptionSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms) || Configuration_isCommandLineOptionSet(&globalOptions.cryptNewPassword))
   {
     cryptSalt = NULL;
     cryptKey  = NULL;
@@ -1010,9 +1010,9 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert image     '%s' (%s bytes%s)...",String_cString(deviceName),sizeString,fragmentString);
 
   // set new compression, crypt settings
-  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = newJobOptions->cryptAlgorithms[0];
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  if (Configuration_isCommandLineOptionSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = newJobOptions->cryptAlgorithms[0];
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms) || Configuration_isCommandLineOptionSet(&globalOptions.cryptNewPassword))
   {
     cryptSalt = NULL;
     cryptKey  = NULL;
@@ -1197,8 +1197,8 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert directory '%s'...",String_cString(directoryName));
 
   // set new crypt settings
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms) || Configuration_isCommandLineOptionSet(&globalOptions.cryptNewPassword))
   {
     cryptSalt = NULL;
     cryptKey  = NULL;
@@ -1321,8 +1321,8 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert link      '%s'...",String_cString(linkName));
 
   // set new crypt settings
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms) || Configuration_isCommandLineOptionSet(&globalOptions.cryptNewPassword))
   {
     cryptSalt = NULL;
     cryptKey  = NULL;
@@ -1477,9 +1477,9 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert hard link '%s' (%s bytes%s)...",String_cString(StringList_first(&fileNameList,NULL)),sizeString,fragmentString);
 
   // set new compression, crypt settings
-  if (CmdOption_isSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = newJobOptions->cryptAlgorithms[0];
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  if (Configuration_isCommandLineOptionSet(&globalOptions.compressAlgorithms)) byteCompressAlgorithm = newJobOptions->compressAlgorithms.byte;
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms    )) cryptAlgorithm        = newJobOptions->cryptAlgorithms[0];
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms) || Configuration_isCommandLineOptionSet(&globalOptions.cryptNewPassword))
   {
     cryptSalt = NULL;
     cryptKey  = NULL;
@@ -1668,8 +1668,8 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   printInfo(1,"  Convert special   '%s'...",String_cString(fileName));
 
   // set new crypt settings
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms) || Configuration_isCommandLineOptionSet(&globalOptions.cryptNewPassword))
   {
     cryptSalt = NULL;
     cryptKey  = NULL;
@@ -1802,11 +1802,11 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(comment); String_delete(userName); String_delete(hostName); return DEBUG_TESTCODE_ERROR(); }
 
-  printInfo(1,"  Convert 'meta'    ...");
+  printInfo(1,"  Convert meta      ...");
 
   // set new job UUID, schedule UUOD, created date/time comment
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms) || CmdOption_isSet(&globalOptions.cryptNewPassword))
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms)) cryptAlgorithm = newJobOptions->cryptAlgorithms[0];
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms) || Configuration_isCommandLineOptionSet(&globalOptions.cryptNewPassword))
   {
     cryptSalt = NULL;
     cryptKey  = NULL;
@@ -1814,7 +1814,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   if (!stringIsEmpty(newJobUUID)) String_setCString(jobUUID,newJobUUID);
   if (!stringIsEmpty(newEntityUUID)) String_setCString(entityUUID,newEntityUUID);
   if (newCreatedDateTime != 0LL) createdDateTime = newCreatedDateTime;
-  if (CmdOption_isSet(&globalOptions.comment)) String_set(comment,newJobOptions->comment);
+  if (Configuration_isCommandLineOptionSet(&globalOptions.comment)) String_set(comment,newJobOptions->comment);
 
   // create new meta entry
   error = Archive_newMetaEntry(&destinationArchiveEntryInfo,
@@ -1966,7 +1966,7 @@ LOCAL Errors convertEntry(ArchiveHandle     *sourceArchiveHandle,
       break;
     case ARCHIVE_ENTRY_TYPE_SALT:
     case ARCHIVE_ENTRY_TYPE_KEY:
-      assert(!CmdOption_isSet(globalOptions.cryptAlgorithms));
+      assert(!Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms));
       error = Archive_transferEntry(sourceArchiveHandle,
                                     &convertInfo->destinationArchiveHandle
                                    );
@@ -2049,7 +2049,7 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 // TODO: required?
       // set crypt salt, crypt key derive type, and crypt mode
       Archive_setCryptInfo(&sourceArchiveHandle,entryMsg.archiveCryptInfo);
-      if (!CmdOption_isSet(globalOptions.cryptAlgorithms))
+      if (!Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms))
       {
         Archive_setCryptInfo(&convertInfo->destinationArchiveHandle,entryMsg.archiveCryptInfo);
       }
@@ -2297,7 +2297,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 
   // create new archive
   archiveFlags = ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS;
-  if (CmdOption_isSet(globalOptions.cryptAlgorithms))
+  if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms))
   {
     archiveFlags |= ARCHIVE_FLAG_CREATE_SALT|ARCHIVE_FLAG_CREATE_KEY;
   }
@@ -2321,7 +2321,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                          sourceArchiveHandle.archiveType,
                          FALSE, // dryRun
                          Misc_getCurrentDateTime(),
-                         CmdOption_isSet(&globalOptions.cryptNewPassword)
+                         Configuration_isCommandLineOptionSet(&globalOptions.cryptNewPassword)
                            ? &globalOptions.cryptNewPassword
                            : &globalOptions.cryptPassword,
                          archiveFlags,

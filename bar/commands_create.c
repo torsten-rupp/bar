@@ -5490,7 +5490,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
           }
           else
           {
-            // read nohting -> file size changed -> done
+            // read nothing -> file size changed -> done
             size = 0;
           }
         }
@@ -7748,7 +7748,6 @@ Errors Command_create(ServerIO                     *masterIO,
                                           &createInfo.storageInfo.storageSpecifier
                                          );
         incrementalFileInfoExistFlag = File_exists(incrementalListFileName);
-fprintf(stderr,"%s:%d: incrementalListFileName=%s %d\n",__FILE__,__LINE__,String_cString(incrementalListFileName),incrementalFileInfoExistFlag);
       }
       if (!incrementalFileInfoExistFlag && (jobUUID != NULL))
       {

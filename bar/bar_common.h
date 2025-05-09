@@ -1176,6 +1176,7 @@ typedef struct
 
   // debug/test only
   #ifndef NDEBUG
+  bool                        debugFlag;                      // run in debug mode
   struct
   {
     bool                      showChunkIdsFlag;               // TRUE to show chunk ids only
