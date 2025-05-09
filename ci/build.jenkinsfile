@@ -51,11 +51,11 @@ def build()
               sh "make -j`nproc --ignore=1`"
               if (params.CODE_COVERAGE)
               {
-                sh "make -C bar bar-gcov"
+                sh "make -C bar -j`nproc --ignore=1` bar-gcov"
               }
               if (params.PROFILING)
               {
-                sh "make -C bar bar-gprof"
+                sh "make -C bar -j`nproc --ignore=1` bar-gprof"
               }
               sh "make dist"
             }

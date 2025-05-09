@@ -1572,7 +1572,7 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
 
 # ----------------------------------------------------------------------------
 
-# tests
+# tests (Note: tests must be executed sequential)
 .PHONY: tests_smoke* tests_min* tests*
 tests_smoke: \
   bar@EXEEXT@ \

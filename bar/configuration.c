@@ -8164,7 +8164,7 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 //  CMD_OPTION_ENUM         ("new-key-password",                  0,  1,1,command,                                             COMMAND_NEW_KEY_PASSWORD,                                    "set new private key password"                                             ),
   CMD_OPTION_INTEGER      ("generate-keys-bits",                0,  1,1,globalOptions.generateKeyBits,                       MIN_ASYMMETRIC_CRYPT_KEY_BITS,
                                                                                                                              MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,       "key bits (default: %default%)"                                            ),
-  CMD_OPTION_SELECT       ("generate-keys-mode",                0,  1,2,globalOptions.generateKeyMode,                       BAR_COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES,                     "select generate key mode mode","mode","(default)"                         ),
+  CMD_OPTION_SELECT       ("generate-keys-mode",                0,  1,2,globalOptions.generateKeyMode,                       BAR_COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES,                 "select generate key mode mode","mode","(default)"                         ),
   CMD_OPTION_STRING       ("job",                               0,  0,1,globalOptions.jobUUIDOrName,                                                                                      "execute job","name or UUID"                                               ),
 
   CMD_OPTION_ENUM         ("normal",                            0,  1,2,globalOptions.archiveType,                           ARCHIVE_TYPE_NORMAL,                                         "create normal archive (no incremental list file, default)"                ),
@@ -8173,7 +8173,7 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_SPECIAL      ("incremental-list-file",             'I',1,2,&globalOptions.incrementalListFileName,              cmdOptionParseString,NULL,1,                                 "incremental list file name (default: <archive name>.bid)","file name"     ),
   CMD_OPTION_ENUM         ("differential",                      0,  1,2,globalOptions.archiveType,                           ARCHIVE_TYPE_DIFFERENTIAL,                                   "create differential archive"                                              ),
 
-  CMD_OPTION_SELECT       ("pattern-type",                      0,  1,2,globalOptions.patternType,                           BAR_COMMAND_LINE_OPTIONS_PATTERN_TYPES,                          "select pattern type","type","(default)"                                   ),
+  CMD_OPTION_SELECT       ("pattern-type",                      0,  1,2,globalOptions.patternType,                           BAR_COMMAND_LINE_OPTIONS_PATTERN_TYPES,                      "select pattern type","type","(default)"                                   ),
 
   CMD_OPTION_BOOLEAN      ("storage-list-stdin",                'T',1,3,globalOptions.storageNameListStdin,                                                                               "read storage name list from stdin"                                        ),
   CMD_OPTION_STRING       ("storage-list",                      0,  1,3,globalOptions.storageNameListFileName,                                                                            "storage name list file name","file name"                                  ),
@@ -8474,10 +8474,10 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("raw-images",                        0,  1,2,globalOptions.rawImagesFlag,                                                                                      "store raw images (store all image blocks)"                                ),
   CMD_OPTION_BOOLEAN      ("no-fragments-check",                0,  1,2,globalOptions.noFragmentsCheckFlag,                                                                               "do not check completeness of file fragments"                              ),
   CMD_OPTION_BOOLEAN      ("no-index-database",                 0,  1,1,globalOptions.noIndexDatabaseFlag,                                                                                "do not store index database for archives"                                 ),
-  CMD_OPTION_SELECT       ("archive-file-mode",                 0,  1,2,globalOptions.archiveFileMode,                       BAR_COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,                     "select archive files write mode","mode","(default)"                       ),
+  CMD_OPTION_SELECT       ("archive-file-mode",                 0,  1,2,globalOptions.archiveFileMode,                       BAR_COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES,                 "select archive files write mode","mode","(default)"                       ),
   // Note: shortcut for --archive-file-mode=overwrite
   CMD_OPTION_SPECIAL      ("overwrite-archive-files",           'o',0,2,&globalOptions.archiveFileMode,                      cmdOptionParseArchiveFileModeOverwrite,NULL,0,               "overwrite existing archive files",""                                      ),
-  CMD_OPTION_SELECT       ("restore-entry-mode",                0,  1,2,globalOptions.restoreEntryMode,                      BAR_COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES,                    "restore entry mode","mode","(default)"                                    ),
+  CMD_OPTION_SELECT       ("restore-entry-mode",                0,  1,2,globalOptions.restoreEntryMode,                      BAR_COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES,                "restore entry mode","mode","(default)"                                    ),
   // Note: shortcut for --restore-entry-mode=overwrite
   CMD_OPTION_SPECIAL      ("overwrite-files",                   0,  0,2,&globalOptions.restoreEntryMode,                     cmdOptionParseRestoreEntryModeOverwrite,NULL,0,              "overwrite existing entries on restore",""                                 ),
   CMD_OPTION_BOOLEAN      ("sparse-files",                      0,  1,2,globalOptions.sparseFilesFlag,                                                                                    "create sparse files"                                                      ),
@@ -8519,6 +8519,8 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
 
   // only for debugging/testing
   #ifndef NDEBUG
+  CMD_OPTION_BOOLEAN      ("debug",                             0,  2,0,globalOptions.debugFlag,                                                                                          "run in debug mode"                                                        ),
+
   CMD_OPTION_BOOLEAN      ("debug-show-chunks",                 0,  2,0,globalOptions.debug.showChunkIdsFlag,                                                                             "show chunk ids"                                                           ),
   CMD_OPTION_INCREMENT    ("debug-create-archive-errors",       0,  2,0,globalOptions.debug.createArchiveErrors,             0,MAX_INT,                                                   "create error in archives"                                                 ),
   CMD_OPTION_INTEGER      ("debug-create-signal",               0,  2,0,globalOptions.debug.createSignal,                    0,MAX_INT,NULL,                                              "create signal"                                                            ),
