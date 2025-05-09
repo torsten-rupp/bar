@@ -374,9 +374,6 @@ sh "echo binaryExtension="+binaryExtension
   {
     script
     {
-//      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log', allowEmptyArchive: true
-//sh "ps auxw"
-//sh "ls -la /var/log"
       archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log, core*', allowEmptyArchive: true
 //      archiveArtifacts artifacts: 'win32/**, bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log, core*', allowEmptyArchive: true
     }
