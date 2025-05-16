@@ -10983,7 +10983,6 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   const JobNode  *jobNode;
   Errors         error;
   String         noBackupFileName1,noBackupFileName2;
-  Errors         tmpError;
   FileAttributes fileAttributes;
 
   assert(clientInfo != NULL);
@@ -11080,10 +11079,20 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
           noBackupFileName2 = File_appendFileNameCString(File_setFileName(String_new(),name),".NOBACKUP");
 
           error = ERROR_NONE;
-          tmpError = File_delete(noBackupFileName1,FALSE);
-          if (tmpError != ERROR_NONE) error = tmpError;
-          tmpError = File_delete(noBackupFileName2,FALSE);
-          if (tmpError != ERROR_NONE) error = tmpError;
+          if (error == ERROR_NONE)
+          {
+            if (File_exists(noBackupFileName1))
+            {
+              error = File_delete(noBackupFileName1,FALSE);
+            }
+          }
+          if (error == ERROR_NONE)
+          {
+            if (File_exists(noBackupFileName2))
+            {
+              error = File_delete(noBackupFileName2,FALSE);
+            }
+          }
           if (error != ERROR_NONE)
           {
             String_delete(noBackupFileName2);
