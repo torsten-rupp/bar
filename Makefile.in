@@ -846,25 +846,22 @@ clean_rpm:
 
 $(DISTRIBUTION_NAME)-x86_64.rpm: \
   $(DISTRIBUTION_NAME).tar.bz2
-	@$(call functionPrintInfo,Build RPM on AlmaLinux 8 64bit)
+	@$(call functionPrintInfo,Build RPM on AlmaLinux)
 	@( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
             --net=host \
             --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
-            -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
-            bar-almalinux-x86_64:8 setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
+            bar-rpm setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
 .PHONY: build_rpm
 build_rpm:
 	install -d build/rpm
-	# Note: scl_source to enable gcc 7
 	(cd build/rpm; \
-	 source scl_source enable devtoolset-7; \
          ../../packages/build_rpm.sh \
            ../.. \
            $(PACKAGE_NAME) \
@@ -913,16 +910,15 @@ clean_deb:
 
 $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
   $(DISTRIBUTION_NAME).tar.bz2
-	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 64bit)
+	@$(call functionPrintInfo,Build DEB on Debian)
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
             --net=host \
             --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
-            -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
-            bar-debian-x86_64:10 setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
+            bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -1086,7 +1082,7 @@ install_test_rpm_opensused: \
   install_test_rpm_opensuse-tumbleweed-x86_64d \
   $(foreach i,$(TEST_PACKAGES_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64d)
 
-.PHONY: install_test_rpm_almalinux8-x86_64 install_test_rpm_almalinux8-x86_64d
+.PHONY: $(foreach i,$(TEST_PACKAGES_ALMALINUX),install_test_rpm_almalinux$i-x86_64) $(foreach i,$(TEST_PACKAGES_ALMALINUX),install_test_rpm_almalinux$i-x86_64d)
 install_test_rpm_almalinux%-x86_64: $(DISTRIBUTION_NAME)-x86_64.rpm
 	@$(call functionPrintInfo,Test install almalinux $* 64bit)
 	$(call functionInstallTestRPM,almalinux:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
@@ -1096,7 +1092,7 @@ install_test_rpm_almalinux%-x86_64d: $(DISTRIBUTION_NAME)-x86_64.rpm
 	$(call functionInstallTestRPM,almalinux:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm,--debug) $(if $(QUIET),1>/dev/null)
 	$(call functionPrintResult,OK)
 
-.PHONY: install_test_rpm_fedora%-x86_64 install_test_rpm_fedora%-x86_64d
+.PHONY: $(foreach i,$(TEST_PACKAGES_FEDORA),install_test_rpm_fedora$i-x86_64) $(foreach i,$(TEST_PACKAGES_FEDORA),install_test_rpm_fedora$i-x86_64d)
 install_test_rpm_fedora%-x86_64:
 	@$(call functionPrintInfo,Test install Fedora $* 64bit)
 	@$(call functionInstallTestRPM,fedora:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
@@ -1115,7 +1111,7 @@ install_test_rpm_opensuse-tumbleweed-x86_64d:
 	@$(call functionPrintInfo,Test install OpenSuSE tumbleweed 64bit)
 	@$(call functionInstallTestRPM,opensuse/tumbleweed,,x86_64,$(DISTRIBUTION_NAME)-x86_64.rpm,--debug) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
-.PHONY: install_test_rpm_opensuse-leap-x86_64 install_test_rpm_opensuse-leap%-x86_64d
+.PHONY: $(foreach i,$(TEST_PACKAGES_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64) $(foreach i,$(TEST_PACKAGES_OPENSUSE_LEAP),install_test_rpm_opensuse-leap$i-x86_64d)
 install_test_rpm_opensuse-leap%-x86_64:
 	@$(call functionPrintInfo,Test install OpenSuSE Leap $* 64bit)
 	@$(call functionInstallTestRPM,opensuse/leap:$*,,$(DISTRIBUTION_NAME)-x86_64.rpm) $(if $(QUIET),1>/dev/null)
@@ -1145,7 +1141,7 @@ install_test_deb_ubuntu: \
 install_test_deb_ubuntud: \
   $(foreach i,$(TEST_PACKAGES_UBUNTU),install_test_deb_ubuntu$i-x86_64d)
 
-.PHONY: install_test_deb_debian%-x86_64 install_test_deb_debian%-x86_64d
+.PHONY: $(foreach i,$(TEST_PACKAGES_DEBIAN),install_test_deb_debian$i-x86_64) $(foreach i,$(TEST_PACKAGES_DEBIAN),install_test_deb_debian$i-x86_64d)
 install_test_deb_debian%-x86_64:
 	@$(call functionPrintInfo,Test install Debian $* 64bit)
 	@$(call functionInstallTestDEB,debian:$*,x86_64,$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb) $(if $(QUIET),1>/dev/null)
@@ -1155,7 +1151,7 @@ install_test_deb_debian%-x86_64d:
 	@$(call functionInstallTestDEB,debian:$*,x86_64,$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb,--debug) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
-.PHONY: install_test_deb_ubuntu%-x86_64 install_test_deb_ubuntu%-x86_64d
+.PHONY: $(foreach i,$(TEST_PACKAGES_UBUNTU),install_test_deb_ubuntu$i-x86_64) $(foreach i,$(TEST_PACKAGES_UBUNTU),install_test_deb_ubuntu$i-x86_64d)
 install_test_deb_ubuntu%-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu $* 64bit)
 	@$(call functionInstallTestDEB,ubuntu:$*,x86_64,$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb) $(if $(QUIET),1>/dev/null)

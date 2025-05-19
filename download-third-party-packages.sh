@@ -1613,7 +1613,7 @@ if test $cleanFlag -eq 0; then
      directoryName="libsmb2-$LIBSMB2_VERSION"
      if test ! -d $directoryName; then
        if test -n "$localDirectory" -a -d $localDirectory/libsmb2-$LIBSMB2_VERSION; then
-         # Note: make a copy to get usable file permissions (source may be owned by root)
+         # Note: make a deep copy instead of link to get usable file permissions (source may be owned by root)
          $CP -r $localDirectory/libsmb2-$LIBSMB2_VERSION $directoryName
          result=1
        else
@@ -1960,7 +1960,7 @@ if test $cleanFlag -eq 0; then
      directoryName="par2cmdline-$PAR2_VERSION"
      if test ! -d $directoryName; then
        if test -n "$localDirectory" -a -d $localDirectory/par2cmdline-$PAR2_VERSION; then
-         # Note: make a copy to get usable file permissions (source may be owned by root)
+         # Note: make a deep copy instead of link to get usable file permissions (source may be owned by root)
          $CP -r $localDirectory/par2cmdline-$PAR2_VERSION $directoryName
          result=1
        else
@@ -2010,7 +2010,7 @@ if test $cleanFlag -eq 0; then
 
      if test ! -d $directoryName; then
        if test -n "$localDirectory" -a -d $localDirectory/libisofs-$LIBISOFS_VERSION; then
-         # Note: make a copy to get usable file permissions (source may be owned by root)
+         # Note: make a deep copy instead of link to get usable file permissions (source may be owned by root)
          $CP -r $localDirectory/libisofs-$LIBISOFS_VERSION $directoryName
          result=1
        else
@@ -2068,7 +2068,7 @@ if test $cleanFlag -eq 0; then
 
      if test ! -d $directoryName; then
        if test -n "$localDirectory" -a -d $localDirectory/libburn-$LIBBURN_VERSION; then
-         # Note: make a copy to get usable file permissions (source may be owned by root)
+         # Note: make a deep copy instead of link to get usable file permissions (source may be owned by root)
          $CP -r $localDirectory/libburn-$LIBBURN_VERSION $directoryName
          result=1
        else
@@ -2124,9 +2124,10 @@ if test $cleanFlag -eq 0; then
      $ECHO_NO_NEW_LINE "Get util-linux ($UTIL_LINUX_VERSION)..."
      directoryName="util-linux-$UTIL_LINUX_VERSION"
 
+set -x
      if test ! -d $directoryName; then
        if test -n "$localDirectory" -a -d $localDirectory/util-linux-$UTIL_LINUX_VERSION; then
-         # Note: make a copy to get usable file permissions (source may be owned by root)
+         # Note: make a deep copy instead of link to get usable file permissions (source may be owned by root)
          $CP -r $localDirectory/util-linux-$UTIL_LINUX_VERSION $directoryName
          result=1
        else
@@ -2147,6 +2148,7 @@ if test $cleanFlag -eq 0; then
      else
        result=3
      fi
+set +x
 
      if test $noDecompressFlag -eq 0; then
        (cd "$workingDirectory"; $LN -sfT $destinationDirectory/util-linux-$UTIL_LINUX_VERSION util-linux)

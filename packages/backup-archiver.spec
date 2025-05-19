@@ -16,8 +16,8 @@ BuildRequires: coreutils
 BuildRequires: e2fsprogs
 BuildRequires: make
 BuildRequires: gcc gcc-c++ glibc-devel binutils
-BuildRequires: java-1.6.0-openjdk-devel
-BuildRequires: jre >= 1.6.0
+BuildRequires: java-1.8.0-openjdk-devel
+BuildRequires: jre >= 1.8.0
 BuildRequires: lua
 BuildRequires: m4
 BuildRequires: openssl
@@ -40,10 +40,11 @@ stored on a harddisk, cd, dvd, bd or directly on a server via ftp,
 scp, sftp or webdav. A server-mode and a scheduler is integrated for
 creating automated backups in the background.
 
-#define ADDITIONAL_DOWNLOAD_FLAGS zlib icu
 %define ADDITIONAL_DOWNLOAD_FLAGS %{nil}
-#define ADDITIONAL_CONFIGURE_FLAGS --disable-bz2 --disable-lzma --disable-xz --disable-lzo --disable-lz4 --disable-zstd --disable-xdelta3 --disable-gcrypt --disable-curl --disable-ssh --disable-tls --disable-iso9660 --disable-pcre
 %define ADDITIONAL_CONFIGURE_FLAGS %{nil}
+# debug only
+#define ADDITIONAL_DOWNLOAD_FLAGS zlib icu
+#define ADDITIONAL_CONFIGURE_FLAGS --disable-bz2 --disable-lzma --disable-xz --disable-lzo --disable-lz4 --disable-zstd --disable-xdelta3 --disable-gcrypt --disable-curl --disable-ssh --disable-tls --disable-iso9660 --disable-pcre
 
 %prep
 %setup -q -n %{packageName}-%{version}
