@@ -11400,7 +11400,7 @@ throw new Error("NYI");
     Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
-      widgetSave.setEnabled(!entryData.pattern.isEmpty());
+      if (entryData.pattern != null) widgetSave.setEnabled(!entryData.pattern.isEmpty());
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       widgetSave.addSelectionListener(new SelectionListener()
       {
@@ -11458,7 +11458,7 @@ throw new Error("NYI");
       }
     });
 
-    return (Boolean)Dialogs.run(dialog,false) && !entryData.pattern.isEmpty();
+    return (Boolean)Dialogs.run(dialog,false) && ((entryData.pattern == null) || !entryData.pattern.isEmpty());
   }
 
   /** add include entry
