@@ -6559,7 +6559,6 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
       --debug-server \
       --debug-index-wait-operations \
       $(ADDITIONAL_OPTIONS); \
-      $(LOG); \
     $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
       -C $(SUB_DIR) \
       --config=$(TEST_SERVER_CONFIG) \
@@ -6570,7 +6569,6 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
       --debug-server \
       --debug-index-wait-operations \
       $(ADDITIONAL_OPTIONS); \
-      $(LOG); \
     $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
       -C $(SUB_DIR) \
       --config=$(TEST_SERVER_CONFIG) \
@@ -6811,7 +6809,7 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 			--debug-server \
 			--debug-server-fixed-ids \
 			$(ADDITIONAL_OPTIONS); \
-	) $(LOG); \
+	) $(LOG)
 else
 	$(ECHO) Warning: skipped $@ - BAR with debug functions required
 endif
@@ -6860,7 +6858,7 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 			--debug-server \
 			--debug-server-fixed-ids \
 			$(ADDITIONAL_OPTIONS); \
-	) $(LOG); \
+	) $(LOG)
 else
 	$(ECHO) Warning: skipped $@ - BAR with debug functions required
 endif
@@ -7083,7 +7081,7 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 		\
 		: done; \
 		$(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),QUIT); \
-	) $(LOG); \
+	) $(LOG)
 else
 	$(ECHO) Warning: skipped $@ - BAR with debug functions required
 endif
