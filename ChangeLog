@@ -9,6 +9,8 @@
   * BACControl: upgrade to Java 1.7
   * BARControl: add total progress to test dialog
   * BARControl: add general commands to server settings dialog
+  * BARControl: fixed bug #29: null pointer exception when adding
+    filter rule
   * upgrade build+test docker base to Ubuntu 24.04
   * replaced support for CentOS by AlmaLinux
 
