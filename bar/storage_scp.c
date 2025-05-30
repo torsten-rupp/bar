@@ -350,7 +350,7 @@ LOCAL void StorageSCP_getPrintableName(String                 string,
   }
   if (!String_isEmpty(storageFileName))
   {
-    if (!String_startsWithChar(storageFileName,'/')) String_appendChar(string,'/');
+    String_appendChar(string,'/');
     String_append(string,storageFileName);
   }
 }
