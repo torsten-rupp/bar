@@ -6,6 +6,7 @@
   * fixed handling optional command line options (isSet-operator)
   * fixed error handling when deleting .nobackup
   * upgraded SQLite to 3.49.1
+  * bar-index: add option --purge-with-error
   * BACControl: upgrade to Java 1.7
   * BARControl: add total progress to test dialog
   * BARControl: add general commands to server settings dialog

@@ -108,7 +108,8 @@ LOCAL bool       createAggregatesFlag                 = FALSE;  // re-create agg
 LOCAL bool       cleanOrphanedFlag                    = FALSE;  // execute clean orphaned entries
 LOCAL bool       cleanDuplicateEntriesFlag            = FALSE;  // execute clean duplicate entries
 LOCAL bool       cleanFlag                            = FALSE;  // execute clean orphaned+duplicate entries
-LOCAL bool       purgeFlag                     = FALSE;  // execute purge deleted storages
+LOCAL bool       purgeFlag                            = FALSE;  // execute purge deleted storages
+LOCAL bool       purgeWithErrorFlag                   = FALSE;  // execute purge storages with error
 LOCAL bool       vacuumFlag                           = FALSE;  // execute vacuum
 LOCAL bool       showStoragesFlag                     = FALSE;  // show storages of job
 LOCAL bool       showEntriesFlag                      = FALSE;  // show entries of job
@@ -563,7 +564,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("clean-orphaned",                    0,  0,0,cleanOrphanedFlag,                                                                       "clean orphaned in index database"                                ),
   CMD_OPTION_BOOLEAN      ("clean-duplicates",                  0,  0,0,cleanDuplicateEntriesFlag,                                                               "clean duplicates in index database"                              ),
   CMD_OPTION_BOOLEAN      ("clean",                             0,  0,0,cleanFlag,                                                                               "clean index database"                                            ),
-  CMD_OPTION_BOOLEAN      ("purge",                             0,  0,0,purgeFlag,                                                                        "purge deleted storages"                                          ),
+  CMD_OPTION_BOOLEAN      ("purge",                             0,  0,0,purgeFlag,                                                                               "purge deleted storages"                                          ),
+  CMD_OPTION_BOOLEAN      ("purge-with-error",                  0,  0,0,purgeWithErrorFlag,                                                                      "purge storages with error"                                       ),
   CMD_OPTION_BOOLEAN      ("vacuum",                            0,  0,0,vacuumFlag,                                                                              "collect and free unused file space"                              ),
   CMD_OPTION_BOOLEAN      ("storages",                          's',0,0,showStoragesFlag,                                                                        "print storages"                                                  ),
   CMD_OPTION_BOOLEAN      ("entries",                           'e',0,0,showEntriesFlag,                                                                         "print entries"                                                   ),
@@ -6919,54 +6921,30 @@ LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : purgeDeletedStorages
-* Purpose: purge deleted storages
+* Name   : purgeStorages
+* Purpose: purge storages
 * Input  : databaseHandle - database handle
+*          storageIds     - storages to purge
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
+LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
 {
-  Array         storageIds;
   Array         entryIds;
-  ulong         n;
   Errors        error;
+  ulong         n;
   ArrayIterator storageArrayIterator,entryArrayIterator;
   DatabaseId    storageId;
   DatabaseId    databaseId;
   IndexId       entityId;
   DatabaseId    entryId;
 
-  // init variables
-
-  printInfo("Purge deleted storages:\n");
-
-  Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  n     = 0L;
-  error = ERROR_UNKNOWN;
 
-  error = Database_getIds(databaseHandle,
-                          &storageIds,
-                          "storages",
-                          "id",
-                          "deletedFlag=TRUE",
-                          DATABASE_FILTERS
-                          (
-                          ),
-                          DATABASE_UNLIMITED
-                         );
-  if (error != ERROR_NONE)
-  {
-    printError(_("purge deleted fail (error: %s)!"),Error_getText(error));
-    Array_done(&entryIds);
-    Array_done(&storageIds);
-    return error;
-  }
-
-  ARRAY_ITERATEX(&storageIds,storageArrayIterator,storageId,error == ERROR_NONE)
+  error = ERROR_NONE;
+  ARRAY_ITERATEX(storageIds,storageArrayIterator,storageId,error == ERROR_NONE)
   {
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
@@ -7334,15 +7312,116 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
   }
   if (error != ERROR_NONE)
   {
-    printError(_("purge deleted fail (error: %s)!"),Error_getText(error));
     Array_done(&entryIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&entryIds);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : purgeDeletedStorages
+* Purpose: purge deleted storages
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
+{
+  Array  storageIds;
+  Errors error;
+
+  // init variables
+
+  printInfo("Purge deleted storages:\n");
+
+  Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  error = Database_getIds(databaseHandle,
+                          &storageIds,
+                          "storages",
+                          "id",
+                          "deletedFlag=TRUE",
+                          DATABASE_FILTERS
+                          (
+                          ),
+                          DATABASE_UNLIMITED
+                         );
+  if (error != ERROR_NONE)
+  {
+    printError(_("purge deleted fail (error: %s)!"),Error_getText(error));
+    Array_done(&storageIds);
+    return error;
+  }
+
+  error = purgeStorages(databaseHandle,&storageIds);
+  if (error != ERROR_NONE)
+  {
+    printError(_("purge deleted fail (error: %s)!"),Error_getText(error));
     Array_done(&storageIds);
     return error;
   }
   (void)Database_flush(databaseHandle);
 
   // free resources
-  Array_done(&entryIds);
+  Array_done(&storageIds);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : purgeStoragesWithError
+* Purpose: purge storages with error
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors purgeStoragesWithError(DatabaseHandle *databaseHandle)
+{
+  Array  storageIds;
+  Errors error;
+
+  // init variables
+
+  printInfo("Purge storages with error:\n");
+
+  Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  error = Database_getIds(databaseHandle,
+                          &storageIds,
+                          "storages",
+                          "id",
+                          "state=? AND deletedFlag!=TRUE",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_UINT  (INDEX_CONST_STATE_ERROR),
+                          ),
+                          DATABASE_UNLIMITED
+                         );
+  if (error != ERROR_NONE)
+  {
+    printError(_("purge with error fail (error: %s)!"),Error_getText(error));
+    Array_done(&storageIds);
+    return error;
+  }
+
+  error = purgeStorages(databaseHandle,&storageIds);
+  if (error != ERROR_NONE)
+  {
+    printError(_("purge with error fail (error: %s)!"),Error_getText(error));
+    Array_done(&storageIds);
+    return error;
+  }
+  (void)Database_flush(databaseHandle);
+
+  // free resources
   Array_done(&storageIds);
 
   return ERROR_NONE;
@@ -9685,6 +9764,7 @@ int main(int argc, const char *argv[])
           && !cleanDuplicateEntriesFlag
           && !cleanFlag
           && !purgeFlag
+          && !purgeWithErrorFlag
           && !vacuumFlag
           && !showStoragesFlag
           && !showEntriesFlag
@@ -9842,7 +9922,11 @@ int main(int argc, const char *argv[])
   // purge deleted storages
   if (purgeFlag)
   {
-    error = purgeDeletedStorages(&databaseHandle);
+    if (error == ERROR_NONE) error = purgeDeletedStorages(&databaseHandle);
+  }
+  if (purgeWithErrorFlag)
+  {
+    if (error == ERROR_NONE) error = purgeStoragesWithError(&databaseHandle);
   }
 
   // vacuum
