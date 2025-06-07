@@ -5772,7 +5772,8 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
                                  now = Misc_getCurrentDateTime();
 
                                  // to avoid add/update on currently created archive, wait for min. 30min after creation
-                                 if (now > (fileInfo->timeLastChanged+30*60))
+
+                                 if (now > (fileInfo->timeLastChanged+30*S_PER_MINUTE))
                                  {
                                    error = Storage_parseName(&storageSpecifier,storageName);
                                    if (error == ERROR_NONE)
@@ -5806,7 +5807,7 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
                                                                      NULL,  // entityId
                                                                      NULL,  // jobUUID
                                                                      NULL,  // scheduleUUID
-                                                                     &storageId,
+                                                                     NULL,  // storageId,
                                                                      NULL,  // createdDateTime
                                                                      NULL,  // size
                                                                      &indexState,

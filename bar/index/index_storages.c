@@ -4431,7 +4431,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                              String                 jobUUID,
                              String                 scheduleUUID,
                              IndexId                *storageId,
-                             uint64                 *dateTime,
+                             uint64                 *createdDateTime,
                              uint64                 *size,
                              IndexStates            *indexState,
                              IndexModes             *indexMode,
@@ -4497,7 +4497,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                               if (jobUUID             != NULL) String_set(jobUUID,values[2].string);
                               if (scheduleUUID        != NULL) String_set(scheduleUUID,values[3].string);
                               if (storageId           != NULL) (*storageId)           = INDEX_ID_STORAGE(values[4].id);
-                              if (dateTime            != NULL) (*dateTime)            = values[6].u64;
+                              if (createdDateTime     != NULL) (*createdDateTime)     = values[6].u64;
                               if (size                != NULL) (*size)                = values[7].u64;
                               if (indexState          != NULL) (*indexState)          = values[8].u;
                               if (indexMode           != NULL) (*indexMode)           = values[9].u;

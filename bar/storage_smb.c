@@ -2424,7 +2424,7 @@ LOCAL Errors StorageSMB_readDirectoryList(StorageDirectoryListHandle *storageDir
           fileInfo->size            = storageDirectoryListHandle->smb.directoryEntry->st.smb2_size;
           fileInfo->timeLastAccess  = storageDirectoryListHandle->smb.directoryEntry->st.smb2_atime;
           fileInfo->timeModified    = storageDirectoryListHandle->smb.directoryEntry->st.smb2_mtime;
-          fileInfo->timeLastChanged = 0LL;
+          fileInfo->timeLastChanged = storageDirectoryListHandle->smb.directoryEntry->st.smb2_mtime;  // Note: no timestamp for meta data - use timestamp for content
           fileInfo->userId          = 0;
           fileInfo->groupId         = 0;
           fileInfo->permissions     = 0;

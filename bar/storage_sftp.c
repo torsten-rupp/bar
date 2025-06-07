@@ -3127,7 +3127,7 @@ LOCAL Errors StorageSFTP_readDirectoryList(StorageDirectoryListHandle *storageDi
           fileInfo->size            = storageDirectoryListHandle->sftp.attributes.filesize;
           fileInfo->timeLastAccess  = storageDirectoryListHandle->sftp.attributes.atime;
           fileInfo->timeModified    = storageDirectoryListHandle->sftp.attributes.mtime;
-          fileInfo->timeLastChanged = 0LL;
+          fileInfo->timeLastChanged = storageDirectoryListHandle->sftp.attributes.mtime;  // Note: no timestamp for meta data - use timestamp for content
           fileInfo->userId          = storageDirectoryListHandle->sftp.attributes.uid;
           fileInfo->groupId         = storageDirectoryListHandle->sftp.attributes.gid;
           fileInfo->permissions     = storageDirectoryListHandle->sftp.attributes.permissions;

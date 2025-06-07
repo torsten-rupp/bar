@@ -912,7 +912,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 *          entityUUID          - schedule UUID (can be NULL)
 *          entityId            - index id of entity entry (can be NULL)
 *          storageId           - index id of storage entry (can be NULL)
-*          dateTime            - date/time stamp [s] (can be NULL)
+*          createdDateTime     - created date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
@@ -933,7 +933,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                              String                 jobUUID,
                              String                 entityUUID,
                              IndexId                *storageId,
-                             uint64                 *dateTime,
+                             uint64                 *createdDateTime,
                              uint64                 *size,
                              IndexStates            *indexState,
                              IndexModes             *indexMode,

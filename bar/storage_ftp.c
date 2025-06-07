@@ -3069,7 +3069,7 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
         fileInfo->size            = storageDirectoryListHandle->ftp.size;
         fileInfo->timeLastAccess  = 0LL;
         fileInfo->timeModified    = storageDirectoryListHandle->ftp.timeModified;
-        fileInfo->timeLastChanged = 0LL;
+        fileInfo->timeLastChanged = storageDirectoryListHandle->ftp.timeModified;  // Note: no timestamp for meta data - use timestamp for content
         fileInfo->userId          = storageDirectoryListHandle->ftp.userId;
         fileInfo->groupId         = storageDirectoryListHandle->ftp.groupId;
         fileInfo->permissions     = storageDirectoryListHandle->ftp.permissions;
