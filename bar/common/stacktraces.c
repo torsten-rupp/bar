@@ -101,7 +101,7 @@ typedef struct
 /**************************** Functions ********************************/
 
 #if   defined(PLATFORM_LINUX)
-#if defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+#if defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
 /***********************************************************************\
 * Name   : readSymbolTable
 * Purpose: read symbol table from BFD
@@ -627,7 +627,7 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
 
   return 0; // return value not used
 }
-#endif // HAVE_BFD_INIT
+#endif // defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
 
 LOCAL void sigActionHandler(int signalNumber, siginfo_t *sigInfo, void *context)
 {
@@ -756,12 +756,12 @@ void Stacktrace_getSymbols(const char         *executableFileName,
                           )
 {
   #if   defined(PLATFORM_LINUX)
-    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+    #if defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
       uint          i;
       FileMatchInfo fileMatchInfo;
       char          errorMessage[128];
       bool          symbolFound;
-    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
@@ -770,7 +770,7 @@ void Stacktrace_getSymbols(const char         *executableFileName,
   assert(symbolInfo != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+    #if defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
       for (i = 0; i < addressCount; i++)
       {
         fileMatchInfo.found   = FALSE;
@@ -890,12 +890,12 @@ void Stacktrace_getSymbols(const char         *executableFileName,
           symbolInfo[i].lineNb     = 0; //  lineNb
         }
       }
-    #else // not defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+    #else // not defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
       UNUSED_VARIABLE(executableFileName);
       UNUSED_VARIABLE(addresses);
       UNUSED_VARIABLE(addressCount);
       UNUSED_VARIABLE(symbolInfo);
-    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
   #elif defined(PLATFORM_WINDOWS)
     UNUSED_VARIABLE(executableFileName);
     UNUSED_VARIABLE(addresses);
@@ -928,12 +928,12 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
                              )
 {
   #if   defined(PLATFORM_LINUX)
-    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+    #if defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
       uint          i;
       FileMatchInfo fileMatchInfo;
       char          errorMessage[128];
       bool          symbolFound;
-    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
@@ -942,7 +942,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
   assert(symbolFunction != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+    #if defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
       for (i = 0; i < addressCount; i++)
       {
         fileMatchInfo.found   = FALSE;
@@ -967,7 +967,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
                                                 sizeof(errorMessage)
                                                );
           }
-    //fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,fileMatchInfo.fileName,symbolFound);
+//fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,fileMatchInfo.fileName,symbolFound);
         }
         else
         {
@@ -978,7 +978,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
                                               errorMessage,
                                               sizeof(errorMessage)
                                              );
-    //fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,executableFileName,symbolFound);
+//fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,executableFileName,symbolFound);
         }
 
         if (!symbolFound)
@@ -1027,14 +1027,14 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
           fprintf(stderr,"ERROR: %s\n",errorMessage);
         }
       }
-    #else // not defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+    #else // not defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
       UNUSED_VARIABLE(executableFileName);
       UNUSED_VARIABLE(addresses);
       UNUSED_VARIABLE(addressCount);
       UNUSED_VARIABLE(symbolFunction);
       UNUSED_VARIABLE(symbolUserData);
       UNUSED_VARIABLE(printErrorMessagesFlag);
-    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK_H)
+    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
   #elif defined(PLATFORM_WINDOWS)
     UNUSED_VARIABLE(executableFileName);
     UNUSED_VARIABLE(addresses);
