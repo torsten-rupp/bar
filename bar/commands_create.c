@@ -4170,7 +4170,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   Errors           error;
   String           printableStorageName;
   String           directoryPath;
-  FileInfo         fileInfo;
   Server           server;
   FileHandle       fileHandle;
   uint             retryCount;
@@ -4270,6 +4269,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     if (!createInfo->jobOptions->dryRun)
     {
       // get file info
+      FileInfo fileInfo;
       error = File_getInfo(&fileInfo,storageMsg.intermediateFileName);
       if (error != ERROR_NONE)
       {
@@ -4825,7 +4825,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                           );
         }
 
-        // set index database state and time stamp
+        // set index database state and last check time stamp
         if (error == ERROR_NONE)
         {
           error = Index_setStorageState(createInfo->indexHandle,
@@ -6589,7 +6589,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
-                 "Added link '%s'\n",
+                 "Added link '%s'",
                  String_cString(linkName)
                 );
     }
