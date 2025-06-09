@@ -1621,8 +1621,8 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
       error = Index_setStorageState(indexHandle,
                                     indexId,
                                     INDEX_STATE_UPDATE_REQUESTED,
-                                    0LL,
-                                    NULL
+                                    0LL,  // lastCheckedDateTime
+                                    NULL  // errorMessage
                                    );
       if (error == ERROR_NONE)
       {

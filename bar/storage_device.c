@@ -1457,26 +1457,23 @@ LOCAL Errors StorageDevice_delete(const StorageInfo *storageInfo,
   return ERROR_FUNCTION_NOT_SUPPORTED;
 }
 
-#if 0
-still not complete
-LOCAL Errors StorageDevice_getInfo(const StorageInfo *storageInfo,
-                                   ConstString       fileName,
-                                   FileInfo          *fileInfo
-                                  )
+LOCAL Errors StorageDevice_getFileInfo(FileInfo          *fileInfo,
+                                       const StorageInfo *storageInfo,
+                                       ConstString       fileName
+                                      )
 {
   Errors error;
 
-  assert(storage != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_DEVICE);
+  assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(fileInfo != NULL);
 
-  UNUSED_VARIABLE(storage);
+  UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(fileName);
   UNUSED_VARIABLE(fileInfo);
 
   return ERROR_FUNCTION_NOT_SUPPORTED;
 }
-#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 

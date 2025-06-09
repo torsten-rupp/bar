@@ -1001,18 +1001,16 @@ LOCAL Errors StorageSMB_postProcess(const StorageInfo *storageInfo,
 
 LOCAL bool StorageSMB_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
-  #ifdef HAVE_SMB2
-    String              shareName,path;
-    bool                existsFlag;
-    struct smb2_stat_64 smbStatus;
-  #endif /* HAVE_SMB2 */
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
   #ifdef HAVE_SMB2
+    bool existsFlag;
+
+    String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageInfo->storageSpecifier,archiveName);
 
+    struct smb2_stat_64 smbStatus;
     existsFlag = (smb2stat(&smbStatus,
                            storageInfo->storageSpecifier.hostName,
                            storageInfo->storageSpecifier.userName,
@@ -1021,7 +1019,6 @@ LOCAL bool StorageSMB_exists(const StorageInfo *storageInfo, ConstString archive
                            path
                           ) == ERROR_NONE
                  );
-
     smb2DoneSharePath(shareName,path);
 
     return existsFlag;
@@ -1045,28 +1042,23 @@ LOCAL bool StorageSMB_exists(const StorageInfo *storageInfo, ConstString archive
 
 LOCAL bool StorageSMB_isFile(const StorageInfo *storageInfo, ConstString archiveName)
 {
-  #ifdef HAVE_SMB2
-    String              shareName,path;
-    bool                isFileFlag;
-    struct smb2_stat_64 smbStatus;
-  #endif /* HAVE_SMB2 */
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
   #ifdef HAVE_SMB2
+    String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageInfo->storageSpecifier,archiveName);
 
-    isFileFlag =    (smb2stat(&smbStatus,
-                              storageInfo->storageSpecifier.hostName,
-                              storageInfo->storageSpecifier.userName,
-                              &storageInfo->storageSpecifier.password,
-                              shareName,
-                              path
-                             ) == ERROR_NONE
-                    )
-                 && (smbStatus.smb2_type == SMB2_TYPE_FILE);
-
+    struct smb2_stat_64 smbStatus;
+    bool isFileFlag =    (smb2stat(&smbStatus,
+                                   storageInfo->storageSpecifier.hostName,
+                                   storageInfo->storageSpecifier.userName,
+                                   &storageInfo->storageSpecifier.password,
+                                   shareName,
+                                   path
+                                  ) == ERROR_NONE
+                         )
+                      && (smbStatus.smb2_type == SMB2_TYPE_FILE);
     smb2DoneSharePath(shareName,path);
 
     return isFileFlag;
@@ -1090,28 +1082,23 @@ LOCAL bool StorageSMB_isFile(const StorageInfo *storageInfo, ConstString archive
 
 LOCAL bool StorageSMB_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
 {
-  #ifdef HAVE_SMB2
-    String              shareName,path;
-    bool                isDirectoryFlag;
-    struct smb2_stat_64 smbStatus;
-  #endif /* HAVE_SMB2 */
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
   #ifdef HAVE_SMB2
+    String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageInfo->storageSpecifier,archiveName);
 
-    isDirectoryFlag =    (smb2stat(&smbStatus,
-                                   storageInfo->storageSpecifier.hostName,
-                                   storageInfo->storageSpecifier.userName,
-                                   &storageInfo->storageSpecifier.password,
-                                   shareName,
-                                   path
-                                  ) == ERROR_NONE
-                         )
-                      && (smbStatus.smb2_type == SMB2_TYPE_DIRECTORY);
-
+    struct smb2_stat_64 smbStatus;
+    bool isDirectoryFlag =    (smb2stat(&smbStatus,
+                                        storageInfo->storageSpecifier.hostName,
+                                        storageInfo->storageSpecifier.userName,
+                                        &storageInfo->storageSpecifier.password,
+                                        shareName,
+                                        path
+                                       ) == ERROR_NONE
+                              )
+                           && (smbStatus.smb2_type == SMB2_TYPE_DIRECTORY);
     smb2DoneSharePath(shareName,path);
 
     return isDirectoryFlag;
@@ -2073,60 +2060,57 @@ LOCAL Errors StorageSMB_delete(const StorageInfo *storageInfo,
   #endif /* HAVE_SMB2 */
 }
 
-#if 0
-//TODO
-Errors StorageSMB_getInfo(FileInfo          *fileInfo,
-                          const StorageInfo *storageInfo,
-                          ConstString       archiveName
-                         )
+Errors StorageSMB_getFileInfo(FileInfo          *fileInfo,
+                              const StorageInfo *storageInfo,
+                              ConstString       archiveName
+                             )
 {
-  Errors       error;
-  #ifdef HAVE_SMB2
-    SocketHandle socketHandle;
-  #endif /* HAVE_SMB2 */
+  Errors error;
 
+  assert(fileInfo != NULL);
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
-  assert(fileInfo != NULL);
+  assert(archiveName != NULL);
 
   memClear(fileInfo,sizeof(FileInfo));
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_SMB2
+    String shareName,path;
+    smb2InitSharePath(&shareName,&path,&storageInfo->storageSpecifier,archiveName);
+
+    struct smb2_stat_64 smbStatus;
+    error = smb2stat(&smbStatus,
+                     storageInfo->storageSpecifier.hostName,
+                     storageInfo->storageSpecifier.userName,
+                     &storageInfo->storageSpecifier.password,
+                     shareName,
+                     path
+                    );
+    if (error == ERROR_NONE)
     {
-      LIBSSH2_SFTP_ATTRIBUTES smbAttributes;
-
-      error = Network_connect(&socketHandle,
-                              SOCKET_TYPE_SSH,
-                              storageInfo->storageSpecifier.hostName,
-                              storageInfo->storageSpecifier.hostPort,
-                              storageInfo->storageSpecifier.userName,
-                              storageInfo->storageSpecifier.password,
-                              NULL,  // caData
-                              0,     // caLength
-                              NULL,  // certData
-                              0,     // certLength
-                              storageInfo->smb.publicKey.data,
-                              storageInfo->smb.publicKey.length,
-                              storageInfo->smb.privateKey.data,
-                              storageInfo->smb.privateKey.length,
-                                SOCKET_FLAG_NONE
-                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
-                              30*MS_PER_SECOND
-                             );
-      if (error == ERROR_NONE)
+      switch (smbStatus.smb2_type)
       {
-        libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
-
-        error = smb2ConnectShare(&socketHandle,
-                                 archiveName,
-                                 fileInfo
-                                );
-
-//        Network_disconnect(&socketHandle);
+        case SMB2_TYPE_FILE:      fileInfo->type = FILE_TYPE_FILE;      break;
+        case SMB2_TYPE_DIRECTORY: fileInfo->type = FILE_TYPE_DIRECTORY; break;
+        case SMB2_TYPE_LINK:      fileInfo->type = FILE_TYPE_LINK;      break;
+        default:                  fileInfo->type = FILE_TYPE_UNKNOWN;   break;
       }
+      fileInfo->size            = smbStatus.smb2_size;
+      fileInfo->timeLastAccess  = smbStatus.smb2_atime;
+      fileInfo->timeModified    = smbStatus.smb2_mtime;
+      fileInfo->timeLastChanged = smbStatus.smb2_ctime;
+      fileInfo->userId          = 0;
+      fileInfo->groupId         = 0;
+      fileInfo->permissions     = 0;
+      fileInfo->specialType     = FILE_SPECIAL_TYPE_OTHER;
+      fileInfo->major           = 0;
+      fileInfo->minor           = 0;
+      fileInfo->attributes      = 0L;
+      fileInfo->id              = 0L;
+      memClear(&fileInfo->cast,sizeof(fileInfo->cast));
     }
+    smb2DoneSharePath(shareName,path);
   #else /* not HAVE_SMB2 */
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SMB2 */
@@ -2134,7 +2118,6 @@ Errors StorageSMB_getInfo(FileInfo          *fileInfo,
 
   return error;
 }
-#endif
 
 /*---------------------------------------------------------------------*/
 

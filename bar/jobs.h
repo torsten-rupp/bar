@@ -832,13 +832,19 @@ INLINE void __Job_listUnlock(const char *__fileName__,
                             )
 #endif /* NDEBUG */
 {
+  #ifdef VALGRIND
+    #define MAX_JOB_LIST_LOCK_TIME 20
+  #else
+    #define MAX_JOB_LIST_LOCK_TIME 2
+  #endif
+
   #ifndef NDEBUG
     uint64 dt;
   #endif /* NDEBUG */
 
   #ifndef NDEBUG
-    dt = Misc_getTimestamp()-jobList.lockTimestamp;
-    if ((dt > 2*US_PER_S) && (Semaphore_lockCount(&jobList.lock) == 1))
+    dt = Misc_getTimestamp() - jobList.lockTimestamp;
+    if ((dt > MAX_JOB_LIST_LOCK_TIME*US_PER_S) && (Semaphore_lockCount(&jobList.lock) == 1))
     {
       fprintf(stderr,"Warning: long job list lock: %"PRIu64"ms\n",dt/(uint64)US_PER_MS);
       #ifdef HAVE_BACKTRACE

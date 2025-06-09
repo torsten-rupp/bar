@@ -417,13 +417,14 @@ LOCAL Errors sftpStat(SocketHandle *socketHandle,
             else if (LIBSSH2_SFTP_S_ISBLK (sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_SPECIAL;
             else if (LIBSSH2_SFTP_S_ISFIFO(sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_SPECIAL;
             else if (LIBSSH2_SFTP_S_ISSOCK(sftpAttributes.permissions)) fileInfo->type = FILE_TYPE_SPECIAL;
-            else                                                  fileInfo->type = FILE_TYPE_UNKNOWN;
-            fileInfo->size           = (uint64)sftpAttributes.filesize;
-            fileInfo->timeLastAccess = (uint64)sftpAttributes.atime;
-            fileInfo->timeModified   = (uint64)sftpAttributes.mtime;
-            fileInfo->userId         = sftpAttributes.uid;
-            fileInfo->groupId        = sftpAttributes.gid;
-            fileInfo->permissions    = (FilePermissions)sftpAttributes.permissions;
+            else                                                        fileInfo->type = FILE_TYPE_UNKNOWN;
+            fileInfo->size            = (uint64)sftpAttributes.filesize;
+            fileInfo->timeLastAccess  = (uint64)sftpAttributes.atime;
+            fileInfo->timeModified    = (uint64)sftpAttributes.mtime;
+            fileInfo->timeLastChanged = (uint64)sftpAttributes.mtime;
+            fileInfo->userId          = sftpAttributes.uid;
+            fileInfo->groupId         = sftpAttributes.gid;
+            fileInfo->permissions     = (FilePermissions)sftpAttributes.permissions;
           }
 
           error = ERROR_NONE;
@@ -2495,7 +2496,6 @@ LOCAL Errors StorageSFTP_rename(const StorageInfo *storageInfo,
 UNUSED_VARIABLE(storageInfo);
 UNUSED_VARIABLE(fromArchiveName);
 UNUSED_VARIABLE(toArchiveName);
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;
@@ -2591,6 +2591,7 @@ LOCAL Errors StorageSFTP_delete(StorageInfo *storageInfo,
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_SSH2
+// TODO: single connect in StorageSFTP_init()?
     error = Network_connect(&socketHandle,
                             SOCKET_TYPE_SSH,
                             storageInfo->storageSpecifier.hostName,
@@ -2629,21 +2630,20 @@ LOCAL Errors StorageSFTP_delete(StorageInfo *storageInfo,
   return error;
 }
 
-#if 0
-//TODO
-Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
-                           const StorageInfo *storageInfo,
-                           ConstString       archiveName
-                          )
+Errors StorageSFTP_getFileInfo(FileInfo          *fileInfo,
+                               const StorageInfo *storageInfo,
+                               ConstString       archiveName
+                              )
 {
   Errors       error;
   #ifdef HAVE_SSH2
     SocketHandle socketHandle;
   #endif /* HAVE_SSH2 */
 
+  assert(fileInfo != NULL);
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
-  assert(fileInfo != NULL);
+  assert(archiveName != NULL);
 
   memClear(fileInfo,sizeof(FileInfo));
 
@@ -2657,7 +2657,7 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
                               storageInfo->storageSpecifier.hostName,
                               storageInfo->storageSpecifier.hostPort,
                               storageInfo->storageSpecifier.userName,
-                              storageInfo->storageSpecifier.password,
+                              &storageInfo->storageSpecifier.password,
                               NULL,  // caData
                               0,     // caLength
                               NULL,  // certData
@@ -2690,7 +2690,6 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
 
   return error;
 }
-#endif
 
 /*---------------------------------------------------------------------*/
 

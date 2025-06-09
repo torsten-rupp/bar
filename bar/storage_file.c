@@ -613,25 +613,18 @@ LOCAL Errors StorageFile_delete(const StorageInfo *storageInfo,
   return File_delete(fileName,FALSE);
 }
 
-#if 0
-still not complete
-LOCAL Errors StorageFile_getInfo(const StorageInfo *storageInfo,
-                                 ConstString       fileName,
-                                 FileInfo          *fileInfo
-                                )
+LOCAL Errors StorageFile_getFileInfo(FileInfo          *fileInfo,
+                                     const StorageInfo *storageInfo,
+                                     ConstString       archiveName
+                                    )
 {
-  String infoFileName;
-  Errors error;
-
-  assert(storageInfo != NULL);
   assert(fileInfo != NULL);
+  assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(archiveName != NULL);
 
-  error = File_getInfo(fileInfo,infoFileName);
-
-  return error;
+  return File_getInfo(fileInfo,archiveName);
 }
-#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 

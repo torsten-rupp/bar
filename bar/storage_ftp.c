@@ -416,40 +416,37 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
 }
 
 /***********************************************************************\
-* Name   : curlFTPParseDirectoryListCallback
-* Purpose: curl FTP parse directory list callback
+* Name   : curlFTPLineListCallback
+* Purpose: curl FTP list callback: store lines into string list
 * Input  : buffer   - buffer with data: receive data from remote
 *          size     - size of an element
 *          n        - number of elements
-*          userData - user data
+*          userData - string list
 * Output : -
 * Return : number of processed bytes or 0
 * Notes  : -
 \***********************************************************************/
 
-LOCAL size_t curlFTPParseDirectoryListCallback(const void *buffer,
-                                               size_t     size,
-                                               size_t     n,
-                                               void       *userData
-                                              )
+LOCAL size_t curlFTPLineListCallback(const void *buffer,
+                                     size_t     size,
+                                     size_t     n,
+                                     void       *userData
+                                    )
 {
-  StorageDirectoryListHandle *storageDirectoryListHandle = (StorageDirectoryListHandle*)userData;
-  String                     line;
-  const char                 *s;
-  size_t                     i;
+  StringList *stringList = (StringList*)userData;
 
   assert(buffer != NULL);
   assert(size > 0);
-  assert(storageDirectoryListHandle != NULL);
+  assert(stringList != NULL);
 
-  line = String_new();
-  s    = (const char*)buffer;
-  for (i = 0; i < n; i++)
+  String     line = String_new();
+  const char *s   = (const char*)buffer;
+  for (size_t i = 0; i < n; i++)
   {
     switch (*s)
     {
       case '\n':
-        StringList_append(&storageDirectoryListHandle->ftp.lineList,line);
+        StringList_append(stringList,line);
         String_clear(line);
         break;
       case '\r':
@@ -462,7 +459,7 @@ LOCAL size_t curlFTPParseDirectoryListCallback(const void *buffer,
   }
   String_delete(line);
 
-  return size*n;
+  return size * n;
 }
 #endif /* HAVE_CURL */
 
@@ -1059,12 +1056,11 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
 
   #if   defined(HAVE_CURL)
     {
-      FTPServer ftpServer;
-
       // init variables
       initBandWidthLimiter(&storageInfo->ftp.bandWidthLimiter,maxBandWidthList);
 
       // get FTP server settings
+      FTPServer ftpServer;
       storageInfo->ftp.serverId = Configuration_initFTPServerSettings(&ftpServer,storageInfo->storageSpecifier.hostName,jobOptions);
       if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_set(storageInfo->storageSpecifier.userName,ftpServer.userName);
       if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("LOGNAME"));
@@ -1361,7 +1357,7 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo,
   existsFlag = FALSE;
 
   #if   defined(HAVE_CURL)
-    // open Curl handles
+    // open curl handle
     curlHandle = curl_easy_init();
     if (curlHandle == NULL)
     {
@@ -1531,7 +1527,7 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     storageHandle->ftp.length                 = 0L;
     storageHandle->ftp.transferedBytes        = 0L;
 
-    // open Curl handles
+    // open curl handles
     storageHandle->ftp.curlMultiHandle = curl_multi_init();
     if (storageHandle->ftp.curlMultiHandle == NULL)
     {
@@ -1744,7 +1740,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
       HALT_INSUFFICIENT_MEMORY();
     }
 
-    // open Curl handles
+    // open curl handles
     storageHandle->ftp.curlMultiHandle = curl_multi_init();
     if (storageHandle->ftp.curlMultiHandle == NULL)
     {
@@ -2454,7 +2450,7 @@ LOCAL Errors StorageFTP_makeDirectory(StorageInfo *storageInfo,
   assert(!String_isEmpty(directoryName));
 
   #if   defined(HAVE_CURL)
-    // open Curl handles
+    // open curl handles
     curlMultiHandle = curl_multi_init();
     if (curlMultiHandle == NULL)
     {
@@ -2562,7 +2558,7 @@ LOCAL Errors StorageFTP_delete(StorageInfo *storageInfo,
 
   error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)
-    // open Curl handle
+    // open curl handle
     curlHandle = curl_easy_init();
     if (curlHandle != NULL)
     {
@@ -2642,84 +2638,77 @@ LOCAL Errors StorageFTP_delete(StorageInfo *storageInfo,
   return error;
 }
 
-#if 0
-still not complete
-LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
-                                ConstString       fileName,
-                                FileInfo          *fileInfo
-                               )
+LOCAL Errors StorageFTP_getFileInfo(FileInfo          *fileInfo,
+                                    const StorageInfo *storageInfo,
+                                    ConstString       archiveName
+                                   )
 {
-  String infoFileName;
   Errors error;
-  #if   defined(HAVE_CURL)
-    Server            server;
-    CURL              *curlHandle;
-    String            directoryName,baseName;
-    String            url;
-    CURLcode          curlCode;
-    const char        *plain;
-    StringTokenizer   nameTokenizer;
-    ConstString       token;
-    String            ftpCommand;
-    struct curl_slist *curlSList;
-  #endif /* HAVE_CURL || HAVE_FTP */
 
-  assert(storageInfo != NULL);
   assert(fileInfo != NULL);
+  assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
+  assert(archiveName != NULL);
 
-  infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
+  if (String_isEmpty(storageInfo->storageSpecifier.hostName))
+  {
+    return ERROR_NO_HOST_NAME;
+  }
+
   memClear(fileInfo,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)
     // get FTP server settings
-    getFTPServerSettings(storageInfo->storageSpecifier.hostName,storageInfo->jobOptions,&server);
-    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_set(storageInfo->storageSpecifier.userName,ftpServer.userName);
-    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("LOGNAME"));
-    if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_setCString(storageInfo->storageSpecifier.userName,getenv("USER"));
-    if (String_isEmpty(storageInfo->storageSpecifier.hostName))
-    {
-      return ERROR_NO_HOST_NAME;
-    }
+    FTPServer ftpServer;
+    uint serverId = Configuration_initFTPServerSettings(&ftpServer,storageInfo->storageSpecifier.hostName,storageInfo->jobOptions);
+    if (String_isEmpty(ftpServer.userName)) String_set(ftpServer.userName,ftpServer.userName);
+    if (String_isEmpty(ftpServer.userName)) String_setCString(ftpServer.userName,getenv("LOGNAME"));
+    if (String_isEmpty(ftpServer.userName)) String_setCString(ftpServer.userName,getenv("USER"));
+    if (Password_isEmpty(&ftpServer.password)) Password_set(&ftpServer.password,&ftpServer.password);
 
     // allocate FTP server
-    if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,ALLOCATE_SERVER_TIMEOUT))
+    Server server;
+    if (!allocateServer(serverId,SERVER_CONNECTION_PRIORITY_LOW,ALLOCATE_SERVER_TIMEOUT))
     {
+      Configuration_doneFTPServerSettings(&ftpServer);
       return ERROR_TOO_MANY_CONNECTIONS;
     }
 
-    // open Curl handle
-    curlHandle = curl_easy_init();
-    if (curlHandle != NULL)
+    // open curl handle
+    CURL *curlHandle = curl_easy_init();
+    if (curlHandle == NULL)
     {
-      freeServer(ftpServer);
-      return = ERROR_FTP_SESSION_FAIL;
+      freeServer(serverId);
+      Configuration_doneFTPServerSettings(&ftpServer);
+      return ERROR_FTP_SESSION_FAIL;
     }
 
-    // get directory name, base name
-    directoryName = File_getDirectoryName(String_new(),infoFileName);
-    baseName      = File_getBaseName(String_new(),infoFileName,TRUE);
+    // get directory, basename
+    String directoryPath = File_getDirectoryName(String_new(),archiveName);
+    String baseName      = File_getBaseName(String_new(),archiveName,TRUE);
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+    String  url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
     if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageInfo->storageSpecifier.hostPort);
-    File_initSplitFileName(&nameTokenizer,pathName);
+    StringTokenizer nameTokenizer;
+    File_initSplitFileName(&nameTokenizer,directoryPath);
+    ConstString token;
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
       String_append(url,token);
     }
-    File_doneSplitFileName(&nameTokenizer);
     String_appendChar(url,'/');
-    String_append(url,baseName);
+    File_doneSplitFileName(&nameTokenizer);
 
     // get file info
-    ftpCommand = String_appendFormat(String_new(),"*DIR %S",infoFileName);
-    curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
+    StringList lineList;
+    StringList_init(&lineList);
+    CURLcode curlCode;
     curlCode = setFTPLogin(curlHandle,
-                           storageInfo->storageSpecifier.userName,
-                           storageInfo->storageSpecifier.password,
+                           ftpServer.userName,
+                           &ftpServer.password,
                            FTP_TIMEOUT
                           );
     if (curlCode == CURLE_OK)
@@ -2728,36 +2717,61 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
     }
     if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPLineListCallback);
     }
     if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_setopt(curlHandle,CURLOPT_QUOTE,curlSList);
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,&lineList);
     }
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_perform(curlHandle);
     }
-    (void)curl_easy_setopt(curlHandle,CURLOPT_QUOTE,NULL);
     if (curlCode == CURLE_OK)
     {
-      error = ERROR_NONE;
+      curlCode = curl_easy_perform(curlHandle);
     }
-    else
+    if (curlCode != CURLE_OK)
     {
-      error = ERRORX_(DELETE_FILE,0,"%s",curl_multi_strerror(curlCode));
+      error = ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
+      StringList_done(&lineList);
+      String_delete(url);
+      String_delete(baseName);
+      String_delete(directoryPath);
+      (void)curl_easy_cleanup(curlHandle);
+      freeServer(serverId);
+      Configuration_doneFTPServerSettings(&ftpServer);
+      return error;
     }
-    curl_slist_free_all(curlSList);
-    String_delete(ftpCommand);
+    bool   done     = FALSE;
+    String fileName = String_new();
+    while (!StringList_isEmpty(&lineList) && !done)
+    {
+      String line = StringList_removeFirst(&lineList,NULL);
+      done =    parseFTPDirectoryLine(line,
+                                      fileName,
+                                      &fileInfo->type,
+                                      &fileInfo->size,
+                                      &fileInfo->timeModified,
+                                      &fileInfo->userId,
+                                      &fileInfo->groupId,
+                                      &fileInfo->permissions
+                                     )
+             && String_equals(fileName,baseName);
+      String_delete(line);
+    }
+    String_delete(fileName);
+    StringList_done(&lineList);
 
     // free resources
     String_delete(url);
     String_delete(baseName);
-    String_delete(pathName);
+    String_delete(directoryPath);
     (void)curl_easy_cleanup(curlHandle);
-    freeServer(&server);
+    freeServer(serverId);
+    Configuration_doneFTPServerSettings(&ftpServer);
 
-    error = ERROR_NONE;
+    error = done ? ERROR_NONE : ERROR_FILE_NOT_FOUND_;
   #else /* not HAVE_CURL || HAVE_FTP */
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL || HAVE_FTP */
@@ -2765,7 +2779,6 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
 
   return error;
 }
-#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 
@@ -2895,7 +2908,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
       return error;
     }
 
-    // init Curl handle
+    // init curl handle
     curlHandle = curl_easy_init();
     if (curlHandle == NULL)
     {
@@ -2927,11 +2940,11 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     }
     if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPParseDirectoryListCallback);
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPLineListCallback);
     }
     if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,storageDirectoryListHandle);
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,&storageDirectoryListHandle->ftp.lineList);
     }
     if (curlCode == CURLE_OK)
     {

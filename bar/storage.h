@@ -1766,24 +1766,21 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString pathName);
 
 Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName);
 
-#if 0
-still not complete
 /***********************************************************************\
 * Name   : Storage_getFileInfo
 * Purpose: get storage file info
-* Input  : storageInfo - storage info
+* Input  : fileInfo    - file info variable
+*          storageInfo - storage info
 *          archiveName - archive name (can be NULL)
-*          fileInfo    - file info variable
 * Output : fileInfo - file info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_getFileInfo(StorageInfo *storageInfo,
-                           ConstString archiveName,
-                           FileInfo    *fileInfo
+Errors Storage_getFileInfo(FileInfo          *fileInfo,
+                           const StorageInfo *storageInfo,
+                           ConstString       archiveName
                           );
-#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 

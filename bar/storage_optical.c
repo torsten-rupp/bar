@@ -3774,26 +3774,25 @@ LOCAL Errors StorageOptical_delete(const StorageInfo *storageInfo,
   return ERROR_FUNCTION_NOT_SUPPORTED;
 }
 
-#if 0
-still not complete
-LOCAL Errors StorageOptical_getInfo(const StorageInfo *storageInfo,
-                                    ConstString       fileName,
-                                    FileInfo          *fileInfo
-                                   )
+LOCAL Errors StorageOptical_getFileInfo(FileInfo          *fileInfo,
+                                        const StorageInfo *storageInfo,
+                                        ConstString       archiveName
+                                       )
 {
-  String infoFileName;
-  Errors error;
-
-  assert(storageInfo != NULL);
-  assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
   assert(fileInfo != NULL);
+  assert(storageInfo != NULL);
+  assert(   (storageInfo->storageSpecifier.type == STORAGE_TYPE_CD)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD)
+         || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD)
+        );
+  assert(archiveName != NULL);
 
-  infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
   memClear(fileInfo,sizeof(fileInfo));
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
 
   return ERROR_FUNCTION_NOT_SUPPORTED;
 }
-#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 

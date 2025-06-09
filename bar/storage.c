@@ -4597,7 +4597,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         break;
       case STORAGE_TYPE_SSH:
         #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         #else /* not HAVE_SSH2 */
         #endif /* HAVE_SSH2 */
         break;
@@ -4634,22 +4634,24 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   return error;
 }
 
-#if 0
-still not complete
-Errors Storage_getInfo(StorageInfo *storageInfo,
-                       FileInfo    *fileInfo
-                      )
+Errors Storage_getFileInfo(FileInfo          *fileInfo,
+                           const StorageInfo *storageInfo,
+                           ConstString       archiveName
+                          )
 {
-  String infoFileName;
   Errors error;
 
-  assert(storageInfo != NULL);
   assert(fileInfo != NULL);
+  assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
   assert(storageInfo->jobOptions != NULL);
 
-  infoFileName = (fileName != NULL) ? archiveName : storageInfo->storageSpecifier.archiveName;
-  memClear(fileInfo,sizeof(fileInfo));
+  // get archive name
+  if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
+  if (String_isEmpty(archiveName))
+  {
+    return ERROR_NO_ARCHIVE_FILE_NAME;
+  }
 
   error = ERROR_UNKNOWN;
   if (   (   (storageInfo->jobOptions == NULL)
@@ -4668,37 +4670,37 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
-        errors = StorageFile_getInfo(storageInfo,archiveName,fileInfo);
+        error = StorageFile_getFileInfo(fileInfo,storageInfo,archiveName);
         break;
       case STORAGE_TYPE_FTP:
-        errors = StorageFTP_getInfo(storageInfo,archiveName,fileInfo);
+        error = StorageFTP_getFileInfo(fileInfo,storageInfo,archiveName);
         break;
       case STORAGE_TYPE_SSH:
         #ifdef HAVE_SSH2
-  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         #else /* not HAVE_SSH2 */
         #endif /* HAVE_SSH2 */
         break;
       case STORAGE_TYPE_SCP:
-        errors = StorageSCP_getInfo(storageInfo,archiveName,fileInfo);
+        error = StorageSCP_getFileInfo(fileInfo,storageInfo,archiveName);
         break;
       case STORAGE_TYPE_SFTP:
-        errors = StorageSFTP_getInfo(storageInfo,archiveName,fileInfo);
+        error = StorageSFTP_getFileInfo(fileInfo,storageInfo,archiveName);
         break;
       case STORAGE_TYPE_WEBDAV:
       case STORAGE_TYPE_WEBDAVS:
-        errors = StorageWebDAV_getInfo(storageInfo,archiveName,fileInfo);
+        error = StorageWebDAV_getFileInfo(fileInfo,storageInfo,archiveName);
         break;
       case STORAGE_TYPE_SMB:
-        errors = StorageSMB_getInfo(storageInfo,archiveName,fileInfo);
+        error = StorageSMB_getFileInfo(fileInfo,storageInfo,archiveName);
         break;
       case STORAGE_TYPE_CD:
       case STORAGE_TYPE_DVD:
       case STORAGE_TYPE_BD:
-        errors = StorageOptical_getInfo(storageInfo,archiveName,fileInfo);
+        error = StorageOptical_getFileInfo(fileInfo,storageInfo,archiveName);
         break;
       case STORAGE_TYPE_DEVICE:
-        errors = StorageDevice_getInfo(storageInfo,archiveName,fileInfo);
+        error = StorageDevice_getFileInfo(fileInfo,storageInfo,archiveName);
         break;
       default:
         #ifndef NDEBUG
@@ -4711,7 +4713,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
   return error;
 }
-#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 

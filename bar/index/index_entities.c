@@ -341,7 +341,6 @@ return ERROR_NONE;
 \***********************************************************************/
 
 LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
-// TODO: XXX
                          IndexId     entityId
                         )
 {
@@ -948,6 +947,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
   if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
   {
     // get locked count
+// TODO: implement isLockedEntity
     error = Database_getUInt(&indexHandle->databaseHandle,
                              &lockedCount,
                              "entities",
@@ -2421,6 +2421,7 @@ bool Index_isLockedEntity(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
+// TODO: implement isLockedEntity
     error = Database_getUInt(&indexHandle->databaseHandle,
                              &lockedCount,
                              "entities",
@@ -2699,7 +2700,6 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
   assert(!INDEX_ID_IS_DEFAULT_ENTITY(entityId));
 
-  // prune storages of entity if not default entity
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,

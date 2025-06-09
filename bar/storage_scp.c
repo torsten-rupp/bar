@@ -1775,31 +1775,22 @@ whould this be a possible implementation?
   return error;
 }
 
-#if 0
-still not complete
-LOCAL Errors StorageSCP_getInfo(const StorageInfo *storageInfo,
-                                ConstString       fileName,
-                                FileInfo          *fileInfo
-                               )
+LOCAL Errors StorageSCP_getFileInfo(FileInfo          *fileInfo,
+                                    const StorageInfo *storageInfo,
+                                    ConstString       archiveName
+                                   )
 {
-  String infoFileName;
-  Errors error;
-
+  assert(fileInfo != NULL);
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
-  assert(fileInfo != NULL);
+  assert(archiveName != NULL);
 
-  infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
   memClear(fileInfo,sizeof(fileInfo));
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
 
-  error = ERROR_UNKNOWN;
-  switch (storageInfo->storageSpecifier.type)
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
-  assert(error != ERROR_UNKNOWN);
-
-  return error;
+  return ERROR_FUNCTION_NOT_SUPPORTED;
 }
-#endif /* 0 */
 
 /*---------------------------------------------------------------------*/
 

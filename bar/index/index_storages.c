@@ -165,8 +165,8 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
       error = Index_setStorageState(indexHandle,
                                     indexId,
                                     INDEX_STATE_UPDATE_REQUESTED,
-                                    0LL,
-                                    NULL
+                                    0LL,  // lastCheckedDateTime
+                                    NULL  // errorMessage
                                    );
       if (error == ERROR_NONE)
       {
@@ -2223,7 +2223,7 @@ UNUSED_VARIABLE(progressInfo);
                              entrySize       = values[1].u64;
                              fragmentSizeSum = values[2].u64;
 
-                             // check if entry is completely covery by fragments
+                             // check if entry is completely covered by fragments
                              if (entrySize == fragmentSizeSum)
                              {
                                Array_append(&entryIds,&entryId);
@@ -4449,7 +4449,6 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 
   assert(indexHandle != NULL);
   assert(findStorageSpecifier != NULL);
-  assert(storageId != NULL);
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -4699,8 +4698,6 @@ Errors Index_getStorageState(IndexHandle *indexHandle,
                              String      errorMessage
                             )
 {
-  Errors error;
-
   assert(indexHandle != NULL);
   assert(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE);
 
@@ -4710,6 +4707,7 @@ Errors Index_getStorageState(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
+  Errors error;
   INDEX_DOX(error,
             indexHandle,
   {
@@ -4732,10 +4730,6 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
                              ...
                             )
 {
-  Errors  error;
-  va_list arguments;
-  String  errorMessage;
-
   assert(indexHandle != NULL);
   assert((INDEX_TYPE(indexId) == INDEX_TYPE_ENTITY) || (INDEX_TYPE(indexId) == INDEX_TYPE_STORAGE));
 
@@ -4746,8 +4740,10 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
   }
 
   // format error message (if any)
+  String errorMessage;
   if (errorFormat != NULL)
   {
+    va_list arguments;
     va_start(arguments,errorFormat);
     errorMessage = String_vformat(String_new(),errorFormat,arguments);
     va_end(arguments);
@@ -4757,6 +4753,7 @@ Errors Index_setStorageState(IndexHandle *indexHandle,
     errorMessage = NULL;
   }
 
+  Errors error;
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,
@@ -4889,8 +4886,6 @@ long Index_countStorageState(IndexHandle *indexHandle,
                              IndexStates indexState
                             )
 {
-  long count;
-
   assert(indexHandle != NULL);
 
   // check init error
@@ -4899,7 +4894,7 @@ long Index_countStorageState(IndexHandle *indexHandle,
     return 0L;
   }
 
-  count = -1L;
+  long count = -1L;
 
   INDEX_DOX(count,
             indexHandle,
