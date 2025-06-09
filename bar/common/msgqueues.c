@@ -466,12 +466,10 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
 
     // put message
     List_append(&msgQueue->list,msgNode);
-//fprintf(stderr,"%s:%d: appended %d\n",__FILE__,__LINE__,msgQueue->list.count);
 
     // signal modify
     msgQueue->modifiedFlag = TRUE;
   }
-//fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3");
 
   return TRUE;
 }

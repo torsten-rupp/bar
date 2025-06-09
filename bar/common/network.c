@@ -910,10 +910,6 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
             // authorize with key
             if ((publicKeyData != NULL) && (privateKeyData != NULL))
             {
-// TODO: test
-//debugDumpMemory(publicKeyData,publicKeyLength,0);
-//debugDumpMemory(privateKeyData,privateKeyLength,0);
-//fprintf(stderr,"%s:%d: plainPassword=%s\n",__FILE__,__LINE__,plainPassword);
               result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
                                                              String_cString(loginName),
                                                              String_length(loginName),
