@@ -183,43 +183,11 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
                           );
 
 /***********************************************************************\
-* Name   : Continuous_removeEntry
-* Purpose: remove continuous entry
-* Input  : databaseHandle - database handle
-*          databaseId     - database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
-                              DatabaseId     databaseId
-                             );
-
-/***********************************************************************\
-* Name   : Continuous_getEntry
-* Purpose: get continuous entry
+* Name   : Continuous_discardEntries
+* Purpose: discard all entries
 * Input  : databaseHandle - database handle
 *          jobUUID        - job UUID
 *          scheduleUUID   - schedule UUID
-* Output : databaseId - database id (can be NULL)
-*          name       - name of entry (can be NULL)
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Continuous_getEntry(DatabaseHandle *databaseHandle,
-                           const char     *jobUUID,
-                           const char     *scheduleUUID,
-                           DatabaseId     *databaseId,
-                           String         name
-                          );
-
-/***********************************************************************\
-* Name   : Continuous_discardEntry
-* Purpose: discard all entries
-* Input  : jobUUID      - job UUID
-*          scheduleUUID  schedule UUID
 * Output : -
 * Return : -
 * Notes  : -
@@ -276,7 +244,7 @@ void Continuous_doneList(DatabaseStatementHandle *databaseStatementHandle);
 
 /***********************************************************************\
 * Name   : Continuous_getNext
-* Purpose: get next special entry
+* Purpose: get next continuous entry
 * Input  : databaseStatementHandle - database query handle
 * Output : databaseId - database id of entry
 *          name       - name
@@ -288,6 +256,20 @@ bool Continuous_getNext(DatabaseStatementHandle *databaseStatementHandle,
                         DatabaseId              *databaseId,
                         String                  name
                        );
+
+/***********************************************************************\
+* Name   : Continuous_markEntryStored
+* Purpose: mark entry as stored
+* Input  : databaseHandle - database handle
+*          databaseId     - database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Continuous_markEntryStored(DatabaseHandle *databaseHandle,
+                                  DatabaseId     databaseId
+                                 );
 
 #ifndef NDEBUG
 /***********************************************************************\

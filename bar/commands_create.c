@@ -1986,6 +1986,31 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               }
             }
 
+            // mark as stored
+            if (collectorType == COLLECTOR_TYPE_ENTRIES)
+            {
+              error = Continuous_markEntryStored(&continuousDatabaseHandle,databaseId);
+              if (error != ERROR_NONE)
+              {
+                printError(_("cannot mark continuous entry '%s' as stored (error: %s)"),
+                           String_cString(name),
+                           Error_getText(error)
+                          );
+                logMessage(createInfo->logHandle,
+                           LOG_TYPE_ENTRY_ACCESS_DENIED,
+                           "Cannot mark continuous entry '%s' as stored (error: %s)",
+                           String_cString(name),
+                           Error_getText(error)
+                          );
+
+                STATUS_INFO_UPDATE(createInfo,name,NULL)
+                {
+                  createInfo->runningInfo.progress.error.count++;
+                }
+                continue;
+              }
+            }
+
             // free resources
           }
           String_delete(name);

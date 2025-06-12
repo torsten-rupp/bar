@@ -1335,37 +1335,6 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
 }
 
 /***********************************************************************\
-* Name   : removeEntry
-* Purpose: remove continuous entry from database
-* Input  : databaseHandle - database handle
-*          databaseId     - database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors removeEntry(DatabaseHandle *databaseHandle,
-                         DatabaseId     databaseId
-                        )
-{
-  assert(initFlag);
-  assert(databaseHandle != NULL);
-//  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
-
-  return Database_delete(databaseHandle,
-                         NULL,  // changedRowCount
-                         "names",
-                         DATABASE_FLAG_NONE,
-                         "id=?",
-                         DATABASE_FILTERS
-                         (
-                           DATABASE_FILTER_KEY(databaseId)
-                         ),
-                         DATABASE_UNLIMITED
-                        );
-}
-
-/***********************************************************************\
 * Name   : markEntryStored
 * Purpose: mark continuous entry stored
 * Input  : databaseHandle - database handle
@@ -1381,7 +1350,6 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
 {
   assert(initFlag);
   assert(databaseHandle != NULL);
-//  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
   return Database_update(databaseHandle,
                          NULL,  // changedRowCount
@@ -2188,103 +2156,6 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
   return error;
 }
 
-Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
-                              DatabaseId     databaseId
-                             )
-{
-  assert(initFlag);
-  assert(databaseHandle != NULL);
-
-  return removeEntry(databaseHandle,databaseId);
-}
-
-// TODO: remove, obsolete
-Errors Continuous_getEntry(DatabaseHandle *databaseHandle,
-                           const char     *jobUUID,
-                           const char     *scheduleUUID,
-                           DatabaseId     *databaseId,
-                           String         name
-                          )
-{
-  Errors error;
-
-  assert(initFlag);
-  assert(databaseHandle != NULL);
-  assert(!stringIsEmpty(jobUUID));
-  assert(!stringIsEmpty(scheduleUUID));
-  assert(databaseId != NULL);
-  assert(name != NULL);
-
-  (*databaseId) = DATABASE_ID_NONE;
-  String_clear(name);
-
-// TODO: lock required?
-//  BLOCK_DOX(result,
-//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
-//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-//  {
-  error = Database_get(databaseHandle,
-                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                       {
-                         assert(values != NULL);
-                         assert(valueCount == 2);
-
-                         UNUSED_VARIABLE(userData);
-                         UNUSED_VARIABLE(valueCount);
-
-                         (*databaseId) = values[0].id;
-                         String_set(name,values[1].string);
-
-                         return ERROR_NONE;
-                       },NULL),
-                       NULL,  // changedRowCount
-                       DATABASE_TABLES
-                       (
-                         "names"
-                       ),
-                       DATABASE_FLAG_NONE,
-                       DATABASE_COLUMNS
-                       (
-                         DATABASE_COLUMN_KEY   ("id"),
-                         DATABASE_COLUMN_STRING("name")
-                       ),
-                       "    storedFlag=FALSE \
-                        AND (NOW()-?)>=UNIX_TIMESTAMP(storedDateTime) \
-                        AND jobUUID=? \
-                        AND scheduleUUID=? \
-                       ",
-                       DATABASE_FILTERS
-                       (
-                         DATABASE_FILTER_UINT   (globalOptions.continuousMinTimeDelta),
-                         DATABASE_FILTER_CSTRING(jobUUID),
-                         DATABASE_FILTER_CSTRING(scheduleUUID)
-                       ),
-                       NULL,  // groupBy
-                       NULL,  // orderBy
-                       0LL,
-                       1LL
-                      );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  if ((*databaseId) != DATABASE_ID_NONE)
-  {
-    // mark entry as stored
-    error = markEntryStored(databaseHandle,(*databaseId));
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-
-//    return TRUE;
-//  });
-
-  return ERROR_NONE;
-}
-
 void Continuous_discardEntries(DatabaseHandle *databaseHandle,
                                const char     *jobUUID,
                                const char     *scheduleUUID
@@ -2295,11 +2166,6 @@ void Continuous_discardEntries(DatabaseHandle *databaseHandle,
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));
 
-// TODO: lock required?
-//  BLOCK_DOX(result,
-//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
-//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-//  {
   Database_delete(databaseHandle,
                   NULL,  // changedRowCount
                   "names",
@@ -2314,9 +2180,6 @@ void Continuous_discardEntries(DatabaseHandle *databaseHandle,
                   ),
                   DATABASE_UNLIMITED
                  );
-
-//    return TRUE;
-//  });
 }
 
 bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
@@ -2413,6 +2276,15 @@ bool Continuous_getNext(DatabaseStatementHandle *databaseStatementHandle,
                              databaseId,
                              name
                             );
+}
+
+Errors Continuous_markEntryStored(DatabaseHandle *databaseHandle,
+                                  DatabaseId     databaseId
+                                 )
+{
+  assert(databaseHandle != NULL);
+
+  return markEntryStored(databaseHandle,databaseId);
 }
 
 #ifndef NDEBUG
