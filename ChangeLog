@@ -1,4 +1,4 @@
-2025-05-30 26
+2025-06-15 26
   * automatic replace deprecated configuration values by new value
   * support libsmb2 for Windows port
   * increased test code coverage
@@ -10,6 +10,7 @@
   * BACControl: upgrade to Java 1.7
   * BARControl: add total progress to test dialog
   * BARControl: add general commands to server settings dialog
+  * BARControl: show busy dialog when deleting storages
   * BARControl: fixed bug #29: null pointer exception when adding
     filter rule
   * upgrade build+test docker base to Ubuntu 24.04

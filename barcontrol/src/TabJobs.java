@@ -16280,17 +16280,136 @@ throw new Error("NYI");
   {
     if (selectedJobData != null)
     {
-      // remove from persistence list
       {
         BARControl.waitCursor();
       }
       try
       {
-        BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%lld",
-                                                     entityIndexData.id
-                                                    ),
-                                 0  // debugLevel
-                                );
+        final BusyDialog busyDialog = new BusyDialog(shell,
+                                                     BARControl.tr("Delete storage indices and archives"),
+                                                     500,
+                                                     150,
+                                                     (String)null,
+                                                     BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                                    );
+
+        {
+          display.syncExec(new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              BARControl.waitCursor();
+            }
+          });
+        }
+        try
+        {
+          BARServer.executeCommand(StringParser.format("STORAGE_DELETE entityId=%lld",
+                                                       entityIndexData.id
+                                                      ),
+                                   0,  // debugLevel
+                                   new Command.ResultHandler()
+                                   {
+                                     @Override
+                                     public void handle(int i, ValueMap valueMap)
+                                     {
+                                       int    storageDoneCount  = valueMap.getInt   ("storageDoneCount");
+                                       int    storageTotalCount = valueMap.getInt   ("storageTotalCount");
+                                       String storageName       = valueMap.getString("storageName");
+
+                                       busyDialog.updateProgressBar(0,storageDoneCount);
+                                       busyDialog.setMaximum(storageTotalCount);
+                                       busyDialog.updateText(0,storageName);
+
+                                       if (busyDialog.isAborted())
+                                       {
+                                         abort();
+                                       }
+                                     }
+                                   }
+                                  );
+        }
+        catch (final BARException exception)
+        {
+          if (exception.code != BARException.ABORTED)
+          {
+            display.syncExec(new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                Dialogs.error(shell,BARControl.tr("Cannot restore:\n\n{0}",exception.getMessage()));
+              }
+            });
+          }
+          busyDialog.close();
+        }
+        catch (final Exception exception)
+        {
+          display.syncExec(new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              Dialogs.error(shell,BARControl.tr("Cannot restore:\n\n{0}",exception.getMessage()));
+            }
+          });
+          busyDialog.close();
+        }
+        catch (final CommunicationError error)
+        {
+          busyDialog.close();
+          display.syncExec(new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              Dialogs.error(shell,BARControl.tr("Error while restoring:\n\n{0}",error.getMessage()));
+             }
+          });
+        }
+        catch (final ConnectionError error)
+        {
+          busyDialog.close();
+          display.syncExec(new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              Dialogs.error(shell,BARControl.tr("Connection error while restoring\n\n(error: {0})",error.getMessage()));
+             }
+          });
+        }
+        catch (Throwable throwable)
+        {
+          if (Settings.debugLevel > 0)
+          {
+            BARServer.disconnect();
+            BARControl.internalError(throwable);
+          }
+        }
+        finally
+        {
+          display.syncExec(new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              BARControl.resetCursor();
+            }
+          });
+        }
+
+        // close busy dialog
+        display.syncExec(new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            busyDialog.close();
+          }
+        });
       }
       catch (Exception exception)
       {
