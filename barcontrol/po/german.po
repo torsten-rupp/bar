@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-05-21 04:29+0200\n"
+"POT-Creation-Date: 2025-06-15 15:33+0200\n"
 "PO-Revision-Date: 2023-06-25 11:36+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -5644,7 +5644,45 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabJobs.java:16298
+#: src/TabJobs.java:16289 src/TabRestore.java:9499
+msgid "Delete storage indices and archives"
+msgstr "Archiveindex und -dateien löschen"
+
+#: src/TabJobs.java:16342 src/TabJobs.java:16355 src/TabRestore.java:10690
+#: src/TabRestore.java:10703
+#, java-format
+msgid ""
+"Cannot restore:\n"
+"\n"
+"{0}"
+msgstr ""
+"Wiederherstellen fehlgeschlagen:\n"
+"\n"
+"(Fehler: {0})"
+
+#: src/TabJobs.java:16368 src/TabRestore.java:10717
+#, java-format
+msgid ""
+"Error while restoring:\n"
+"\n"
+"{0}"
+msgstr ""
+"Fehler beim Wiederherstellen:\n"
+"\n"
+"(Fehler: {0})"
+
+#: src/TabJobs.java:16380 src/TabRestore.java:10729
+#, java-format
+msgid ""
+"Connection error while restoring\n"
+"\n"
+"(error: {0})"
+msgstr ""
+"Kommunikationsfehler beim Wiederherstellen\n"
+"\n"
+"(Fehler: {0})"
+
+#: src/TabJobs.java:16417
 #, java-format
 msgid ""
 "Cannot delete entity:\n"
@@ -6310,10 +6348,6 @@ msgstr ""
 "{0} {0,choice,0#Dateien|1#Datei|1<Dateien}/{1} ({2} "
 "{2,choice,0#Bytes|1#Byte|1<Bytes}) löschen?"
 
-#: src/TabRestore.java:9499
-msgid "Delete storage indices and archives"
-msgstr "Archiveindex und -dateien löschen"
-
 #: src/TabRestore.java:9546
 #, java-format
 msgid ""
@@ -6454,39 +6488,6 @@ msgstr "Einträge wiederherstellen in: {0}"
 #: src/TabRestore.java:10541
 msgid "Failed entries"
 msgstr "Fehlgeschlagene Einträge"
-
-#: src/TabRestore.java:10690 src/TabRestore.java:10703
-#, java-format
-msgid ""
-"Cannot restore:\n"
-"\n"
-"{0}"
-msgstr ""
-"Wiederherstellen fehlgeschlagen:\n"
-"\n"
-"(Fehler: {0})"
-
-#: src/TabRestore.java:10717
-#, java-format
-msgid ""
-"Error while restoring:\n"
-"\n"
-"{0}"
-msgstr ""
-"Fehler beim Wiederherstellen:\n"
-"\n"
-"(Fehler: {0})"
-
-#: src/TabRestore.java:10729
-#, java-format
-msgid ""
-"Connection error while restoring\n"
-"\n"
-"(error: {0})"
-msgstr ""
-"Kommunikationsfehler beim Wiederherstellen\n"
-"\n"
-"(Fehler: {0})"
 
 #: src/TabStatus.java:85
 msgid "waiting"
