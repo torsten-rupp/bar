@@ -2952,6 +2952,17 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
   return error;
 }
 
+/***********************************************************************\
+* Name   : StorageWebDAV_getFileInfo
+* Purpose: get storage file info
+* Input  : fileInfo    - file info variable
+*          storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : fileInfo - file info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageWebDAV_getFileInfo(FileInfo          *fileInfo,
                                        const StorageInfo *storageInfo,
                                        ConstString       archiveName
@@ -2971,14 +2982,15 @@ LOCAL Errors StorageWebDAV_getFileInfo(FileInfo          *fileInfo,
   error = ERROR_UNKNOWN;
   #ifdef HAVE_CURL
     // get WebDAV server settings
+    uint         serverId = 0;
     WebDAVServer webDAVServer;
     switch (storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_WEBDAV:
-        Configuration_initWebDAVServerSettings(&webDAVServer,storageInfo->storageSpecifier.hostName,storageInfo->jobOptions);
+        serverId = Configuration_initWebDAVServerSettings(&webDAVServer,storageInfo->storageSpecifier.hostName,storageInfo->jobOptions);
         break;
       case STORAGE_TYPE_WEBDAVS:
-        Configuration_initWebDAVSServerSettings(&webDAVServer,storageInfo->storageSpecifier.hostName,storageInfo->jobOptions);
+        serverId = Configuration_initWebDAVSServerSettings(&webDAVServer,storageInfo->storageSpecifier.hostName,storageInfo->jobOptions);
         break;
       default:
         #ifndef NDEBUG
@@ -2993,8 +3005,7 @@ LOCAL Errors StorageWebDAV_getFileInfo(FileInfo          *fileInfo,
     }
 
     // allocate webDAV server
-    Server server;
-    if (!allocateServer(&server,SERVER_CONNECTION_PRIORITY_LOW,ALLOCATE_SERVER_TIMEOUT))
+    if (!allocateServer(serverId,SERVER_CONNECTION_PRIORITY_LOW,ALLOCATE_SERVER_TIMEOUT))
     {
       Configuration_doneWebDAVServerSettings(&webDAVServer);
       return ERROR_TOO_MANY_CONNECTIONS;
@@ -3041,7 +3052,9 @@ LOCAL Errors StorageWebDAV_getFileInfo(FileInfo          *fileInfo,
     }
     if (curlCode == CURLE_OK)
     {
+#ifndef WERROR
 #warning INFO, HEAD?
+#endif
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"INFO");
     }
     if (curlCode == CURLE_OK)
@@ -3062,9 +3075,9 @@ LOCAL Errors StorageWebDAV_getFileInfo(FileInfo          *fileInfo,
     (void)curl_easy_cleanup(curlHandle);
     Configuration_doneWebDAVServerSettings(&webDAVServer);
   #else /* not HAVE_CURL */
-    UNUSED_VARIABLE(storageInfo);
-    UNUSED_VARIABLE(fileName);
     UNUSED_VARIABLE(fileInfo);
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL */

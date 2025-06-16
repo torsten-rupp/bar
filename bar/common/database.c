@@ -10119,7 +10119,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
   {
     case DATABASE_TYPE_SQLITE3:
       {
-        int sqliteResult;
+        int sqliteResult = SQLITE_ERROR;
 
         for (i = 0; i < filterCount; i++)
         {

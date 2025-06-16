@@ -377,12 +377,10 @@ void MsgQueue_unlock(MsgQueue *msgQueue)
 
 bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, long timeout)
 {
-  TimeoutInfo timeoutInfo;
-  MsgNode     *msgNode;
-  ulong       n;
-
   assert(msgQueue != NULL);
 
+  MsgNode *msgNode = NULL;
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,timeout);
   MSGQUEUE_LOCKED_DO(msgQueue)
   {
@@ -418,7 +416,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
   {
     return FALSE;
   }
-  n = MIN(msgNode->size,maxSize);
+  ulong n = MIN(msgNode->size,maxSize);
   memcpy(msg,msgNode->data,n);
   if (size != NULL) (*size) = n;
   free(msgNode);

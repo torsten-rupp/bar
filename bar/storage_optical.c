@@ -3774,6 +3774,17 @@ LOCAL Errors StorageOptical_delete(const StorageInfo *storageInfo,
   return ERROR_FUNCTION_NOT_SUPPORTED;
 }
 
+/***********************************************************************\
+* Name   : StorageOptical_getFileInfo
+* Purpose: get storage file info
+* Input  : fileInfo    - file info variable
+*          storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : fileInfo - file info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageOptical_getFileInfo(FileInfo          *fileInfo,
                                         const StorageInfo *storageInfo,
                                         ConstString       archiveName

@@ -2060,10 +2060,21 @@ LOCAL Errors StorageSMB_delete(const StorageInfo *storageInfo,
   #endif /* HAVE_SMB2 */
 }
 
-Errors StorageSMB_getFileInfo(FileInfo          *fileInfo,
-                              const StorageInfo *storageInfo,
-                              ConstString       archiveName
-                             )
+/***********************************************************************\
+* Name   : StorageSMB_getFileInfo
+* Purpose: get storage file info
+* Input  : fileInfo    - file info variable
+*          storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : fileInfo - file info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors StorageSMB_getFileInfo(FileInfo          *fileInfo,
+                                    const StorageInfo *storageInfo,
+                                    ConstString       archiveName
+                                   )
 {
   Errors error;
 

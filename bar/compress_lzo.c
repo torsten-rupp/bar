@@ -709,8 +709,6 @@ LOCAL Errors CompressLZO_init(CompressInfo       *compressInfo,
                               CompressAlgorithms compressAlgorithm
                              )
 {
-  ulong workingMemorySize;
-
   assert(compressInfo != NULL);
 
   UNUSED_VARIABLE(compressMode);
@@ -723,6 +721,7 @@ LOCAL Errors CompressLZO_init(CompressInfo       *compressInfo,
   compressInfo->lzo.totalInputLength   = 0LL;
   compressInfo->lzo.totalOutputLength  = 0LL;
 
+  ulong workingMemorySize = 0;
   switch (compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_LZO_1:

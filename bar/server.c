@@ -3540,8 +3540,7 @@ LOCAL Errors deleteUUID(IndexHandle  *indexHandle,
 
   // delete all entities of job
   ArrayIterator arrayIterator;
-  String        storageName = String_new();
-  uint          doneCount   = 0;
+  uint          doneCount = 0;
   ARRAY_ITERATEX(&entityIdArray,
                  arrayIterator,
                  entityId,

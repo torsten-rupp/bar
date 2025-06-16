@@ -474,7 +474,7 @@ LOCAL Errors sftpStat(SocketHandle *socketHandle,
     assert(error != ERROR_UNKNOWN);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(socketHandle);
-    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(fileName);
     UNUSED_VARIABLE(fileInfo);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -581,8 +581,7 @@ LOCAL Errors sftpMakeDirectory(SocketHandle *socketHandle,
     assert(error != ERROR_UNKNOWN);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(socketHandle);
-    UNUSED_VARIABLE(archiveName);
-    UNUSED_VARIABLE(fileInfo);
+    UNUSED_VARIABLE(directoryName);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
@@ -704,8 +703,7 @@ LOCAL Errors sftpUnlink(SocketHandle *socketHandle,
     assert(error != ERROR_UNKNOWN);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(socketHandle);
-    UNUSED_VARIABLE(archiveName);
-    UNUSED_VARIABLE(fileInfo);
+    UNUSED_VARIABLE(name);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
@@ -2630,10 +2628,21 @@ LOCAL Errors StorageSFTP_delete(StorageInfo *storageInfo,
   return error;
 }
 
-Errors StorageSFTP_getFileInfo(FileInfo          *fileInfo,
-                               const StorageInfo *storageInfo,
-                               ConstString       archiveName
-                              )
+/***********************************************************************\
+* Name   : StorageSFTP_getFileInfo
+* Purpose: get storage file info
+* Input  : fileInfo    - file info variable
+*          storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : fileInfo - file info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors StorageSFTP_getFileInfo(FileInfo    *fileInfo,
+                                     StorageInfo *storageInfo,
+                                     ConstString archiveName
+                                    )
 {
   Errors       error;
   #ifdef HAVE_SSH2
@@ -2650,8 +2659,6 @@ Errors StorageSFTP_getFileInfo(FileInfo          *fileInfo,
   error = ERROR_UNKNOWN;
   #ifdef HAVE_SSH2
     {
-      LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
-
       error = Network_connect(&socketHandle,
                               SOCKET_TYPE_SSH,
                               storageInfo->storageSpecifier.hostName,

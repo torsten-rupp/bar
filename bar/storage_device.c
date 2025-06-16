@@ -1459,18 +1459,16 @@ LOCAL Errors StorageDevice_delete(const StorageInfo *storageInfo,
 
 LOCAL Errors StorageDevice_getFileInfo(FileInfo          *fileInfo,
                                        const StorageInfo *storageInfo,
-                                       ConstString       fileName
+                                       ConstString       archiveName
                                       )
 {
-  Errors error;
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(fileInfo != NULL);
 
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(fileName);
   UNUSED_VARIABLE(fileInfo);
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
 
   return ERROR_FUNCTION_NOT_SUPPORTED;
 }

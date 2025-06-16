@@ -618,7 +618,7 @@ typedef struct
 
         String          fileName;                             // last parsed entry
         FileTypes       type;
-        int64           size;
+        uint64          size;
         uint64          timeModified;
         uint32          userId;
         uint32          groupId;
@@ -1777,9 +1777,9 @@ Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName);
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_getFileInfo(FileInfo          *fileInfo,
-                           const StorageInfo *storageInfo,
-                           ConstString       archiveName
+Errors Storage_getFileInfo(FileInfo    *fileInfo,
+                           StorageInfo *storageInfo,
+                           ConstString archiveName
                           );
 
 /*---------------------------------------------------------------------*/
