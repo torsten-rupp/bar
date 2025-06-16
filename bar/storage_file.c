@@ -613,6 +613,17 @@ LOCAL Errors StorageFile_delete(const StorageInfo *storageInfo,
   return File_delete(fileName,FALSE);
 }
 
+/***********************************************************************\
+* Name   : StorageFile_getFileInfo
+* Purpose: get storage file info
+* Input  : fileInfo    - file info variable
+*          storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : fileInfo - file info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageFile_getFileInfo(FileInfo          *fileInfo,
                                      const StorageInfo *storageInfo,
                                      ConstString       archiveName
@@ -622,6 +633,8 @@ LOCAL Errors StorageFile_getFileInfo(FileInfo          *fileInfo,
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(archiveName != NULL);
+
+  UNUSED_VARIABLE(storageInfo);
 
   return File_getInfo(fileInfo,archiveName);
 }

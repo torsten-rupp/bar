@@ -476,7 +476,7 @@ LOCAL size_t curlFTPLineListCallback(const void *buffer,
 LOCAL bool parseFTPDirectoryLine(String          line,
                                  String          fileName,
                                  FileTypes       *type,
-                                 int64           *size,
+                                 uint64          *size,
                                  uint64          *timeModified,
                                  uint32          *userId,
                                  uint32          *groupId,
@@ -2638,6 +2638,17 @@ LOCAL Errors StorageFTP_delete(StorageInfo *storageInfo,
   return error;
 }
 
+/***********************************************************************\
+* Name   : StorageFTP_getFileInfo
+* Purpose: get storage file info
+* Input  : fileInfo    - file info variable
+*          storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : fileInfo - file info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageFTP_getFileInfo(FileInfo          *fileInfo,
                                     const StorageInfo *storageInfo,
                                     ConstString       archiveName
@@ -2668,7 +2679,6 @@ LOCAL Errors StorageFTP_getFileInfo(FileInfo          *fileInfo,
     if (Password_isEmpty(&ftpServer.password)) Password_set(&ftpServer.password,&ftpServer.password);
 
     // allocate FTP server
-    Server server;
     if (!allocateServer(serverId,SERVER_CONNECTION_PRIORITY_LOW,ALLOCATE_SERVER_TIMEOUT))
     {
       Configuration_doneFTPServerSettings(&ftpServer);

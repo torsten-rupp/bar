@@ -398,6 +398,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
     writtenBytes += length;
     storageHandle->master.index += (uint64)length;
   }
+  error = ERROR_NONE;
   while (idCount > 0)
   {
     error = ServerIO_waitResults(storageHandle->storageInfo->masterIO,

@@ -2630,10 +2630,21 @@ LOCAL Errors StorageSFTP_delete(StorageInfo *storageInfo,
   return error;
 }
 
-Errors StorageSFTP_getFileInfo(FileInfo          *fileInfo,
-                               const StorageInfo *storageInfo,
-                               ConstString       archiveName
-                              )
+/***********************************************************************\
+* Name   : StorageSFTP_getFileInfo
+* Purpose: get storage file info
+* Input  : fileInfo    - file info variable
+*          storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : fileInfo - file info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors StorageSFTP_getFileInfo(FileInfo    *fileInfo,
+                                     StorageInfo *storageInfo,
+                                     ConstString archiveName
+                                    )
 {
   Errors       error;
   #ifdef HAVE_SSH2

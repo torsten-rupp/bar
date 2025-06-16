@@ -4634,9 +4634,9 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
   return error;
 }
 
-Errors Storage_getFileInfo(FileInfo          *fileInfo,
-                           const StorageInfo *storageInfo,
-                           ConstString       archiveName
+Errors Storage_getFileInfo(FileInfo    *fileInfo,
+                           StorageInfo *storageInfo,
+                           ConstString archiveName
                           )
 {
   Errors error;
@@ -5045,6 +5045,7 @@ UNUSED_VARIABLE(skipUnreadableFlag);
   // read directory and scan all sub-directories
   StringList_append(&directoryList,(directory != NULL) ? directory : storageSpecifier->archiveName);
   doneCount = 0L;
+  error     = ERROR_NONE;
   while (   !StringList_isEmpty(&directoryList)
          && (error == ERROR_NONE)
         )

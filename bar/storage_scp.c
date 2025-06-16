@@ -1775,6 +1775,17 @@ whould this be a possible implementation?
   return error;
 }
 
+/***********************************************************************\
+* Name   : StorageSCP_getFileInfo
+* Purpose: get storage file info
+* Input  : fileInfo    - file info variable
+*          storageInfo - storage info
+*          archiveName - archive name (can be NULL)
+* Output : fileInfo - file info
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 LOCAL Errors StorageSCP_getFileInfo(FileInfo          *fileInfo,
                                     const StorageInfo *storageInfo,
                                     ConstString       archiveName
