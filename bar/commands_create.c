@@ -6692,7 +6692,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   double                    compressionRatio;
   double                    d;
   char                      fragmentInfoString[256],compressionRatioString[256];
-  const StringNode          *stringNode;
   String                    fileName;
 
   assert(createInfo != NULL);
@@ -7151,6 +7150,13 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
   // close file
   (void)File_close(&fileHandle);
+
+  const StringNode *stringNode = fileNameList->head->next;
+  while (stringNode != NULL)
+  {
+    printInfo(1,"Add hardlink  '%s'...OK\n",String_cString(stringNode->string));
+    stringNode = stringNode->next;
+  }
 
   // free resources
   fragmentDone(createInfo,StringList_first(fileNameList,NULL));
