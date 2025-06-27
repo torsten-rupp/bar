@@ -944,13 +944,13 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       break;
     case CMD_OPTION_TYPE_SPECIAL:
       errorMessage[0] = '\0';
-      if (!commandLineOption->specialOption.parseSpecial(commandLineOption->specialOption.userData,
-                                                         commandLineOption->variable.special,
+      if (!commandLineOption->specialOption.parseSpecial(commandLineOption->variable.special,
                                                          option,
                                                          value,
                                                          commandLineOption->defaultValue.special,
                                                          errorMessage,
-                                                         sizeof(errorMessage)
+                                                         sizeof(errorMessage),
+                                                         commandLineOption->specialOption.userData
                                                         )
          )
       {
@@ -1002,13 +1002,13 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                  );
         }
       }
-      if (!commandLineOption->deprecatedOption.parseDeprecated(commandLineOption->deprecatedOption.userData,
-                                                               commandLineOption->variable.special,
+      if (!commandLineOption->deprecatedOption.parseDeprecated(commandLineOption->variable.special,
                                                                option,
                                                                value,
                                                                commandLineOption->defaultValue.special,
                                                                errorMessage,
-                                                               sizeof(errorMessage)
+                                                               sizeof(errorMessage),
+                                                               commandLineOption->deprecatedOption.userData
                                                               )
          )
       {
@@ -1657,16 +1657,8 @@ bool CmdOption_parse(const char              *argv[],
                 }
                 else
                 {
-                  // missing value for option
-                  if (outputHandle != NULL)
-                  {
-                    fprintf(outputHandle,
-                            "%sNo value given for option '--%s'!\n",
-                            (errorPrefix != NULL)?errorPrefix:"",
-                            name
-                           );
-                  }
-                  return FALSE;
+                  // no value
+                  value = NULL;
                 }
               }
               else
@@ -1881,49 +1873,96 @@ bool CmdOption_parse(const char              *argv[],
   return TRUE;
 }
 
-bool CmdOption_parseDeprecatedStringOption(void       *userData,
-                                           void       *variable,
+bool CmdOption_parseDeprecatedBooleanOption(void       *variable,
+                                            const char *name,
+                                            const char *value,
+                                            const void *defaultValue,
+                                            char       errorMessage[],
+                                            uint       errorMessageSize,
+                                            void       *userData
+                                           )
+{
+  assert(variable != NULL);
+
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
+
+  if (variable != NULL)
+  {
+    if      (   (value == NULL)
+             || stringEquals(value,"1")
+             || stringEqualsIgnoreCase(value,"true")
+             || stringEqualsIgnoreCase(value,"on")
+             || stringEqualsIgnoreCase(value,"yes")
+            )
+    {
+      (*((bool*)variable)) = TRUE;
+    }
+    else if (   stringEquals(value,"0")
+             || stringEqualsIgnoreCase(value,"false")
+             || stringEqualsIgnoreCase(value,"off")
+             || stringEqualsIgnoreCase(value,"no")
+            )
+    {
+      (*((bool*)variable)) = FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+bool CmdOption_parseDeprecatedStringOption(void       *variable,
                                            const char *name,
                                            const char *value,
                                            const void *defaultValue,
                                            char       errorMessage[],
-                                           uint       errorMessageSize
+                                           uint       errorMessageSize,
+                                           void       *userData
                                           )
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
-  String_setCString(*((String*)variable),value);
+  if (variable != NULL)
+  {
+    String_setCString(*((String*)variable),value);
+  }
 
   return TRUE;
 }
 
-bool CmdOption_parseDeprecatedCStringOption(void       *userData,
-                                            void       *variable,
+bool CmdOption_parseDeprecatedCStringOption(void       *variable,
                                             const char *name,
                                             const char *value,
                                             const void *defaultValue,
                                             char       errorMessage[],
-                                            uint       errorMessageSize
+                                            uint       errorMessageSize,
+                                            void       *userData
                                            )
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
+  if (variable != NULL)
+  {
 //TODO: correct?
-  (*((const char**)variable)) = value;
+    (*((const char**)variable)) = value;
+  }
 
   return TRUE;
 }

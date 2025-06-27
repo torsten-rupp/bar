@@ -604,27 +604,28 @@ LOCAL MountNode *newMountNodeCString(const char *mountName, const char *deviceNa
 /***********************************************************************\
 * Name   : cmdOptionParseString
 * Purpose: command line option call back for parsing string
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+// TODO: in cmdoptions.*?
+LOCAL bool cmdOptionParseString(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if ((*(String*)variable) != NULL)
   {
@@ -641,27 +642,27 @@ LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name
 /***********************************************************************\
 * Name   : cmdOptionParseStringList
 * Purpose: command line option call back for parsing string list
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseStringList(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseStringList(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if (((StringList*)variable) != NULL)
   {
@@ -674,24 +675,24 @@ LOCAL bool cmdOptionParseStringList(void *userData, void *variable, const char *
 /***********************************************************************\
 * Name   : cmdOptionParseNewEntityUUID
 * Purpose: command line option call back for new entity UUID
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseNewEntityUUID(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseNewEntityUUID(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if ((*(String*)variable) == NULL)
   {
@@ -718,27 +719,27 @@ LOCAL bool cmdOptionParseNewEntityUUID(void *userData, void *variable, const cha
 /***********************************************************************\
 * Name   : cmdOptionParseConfigFile
 * Purpose: command line option call back for parsing configuration file
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseConfigFile(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(variable);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   Configuration_add(CONFIG_FILE_TYPE_COMMAND_LINE,value);
 
@@ -749,18 +750,18 @@ LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *
 * Name   : cmdOptionParseEntryPattern
 * Purpose: command line option call back for parsing include
 *          patterns
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseEntryPattern(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   EntryTypes   entryType;
   PatternTypes patternType;
@@ -769,9 +770,9 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   // get entry type
   entryType = ENTRY_TYPE_FILE;
@@ -820,18 +821,18 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
 /***********************************************************************\
 * Name   : cmdOptionParsePattern
 * Purpose: command line option call back for parsing patterns
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParsePattern(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   PatternTypes patternType;
   Errors       error;
@@ -839,9 +840,9 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   // detect pattern type, get pattern
   if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
@@ -866,18 +867,18 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
 /***********************************************************************\
 * Name   : cmdOptionParseMount
 * Purpose: command line option call back for mounts
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseMount(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   String    mountName;
   String    deviceName;
@@ -886,11 +887,11 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   // init variables
   mountName  = String_new();
@@ -940,18 +941,18 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
 /***********************************************************************\
 * Name   : cmdOptionParseDeltaSource
 * Purpose: command line option call back for parsing delta patterns
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseDeltaSource(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   String       storageName;
   PatternTypes patternType;
@@ -959,11 +960,11 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   // init variables
   storageName = String_new();
@@ -989,18 +990,18 @@ LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char 
 /***********************************************************************\
 * Name   : cmdOptionParseCompressAlgorithms
 * Purpose: command line option call back for parsing compress algorithm
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseCompressAlgorithms(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   char               algorithm1[256],algorithm2[256];
   CompressAlgorithms compressAlgorithm;
@@ -1009,9 +1010,9 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, cons
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
   compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
@@ -1058,18 +1059,18 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *userData, void *variable, cons
 /***********************************************************************\
 * Name   : cmdOptionParseCryptAlgorithms
 * Purpose: command line option call back for parsing crypt algorithms
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseCryptAlgorithms(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
 #ifdef MULTI_CRYPT
   StringTokenizer stringTokenizer;
@@ -1083,9 +1084,9 @@ LOCAL bool cmdOptionParseCryptAlgorithms(void *userData, void *variable, const c
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
 #ifdef MULTI_CRYPT
   cryptAlgorithmCount = 0;
@@ -2258,18 +2259,18 @@ LOCAL void doneGlobalOptions(void)
 /***********************************************************************\
 * Name   : cmdOptionParseBandWidth
 * Purpose: command line option call back for parsing band width settings
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseBandWidth(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   BandWidthNode *bandWidthNode;
   String        s;
@@ -2277,9 +2278,9 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   // parse band width node
   s = String_newCString(value);
@@ -2300,18 +2301,18 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 /***********************************************************************\
 * Name   : cmdOptionParseOwner
 * Purpose: command line option call back for parsing owner
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseTransform(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   PatternTypes patternType;
   String       patternString,replace;
@@ -2319,9 +2320,9 @@ LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *n
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   // init variables
   patternString = String_new();
@@ -2380,18 +2381,18 @@ LOCAL bool cmdOptionParseTransform(void *userData, void *variable, const char *n
 /***********************************************************************\
 * Name   : cmdOptionParseOwner
 * Purpose: command line option call back for parsing owner
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseOwner(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   char   userName[256],groupName[256];
   uint32 userId,groupId;
@@ -2399,9 +2400,9 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   // parse
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
@@ -2440,18 +2441,18 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
 /***********************************************************************\
 * Name   : cmdOptionParsePermissions
 * Purpose: command line option call back for parsing permissions
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParsePermissions(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   char            user[3+1],group[3+1],other[3+1];
   FilePermissions permission;
@@ -2459,9 +2460,9 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   // parse
   permission = FILE_PERMISSION_NONE;
@@ -2496,27 +2497,27 @@ LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char 
 /***********************************************************************\
 * Name   : cmdOptionParsePassword
 * Purpose: command line option call back for parsing password
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParsePassword(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   Password_setCString((Password*)variable,value);
 
@@ -2527,29 +2528,29 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
 * Name   : cmdOptionParseHashData
 * Purpose: command line option call back for parsing password to hash
 *          data
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseHashData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseHashData(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   CryptHash cryptHash;
 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
 // TODO: parse algorithmus+salt
   // calculate hash
@@ -2568,18 +2569,18 @@ LOCAL bool cmdOptionParseHashData(void *userData, void *variable, const char *na
 /***********************************************************************\
 * Name   : cmdOptionReadCertificateFile
 * Purpose: command line option call back for reading certificate file
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionReadCertificateFile(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   Certificate *certificate = (Certificate*)variable;
   Errors      error;
@@ -2590,9 +2591,9 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
   if (error != ERROR_NONE)
@@ -2649,18 +2650,18 @@ LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const ch
 /***********************************************************************\
 * Name   : cmdOptionReadKeyFile
 * Purpose: command line option call back for reading key file
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionReadKeyFile(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   Key        *key = (Key*)variable;
   Errors     error;
@@ -2671,9 +2672,9 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   // open file
   error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
@@ -2726,18 +2727,18 @@ LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name
 /***********************************************************************\
 * Name   : cmdOptionParseKey
 * Purpose: command line option call back for get key data
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseKey(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   Key    *key = (Key*)variable;
   Errors error;
@@ -2747,9 +2748,9 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   if (File_existsCString(value))
   {
@@ -2829,18 +2830,18 @@ LOCAL bool cmdOptionParseKey(void *userData, void *variable, const char *name, c
 /***********************************************************************\
 * Name   : cmdOptionParseSSHKey
 * Purpose: command line option call back for get TLS key data
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseSSHKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseSSHKey(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   Key    *key = (Key*)variable;
   Errors error;
@@ -2850,9 +2851,9 @@ LOCAL bool cmdOptionParseSSHKey(void *userData, void *variable, const char *name
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(userData);
 
   if (File_existsCString(value))
   {
@@ -2932,26 +2933,26 @@ LOCAL bool cmdOptionParseSSHKey(void *userData, void *variable, const char *name
 /***********************************************************************\
 * Name   : cmdOptionParseArchiveFileModeOverwrite
 * Purpose: command line option call back for archive file mode overwrite
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if      (   (value == NULL)
            || stringEquals(value,"1")
@@ -2974,26 +2975,26 @@ LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *userData, void *variable
 * Name   : cmdOptionParseRestoreEntryModeOverwrite
 * Purpose: command line option call back for restore entry mode
 *          overwrite
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if      (   (value == NULL)
            || stringEquals(value,"1")
@@ -3015,29 +3016,29 @@ LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *userData, void *variabl
 /***********************************************************************\
 * Name   : cmdOptionParseDeprecatedMountDevice
 * Purpose: command line option call back for archive files overwrite mode
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseDeprecatedMountDevice(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   MountNode *mountNode;
 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if (!stringIsEmpty(value))
   {
@@ -3056,26 +3057,26 @@ LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, c
 * Name   : cmdOptionParseDeprecatedStopOnError
 * Purpose: command line option call back for deprecated option
 *          stop-on-error
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          defaultValue          - default config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseDeprecatedStopOnError(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if (value != NULL)
   {
@@ -3097,27 +3098,27 @@ LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, c
 * Name   : configValueParseConfigFile
 * Purpose: command line option call back for parsing configuration
 *          filename
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : -
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueConfigFileParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueConfigFileParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   String string;
 
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(variable);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
 //TODO: required?
   // unquote/unescape
@@ -3218,7 +3219,7 @@ LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueOperati
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueMaintenanceDateParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   bool         errorFlag;
   String       s0,s1,s2;
@@ -3228,8 +3229,8 @@ LOCAL bool configValueMaintenanceDateParse(void *userData, void *variable, const
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   errorFlag = FALSE;
@@ -3371,15 +3372,15 @@ LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueOp
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueMaintenanceWeekDaySetParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueMaintenanceWeekDaySetParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   WeekDaySet weekDaySet;
 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   if (!Configuration_parseWeekDaySet(value,&weekDaySet))
@@ -3487,7 +3488,7 @@ LOCAL bool configValueMaintenanceWeekDaySetFormat(void **formatUserData, ConfigV
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueMaintenanceTimeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueMaintenanceTimeParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   bool         errorFlag;
   String       s0,s1;
@@ -3496,8 +3497,8 @@ LOCAL bool configValueMaintenanceTimeParse(void *userData, void *variable, const
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   errorFlag = FALSE;
@@ -3886,7 +3887,7 @@ LOCAL void *configValueDeviceSectionDataIterator(ConfigValueSectionDataIterator 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeprecatedMountDeviceParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedMountDeviceParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   String    string;
   MountNode *mountNode;
@@ -3894,10 +3895,10 @@ LOCAL bool configValueDeprecatedMountDeviceParse(void *userData, void *variable,
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   // unquote/unescape
   string = String_newCString(value);
@@ -3931,26 +3932,26 @@ LOCAL bool configValueDeprecatedMountDeviceParse(void *userData, void *variable,
 /***********************************************************************\
 * Name   : configValueDeprecatedStopOnErrorParse
 * Purpose: config value option call back for deprecated stop-on-error
-* Input  : userData              - user data
-*          variable              - config variable
+* Input  : variable              - config variable
 *          name                  - config name
 *          value                 - config value
 *          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
 * Output : errorMessage - error message text
 * Return : TRUE if config value parsed and stored in variable, FALSE
 *          otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeprecatedStopOnErrorParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedStopOnErrorParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if (value != NULL)
   {
@@ -3982,19 +3983,19 @@ LOCAL bool configValueDeprecatedStopOnErrorParse(void *userData, void *variable,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeprecatedForceTLSParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedForceTLSParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(value);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   bool forceTLS = FALSE;
-  if (ConfigValue_parseDeprecatedBoolean(userData,&forceTLS,name,value,errorMessage,errorMessageSize))
+  if (ConfigValue_parseDeprecatedBoolean(&forceTLS,name,value,errorMessage,errorMessageSize,userData))
   {
     (*(TLSModes*)variable) = (forceTLS) ? TLS_MODE_FORCE : TLS_MODE_NONE;
 
@@ -4020,16 +4021,16 @@ LOCAL bool configValueDeprecatedForceTLSParse(void *userData, void *variable, co
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeprecatedArchiveFileModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedArchiveFileModeOverwriteParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(value);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_OVERWRITE;
 
@@ -4050,16 +4051,16 @@ LOCAL bool configValueDeprecatedArchiveFileModeOverwriteParse(void *userData, vo
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeprecatedRestoreEntryModeOverwriteParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedRestoreEntryModeOverwriteParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(value);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   (*(RestoreEntryModes*)variable) = RESTORE_ENTRY_MODE_OVERWRITE;
 
@@ -4080,7 +4081,7 @@ LOCAL bool configValueDeprecatedRestoreEntryModeOverwriteParse(void *userData, v
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueScheduleDateParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   bool         errorFlag;
   String       s0,s1,s2;
@@ -4089,8 +4090,8 @@ LOCAL bool configValueScheduleDateParse(void *userData, void *variable, const ch
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   errorFlag = FALSE;
@@ -4220,15 +4221,15 @@ LOCAL bool configValueScheduleDateFormat(void **formatUserData, ConfigValueOpera
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueScheduleWeekDaySetParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueScheduleWeekDaySetParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   WeekDaySet weekDaySet;
 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   if (!Configuration_parseWeekDaySet(value,&weekDaySet))
@@ -4336,7 +4337,7 @@ LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, ConfigValu
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueScheduleTimeParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   bool         errorFlag;
   String       s0,s1;
@@ -4345,8 +4346,8 @@ LOCAL bool configValueScheduleTimeParse(void *userData, void *variable, const ch
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   errorFlag = FALSE;
@@ -4520,15 +4521,15 @@ LOCAL void *configValuePersistenceSectionDataIterator(ConfigValueSectionDataIter
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePersistenceMinKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePersistenceMinKeepParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   int minKeep;
 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   if (!stringEquals(value,"*"))
@@ -4624,15 +4625,15 @@ LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValu
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePersistenceMaxKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePersistenceMaxKeepParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   int maxKeep;
 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   if (!stringEquals(value,"*"))
@@ -4728,15 +4729,15 @@ LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValu
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePersistenceMaxAgeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePersistenceMaxAgeParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   int maxAge;
 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   if (!stringEquals(value,"*"))
@@ -4832,17 +4833,18 @@ LOCAL bool configValuePersistenceMaxAgeFormat(void **formatUserData, ConfigValue
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+// TODO: use ConfigValue_parseDeprecatedString direct
+LOCAL bool configValueDeprecatedRemoteHostParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
-  return ConfigValue_parseDeprecatedString(userData,variable,name,value,errorMessage,errorMessageSize);
+  return ConfigValue_parseDeprecatedString(variable,name,value,errorMessage,errorMessageSize,userData);
 }
 
 /***********************************************************************\
@@ -4859,15 +4861,15 @@ LOCAL bool configValueDeprecatedRemoteHostParse(void *userData, void *variable, 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeprecatedRemotePortParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedRemotePortParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   uint n;
 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   if (!stringToUInt(value,&n,NULL))
   {
@@ -4894,15 +4896,15 @@ LOCAL bool configValueDeprecatedRemotePortParse(void *userData, void *variable, 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeprecatedScheduleMinKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedScheduleMinKeepParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if (!stringToInt(value,&((ScheduleNode*)variable)->minKeep,NULL))
   {
@@ -4929,15 +4931,15 @@ LOCAL bool configValueDeprecatedScheduleMinKeepParse(void *userData, void *varia
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeprecatedScheduleMaxKeepParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedScheduleMaxKeepParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if (!stringToInt(value,&((ScheduleNode*)variable)->maxKeep,NULL))
   {
@@ -4964,15 +4966,15 @@ LOCAL bool configValueDeprecatedScheduleMaxKeepParse(void *userData, void *varia
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeprecatedScheduleMaxAgeParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeprecatedScheduleMaxAgeParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if (!stringToInt(value,&((ScheduleNode*)variable)->maxAge,NULL))
   {
@@ -5026,17 +5028,17 @@ String getConfigFileName(String fileName)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePasswordParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePasswordParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   String string;
 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   // unquote/unescape
   string = String_newCString(value);
@@ -5132,7 +5134,7 @@ LOCAL bool configValuePasswordFormat(void **formatUserData, ConfigValueOperation
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueCryptAlgorithmsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueCryptAlgorithmsParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
 #ifdef MULTI_CRYPT
   StringTokenizer stringTokenizer;
@@ -5146,10 +5148,10 @@ LOCAL bool configValueCryptAlgorithmsParse(void *userData, void *variable, const
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
 #ifdef MULTI_CRYPT
   i = 0;
@@ -5287,7 +5289,7 @@ LOCAL bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueOp
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueBandWidthParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueBandWidthParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   BandWidthNode *bandWidthNode;
   String        s;
@@ -5295,8 +5297,8 @@ LOCAL bool configValueBandWidthParse(void *userData, void *variable, const char 
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse band width node
   s = String_newCString(value);
@@ -5455,7 +5457,7 @@ LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueOperatio
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueOwnerParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueOwnerParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   char   userName[256],groupName[256];
   uint32 userId,groupId;
@@ -5463,8 +5465,8 @@ LOCAL bool configValueOwnerParse(void *userData, void *variable, const char *nam
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
@@ -5578,7 +5580,7 @@ LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueOperations o
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePermissionsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePermissionsParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   char            user[3+1],group[3+1],other[3+1];
   FilePermissions permission;
@@ -5586,8 +5588,8 @@ LOCAL bool configValuePermissionsParse(void *userData, void *variable, const cha
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // parse
   permission = FILE_PERMISSION_NONE;
@@ -5688,7 +5690,23 @@ LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueOperat
   return TRUE;
 }
 
-LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+/***********************************************************************\
+* Name   : configValueEntryPatternParse
+* Purpose: config value option call back for parsing file/image entry
+*          patterns
+* Input  : entryType             - entry type
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   const char* FILENAME_MAP_FROM[] = {"\\n","\\r","\\\\"};
   const char* FILENAME_MAP_TO[]   = {"\n","\r","\\"};
@@ -5754,14 +5772,14 @@ LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *userData, vo
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueFileEntryPatternParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueFileEntryPatternParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  return configValueEntryPatternParse(ENTRY_TYPE_FILE,userData,variable,name,value,errorMessage,errorMessageSize);
+  return configValueEntryPatternParse(ENTRY_TYPE_FILE,variable,name,value,errorMessage,errorMessageSize,userData);
 }
 
-LOCAL bool configValueImageEntryPatternParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueImageEntryPatternParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  return configValueEntryPatternParse(ENTRY_TYPE_IMAGE,userData,variable,name,value,errorMessage,errorMessageSize);
+  return configValueEntryPatternParse(ENTRY_TYPE_IMAGE,variable,name,value,errorMessage,errorMessageSize,userData);
 }
 
 /***********************************************************************\
@@ -5927,7 +5945,7 @@ LOCAL bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValue
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValuePatternParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePatternParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   PatternTypes patternType;
   String       string;
@@ -5936,8 +5954,8 @@ LOCAL bool configValuePatternParse(void *userData, void *variable, const char *n
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   // detect pattern type, get pattern
   if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
@@ -6060,7 +6078,7 @@ LOCAL bool configValuePatternFormat(void **formatUserData, ConfigValueOperations
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueMountParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueMountParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   String    mountName;
   String    deviceName;
@@ -6069,10 +6087,10 @@ LOCAL bool configValueMountParse(void *userData, void *variable, const char *nam
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   // init variables
   mountName  = String_new();
@@ -6201,7 +6219,7 @@ LOCAL bool configValueMountFormat(void **formatUserData, ConfigValueOperations o
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueDeltaSourceParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueDeltaSourceParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   PatternTypes    patternType;
   String          string;
@@ -6210,10 +6228,10 @@ LOCAL bool configValueDeltaSourceParse(void *userData, void *variable, const cha
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   // detect pattern type, get pattern
   if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
@@ -6336,7 +6354,7 @@ LOCAL bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueOperat
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueCompressAlgorithmsParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueCompressAlgorithmsParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   char                          algorithm1[256],algorithm2[256];
   CompressAlgorithms            compressAlgorithmDelta,compressAlgorithmByte;
@@ -6346,8 +6364,8 @@ LOCAL bool configValueCompressAlgorithmsParse(void *userData, void *variable, co
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(userData);
 
   compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
   compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
@@ -6535,7 +6553,7 @@ LOCAL bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValu
 * Notes  : read from file or decode base64 data
 \***********************************************************************/
 
-LOCAL bool configValueCertificateParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueCertificateParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   Certificate *certificate = (Certificate*)variable;
   Errors      error;
@@ -6545,10 +6563,10 @@ LOCAL bool configValueCertificateParse(void *userData, void *variable, const cha
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if      (File_existsCString(value))
   {
@@ -6715,7 +6733,7 @@ LOCAL bool configValueCertificateFormat(void **formatUserData, ConfigValueOperat
 * Notes  : read from file or decode base64 data
 \***********************************************************************/
 
-LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueKeyParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   Key    *key = (Key*)variable;
   Errors error;
@@ -6725,10 +6743,10 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if (File_existsCString(value))
   {
@@ -6815,7 +6833,7 @@ LOCAL bool configValueKeyParse(void *userData, void *variable, const char *name,
 * Notes  : read from file or decode base64 data
 \***********************************************************************/
 
-LOCAL bool configValueSSHKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueSSHKeyParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   Key    *key = (Key*)variable;
   Errors error;
@@ -6825,10 +6843,10 @@ LOCAL bool configValueSSHKeyParse(void *userData, void *variable, const char *na
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if (File_existsCString(value))
   {
@@ -6976,7 +6994,7 @@ LOCAL bool configValueKeyFormat(void **formatUserData, ConfigValueOperations ope
 
 // TODO: no used
 #ifndef WERROR
-LOCAL bool configValuePublicPrivateKeyParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValuePublicPrivateKeyParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   CryptKey *cryptKey = (CryptKey*)variable;
   Errors   error;
@@ -6984,10 +7002,10 @@ LOCAL bool configValuePublicPrivateKeyParse(void *userData, void *variable, cons
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if (File_existsCString(value))
   {
@@ -7064,7 +7082,7 @@ LOCAL bool configValuePublicPrivateKeyParse(void *userData, void *variable, cons
 * Notes  : read from file or decode base64 data
 \***********************************************************************/
 
-LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueHashDataParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   Hash                *hash = (Hash*)variable;
   char                cryptHashAlgorithmName[64];
@@ -7079,10 +7097,10 @@ LOCAL bool configValueHashDataParse(void *userData, void *variable, const char *
   assert(variable != NULL);
   assert(value != NULL);
 
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   if      (String_parseCString(value,"%64s:%32s:",&nextIndex,cryptHashAlgorithmName,salt))
   {

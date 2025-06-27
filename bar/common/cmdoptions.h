@@ -175,13 +175,13 @@ typedef struct CommandLineOption
   } stringOption;
   struct
   {
-    bool(*parseSpecial)(void       *userData,
-                        void       *variable,
+    bool(*parseSpecial)(void       *variable,
                         const char *option,
                         const char *value,
                         const void *defaultValue,
                         char       *errorMessage,          // must be NUL-terminated!
-                        uint       errorMessageSize
+                        uint       errorMessageSize,
+                        void       *userData
                        );
     void                          *userData;               // user data for parse special
     uint                          argumentCount;           // argument count
@@ -190,13 +190,13 @@ typedef struct CommandLineOption
   } specialOption;
   struct
   {
-    bool(*parseDeprecated)(void       *userData,
-                           void       *variable,
+    bool(*parseDeprecated)(void       *variable,
                            const char *option,
                            const char *value,
                            const void *defaultValue,
                            char       *errorMessage,       // must be NUL-terminated!
-                           uint       errorMessageSize
+                           uint       errorMessageSize,
+                           void       *userData
                           );
     void                          *userData;               // user data for parse special
     uint                          argumentCount;           // argument count
@@ -1078,51 +1078,75 @@ bool CmdOption_parse(const char              *argv[],
                     );
 
 /***********************************************************************\
-* Name   : CmdOption_parseDeprecatedStringOption
-* Purpose: command line option call back to parse deprecated string
-* Input  : userData         - user data (not used)
-*          variable         - variable
+* Name   : CmdOption_parseDeprecatedBooleanOption
+* Purpose: command line option call back to parse deprecated boolean
+* Input  : variable         - variable
 *          name             - option name
 *          value            - option value
 *          defaultValue     - option default value
 *          errorMessage     - error message (not used)
 *          errorMessageSize - error message size (not used)
+*          userData         - user data (not used)
 * Output : -
 * Return : always TRUE
 * Notes  : -
 \***********************************************************************/
 
-bool CmdOption_parseDeprecatedStringOption(void       *userData,
-                                           void       *variable,
+bool CmdOption_parseDeprecatedBooleanOption(void       *variable,
+                                            const char *name,
+                                            const char *value,
+                                            const void *defaultValue,
+                                            char       errorMessage[],
+                                            uint       errorMessageSize,
+                                            void       *userData
+                                           );
+
+/***********************************************************************\
+* Name   : CmdOption_parseDeprecatedStringOption
+* Purpose: command line option call back to parse deprecated string
+* Input  : variable         - variable
+*          name             - option name
+*          value            - option value
+*          defaultValue     - option default value
+*          errorMessage     - error message (not used)
+*          errorMessageSize - error message size (not used)
+*          userData         - user data (not used)
+* Output : -
+* Return : always TRUE
+* Notes  : -
+\***********************************************************************/
+
+bool CmdOption_parseDeprecatedStringOption(void       *variable,
                                            const char *name,
                                            const char *value,
                                            const void *defaultValue,
                                            char       errorMessage[],
-                                           uint       errorMessageSize
+                                           uint       errorMessageSize,
+                                           void       *userData
                                           );
 
 /***********************************************************************\
 * Name   : cmdOptionParseDeprecatedMountDevice
 * Purpose: command line option call back to parse deprecated c-string
-* Input  : userData         - user data (not used)
-*          variable         - variable
+* Input  : variable         - variable
 *          name             - option name
 *          value            - option value
 *          defaultValue     - option default value
 *          errorMessage     - error message (not used)
 *          errorMessageSize - error message size (not used)
+*          userData         - user data (not used)
 * Output : -
 * Return : always TRUE
 * Notes  : -
 \***********************************************************************/
 
-bool CmdOption_parseDeprecatedCStringOption(void       *userData,
-                                            void       *variable,
+bool CmdOption_parseDeprecatedCStringOption(void       *variable,
                                             const char *name,
                                             const char *value,
                                             const void *defaultValue,
                                             char       errorMessage[],
-                                            uint       errorMessageSize
+                                            uint       errorMessageSize,
+                                            void       *userData
                                            );
 
 /***********************************************************************

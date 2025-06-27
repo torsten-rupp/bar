@@ -90,17 +90,17 @@ LOCAL bool       checkOrphanedFlag                    = FALSE;  // check databas
 LOCAL bool       checkDuplicatesFlag                  = FALSE;  // check database duplicate entries
 LOCAL bool       checkFlag                            = FALSE;  // check database integrity+orphaned+duplicate entries
 LOCAL bool       optimizeFlag                         = FALSE;  // optimize database
-LOCAL bool       reindexFlag                          = FALSE;  // re-create existing indizes
+LOCAL bool       reindexFlag                          = FALSE;  // re-create existing indices
 LOCAL bool       createFlag                           = FALSE;  // create new index database
 LOCAL bool       createTriggersFlag                   = FALSE;  // re-create triggers
 LOCAL bool       dropTablesFlag                       = FALSE;  // drop tables
 LOCAL bool       dropTriggersFlag                     = FALSE;  // drop triggers
-LOCAL bool       createIndizesFlag                    = FALSE;  // re-create indizes
-LOCAL bool       createFTSIndizesFlag                 = FALSE;  // re-create FTS indizes
+LOCAL bool       createIndicesFlag                    = FALSE;  // re-create indices
+LOCAL bool       createFTSIndicesFlag                 = FALSE;  // re-create FTS indices
 LOCAL bool       showTableNames                       = FALSE;  // output index database table names
 LOCAL bool       showIndexNames                       = FALSE;  // output index database index names
 LOCAL bool       showTriggerNames                     = FALSE;  // output index database trigger names
-LOCAL bool       dropIndizesFlag                      = FALSE;  // drop indizes
+LOCAL bool       dropIndicesFlag                      = FALSE;  // drop indices
 LOCAL bool       createNewestFlag                     = FALSE;  // re-create newest data
 LOCAL bool       createAggregatesEntitiesFlag         = FALSE;  // re-create aggregates entities data
 LOCAL bool       createAggregatesStoragesFlag         = FALSE;  // re-create aggregates storages data
@@ -142,14 +142,14 @@ LOCAL bool       xhelpFlag                            = FALSE;
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseJobsUUIDIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseJobsUUIDIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   infoUUIDsFlag = TRUE;
 
@@ -185,14 +185,14 @@ LOCAL bool cmdOptionParseJobsUUIDIds(void *userData, void *variable, const char 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseEntityIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseEntityIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   infoEntitiesFlag = TRUE;
 
@@ -224,14 +224,14 @@ LOCAL bool cmdOptionParseEntityIds(void *userData, void *variable, const char *n
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseEntryIdsName(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseEntryIdsName(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   infoEntriesFlag = TRUE;
 
@@ -267,14 +267,14 @@ LOCAL bool cmdOptionParseEntryIdsName(void *userData, void *variable, const char
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseLostEntryIdsName(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseLostEntryIdsName(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   infoLostEntriesFlag = TRUE;
 
@@ -310,14 +310,14 @@ LOCAL bool cmdOptionParseLostEntryIdsName(void *userData, void *variable, const 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseStorageIdsName(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseStorageIdsName(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   infoStoragesFlag = TRUE;
 
@@ -353,14 +353,14 @@ LOCAL bool cmdOptionParseStorageIdsName(void *userData, void *variable, const ch
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseCreateNewestIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseCreateNewestIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   createNewestFlag = TRUE;
 
@@ -392,14 +392,14 @@ LOCAL bool cmdOptionParseCreateNewestIds(void *userData, void *variable, const c
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseCreateAggregateEntityIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseCreateAggregateEntityIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   createAggregatesEntitiesFlag = TRUE;
 
@@ -431,14 +431,14 @@ LOCAL bool cmdOptionParseCreateAggregateEntityIds(void *userData, void *variable
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseCreateAggregateStorageIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseCreateAggregateStorageIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   createAggregatesStoragesFlag = TRUE;
 
@@ -470,14 +470,14 @@ LOCAL bool cmdOptionParseCreateAggregateStorageIds(void *userData, void *variabl
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseCreateAggregateIds(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseCreateAggregateIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
   UNUSED_VARIABLE(variable);
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   createAggregatesFlag = TRUE;
 
@@ -509,15 +509,15 @@ LOCAL bool cmdOptionParseCreateAggregateIds(void *userData, void *variable, cons
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseVerbose(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParseVerbose(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(variable);
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(value);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
 
   quietFlag = FALSE;
 
@@ -552,11 +552,11 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("check-duplicates",                  0,  0,0,checkDuplicatesFlag,                                                                     "check index database for duplicate entries"                      ),
   CMD_OPTION_BOOLEAN      ("check",                             0,  0,0,checkFlag,                                                                               "check index database"                                            ),
   CMD_OPTION_BOOLEAN      ("optimize",                          0,  0,0,optimizeFlag,                                                                            "optimize database (analyze and collect statistics data)"         ),
-  CMD_OPTION_BOOLEAN      ("reindex",                           0,  0,0,reindexFlag,                                                                             "re-create all existing indizes"                                  ),
+  CMD_OPTION_BOOLEAN      ("reindex",                           0,  0,0,reindexFlag,                                                                             "re-create all existing indices"                                  ),
   CMD_OPTION_BOOLEAN      ("create",                            0,  0,0,createFlag,                                                                              "create new index database"                                       ),
   CMD_OPTION_BOOLEAN      ("create-triggers",                   0,  0,0,createTriggersFlag,                                                                      "re-create triggers"                                              ),
-  CMD_OPTION_BOOLEAN      ("create-indizes",                    0,  0,0,createIndizesFlag,                                                                       "re-create indizes"                                               ),
-  CMD_OPTION_BOOLEAN      ("create-fts-indizes",                0,  0,0,createFTSIndizesFlag,                                                                    "re-create FTS indizes (full text search)"                        ),
+  CMD_OPTION_BOOLEAN      ("create-indices",                    0,  0,0,createIndicesFlag,                                                                       "re-create indices"                                               ),
+  CMD_OPTION_BOOLEAN      ("create-fts-indices",                0,  0,0,createFTSIndicesFlag,                                                                    "re-create FTS indices (full text search)"                        ),
   CMD_OPTION_SPECIAL      ("create-newest",                     0,  0,1,&uuidIds,                        cmdOptionParseCreateNewestIds,NULL,0,                   "re-create newest data","id"                                      ),
   CMD_OPTION_SPECIAL      ("create-aggregates-entities",        0,  0,1,&createAggregatesEntitiesFlag,   cmdOptionParseCreateAggregateEntityIds,NULL,0,          "re-create aggregated data entities","entity id"                  ),
   CMD_OPTION_SPECIAL      ("create-aggregates-storages",        0,  0,1,&createAggregatesStoragesFlag,   cmdOptionParseCreateAggregateStorageIds,NULL,0,         "re-create aggregated data storages","storage id"                 ),
@@ -588,13 +588,16 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("trigger-names",                     0,  1,0,showTriggerNames,                                                                        "show trigger names"                                              ),
   CMD_OPTION_BOOLEAN      ("drop-tables",                       0,  1,0,dropTablesFlag,                                                                          "drop all tables"                                                 ),
   CMD_OPTION_BOOLEAN      ("drop-triggers",                     0,  1,0,dropTriggersFlag,                                                                        "drop all triggers"                                               ),
-  CMD_OPTION_BOOLEAN      ("drop-indizes",                      0,  1,0,dropIndizesFlag,                                                                         "drop all indixes"                                                ),
+  CMD_OPTION_BOOLEAN      ("drop-indices",                      0,  1,0,dropIndicesFlag,                                                                         "drop all indices"                                                ),
 
   CMD_OPTION_BOOLEAN      ("version",                           0  ,0,0,versionFlag,                                                                             "print version"                                                   ),
   CMD_OPTION_BOOLEAN      ("help",                              'h',0,0,helpFlag,                                                                                "print this help"                                                 ),
   CMD_OPTION_BOOLEAN      ("xhelp",                             0,  0,0,xhelpFlag,                                                                               "print help to extended options"                                  ),
 
   CMD_OPTION_DEPRECATED   ("verbose",                           0,  0,0,&verboseFlag,                        cmdOptionParseVerbose,NULL,1,                       "quiet"                                                           ),
+  CMD_OPTION_DEPRECATED   ("create-indizes",                    0,  0,0,&createIndicesFlag,                  CmdOption_parseDeprecatedBooleanOption,NULL,1,      "create-indices"                                                  ),
+  CMD_OPTION_DEPRECATED   ("create-fts-indizes",                0,  0,0,&createFTSIndicesFlag,               CmdOption_parseDeprecatedBooleanOption,NULL,1,      "create-fts-indices"                                              ),
+  CMD_OPTION_DEPRECATED   ("drop-indizes",                      0,  1,0,&dropIndicesFlag,                    CmdOption_parseDeprecatedBooleanOption,NULL,1,      "drop-indices"                                                    ),
 );
 
 LOCAL ulong outputProgressCount;
@@ -1127,7 +1130,7 @@ LOCAL Errors dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
 {
   Errors error;
 
-  if (!quietFlag) printInfo("Drop indizes...");
+  if (!quietFlag) printInfo("Drop indices...");
   error = ERROR_UNKNOWN;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
@@ -1135,7 +1138,7 @@ LOCAL Errors dropIndices(DatabaseHandle *databaseHandle, bool quietFlag)
     error = Database_dropIndices(databaseHandle);
     if (Database_getType(databaseHandle) == DATABASE_TYPE_SQLITE3)
     {
-      // drop FTS indizes
+      // drop FTS indices
       if (error == ERROR_NONE)
       {
         error = Database_dropTable(databaseHandle,
@@ -2418,13 +2421,13 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
   printInfo("OK  \n");
   StringList_done(&tableNameList);
 
-  printInfo("  Indizes...");
+  printInfo("  Indices...");
   StringList_clear(&tableNameList);
   error = Database_getIndexList(&tableNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
   {
     printInfo("FAIL!\n");
-    printError(_("get indizes fail (error: %s)!"),Error_getText(error));
+    printError(_("get indices fail (error: %s)!"),Error_getText(error));
     return;
   }
   initProgress(StringList_count(&tableNameList));
@@ -2813,15 +2816,15 @@ LOCAL void printTriggerNames(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : createIndizes
-* Purpose: create all indizes
+* Name   : createIndices
+* Purpose: create all indices
 * Input  : databaseHandle - database handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createIndizes(DatabaseHandle *databaseHandle)
+LOCAL Errors createIndices(DatabaseHandle *databaseHandle)
 {
   Errors error;
 
@@ -2830,13 +2833,13 @@ LOCAL Errors createIndizes(DatabaseHandle *databaseHandle)
   DELETE FROM sqlite_master WHERE type = 'table' AND name = 'tablename';
   */
 
-  printInfo("Create indizes:\n");
+  printInfo("Create indices:\n");
 
   error = ERROR_UNKNOWN;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    // drop all existing indizes
-    printInfo("  Discard indizes...");
+    // drop all existing indices
+    printInfo("  Discard indices...");
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
@@ -2872,8 +2875,8 @@ LOCAL Errors createIndizes(DatabaseHandle *databaseHandle)
       break;
     }
 
-    // create new indizes (if not exists)
-    printInfo("  Create indizes...");
+    // create new indices (if not exists)
+    printInfo("  Create indices...");
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
@@ -2915,7 +2918,7 @@ LOCAL Errors createIndizes(DatabaseHandle *databaseHandle)
   assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
-    printError(_("create indizes fail (error: %s)!"),Error_getText(error));
+    printError(_("create indices fail (error: %s)!"),Error_getText(error));
     return error;
   }
   (void)Database_flush(databaseHandle);
@@ -2924,28 +2927,28 @@ LOCAL Errors createIndizes(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : createFTSIndizes
-* Purpose: create FTS indizes
+* Name   : createFTSIndices
+* Purpose: create FTS indices
 * Input  : databaseHandle - database handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createFTSIndizes(DatabaseHandle *databaseHandle)
+LOCAL Errors createFTSIndices(DatabaseHandle *databaseHandle)
 {
   Errors       error;
   uint         maxSteps;
   uint64       n;
   ProgressInfo progressInfo;
 
-  printInfo("Create FTS indizes:\n");
+  printInfo("Create FTS indices:\n");
 
   error = ERROR_UNKNOWN;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    // drop FTS indizes
-    printInfo("  Discard FTS indizes...");
+    // drop FTS indices
+    printInfo("  Discard FTS indices...");
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
@@ -2976,7 +2979,7 @@ LOCAL Errors createFTSIndizes(DatabaseHandle *databaseHandle)
     printInfo("OK\n");
 
     // create new FTS tables (if not exists)
-    printInfo("  Create FTS indizes...");
+    printInfo("  Create FTS indices...");
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
@@ -3271,7 +3274,7 @@ LOCAL Errors createFTSIndizes(DatabaseHandle *databaseHandle)
   assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
-    printError(_("create FTS indizes fail (error: %s)!"),Error_getText(error));
+    printError(_("create FTS indices fail (error: %s)!"),Error_getText(error));
     return error;
   }
   (void)Database_flush(databaseHandle);
@@ -3281,7 +3284,7 @@ LOCAL Errors createFTSIndizes(DatabaseHandle *databaseHandle)
 
 /***********************************************************************\
 * Name   : reindex
-* Purpose: re-create existing indizes
+* Purpose: re-create existing indices
 * Input  : databaseHandle - database handle
 * Output : -
 * Return : ERROR_CODE or error none
@@ -5468,7 +5471,8 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 
   // clean fragments/directory entries/link entries/special entries without or an empty storage name
   printInfo("  entries without storage name...      ");
-  n = 0L;
+  error = ERROR_UNKNOWN;
+  n     = 0L;
   do
   {
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -9753,9 +9757,9 @@ int main(int argc, const char *argv[])
           && !createTriggersFlag
           && !dropTablesFlag
           && !dropTriggersFlag
-          && !createIndizesFlag
-          && !createFTSIndizesFlag
-          && !dropIndizesFlag
+          && !createIndicesFlag
+          && !createFTSIndicesFlag
+          && !dropIndicesFlag
           && !createNewestFlag
           && !createAggregatesEntitiesFlag
           && !createAggregatesStoragesFlag
@@ -9833,8 +9837,8 @@ int main(int argc, const char *argv[])
     if (error == ERROR_NONE) error = dropTriggers(&databaseHandle,FALSE);
   }
 
-  // drop indizes
-  if (dropIndizesFlag)
+  // drop indices
+  if (dropIndicesFlag)
   {
     if (error == ERROR_NONE) error = dropIndices(&databaseHandle,FALSE);
   }
@@ -9883,14 +9887,14 @@ int main(int argc, const char *argv[])
     if (error == ERROR_NONE) error = createTriggers(&databaseHandle);
   }
 
-  // recreate indizes
-  if (createIndizesFlag)
+  // recreate indices
+  if (createIndicesFlag)
   {
-    if (error == ERROR_NONE) error = createIndizes(&databaseHandle);
+    if (error == ERROR_NONE) error = createIndices(&databaseHandle);
   }
-  if (createFTSIndizesFlag)
+  if (createFTSIndicesFlag)
   {
-    if (error == ERROR_NONE) error = createFTSIndizes(&databaseHandle);
+    if (error == ERROR_NONE) error = createFTSIndices(&databaseHandle);
   }
 
   // clean
@@ -9935,7 +9939,7 @@ int main(int argc, const char *argv[])
     if (error == ERROR_NONE) error = vacuum(&databaseHandle,toFileName);
   }
 
-  // re-create existing indizes
+  // re-create existing indices
   if (reindexFlag)
   {
     if (error == ERROR_NONE) error = reindex(&databaseHandle);

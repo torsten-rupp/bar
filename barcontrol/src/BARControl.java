@@ -2983,7 +2983,7 @@ public class BARControl
     new Option("--index-database-entities-list", "-n",Options.Types.STRING,     "indexDatabaseEntitiesListName",""),
     new Option("--index-database-storages-list", "-a",Options.Types.STRING,     "indexDatabaseStoragesListName",""),
     new Option("--index-database-entries-list",  "-e",Options.Types.STRING,     "indexDatabaseEntriesListName",""),
-    new Option("--index-database-entries-newest",null,Options.Types.BOOLEAN,    "indexDatabaseEntriesNewestOnly"),
+    new Option("--index-database-entries-newest",null,Options.Types.BOOLEAN,    "indexDatabaseEntriesListNewestOnly"),
     new Option("--index-database-history-list",  null,Options.Types.BOOLEAN,    "indexDatabaseHistoryList"),
 
     new Option("--restore",                      null,Options.Types.STRING,     "restoreStorageName"),
@@ -7014,12 +7014,12 @@ if (false) {
 
         if (Settings.indexDatabaseEntriesListName != null)
         {
-          // list storage index
+          // list entries index
           try
           {
             BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO entryType=* name=%'S newestOnly=%y  selectedOnly=no fragmentsCount=no",
                                                          Settings.indexDatabaseEntriesListName,
-                                                         Settings.indexDatabaseEntriesNewestOnly
+                                                         Settings.indexDatabaseEntriesListNewestOnly
                                                         ),
                                      1,  // debug level
                                      new Command.ResultHandler()
@@ -7035,7 +7035,7 @@ if (false) {
             final ArrayList<EntryInfo> entryInfoList = new ArrayList<EntryInfo>();
             BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryType=* name=%'S newestOnly=%y limit=1024",
                                                          Settings.indexDatabaseEntriesListName,
-                                                         Settings.indexDatabaseEntriesNewestOnly
+                                                         Settings.indexDatabaseEntriesListNewestOnly
                                                         ),
                                      1,  // debug level
                                      new Command.ResultHandler()

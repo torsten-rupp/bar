@@ -503,133 +503,133 @@ public class Settings
 
   // program settings
   @SettingValue(type=SettingUtils.ValueAdapterSimpleStringArray.class, name="job-table-column-order")
-  public static SettingUtils.SimpleStringArray jobListColumnOrder              = new SettingUtils.SimpleStringArray();
+  public static SettingUtils.SimpleStringArray jobListColumnOrder                 = new SettingUtils.SimpleStringArray();
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="job-table-columns")
-  public static ColumnWidth                    jobTableColumns                 = new ColumnWidth(110,130,90,90,80,80,100,150,120);
+  public static ColumnWidth                    jobTableColumns                    = new ColumnWidth(110,130,90,90,80,80,100,150,120);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="mount-table-columns")
-  public static ColumnWidth                    mountTableColumns               = new ColumnWidth(600,100);
+  public static ColumnWidth                    mountTableColumns                  = new ColumnWidth(600,100);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="schedule-table-columns")
-  public static ColumnWidth                    scheduleTableColumns            = new ColumnWidth(120,250,100,100,90);
+  public static ColumnWidth                    scheduleTableColumns               = new ColumnWidth(120,250,100,100,90);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="persistence-tree-columns")
-  public static ColumnWidth                    persistenceTreeColumns          = new ColumnWidth(100,90,90,90,140,90,120);
+  public static ColumnWidth                    persistenceTreeColumns            = new ColumnWidth(100,90,90,90,140,90,120);
   @SettingValue(type=SettingValueAdapterSizesArray.class, name="restore-pane-sizes")
-  public static PaneSizes                      restorePaneSizes                = new PaneSizes(50.0,50.0);
+  public static PaneSizes                      restorePaneSizes                   = new PaneSizes(50.0,50.0);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="storage-tree-columns")
-  public static ColumnWidth                    storageTreeColumns              = new ColumnWidth(330,90,170,100,80);
+  public static ColumnWidth                    storageTreeColumns                 = new ColumnWidth(330,90,170,100,80);
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="storage-table-columns")
-  public static ColumnWidth                    storageTableColumns             = new ColumnWidth(420,90,90,100,80);
+  public static ColumnWidth                    storageTableColumns                = new ColumnWidth(420,90,90,100,80);
 
   @SettingComment(text={"","Pause default settings"})
   @SettingValue(name="pause-create")
-  public static boolean                        pauseCreateFlag                 = true;
+  public static boolean                        pauseCreateFlag                    = true;
   @SettingValue(name="pause-storage")
-  public static boolean                        pauseStorageFlag                = false;
+  public static boolean                        pauseStorageFlag                   = false;
   @SettingValue(name="pause-restore")
-  public static boolean                        pauseRestoreFlag                = true;
+  public static boolean                        pauseRestoreFlag                   = true;
   @SettingValue(name="pause-index-update")
-  public static boolean                        pauseIndexUpdateFlag            = false;
+  public static boolean                        pauseIndexUpdateFlag               = false;
   @SettingValue(name="pause-index-maintenance")
-  public static boolean                        pauseIndexMaintenanceFlag       = false;
+  public static boolean                        pauseIndexMaintenanceFlag          = false;
 
   // server settings
   @SettingComment(text={"","Server settings"})
   @SettingValue(name="server",type=SettingValueAdapterServer.class,migrate=SettingMigrateServer.class)
-  public static LinkedHashSet<Server>          servers                         = new LinkedHashSet<Server>();
+  public static LinkedHashSet<Server>          servers                            = new LinkedHashSet<Server>();
   @SettingValue(name="server-ca-file")
-  public static String                         serverCAFileName                = null;
+  public static String                         serverCAFileName                   = null;
   @SettingValue(name="server-keystore-file")
-  public static String                         serverKeystoreFileName          = null;
+  public static String                         serverKeystoreFileName             = null;
   @SettingValue(name="no-tls")
-  public static boolean                        serverNoTLS                     = false;
+  public static boolean                        serverNoTLS                        = false;
   @SettingValue(name="force-tls")
-  public static boolean                        serverForceTLS                  = false;
+  public static boolean                        serverForceTLS                     = false;
   @SettingValue(name="tls-insecure")
-  public static boolean                        serverInsecureTLS               = false;
+  public static boolean                        serverInsecureTLS                  = false;
   @SettingValue(name="role")
-  public static BARControl.Roles               role                            = BARControl.Roles.BASIC;
+  public static BARControl.Roles               role                               = BARControl.Roles.BASIC;
 
-  public static Geometry                       geometry                        = new Geometry();
+  public static Geometry                       geometry                           = new Geometry();
 
   // file requester shortcuts
   @SettingComment(text={"","Shortcuts"})
   @SettingValue(name="shortcut")
-  public static HashSet<String>                shortcuts                       = new HashSet<String>();
+  public static HashSet<String>                shortcuts                          = new HashSet<String>();
 
-  public static String                         configFileName                  = DEFAULT_BARCONTROL_CONFIG_FILE_NAME;
+  public static String                         configFileName                     = DEFAULT_BARCONTROL_CONFIG_FILE_NAME;
 
-  public static String                         selectedJobName                 = null;
-  public static boolean                        loginDialogFlag                 = false;
-  public static boolean                        pairMasterFlag                  = false;
+  public static String                         selectedJobName                    = null;
+  public static boolean                        loginDialogFlag                    = false;
+  public static boolean                        pairMasterFlag                     = false;
 
   // commands and data
-  public static LinkedHashSet<String>          runJobNames                     = new LinkedHashSet<String>();
-  public static ArchiveTypes                   archiveType                     = ArchiveTypes.NORMAL;
-  public static String                         abortJobName                    = null;
-  public static int                            pauseTime                       = 0;
-  public static int                            maintenanceTime                 = 0;
-  public static boolean                        pingFlag                        = false;
-  public static boolean                        suspendFlag                     = false;
-  public static boolean                        continueFlag                    = false;
-  public static boolean                        listJobsFlag                    = false;
-  public static boolean                        listSchedulesFlag               = false;
-  public static String                         infoJobName                     = null;
+  public static LinkedHashSet<String>          runJobNames                        = new LinkedHashSet<String>();
+  public static ArchiveTypes                   archiveType                        = ArchiveTypes.NORMAL;
+  public static String                         abortJobName                       = null;
+  public static int                            pauseTime                          = 0;
+  public static int                            maintenanceTime                    = 0;
+  public static boolean                        pingFlag                           = false;
+  public static boolean                        suspendFlag                        = false;
+  public static boolean                        continueFlag                       = false;
+  public static boolean                        listJobsFlag                       = false;
+  public static boolean                        listSchedulesFlag                  = false;
+  public static String                         infoJobName                        = null;
 
-  public static boolean                        indexDatabaseInfo               = false;
-  public static String                         indexDatabaseAddStorageName     = null;
-  public static String                         indexDatabaseRemoveStorageName  = null;
-  public static String                         indexDatabaseRefreshStorageName = null;
-  public static String                         indexDatabaseEntitiesListName   = null;
-  public static String                         indexDatabaseStoragesListName   = null;
-  public static String                         indexDatabaseEntriesListName    = null;
-  public static boolean                        indexDatabaseEntriesNewestOnly  = false;
-  public static boolean                        indexDatabaseHistoryList        = false;
+  public static boolean                        indexDatabaseInfo                  = false;
+  public static String                         indexDatabaseAddStorageName        = null;
+  public static String                         indexDatabaseRemoveStorageName     = null;
+  public static String                         indexDatabaseRefreshStorageName    = null;
+  public static String                         indexDatabaseEntitiesListName      = null;
+  public static String                         indexDatabaseStoragesListName      = null;
+  public static String                         indexDatabaseEntriesListName       = null;
+  public static boolean                        indexDatabaseEntriesListNewestOnly = false;
+  public static boolean                        indexDatabaseHistoryList           = false;
 
-  public static String                         restoreStorageName              = null;
-  public static String                         destination                     = "";
-  public static boolean                        overwriteEntriesFlag            = false;
+  public static String                         restoreStorageName                 = null;
+  public static String                         destination                        = "";
+  public static boolean                        overwriteEntriesFlag               = false;
 
   // flags
 //TODO: preference dialog
   @SettingValue
-  public static Boolean                        showNoneTLSWarning              = Boolean.valueOf(true);
+  public static Boolean                        showNoneTLSWarning                 = Boolean.valueOf(true);
 //TODO: preference dialog
   @SettingValue
-  public static Boolean                        showEntriesExceededInfo         = Boolean.valueOf(true);
+  public static Boolean                        showEntriesExceededInfo            = Boolean.valueOf(true);
 //TODO: preference dialog
   @SettingValue
-  public static Boolean                        showEntriesMarkInfo             = Boolean.valueOf(true);
+  public static Boolean                        showEntriesMarkInfo                = Boolean.valueOf(true);
 //TODO: preference dialog
   @SettingValue
-  public static Boolean                        showNewVersionInformation       = Boolean.valueOf(true);
+  public static Boolean                        showNewVersionInformation          = Boolean.valueOf(true);
   @SettingValue
-  public static Boolean                        showSlaveDisconnected           = Boolean.valueOf(true);
+  public static Boolean                        showSlaveDisconnected              = Boolean.valueOf(true);
   @SettingValue
-  public static Boolean                        showVerboseWarning              = Boolean.valueOf(true);
+  public static Boolean                        showVerboseWarning                 = Boolean.valueOf(true);
 
-  public static boolean                        longFormatFlag                  = false;
-  public static boolean                        noHeaderFooterFlag              = false;
+  public static boolean                        longFormatFlag                     = false;
+  public static boolean                        noHeaderFooterFlag                 = false;
 
   // version, help
-  public static boolean                        versionFlag                     = false;
-  public static boolean                        helpFlag                        = false;
-  public static boolean                        xhelpFlag                       = false;
+  public static boolean                        versionFlag                        = false;
+  public static boolean                        helpFlag                           = false;
+  public static boolean                        xhelpFlag                          = false;
 
   // debug
-  public static int                            debugLevel                      = 0;
-  public static boolean                        debugIgnoreProtocolVersion      = false;
-  public static boolean                        debugFakeTLSFlag                = false;
-  public static boolean                        debugQuitServerFlag             = false;
-  public static boolean                        debugNoVersionInfoFlag          = false;
+  public static int                            debugLevel                         = 0;
+  public static boolean                        debugIgnoreProtocolVersion         = false;
+  public static boolean                        debugFakeTLSFlag                   = false;
+  public static boolean                        debugQuitServerFlag                = false;
+  public static boolean                        debugNoVersionInfoFlag             = false;
 
   // server
-  public static String                         serverName                      = null;
-  public static int                            serverPort                      = -1;
-  public static int                            serverTLSPort                   = -1;
+  public static String                         serverName                         = null;
+  public static int                            serverPort                         = -1;
+  public static int                            serverTLSPort                      = -1;
 
   // deprecated
-  public static LinkedHashSet<String>          serverNames                     = new LinkedHashSet<String>();
+  public static LinkedHashSet<String>          serverNames                        = new LinkedHashSet<String>();
   @SettingValue(name="server-password",deprecated=true)
-  public static String                         serverPassword                  = null;
+  public static String                         serverPassword                     = null;
 
   // ----------------------- native functions ---------------------------
 
