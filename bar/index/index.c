@@ -843,46 +843,6 @@ LOCAL void logImportIndex(const char *fileName, ulong lineNb, const char *format
 #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
 
 /***********************************************************************\
-* Name   : formatSubProgressInfo
-* Purpose: format sub-progress info call back
-* Input  : progress           - progress [%%]
-*          estimatedTotalTime - estimated total time [s]
-*          estimatedRestTime  - estimated rest time [s]
-*          userData           - user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void formatSubProgressInfo(uint  progress,
-                                 ulong estimatedTotalTime,
-                                 ulong estimatedRestTime,
-                                 void  *userData
-                                )
-{
-  UNUSED_VARIABLE(estimatedTotalTime);
-  UNUSED_VARIABLE(userData);
-
-  if (estimatedRestTime < (999*60*60))
-  {
-    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                 "%6.1f%% %2dh:%02dmin:%02ds",
-                 (float)progress/10.0,
-                 estimatedRestTime/(60*60),
-                 estimatedRestTime%(60*60)/60,
-                 estimatedRestTime%60
-                );
-  }
-  else
-  {
-    stringFormat(outputProgressBuffer,sizeof(outputProgressBuffer),
-                 "%6.1f%% ---h:--min:--s",
-                 (float)progress/10.0
-                );
-  }
-}
-
-/***********************************************************************\
 * Name   : outputProgressInit
 * Purpose: output progress text
 * Input  : text     - text

@@ -1030,7 +1030,8 @@ LOCAL void debugPrint(sqlite3_context *context, int argc, sqlite3_value *argv[])
 * Notes  : -
 \***********************************************************************/
 
-#ifndef WERROR
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wunused-function"
 LOCAL int debugPrintQueryPlanCallback(void *userData, int argc, char *argv[], char *columns[])
 {
   int i;
@@ -1049,7 +1050,7 @@ LOCAL int debugPrintQueryPlanCallback(void *userData, int argc, char *argv[], ch
 
   return 0;
 }
-#endif
+#pragma GCC pop_options
 
 /***********************************************************************\
 * Name   : debugDatabaseSignalHandler

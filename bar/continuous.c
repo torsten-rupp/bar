@@ -178,8 +178,6 @@ LOCAL void freeUUIDNode(UUIDNode *uuidNode, void *userData)
 }
 
 #ifndef NDEBUG
-//TODO
-#ifndef WERROR
 /***********************************************************************\
 * Name   : printNotifies
 * Purpose: print notifies
@@ -189,6 +187,8 @@ LOCAL void freeUUIDNode(UUIDNode *uuidNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
+#pragma GCC push_options
+#pragma GCC diagnostic ignored "-Wunused-function"
 LOCAL void printNotifies(void)
 {
   DictionaryIterator dictionaryIterator;
@@ -233,7 +233,7 @@ LOCAL void printNotifies(void)
     Dictionary_doneIterator(&dictionaryIterator);
   }
 }
-#endif
+#pragma GCC pop_options
 #endif // NDEBUG
 
 /***********************************************************************\
