@@ -7064,8 +7064,7 @@ LOCAL void jobThreadCode(void)
                       );
           }
 
-// TODO: nextScheduleDateTime could be 0
-          if (nextScheduleDateTime < MAX_UINT64)
+          if ((nextScheduleDateTime > 0L) && (nextScheduleDateTime < MAX_UINT64))
           {
             char buffer[64];
             logMessage(&logHandle,
