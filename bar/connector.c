@@ -4169,33 +4169,6 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
   }
 
   /***********************************************************************\
-  * Name   : parseVolumeRequest
-  * Purpose: parse volume request text
-  * Input  : text          - text
-  *          volumeRequest - volume request variable
-  *          userData      - user data (not used)
-  * Output : volumeRequest - volume request
-  * Return : always TRUE
-  * Notes  : -
-  \***********************************************************************/
-
-  auto bool parseVolumeRequest(const char *text, VolumeRequests *volumeRequest, void *userData);
-  bool parseVolumeRequest(const char *text, VolumeRequests *volumeRequest, void *userData)
-  {
-    assert(text != NULL);
-    assert(volumeRequest != NULL);
-
-    UNUSED_VARIABLE(userData);
-
-    if      (stringEquals(text,"-"          )) (*volumeRequest) = VOLUME_REQUEST_NONE;
-    else if (stringEquals(text,"INITIAL"    )) (*volumeRequest) = VOLUME_REQUEST_INITIAL;
-    else if (stringEquals(text,"REPLACEMENT")) (*volumeRequest) = VOLUME_REQUEST_REPLACEMENT;
-    else                                       (*volumeRequest) = VOLUME_REQUEST_NONE;
-
-    return TRUE;
-  }
-
-  /***********************************************************************\
   * Name   : parseMessageCode
   * Purpose: parse message code text
   * Input  : text        - text
@@ -4346,15 +4319,13 @@ UNUSED_VARIABLE(storageVolumeRequestUserData);
                                        StringMap_getUInt  (resultMap,"volumeNumber",         &runningInfo.progress.volume.number,0);
                                        StringMap_getDouble(resultMap,"volumeDone",           &runningInfo.progress.volume.done,0.0);
 
-                                       /* Note: not use, recalculated in running info function
+                                       /* Note: not used, recalculated in running info function
                                        StringMap_getULong (resultMap,"entriesPerSecond",     &statusInfo.entriesPerSecond,0L);
                                        StringMap_getULong (resultMap,"bytesPerSecond",       &statusInfo.bytesPerSecond,0L);
                                        StringMap_getULong (resultMap,"storageBytesPerSecond",&statusInfo.storageBytesPerSecond,0L);
                                        StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
                                        */
 
-                                       StringMap_getEnum  (resultMap,"volumeRequest",        &runningInfo.volumeRequest,CALLBACK_((StringMapParseEnumFunction)parseVolumeRequest,NULL),VOLUME_REQUEST_NONE);
-                                       StringMap_getUInt  (resultMap,"volumeRequestNumber",  &runningInfo.volumeRequestNumber,0);
                                        StringMap_getEnum  (resultMap,"messageCode",          &runningInfo.message.code,CALLBACK_((StringMapParseEnumFunction)parseMessageCode,NULL),MESSAGE_CODE_NONE);
                                        StringMap_getString(resultMap,"messageText",          runningInfo.message.text,NULL);
 

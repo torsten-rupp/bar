@@ -112,10 +112,10 @@ typedef enum
 {
   STORAGE_VOLUME_REQUEST_RESULT_NONE,
 
-  STORAGE_VOLUME_REQUEST_RESULT_OK,
-  STORAGE_VOLUME_REQUEST_RESULT_FAIL,
+  STORAGE_VOLUME_REQUEST_RESULT_LOAD,
   STORAGE_VOLUME_REQUEST_RESULT_UNLOAD,
   STORAGE_VOLUME_REQUEST_RESULT_ABORTED,
+  STORAGE_VOLUME_REQUEST_RESULT_FAIL,
 
   STORAGE_VOLUME_REQUEST_RESULT_UNKNOWN,
 } StorageVolumeRequestResults;
@@ -1384,17 +1384,6 @@ uint Storage_getVolumeNumber(const StorageInfo *storageInfo);
 void Storage_setVolumeNumber(StorageInfo *storageInfo,
                              uint        volumeNumber
                             );
-
-/***********************************************************************\
-* Name   : Storage_unloadVolume
-* Purpose: unload volume
-* Input  : storageInfo - storage info
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Storage_unloadVolume(StorageInfo *storageInfo);
 
 /***********************************************************************\
 * Name   : Storage_exists

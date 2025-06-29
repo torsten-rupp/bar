@@ -917,7 +917,7 @@ LOCAL Errors StorageOptical_init(StorageInfo      *storageInfo,
     storageInfo->opticalDisk.write.newVolumeFlag = FALSE;
   }
   StringList_init(&storageInfo->opticalDisk.write.fileNameList);
-  storageInfo->opticalDisk.write.totalSize              = 0LL;
+  storageInfo->opticalDisk.write.totalSize               = 0LL;
 
   // create temporary directory for medium files
   error = File_getTmpDirectoryName(storageInfo->opticalDisk.write.directory,NULL,tmpDirectory);
@@ -998,15 +998,15 @@ LOCAL Errors StorageOptical_done(StorageInfo *storageInfo)
 }
 
 /***********************************************************************\
-* Name   : loadVolume
-* Purpose: load volume (close tray)
+* Name   : loadOpticalVolume
+* Purpose: load optical volume (close tray)
 * Input  : storageInfo - storage info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors loadVolume(const StorageInfo *storageInfo)
+LOCAL Errors loadOpticalVolume(const StorageInfo *storageInfo)
 {
   TextMacros (textMacros,2);
   StringList stderrList;
@@ -1108,15 +1108,15 @@ LOCAL Errors loadVolume(const StorageInfo *storageInfo)
 }
 
 /***********************************************************************\
-* Name   : unloadVolume
-* Purpose: unload volume (open tray)
+* Name   : unloadOpticalVolume
+* Purpose: unload optical volume (open tray)
 * Input  : storageInfo - storageInfo
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors unloadVolume(const StorageInfo *storageInfo)
+LOCAL Errors unloadOpticalVolume(const StorageInfo *storageInfo)
 {
   TextMacros (textMacros,2);
   StringList stderrList;
@@ -1233,10 +1233,6 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
                                      bool        waitFlag
                                     )
 {
-  TextMacros                  (textMacros,2);
-  bool                        mediumRequestedFlag;
-  StorageVolumeRequestResults storageRequestVolumeResult;
-
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
 #ifndef NDEBUG
   const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
@@ -1251,19 +1247,19 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
      )
   {
     printInfo(1,"Unload medium #%d...",storageInfo->volumeNumber);
-    (void)unloadVolume(storageInfo);
+    (void)unloadOpticalVolume(storageInfo);
     printInfo(1,"OK\n");
 
     storageInfo->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
   }
 
   // request new medium
-  mediumRequestedFlag  = FALSE;
-  storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_UNKNOWN;
+  bool                        volumeRequestedFlag        = FALSE;
+  StorageVolumeRequestResults storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_UNKNOWN;
   if      (storageInfo->volumeRequestFunction != NULL)
   {
     // request volume via callback
-    mediumRequestedFlag = TRUE;
+    volumeRequestedFlag = TRUE;
 
     // request new medium via call back, unload if requested
     do
@@ -1276,7 +1272,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
       if (storageRequestVolumeResult == STORAGE_VOLUME_REQUEST_RESULT_UNLOAD)
       {
         printInfo(1,"Unload medium...");
-        (void)unloadVolume(storageInfo);
+        (void)unloadOpticalVolume(storageInfo);
         printInfo(1,"OK\n");
       }
     }
@@ -1287,8 +1283,9 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
   else if (storageInfo->opticalDisk.write.requestVolumeCommand != NULL)
   {
     // request volume via external command
-    mediumRequestedFlag = TRUE;
+    volumeRequestedFlag = TRUE;
 
+    TextMacros (textMacros,2);
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_STRING("%device",deviceName,                      NULL);
@@ -1307,7 +1304,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
        )
     {
       printInfo(1,"OK\n");
-      storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
+      storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
     }
     else
     {
@@ -1324,7 +1321,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
     {
       if (waitFlag)
       {
-        mediumRequestedFlag = TRUE;
+        volumeRequestedFlag = TRUE;
 
         printInfo(0,
                   "Please insert medium #%d into drive '%s' and press ENTER to continue\n",
@@ -1333,7 +1330,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
                  );
         Misc_waitEnter();
 
-        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
+        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
       }
       else
       {
@@ -1348,26 +1345,26 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
     {
       if (waitFlag)
       {
-        mediumRequestedFlag = TRUE;
+        volumeRequestedFlag = TRUE;
 
         printInfo(0,"Press ENTER to continue\n");
         Misc_waitEnter();
 
-        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
+        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
       }
     }
 
     storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
 
-  if (mediumRequestedFlag)
+  if (volumeRequestedFlag)
   {
     switch (storageRequestVolumeResult)
     {
-      case STORAGE_VOLUME_REQUEST_RESULT_OK:
+      case STORAGE_VOLUME_REQUEST_RESULT_LOAD:
         // load medium, then sleep a short time to give hardware time for reading medium information
         printInfo(1,"Load medium #%d...",storageInfo->volumeRequestNumber);
-        (void)loadVolume(storageInfo);
+        (void)loadOpticalVolume(storageInfo);
         printInfo(1,"OK\n");
 
         // store new medium number
@@ -1415,7 +1412,7 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
     messageSet(&storageInfo->progress.message,MESSAGE_CODE_BLANK_VOLUME,NULL);
     updateStorageRunningInfo(storageInfo);
 
-    (void)loadVolume(storageInfo);
+    (void)loadOpticalVolume(storageInfo);
 
     const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
 #ifndef NDEBUG
@@ -2142,7 +2139,7 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
   messageSet(&storageInfo->progress.message,MESSAGE_CODE_WRITE_VOLUME,NULL);
   updateStorageRunningInfo(storageInfo);
 
-  (void)loadVolume(storageInfo);
+  (void)loadOpticalVolume(storageInfo);
 
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
 #ifndef NDEBUG
@@ -2327,7 +2324,7 @@ LOCAL Errors writeDirectory(StorageInfo *storageInfo, ConstString archiveName)
   messageSet(&storageInfo->progress.message,MESSAGE_CODE_WRITE_VOLUME,NULL);
   updateStorageRunningInfo(storageInfo);
 
-  (void)loadVolume(storageInfo);
+  (void)loadOpticalVolume(storageInfo);
 
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
 #ifndef NDEBUG
@@ -2529,8 +2526,8 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
     printInfo(1,"Verify volume #%u...",storageInfo->opticalDisk.write.number);
 
     // unload+load volume to clear caches
-    (void)unloadVolume(storageInfo);
-    (void)loadVolume(storageInfo);
+    (void)unloadOpticalVolume(storageInfo);
+    (void)loadOpticalVolume(storageInfo);
 
     // get file names
     StringList fileNameList;
@@ -2713,20 +2710,6 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
   updateStorageRunningInfo(storageInfo);
 
   return error;
-}
-
-LOCAL Errors StorageOptical_loadVolume(const StorageInfo *storageInfo)
-{
-  assert(storageInfo != NULL);
-
-  return loadVolume(storageInfo);
-}
-
-LOCAL Errors StorageOptical_unloadVolume(const StorageInfo *storageInfo)
-{
-  assert(storageInfo != NULL);
-
-  return unloadVolume(storageInfo);
 }
 
 LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,

@@ -64,6 +64,162 @@
 #endif
 
 /***********************************************************************\
+* Name   : loadDeviceVolume
+* Purpose: load device volume
+* Input  : storageInfo - storage info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors loadDeviceVolume(const StorageInfo *storageInfo)
+{
+  TextMacros (textMacros,2);
+  StringList stderrList;
+  String     commandLine;
+  Errors     error;
+
+  assert(storageInfo != NULL);
+  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+
+  error = ERROR_NONE;
+
+  const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
+#ifndef NDEBUG
+  const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+  if (debugEmulateBlockDevice != NULL)
+  {
+    deviceName = debugEmulateBlockDevice;
+  }
+#endif
+
+  // init variables
+  StringList_init(&stderrList);
+  commandLine = String_new();
+
+  TEXT_MACROS_INIT(textMacros)
+  {
+    TEXT_MACRO_X_CSTRING("%device",deviceName,                      NULL);
+    TEXT_MACRO_X_INT    ("%number",storageInfo->volumeRequestNumber,NULL);
+  }
+  error = Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
+                              textMacros.data,
+                              textMacros.count,
+                              commandLine,
+                              CALLBACK_(executeIOOutput,NULL),
+                              CALLBACK_(executeIOOutput,NULL)
+                             );
+  if (error == ERROR_NONE)
+  {
+    Misc_mdelay(DEVICE_LOAD_VOLUME_DELAY_TIME);
+
+    logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
+    logMessage(storageInfo->logHandle,
+               LOG_TYPE_ERROR,
+               "Loaded medium"
+              );
+  }
+  else
+  {
+    logMessage(storageInfo->logHandle,
+               LOG_TYPE_ERROR,
+               "Load medium fail: %s",
+               Error_getText(error)
+              );
+    logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
+    logLines(storageInfo->logHandle,
+             LOG_TYPE_ERROR,
+             "  ",
+             &stderrList
+            );
+  }
+
+  // free resources
+  String_delete(commandLine);
+  StringList_done(&stderrList);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : unloadDeviceVolume
+* Purpose: unload device volume
+* Input  : storageInfo - storageInfo
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors unloadDeviceVolume(const StorageInfo *storageInfo)
+{
+  TextMacros (textMacros,2);
+  StringList stderrList;
+  String     commandLine;
+  Errors     error;
+
+  assert(storageInfo != NULL);
+  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+
+  error = ERROR_NONE;
+
+  const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
+#ifndef NDEBUG
+  const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+  if (debugEmulateBlockDevice != NULL)
+  {
+    deviceName = debugEmulateBlockDevice;
+  }
+#endif
+
+  // init variables
+  StringList_init(&stderrList);
+  commandLine = String_new();
+
+  Misc_mdelay(DEVICE_UNLOAD_VOLUME_DELAY_TIME);
+
+  TEXT_MACROS_INIT(textMacros)
+  {
+    TEXT_MACRO_X_CSTRING("%device",deviceName,                      NULL);
+    TEXT_MACRO_X_INT    ("%number",storageInfo->volumeRequestNumber,NULL);
+  }
+  error = Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
+                              textMacros.data,
+                              textMacros.count,
+                              commandLine,
+                              CALLBACK_(executeIOOutput,NULL),
+                              CALLBACK_(executeIOOutput,NULL)
+                             );
+  if (error == ERROR_NONE)
+  {
+    logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
+    logMessage(storageInfo->logHandle,
+               LOG_TYPE_ERROR,
+               "Unloaded medium"
+              );
+  }
+  else
+  {
+    logMessage(storageInfo->logHandle,
+               LOG_TYPE_ERROR,
+               "Unload medium fail: %s",
+               Error_getText(error)
+              );
+    logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
+    logLines(storageInfo->logHandle,
+             LOG_TYPE_ERROR,
+             "  ",
+             &stderrList
+            );
+  }
+
+  // free resources
+  String_delete(commandLine);
+  StringList_done(&stderrList);
+
+  return error;
+}
+
+/***********************************************************************\
 * Name   : requestNewDeviceVolume
 * Purpose: request new volume
 * Input  : storage  - storage
@@ -75,38 +231,21 @@
 
 LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
 {
-  TextMacros                  (textMacros,2);
-  bool                        volumeRequestedFlag;
-  StorageVolumeRequestResults storageRequestVolumeResult;
-
-  TEXT_MACROS_INIT(textMacros)
-  {
-    TEXT_MACRO_X_STRING("%device",storageInfo->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_X_INT   ("%number",storageInfo->volumeRequestNumber,        NULL);
-  }
-
   if (   (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
       || (storageInfo->volumeState == STORAGE_VOLUME_STATE_LOADED)
      )
   {
     // sleep a short time to give hardware time for finishing volume; unload current volume
     printInfo(1,"Unload volume #%d...",storageInfo->volumeNumber);
-    Misc_mdelay(DEVICE_UNLOAD_VOLUME_DELAY_TIME);
-    Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
-                        textMacros.data,
-                        textMacros.count,
-                        NULL, // commandLine
-                        CALLBACK_(executeIOOutput,NULL),
-                        CALLBACK_(executeIOOutput,NULL)
-                       );
+    (void)unloadDeviceVolume(storageInfo);
     printInfo(1,"OK\n");
 
     storageInfo->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
   }
 
   // request new volume
-  volumeRequestedFlag  = FALSE;
-  storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_UNKNOWN;
+  bool                        volumeRequestedFlag        = FALSE;
+  StorageVolumeRequestResults storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_UNKNOWN;
   if      (storageInfo->volumeRequestFunction != NULL)
   {
     volumeRequestedFlag = TRUE;
@@ -123,14 +262,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
       {
         // sleep a short time to give hardware time for finishing volume, then unload current medium
         printInfo(1,"Unload volume...");
-        Misc_mdelay(DEVICE_UNLOAD_VOLUME_DELAY_TIME);
-        Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
-                            textMacros.data,
-                            textMacros.count,
-                            NULL, // commandLine
-                            CALLBACK_(executeIOOutput,NULL),
-                            CALLBACK_(executeIOOutput,NULL)
-                           );
+        (void)unloadDeviceVolume(storageInfo);
         printInfo(1,"OK\n");
       }
     }
@@ -142,9 +274,16 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
   {
     volumeRequestedFlag = TRUE;
 
+    TextMacros (textMacros,2);
+    TEXT_MACROS_INIT(textMacros)
+    {
+      TEXT_MACRO_X_STRING("%device",storageInfo->storageSpecifier.deviceName,NULL);
+      TEXT_MACRO_X_INT   ("%number",storageInfo->volumeRequestNumber,        NULL);
+    }
+
     // request new volume via external command
     printInfo(1,"Request new volume #%d...",storageInfo->volumeRequestNumber);
-    if (Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
+    if (Misc_executeCommand(String_cString(storageInfo->device.write.requestVolumeCommand),
                             textMacros.data,
                             textMacros.count,
                             NULL, // commandLine
@@ -154,7 +293,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
        )
     {
       printInfo(1,"OK\n");
-      storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
+      storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
     }
     else
     {
@@ -179,7 +318,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
                  );
         Misc_waitEnter();
 
-        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
+        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
       }
       else
       {
@@ -199,7 +338,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         printInfo(0,"Press ENTER to continue\n");
         Misc_waitEnter();
 
-        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
+        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
       }
     }
 
@@ -210,17 +349,10 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
   {
     switch (storageRequestVolumeResult)
     {
-      case STORAGE_VOLUME_REQUEST_RESULT_OK:
+      case STORAGE_VOLUME_REQUEST_RESULT_LOAD:
         // load volume; sleep a short time to give hardware time for reading volume information
         printInfo(1,"Load volume #%d...",storageInfo->volumeRequestNumber);
-        Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
-                            textMacros.data,
-                            textMacros.count,
-                            NULL, // commandLine
-                            CALLBACK_(executeIOOutput,NULL),
-                            CALLBACK_(executeIOOutput,NULL)
-                           );
-        Misc_mdelay(DEVICE_LOAD_VOLUME_DELAY_TIME);
+        (void)loadDeviceVolume(storageInfo);
         printInfo(1,"OK\n");
 
         // store new volume number
@@ -236,13 +368,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
       case STORAGE_VOLUME_REQUEST_RESULT_ABORTED:
         // load volume
         printInfo(1,"Load volume #%d...",storageInfo->volumeRequestNumber);
-        Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
-                            textMacros.data,
-                            textMacros.count,
-                            NULL, // commandLine
-                            CALLBACK_(executeIOOutput,NULL),
-                            CALLBACK_(executeIOOutput,NULL)
-                           );
+        (void)loadDeviceVolume(storageInfo);
         printInfo(1,"OK\n");
 
         return ERROR_ABORTED;
@@ -1088,29 +1214,6 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       }
     }
   }
-
-  return error;
-}
-
-LOCAL Errors StorageDevice_unloadVolume(const StorageInfo *storageInfo)
-{
-  Errors     error;
-  TextMacros (textMacros,1);
-
-  assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
-
-  TEXT_MACROS_INIT(textMacros)
-  {
-    TEXT_MACRO_X_STRING("%device",storageInfo->storageSpecifier.deviceName,NULL);
-  }
-  error = Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
-                              textMacros.data,
-                              textMacros.count,
-                              NULL, // commandLine
-                              CALLBACK_(executeIOOutput,NULL),
-                              CALLBACK_(executeIOOutput,NULL)
-                             );
 
   return error;
 }

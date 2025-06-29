@@ -236,6 +236,8 @@ typedef struct JobNode
 
   bool                requestedAbortFlag;               // request abort current job execution
   String              abortedByInfo;                    // aborted by info
+  VolumeRequests      volumeRequest;                    // requested new volume
+  uint                volumeRequestNumber;              // requested volume number
   uint                volumeNumber;                     // load volume number
   bool                volumeUnloadFlag;                 // TRUE to unload volume
 

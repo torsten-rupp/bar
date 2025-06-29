@@ -3696,6 +3696,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
 
   // initialize variables
   AutoFree_init(&autoFreeList);
+  error = ERROR_NONE;
 
 #if 0
   // read all jobs
@@ -3803,6 +3804,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       AutoFree_cleanup(&autoFreeList);
       return ERROR_NO_STORAGE_NAME;
     }
+    error = ERROR_NONE;
     for (int i = 2; i < argc; i++)
     {
       error = EntryList_appendCString(&globalOptions.includeEntryList,ENTRY_TYPE_FILE,argv[i],globalOptions.patternType,NULL);

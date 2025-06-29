@@ -1323,6 +1323,8 @@ JobNode *Job_new(JobTypes    jobType,
   jobNode->slaveInsecureTLS                 = FALSE;
 
   initRunningInfo(&jobNode->runningInfo);
+  jobNode->volumeRequest                    = VOLUME_REQUEST_NONE;
+  jobNode->volumeRequestNumber              = 0;
 
   jobNode->archiveType                      = ARCHIVE_TYPE_NORMAL;
   jobNode->scheduleUUID                     = String_new();
@@ -1389,6 +1391,8 @@ JobNode *Job_copy(const JobNode *jobNode,
   newJobNode->slaveInsecureTLS                 = FALSE;
 
   initRunningInfo(&newJobNode->runningInfo);
+  newJobNode->volumeRequest                    = VOLUME_REQUEST_NONE;
+  newJobNode->volumeRequestNumber              = 0;
 
   newJobNode->archiveType                      = ARCHIVE_TYPE_NORMAL;
   newJobNode->scheduleUUID                     = String_new();
@@ -2628,13 +2632,13 @@ void Job_trigger(JobNode      *jobNode,
     jobNode->startDateTime         = startDateTime;
     String_setCString(jobNode->byName,byName);
 
-    // reset running info
     jobNode->requestedAbortFlag    = FALSE;
     String_clear(jobNode->abortedByInfo);
     jobNode->volumeNumber          = 0;
     jobNode->volumeUnloadFlag      = FALSE;
     Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
+    // reset running info
     resetRunningInfo(&jobNode->runningInfo);
 
     Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);

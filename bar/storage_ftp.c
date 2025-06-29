@@ -1325,16 +1325,6 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
   return error;
 }
 
-LOCAL Errors StorageFTP_unloadVolume(const StorageInfo *storageInfo)
-{
-  assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
-
-  UNUSED_VARIABLE(storageInfo);
-
-  return ERROR_NONE;
-}
-
 LOCAL bool StorageFTP_exists(StorageInfo *storageInfo,
                              ConstString archiveName
                             )

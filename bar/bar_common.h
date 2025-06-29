@@ -922,8 +922,6 @@ typedef struct
     } volume;
   }                 progress;
 
-  VolumeRequests    volumeRequest;
-  uint              volumeRequestNumber;              // requested volume number
   Message           message;                          // last message
 
   uint              lastErrorCode;

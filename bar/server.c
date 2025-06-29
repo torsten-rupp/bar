@@ -799,39 +799,38 @@ LOCAL const char *getClientInfoString(ClientInfo *clientInfo, char *buffer, uint
 /***********************************************************************\
 * Name   : storageVolumeRequest
 * Purpose: volume request call-back
-* Input  : type         - storage volume request type
-*          volumeNumber - volume number
-*          message      - message or NULL
-*          userData     - user data: job node
+* Input  : type                - storage volume request type
+*          volumeRequestNumber - requested volume number
+*          message             - message or NULL
+*          userData            - user data: job node
 * Output : -
 * Return : volume request result; see StorageVolumeRequestResults
 * Notes  : -
 \***********************************************************************/
 
 LOCAL StorageVolumeRequestResults storageVolumeRequest(StorageVolumeRequestTypes type,
-                                                       uint                      volumeNumber,
+                                                       uint                      volumeRequestNumber,
                                                        const char                *message,
                                                        void                      *userData
                                                       )
 {
-  JobNode                     *jobNode = (JobNode*)userData;
-  StorageVolumeRequestResults storageVolumeRequestResult;
-
-  assert(jobNode != NULL);
 
 //TODO: use type?
   UNUSED_VARIABLE(type);
 //TODO: use message
   UNUSED_VARIABLE(message);
 
-  storageVolumeRequestResult = STORAGE_VOLUME_REQUEST_RESULT_NONE;
+  StorageVolumeRequestResults storageVolumeRequestResult = STORAGE_VOLUME_REQUEST_RESULT_NONE;
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+    JobNode *jobNode = (JobNode*)userData;
+    assert(jobNode != NULL);
+
     // request volume
     assert(jobNode->jobState == JOB_STATE_RUNNING);
-    jobNode->runningInfo.volumeRequest       = VOLUME_REQUEST_INITIAL;
-    jobNode->runningInfo.volumeRequestNumber = volumeNumber;
+    jobNode->volumeRequest       = VOLUME_REQUEST_INITIAL;
+    jobNode->volumeRequestNumber = volumeRequestNumber;
     jobNode->volumeUnloadFlag    = FALSE;
     jobNode->volumeNumber        = 0;
     Job_listSignalModifed();
@@ -851,9 +850,9 @@ LOCAL StorageVolumeRequestResults storageVolumeRequest(StorageVolumeRequestTypes
         storageVolumeRequestResult = STORAGE_VOLUME_REQUEST_RESULT_UNLOAD;
         jobNode->volumeUnloadFlag = FALSE;
       }
-      else if (jobNode->volumeNumber == jobNode->runningInfo.volumeRequestNumber)
+      else if (jobNode->volumeNumber == jobNode->volumeRequestNumber)
       {
-        storageVolumeRequestResult = STORAGE_VOLUME_REQUEST_RESULT_OK;
+        storageVolumeRequestResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
       }
     }
     while (   !isQuit()
@@ -861,7 +860,7 @@ LOCAL StorageVolumeRequestResults storageVolumeRequest(StorageVolumeRequestTypes
           );
 
     // clear request volume
-    jobNode->runningInfo.volumeRequest = VOLUME_REQUEST_NONE;
+    jobNode->volumeRequest = VOLUME_REQUEST_NONE;
     Job_listSignalModifed();
   }
 
@@ -6288,7 +6287,7 @@ LOCAL Errors getCryptPasswordFromConfig(String        name,
 }
 
 /***********************************************************************\
-* Name   : createRunningInfo
+* Name   : updateRunningInfo
 * Purpose: create running info
 * Input  : error       - error code
 *          runningInfo - running info data
@@ -6298,7 +6297,7 @@ LOCAL Errors getCryptPasswordFromConfig(String        name,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void createRunningInfo(Errors      error,
+LOCAL void updateRunningInfo(Errors      error,
                              RunningInfo *runningInfo,
                              void        *userData
                             )
@@ -6313,29 +6312,23 @@ LOCAL void createRunningInfo(Errors      error,
   // Note: update progress info has low priority; only try for 2s
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
-    double  entriesPerSecondAverage,bytesPerSecondAverage,storageBytesPerSecondAverage;
-    ulong   restFiles;
-    uint64  restBytes;
-    uint64  restStorageBytes;
-    ulong   estimatedRestTime;
-
     setRunningInfo(&jobNode->runningInfo,runningInfo);
 
     // calculate statics values
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     jobNode->runningInfo.progress.done.count      );
     Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       jobNode->runningInfo.progress.done.size       );
     Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,jobNode->runningInfo.progress.storage.doneSize);
-    entriesPerSecondAverage      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecondFilter     );
-    bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
-    storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
+    double entriesPerSecondAverage      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecondFilter     );
+    double bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
+    double storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
 
     // calculate rest values
-    restFiles         = (jobNode->runningInfo.progress.total.count       > jobNode->runningInfo.progress.done.count      ) ? jobNode->runningInfo.progress.total.count      -jobNode->runningInfo.progress.done.count       : 0L;
-    restBytes         = (jobNode->runningInfo.progress.total.size        > jobNode->runningInfo.progress.done.size       ) ? jobNode->runningInfo.progress.total.size       -jobNode->runningInfo.progress.done.size        : 0LL;
-    restStorageBytes  = (jobNode->runningInfo.progress.storage.totalSize > jobNode->runningInfo.progress.storage.doneSize) ? jobNode->runningInfo.progress.storage.totalSize-jobNode->runningInfo.progress.storage.doneSize : 0LL;
+    ulong  restFiles         = (jobNode->runningInfo.progress.total.count       > jobNode->runningInfo.progress.done.count      ) ? jobNode->runningInfo.progress.total.count      -jobNode->runningInfo.progress.done.count       : 0L;
+    uint64 restBytes         = (jobNode->runningInfo.progress.total.size        > jobNode->runningInfo.progress.done.size       ) ? jobNode->runningInfo.progress.total.size       -jobNode->runningInfo.progress.done.size        : 0LL;
+    uint64 restStorageBytes  = (jobNode->runningInfo.progress.storage.totalSize > jobNode->runningInfo.progress.storage.doneSize) ? jobNode->runningInfo.progress.storage.totalSize-jobNode->runningInfo.progress.storage.doneSize : 0LL;
 
     // calculate estimated rest time
-    estimatedRestTime = 0L;
+    ulong estimatedRestTime = 0L;
     if (entriesPerSecondAverage      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecondAverage     )); }
     if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }
     if (storageBytesPerSecondAverage > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecondAverage)); }
@@ -6850,7 +6843,7 @@ LOCAL void jobThreadCode(void)
                                                           &jobOptions,
                                                           startDateTime,
                                                           CALLBACK_(getCryptPasswordFromConfig,jobNode),
-                                                          CALLBACK_(createRunningInfo,jobNode),
+                                                          CALLBACK_(updateRunningInfo,jobNode),
                                                           CALLBACK_(storageVolumeRequest,jobNode),
                                                           CALLBACK_(isPauseCreate,NULL),
                                                           CALLBACK_(isPauseStorage,NULL),
@@ -6938,7 +6931,7 @@ LOCAL void jobThreadCode(void)
                                                         NULL,  // scheduleTitle,
                                                         NULL,  // scheduleCustomText,
                                                         CALLBACK_(getCryptPasswordFromConfig,jobNode),
-                                                        CALLBACK_(createRunningInfo,jobNode),
+                                                        CALLBACK_(updateRunningInfo,jobNode),
                                                         CALLBACK_(storageVolumeRequest,jobNode)
                                                        );
 
@@ -12083,8 +12076,8 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           jobNode->runningInfo.lastErrorCode,
                           jobNode->runningInfo.lastErrorData,
                           jobNode->runningInfo.estimatedRestTime,
-                          volumeRequestToString(jobNode->runningInfo.volumeRequest),
-                          jobNode->runningInfo.volumeRequestNumber,
+                          volumeRequestToString(jobNode->volumeRequest),
+                          jobNode->volumeRequestNumber,
                           messageCodeToString(jobNode->runningInfo.message.code),
                           jobNode->runningInfo.message.text
                          );
@@ -12987,8 +12980,8 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
                         jobNode->runningInfo.bytesPerSecond,
                         jobNode->runningInfo.storageBytesPerSecond,
                         jobNode->runningInfo.estimatedRestTime,
-                        volumeRequestToString(jobNode->runningInfo.volumeRequest),
-                        jobNode->runningInfo.volumeRequestNumber,
+                        volumeRequestToString(jobNode->volumeRequest),
+                        jobNode->volumeRequestNumber,
                         messageCodeToString(jobNode->runningInfo.message.code),
                         jobNode->runningInfo.message.text
                        );

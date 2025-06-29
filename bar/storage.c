@@ -2398,7 +2398,7 @@ uint Storage_getServerSettings(Server                 *server,
   if ((jobOptions != NULL) && jobOptions->waitFirstVolumeFlag)
   {
     storageInfo->volumeNumber        = 0;
-    storageInfo->volumeRequestNumber = 0;
+    storageInfo->volumeRequestNumber = 1;
     storageInfo->volumeState         = STORAGE_VOLUME_STATE_UNKNOWN;
   }
   else
@@ -2815,71 +2815,6 @@ void Storage_setVolumeNumber(StorageInfo *storageInfo,
   assert(storageInfo != NULL);
 
   storageInfo->volumeNumber = volumeNumber;
-}
-
-Errors Storage_unloadVolume(StorageInfo *storageInfo)
-{
-  Errors error;
-
-  assert(storageInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-  assert(storageInfo->jobOptions != NULL);
-
-  error = ERROR_UNKNOWN;
-  if (   (   (storageInfo->jobOptions == NULL)
-          || storageInfo->jobOptions->storageOnMasterFlag
-         )
-      && (storageInfo->masterIO != NULL)
-     )
-  {
-//TODO
-error = ERROR_STILL_NOT_IMPLEMENTED;
-  }
-  else
-  {
-    switch (storageInfo->storageSpecifier.type)
-    {
-      case STORAGE_TYPE_NONE:
-        error = ERROR_NONE;
-        break;
-      case STORAGE_TYPE_FILESYSTEM:
-        error = ERROR_NONE;
-        break;
-      case STORAGE_TYPE_FTP:
-        error = StorageFTP_unloadVolume(storageInfo);
-        break;
-      case STORAGE_TYPE_SSH:
-      case STORAGE_TYPE_SCP:
-        error = ERROR_NONE;
-        break;
-      case STORAGE_TYPE_SFTP:
-        error = ERROR_NONE;
-        break;
-      case STORAGE_TYPE_WEBDAV:
-      case STORAGE_TYPE_WEBDAVS:
-        error = ERROR_NONE;
-        break;
-      case STORAGE_TYPE_SMB:
-        error = ERROR_NONE;
-        break;
-      case STORAGE_TYPE_CD:
-      case STORAGE_TYPE_DVD:
-      case STORAGE_TYPE_BD:
-        error = StorageOptical_unloadVolume(storageInfo);
-        break;
-      case STORAGE_TYPE_DEVICE:
-        error = StorageDevice_unloadVolume(storageInfo);
-        break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-  }
-  assert(error != ERROR_UNKNOWN);
-
-  return error;
 }
 
 bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
