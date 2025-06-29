@@ -30,26 +30,27 @@ def build()
           // configure
           sh "./download-third-party-packages.sh --local-directory /media/extern"
           sh "./download-third-party-packages.sh"
-//          sh "./configure"
           sh "./configure \
-  --disable-bz2        \
-  --disable-lzma       \
-  --disable-xz         \
-  --disable-lzo        \
-  --disable-lz4        \
-  --disable-zstd       \
-  --disable-xdelta3    \
-  --disable-gcrypt     \
-  --disable-curl       \
-  --disable-ssh        \
-  --disable-tls        \
-  --disable-iso9660    \
-  --disable-smbclient  \
-  --disable-mariadb    \
-  --disable-postgresql \
-  --disable-pcre       \
-  --disable-bfd        \
-"
+            --disable-bz2        \
+            --disable-lzma       \
+            --disable-xz         \
+            --disable-lzo        \
+            --disable-lz4        \
+            --disable-zstd       \
+            --disable-xdelta3    \
+            --disable-gcrypt     \
+            --disable-curl       \
+            --disable-ssh        \
+            --disable-tls        \
+            --disable-iso9660    \
+            --disable-smbclient  \
+            --disable-mariadb    \
+            --disable-postgresql \
+            --disable-pcre       \
+            --disable-burn       \
+            --disable-isofs      \
+            --disable-bfd        \
+          "
         }
       }
     }

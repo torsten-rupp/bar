@@ -2124,7 +2124,6 @@ if test $cleanFlag -eq 0; then
      $ECHO_NO_NEW_LINE "Get util-linux ($UTIL_LINUX_VERSION)..."
      directoryName="util-linux-$UTIL_LINUX_VERSION"
 
-set -x
      if test ! -d $directoryName; then
        if test -n "$localDirectory" -a -d $localDirectory/util-linux-$UTIL_LINUX_VERSION; then
          # Note: make a deep copy instead of link to get usable file permissions (source may be owned by root)
@@ -2148,7 +2147,6 @@ set -x
      else
        result=3
      fi
-set +x
 
      if test $noDecompressFlag -eq 0; then
        (cd "$workingDirectory"; $LN -sfT $destinationDirectory/util-linux-$UTIL_LINUX_VERSION util-linux)

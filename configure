@@ -777,7 +777,7 @@ INSTALL_DIR
 HAVE_USLEEP
 HAVE_BFD
 HAVE_PTHREADS_W32
-HAVE_LIBMOUNT
+HAVE_MOUNT
 HAVE_BURN
 HAVE_ISOFS
 HAVE_PAR2
@@ -912,7 +912,7 @@ enable_pcre
 enable_par2
 enable_isofs
 enable_burn
-enable_libmount
+enable_mount
 enable_bfd
 enable_gui
 enable_gui_i18n
@@ -1577,7 +1577,7 @@ Optional Features:
   --disable-par2          disable PAR2 support
   --disable-isofs         disable ISO file system support
   --disable-burn          disable burn support
-  --disable-libmount      disable libmount support
+  --disable-mount         disable mount support
   --disable-bfd           disable BFD support
   --disable-gui           disable GUI support (barcontrol)
   --disable-gui-i18n      disable GUI localization support (barcontrol)
@@ -3379,7 +3379,7 @@ ENABLE_PTHREADS_W32="yes"
 ENABLE_PAR2="yes"
 ENABLE_ISOFS="yes"
 ENABLE_BURN="yes"
-ENABLE_LIBMOUNT="yes"
+ENABLE_MOUNT="yes"
 ENABLE_BFD="yes"
 ENABLE_GUI="yes"
 ENABLE_GUI_I18N="yes"
@@ -3674,10 +3674,10 @@ then :
 
 fi
 
-# Check whether --enable-libmount was given.
-if test ${enable_libmount+y}
+# Check whether --enable-mount was given.
+if test ${enable_mount+y}
 then :
-  enableval=$enable_libmount; ENABLE_LIBMOUNT=$enableval
+  enableval=$enable_mount; ENABLE_MOUNT=$enableval
 
 fi
 
@@ -21561,7 +21561,7 @@ printf "%s\n" "$as_me: WARNING: libburn not compiled: libburn package missing" >
 fi
 
 # compile/use libmount
-if test $ENABLE_LIBMOUNT = "yes"; then
+if test $ENABLE_MOUNT = "yes"; then
   if test -d util-linux -o -d "`readlink util-linux`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 
@@ -21650,9 +21650,9 @@ printf "%s\n" "done" >&6; }
       else
         STATIC_LIBRARIES="$STATIC_LIBRARIES mount blkid"
       fi
-      HAVE_LIBMOUNT=1
+      HAVE_MOUNT=1
 
-printf "%s\n" "#define HAVE_LIBMOUNT 1" >>confdefs.h
+printf "%s\n" "#define HAVE_MOUNT 1" >>confdefs.h
 
     fi
   else
@@ -21717,13 +21717,13 @@ printf "%s\n" "$ac_cv_search_libraries_mnt_new_table_from_file" >&6; }
   ac_result=$ac_cv_search_libraries_mnt_new_table_from_file
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LIBMOUNT=1;LIBRARIES="mount blkid $LIBRARIES";
-printf "%s\n" "#define HAVE_LIBMOUNT 1" >>confdefs.h
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MOUNT=1;LIBRARIES="mount blkid $LIBRARIES";
+printf "%s\n" "#define HAVE_MOUNT 1" >>confdefs.h
 
 fi
 
     else
-      if test -z "$HAVE_LIBMOUNT"; then
+      if test -z "$HAVE_MOUNT"; then
 
 
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing mnt_new_table_from_file" >&5
@@ -21785,13 +21785,13 @@ printf "%s\n" "$ac_cv_search_static_mnt_new_table_from_file" >&6; }
   ac_result=$ac_cv_search_static_mnt_new_table_from_file
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LIBMOUNT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mount blkid";
-printf "%s\n" "#define HAVE_LIBMOUNT 1" >>confdefs.h
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MOUNT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mount blkid";
+printf "%s\n" "#define HAVE_MOUNT 1" >>confdefs.h
 
 fi
 
       fi
-      if test -z "$HAVE_LIBMOUNT"; then
+      if test -z "$HAVE_MOUNT"; then
 
 
     ac_result=""
@@ -21851,8 +21851,8 @@ printf "%s\n" "$ac_cv_search_libraries_mnt_new_table_from_file" >&6; }
   ac_result=$ac_cv_search_libraries_mnt_new_table_from_file
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_LIBMOUNT=1;LIBRARIES="mount blkid $LIBRARIES";
-printf "%s\n" "#define HAVE_LIBMOUNT 1" >>confdefs.h
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_MOUNT=1;LIBRARIES="mount blkid $LIBRARIES";
+printf "%s\n" "#define HAVE_MOUNT 1" >>confdefs.h
 
 fi
 
@@ -21871,7 +21871,7 @@ fi
       ;;
   esac
 
-  if test -z "$HAVE_LIBMOUNT"; then
+  if test -z "$HAVE_MOUNT"; then
     if test ! \( -d util-linux -o -d "`readlink util-linux`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libmount not compiled: util-linux package missing" >&5
 printf "%s\n" "$as_me: WARNING: libmount not compiled: util-linux package missing" >&2;}
@@ -22472,6 +22472,18 @@ then :
 
 else $as_nop
   as_fn_error $? "isofs missing" "$LINENO" 5
+fi
+   if test $HAVE_BURN
+then :
+
+else $as_nop
+  as_fn_error $? "burn missing" "$LINENO" 5
+fi
+   if test $HAVE_MOUNT
+then :
+
+else $as_nop
+  as_fn_error $? "mount missing" "$LINENO" 5
 fi
 
 
@@ -34443,13 +34455,13 @@ printf "%s\n" "#define VERSION_BURN \"\"" >>confdefs.h
 
 fi
 
-if test "$HAVE_LIBMOUNT"; then
+if test "$HAVE_MOUNT"; then
 
 
-    if test -n "libmount version"; then
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking libmount version" >&5
-printf %s "checking libmount version... " >&6; }
-if test ${ac_cv_constant_value_VERSION_LIBMOUNT+y}
+    if test -n "mount version"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking mount version" >&5
+printf %s "checking mount version... " >&6; }
+if test ${ac_cv_constant_value_VERSION_MOUNT+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
@@ -34472,24 +34484,24 @@ _ACEOF
   ac_status=$?
   printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-          ac_cv_constant_value_VERSION_LIBMOUNT=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+          ac_cv_constant_value_VERSION_MOUNT=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
         else
-          ac_cv_constant_value_VERSION_LIBMOUNT=
+          ac_cv_constant_value_VERSION_MOUNT=
         fi
         if test -n " \"
                    "; then
-          ac_cv_constant_value_VERSION_LIBMOUNT=`echo $ac_cv_constant_value_VERSION_LIBMOUNT|tr -d " \"
+          ac_cv_constant_value_VERSION_MOUNT=`echo $ac_cv_constant_value_VERSION_MOUNT|tr -d " \"
                    "`
         fi
-        VERSION_LIBMOUNT=$ac_cv_constant_value_VERSION_LIBMOUNT
+        VERSION_MOUNT=$ac_cv_constant_value_VERSION_MOUNT
 
         rm -f conftest.c conftest
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_LIBMOUNT" >&5
-printf "%s\n" "$ac_cv_constant_value_VERSION_LIBMOUNT" >&6; }  else
-    if test ${ac_cv_constant_value_VERSION_LIBMOUNT+y}
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_MOUNT" >&5
+printf "%s\n" "$ac_cv_constant_value_VERSION_MOUNT" >&6; }  else
+    if test ${ac_cv_constant_value_VERSION_MOUNT+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
@@ -34512,16 +34524,16 @@ _ACEOF
   ac_status=$?
   printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-          ac_cv_constant_value_VERSION_LIBMOUNT=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+          ac_cv_constant_value_VERSION_MOUNT=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
         else
-          ac_cv_constant_value_VERSION_LIBMOUNT=
+          ac_cv_constant_value_VERSION_MOUNT=
         fi
         if test -n " \"
                    "; then
-          ac_cv_constant_value_VERSION_LIBMOUNT=`echo $ac_cv_constant_value_VERSION_LIBMOUNT|tr -d " \"
+          ac_cv_constant_value_VERSION_MOUNT=`echo $ac_cv_constant_value_VERSION_MOUNT|tr -d " \"
                    "`
         fi
-        VERSION_LIBMOUNT=$ac_cv_constant_value_VERSION_LIBMOUNT
+        VERSION_MOUNT=$ac_cv_constant_value_VERSION_MOUNT
 
         rm -f conftest.c conftest
 
@@ -34530,11 +34542,11 @@ fi
   fi
 
 
-printf "%s\n" "#define VERSION_LIBMOUNT \"$VERSION_LIBMOUNT\"" >>confdefs.h
+printf "%s\n" "#define VERSION_MOUNT \"$VERSION_MOUNT\"" >>confdefs.h
 
 else
 
-printf "%s\n" "#define VERSION_LIBMOUNT \"\"" >>confdefs.h
+printf "%s\n" "#define VERSION_MOUNT \"\"" >>confdefs.h
 
 fi
 
@@ -35309,7 +35321,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_PAR2=$HAVE_PAR2
                    HAVE_ISOFS=$HAVE_ISOFS
                    HAVE_BURN=$HAVE_BURN
-                   HAVE_LIBMOUNT=$HAVE_LIBMOUNT
+                   HAVE_MOUNT=$HAVE_MOUNT
                    HAVE_BFD=$HAVE_BFD
 
                    ENABLE_DEBUG=$ENABLE_DEBUG
@@ -35352,7 +35364,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_PAR2="$VERSION_PAR2"
                    VERSION_ISOFS="$VERSION_ISOFS"
                    VERSION_BURN="$VERSION_BURN"
-                   VERSION_LIBMOUNT="$VERSION_LIBMOUNT"
+                   VERSION_MOUNT="$VERSION_MOUNT"
 
 
 _ACEOF
@@ -35956,7 +35968,7 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                     echo "  PAR2 support         : `if test "$HAVE_PAR2"; then echo "yes ($VERSION_PAR2)"; else echo no; fi`";
                     echo "  isofs support        : `if test "$HAVE_ISOFS"; then echo "yes ($VERSION_ISOFS)"; else echo no; fi`";
                     echo "  burn support         : `if test "$HAVE_BURN"; then echo "yes ($VERSION_BURN)"; else echo no; fi`";
-                    echo "  libmount support     : `if test "$HAVE_LIBMOUNT"; then echo "yes ($VERSION_LIBMOUNT)"; else echo no; fi`";
+                    echo "  mount support        : `if test "$HAVE_MOUNT"; then echo "yes ($VERSION_MOUNT)"; else echo no; fi`";
                     echo "  GUI support          : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
                     echo "  GUI i18n support     : `if test "$ENABLE_GUI" = "yes" -a "$ENABLE_GUI_I18N" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SWT                  : `if test -n \"$SWT_DIR\"; then echo $SWT_DIR; else echo \"(integrated)\"; fi`"
@@ -35996,7 +36008,7 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                             -o ! "$HAVE_PAR2" \
                             -o ! "$HAVE_ISOFS" \
                             -o ! "$HAVE_BURN" \
-                            -o ! "$HAVE_LIBMOUNT"; then
+                            -o ! "$HAVE_MOUNT"; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."

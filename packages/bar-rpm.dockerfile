@@ -39,6 +39,7 @@ RUN yum -y install \
   gcc \
   gcc-c++ \
   gettext \
+  gettext-devel \
   git \
   java-1.8.0-openjdk-devel \
   libtool \

@@ -4496,7 +4496,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     printf("  PAR2       %s\n",!stringIsEmpty(VERSION_PAR2      ) ? VERSION_PAR2       : "(not included)");
     printf("  isofs      %s\n",!stringIsEmpty(VERSION_ISOFS     ) ? VERSION_ISOFS      : "(not included)");
     printf("  burn       %s\n",!stringIsEmpty(VERSION_BURN      ) ? VERSION_BURN       : "(not included)");
-    printf("  libmount   %s\n",!stringIsEmpty(VERSION_LIBMOUNT  ) ? VERSION_LIBMOUNT   : "(not included)");
+    printf("  mount      %s\n",!stringIsEmpty(VERSION_MOUNT     ) ? VERSION_MOUNT      : "(not included)");
 
     return ERROR_NONE;
   }
