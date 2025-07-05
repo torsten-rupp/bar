@@ -2788,7 +2788,7 @@ LOCAL Errors testEntity(IndexHandle             *indexHandle,
 
 /***********************************************************************\
 * Name   : testUUID
-* Purpose: deltestete all storage files ofUUID
+* Purpose: test all storage files of UUID
 * Input  : indexHandle             - index handle
 *          jobUUID                 - job UUID
 *          testRunningInfoFunction - running info function
@@ -2865,7 +2865,6 @@ LOCAL Errors testUUID(IndexHandle             *indexHandle,
   }
   while (   (error == ERROR_NONE)
          && !isQuit()
-         && !Job_isSomeActive()
          && Index_getNextEntity(&indexQueryHandle,
                                 NULL,  // uuidId
                                 NULL,  // jobUUID
@@ -2894,6 +2893,7 @@ LOCAL Errors testUUID(IndexHandle             *indexHandle,
                     (error == ERROR_NONE)
                  && ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
                  && !isQuit()
+                 && !Job_isSomeActive()
                 )
   {
     error = testEntity(indexHandle,
@@ -3295,7 +3295,6 @@ LOCAL Errors deleteEntity(IndexHandle  *indexHandle,
   IndexId storageId;
   while (   (error == ERROR_NONE)
          && !isQuit()
-         && !Job_isSomeActive()
          && Index_getNextStorage(&indexQueryHandle,
                                  NULL,  // uuidId
                                  NULL,  // jobUUID
@@ -3335,25 +3334,26 @@ LOCAL Errors deleteEntity(IndexHandle  *indexHandle,
                      || !isCommandAborted(clientInfo,commandId)
                     )
                  && !isQuit()
+                 && !Job_isSomeActive()
                 )
   {
     // get storage name
     if (!Index_findStorageById(indexHandle,
-                            storageId,
-                            NULL,  // jobUUID,
-                            NULL,  // scheduleUUID
-                            NULL,  // uuidId
-                            NULL,  // entityId
-                            storageName,
-                            NULL,  // dateTime
-                            NULL,  // size,
-                            NULL,  // indexState
-                            NULL,  // indexMode
-                            NULL,  // lastCheckedDateTime
-                            NULL,  // errorMessage
-                            NULL,  // totalEntryCount
-                            NULL   // totalEntrySize
-                           )
+                               storageId,
+                               NULL,  // jobUUID,
+                               NULL,  // scheduleUUID
+                               NULL,  // uuidId
+                               NULL,  // entityId
+                               storageName,
+                               NULL,  // dateTime
+                               NULL,  // size,
+                               NULL,  // indexState
+                               NULL,  // indexMode
+                               NULL,  // lastCheckedDateTime
+                               NULL,  // errorMessage
+                               NULL,  // totalEntryCount
+                               NULL   // totalEntrySize
+                              )
        )
     {
       String_clear(storageName);
@@ -3384,7 +3384,7 @@ LOCAL Errors deleteEntity(IndexHandle  *indexHandle,
     String_delete(jobName);
     return error;
   }
-  if (isQuit())
+  if (isQuit() || Job_isSomeActive())
   {
     Array_done(&storageIdArray);
     String_delete(jobName);
@@ -3515,7 +3515,6 @@ LOCAL Errors deleteUUID(IndexHandle  *indexHandle,
   IndexId entityId;
   while (   (error == ERROR_NONE)
          && !isQuit()
-         && !Job_isSomeActive()
          && Index_getNextEntity(&indexQueryHandle,
                                 NULL,  // uuidId
                                 NULL,  // jobUUID
@@ -3548,6 +3547,7 @@ LOCAL Errors deleteUUID(IndexHandle  *indexHandle,
                      || !isCommandAborted(clientInfo,commandId)
                     )
                  && !isQuit()
+                 && !Job_isSomeActive()
                 )
   {
     error = deleteEntity(indexHandle,entityId,clientInfo,commandId);
@@ -4281,7 +4281,9 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
       }
       else
       {
-        if (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+        if (   (Error_getCode(error) != ERROR_CODE_CONNECT_FAIL)
+            && (Error_getCode(error) != ERROR_CODE_INTERRUPTED)
+           )
         {
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
@@ -5115,7 +5117,10 @@ LOCAL void persistenceThreadCode(void)
         purgeMounts(FALSE);
 
         // sleep
-        if ((error == ERROR_NONE) || (Error_getCode(error) == ERROR_CODE_CONNECT_FAIL))
+        if (   (error == ERROR_NONE)
+            || (Error_getCode(error) == ERROR_CODE_CONNECT_FAIL)
+            || (Error_getCode(error) == ERROR_INTERRUPTED)
+           )
         {
           // sleep and check quit flag
           delayThread(SLEEP_TIME_PERSISTENCE_THREAD,&persistenceThreadTrigger);

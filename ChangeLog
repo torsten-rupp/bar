@@ -1,3 +1,6 @@
+2025-07-30 25a
+  * fixed wrong repeated log entry on purge (bug #30)
+
 2025-06-29 26
   * automatic replace deprecated configuration values by new value
   * support libsmb2 for Windows port
