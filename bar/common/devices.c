@@ -623,7 +623,8 @@ Errors Device_mount(ConstString mountCommand,
                               textMacros.count,
                               NULL, // commandLine
                               CALLBACK_(NULL,NULL),
-                              CALLBACK_(NULL,NULL)
+                              CALLBACK_(NULL,NULL),
+                              WAIT_FOREVER
                              );
 #endif
 
@@ -651,7 +652,8 @@ Errors Device_umount(ConstString umountCommand,
                                 textMacros.count,
                                 NULL, // commandLine
                                 CALLBACK_(NULL,NULL),
-                                CALLBACK_(NULL,NULL)
+                                CALLBACK_(NULL,NULL),
+                                WAIT_FOREVER
                                );
   }
   else
@@ -661,7 +663,8 @@ Errors Device_umount(ConstString umountCommand,
                                 textMacros.count,
                                 NULL, // commandLine
                                 CALLBACK_(NULL,NULL),
-                                CALLBACK_(NULL,NULL)
+                                CALLBACK_(NULL,NULL),
+                                WAIT_FOREVER
                                );
     if (error != ERROR_NONE)
     {
@@ -670,7 +673,8 @@ Errors Device_umount(ConstString umountCommand,
                                   textMacros.count,
                                   NULL, // commandLine
                                   CALLBACK_(NULL,NULL),
-                                  CALLBACK_(NULL,NULL)
+                                  CALLBACK_(NULL,NULL),
+                                  WAIT_FOREVER
                                  );
     }
   }

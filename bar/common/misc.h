@@ -1384,6 +1384,7 @@ bool Misc_findCommandInPath(String     command,
 *          stdoutExecuteIOUserData - user data for stdoout callback
 *          stderrExecuteIOFunction - stderr callback or NULL
 *          stderrExecuteIOUserData - user data for stderr callback
+*          timeout                 - timeout [s] or WAIT_FOREVER
 * Output : commandLine - command line
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1396,7 +1397,8 @@ Errors Misc_executeCommand(const char        *commandTemplate,
                            ExecuteIOFunction stdoutExecuteIOFunction,
                            void              *stdoutExecuteIOUserData,
                            ExecuteIOFunction stderrExecuteIOFunction,
-                           void              *stderrExecuteIOUserData
+                           void              *stderrExecuteIOUserData,
+                           long              timeout
                           );
 
 /***********************************************************************\
@@ -1407,6 +1409,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
 *          stdoutExecuteIOUserData - user data for stdoout callback
 *          stderrExecuteIOFunction - stderr callback or NULL
 *          stderrExecuteIOUserData - user data for stderr callback
+*          timeout                 - timeout [s] or WAIT_FOREVER
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1416,7 +1419,8 @@ Errors Misc_executeScript(const char       *script,
                           ExecuteIOFunction stdoutExecuteIOFunction,
                           void              *stdoutExecuteIOUserData,
                           ExecuteIOFunction stderrExecuteIOFunction,
-                          void              *stderrExecuteIOUserData
+                          void              *stderrExecuteIOUserData,
+                          long              timeout
                          );
 
 /***********************************************************************\

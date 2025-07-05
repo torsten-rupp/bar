@@ -107,7 +107,8 @@ LOCAL Errors loadDeviceVolume(const StorageInfo *storageInfo)
                               textMacros.count,
                               commandLine,
                               CALLBACK_(executeIOOutput,NULL),
-                              CALLBACK_(executeIOOutput,NULL)
+                              CALLBACK_(executeIOOutput,NULL),
+                              WAIT_FOREVER
                              );
   if (error == ERROR_NONE)
   {
@@ -187,7 +188,8 @@ LOCAL Errors unloadDeviceVolume(const StorageInfo *storageInfo)
                               textMacros.count,
                               commandLine,
                               CALLBACK_(executeIOOutput,NULL),
-                              CALLBACK_(executeIOOutput,NULL)
+                              CALLBACK_(executeIOOutput,NULL),
+                              WAIT_FOREVER
                              );
   if (error == ERROR_NONE)
   {
@@ -288,7 +290,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
                             textMacros.count,
                             NULL, // commandLine
                             CALLBACK_(executeIOOutput,NULL),
-                            CALLBACK_(executeIOOutput,NULL)
+                            CALLBACK_(executeIOOutput,NULL),
+                            SCRIPT_TIMEOUT
                            ) == ERROR_NONE
        )
     {
@@ -817,7 +820,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                     textMacros.count,
                                     NULL, // commandLine
                                     CALLBACK_(executeIOOutput,NULL),
-                                    CALLBACK_(executeIOOutput,NULL)
+                                    CALLBACK_(executeIOOutput,NULL),
+                                    WAIT_FOREVER
                                    );
         if (error == ERROR_NONE)
         {
@@ -856,7 +860,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                     textMacros.count,
                                     commandLine,
                                     CALLBACK_(executeIOOutput,NULL),
-                                    CALLBACK_(executeIOOutput,NULL)
+                                    CALLBACK_(executeIOOutput,NULL),
+                                    WAIT_FOREVER
                                    );
         if (error == ERROR_NONE)
         {
@@ -903,7 +908,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                       textMacros.count,
                                       commandLine,
                                       CALLBACK_(executeIOOutput,NULL),
-                                      CALLBACK_(executeIOOutput,NULL)
+                                      CALLBACK_(executeIOOutput,NULL),
+                                      WAIT_FOREVER
                                      );
           if (error == ERROR_NONE)
           {
@@ -943,7 +949,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                       textMacros.count,
                                       commandLine,
                                       CALLBACK_(executeIOdvdisasterStdout,&executeIOInfo),
-                                      CALLBACK_(executeIOdvdisasterStderr,&executeIOInfo)
+                                      CALLBACK_(executeIOdvdisasterStderr,&executeIOInfo),
+                                      WAIT_FOREVER
                                      );
           if (error == ERROR_NONE)
           {
@@ -982,7 +989,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                       textMacros.count,
                                       commandLine,
                                       CALLBACK_(executeIOOutput,NULL),
-                                      CALLBACK_(executeIOOutput,NULL)
+                                      CALLBACK_(executeIOOutput,NULL),
+                                      WAIT_FOREVER
                                      );
           if (error == ERROR_NONE)
           {
@@ -1023,7 +1031,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                     textMacros.count,
                                     commandLine,
                                     CALLBACK_(executeIOOutput,NULL),
-                                    CALLBACK_(executeIOOutput,NULL)
+                                    CALLBACK_(executeIOOutput,NULL),
+                                    WAIT_FOREVER
                                    );
         if (error == ERROR_NONE)
         {
@@ -1065,7 +1074,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                       textMacros.count,
                                       commandLine,
                                       CALLBACK_(executeIOblankStdout,&executeIOInfo),
-                                      CALLBACK_(executeIOblankStderr,&executeIOInfo)
+                                      CALLBACK_(executeIOblankStderr,&executeIOInfo),
+                                      WAIT_FOREVER
                                      );
           if (error == ERROR_NONE)
           {
@@ -1114,7 +1124,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                     textMacros.count,
                                     commandLine,
                                     CALLBACK_(executeIOOutput,NULL),
-                                    CALLBACK_(executeIOOutput,NULL)
+                                    CALLBACK_(executeIOOutput,NULL),
+                                    WAIT_FOREVER
                                    );
         if (error == ERROR_NONE)
         {
