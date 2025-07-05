@@ -312,6 +312,7 @@ LOCAL bool readProcessIO(int fd, String line)
 *          stderrExecuteIOUserData - stderr callback user data
 *          stderrStripCount        - number of character to strip from
 *                                    stderr output text
+*          timeout                 - timeout [s] or WAIT_FOREVER
 * Output : ERROR_NONE or error code
 * Return : -
 * Notes  : -
@@ -325,29 +326,17 @@ LOCAL Errors execute(const char        *command,
                      uint              stdoutStripCount,
                      ExecuteIOFunction stderrExecuteIOFunction,
                      void              *stderrExecuteIOUserData,
-                     uint              stderrStripCount
+                     uint              stderrStripCount,
+                     long              timeout
                     )
 {
-  Errors     error;
-  #if   defined(PLATFORM_LINUX)
-    String     text;
-    const char * const *s;
-    #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
-      int        pipeStdin[2],pipeStdout[2],pipeStderr[2];
-      pid_t      pid;
-      int        status;
-      bool       sleepFlag;
-      String     line;
-      int        exitcode;
-    #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
+  Errors error;
 
   #if   defined(PLATFORM_LINUX)
     // init variables
-    text  = String_new();
     error = ERROR_NONE;
 
+    String text = String_new();
     if (errorText != NULL)
     {
       // get error text
@@ -361,7 +350,7 @@ LOCAL Errors execute(const char        *command,
       String_setCString(text,command);
       if ((arguments != NULL) && (arguments[0] != NULL))
       {
-        s = &arguments[1];
+        const char * const *s = &arguments[1];
         while ((*s) != NULL)
         {
           String_joinCString(text,*s,' ');
@@ -369,10 +358,10 @@ LOCAL Errors execute(const char        *command,
         }
       }
     }
-//fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(text));
 
     #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
       // create i/o pipes
+      int pipeStdin[2],pipeStdout[2],pipeStderr[2];
       if (pipe(pipeStdin) != 0)
       {
         error = ERRORX_(IO_REDIRECT_FAIL,errno,"%s",String_cString(text));
@@ -399,7 +388,7 @@ LOCAL Errors execute(const char        *command,
       }
 
       // do fork to start separated process
-      pid = fork();
+      pid_t pid = fork();
       if      (pid == 0)
       {
         /* Note: do not use any function here which may synchronize (lock)
@@ -448,16 +437,21 @@ LOCAL Errors execute(const char        *command,
       close(pipeStdout[1]);
       close(pipeStdin[0]);
 
+      TimeoutInfo timeoutInfo;
+      Misc_initTimeout(&timeoutInfo,timeout * MS_PER_SECOND);
+
       // read stdout/stderr and wait until process terminate
-      line   = String_new();
-      status = 0xFFFFFFFF;
-      while (   (waitpid(pid,&status,WNOHANG) == 0)
-             || (   !WIFEXITED(status)
-                 && !WIFSIGNALED(status)
+      String line   = String_new();
+      int    status = 0xFFFFFFFF;
+      while (   (   (waitpid(pid,&status,WNOHANG) == 0)
+                 || (   !WIFEXITED(status)
+                     && !WIFSIGNALED(status)
+                    )
                 )
+             && !Misc_isTimeout(&timeoutInfo)
             )
       {
-        sleepFlag = TRUE;
+        bool sleepFlag = TRUE;
 
         if (readProcessIO(pipeStdout[0],line))
         {
@@ -479,13 +473,13 @@ LOCAL Errors execute(const char        *command,
           Misc_mdelay(250);
         }
       }
-      while (readProcessIO(pipeStdout[0],line))
+      while (!Misc_isTimeout(&timeoutInfo) && readProcessIO(pipeStdout[0],line))
       {
         String_remove(line,STRING_BEGIN,stdoutStripCount);
         if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(line,stdoutExecuteIOUserData);
         String_clear(line);
       }
-      while (readProcessIO(pipeStderr[0],line))
+      while (!Misc_isTimeout(&timeoutInfo) && readProcessIO(pipeStderr[0],line))
       {
         String_remove(line,STRING_BEGIN,stderrStripCount);
         if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(line,stderrExecuteIOUserData);
@@ -499,10 +493,13 @@ LOCAL Errors execute(const char        *command,
       close(pipeStdin[1]);
 
       // check exit code
-      exitcode = -1;
-      if      (WIFEXITED(status))
+      if      (Misc_isTimeout(&timeoutInfo))
       {
-        exitcode = WEXITSTATUS(status);
+        error = ERROR_EXEC_TIMEOUT;
+      }
+      else if (WIFEXITED(status))
+      {
+        int exitcode = WEXITSTATUS(status);
         if (exitcode == 0)
         {
           error = ERROR_NONE;
@@ -520,6 +517,9 @@ LOCAL Errors execute(const char        *command,
       {
         error = ERROR_UNKNOWN;
       }
+
+      // free resources
+      Misc_doneTimeout(&timeoutInfo);
     #else /* not defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
       UNUSED_VARIABLE(command);
       UNUSED_VARIABLE(arguments);
@@ -2545,7 +2545,8 @@ Errors Misc_executeCommand(const char        *commandTemplate,
                            ExecuteIOFunction stdoutExecuteIOFunction,
                            void              *stdoutExecuteIOUserData,
                            ExecuteIOFunction stderrExecuteIOFunction,
-                           void              *stderrExecuteIOUserData
+                           void              *stderrExecuteIOUserData,
+                           long              timeout
                           )
 {
   Errors          error;
@@ -2647,7 +2648,8 @@ stringNode = stringNode->next;
                     CALLBACK_(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
                     0,  // stdoutStripCount
                     CALLBACK_(stderrExecuteIOFunction,stderrExecuteIOUserData),
-                    0  // stderrStripCount
+                    0,  // stderrStripCount
+                    timeout
                    );
 
     // free resources
@@ -2665,7 +2667,8 @@ Errors Misc_executeScript(const char        *script,
                           ExecuteIOFunction stdoutExecuteIOFunction,
                           void              *stdoutExecuteIOUserData,
                           ExecuteIOFunction stderrExecuteIOFunction,
-                          void              *stderrExecuteIOUserData
+                          void              *stderrExecuteIOUserData,
+                          long              timeout
                          )
 {
   const char      *shellCommand;
@@ -2744,7 +2747,8 @@ Errors Misc_executeScript(const char        *script,
                     CALLBACK_(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
                     0,  // stdoutStripCount
                     CALLBACK_(stderrExecuteIOFunction,stderrExecuteIOUserData),
-                    String_length(tmpFileName)+1+1
+                    String_length(tmpFileName)+1+1,
+                    timeout
                    );
 
     // free resources

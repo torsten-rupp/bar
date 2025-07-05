@@ -180,6 +180,8 @@
 #define FILE_NAME_EXTENSION_ARCHIVE_FILE          ".bar"
 #define FILE_NAME_EXTENSION_INCREMENTAL_FILE      ".bid"
 
+#define SCRIPT_TIMEOUT                            (5 * S_PER_MINUTE)  // script timeout [s]
+
 // program exit codes
 typedef enum
 {

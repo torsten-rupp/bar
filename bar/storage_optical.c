@@ -1072,7 +1072,8 @@ LOCAL Errors loadOpticalVolume(const StorageInfo *storageInfo)
                                 textMacros.count,
                                 commandLine,
                                 CALLBACK_(executeIOOutput,NULL),
-                                CALLBACK_(executeIOOutput,NULL)
+                                CALLBACK_(executeIOOutput,NULL),
+                                WAIT_FOREVER
                                );
     if (error == ERROR_NONE)
     {
@@ -1184,7 +1185,8 @@ LOCAL Errors unloadOpticalVolume(const StorageInfo *storageInfo)
                                 textMacros.count,
                                 commandLine,
                                 CALLBACK_(executeIOOutput,NULL),
-                                CALLBACK_(executeIOOutput,NULL)
+                                CALLBACK_(executeIOOutput,NULL),
+                                WAIT_FOREVER
                                );
     if (error == ERROR_NONE)
     {
@@ -1299,7 +1301,8 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
                             textMacros.count,
                             NULL, // commandLine
                             CALLBACK_(executeIOOutput,NULL),
-                            CALLBACK_(executeIOOutput,NULL)
+                            CALLBACK_(executeIOOutput,NULL),
+                            SCRIPT_TIMEOUT
                            ) == ERROR_NONE
        )
     {
@@ -1531,7 +1534,8 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
                                   textMacros.count,
                                   commandLine,
                                   CALLBACK_(executeIOblankStdout,&executeIOInfo),
-                                  CALLBACK_(executeIOblankStderr,&executeIOInfo)
+                                  CALLBACK_(executeIOblankStderr,&executeIOInfo),
+                                  WAIT_FOREVER
                                  );
       if (error == ERROR_NONE)
       {
@@ -1630,7 +1634,8 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
                                   textMacros.count,
                                   commandLine,
                                   CALLBACK_(executeIOOutput,NULL),
-                                  CALLBACK_(executeIOOutput,NULL)
+                                  CALLBACK_(executeIOOutput,NULL),
+                                  SCRIPT_TIMEOUT
                                  );
       if (error == ERROR_NONE)
       {
@@ -1755,7 +1760,8 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
                                   textMacros.count,
                                   commandLine,
                                   CALLBACK_(executeIOmkisofsStdout,&executeIOInfo),
-                                  CALLBACK_(executeIOmkisofsStderr,&executeIOInfo)
+                                  CALLBACK_(executeIOmkisofsStderr,&executeIOInfo),
+                                  WAIT_FOREVER
                                  );
       if (error == ERROR_NONE)
       {
@@ -1806,7 +1812,8 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
                                     textMacros.count,
                                     commandLine,
                                     CALLBACK_(executeIOOutput,NULL),
-                                    CALLBACK_(executeIOOutput,NULL)
+                                    CALLBACK_(executeIOOutput,NULL),
+                                    SCRIPT_TIMEOUT
                                    );
         if (error == ERROR_NONE)
         {
@@ -1849,7 +1856,8 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
                                     textMacros.count,
                                     commandLine,
                                     CALLBACK_(executeIOdvdisasterStdout,&executeIOInfo),
-                                    CALLBACK_(executeIOdvdisasterStderr,&executeIOInfo)
+                                    CALLBACK_(executeIOdvdisasterStderr,&executeIOInfo),
+                                    WAIT_FOREVER
                                    );
         if (error == ERROR_NONE)
         {
@@ -1892,7 +1900,8 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
                                     textMacros.count,
                                     commandLine,
                                     CALLBACK_(executeIOOutput,NULL),
-                                    CALLBACK_(executeIOOutput,NULL)
+                                    CALLBACK_(executeIOOutput,NULL),
+                                    SCRIPT_TIMEOUT
                                    );
         if (error == ERROR_NONE)
         {
@@ -1942,7 +1951,8 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
                                   textMacros.count,
                                   commandLine,
                                   CALLBACK_(executeIOOutput,NULL),
-                                  CALLBACK_(executeIOOutput,NULL)
+                                  CALLBACK_(executeIOOutput,NULL),
+                                  SCRIPT_TIMEOUT
                                  );
       if (error == ERROR_NONE)
       {
@@ -2268,7 +2278,8 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
                                 textMacros.count,
                                 commandLine,
                                 CALLBACK_(executeIOgrowisofsStdout,&executeIOInfo),
-                                CALLBACK_(executeIOgrowisofsStderr,&executeIOInfo)
+                                CALLBACK_(executeIOgrowisofsStderr,&executeIOInfo),
+                                WAIT_FOREVER
                                );
     if (error == ERROR_NONE)
     {
@@ -2455,7 +2466,8 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
                                 textMacros.count,
                                 commandLine,
                                 CALLBACK_(executeIOgrowisofsStdout,&executeIOInfo),
-                                CALLBACK_(executeIOgrowisofsStderr,&executeIOInfo)
+                                CALLBACK_(executeIOgrowisofsStderr,&executeIOInfo),
+                                WAIT_FOREVER
                                );
     if (error == ERROR_NONE)
     {
