@@ -683,7 +683,8 @@ Errors executeTemplate(const char        *templateString,
       // execute script
       error = Misc_executeScript(String_cString(script),
                                  CALLBACK_(executeIOFunction,executeIOUserData),
-                                 CALLBACK_(executeIOFunction,executeIOUserData)
+                                 CALLBACK_(executeIOFunction,executeIOUserData),
+                                 SCRIPT_TIMEOUT
                                 );
       String_delete(script);
     }

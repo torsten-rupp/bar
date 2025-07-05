@@ -11694,7 +11694,8 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
                                    UNUSED_VARIABLE(userData);
 
                                    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
-                                 },NULL)
+                                 },NULL),
+                                 SCRIPT_TIMEOUT
                                 );
     }
   }
