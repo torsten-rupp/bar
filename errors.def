@@ -830,6 +830,13 @@ ERROR EXEC_TERMINATE
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR EXEC_TIMEOUT
+  stringSet(errorText,sizeof(errorText),TR("execute external program timeout"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 // --- BARControl protocol ----------------------------------------------
 ERROR PARSE
   stringSet(errorText,sizeof(errorText),TR("parsing data failed"));

@@ -1451,7 +1451,8 @@ void logPostProcess(LogHandle        *logHandle,
                                     textMacros.count,
                                     NULL,  // commandLine
                                     CALLBACK_(NULL,NULL),
-                                    CALLBACK_(executeIOlogPostProcess,&stderrList)
+                                    CALLBACK_(executeIOlogPostProcess,&stderrList),
+                                    (globalOptions.commandTimeout > 0) ? (long)globalOptions.commandTimeout : WAIT_FOREVER
                                    );
         if (error != ERROR_NONE)
         {
@@ -2060,7 +2061,8 @@ Errors addStorageNameListFromCommand(StringList *storageNameList, const char *te
 
                                StringList_append(storageNameList,line);
                              },NULL),
-                             CALLBACK_(NULL,NULL)
+                             CALLBACK_(NULL,NULL),
+                             (globalOptions.commandTimeout > 0) ? (long)globalOptions.commandTimeout : WAIT_FOREVER
                             );
   if (error != ERROR_NONE)
   {
@@ -2151,7 +2153,8 @@ Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, con
 
                                EntryList_append(entryList,entryType,line,PATTERN_TYPE_GLOB,NULL);
                              },NULL),
-                             CALLBACK_(NULL,NULL)
+                             CALLBACK_(NULL,NULL),
+                             (globalOptions.commandTimeout > 0) ? (long)globalOptions.commandTimeout : WAIT_FOREVER
                             );
   if (error != ERROR_NONE)
   {
@@ -2243,7 +2246,8 @@ Errors addExcludeListFromCommand(PatternList *patternList, const char *template)
 
                                PatternList_append(patternList,line,PATTERN_TYPE_GLOB,NULL);
                              },NULL),
-                             CALLBACK_(NULL,NULL)
+                             CALLBACK_(NULL,NULL),
+                             (globalOptions.commandTimeout > 0) ? (long)globalOptions.commandTimeout : WAIT_FOREVER
                             );
   if (error != ERROR_NONE)
   {
@@ -3405,7 +3409,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     Misc_getCurrentDateTime(),
                                     textMacros.data,
                                     textMacros.count,
-                                    CALLBACK_(NULL,NULL)
+                                    CALLBACK_(NULL,NULL),
+                                    globalOptions.commandTimeout
                                    );
             String_delete(directory);
           }
@@ -3473,7 +3478,8 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     Misc_getCurrentDateTime(),
                                     textMacros.data,
                                     textMacros.count,
-                                    CALLBACK_(NULL,NULL)
+                                    CALLBACK_(NULL,NULL),
+                                    globalOptions.commandTimeout
                                    );
             String_delete(directory);
           }

@@ -664,7 +664,8 @@ Errors executeTemplate(const char        *templateString,
                        const TextMacro   textMacros[],
                        uint              textMacroCount,
                        ExecuteIOFunction executeIOFunction,
-                       void              *executeIOUserData
+                       void              *executeIOUserData,
+                       uint              timeout
                       )
 {
   String script;
@@ -683,7 +684,8 @@ Errors executeTemplate(const char        *templateString,
       // execute script
       error = Misc_executeScript(String_cString(script),
                                  CALLBACK_(executeIOFunction,executeIOUserData),
-                                 CALLBACK_(executeIOFunction,executeIOUserData)
+                                 CALLBACK_(executeIOFunction,executeIOUserData),
+                                 timeout
                                 );
       String_delete(script);
     }

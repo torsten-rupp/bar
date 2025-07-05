@@ -180,6 +180,8 @@
 #define FILE_NAME_EXTENSION_ARCHIVE_FILE          ".bar"
 #define FILE_NAME_EXTENSION_INCREMENTAL_FILE      ".bid"
 
+#define DEFAULT_COMMND_TIMEOUT                    (30 * S_PER_MINUTE)  // script timeout [s]
+
 // program exit codes
 typedef enum
 {
@@ -1043,6 +1045,8 @@ typedef struct
 
   const char                  *pidFileName;
 
+  uint                        commandTimeout;
+
   bool                        serverFlag;
   bool                        daemonFlag;
   bool                        noDetachFlag;
@@ -1515,6 +1519,7 @@ String expandTemplate(const char       *templateString,
 *          textMacroCount    - number of macros
 *          executeIOFunction - execute I/O function
 *          executeIOUserData - execute I/O function user data
+*          timeout           - timeout [s] or 0
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1525,7 +1530,8 @@ Errors executeTemplate(const char        *templateString,
                        const TextMacro   textMacros[],
                        uint              textMacroCount,
                        ExecuteIOFunction executeIOFunction,
-                       void              *executeIOUserData
+                       void              *executeIOUserData,
+                       uint              timeout
                       );
 
 // ----------------------------------------------------------------------
