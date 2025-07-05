@@ -2939,21 +2939,14 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                            IndexId     storageId
                           )
 {
-  Errors           error;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  String           storageName;
-  String           string;
-  uint64           createdDateTime;
-  StorageSpecifier storageSpecifier;
-  StorageInfo      storageInfo;
+  Errors error;
 
   assert(indexHandle != NULL);
 
-  // init variables
-  storageName = String_new();
-  string      = String_new();
-
   // find storage
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String storageName = String_new();
+  uint64 createdDateTime;
   if (!Index_findStorageById(indexHandle,
                              storageId,
                              jobUUID,
@@ -2972,7 +2965,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                             )
      )
   {
-    String_delete(string);
     String_delete(storageName);
     return ERROR_DATABASE_ENTRY_NOT_FOUND;
   }
@@ -2980,6 +2972,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
   error = ERROR_NONE;
   if (!String_isEmpty(storageName))
   {
+    StorageSpecifier storageSpecifier;
     Storage_initSpecifier(&storageSpecifier);
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error == ERROR_NONE)
@@ -2993,6 +2986,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
 #warning NYI: move this special handling of limited scp into Storage_delete()?
 #endif
       // init storage
+      StorageInfo storageInfo;
       if (storageSpecifier.type == STORAGE_TYPE_SCP)
       {
         // try to init scp-storage first with sftp
@@ -3121,12 +3115,13 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
           {
             if (createdDateTime > 0LL)
             {
+              char string[64];
               logMessage(NULL,  // logHandle,
                          LOG_TYPE_ALWAYS,
                          "Deleted storage #%"PRIi64": '%s', created at %s",
                          INDEX_DATABASE_ID(storageId),
                          String_cString(storageName),
-                         String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,TIME_TYPE_LOCAL,NULL))
+                         Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,TIME_TYPE_LOCAL,NULL)
                         );
             }
             else
@@ -3169,13 +3164,11 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
     Storage_doneSpecifier(&storageSpecifier);
     if (error != ERROR_NONE)
     {
-      String_delete(string);
       String_delete(storageName);
       return error;
     }
     if (isQuit())
     {
-      String_delete(string);
       String_delete(storageName);
       return ERROR_INTERRUPTED;
     }
@@ -3188,14 +3181,12 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                               );
     if (error != ERROR_NONE)
     {
-      String_delete(string);
       String_delete(storageName);
       return error;
     }
   }
 
   // free resources
-  String_delete(string);
   String_delete(storageName);
 
   return ERROR_NONE;
@@ -3399,13 +3390,13 @@ LOCAL Errors deleteEntity(IndexHandle  *indexHandle,
     {
       if (createdDateTime > 0LL)
       {
-        String string = String_new();
+        char string[64];
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
                    "Deleted entity #%"PRIi64": job '%s', created at %s",
                    INDEX_DATABASE_ID(entityId),
                    String_cString(jobName),
-                   String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,TIME_TYPE_LOCAL,NULL))
+                   Misc_formatDateTimeCString(string,sizeof(string),createdDateTime,TIME_TYPE_LOCAL,NULL)
                   );
         String_delete(string);
       }
@@ -4010,53 +4001,35 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                                   ArchiveTypes newArchiveType
                                  )
 {
-  Array            entityIdArray;
-  String           expiredJobName;
-  EntityList       entityList;
-  Errors           failError;
-  uint64           now;
-  IndexId          expiredEntityId;
-  ArchiveTypes     expiredArchiveType;
-  uint64           expiredCreatedDateTime;
-  ulong            expiredTotalEntryCount;
-  uint64           expiredTotalEntrySize;
-  String           expiredReason;
-  MountList        mountList;
-  Errors           error;
-  const JobNode    *jobNode;
-  EntityList       jobEntityList;
-  const EntityNode *jobEntityNode,*otherJobEntityNode;
-  const EntityNode *nextJobEntityNode;
-  uint             age;
-  uint             totalEntityCount;
-  uint64           totalEntitySize;
-  AutoFreeList     autoFreeList;
-  char             string[64];
-
   assert(indexHandle != NULL);
 
   // init variables
+  Array entityIdArray;
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  expiredJobName = String_new();
-  expiredReason  = String_new();
-  List_init(&entityList,
-            CALLBACK_(NULL,NULL),
-            CALLBACK_((ListNodeFreeFunction)freeEntityNode,NULL)
-           );
+  String expiredJobName = String_new();
+  String expiredReason  = String_new();
 
-  failError = ERROR_NONE;
+  Errors  failError = ERROR_NONE;
+  IndexId expiredEntityId;
   do
   {
+    expiredEntityId = INDEX_ID_NONE;
+
     // get entity list
+    EntityList entityList;
+    List_init(&entityList,
+              CALLBACK_(NULL,NULL),
+              CALLBACK_((ListNodeFreeFunction)freeEntityNode,NULL)
+             );
     getEntityList(&entityList,indexHandle);
 
     // init variables
-    now                    = Misc_getCurrentDateTime();
-    expiredEntityId        = INDEX_ID_NONE;
-    expiredArchiveType     = ARCHIVE_TYPE_NONE;
-    expiredCreatedDateTime = 0LL;
-    expiredTotalEntryCount = 0;
-    expiredTotalEntrySize  = 0LL;
+    uint64       now                    = Misc_getCurrentDateTime();
+    ArchiveTypes expiredArchiveType     = ARCHIVE_TYPE_NONE;
+    uint64       expiredCreatedDateTime = 0LL;
+    ulong        expiredTotalEntryCount = 0;
+    uint64       expiredTotalEntrySize  = 0LL;
+    MountList    mountList;
     List_init(&mountList,
               CALLBACK_((ListNodeDuplicateFunction)Configuration_duplicateMountNode,NULL),
               CALLBACK_((ListNodeFreeFunction)Configuration_freeMountNode,NULL)
@@ -4065,9 +4038,11 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       // find expired/surpluse entity
+      const JobNode *jobNode;
       JOB_LIST_ITERATEX(jobNode,INDEX_ID_IS_NONE(expiredEntityId))
       {
         // get entity list for job with assigned persistence
+        EntityList jobEntityList;
         getJobEntityList(&jobEntityList,
                          &entityList,
                          jobNode->job.uuid,
@@ -4081,16 +4056,18 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
            )
         {
           // find expired entity
+          const EntityNode *jobEntityNode;
           LIST_ITERATEX(&jobEntityList,jobEntityNode,INDEX_ID_IS_NONE(expiredEntityId))
           {
-            totalEntityCount = 0;
-            totalEntitySize  = 0LL;
+            ulong  totalEntityCount = 0;
+            uint64 totalEntitySize  = 0LL;
 
             if (   !jobEntityNode->lockedFlag
                 && (jobEntityNode->persistenceNode != NULL)
                )
             {
               // calculate number/total size of entities in persistence periode
+              const EntityNode *otherJobEntityNode;
               LIST_ITERATE(&jobEntityList,otherJobEntityNode)
               {
                 if (   (otherJobEntityNode->persistenceNode == jobEntityNode->persistenceNode)  // same periode
@@ -4112,7 +4089,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
               }
 
               // get age
-              age = (now-jobEntityNode->createdDateTime)/S_PER_DAY;
+              uint age = (now-jobEntityNode->createdDateTime)/S_PER_DAY;
 
               // check if expired and not "in-transit"
               if (   !isInTransit(jobEntityNode)
@@ -4134,6 +4111,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                   // over max-keep limit -> find oldest entry of same type and persistence
 
                   // mark expired entity+oldest entity as processed
+                  const EntityNode *nextJobEntityNode;
                   Array_append(&entityIdArray,&jobEntityNode->entityId);
                   do
                   {
@@ -4211,8 +4189,9 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
     // delete expired entity
     if (!INDEX_ID_IS_NONE(expiredEntityId))
     {
+      AutoFreeList autoFreeList;
       AutoFree_init(&autoFreeList);
-      error = ERROR_NONE;
+      Errors error = ERROR_NONE;
 
       // lock entity
       if (error == ERROR_NONE)
@@ -4261,6 +4240,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
 
       if (error == ERROR_NONE)
       {
+        char string[64];
         plogMessage(NULL,  // logHandle,
                     LOG_TYPE_INDEX,
                     "INDEX",
@@ -4285,6 +4265,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
             && (Error_getCode(error) != ERROR_CODE_INTERRUPTED)
            )
         {
+          char string[64];
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
                       "INDEX",
@@ -6043,7 +6024,6 @@ LOCAL void autoCleanIndex(IndexHandle *indexHandle)
   IndexStates      indexState;
   IndexModes       indexMode;
   uint64           lastCheckedDateTime;
-  char             buffer[64];
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -6134,12 +6114,13 @@ LOCAL void autoCleanIndex(IndexHandle *indexHandle)
                          NULL  // progressInfo
                         );
 
+      char string[64];
       plogMessage(NULL,  // logHandle,
                   LOG_TYPE_INDEX,
                   "INDEX",
                   "Auto deleted index for '%s', last checked %s",
                   String_cString(printableStorageName),
-                  Misc_formatDateTimeCString(buffer,sizeof(buffer),lastCheckedDateTime,TIME_TYPE_LOCAL,NULL)
+                  Misc_formatDateTimeCString(string,sizeof(string),lastCheckedDateTime,TIME_TYPE_LOCAL,NULL)
                  );
     }
   }
@@ -7071,12 +7052,12 @@ LOCAL void jobThreadCode(void)
 
           if ((nextScheduleDateTime > 0L) && (nextScheduleDateTime < MAX_UINT64))
           {
-            char buffer[64];
+            char string[64];
             logMessage(&logHandle,
                        LOG_TYPE_ALWAYS,
                        "Next schedule job '%s' at %s",
                        !String_isEmpty(nextJobName) ? String_cString(nextJobName) : String_cString(nextJobUUID),
-                       Misc_formatDateTimeCString(buffer,sizeof(buffer),nextScheduleDateTime,TIME_TYPE_LOCAL,NULL)
+                       Misc_formatDateTimeCString(string,sizeof(string),nextScheduleDateTime,TIME_TYPE_LOCAL,NULL)
                       );
           }
         }
