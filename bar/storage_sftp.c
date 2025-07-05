@@ -1250,7 +1250,8 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
                                 time,
                                 textMacros.data,
                                 textMacros.count,
-                                CALLBACK_(executeIOOutput,NULL)
+                                CALLBACK_(executeIOOutput,NULL),
+                                globalOptions.commandTimeout
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
@@ -1320,7 +1321,8 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
                                 time,
                                 textMacros.data,
                                 textMacros.count,
-                                CALLBACK_(executeIOOutput,NULL)
+                                CALLBACK_(executeIOOutput,NULL),
+                                globalOptions.commandTimeout
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }

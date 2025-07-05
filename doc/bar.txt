@@ -5,12 +5,13 @@ SYNOPSIS
   bar [<options>] [--] <archive name> [<file>|<device>...]
   bar [<options>] [--] <key file name>
 
-  Archive name:  file://<file name>
-                 ftp:// [<login name>[:<password>]@]<host name>]/<file name>
+  Archive name:  [file://] <file name>
+                 ftp:// [<login name>[:<password>]@]<host name>/<file name>
                  scp:// [<login name>[:<password>]@]<host name>[:<port>]/<file name>
                  sftp:// [<login name>[:<password>]@]<host name>[:<port>]/<file name>
                  webdav:// [<login name>[:<password>]@]<host name>/<file name>
                  webdavs:// [<login name>[:<password>]@]<host name>/<file name>
+                 smb:// [<login name>[:<password>]@]<host name>[:share>]/<file name>
                  cd:// [<device name>:]<file name>
                  dvd:// [<device name>:]<file name>
                  bd:// [<device name>:]<file name>
@@ -41,116 +42,125 @@ barcontrol(3).
 
 OPTIONS
 
-         -c|--create                                                create new files archive
-         -m|--image                                                 create new images archive
-         -l|--list                                                  list contents of archive
-         -t|--test                                                  test contents of archive
-         -d|--compare                                               compare contents of archive with files and images
-         -x|--extract                                               restore archive
-         --convert                                                   convert archives
-         --generate-keys                                            generate new public/private key pair
+         -c|--create                                                create new files archives
+         -m|--image                                                 create new images archives
+         -l|--list                                                  list contents of archives
+         -t|--test                                                  test contents of archives
+         -d|--compare                                               compare contents of archive swith files and images
+         -x|--extract                                               restore archives
+         --convert                                                  convert archives
+         --generate-keys                                            generate new public/private key pair for encryption
          --generate-signature-keys                                  generate new public/private key pair for signature
-         --generate-keys-bits=<n>[K]                                key bits (default: 1K)
-         --generate-keys-mode=<name>                                select generate key mode mode
+         --generate-keys-bits=<n>[K]                                key bits (default: 1024)
+         --generate-keys-mode=<mode>                                select generate key mode mode
                                                                       secure   : secure keys (default)
                                                                       transient: transient keys (less secure)
          --job=<name or UUID>                                       execute job
-         --normal                                                   create normal archive (no incremental list file)
+         --normal                                                   create normal archive (no incremental list file, default)
          -f|--full                                                  create full archive and incremental list file
          -i|--incremental                                           create incremental archive
          -I|--incremental-list-file=<file name>                     incremental list file name (default: <archive name>.bid)
          --differential                                             create differential archive
-         --pattern-type=<name>                                      select pattern type
-                                                                      glob      glob patterns: * and ? (default)
-                                                                      regex     regular expression pattern matching
-                                                                      extended  extended regular expression pattern matching
+         --pattern-type=<type>                                      select pattern type
+                                                                      glob    : glob patterns: * and ? (default)
+                                                                      regex   : regular expression pattern matching
+                                                                      extended: extended regular expression pattern matching
          -T|--storage-list-stdin                                    read storage name list from stdin
          --storage-list=<file name>                                 storage name list file name
          --storage-command=<command>                                storage name command
          -#|--include=<pattern>                                     include pattern
+         --include-file-list=<file name>                            include file pattern list file name
          --include-file-command=<command>                           include file pattern command
-         --include-file-command=<command>                           include file pattern command
-         --include-image-command=<command>                          include image pattern command
+         --include-image-list=<file name>                           include image pattern list file name
          --include-image-command=<command>                          include image pattern command
          -!|--exclude=<pattern>                                     exclude pattern
          --exclude-list=<file name>                                 exclude pattern list file name
          --exclude-command=<command>                                exclude pattern command
          --mount=<name[,[device][,yes]>                             mount device
-         --mount-command=<command>                                  mount command (default: mount -p 0 %directory)
-         --mount-device-command=<command>                           mount device command (default: mount -p 0 %device %directory)
+         --mount-command=<command>                                  mount command (default: mount %directory)
+         --mount-device-command=<command>                           mount device command (default: mount %device %directory)
          --unmount-command=<command>                                unmount command (default: umount %directory)
          --delta-source=<pattern>                                   source pattern
-         --config=<file name>                                       configuration file
          --tmp-directory=<path>                                     temporary directory (default: /tmp)
          --max-tmp-size=<n>[T|G|M|K]                                max. size of temporary files
          -s|--archive-part-size=<n>[T|G|M|K]                        approximated archive part size
+         --fragment-size=<n>[T|G|M|K]                               fragment size (default: 64M)
+         --transform=<pattern,string>                               transform file names
          -p|--directory-strip=<n>                                   number of directories to strip on extract
-         --destination=<path>                                       destination to restore entries (default: )
+         --destination=<path>                                       destination to restore entries
          --owner=<user:group>                                       user and group of restored files
          --permissions=<<owner>:<group>:<world>|<number>>           permissions of restored files
          --comment=<text>                                           comment
          -C|--directory=<path>                                      change to directory
          -z|--compress-algorithm=<algorithm|xdelta+algorithm>       select compress algorithms to use
-                                                                      none           no compression (default)
-                                                                      zip0..zip9     ZIP compression level 0..9
-                                                                      bzip1..bzip9   BZIP2 compression level 1..9
-                                                                      lzma1..lzma9   LZMA compression level 1..9
-                                                                      lzo1..lzo5     LZO compression level 1..5
-                                                                      lz4-0..lz4-16  LZ4 compression level 0..16
+                                                                      none         : no compression (default)
+                                                                      zip0..zip9   : ZIP compression level 0..9
+                                                                      bzip1..bzip9 : BZIP2 compression level 1..9
+                                                                      lzma1..lzma9 : LZMA compression level 1..9
+                                                                      lzo1..lzo5   : LZO compression level 1..5
+                                                                      lz4-0..lz4-16: LZ4 compression level 0..16
                                                                       zstd0..zstd19: ZStd compression level 0..19
-                                                                    additional select with '+':
-                                                                      xdelta1..xdelta9: XDELTA compression level 1..9
-         --compress-min-size=<n>[T|G|M|K]                           minimal size of file for compression (default: 32)
+         --compress-min-size=<n>[T|G|M|K]                           minimal size of file for compression
          --compress-exclude=<pattern>                               exclude compression pattern
-         -y|--crypt-algorithm=<name>                                select crypt algorithm to use
-                                                                      none         no encryption (default)
-                                                                      3DES         3DES cipher
-                                                                      CAST5        CAST5 cipher
-                                                                      BLOWFISH     Blowfish cipher
-                                                                      AES128       AES cipher 128bit
-                                                                      AES192       AES cipher 192bit
-                                                                      AES256       AES cipher 256bit
-                                                                      TWOFISH128   Twofish cipher 128bit
-                                                                      TWOFISH256   Twofish cipher 256bit
-                                                                      SERPENT128   Serpent cipher 128bit
-                                                                      SERPENT192   Serpent cipher 192bit
-                                                                      SERPENT256   Serpent cipher 256bit
-                                                                      CAMELLIA128  Camellia cipher 128bit
-                                                                      CAMELLIA192  Camellia cipher 192bit
-                                                                      CAMELLIA256  Camellia cipher 256bit
-         --crypt-type=<name>                                        select crypt type
-                                                                      symmetric   symmetric (default)
-                                                                      asymmetric  asymmetric
+         -y|--crypt-algorithm=<algorithm>                           select crypt algorithms to use
+                                                                      none (default)
+                                                                      3DES
+                                                                      CAST5
+                                                                      BLOWFISH
+                                                                      AES128
+                                                                      AES192
+                                                                      AES256
+                                                                      TWOFISH128
+                                                                      TWOFISH256
+                                                                      SERPENT128
+                                                                      SERPENT192
+                                                                      SERPENT256
+                                                                      CAMELLIA128
+                                                                      CAMELLIA192
+                                                                      CAMELLIA256
+         --crypt-type=<type>                                        select crypt type
+                                                                      symmetric : symmetric (default)
+                                                                      asymmetric: asymmetric
          --crypt-password=<password>                                crypt password (use with care!)
-         --crypt-public-key=<file name>                             public key for encryption
-         --crypt-private-key=<file name>                            private key for decryption
+         --crypt-new-password=<password>                            new crypt password (use with care!)
+         --crypt-public-key=<file name|data>                        public key for asymmetric encryption
+         --crypt-private-key=<file name|data>                       private key for asymmetric decryption
          --signature-public-key=<file name|data>                    public key for signature check
          --signature-private-key=<file name|data>                   private key for signature generation
+         --par2-directory=<path>                                    PAR2 checksum directory
+         --par2-block-size=<n>[T|G|M|K]                             PAR2 block size (default: 2264)
+         --par2-files=<n>                                           number of PAR2 checksum files to create (default: 1)
+         --par2-blocks=<n>                                          number of PAR2 error correction blocks (default: 128)
          --ftp-login-name=<name>                                    ftp login name
          --ftp-password=<password>                                  ftp password (use with care!)
          --ftp-max-connections=<n>                                  max. number of concurrent ftp connections
-         --ssh-port=<n>                                             ssh port (default: 22)
          --ssh-login-name=<name>                                    ssh login name
          --ssh-password=<password>                                  ssh password (use with care!)
-         --ssh-public-key=<file name>                               ssh public key file name
-         --ssh-private-key=<file name>                              ssh private key file name
+         --ssh-port=<n>                                             ssh port (default: 22)
+         --ssh-public-key=<file name|data>                          ssh public key
+         --ssh-private-key=<file name|data>                         ssh private key
          --ssh-max-connections=<n>                                  max. number of concurrent ssh connections
+         --webdav-port=<n>                                          WebDAV port (default: 80)
          --webdav-login-name=<name>                                 WebDAV login name
          --webdav-password=<password>                               WebDAV password (use with care!)
          --webdav-max-connections=<n>                               max. number of concurrent WebDAV connections
-         --daemon                                                   run in daemon mode
+         --smb-login-name=<name>                                    SMB/CIFS login name
+         --smb-password=<password>                                  SMB/CIFS password (use with care!)
+         --smb-share=<name>                                         SMB/CIFS share name
+         --smb-max-connections=<n>                                  max. number of concurrent ftp connections
+         --server                                                   run in server mode
+         --daemon                                                   run in server daemon mode
          -D|--no-detach                                             do not detach in daemon mode
-         --server-mode=<name>                                       select server mode
+         --server-mode=<mode>                                       select server mode
                                                                       master: master (default)
                                                                       slave : slave
          --server-port=<n>                                          server port (default: 38523)
-         --server-tls-port=<n>                                      TLS (SSL) server port (default: 38524)
+         --server-tls-port=<n>                                      TLS (SSL) server port
          --server-ca-file=<file name>                               TLS (SSL) server certificate authority file (CA file)
          --server-cert-file=<file name>                             TLS (SSL) server certificate file
          --server-key-file=<file name>                              TLS (SSL) server key file
          --server-password=<password>                               server password (use with care!)
          --server-max-connections=<n>                               max. concurrent connections to server (default: 8)
-         --server-jobs-directory=<path name>                        server job directory (default: /etc/bar/jobs)
          --nice-level=<n>                                           general nice level of processes/threads
          --max-threads=<n>                                          max. number of concurrent compress/encryption threads
          --max-band-width=<number or file name>                     max. network band width to use [bits/s]
@@ -167,55 +177,57 @@ OPTIONS
          --sftp-write-post-command=<command>                        write SFTP post-process command
          --webdav-write-pre-command=<command>                       write WebDAV pre-process command
          --webdav-write-post-command=<command>                      write WebDAV post-process command
-         --cd-device=<device name>                                  default CD device (default: /dev/cdrw)
+         --smb-write-pre-command=<command>                          write SMB/CIFS pre-process command
+         --smb-write-post-command=<command>                         write SMB/CIFS post-process command
+         --cd-device=<device name>                                  CD device (default: /dev/cdrw)
          --cd-request-volume-command=<command>                      request new CD volume command
-         --cd-unload-volume-command=<command>                       unload CD volume command (default: eject %device)
-         --cd-load-volume-command=<command>                         load CD volume command (default: eject -t %device)
+         --cd-unload-volume-command=<command>                       unload CD volume command (default: )
+         --cd-load-volume-command=<command>                         load CD volume command (default: )
          --cd-volume-size=<n>[T|G|M|K]                              CD volume size
          --cd-image-pre-command=<command>                           make CD image pre-process command
          --cd-image-post-command=<command>                          make CD image post-process command
-         --cd-image-command=<command>                               make CD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %directory)
+         --cd-image-command=<command>                               make CD image command (default: )
          --cd-ecc-pre-command=<command>                             make CD error-correction codes pre-process command
          --cd-ecc-post-command=<command>                            make CD error-correction codes post-process command
-         --cd-ecc-command=<command>                                 make CD error-correction codes command (default: nice dvdisaster -mRS02 -n cd -c -i %image -v)
-         --cd-blank-command=<command>                               blank CD medium command (default: nice dvd+rw-format -blank %device)
+         --cd-ecc-command=<command>                                 make CD error-correction codes command (default: )
+         --cd-blank-command=<command>                               blank CD medium command (default: )
          --cd-write-pre-command=<command>                           write CD pre-process command
          --cd-write-post-command=<command>                          write CD post-process command
-         --cd-write-command=<command>                               write CD command (default: nice sh -c 'mkisofs -V Backup -volset %number -r -o %image %directory && cdrecord dev=%device %image')
-         --cd-write-image-command=<command>                         write CD image command (default: nice cdrecord dev=%device %image)
-         --dvd-device=<device name>                                 default DVD device (default: /dev/dvd)
+         --cd-write-command=<command>                               write CD command (default: )
+         --cd-write-image-command=<command>                         write CD image command (default: )
+         --dvd-device=<device name>                                 DVD device (default: /dev/dvd)
          --dvd-request-volume-command=<command>                     request new DVD volume command
-         --dvd-unload-volume-command=<command>                      unload DVD volume command (default: eject %device)
-         --dvd-load-volume-command=<command>                        load DVD volume command (default: eject -t %device)
+         --dvd-unload-volume-command=<command>                      unload DVD volume command (default: )
+         --dvd-load-volume-command=<command>                        load DVD volume command (default: )
          --dvd-volume-size=<n>[T|G|M|K]                             DVD volume size
          --dvd-image-pre-command=<command>                          make DVD image pre-process command
          --dvd-image-post-command=<command>                         make DVD image post-process command
-         --dvd-image-command=<command>                              make DVD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %directory)
+         --dvd-image-command=<command>                              make DVD image command (default: )
          --dvd-ecc-pre-command=<command>                            make DVD error-correction codes pre-process command
          --dvd-ecc-post-command=<command>                           make DVD error-correction codes post-process command
-         --dvd-ecc-command=<command>                                make DVD error-correction codes command (default: nice dvdisaster -mRS02 -n dvd -c -i %image -v)
-         --dvd-blank-command=<command>                              blank DVD mediumcommand (default: nice dvd+rw-format -blank %device)
+         --dvd-ecc-command=<command>                                make DVD error-correction codes command (default: )
+         --dvd-blank-command=<command>                              blank DVD medium command (default: )
          --dvd-write-pre-command=<command>                          write DVD pre-process command
          --dvd-write-post-command=<command>                         write DVD post-process command
-         --dvd-write-command=<command>                              write DVD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory)
-         --dvd-write-image-command=<command>                        write DVD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload)
-         --bd-device=<device name>                                  default BD device (default: /dev/bd)
+         --dvd-write-command=<command>                              write DVD command (default: )
+         --dvd-write-image-command=<command>                        write DVD image command (default: )
+         --bd-device=<device name>                                  BD device (default: /dev/bd)
          --bd-request-volume-command=<command>                      request new BD volume command
-         --bd-unload-volume-command=<command>                       unload BD volume command (default: eject %device)
-         --bd-load-volume-command=<command>                         load BD volume command (default: eject -t %device)
+         --bd-unload-volume-command=<command>                       unload BD volume command (default: )
+         --bd-load-volume-command=<command>                         load BD volume command (default: )
          --bd-volume-size=<n>[T|G|M|K]                              BD volume size
          --bd-image-pre-command=<command>                           make BD image pre-process command
          --bd-image-post-command=<command>                          make BD image post-process command
-         --bd-image-command=<command>                               make BD image command (default: nice mkisofs -V Backup -volset %number -r -o %image %directory)
+         --bd-image-command=<command>                               make BD image command (default: )
          --bd-ecc-pre-command=<command>                             make BD error-correction codes pre-process command
          --bd-ecc-post-command=<command>                            make BD error-correction codes post-process command
-         --bd-ecc-command=<command>                                 make BD error-correction codes command (default: nice dvdisaster -mRS02 -n bd -c -i %image -v)
-         --bd-blank-command=<command>                               blank BD medium command (default: nice dvd+rw-format -blank %device)
+         --bd-ecc-command=<command>                                 make BD error-correction codes command (default: )
+         --bd-blank-command=<command>                               blank BD medium command (default: )
          --bd-write-pre-command=<command>                           write BD pre-process command
          --bd-write-post-command=<command>                          write BD post-process command
-         --bd-write-command=<command>                               write BD command (default: nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory)
-         --bd-write-image-command=<command>                         write BD image command (default: nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload)
-         --device=<device name>                                     default device
+         --bd-write-command=<command>                               write BD command (default: )
+         --bd-write-image-command=<command>                         write BD image command (default: )
+         --device=<device name>                                     device
          --device-request-volume-command=<command>                  request new volume command
          --device-load-volume-command=<command>                     load volume command
          --device-unload-volume-command=<command>                   unload volume command
@@ -231,36 +243,43 @@ OPTIONS
          --device-write-post-command=<command>                      write device post-process command
          --device-write-command=<command>                           write device command
          --max-storage-size=<n>[T|G|M|K]                            max. storage size
+         --test-created-archives                                    test created archives
          --volume-size=<n>[T|G|M|K]                                 volume size
          --ecc                                                      add error-correction codes with 'dvdisaster' tool
          --always-create-image                                      always create image for CD/DVD/BD/device
          --blank                                                    blank medium before writing
          --jobs-directory=<path name>                               server job directory (default: /etc/bar/jobs)
          --incremental-data-directory=<path name>                   server incremental data directory (default: /var/lib/bar)
-         --index-database=<file name>                               index database file name
+         --index-database=<URI>                                     index database URI (default: sqlite3:/var/lib/index.db)
+                                                                      sqlite3:<file name>
+                                                                      mariadb:<host name>:<user name>:<password>
+                                                                      postgresql:<host name>:<user name>:<password>
+         --index-database-update                                    enabled update index database
          --index-database-auto-update                               enabled automatic update index database
          --index-database-max-band-width=<number or file name>      max. band width to use for index updates [bis/s]
-         --index-database-keep-time=<n>[weeks|week|days|day|h|m|s]  time to keep index data of not existing storages (default: 86400)
+         --index-database-keep-time=<n>[weeks|week|days|day|h|m|s]  time to keep index data of not existing storages
          --continuous-max-size=<n>[T|G|M|K]                         max. continuous size
          --continuous-min-time-delta=<n>[weeks|week|days|day|h|m|s] min. time between continuous backup of an entry
-         --log=<name>[,<name>...]                                   log types
-                                                                      none        no logging (default)
-                                                                      errors      log errors
-                                                                      warnings    log warnings
-                                                                      ok          log stored/restored files
-                                                                      unknown     log unknown files
-                                                                      skipped     log skipped files
-                                                                      missing     log missing files
-                                                                      incomplete  log incomplete files
-                                                                      excluded    log excluded files
-                                                                      storage     log storage
-                                                                      index       index database
-                                                                      continuous  continuous backup
-                                                                      all         log everything
+         --log=<type[,<type>...]>                                   log types
+                                                                      none      : no logging (default)
+                                                                      errors    : log errors
+                                                                      warnings  : log warnings
+                                                                      info      : log info
+                                                                      ok        : log stored/restored files
+                                                                      unknown   : log unknown files
+                                                                      skipped   : log skipped files
+                                                                      missing   : log missing files
+                                                                      incomplete: log incomplete files
+                                                                      excluded  : log excluded files
+                                                                      storage   : log storage
+                                                                      index     : index database
+                                                                      continuous: continuous backup
+                                                                      all       : log everything
          --log-file=<file name>                                     log file name
          --log-format=<format>                                      log format (default: %Y-%m-%d %H:%M:%S)
          --log-post-command=<command>                               log file post-process command
-         --pid-file=<file name>                                     process id file name
+         --pid-file=<file name>                                     process id file name (default: /run/bar.pid)
+         --continuous-min-time-delta=<n>[weeks|week|days|day|h|m|s] min. time between continuous backup of an entry
          --pairing-master-file=<file name>                          pairing master enable file name (default: /var/lib/bar/pairing)
          --info                                                     show meta info
          -g|--group                                                 group files in list
@@ -268,37 +287,50 @@ OPTIONS
          -L|--long-format                                           list in long format
          -H|--human-format                                          list in human readable format
          --numeric-uid-gid                                          print numeric user/group ids
-         --numeric-permission                                       print numeric file/directory permissions
-         --no-header-footer                                         output no header/footer in list
+         --numeric-permissions                                      print numeric file/directory permissions
+         --no-header-footer                                         no header/footer output in list
          --delete-old-archive-files                                 delete old archive files after creating new files
          --ignore-no-backup-file                                    ignore .nobackup/.NOBACKUP file
          --ignore-no-dump                                           ignore 'no dump' attribute of files
+         --command-timeout=<n>[weeks|week|days|day|h|m|s]           execute external command timeout
          --skip-unreadable                                          skip unreadable files
          --force-delta-compression                                  force delta compression of files. Stop on error
          --raw-images                                               store raw images (store all image blocks)
          --no-fragments-check                                       do not check completeness of file fragments
          --no-index-database                                        do not store index database for archives
-         --archive-file-mode=<name>                                 select archive files write mode
-                                                                      stop       stop if archive file exists (default)
-                                                                      append     append to existing archive files
-                                                                      overwrite  overwrite existing archive files
+         --archive-file-mode=<mode>                                 select archive files write mode
+                                                                      stop     : stop if archive file exists (default)
+                                                                      rename   : rename if archive file exists
+                                                                      append   : append to existing archive files
+                                                                      overwrite: overwrite existing archive files
          -o|--overwrite-archive-files                               overwrite existing archive files
-         --restore-entry-mode=<name>                                restore entry mode
-                                                                      stop     : stop if entry exists (default)
-                                                                      append   : rename entries
-                                                                      overwrite: overwrite entries
-         --overwrite-files                                          overwrite existing entries
+         --restore-entry-mode=<mode>                                restore entry mode
+                                                                      stop         : stop if entry exists (default)
+                                                                      rename       : rename entries
+                                                                      overwrite    : overwrite entries
+                                                                      skip-existing: skip existing entries
+         --overwrite-files                                          overwrite existing entries on restore
+         --sparse-files                                             create sparse files
          --wait-first-volume                                        wait for first volume
          --no-signature                                             do not create signatures
          --skip-verify-signatures                                   do not verify signatures of archives
          --force-verify-signatures                                  force verify signatures of archives. Stop on error
          --no-bar-on-medium                                         do not store a copy of BAR on medium
          --no-stop-on-error                                         do not immediately stop on error
+         --no-stop-on-owner-error                                   do not immediately stop on owner error
          --no-stop-on-attribute-error                               do not immediately stop on attribute error
-         --no-storage                                               do not store archives (skip storage, index database)
+         --no-storage                                               do not store archives (skip storage, index database
          --dry-run                                                  do dry-run (skip storage/restore, incremental data, index database)
-         --no-default-config                                        do not read configuration files /etc/bar/bar.cfg and ~/.bar/bar.cfg
+         --new-entity-uuid                                          new entity uuid
+         --system-encoding=<encoding>                               system encoding
+         --console-encoding=<encoding>                              console encoding
+         --force-console-encoding                                   force output via console encoding
          --quiet                                                    suppress any output
+         -v|--verbose                                               increment/set verbosity level
+         --no-default-config                                        do not read default configuration files
+         --config=<file name>                                       configuration file
+         --save-configuration=<file name>                           save formated configuration file
+         --clean-configuration-comments                             clean comments when saving configuration file
          --version                                                  output version
          -h|--help                                                  output this help
          --xhelp                                                    output help to extended options

@@ -606,7 +606,8 @@ LOCAL Errors StorageSCP_preProcess(const StorageInfo *storageInfo,
                                 timestamp,
                                 textMacros.data,
                                 textMacros.count,
-                                CALLBACK_(executeIOOutput,NULL)
+                                CALLBACK_(executeIOOutput,NULL),
+                                globalOptions.commandTimeout
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
@@ -663,7 +664,8 @@ LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
                                 timestamp,
                                 textMacros.data,
                                 textMacros.count,
-                                CALLBACK_(executeIOOutput,NULL)
+                                CALLBACK_(executeIOOutput,NULL),
+                                globalOptions.commandTimeout
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }

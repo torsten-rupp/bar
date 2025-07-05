@@ -1,3 +1,7 @@
+2025-09-01 27
+  * added option --commmand-timeout
+  * fixed command timeout (bug #31)
+
 2025-06-29 26
   * automatic replace deprecated configuration values by new value
   * support libsmb2 for Windows port

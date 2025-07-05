@@ -6688,7 +6688,8 @@ LOCAL void jobThreadCode(void)
                                 executeStartDateTime,
                                 textMacros.data,
                                 textMacros.count,
-                                CALLBACK_(executeIOOutput,NULL)
+                                CALLBACK_(executeIOOutput,NULL),
+                                globalOptions.commandTimeout
                                );
         if (error == ERROR_NONE)
         {
@@ -6973,7 +6974,8 @@ LOCAL void jobThreadCode(void)
                               executeStartDateTime,
                               textMacros.data,
                               textMacros.count,
-                              CALLBACK_(executeIOOutput,NULL)
+                              CALLBACK_(executeIOOutput,NULL),
+                              globalOptions.commandTimeout
                              );
       if (error == ERROR_NONE)
       {
@@ -11675,7 +11677,8 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
                                    UNUSED_VARIABLE(userData);
 
                                    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
-                                 },NULL)
+                                 },NULL),
+                                 (globalOptions.commandTimeout > 0) ? (long)globalOptions.commandTimeout : WAIT_FOREVER
                                 );
     }
   }

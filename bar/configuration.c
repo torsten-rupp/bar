@@ -1894,6 +1894,8 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.pidFileName                                     = DEFAULT_PID_FILE_NAME;
 
+  globalOptions.commandTimeout                                  = DEFAULT_COMMND_TIMEOUT;
+
   globalOptions.quietFlag                                       = FALSE;
   globalOptions.verboseLevel                                    = DEFAULT_VERBOSE_LEVEL;
   globalOptions.serverFlag                                      = FALSE;
@@ -8465,7 +8467,7 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_INTEGER64    ("continuous-max-size",               0,  1,2,globalOptions.continuousMaxSize,                     0LL,MAX_INT64,COMMAND_LINE_BYTES_UNITS,                      "max. continuous size"                                                     ),
   CMD_OPTION_INTEGER      ("continuous-min-time-delta",         0,  1,1,globalOptions.continuousMinTimeDelta,                0,MAX_INT,COMMAND_LINE_TIME_UNITS,                           "min. time between continuous backup of an entry"                          ),
 
-  CMD_OPTION_SET          ("log",                               0,  1,1,globalOptions.logTypes,                              BAR_COMMAND_LINE_OPTIONS_LOG_TYPES,                              "log types","type","(default)"                                             ),
+  CMD_OPTION_SET          ("log",                               0,  1,1,globalOptions.logTypes,                              BAR_COMMAND_LINE_OPTIONS_LOG_TYPES,                          "log types","type","(default)"                                             ),
   CMD_OPTION_STRING       ("log-file",                          0,  1,1,globalOptions.logFileName,                                                                                        "log file name","file name"                                                ),
   CMD_OPTION_CSTRING      ("log-format",                        0,  1,1,globalOptions.logFormat,                                                                                          "log format (default: %default%)","format"                                 ),
   CMD_OPTION_CSTRING      ("log-post-command",                  0,  1,1,globalOptions.logPostCommand,                                                                                     "log file post-process command","command"                                  ),
@@ -8486,6 +8488,8 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("delete-old-archive-files",          0,  1,1,globalOptions.deleteOldArchiveFilesFlag,                                                                          "delete old archive files after creating new files"                        ),
   CMD_OPTION_BOOLEAN      ("ignore-no-backup-file",             0,  1,2,globalOptions.ignoreNoBackupFileFlag,                                                                             "ignore .nobackup/.NOBACKUP file"                                          ),
   CMD_OPTION_BOOLEAN      ("ignore-no-dump",                    0,  1,2,globalOptions.ignoreNoDumpAttributeFlag,                                                                          "ignore 'no dump' attribute of files"                                      ),
+
+  CMD_OPTION_INTEGER      ("command-timeout",                   0,  1,1,globalOptions.commandTimeout,                        0,MAX_INT,COMMAND_LINE_TIME_UNITS,                           "execute external command timeout"                                         ),
 
   CMD_OPTION_BOOLEAN      ("skip-unreadable",                   0,  0,2,globalOptions.skipUnreadableFlag,                                                                                 "skip unreadable files"                                                    ),
   CMD_OPTION_BOOLEAN      ("force-delta-compression",           0,  0,2,globalOptions.forceDeltaCompressionFlag,                                                                          "force delta compression of files. Stop on error"                          ),
@@ -9065,6 +9069,7 @@ const ConfigValue BAR_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_SEPARATOR("miscellaneous"),
   CONFIG_VALUE_SPACE(),
+  CONFIG_VALUE_INTEGER           ("command-timeout",                  &globalOptions.commandTimeout,-1,                              0,MAX_INT,NULL,"<n>"),
   CONFIG_VALUE_BOOLEAN           ("skip-unreadable",                  &globalOptions.skipUnreadableFlag,-1,                          "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("raw-images",                       &globalOptions.rawImagesFlag,-1,                               "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("no-fragments-check",               &globalOptions.noFragmentsCheckFlag,-1,                        "yes|no"),
