@@ -7175,7 +7175,7 @@ Dprintf.dprintf("");
 
     for (Long storageId : storageIdSet)
     {
-      checkedIndexIdSet.set(storageId,true);
+      checkedIndexIdSet.add(storageId);
     }
   }
 
@@ -7379,14 +7379,6 @@ Dprintf.dprintf("");
     {
       case 0:
         // tree view
-        for (TreeItem treeItem : widgetStorageTree.getSelection())
-        {
-          indexData = (IndexData)treeItem.getData();
-          if (indexData != null)
-          {
-            indexDataHashSet.add(indexData);
-          }
-        }
         for (TreeItem treeItem : Widgets.getAllTreeItems(widgetStorageTree))
         {
           if (treeItem.getChecked())
@@ -7398,20 +7390,34 @@ Dprintf.dprintf("");
             }
           }
         }
+        if (indexDataHashSet.isEmpty())
+        {
+          for (TreeItem treeItem : widgetStorageTree.getSelection())
+          {
+            indexData = (IndexData)treeItem.getData();
+            if (indexData != null)
+            {
+              indexDataHashSet.add(indexData);
+            }
+          }
+        }
         break;
       case 1:
         // table view
-        for (TableItem tableItem : widgetStorageTable.getSelection())
-        {
-          indexData = (IndexData)tableItem.getData();
-          if ((indexData != null) && !tableItem.getGrayed())
-          {
-            indexDataHashSet.add(indexData);
-          }
-        }
         for (TableItem tableItem : widgetStorageTable.getItems())
         {
           if (tableItem.getChecked())
+          {
+            indexData = (IndexData)tableItem.getData();
+            if ((indexData != null) && !tableItem.getGrayed())
+            {
+              indexDataHashSet.add(indexData);
+            }
+          }
+        }
+        if (indexDataHashSet.isEmpty())
+        {
+          for (TableItem tableItem : widgetStorageTable.getSelection())
           {
             indexData = (IndexData)tableItem.getData();
             if ((indexData != null) && !tableItem.getGrayed())
@@ -9123,6 +9129,8 @@ Dprintf.dprintf("");
                                              0  // debugLevel
                                             );
                   }
+
+                  checkedIndexIdSet.remove(indexData.id);
                 }
                 catch (final Exception exception)
                 {
@@ -9194,6 +9202,8 @@ Dprintf.dprintf("");
             updateAssignTo();
           }
         });
+
+        clearSelectedIndexData();
       }
     }
   }

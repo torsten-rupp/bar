@@ -4409,7 +4409,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
-        printInfo(0,"FAIL!\n");
+        printInfo(1,"FAIL!\n");
         printError(_("cannot open file '%s' (error: %s)!"),
                    String_cString(storageMsg.intermediateFileName),
                    Error_getText(error)
@@ -4554,7 +4554,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
       else if (createInfo->failError != ERROR_NONE)
       {
-        printInfo(0,"FAIL!\n");
+        printInfo(1,"FAIL!\n");
         printError(_("cannot store '%s' (error: %s)!"),
                    String_cString(printableStorageName),
                    Error_getText(createInfo->failError)
@@ -4572,7 +4572,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         {
           if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
-          printInfo(0,"FAIL!\n");
+          printInfo(1,"FAIL!\n");
           printError(_("cannot test '%s' (error: %s)!"),
                      String_cString(printableStorageName),
                      Error_getText(createInfo->failError)
@@ -4601,7 +4601,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         {
           if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
-          printInfo(0,"FAIL!\n");
+          printInfo(1,"FAIL!\n");
           printError(_("cannot create PAR2 files for '%s' (error: %s)!"),
                      String_cString(printableStorageName),
                      Error_getText(createInfo->failError)
