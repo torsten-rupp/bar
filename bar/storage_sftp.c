@@ -2988,7 +2988,7 @@ LOCAL Errors StorageSFTP_readDirectoryList(StorageDirectoryListHandle *storageDi
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
-  error = ERROR_NONE;
+  error = ERROR_UNKNOWN;
   #ifdef HAVE_SSH2
     {
       if (!storageDirectoryListHandle->sftp.entryReadFlag)

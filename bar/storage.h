@@ -616,6 +616,24 @@ typedef struct
         ulong                   bufferLength;
         LIBSSH2_SFTP_ATTRIBUTES attributes;
         bool                    entryReadFlag;                // TRUE if entry read
+      } scp;
+    #endif /* HAVE_SSH2 */
+
+    #ifdef HAVE_SSH2
+      struct
+      {
+        uint                    serverId;                     // id of allocated server
+        String                  pathName;                     // directory name
+
+        SocketHandle            socketHandle;
+        LIBSSH2_SESSION         *session;
+        LIBSSH2_CHANNEL         *channel;
+        LIBSSH2_SFTP            *sftp;
+        LIBSSH2_SFTP_HANDLE     *sftpHandle;
+        char                    *buffer;                      // buffer for reading file names
+        ulong                   bufferLength;
+        LIBSSH2_SFTP_ATTRIBUTES attributes;
+        bool                    entryReadFlag;                // TRUE if entry read
       } sftp;
     #endif /* HAVE_SSH2 */
 

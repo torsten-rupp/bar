@@ -1782,6 +1782,10 @@ LOCAL Errors StorageSCP_openDirectoryList(StorageDirectoryListHandle *storageDir
                                           ServerConnectionPriorities serverConnectionPriority
                                          )
 {
+  #ifdef HAVE_SSH2
+    Errors error;
+  #endif /* HAVE_SSH2 */
+
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SCP);
@@ -1794,7 +1798,198 @@ LOCAL Errors StorageSCP_openDirectoryList(StorageDirectoryListHandle *storageDir
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
 
-  return ERROR_FUNCTION_NOT_SUPPORTED;
+  // try to read directory content with sftp-protocol
+
+  #ifdef HAVE_SSH2
+    // init variables
+    AutoFreeList autoFreeList;
+    AutoFree_init(&autoFreeList);
+    storageDirectoryListHandle->scp.pathName      = String_new();
+    storageDirectoryListHandle->scp.buffer        = (char*)malloc(MAX_FILENAME_LENGTH);
+    if (storageDirectoryListHandle->scp.buffer == NULL)
+    {
+      String_delete(storageDirectoryListHandle->scp.pathName);
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
+    storageDirectoryListHandle->scp.bufferLength  = 0;
+    storageDirectoryListHandle->scp.entryReadFlag = FALSE;
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->scp.buffer,{ free(storageDirectoryListHandle->scp.buffer); });
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->scp.pathName,{ String_delete(storageDirectoryListHandle->scp.pathName); });
+
+    // set pathname
+    String_set(storageDirectoryListHandle->scp.pathName,pathName);
+
+    // get SSH server settings
+    SSHServer sshServer;
+    storageDirectoryListHandle->scp.serverId = Configuration_initSSHServerSettings(&sshServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
+    AUTOFREE_ADD(&autoFreeList,&sshServer,{ Configuration_doneSSHServerSettings(&sshServer); });
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_set(storageDirectoryListHandle->storageSpecifier.userName,sshServer.userName);
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_setCString(storageDirectoryListHandle->storageSpecifier.userName,getenv("LOGNAME"));
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_setCString(storageDirectoryListHandle->storageSpecifier.userName,getenv("USER"));
+    if (storageDirectoryListHandle->storageSpecifier.hostPort == 0) storageDirectoryListHandle->storageSpecifier.hostPort = sshServer.port;
+    if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.hostName))
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NO_HOST_NAME;
+    }
+
+    // allocate SSH server
+    if (!allocateServer(storageDirectoryListHandle->scp.serverId,serverConnectionPriority,ALLOCATE_SERVER_TIMEOUT))
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_TOO_MANY_CONNECTIONS;
+    }
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->scp.serverId,{ freeServer(storageDirectoryListHandle->scp.serverId); });
+
+    // check if SSH login is possible
+    error = ERROR_SSH_AUTHENTICATION;
+    if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(&storageDirectoryListHandle->storageSpecifier.password))
+    {
+      error = checkSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                            storageDirectoryListHandle->storageSpecifier.hostPort,
+                            storageDirectoryListHandle->storageSpecifier.userName,
+                            &storageDirectoryListHandle->storageSpecifier.password,
+                            sshServer.publicKey.data,
+                            sshServer.publicKey.length,
+                            sshServer.privateKey.data,
+                            sshServer.privateKey.length
+                           );
+    }
+    if ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && !Password_isEmpty(&sshServer.password))
+    {
+      error = checkSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                            storageDirectoryListHandle->storageSpecifier.hostPort,
+                            storageDirectoryListHandle->storageSpecifier.userName,
+                            &sshServer.password,
+                            sshServer.publicKey.data,
+                            sshServer.publicKey.length,
+                            sshServer.privateKey.data,
+                            sshServer.privateKey.length
+                           );
+      if (error == ERROR_NONE)
+      {
+        Password_set(&storageDirectoryListHandle->storageSpecifier.password,&sshServer.password);
+      }
+    }
+    if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
+    {
+      // initialize interactive/default password
+      uint retries = 0;
+      while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
+      {
+        if (initSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                         storageDirectoryListHandle->storageSpecifier.userName,
+                         &storageDirectoryListHandle->storageSpecifier.password,
+                         jobOptions,
+// TODO:
+CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHandle->getNamePasswordFunction,storageDirectoryListHandle->getNamePasswordUserData)
+                        )
+           )
+        {
+          error = checkSSHLogin(storageDirectoryListHandle->storageSpecifier.hostName,
+                                storageDirectoryListHandle->storageSpecifier.hostPort,
+                                storageDirectoryListHandle->storageSpecifier.userName,
+                                &storageDirectoryListHandle->storageSpecifier.password,
+                                sshServer.publicKey.data,
+                                sshServer.publicKey.length,
+                                sshServer.privateKey.data,
+                                sshServer.privateKey.length
+                               );
+        }
+        retries++;
+      }
+    }
+    if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
+    {
+      error = (   !Password_isEmpty(&storageDirectoryListHandle->storageSpecifier.password)
+               || !Password_isEmpty(&sshServer.password)
+               || !Password_isEmpty(&defaultSSHPassword)
+              )
+                ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName))
+                : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.hostName));
+    }
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_FUNCTION_NOT_SUPPORTED;
+    }
+
+    // store password as default SSH password
+    Password_set(&defaultSSHPassword,&storageDirectoryListHandle->storageSpecifier.password);
+
+    // connect
+    error = Network_connect(&storageDirectoryListHandle->scp.socketHandle,
+                            SOCKET_TYPE_SSH,
+                            storageDirectoryListHandle->storageSpecifier.hostName,
+                            storageDirectoryListHandle->storageSpecifier.hostPort,
+                            storageDirectoryListHandle->storageSpecifier.userName,
+                            &defaultSSHPassword,
+                            NULL,  // caData
+                            0,     // caLength
+                            NULL,  // certData
+                            0,     // certLength
+                            sshServer.publicKey.data,
+                            sshServer.publicKey.length,
+                            sshServer.privateKey.data,
+                            sshServer.privateKey.length,
+                              SOCKET_FLAG_NONE
+                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                            30*MS_PER_SECOND
+                           );
+    if (error != ERROR_NONE)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_FUNCTION_NOT_SUPPORTED;
+    }
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->scp.socketHandle,{ Network_disconnect(&storageDirectoryListHandle->scp.socketHandle); });
+
+    // init scp session
+    int ssh2ErrorCode = 0;
+    do
+    {
+      storageDirectoryListHandle->scp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageDirectoryListHandle->scp.socketHandle));
+      if (storageDirectoryListHandle->scp.sftp == NULL)
+      {
+        ssh2ErrorCode = libssh2_session_last_errno(Network_getSSHSession(&storageDirectoryListHandle->scp.socketHandle));
+        if (ssh2ErrorCode == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+      }
+    }
+    while ((storageDirectoryListHandle->scp.sftp == NULL) && (ssh2ErrorCode == LIBSSH2_ERROR_EAGAIN));
+    if (storageDirectoryListHandle->scp.sftp == NULL)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_FUNCTION_NOT_SUPPORTED;
+    }
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->scp.sftp,{ libssh2_sftp_shutdown(storageDirectoryListHandle->scp.sftp); });
+
+    // open directory for reading
+    storageDirectoryListHandle->scp.sftpHandle = libssh2_sftp_opendir(storageDirectoryListHandle->scp.sftp,
+                                                                      !String_isEmpty(storageDirectoryListHandle->scp.pathName)
+                                                                        ? String_cString(storageDirectoryListHandle->scp.pathName)
+                                                                        : "."
+                                                                     );
+    if (storageDirectoryListHandle->scp.sftpHandle == NULL)
+    {
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_FUNCTION_NOT_SUPPORTED;
+    }
+
+    // free resources
+    Configuration_doneSSHServerSettings(&sshServer);
+    AutoFree_done(&autoFreeList);
+
+    return ERROR_NONE;
+  #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageDirectoryListHandle);
+    UNUSED_VARIABLE(storageSpecifier);
+    UNUSED_VARIABLE(pathName);
+    UNUSED_VARIABLE(jobOptions);
+    UNUSED_VARIABLE(serverConnectionPriority);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_SSH2 */
 }
 
 LOCAL void StorageSCP_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -1802,7 +1997,16 @@ LOCAL void StorageSCP_closeDirectoryList(StorageDirectoryListHandle *storageDire
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_SCP);
 
-  UNUSED_VARIABLE(storageDirectoryListHandle);
+  #ifdef HAVE_SSH2
+    (void)libssh2_sftp_closedir(storageDirectoryListHandle->scp.sftpHandle);
+    (void)libssh2_sftp_shutdown(storageDirectoryListHandle->scp.sftp);
+    Network_disconnect(&storageDirectoryListHandle->scp.socketHandle);
+    free(storageDirectoryListHandle->scp.buffer);
+    String_delete(storageDirectoryListHandle->scp.pathName);
+    freeServer(storageDirectoryListHandle->scp.serverId);
+  #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageDirectoryListHandle);
+  #endif /* HAVE_SSH2 */
 }
 
 LOCAL bool StorageSCP_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -1810,9 +2014,42 @@ LOCAL bool StorageSCP_endOfDirectoryList(StorageDirectoryListHandle *storageDire
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_SCP);
 
-  UNUSED_VARIABLE(storageDirectoryListHandle);
+  bool endOfDirectoryFlag = TRUE;
+  #ifdef HAVE_SSH2
+    {
+      // read entry iff not already read
+      while (!storageDirectoryListHandle->scp.entryReadFlag)
+      {
+        int n = libssh2_sftp_readdir(storageDirectoryListHandle->scp.sftpHandle,
+                                     storageDirectoryListHandle->scp.buffer,
+                                     MAX_FILENAME_LENGTH,
+                                     &storageDirectoryListHandle->scp.attributes
+                                    );
+        if (n > 0)
+        {
+          if (   !LIBSSH2_SFTP_S_ISDIR(storageDirectoryListHandle->scp.attributes.permissions)
+              || (   ((n != 1) || (strncmp(storageDirectoryListHandle->scp.buffer,".", 1) != 0))
+                  && ((n != 2) || (strncmp(storageDirectoryListHandle->scp.buffer,"..",2) != 0))
+                 )
+             )
+          {
+            storageDirectoryListHandle->scp.bufferLength = n;
+            storageDirectoryListHandle->scp.entryReadFlag = TRUE;
+          }
+        }
+        else
+        {
+          break;
+        }
+      }
 
-  return TRUE;
+      endOfDirectoryFlag = !storageDirectoryListHandle->scp.entryReadFlag;
+    }
+  #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageDirectoryListHandle);
+  #endif /* HAVE_SSH2 */
+
+  return endOfDirectoryFlag;
 }
 
 LOCAL Errors StorageSCP_readDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
@@ -1820,24 +2057,115 @@ LOCAL Errors StorageSCP_readDirectoryList(StorageDirectoryListHandle *storageDir
                                           FileInfo                   *fileInfo
                                          )
 {
+  Errors error;
+
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_SCP);
 
-  UNUSED_VARIABLE(storageDirectoryListHandle);
+  error = ERROR_UNKNOWN;
+  #ifdef HAVE_SSH2
+    {
+      if (!storageDirectoryListHandle->scp.entryReadFlag)
+      {
+        do
+        {
+          int n = libssh2_sftp_readdir(storageDirectoryListHandle->scp.sftpHandle,
+                                       storageDirectoryListHandle->scp.buffer,
+                                       MAX_FILENAME_LENGTH,
+                                       &storageDirectoryListHandle->scp.attributes
+                                      );
+          if      (n > 0)
+          {
+            if (   !LIBSSH2_SFTP_S_ISDIR(storageDirectoryListHandle->scp.attributes.permissions)
+                || (   ((n != 1) || (strncmp(storageDirectoryListHandle->scp.buffer,".", 1) != 0))
+                    && ((n != 2) || (strncmp(storageDirectoryListHandle->scp.buffer,"..",2) != 0))
+                   )
+               )
+            {
+              storageDirectoryListHandle->scp.entryReadFlag = TRUE;
+              error = ERROR_NONE;
+            }
+          }
+          else
+          {
+            error = ERROR_(IO,errno);
+          }
+        }
+        while (!storageDirectoryListHandle->scp.entryReadFlag && (error == ERROR_NONE));
+      }
+      else
+      {
+        error = ERROR_NONE;
+      }
 
-  String_clear(fileName);
-  fileInfo->type            = FILE_TYPE_NONE;
-  fileInfo->size            = 0LL;
-  fileInfo->timeLastAccess  = 0LL;
-  fileInfo->timeModified    = 0LL;
-  fileInfo->timeLastChanged = 0LL;
-  fileInfo->userId          = 0;
-  fileInfo->groupId         = 0;
-  fileInfo->permissions     = 0L;
-  fileInfo->major           = 0;
-  fileInfo->minor           = 0;
+      if (storageDirectoryListHandle->scp.entryReadFlag)
+      {
+        String_set(fileName,storageDirectoryListHandle->scp.pathName);
+        File_appendFileNameBuffer(fileName,storageDirectoryListHandle->scp.buffer,storageDirectoryListHandle->scp.bufferLength);
 
-  return ERROR_FUNCTION_NOT_SUPPORTED;
+        if (fileInfo != NULL)
+        {
+          if      (LIBSSH2_SFTP_S_ISREG(storageDirectoryListHandle->scp.attributes.permissions))
+          {
+            fileInfo->type        = FILE_TYPE_FILE;
+          }
+          else if (LIBSSH2_SFTP_S_ISDIR(storageDirectoryListHandle->scp.attributes.permissions))
+          {
+            fileInfo->type        = FILE_TYPE_DIRECTORY;
+          }
+          else if (LIBSSH2_SFTP_S_ISLNK(storageDirectoryListHandle->scp.attributes.permissions))
+          {
+            fileInfo->type        = FILE_TYPE_LINK;
+          }
+          else if (LIBSSH2_SFTP_S_ISCHR(storageDirectoryListHandle->scp.attributes.permissions))
+          {
+            fileInfo->type        = FILE_TYPE_SPECIAL;
+            fileInfo->specialType = FILE_SPECIAL_TYPE_CHARACTER_DEVICE;
+          }
+          else if (LIBSSH2_SFTP_S_ISBLK(storageDirectoryListHandle->scp.attributes.permissions))
+          {
+            fileInfo->type        = FILE_TYPE_SPECIAL;
+            fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
+          }
+          else if (LIBSSH2_SFTP_S_ISFIFO(storageDirectoryListHandle->scp.attributes.permissions))
+          {
+            fileInfo->type        = FILE_TYPE_SPECIAL;
+            fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
+          }
+          else if (LIBSSH2_SFTP_S_ISSOCK(storageDirectoryListHandle->scp.attributes.permissions))
+          {
+            fileInfo->type        = FILE_TYPE_SPECIAL;
+            fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
+          }
+          else
+          {
+            fileInfo->type        = FILE_TYPE_UNKNOWN;
+          }
+          fileInfo->size            = storageDirectoryListHandle->scp.attributes.filesize;
+          fileInfo->timeLastAccess  = storageDirectoryListHandle->scp.attributes.atime;
+          fileInfo->timeModified    = storageDirectoryListHandle->scp.attributes.mtime;
+          fileInfo->timeLastChanged = storageDirectoryListHandle->scp.attributes.mtime;  // Note: no timestamp for meta data - use timestamp for content
+          fileInfo->userId          = storageDirectoryListHandle->scp.attributes.uid;
+          fileInfo->groupId         = storageDirectoryListHandle->scp.attributes.gid;
+          fileInfo->permissions     = storageDirectoryListHandle->scp.attributes.permissions;
+          fileInfo->major           = 0;
+          fileInfo->minor           = 0;
+          memClear(&fileInfo->cast,sizeof(FileCast));
+        }
+
+        storageDirectoryListHandle->scp.entryReadFlag = FALSE;
+      }
+    }
+  #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageDirectoryListHandle);
+    UNUSED_VARIABLE(fileName);
+    UNUSED_VARIABLE(fileInfo);
+
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_SSH2 */
+  assert(error != ERROR_UNKNOWN);
+
+  return error;
 }
 
 #ifdef __cplusplus
