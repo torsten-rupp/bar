@@ -171,7 +171,6 @@ typedef enum
 
   STORAGE_TYPE_FILESYSTEM,
   STORAGE_TYPE_FTP,
-  STORAGE_TYPE_SSH,
   STORAGE_TYPE_SCP,
   STORAGE_TYPE_SFTP,
   STORAGE_TYPE_WEBDAV,
@@ -274,17 +273,6 @@ typedef struct
         StorageBandWidthLimiter bandWidthLimiter;             // band width limit data
       } ftp;
     #endif /* HAVE_CURL */
-
-    #ifdef HAVE_SSH2
-      // ssh storage (remote BAR)
-      struct
-      {
-        uint                    serverId;                     // id of allocated server
-        Key                     publicKey;                    // ssh public key data (ssh,scp,sftp)
-        Key                     privateKey;                   // ssh private key data (ssh,scp,sftp)
-        StorageBandWidthLimiter bandWidthLimiter;             // band width limiter data
-      } ssh;
-    #endif /* HAVE_SSH2 */
 
     #ifdef HAVE_SSH2
       // scp storage
@@ -451,20 +439,6 @@ typedef struct
         ulong transferedBytes;                                // number of data bytes read/written
       } ftp;
     #endif /* HAVE_CURL */
-
-    #ifdef HAVE_SSH2
-      // ssh storage (remote BAR)
-      struct
-      {
-        SocketHandle            socketHandle;
-        LIBSSH2_CHANNEL         *channel;                     // ssh channel
-        LIBSSH2_SEND_FUNC((*oldSendCallback));                // libssh2 callback to send data (used to track sent bytes)
-        LIBSSH2_RECV_FUNC((*oldReceiveCallback));             // libssh2 callback to receive data (used to track received bytes)
-        uint64                  totalSentBytes;               // total sent bytes
-        uint64                  totalReceivedBytes;           // total received bytes
-        StorageBandWidthLimiter bandWidthLimiter;             // band width limiter data
-      } ssh;
-    #endif /* HAVE_SSH2 */
 
     #ifdef HAVE_SSH2
       // scp storage

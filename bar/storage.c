@@ -1226,7 +1226,6 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
       case STORAGE_TYPE_FTP:
         result = StorageFTP_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
-      case STORAGE_TYPE_SSH:
       case STORAGE_TYPE_SCP:
         result = StorageSCP_equalSpecifiers(storageSpecifier1,archiveName1,storageSpecifier2,archiveName2);
         break;
@@ -1496,36 +1495,6 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     }
 
     storageSpecifier->type = STORAGE_TYPE_FTP;
-  }
-  else if (String_startsWithCString(storageName,"ssh://"))
-  {
-    if (   String_matchCString(storageName,6,"^([^@]|\\@)+?@[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)   // ssh://<login name>@<host name>:[<host port>]/<file name>
-        || String_matchCString(storageName,6,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // ssh://<login name>@<host name>/<file name>
-        || String_matchCString(storageName,6,"^[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)                // ssh://<host name>:[<host port>]/<file name>
-        || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // ssh://<host name>/<file name>
-       )
-    {
-      String_sub(string,storageName,6,nextIndex-6);
-      String_trimEnd(string,"/");
-      if (!Storage_parseSSHSpecifier(string,
-                                     storageSpecifier->hostName,
-                                     &storageSpecifier->hostPort,
-                                     storageSpecifier->userName
-                                    )
-         )
-      {
-        AutoFree_cleanup(&autoFreeList);
-        return ERROR_INVALID_SSH_SPECIFIER;
-      }
-      String_sub(archiveName,storageName,nextIndex,STRING_END);
-    }
-    else
-    {
-      // ssh://<file name>
-      String_sub(archiveName,storageName,6,STRING_END);
-    }
-
-    storageSpecifier->type = STORAGE_TYPE_SSH;
   }
   else if (String_startsWithCString(storageName,"scp://"))
   {
@@ -1962,12 +1931,6 @@ String Storage_getName(String                 string,
     case STORAGE_TYPE_FTP:
       StorageFTP_getName(string,storageSpecifier,archiveName);
       break;
-    case STORAGE_TYPE_SSH:
-      if (!String_isEmpty(archiveName))
-      {
-        String_append(string,archiveName);
-      }
-      break;
     case STORAGE_TYPE_SCP:
       StorageSCP_getName(string,storageSpecifier,archiveName);
       break;
@@ -2037,12 +2000,6 @@ String Storage_getPrintableName(String                 string,
       break;
     case STORAGE_TYPE_FTP:
       StorageFTP_getPrintableName(string,storageSpecifier,archiveName);
-      break;
-    case STORAGE_TYPE_SSH:
-      if (!String_isEmpty(archiveName))
-      {
-        String_append(string,archiveName);
-      }
       break;
     case STORAGE_TYPE_SCP:
       StorageSCP_getPrintableName(string,storageSpecifier,archiveName);
@@ -2152,7 +2109,6 @@ uint Storage_getServerSettings(Server                 *server,
         }
       }
       break;
-    case STORAGE_TYPE_SSH:
     case STORAGE_TYPE_SCP:
       SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
@@ -2435,10 +2391,6 @@ uint Storage_getServerSettings(Server                 *server,
       case STORAGE_TYPE_FTP:
         error = StorageFTP_init(storageInfo,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
-      case STORAGE_TYPE_SSH:
-        UNUSED_VARIABLE(maxBandWidthList);
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-        break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_init(storageInfo,jobOptions,maxBandWidthList,serverConnectionPriority);
         break;
@@ -2537,9 +2489,6 @@ uint Storage_getServerSettings(Server                 *server,
       case STORAGE_TYPE_FTP:
         error = StorageFTP_done(storageInfo);
         break;
-      case STORAGE_TYPE_SSH:
-        // free SSH server connection
-        break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_done(storageInfo);
         break;
@@ -2603,13 +2552,6 @@ bool Storage_isServerAllocationPending(const StorageInfo *storageInfo)
         break;
       case STORAGE_TYPE_FTP:
         serverAllocationPending = StorageFTP_isServerAllocationPending(storageInfo);
-        break;
-      case STORAGE_TYPE_SSH:
-        #if defined(HAVE_SSH2)
-          serverAllocationPending = isServerAllocationPending(storageInfo->ssh.serverId);
-        #else /* not HAVE_SSH2 */
-          serverAllocationPending = FALSE;
-        #endif /* HAVE_SSH2 */
         break;
       case STORAGE_TYPE_SCP:
         serverAllocationPending = StorageSCP_isServerAllocationPending(storageInfo);
@@ -2697,8 +2639,6 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
       case STORAGE_TYPE_FTP:
         error = StorageFTP_preProcess(storageInfo,archiveName,time,initialFlag);
         break;
-      case STORAGE_TYPE_SSH:
-        break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_preProcess(storageInfo,archiveName,time,initialFlag);
         break;
@@ -2765,8 +2705,6 @@ Errors Storage_postProcess(StorageInfo *storageInfo,
         break;
       case STORAGE_TYPE_FTP:
         error = StorageFTP_postProcess(storageInfo,archiveName,time,finalFlag);
-        break;
-      case STORAGE_TYPE_SSH:
         break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_postProcess(storageInfo,archiveName,time,finalFlag);
@@ -2852,9 +2790,6 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
       case STORAGE_TYPE_FTP:
         existsFlag = StorageFTP_exists(storageInfo,archiveName);
         break;
-      case STORAGE_TYPE_SSH:
-        existsFlag = ERROR_FUNCTION_NOT_SUPPORTED;
-        break;
       case STORAGE_TYPE_SCP:
         existsFlag = StorageSCP_exists(storageInfo,archiveName);
         break;
@@ -2921,9 +2856,6 @@ bool Storage_isFile(StorageInfo *storageInfo, ConstString archiveName)
         break;
       case STORAGE_TYPE_FTP:
         isFileFlag = StorageFTP_isFile(storageInfo,archiveName);
-        break;
-      case STORAGE_TYPE_SSH:
-        isFileFlag = ERROR_FUNCTION_NOT_SUPPORTED;
         break;
       case STORAGE_TYPE_SCP:
         isFileFlag = StorageSCP_isFile(storageInfo,archiveName);
@@ -2992,9 +2924,6 @@ bool Storage_isDirectory(StorageInfo *storageInfo, ConstString archiveName)
       case STORAGE_TYPE_FTP:
         isDirectoryFlag = StorageFTP_isDirectory(storageInfo,archiveName);
         break;
-      case STORAGE_TYPE_SSH:
-        isDirectoryFlag = ERROR_FUNCTION_NOT_SUPPORTED;
-        break;
       case STORAGE_TYPE_SCP:
         isDirectoryFlag = StorageSCP_isDirectory(storageInfo,archiveName);
         break;
@@ -3062,9 +2991,6 @@ bool Storage_isReadable(StorageInfo *storageInfo, ConstString archiveName)
       case STORAGE_TYPE_FTP:
         isReadableFlag = StorageFTP_isReadable(storageInfo,archiveName);
         break;
-      case STORAGE_TYPE_SSH:
-        isReadableFlag = ERROR_FUNCTION_NOT_SUPPORTED;
-        break;
       case STORAGE_TYPE_SCP:
         isReadableFlag = StorageSCP_isReadable(storageInfo,archiveName);
         break;
@@ -3131,9 +3057,6 @@ bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName)
         break;
       case STORAGE_TYPE_FTP:
         isWritableFlag = StorageFTP_isWritable(storageInfo,archiveName);
-        break;
-      case STORAGE_TYPE_SSH:
-        isWritableFlag = ERROR_FUNCTION_NOT_SUPPORTED;
         break;
       case STORAGE_TYPE_SCP:
         isWritableFlag = StorageSCP_isWritable(storageInfo,archiveName);
@@ -3204,9 +3127,6 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
         break;
       case STORAGE_TYPE_FTP:
         error = StorageFTP_getTmpName(archiveName,storageInfo);
-        break;
-      case STORAGE_TYPE_SSH:
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
         break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_getTmpName(archiveName,storageInfo);
@@ -3298,9 +3218,6 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
         break;
       case STORAGE_TYPE_FTP:
         error = StorageFTP_create(storageHandle,archiveName,archiveSize,forceFlag);
-        break;
-      case STORAGE_TYPE_SSH:
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
         break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_create(storageHandle,archiveName,archiveSize,forceFlag);
@@ -3397,9 +3314,6 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
       case STORAGE_TYPE_FTP:
         error = StorageFTP_open(storageHandle,archiveName);
         break;
-      case STORAGE_TYPE_SSH:
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-        break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_open(storageHandle,archiveName);
         break;
@@ -3477,8 +3391,6 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
       case STORAGE_TYPE_FTP:
         StorageFTP_close(storageHandle);
         break;
-      case STORAGE_TYPE_SSH:
-        break;
       case STORAGE_TYPE_SCP:
         StorageSCP_close(storageHandle);
         break;
@@ -3547,12 +3459,6 @@ bool Storage_eof(StorageHandle *storageHandle)
         break;
       case STORAGE_TYPE_FTP:
         eofFlag = StorageFTP_eof(storageHandle);
-        break;
-      case STORAGE_TYPE_SSH:
-        #ifdef HAVE_SSH2
-  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        #else /* not HAVE_SSH2 */
-        #endif /* HAVE_SSH2 */
         break;
       case STORAGE_TYPE_SCP:
         eofFlag = StorageSCP_eof(storageHandle);
@@ -3626,9 +3532,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
       case STORAGE_TYPE_FTP:
         error = StorageFTP_read(storageHandle,buffer,bufferSize,bytesRead);
         break;
-      case STORAGE_TYPE_SSH:
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-        break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_read(storageHandle,buffer,bufferSize,bytesRead);
         break;
@@ -3697,9 +3600,6 @@ Errors Storage_write(StorageHandle *storageHandle,
         break;
       case STORAGE_TYPE_FTP:
         error = StorageFTP_write(storageHandle,buffer,bufferLength);
-        break;
-      case STORAGE_TYPE_SSH:
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
         break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_write(storageHandle,buffer,bufferLength);
@@ -3780,9 +3680,6 @@ Errors Storage_transferFromFile(FileHandle                  *fromFileHandle,
                                       CALLBACK_(storageTransferInfoFunction,storageTransferInfoUserData),
                                       CALLBACK_(isAbortedFunction,isAbortedUserData)
                                      );
-        break;
-      case STORAGE_TYPE_SSH:
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
         break;
       case STORAGE_TYPE_SCP:
         error = transferFileToStorage(fromFileHandle,
@@ -3871,12 +3768,6 @@ uint64 Storage_getSize(StorageHandle *storageHandle)
       case STORAGE_TYPE_FTP:
         size = StorageFTP_getSize(storageHandle);
         break;
-      case STORAGE_TYPE_SSH:
-        #ifdef HAVE_SSH2
-  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        #else /* not HAVE_SSH2 */
-        #endif /* HAVE_SSH2 */
-        break;
       case STORAGE_TYPE_SCP:
         size = StorageSCP_getSize(storageHandle);
         break;
@@ -3946,13 +3837,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
       case STORAGE_TYPE_FTP:
         error = StorageFTP_tell(storageHandle,offset);
         break;
-      case STORAGE_TYPE_SSH:
-        #ifdef HAVE_SSH2
-  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        #else /* not HAVE_SSH2 */
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_SSH2 */
-        break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_tell(storageHandle,offset);
         break;
@@ -4018,13 +3902,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         break;
       case STORAGE_TYPE_FTP:
         error = StorageFTP_seek(storageHandle,offset);
-        break;
-      case STORAGE_TYPE_SSH:
-        #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        #else /* not HAVE_SSH2 */
-          error = ERROR_FUNCTION_NOT_SUPPORTED;
-        #endif /* HAVE_SSH2 */
         break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_seek(storageHandle,offset);
@@ -4262,12 +4139,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
       case STORAGE_TYPE_FTP:
         error = StorageFTP_rename(storageInfo,fromArchiveName,toArchiveName);
         break;
-      case STORAGE_TYPE_SSH:
-        #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        #else /* not HAVE_SSH2 */
-        #endif /* HAVE_SSH2 */
-        break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_rename(storageInfo,fromArchiveName,toArchiveName);
         break;
@@ -4340,12 +4211,6 @@ Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName)
           break;
         case STORAGE_TYPE_FTP:
           error = StorageFTP_makeDirectory(storageInfo,directoryName);
-          break;
-        case STORAGE_TYPE_SSH:
-          #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-          #else /* not HAVE_SSH2 */
-          #endif /* HAVE_SSH2 */
           break;
         case STORAGE_TYPE_SCP:
           error = StorageSCP_makeDirectory(storageInfo,directoryName);
@@ -4443,12 +4308,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
             case STORAGE_TYPE_FTP:
               error = StorageFTP_delete(storageInfo,directoryName);
               break;
-            case STORAGE_TYPE_SSH:
-              #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-              #else /* not HAVE_SSH2 */
-              #endif /* HAVE_SSH2 */
-              break;
             case STORAGE_TYPE_SCP:
               error = StorageSCP_delete(storageInfo,directoryName);
               break;
@@ -4530,12 +4389,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
       case STORAGE_TYPE_FTP:
         error = StorageFTP_delete(storageInfo,archiveName);
         break;
-      case STORAGE_TYPE_SSH:
-        #ifdef HAVE_SSH2
-          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        #else /* not HAVE_SSH2 */
-        #endif /* HAVE_SSH2 */
-        break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_delete(storageInfo,archiveName);
         break;
@@ -4609,12 +4462,6 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         break;
       case STORAGE_TYPE_FTP:
         error = StorageFTP_getFileInfo(fileInfo,storageInfo,archiveName);
-        break;
-      case STORAGE_TYPE_SSH:
-        #ifdef HAVE_SSH2
-          HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-        #else /* not HAVE_SSH2 */
-        #endif /* HAVE_SSH2 */
         break;
       case STORAGE_TYPE_SCP:
         error = StorageSCP_getFileInfo(fileInfo,storageInfo,archiveName);
@@ -4691,17 +4538,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
     case STORAGE_TYPE_FTP:
       error = StorageFTP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,directory,jobOptions,serverConnectionPriority);
       break;
-    case STORAGE_TYPE_SSH:
-      UNUSED_VARIABLE(jobOptions);
-      UNUSED_VARIABLE(serverConnectionPriority);
-
-      #ifdef HAVE_SSH2
-//TODO
-error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #else /* not HAVE_SSH2 */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_SSH2 */
-      break;
     case STORAGE_TYPE_SCP:
       error = StorageSCP_openDirectoryList(storageDirectoryListHandle,storageSpecifier,directory,jobOptions,serverConnectionPriority);
       break;
@@ -4761,12 +4597,6 @@ void Storage_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryList
     case STORAGE_TYPE_FTP:
       StorageFTP_closeDirectoryList(storageDirectoryListHandle);
       break;
-    case STORAGE_TYPE_SSH:
-      #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
-      break;
     case STORAGE_TYPE_SCP:
       StorageSCP_closeDirectoryList(storageDirectoryListHandle);
       break;
@@ -4815,12 +4645,6 @@ bool Storage_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryList
       break;
     case STORAGE_TYPE_FTP:
       endOfDirectoryFlag = StorageFTP_endOfDirectoryList(storageDirectoryListHandle);
-      break;
-    case STORAGE_TYPE_SSH:
-      #ifdef HAVE_SSH2
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-      #else /* not HAVE_SSH2 */
-      #endif /* HAVE_SSH2 */
       break;
     case STORAGE_TYPE_SCP:
       endOfDirectoryFlag = StorageSCP_endOfDirectoryList(storageDirectoryListHandle);
@@ -4874,9 +4698,6 @@ Errors Storage_readDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
       break;
     case STORAGE_TYPE_FTP:
       error = StorageFTP_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);
-      break;
-    case STORAGE_TYPE_SSH:
-      error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
       error = StorageSCP_readDirectoryList(storageDirectoryListHandle,fileName,fileInfo);

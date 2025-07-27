@@ -5823,7 +5823,6 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
     {
       if (   (storageSpecifier.type == STORAGE_TYPE_FILESYSTEM)
           || (storageSpecifier.type == STORAGE_TYPE_FTP       )
-          || (storageSpecifier.type == STORAGE_TYPE_SSH       )
           || (storageSpecifier.type == STORAGE_TYPE_SCP       )
           || (storageSpecifier.type == STORAGE_TYPE_SFTP      )
           || (storageSpecifier.type == STORAGE_TYPE_WEBDAV    )

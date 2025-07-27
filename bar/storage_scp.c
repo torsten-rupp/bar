@@ -87,18 +87,15 @@
 
 LOCAL LIBSSH2_SEND_FUNC(scpSendCallback)
 {
-  StorageHandle *storageHandle;
-  ssize_t       n;
-
   assert(abstract != NULL);
 
-  storageHandle = *((StorageHandle**)abstract);
+  StorageHandle *storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(storageHandle->scp.oldSendCallback != NULL);
 
-  n = storageHandle->scp.oldSendCallback(socket,buffer,length,flags,abstract);
+  ssize_t n = storageHandle->scp.oldSendCallback(socket,buffer,length,flags,abstract);
   if (n > 0) storageHandle->scp.totalSentBytes += (uint64)n;
 
   return n;
@@ -120,18 +117,15 @@ LOCAL LIBSSH2_SEND_FUNC(scpSendCallback)
 
 LOCAL LIBSSH2_RECV_FUNC(scpReceiveCallback)
 {
-  StorageHandle *storageHandle;
-  ssize_t       n;
-
   assert(abstract != NULL);
 
-  storageHandle = *((StorageHandle**)abstract);
+  StorageHandle *storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
   assert(storageHandle->scp.oldReceiveCallback != NULL);
 
-  n = storageHandle->scp.oldReceiveCallback(socket,buffer,length,flags,abstract);
+  ssize_t n = storageHandle->scp.oldReceiveCallback(socket,buffer,length,flags,abstract);
   if (n > 0) storageHandle->scp.totalReceivedBytes += (uint64)n;
 
   return n;
@@ -143,11 +137,7 @@ LOCAL LIBSSH2_RECV_FUNC(scpReceiveCallback)
 
 LOCAL Errors StorageSCP_initAll(void)
 {
-  Errors error;
-
-  error = ERROR_NONE;
-
-  return error;
+  return ERROR_NONE;
 }
 
 LOCAL void StorageSCP_doneAll(void)
@@ -165,7 +155,6 @@ LOCAL bool StorageSCP_parseSpecifier(ConstString sshSpecifier,
   const char* LOGINNAME_MAP_TO[]   = {"@"};
 
   bool   result;
-  String s,t;
 
   assert(sshSpecifier != NULL);
   assert(hostName != NULL);
@@ -176,8 +165,8 @@ LOCAL bool StorageSCP_parseSpecifier(ConstString sshSpecifier,
   String_clear(userName);
   if (password != NULL) Password_clear(password);
 
-  s = String_new();
-  t = String_new();
+  String s = String_new();
+  String t = String_new();
   if      (String_matchCString(sshSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,t,NULL))
   {
     // <login name>:<login password>@<host name>:<host port>
@@ -263,12 +252,11 @@ LOCAL String StorageSCP_getName(String                 string,
                                 ConstString            archiveName
                                )
 {
-  ConstString storageFileName;
-
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SCP);
 
   // get file to use
+  ConstString storageFileName;
   if      (archiveName != NULL)
   {
     storageFileName = archiveName;
@@ -322,13 +310,12 @@ LOCAL void StorageSCP_getPrintableName(String                 string,
                                        ConstString            fileName
                                       )
 {
-  ConstString storageFileName;
-
   assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SCP);
 
   // get file to use
+  ConstString storageFileName;
   if      (!String_isEmpty(fileName))
   {
     storageFileName = fileName;
@@ -375,11 +362,7 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
                             )
 {
   #ifdef HAVE_SSH2
-    AutoFreeList autoFreeList;
-    Errors       error;
-    SSHServer    sshServer;
-    uint         retries;
-    Password     password;
+    Errors error;
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
@@ -387,11 +370,13 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
 
   #ifdef HAVE_SSH2
     // init variables
+    AutoFreeList autoFreeList;
     AutoFree_init(&autoFreeList);
     initBandWidthLimiter(&storageInfo->scp.bandWidthLimiter,maxBandWidthList);
     AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.bandWidthLimiter,{ doneBandWidthLimiter(&storageInfo->scp.bandWidthLimiter); });
 
     // get SSH server settings
+    SSHServer sshServer;
     storageInfo->scp.serverId = Configuration_initSSHServerSettings(&sshServer,storageInfo->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&sshServer,{ Configuration_doneSSHServerSettings(&sshServer); });
     if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_set(storageInfo->storageSpecifier.userName,sshServer.userName);
@@ -466,7 +451,8 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
     {
       // initialize interactive/default password
-      retries = 0;
+      uint     retries = 0;
+      Password password;
       Password_init(&password);
       while ((Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
@@ -552,12 +538,10 @@ LOCAL Errors StorageSCP_done(StorageInfo *storageInfo)
 
 LOCAL bool StorageSCP_isServerAllocationPending(const StorageInfo *storageInfo)
 {
-  bool serverAllocationPending;
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
-  serverAllocationPending = FALSE;
+  bool serverAllocationPending = FALSE;
   #if defined(HAVE_SSH2)
     serverAllocationPending = isServerAllocationPending(storageInfo->scp.serverId);
   #else /* not HAVE_SSH2 */
@@ -576,9 +560,6 @@ LOCAL Errors StorageSCP_preProcess(const StorageInfo *storageInfo,
                                   )
 {
   Errors error;
-  #ifdef HAVE_SSH2
-    TextMacros (textMacros,3);
-  #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
@@ -592,6 +573,7 @@ LOCAL Errors StorageSCP_preProcess(const StorageInfo *storageInfo,
       String directory = String_new();
 
       // init macros
+      TextMacros (textMacros,3);
       TEXT_MACROS_INIT(textMacros)
       {
         TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
@@ -634,9 +616,6 @@ LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
                                    )
 {
   Errors error;
-  #ifdef HAVE_SSH2
-    TextMacros (textMacros,3);
-  #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
@@ -650,6 +629,7 @@ LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
       String directory = String_new();
 
       // init macros
+      TextMacros (textMacros,3);
       TEXT_MACROS_INIT(textMacros)
       {
         TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
@@ -691,10 +671,7 @@ LOCAL bool StorageSCP_exists(StorageInfo *storageInfo,
 {
   bool existsFlag;
   #ifdef HAVE_SSH2
-    Errors          error;
-    SocketHandle    socketHandle;
-    LIBSSH2_CHANNEL *channel;
-    struct stat     fileInfo;
+    Errors error;
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
@@ -705,6 +682,7 @@ LOCAL bool StorageSCP_exists(StorageInfo *storageInfo,
 
   #ifdef HAVE_SSH2
     // connect
+    SocketHandle socketHandle;
     error = Network_connect(&socketHandle,
                             SOCKET_TYPE_SSH,
                             storageInfo->storageSpecifier.hostName,
@@ -731,10 +709,11 @@ LOCAL bool StorageSCP_exists(StorageInfo *storageInfo,
     libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
 
     // check if file can be read
-    channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
-                                String_cString(archiveName),
-                                &fileInfo
-                               );
+    struct stat     fileInfo;
+    LIBSSH2_CHANNEL *channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
+                                                 String_cString(archiveName),
+                                                 &fileInfo
+                                                );
     if (channel != NULL)
     {
       existsFlag = TRUE;
@@ -759,10 +738,7 @@ LOCAL bool StorageSCP_isFile(StorageInfo *storageInfo,
 {
   bool result;
   #ifdef HAVE_SSH2
-    Errors          error;
-    SocketHandle    socketHandle;
-    LIBSSH2_CHANNEL *channel;
-    struct stat     fileInfo;
+    Errors error;
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
@@ -773,6 +749,7 @@ LOCAL bool StorageSCP_isFile(StorageInfo *storageInfo,
 
   #ifdef HAVE_SSH2
     // connect
+    SocketHandle socketHandle;
     error = Network_connect(&socketHandle,
                             SOCKET_TYPE_SSH,
                             storageInfo->storageSpecifier.hostName,
@@ -799,10 +776,11 @@ LOCAL bool StorageSCP_isFile(StorageInfo *storageInfo,
     libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
 
     // check if file can be read
-    channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
-                                String_cString(archiveName),
-                                &fileInfo
-                               );
+    struct stat     fileInfo;
+    LIBSSH2_CHANNEL *channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
+                                                 String_cString(archiveName),
+                                                 &fileInfo
+                                                );
     if ((channel != NULL) && S_ISREG(fileInfo.st_mode))
     {
       result = TRUE;
@@ -831,10 +809,7 @@ LOCAL bool StorageSCP_isDirectory(StorageInfo *storageInfo,
 {
   bool result;
   #ifdef HAVE_SSH2
-    Errors          error;
-    SocketHandle    socketHandle;
-    LIBSSH2_CHANNEL *channel;
-    struct stat     fileInfo;
+    Errors error;
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
@@ -845,6 +820,7 @@ LOCAL bool StorageSCP_isDirectory(StorageInfo *storageInfo,
 
   #ifdef HAVE_SSH2
     // connect
+    SocketHandle socketHandle;
     error = Network_connect(&socketHandle,
                             SOCKET_TYPE_SSH,
                             storageInfo->storageSpecifier.hostName,
@@ -871,10 +847,11 @@ LOCAL bool StorageSCP_isDirectory(StorageInfo *storageInfo,
     libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
 
     // check if file can be read
-    channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
-                                String_cString(archiveName),
-                                &fileInfo
-                               );
+    struct stat     fileInfo;
+    LIBSSH2_CHANNEL *channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
+                                                 String_cString(archiveName),
+                                                 &fileInfo
+                                                );
     if ((channel != NULL) && S_ISDIR(fileInfo.st_mode))
     {
       result = TRUE;
@@ -1052,8 +1029,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
                             )
 {
   #ifdef HAVE_SSH2
-    Errors      error;
-    struct stat fileInfo;
+    Errors error;
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
@@ -1113,6 +1089,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
     storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
 
     // open channel and file for reading
+    struct stat fileInfo;
     storageHandle->scp.channel = libssh2_scp_recv2(Network_getSSHSession(&storageHandle->scp.socketHandle),
                                                    String_cString(archiveName),
                                                    &fileInfo
@@ -1241,13 +1218,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
                             )
 {
   #ifdef HAVE_SSH2
-    Errors  error;
-    ulong   index;
-    ulong   bytesAvail;
-    ulong   length;
-    uint64  startTimestamp,endTimestamp;
-    uint64  startTotalReceivedBytes,endTotalReceivedBytes;
-    ssize_t n;
+    Errors error;
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
@@ -1271,8 +1242,8 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
          )
       {
         // copy data from read-ahead buffer
-        index      = (ulong)(storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset);
-        bytesAvail = MIN(bufferSize,storageHandle->scp.readAheadBuffer.length-index);
+        ulong index      = (ulong)(storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset);
+        ulong bytesAvail = MIN(bufferSize,storageHandle->scp.readAheadBuffer.length-index);
         memcpy(buffer,storageHandle->scp.readAheadBuffer.data+index,bytesAvail);
 
         // adjust buffer, bufferSize, bytes read, index
@@ -1288,7 +1259,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
         assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
 
         // get max. number of bytes to receive in one step
-        length = MIN((size_t)(storageHandle->scp.size-storageHandle->scp.index),bufferSize);
+        ulong length = MIN((size_t)(storageHandle->scp.size-storageHandle->scp.index),bufferSize);
         if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
         {
           length = MIN(length,
@@ -1298,12 +1269,13 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
         assert(length > 0L);
 
         // get start time, start received bytes
-        startTimestamp          = Misc_getTimestamp();
-        startTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
+        uint64 startTimestamp          = Misc_getTimestamp();
+        uint64 startTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
 
         if (length < MAX_BUFFER_SIZE)
         {
           // read into read-ahead buffer
+          ssize_t n;
           do
           {
             n = libssh2_channel_read(storageHandle->scp.channel,
@@ -1326,7 +1298,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
 //fprintf(stderr,"%s,%d: readBytes=%ld storageHandle->scp.bufferOffset=%"PRIu64" storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,readBytes,storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
 
           // copy data from read-ahead buffer
-          bytesAvail = MIN(length,storageHandle->scp.readAheadBuffer.length);
+          ulong bytesAvail = MIN(length,storageHandle->scp.readAheadBuffer.length);
           memcpy(buffer,storageHandle->scp.readAheadBuffer.data,bytesAvail);
 
           // adjust buffer, bufferSize, bytes read, index
@@ -1338,6 +1310,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
         else
         {
           // read direct
+          ssize_t n;
           do
           {
             n = libssh2_channel_read(storageHandle->scp.channel,
@@ -1361,8 +1334,8 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
         }
 
         // get end time, end received bytes
-        endTimestamp          = Misc_getTimestamp();
-        endTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
+        uint64 endTimestamp          = Misc_getTimestamp();
+        uint64 endTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
         assert(endTotalReceivedBytes >= startTotalReceivedBytes);
 
         /* limit used band width if requested (note: when the system time is
@@ -1399,12 +1372,7 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
                              )
 {
   #ifdef HAVE_SSH2
-    Errors  error;
-    ulong   writtenBytes;
-    ulong   length;
-    uint64  startTimestamp,endTimestamp;
-    uint64  startTotalSentBytes,endTotalSentBytes;
-    ssize_t n;
+    Errors error;
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
@@ -1418,10 +1386,11 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
 
     error = ERROR_NONE;
 
-    writtenBytes = 0L;
+    ulong writtenBytes = 0L;
     while (writtenBytes < bufferLength)
     {
       // get max. number of bytes to send in one step
+      ulong length;
       if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
       {
         length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
@@ -1436,10 +1405,11 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
       length = MIN(length,4*1024);
 
       // get start time, start received bytes
-      startTimestamp      = Misc_getTimestamp();
-      startTotalSentBytes = storageHandle->scp.totalSentBytes;
+      uint64 startTimestamp      = Misc_getTimestamp();
+      uint64 startTotalSentBytes = storageHandle->scp.totalSentBytes;
 
       // send data
+      ssize_t n;
       ssize_t retryCount = 5;
       do
       {
@@ -1459,8 +1429,8 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
       while ((n == LIBSSH2_ERROR_EAGAIN) && (retryCount >= 0));
 
       // get end time, end received bytes
-      endTimestamp      = Misc_getTimestamp();
-      endTotalSentBytes = storageHandle->scp.totalSentBytes;
+      uint64 endTimestamp      = Misc_getTimestamp();
+      uint64 endTotalSentBytes = storageHandle->scp.totalSentBytes;
       assert(endTotalSentBytes >= startTotalSentBytes);
 
 // ??? is it possible in blocking-mode that write() return 0 and this is not an error?
@@ -1519,13 +1489,11 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
 
 LOCAL uint64 StorageSCP_getSize(StorageHandle *storageHandle)
 {
-  uint64 size;
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
 
-  size = 0LL;
+  uint64 size = 0LL;
   #ifdef HAVE_SSH2
     size = storageHandle->scp.size;
   #else /* not HAVE_SSH2 */
@@ -1826,7 +1794,7 @@ LOCAL Errors StorageSCP_openDirectoryList(StorageDirectoryListHandle *storageDir
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(serverConnectionPriority);
 
-  return ERROR_NONE;
+  return ERROR_FUNCTION_NOT_SUPPORTED;
 }
 
 LOCAL void StorageSCP_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
@@ -1869,7 +1837,7 @@ LOCAL Errors StorageSCP_readDirectoryList(StorageDirectoryListHandle *storageDir
   fileInfo->major           = 0;
   fileInfo->minor           = 0;
 
-  return ERROR_NONE;
+  return ERROR_FUNCTION_NOT_SUPPORTED;
 }
 
 #ifdef __cplusplus

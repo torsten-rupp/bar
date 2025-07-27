@@ -2332,7 +2332,6 @@ bool Job_read(JobNode *jobNode)
         if (String_isEmpty(jobNode->job.options.ftpServer.userName)) String_set(jobNode->job.options.ftpServer.userName,storageSpecifier.userName);
         if (Password_isEmpty(&jobNode->job.options.ftpServer.password)) Password_set(&jobNode->job.options.ftpServer.password,&storageSpecifier.password);
         break;
-      case STORAGE_TYPE_SSH:
       case STORAGE_TYPE_SCP:
       case STORAGE_TYPE_SFTP:
 // TODO: add port in storage name
