@@ -677,7 +677,7 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
 
   assert(userName != NULL);
 
-  printInfo(5,"SSH: host %s:%d\n",String_cString(hostName),hostPort);
+  printInfo(5,"SSH: host '%s:%d', user '%s'\n",String_cString(hostName),hostPort,String_cString(userName));
   error = Network_connect(&socketHandle,
                           SOCKET_TYPE_SSH,
                           hostName,

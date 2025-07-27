@@ -717,10 +717,6 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
                               )
 {
   Errors error;
-  #ifdef HAVE_SSH2
-    int    ssh2Error;
-    char   *ssh2ErrorText;
-  #endif /* HAVE_SSH2 */
 
   assert(socketHandle != NULL);
   assert(socketDescriptor >= 0);
@@ -735,12 +731,6 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
   {
     case SOCKET_TYPE_PLAIN:
       {
-        #if  defined(PLATFORM_LINUX)
-          int n;
-        #elif defined(PLATFORM_WINDOWS)
-          int n;
-        #endif /* PLATFORM_... */
-
         if (socketFlags != SOCKET_FLAG_NONE)
         {
           // enable non-blocking
@@ -757,26 +747,26 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
             if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
               #ifdef HAVE_TCP_NODELAY
-                n = 1;
+                int n = 1;
                 setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(void*)&n,sizeof(int));
               #endif
             }
             if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
-              n = 1;
+              int n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
             }
           #elif defined(PLATFORM_WINDOWS)
             if ((socketFlags & SOCKET_FLAG_NO_DELAY    ) != 0)
             {
               #ifdef HAVE_TCP_NODELAY
-                n = 1;
+                int n = 1;
                 setsockopt(socketHandle->handle,IPPROTO_TCP,TCP_NODELAY,(char*)&n,sizeof(int));
               #endif
             }
             if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
-              n = 1;
+              int n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
             }
           #endif /* PLATFORM_... */
@@ -837,13 +827,6 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
     case SOCKET_TYPE_SSH:
       #ifdef HAVE_SSH2
       {
-        #if  defined(PLATFORM_LINUX)
-          int n;
-        #elif defined(PLATFORM_WINDOWS)
-          int n;
-        #endif /* PLATFORM_... */
-        int result;
-
         assert(loginName != NULL);
 
 // TODO: check CA, cert?
@@ -890,7 +873,8 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
                                    ) != 0
            )
         {
-          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+          char *ssh2ErrorText;
+          int ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
           error = ERRORX_(SSH_SESSION_FAIL,ssh2Error,"%s",ssh2ErrorText);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
@@ -902,61 +886,88 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
         #endif /* HAVE_SSH2_KEEPALIVE_CONFIG */
 
         // authorize with key/password
-        result = -1;
+        error = ERROR_UNKNOWN;
         PASSWORD_DEPLOY_DO(plainPassword,password)
         {
-          if (result != 0)
+          if (error != ERROR_NONE)
           {
             // authorize with key
             if ((publicKeyData != NULL) && (privateKeyData != NULL))
             {
-              result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
-                                                             String_cString(loginName),
-                                                             String_length(loginName),
-                                                             publicKeyData,
-                                                             publicKeyLength,
-                                                             privateKeyData,
-                                                             privateKeyLength,
-                                                             plainPassword
-                                                            );
+              int result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
+                                                                 String_cString(loginName),
+                                                                 String_length(loginName),
+                                                                 publicKeyData,
+                                                                 publicKeyLength,
+                                                                 privateKeyData,
+                                                                 privateKeyLength,
+                                                                 plainPassword
+                                                                );
+              char *ssh2ErrorText;
+              int ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+              // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
+              if (   (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNRECOGNIZED)
+                  || (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_PROTOCOL)
+                 )
+              {
+                error = ERRORX_(INVALID_SSH_PRIVATE_KEY,ssh2Error,"Unable to initialize private key");
+              }
+              else
+              {
+                error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
+              }
             }
           }
 
-          if (result != 0)
+          if (error != ERROR_NONE)
           {
             // authorize with password
-            result = libssh2_userauth_password(socketHandle->ssh2.session,
-                                               String_cString(loginName),
-                                               plainPassword
-                                              );
+            int result = libssh2_userauth_password(socketHandle->ssh2.session,
+                                                   String_cString(loginName),
+                                                   plainPassword
+                                                  );
+            char *ssh2ErrorText;
+            int ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+            // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
+            if (   (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNRECOGNIZED)
+                || (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_PROTOCOL)
+               )
+            {
+              error = ERRORX_(INVALID_SSH_PASSWORD,ssh2Error,NULL);
+            }
+            else
+            {
+              error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
+            }
           }
 
 // disabled keyboard
 #if 0
-          if (result != 0)
+           if (error != ERROR_NONE)
           {
             // authorize interactive
-            result = libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,
-                                                           String_cString(loginName),
-                                                           NULL
-                                                          );
+            int result = libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,
+                                                               String_cString(loginName),
+                                                               NULL
+                                                              );
+            char *ssh2ErrorText;
+            int ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+            // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
+            if (   (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNRECOGNIZED)
+                || (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_PROTOCOL)
+               )
+            {
+              error = ERRORX_(INVALID_SSH_PRIVATE_KEY,ssh2Error,"Unable to initialize private key");
+            }
+            else
+            {
+              error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
+            }
           }
 #endif
         }
-        if (result != 0)
+        if (error != ERROR_NONE)
         {
-          ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-          // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
-          if (   (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNRECOGNIZED)
-              || (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_PROTOCOL)
-             )
-          {
-            error = ERRORX_(INVALID_SSH_PRIVATE_KEY,ssh2Error,"Unable to initialize private key");
-          }
-          else
-          {
-            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
-          }
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
           return error;
@@ -978,13 +989,13 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
           #if  defined(PLATFORM_LINUX)
             if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
-              n = 1;
+              int n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(void*)&n,sizeof(int));
             }
           #elif defined(PLATFORM_WINDOWS)
             if ((socketFlags & SOCKET_FLAG_KEEP_ALIVE  ) != 0)
             {
-              n = 1;
+              int n = 1;
               setsockopt(socketHandle->handle,SOL_SOCKET,SO_KEEPALIVE,(char*)&n,sizeof(int));
             }
           #endif /* PLATFORM_... */
