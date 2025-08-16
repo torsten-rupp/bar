@@ -21364,9 +21364,56 @@ ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_STILL_NOT_IMPLEMENTED,"");
   }
   else if (!String_isEmpty(name))
   {
-    // delete all storages which match name
-//TODO
-ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_STILL_NOT_IMPLEMENTED,"");
+    // parse storage name, get printable name
+    StorageSpecifier storageSpecifier;
+    Storage_initSpecifier(&storageSpecifier);
+    error = Storage_parseName(&storageSpecifier,name);
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      String_delete(name);
+      return;
+    }
+
+    // purge all storages which match name
+    while (Index_findStorageByName(indexHandle,
+                                   &storageSpecifier,
+                                   NULL,  // findArchiveName
+                                   NULL,  // uuidId
+                                   NULL,  // entityId
+                                   NULL,  // jobUUID
+                                   NULL,  // scheduleUUID
+                                   &storageId,
+                                   NULL,  // createdDateTime
+                                   NULL,  // size
+                                   NULL,  // indexState,
+                                   NULL,  // indexMode
+                                   NULL,  // lastCheckedDateTime,
+                                   NULL,  // errorMessage
+                                   NULL,  // totalEntryCount
+                                   NULL  // totalEntrySize
+                                 )
+          )
+    {
+      // purge storage index
+      error = IndexStorage_purge(indexHandle,
+                                 storageId,
+                                 NULL  // progressInfo
+                                );
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+        String_delete(name);
+        return;
+      }
+
+      // remove index id
+      SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      {
+        Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK_(NULL,NULL));
+      }
+    }
+    Storage_doneSpecifier(&storageSpecifier);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");

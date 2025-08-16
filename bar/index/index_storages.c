@@ -2099,16 +2099,16 @@ UNUSED_VARIABLE(progressInfo);
               indexHandle,
     {
       // check if exists
-      if (Database_existsValue(&indexHandle->databaseHandle,
-                               "storages",
-                                DATABASE_FLAG_NONE,
-                                "id",
-                                "id=?",
-                                DATABASE_FILTERS
-                                (
-                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
-                                )
-                              )
+      if (!Database_existsValue(&indexHandle->databaseHandle,
+                                "storages",
+                                 DATABASE_FLAG_NONE,
+                                 "id",
+                                 "id=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
+                                 )
+                               )
          )
       {
         return ERROR_DATABASE_ENTRY_NOT_FOUND;

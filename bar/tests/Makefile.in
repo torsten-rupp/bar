@@ -875,11 +875,6 @@ functionWaitProcess = \
     true; \
   )
 
-# helper function to create index id
-# call functionIndexId,<type>,<id>
-functionIndexId = \
-  $(shell echo $2*16+$1 | $(BC))
-
 # do tests
 #
 # Tests:
@@ -6526,8 +6521,7 @@ tests_server_operations: \
 tests_server_operations_basic: \
   $(TEST_BAR) \
   $(TEST_CONFIGS) \
-  $(TEST_FILES) \
-  $(TEST_SERVER_INDEX_DATABASE)
+  $(TEST_FILES)
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -6599,8 +6593,7 @@ tests_server_operations_batch: \
   $(TEST_BAR) \
   $(TEST_CONFIGS) \
   $(TEST_SERVER_JOBS_DIRECTORY) \
-  $(TEST_FILES) \
-  $(TEST_SERVER_INDEX_DATABASE)
+  $(TEST_FILES)
 	@$(call functionVerifyParameter,BAR_STORAGE)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_JOBS_DIRECTORY)
@@ -6740,6 +6733,8 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 		$(call functionServerCommandBatch,INDEX_REMOVE state=* storageId=1); \
 		$(call functionServerCommandBatch,INDEX_STORAGE_ADD name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
 		$(call functionServerCommandBatch,INDEX_REMOVE state=* name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+		$(call functionServerCommandBatch,INDEX_STORAGE_ADD name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+		$(call functionServerCommandBatch,STORAGE_DELETE storageId=3); \
 		$(SLEEP) 2; \
 		$(call functionServerCommandBatch,INDEX_INFO); \
 		\
