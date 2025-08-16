@@ -21222,7 +21222,8 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
       return;
     }
     IndexStates indexState;
-    while (   !isCommandAborted(clientInfo,id)
+    while (   (error == ERROR_NONE)
+           && !isCommandAborted(clientInfo,id)
            && !isQuit()
            && Index_getNextStorage(&indexQueryHandle,
                                    NULL,  // uuidId
@@ -21267,6 +21268,12 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                   );
         if (error == ERROR_NONE)
         {
+          // remove index id
+          SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+          {
+            Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK_(NULL,NULL));
+          }
+
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                               "storageId=%"PRIu64" name=%'S",
                               storageId,
@@ -21276,19 +21283,17 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         else
         {
           ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-          Index_doneList(&indexQueryHandle);
-          String_delete(name);
-          return;
-        }
-
-        // remove index id
-        SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-        {
-          Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK_(NULL,NULL));
         }
       }
     }
     Index_doneList(&indexQueryHandle);
+    if (error != ERROR_NONE)
+    {
+      String_delete(printableStorageName);
+      String_delete(storageName);
+      Storage_doneSpecifier(&storageSpecifier);
+      return;
+    }
 
     // free resources
     String_delete(printableStorageName);

@@ -875,6 +875,11 @@ functionWaitProcess = \
     true; \
   )
 
+# helper function to create index id
+# call functionIndexId,<type>,<id>
+functionIndexId = \
+  $(shell echo $2*16+$1 | $(BC))
+
 # do tests
 #
 # Tests:
