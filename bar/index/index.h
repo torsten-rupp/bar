@@ -312,10 +312,6 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
   #define Index_beginTransaction(...) __Index_beginTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
-// additional string map functions
-#define StringMap_getIndexId(argumentMap,name,variable,defaultValue) \
-  StringMap_getUInt64(argumentMap,name,&(variable)->data,defaultValue.data)
-
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -749,6 +745,43 @@ bool Index_containsType(const IndexId indexIds[],
                         uint          indexIdCount,
                         IndexTypes    indexType
                        );
+
+/***********************************************************************\
+* Name   : StringMap_getIndexId
+* Purpose: additional string map functions: get index id
+* Input  : stringMap    - stringMap
+*          name         - value name
+*          indexType    - index id type; see INDEX_TYPE_...
+*          defaultValue - value/default value
+* Output : data - value or default value
+* Return : TRUE if read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool StringMap_getIndexId(const StringMap stringMap, const char *name, IndexId *data, IndexTypes indexType, IndexId defaultValue);
+#if defined(NDEBUG) || defined(__INDEX_IMPLEMENTATION__)
+INLINE bool StringMap_getIndexId(const StringMap stringMap, const char *name, IndexId *data, IndexTypes indexType, IndexId defaultValue)
+{
+  assert(stringMap != NULL);
+  assert(name != NULL);
+  assert(data != NULL);
+
+  bool result;
+  DatabaseId databaseId;
+  if (StringMap_getInt64(stringMap,name,&databaseId,defaultValue.data))
+  {
+    (*data) = INDEX_ID_(indexType,databaseId);
+    result = TRUE;
+  }
+  else
+  {
+    (*data) = defaultValue;
+    result = FALSE;
+  }
+
+  return result;
+}
+#endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Index_findUUID
@@ -1404,7 +1437,7 @@ bool Index_isEmptyUUID(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : Index_purgeUUID
-* Purpose: purge UUID entry from index if empty
+* Purpose: purge UUID entry from index if empty (mark as "deleted")
 * Input  : indexHandle - index handle
 *          indexId     - index id of UUID entry
 * Output : -
@@ -1901,21 +1934,6 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                            ConstString  comment,
                            bool         updateNewest
                           );
-
-/***********************************************************************\
-* Name   : Index_puergeStorage
-* Purpose: purge storage index including all entries for attached files,
-*          image, directories, link, hard link, special entries (mark
-*          as deleted)
-* Input  : indexQueryHandle - index query handle
-*          storageId        - index id of storage
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_purgeStorage(IndexHandle *indexHandle,
-                          IndexId     storageId
-                         );
 
 /***********************************************************************\
 * Name   : Index_hasDeletedStorages
@@ -2846,7 +2864,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
 
 /***********************************************************************\
 * Name   : Index_purgeEntity
-* Purpose: purge entity from index if empty
+* Purpose: purge entity from index if empty (mark as "deleted")
 * Input  : indexHandle - index handle
 *          entityId     - index id of entity
 * Output : -

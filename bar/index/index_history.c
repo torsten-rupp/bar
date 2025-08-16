@@ -296,7 +296,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
 
                                       if (historyId != NULL)
                                       {
-                                        if (!StringMap_getIndexId(resultMap,"historyId",historyId,INDEX_ID_NONE))
+                                        if (!StringMap_getIndexId(resultMap,"historyId",historyId,INDEX_TYPE_HISTORY,INDEX_ID_NONE))
                                         {
                                           error = ERROR_EXPECTED_PARAMETER;
                                         }

@@ -2206,7 +2206,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 
                                       UNUSED_VARIABLE(userData);
 
-                                      if (StringMap_getIndexId (resultMap,"entityId",entityId,INDEX_ID_NONE))
+                                      if (StringMap_getIndexId (resultMap,"entityId",entityId,INDEX_TYPE_ENTITY,INDEX_ID_NONE))
                                       {
                                         return ERROR_NONE;
                                       }

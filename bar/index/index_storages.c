@@ -2079,26 +2079,7 @@ Errors IndexStorage_purge(IndexHandle  *indexHandle,
                           ProgressInfo *progressInfo
                          )
 {
-  Errors               error;
-  DatabaseId           databaseId;
-  IndexId              entityId;
-  uint                 totalEntryCount;
-  uint64               totalEntrySize;
-  uint                 totalFileCount;
-  uint64               totalFileSize;
-  uint                 totalImageCount;
-  uint64               totalImageSize;
-  uint                 totalDirectoryCount;
-  uint                 totalLinkCount;
-  uint                 totalHardlinkCount;
-  uint64               totalHardlinkSize;
-  uint                 totalSpecialCount;
-  Array                entryIds;
-  ArraySegmentIterator arraySegmentIterator;
-  ArrayIterator        arrayIterator;
-  IndexId              entryId;
-  String               entryIdsString;
-  String               filterString;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE);
@@ -2117,7 +2098,24 @@ UNUSED_VARIABLE(progressInfo);
     INDEX_DOX(error,
               indexHandle,
     {
+      // check if exists
+      if (Database_existsValue(&indexHandle->databaseHandle,
+                               "storages",
+                                DATABASE_FLAG_NONE,
+                                "id",
+                                "id=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
+                                )
+                              )
+         )
+      {
+        return ERROR_DATABASE_ENTRY_NOT_FOUND;
+      }
+
       // get entity id
+      DatabaseId databaseId;
       error = Database_getId(&indexHandle->databaseHandle,
                              &databaseId,
                              "storages",
@@ -2132,20 +2130,20 @@ UNUSED_VARIABLE(progressInfo);
       {
         return error;
       }
-      entityId = INDEX_ID_ENTITY(databaseId);
+      IndexId entityId = INDEX_ID_ENTITY(databaseId);
 
       // get aggregate data
-      totalEntryCount     = 0;
-      totalEntrySize      = 0LL;
-      totalFileCount      = 0;
-      totalFileSize       = 0LL;
-      totalImageCount     = 0;
-      totalImageSize      = 0LL;
-      totalDirectoryCount = 0;
-      totalLinkCount      = 0;
-      totalHardlinkCount  = 0;
-      totalHardlinkSize   = 0LL;
-      totalSpecialCount   = 0;
+      uint   totalEntryCount     = 0;
+      uint64 totalEntrySize      = 0LL;
+      uint   totalFileCount      = 0;
+      uint64 totalFileSize       = 0LL;
+      uint   totalImageCount     = 0;
+      uint64 totalImageSize      = 0LL;
+      uint   totalDirectoryCount = 0;
+      uint64 totalLinkCount      = 0;
+      uint   totalHardlinkCount  = 0;
+      uint64 totalHardlinkSize   = 0LL;
+      uint   totalSpecialCount   = 0;
       (void)Database_get(&indexHandle->databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
@@ -2203,6 +2201,7 @@ UNUSED_VARIABLE(progressInfo);
                         );
 
       // get entry ids to purge
+      Array entryIds;
       Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
       error = Database_get(&indexHandle->databaseHandle,
@@ -2405,11 +2404,14 @@ UNUSED_VARIABLE(progressInfo);
       }
 
       // purge entries (mark as deleted)
-      entryIdsString = String_new();
-      filterString   = String_new();
+      String entryIdsString = String_new();
+      String filterString   = String_new();
+      ArraySegmentIterator arraySegmentIterator;
       ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,1024,error == ERROR_NONE)
       {
         String_clear(entryIdsString);
+        ArrayIterator arrayIterator;
+        IndexId       entryId;
         ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
         {
           if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
@@ -2457,6 +2459,7 @@ UNUSED_VARIABLE(progressInfo);
                                 DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
                               )
                              );
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       if (error != ERROR_NONE)
       {
         return error;
@@ -2546,6 +2549,26 @@ UNUSED_VARIABLE(progressInfo);
 
   if (indexHandle->masterIO == NULL)
   {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      // check if exists
+      if (Database_existsValue(&indexHandle->databaseHandle,
+                               "entities",
+                                DATABASE_FLAG_NONE,
+                                "id",
+                                "id=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
+                                )
+                              )
+         )
+      {
+        return ERROR_DATABASE_ENTRY_NOT_FOUND;
+      }
+    });
+
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
                                    INDEX_ID_ANY,  // uuidId
@@ -5567,7 +5590,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 
                                       UNUSED_VARIABLE(userData);
 
-                                      if (StringMap_getIndexId(resultMap,"storageId",storageId,INDEX_ID_NONE))
+                                      if (StringMap_getIndexId(resultMap,"storageId",storageId,INDEX_TYPE_STORAGE,INDEX_ID_NONE))
                                       {
                                         return ERROR_NONE;
                                       }
@@ -6057,6 +6080,40 @@ Errors Index_getStorage(IndexHandle *indexHandle,
 
     return ERROR_NONE;
   });
+
+  return error;
+}
+
+Errors Index_purgeStorage(IndexHandle *indexHandle,
+                          IndexId     indexId
+                         )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(INDEX_TYPE(indexId) == INDEX_TYPE_STORAGE);
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return IndexStorage_purge(indexHandle,
+                                indexId,
+                                NULL  // proressInfo
+                               );
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_STORAGE_PURGE storageId=%"PRIi64"",
+                                    indexId
+                                   );
+  }
 
   return error;
 }
