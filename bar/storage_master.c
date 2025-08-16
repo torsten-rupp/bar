@@ -304,7 +304,7 @@ LOCAL bool StorageMaster_eof(StorageHandle *storageHandle)
 LOCAL Errors StorageMaster_read(StorageHandle *storageHandle,
                                 void          *buffer,
                                 ulong         bufferSize,
-                                ulong         *bytesRead
+                                ulong         *readBytes
                                )
 {
 //  Errors error;
@@ -317,7 +317,7 @@ LOCAL Errors StorageMaster_read(StorageHandle *storageHandle,
 
 UNUSED_VARIABLE(buffer);
 UNUSED_VARIABLE(bufferSize);
-UNUSED_VARIABLE(bytesRead);
+UNUSED_VARIABLE(readBytes);
 return ERROR_STILL_NOT_IMPLEMENTED;
 }
 #endif

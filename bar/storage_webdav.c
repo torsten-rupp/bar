@@ -2257,7 +2257,7 @@ LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle)
 LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
                                 void          *buffer,
                                 ulong         bufferSize,
-                                ulong         *bytesRead
+                                ulong         *readBytes
                                )
 {
   Errors error;
@@ -2278,7 +2278,7 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
         );
   assert(buffer != NULL);
 
-  if (bytesRead != NULL) (*bytesRead) = 0L;
+  if (readBytes != NULL) (*readBytes) = 0L;
 
   error = ERROR_NONE;
   #ifdef HAVE_CURL
@@ -2308,7 +2308,7 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
         // adjust buffer, bufferSize, bytes read, index
         buffer = (byte*)buffer+bytesAvail;
         bufferSize -= bytesAvail;
-        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+        if (readBytes != NULL) (*readBytes) += bytesAvail;
         storageHandle->webdav.index += (uint64)bytesAvail;
       }
 
@@ -2403,7 +2403,7 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
         // adjust buffer, bufferSize, bytes read, index
         buffer = (byte*)buffer+bytesAvail;
         bufferSize -= bytesAvail;
-        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+        if (readBytes != NULL) (*readBytes) += bytesAvail;
         storageHandle->webdav.index += (uint64)bytesAvail;
 
         // get end time
@@ -2429,7 +2429,7 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
     UNUSED_VARIABLE(bufferSize);
-    UNUSED_VARIABLE(bytesRead);
+    UNUSED_VARIABLE(readBytes);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL */

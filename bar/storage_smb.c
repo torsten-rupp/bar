@@ -1660,7 +1660,7 @@ LOCAL Errors StorageSMB_write(StorageHandle *storageHandle,
 {
   #ifdef HAVE_SMB2
     Errors  error;
-    ulong   bytesWritten;
+    ulong   writtenBytes;
     ulong   length;
     uint64  startTimestamp,endTimestamp;
     uint64  startTotalSentBytes,endTotalSentBytes;
@@ -1678,18 +1678,18 @@ LOCAL Errors StorageSMB_write(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   #ifdef HAVE_SMB2
-    bytesWritten = 0L;
+    writtenBytes = 0L;
     error        = ERROR_NONE;
-    while (bytesWritten < bufferLength)
+    while (writtenBytes < bufferLength)
     {
       // get max. number of bytes to send in one step
       if (storageHandle->storageInfo->smb.bandWidthLimiter.maxBandWidthList != NULL)
       {
-        length = MIN(MIN(storageHandle->storageInfo->smb.bandWidthLimiter.blockSize,bufferLength-bytesWritten),storageHandle->smb.maxReadWriteBytes);
+        length = MIN(MIN(storageHandle->storageInfo->smb.bandWidthLimiter.blockSize,bufferLength-writtenBytes),storageHandle->smb.maxReadWriteBytes);
       }
       else
       {
-        length = MIN(bufferLength-bytesWritten,storageHandle->smb.maxReadWriteBytes);
+        length = MIN(bufferLength-writtenBytes,storageHandle->smb.maxReadWriteBytes);
       }
       assert(length > 0L);
 
@@ -1709,7 +1709,7 @@ LOCAL Errors StorageSMB_write(StorageHandle *storageHandle,
         break;
       }
       buffer = (byte*)buffer+n;
-      bytesWritten += n;
+      writtenBytes += n;
 
       // get end time, end received bytes
       endTimestamp      = Misc_getTimestamp();
@@ -1731,7 +1731,7 @@ LOCAL Errors StorageSMB_write(StorageHandle *storageHandle,
         }
       }
     }
-    storageHandle->smb.size += bytesWritten;
+    storageHandle->smb.size += writtenBytes;
 
     return error;
   #else /* not HAVE_SMB2 */

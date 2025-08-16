@@ -3509,7 +3509,7 @@ LOCAL bool StorageOptical_eof(StorageHandle *storageHandle)
 LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
                                  void          *buffer,
                                  ulong         bufferSize,
-                                 ulong         *bytesRead
+                                 ulong         *readBytes
                                 )
 {
   #ifdef HAVE_ISO9660
@@ -3531,7 +3531,7 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
     assert(storageHandle->opticalDisk.read.buffer.data != NULL);
   #endif
 
-  if (bytesRead != NULL) (*bytesRead) = 0L;
+  if (readBytes != NULL) (*readBytes) = 0L;
   #ifdef HAVE_ISO9660
     error = ERROR_NONE;
     while (   (bufferSize > 0L)
@@ -3570,7 +3570,7 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
       // adjust buffer, bufferSize, bytes read, index
       buffer = (byte*)buffer+bytesAvail;
       bufferSize -= bytesAvail;
-      if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+      if (readBytes != NULL) (*readBytes) += bytesAvail;
       storageHandle->opticalDisk.read.index += (uint64)bytesAvail;
     }
 
@@ -3579,7 +3579,7 @@ LOCAL Errors StorageOptical_read(StorageHandle *storageHandle,
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
     UNUSED_VARIABLE(bufferSize);
-    UNUSED_VARIABLE(bytesRead);
+    UNUSED_VARIABLE(readBytes);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_ISO9660 */

@@ -507,7 +507,7 @@ LOCAL bool StorageFile_eof(StorageHandle *storageHandle)
 LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
                               void          *buffer,
                               ulong         bufferSize,
-                              ulong         *bytesRead
+                              ulong         *readBytes
                              )
 {
   assert(storageHandle != NULL);
@@ -516,7 +516,7 @@ LOCAL Errors StorageFile_read(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(buffer != NULL);
 
-  return File_read(&storageHandle->fileSystem.fileHandle,buffer,bufferSize,bytesRead);
+  return File_read(&storageHandle->fileSystem.fileHandle,buffer,bufferSize,readBytes);
 }
 
 LOCAL Errors StorageFile_write(StorageHandle *storageHandle,

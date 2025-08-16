@@ -1934,7 +1934,7 @@ LOCAL bool StorageFTP_eof(StorageHandle *storageHandle)
 LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
                              void          *buffer,
                              ulong         bufferSize,
-                             ulong         *bytesRead
+                             ulong         *readBytes
                             )
 {
   Errors error;
@@ -1973,7 +1973,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       // adjust buffer, bufferSize, bytes read, index
       buffer = (byte*)buffer+bytesAvail;
       bufferSize -= bytesAvail;
-      if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+      if (readBytes != NULL) (*readBytes) += bytesAvail;
       storageHandle->ftp.index += (uint64)bytesAvail;
     }
 
@@ -2066,7 +2066,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         // adjust buffer, bufferSize, bytes read, index
         buffer = (byte*)buffer+bytesAvail;
         bufferSize -= bytesAvail;
-        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+        if (readBytes != NULL) (*readBytes) += bytesAvail;
         storageHandle->ftp.index += (uint64)bytesAvail;
       }
       else
@@ -2130,7 +2130,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         // adjust buffer, bufferSize, bytes read, index
         buffer = (byte*)buffer+bytesAvail;
         bufferSize -= bytesAvail;
-        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
+        if (readBytes != NULL) (*readBytes) += bytesAvail;
         storageHandle->ftp.index += (uint64)bytesAvail;
       }
 
@@ -2158,7 +2158,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(buffer);
     UNUSED_VARIABLE(bufferSize);
-    UNUSED_VARIABLE(bytesRead);
+    UNUSED_VARIABLE(readBytes);
 
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL || HAVE_FTP */

@@ -1454,7 +1454,7 @@ LOCAL bool StorageDevice_eof(StorageHandle *storageHandle)
 LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
                                 void          *buffer,
                                 ulong         bufferSize,
-                                ulong         *bytesRead
+                                ulong         *readBytes
                                )
 {
   assert(storageHandle != NULL);
@@ -1464,9 +1464,9 @@ LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(buffer != NULL);
 
-  if (bytesRead != NULL) (*bytesRead) = 0L;
+  if (readBytes != NULL) (*readBytes) = 0L;
 
-  return File_read(&storageHandle->device.write.fileHandle,buffer,bufferSize,bytesRead);
+  return File_read(&storageHandle->device.write.fileHandle,buffer,bufferSize,readBytes);
 }
 
 LOCAL Errors StorageDevice_write(StorageHandle *storageHandle,

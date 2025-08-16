@@ -15334,21 +15334,12 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   uint               importLastProgress;
   uint64             updateLastProgressTimestamp;
 
-  StorageSpecifier   storageSpecifier;
   String             printableStorageName;
   Errors             error;
   uint64             size;
   ArchiveHandle      archiveHandle;
   ArchiveEntryInfo   archiveEntryInfo;
   ArchiveEntryTypes  archiveEntryType;
-  String             fileName;
-  String             imageName;
-  String             directoryName;
-  String             linkName;
-  String             destinationName;
-  StringList         fileNameList;
-  String             hostName,userName;
-  String             comment;
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString       (entityUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes       archiveType;
@@ -15396,20 +15387,15 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
   void updateIndexProgress(uint64 offset)
   {
-    uint   progress;
-    uint64 now;
-    ulong  elapsedTime,importTotalTime;
-    ulong  estimatedRestTime;
-
     assert(offset > 0LL);
 
     if (updateSize > 0LL)
     {
-      progress          = (offset*1000)/updateSize;
-      now               = Misc_getTimestamp();
-      elapsedTime       = (ulong)((now-updateStartTimestamp)/US_PER_SECOND);
-      importTotalTime   = (ulong)(((uint64)elapsedTime*updateSize)/offset);
-      estimatedRestTime = importTotalTime-elapsedTime;
+      uint   progress          = (offset*1000)/updateSize;
+      uint64 now               = Misc_getTimestamp();
+      ulong  elapsedTime       = (ulong)((now-updateStartTimestamp)/US_PER_SECOND);
+      ulong  importTotalTime   = (ulong)(((uint64)elapsedTime*updateSize)/offset);
+      ulong  estimatedRestTime = importTotalTime-elapsedTime;
       if (   (progress >= 20)  // to avoid wrong estimation wait until 2% are done
           && (progress >= (importLastProgress+1))
           && (now > (updateLastProgressTimestamp+30*US_PER_SECOND))
@@ -15437,62 +15423,32 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   assert(storageInfo != NULL);
 
   // init variables
+  StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
-  fileName             = String_new();
-  imageName            = String_new();
-  directoryName        = String_new();
-  linkName             = String_new();
-  destinationName      = String_new();
+  String fileName             = String_new();
+  String imageName            = String_new();
+  String directoryName        = String_new();
+  String linkName             = String_new();
+  String destinationName      = String_new();
+  StringList fileNameList;
   StringList_init(&fileNameList);
-  hostName             = String_new();
-  userName             = String_new();
-  comment              = String_new();
+  String hostName             = String_new();
+  String userName             = String_new();
+  String comment              = String_new();
 
   // get printable name
   Storage_getPrintableName(printableStorageName,&storageInfo->storageSpecifier,NULL);
 
-  // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
-  if (storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP)
-  {
-    // try to open scp-storage first with sftp
-    storageSpecifier.type = STORAGE_TYPE_SFTP;
-//TODO: use indexHandle in Archive_open
-    error = Archive_open(&archiveHandle,
-                         storageInfo,
-                         NULL,  // archive name
-                         NULL,  // deltaSourceList
-                         ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS,
-                         CALLBACK_(NULL,NULL),  // getNamePasswordFunction
-                         logHandle
-                        );
-
-    if (error != ERROR_NONE)
-    {
-      // open scp-storage
-      storageSpecifier.type = STORAGE_TYPE_SCP;
-      error = Archive_open(&archiveHandle,
-                           storageInfo,
-                           NULL,  // archive name
-                           NULL,  // deltaSourceList
-                           ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS,
-                           CALLBACK_(NULL,NULL),  // getNamePasswordFunction
-                           logHandle
-                          );
-    }
-  }
-  else
-  {
-    // open other storage types
-    error = Archive_open(&archiveHandle,
-                         storageInfo,
-                         NULL,  // archive name
-                         NULL,  // deltaSourceList
-                         ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS,
-                         CALLBACK_(NULL,NULL),  // getNamePasswordFunction
-                         logHandle
-                        );
-  }
+  // open archive
+  error = Archive_open(&archiveHandle,
+                       storageInfo,
+                       NULL,  // archive name
+                       NULL,  // deltaSourceList
+                       ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS,
+                       CALLBACK_(NULL,NULL),  // getNamePasswordFunction
+                       logHandle
+                      );
   if (error != ERROR_NONE)
   {
     String_delete(comment);
@@ -15567,11 +15523,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
         {
+          // read file entry
           ArchiveEntryInfo archiveEntryInfo;
           FileInfo         fileInfo;
           uint64           fragmentOffset,fragmentSize;
-
-          // read file entry
           error = Archive_readFileEntry(&archiveEntryInfo,
                                         &archiveHandle,
                                         NULL,  // deltaCompressAlgorithm
@@ -15617,12 +15572,11 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
         {
+          // read image entry
           ArchiveEntryInfo archiveEntryInfo;
           DeviceInfo       deviceInfo;
           FileSystemTypes  fileSystemType;
           uint64           blockOffset,blockCount;
-
-          // read image entry
           error = Archive_readImageEntry(&archiveEntryInfo,
                                          &archiveHandle,
                                          NULL,  // deltaCompressAlgorithm
@@ -15663,9 +15617,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
         break;
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         {
-          FileInfo fileInfo;
-
           // read directory entry
+          FileInfo fileInfo;
           error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                              &archiveHandle,
                                              NULL,  // cryptType
@@ -15702,9 +15655,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
         break;
       case ARCHIVE_ENTRY_TYPE_LINK:
         {
-          FileInfo fileInfo;
-
           // read link entry
+          FileInfo fileInfo;
           error = Archive_readLinkEntry(&archiveEntryInfo,
                                         &archiveHandle,
                                         NULL,  // cryptType
@@ -15743,13 +15695,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         {
+          // read hard link entry
           ArchiveEntryInfo archiveEntryInfo;
           FileInfo         fileInfo;
           uint64           fragmentOffset,fragmentSize;
-          StringNode       *stringNode;
-          String           name;
-
-          // read hard link entry
           error = Archive_readHardLinkEntry(&archiveEntryInfo,
                                             &archiveHandle,
                                             NULL,  // deltaCompressAlgorithm
@@ -15772,6 +15721,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           }
 
           // add to index database
+          StringNode *stringNode;
+          String     name;
           STRINGLIST_ITERATE(&fileNameList,stringNode,name)
           {
             indexAddHardlink(&archiveHandle,
@@ -15798,9 +15749,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         {
-          FileInfo fileInfo;
-
           // read special entry
+          FileInfo fileInfo;
           error = Archive_readSpecialEntry(&archiveEntryInfo,
                                            &archiveHandle,
                                            NULL,  // cryptType
