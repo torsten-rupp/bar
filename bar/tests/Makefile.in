@@ -6536,6 +6536,8 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	( \
     $(INSTALL) -d $(TEST_SERVER_JOBS_DIRECTORY); \
     ( \
+      $(ECHO) "UUID = $(TEST_JOB_UUID)"; \
+      $(ECHO) "archive-name = $(BAR_STORAGE)/$(BAR_FILE).bar"; \
       $(ECHO) "include-file = data"; \
       $(ECHO) "[schedule]"; \
       $(ECHO) "  archive-type = continuous"; \
@@ -6546,6 +6548,7 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
       $(ECHO) "  enabled = yes"; \
       $(ECHO) "[end]"; \
     ) >$(TEST_SERVER_JOBS_DIRECTORY)/$(TEST_JOB_NAME1); \
+		$(RMF) $(BAR_JOBS_DIRECTORY)/$(TEST_JOB_NAME2); \
     \
     $(CD) $(UP_DIR); \
     $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -6729,6 +6732,9 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 		$(call functionServerCommandBatch,ENTRY_LIST_CLEAR); \
 		\
 		$(call functionServerCommandBatch,INDEX_STORAGE_ADD name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+		$(call functionServerCommandBatch,INDEX_REMOVE state=* storageId=1); \
+		$(call functionServerCommandBatch,INDEX_STORAGE_ADD name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
+		$(call functionServerCommandBatch,INDEX_REMOVE state=* name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
 		$(SLEEP) 2; \
 		$(call functionServerCommandBatch,INDEX_INFO); \
 		\
@@ -6789,7 +6795,14 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 		$(call functionServerCommandBatch,QUIT); \
 	) | \
 	( \
+    $(INSTALL) -d $(TEST_SERVER_JOBS_DIRECTORY); \
+    ( \
+      $(ECHO) "UUID = $(TEST_JOB_UUID)"; \
+      $(ECHO) "archive-name = $(BAR_STORAGE)/$(BAR_FILE).bar"; \
+      $(ECHO) "include-file = data"; \
+    ) >$(TEST_SERVER_JOBS_DIRECTORY)/$(TEST_JOB_NAME1); \
 		$(RMF) $(BAR_JOBS_DIRECTORY)/$(TEST_JOB_NAME2); \
+		\
 		$(CD) $(UP_DIR); \
 		$(ULIMIT) -Sv $(MEMORY_LIMIT); \
 		\
@@ -6831,7 +6844,14 @@ tests_server_operations_socket_server: \
 #TODO: has debug optioin
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	( \
+    $(INSTALL) -d $(TEST_SERVER_JOBS_DIRECTORY); \
+    ( \
+      $(ECHO) "UUID = $(TEST_JOB_UUID)"; \
+      $(ECHO) "archive-name = $(BAR_STORAGE)/$(BAR_FILE).bar"; \
+      $(ECHO) "include-file = data"; \
+    ) >$(TEST_SERVER_JOBS_DIRECTORY)/$(TEST_JOB_NAME1); \
 		$(RMF) $(BAR_JOBS_DIRECTORY)/$(TEST_JOB_NAME2); \
+		\
 		$(CD) $(UP_DIR); \
 		$(ULIMIT) -Sv $(MEMORY_LIMIT); \
 		\

@@ -444,14 +444,17 @@ typedef struct
       // scp storage
       struct
       {
-        SocketHandle    socketHandle;
-        LIBSSH2_CHANNEL *channel;                             // scp channel
+        String              archiveName;
+        SocketHandle        socketHandle;
         LIBSSH2_SEND_FUNC((*oldSendCallback));                // libssh2 callback to send data (used to track sent bytes)
         LIBSSH2_RECV_FUNC((*oldReceiveCallback));             // libssh2 callback to receive data (used to track received bytes)
-        uint64          totalSentBytes;                       // total sent bytes
-        uint64          totalReceivedBytes;                   // total received bytes
-        uint64          index;                                // current read/write index in file [0..n-1]
-        uint64          size;                                 // size of file [bytes]
+        uint64              totalSentBytes;                   // total sent bytes
+        uint64              totalReceivedBytes;               // total received bytes
+        LIBSSH2_CHANNEL     *channel;                         // scp channel (only used if scp-protocol have to be used instead of sftp)
+        LIBSSH2_SFTP        *sftp;                            // sftp session (only used if sftp-protocol can be used instead of scp)
+        LIBSSH2_SFTP_HANDLE *sftpHandle;                      // sftp handle (only used if sftp-protocol can be used instead of scp)
+        uint64              index;                            // current read/write index in file [0..n-1]
+        uint64              size;                             // size of file [bytes]
         struct                                                // read-ahead buffer
         {
           byte   *data;
