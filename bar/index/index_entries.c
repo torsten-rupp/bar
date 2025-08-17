@@ -2736,10 +2736,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
   assert(indexHandle->masterIO == NULL);
   assert(   (INDEX_TYPE(entryId) == INDEX_TYPE_FILE)
          || (INDEX_TYPE(entryId) == INDEX_TYPE_IMAGE)
-         || (INDEX_TYPE(entryId) == INDEX_TYPE_DIRECTORY)
-         || (INDEX_TYPE(entryId) == INDEX_TYPE_LINK)
          || (INDEX_TYPE(entryId) == INDEX_TYPE_HARDLINK)
-         || (INDEX_TYPE(entryId) == INDEX_TYPE_SPECIAL)
         );
 
   // check init error

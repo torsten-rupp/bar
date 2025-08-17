@@ -19781,9 +19781,17 @@ LOCAL void serverCommand_indexEntryFragmentList(ClientInfo *clientInfo, IndexHan
   assert(argumentMap != NULL);
 
   // get entity id, offset, limit
-  if (!StringMap_getIndexId(argumentMap,"entryId",&entryId,INDEX_TYPE_ENTITY,INDEX_ID_NONE))
+  if (!StringMap_getUInt64(argumentMap,"entryId",&entryId.data,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryId=<id>");
+    return;
+  }
+  if (   (INDEX_TYPE(entryId) != INDEX_TYPE_FILE)
+      && (INDEX_TYPE(entryId) != INDEX_TYPE_IMAGE)
+      && (INDEX_TYPE(entryId) != INDEX_TYPE_HARDLINK)
+     )
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entry id for file, image or hardlink");
     return;
   }
   StringMap_getUInt64(argumentMap,"offset",&offset,0);
