@@ -731,27 +731,27 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
   uint64           timeModified;
 
 
-  error = Index_initListEntries(&indexQueryHandle,
-                                indexHandle,
-                                NULL,  // indexIds
-                                0L,  // indexIdCount
-                                NULL,  // entryIds
-                                0L,  // entryIdCount
-                                INDEX_TYPESET_ANY_ENTRY,
-                                NULL,  // entryPattern,
-                                FALSE,  // newestOnly
-                                FALSE,  // fragmentsCount
-                                INDEX_ENTRY_SORT_MODE_NONE,
-                                DATABASE_ORDERING_NONE,
-                                0LL,  // offset
-                                INDEX_UNLIMITED
-                               );
+  error = IndexEntry_initList(&indexQueryHandle,
+                              indexHandle,
+                              NULL,  // indexIds
+                              0L,  // indexIdCount
+                              NULL,  // entryIds
+                              0L,  // entryIdCount
+                              INDEX_TYPESET_ANY_ENTRY,
+                              NULL,  // entryPattern,
+                              FALSE,  // newestOnly
+                              FALSE,  // fragmentsCount
+                              INDEX_ENTRY_SORT_MODE_NONE,
+                              DATABASE_ORDERING_NONE,
+                              0LL,  // offset
+                              INDEX_UNLIMITED
+                             );
   if (error != ERROR_NONE)
   {
     return error;
   }
   name = String_new();
-  while (Index_getNextEntry(&indexQueryHandle,
+  while (IndexEntry_getNext(&indexQueryHandle,
                             NULL,  // uuidId
                             NULL,  // jobUUID
                             NULL,  // entityId
@@ -804,7 +804,7 @@ void IndexCommon_verify(IndexHandle *indexHandle,
   assert(condition != NULL);
 
 UNUSED_VARIABLE(value);
-//TODO
+//TODO: implement
 #if 0
   va_start(arguments,condition);
   error = Database_vgetInteger64(&indexHandle->databaseHandle,

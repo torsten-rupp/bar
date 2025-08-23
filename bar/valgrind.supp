@@ -484,7 +484,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -500,7 +500,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -516,7 +516,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -532,7 +532,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -548,7 +548,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -564,7 +564,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -580,7 +580,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -596,7 +596,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -630,7 +630,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -646,7 +646,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -662,7 +662,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -678,7 +678,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -694,7 +694,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -710,7 +710,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -726,7 +726,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {
@@ -742,7 +742,7 @@
    fun:__closure__.20010
    fun:Database_insert
    fun:__closure__.37755
-   fun:Index_newStorage
+   fun:IndexStorage_new
    fun:runDebug
 }
 {

@@ -36,6 +36,10 @@
 #include "jobs.h"
 #include "server.h"
 #include "index/index_storages.h"
+#include "index/index_entries.h"
+#include "index/index_entities.h"
+#include "index/index_uuids.h"
+#include "index/index_history.h"
 
 #include "connector.h"
 
@@ -1111,7 +1115,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   if (indexHandle != NULL)
   {
     // find job data
-    if (Index_findUUID(indexHandle,
+    if (IndexUUID_find(indexHandle,
                        String_cString(jobUUID),
                        String_cString(entityUUUID),
                        &uuidId,
@@ -1208,7 +1212,7 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
   if (indexHandle != NULL)
   {
     // create new UUID
-    error = Index_newUUID(indexHandle,
+    error = IndexUUID_new(indexHandle,
                           String_cString(jobUUID),
                           &uuidId
                          );
@@ -1307,7 +1311,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo   *connectorInfo,
   if (indexHandle != NULL)
   {
     // create new entity
-    error = Index_newEntity(indexHandle,
+    error = IndexEntity_new(indexHandle,
                             String_cString(jobUUID),
                             String_cString(scheduleUUID),
                             String_cString(hostName),
@@ -1421,7 +1425,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
   if (indexHandle != NULL)
   {
     // create new storage
-    error = Index_newStorage(indexHandle,
+    error = IndexStorage_new(indexHandle,
                              uuidId,
                              entityId,
                              connectorInfo->io.network.name,
@@ -1584,21 +1588,21 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   if (indexHandle != NULL)
   {
     // add index file entry
-    error = Index_addFile(indexHandle,
-                          uuidId,
-                          entityId,
-                          storageId,
-                          name,
-                          size,
-                          timeLastAccess,
-                          timeModified,
-                          timeLastChanged,
-                          userId,
-                          groupId,
-                          permission,
-                          fragmentOffset,
-                          fragmentSize
-                         );
+    error = IndexEntry_addFile(indexHandle,
+                               uuidId,
+                               entityId,
+                               storageId,
+                               name,
+                               size,
+                               timeLastAccess,
+                               timeModified,
+                               timeLastChanged,
+                               userId,
+                               groupId,
+                               permission,
+                               fragmentOffset,
+                               fragmentSize
+                              );
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -1744,17 +1748,17 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   if (indexHandle != NULL)
   {
     // add index image entry
-    error = Index_addImage(indexHandle,
-                           uuidId,
-                           entityId,
-                           storageId,
-                           name,
-                           fileSystemType,
-                           size,
-                           blockSize,
-                           blockOffset,
-                           blockCount
-                          );
+    error = IndexEntry_addImage(indexHandle,
+                                uuidId,
+                                entityId,
+                                storageId,
+                                name,
+                                fileSystemType,
+                                size,
+                                blockSize,
+                                blockOffset,
+                                blockCount
+                               );
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -1885,18 +1889,18 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   if (indexHandle != NULL)
   {
     // add index directory entry
-    error = Index_addDirectory(indexHandle,
-                               uuidId,
-                               entityId,
-                               storageId,
-                               name,
-                               timeLastAccess,
-                               timeModified,
-                               timeLastChanged,
-                               userId,
-                               groupId,
-                               permission
-                              );
+    error = IndexEntry_addDirectory(indexHandle,
+                                    uuidId,
+                                    entityId,
+                                    storageId,
+                                    name,
+                                    timeLastAccess,
+                                    timeModified,
+                                    timeLastChanged,
+                                    userId,
+                                    groupId,
+                                    permission
+                                  );
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -2041,19 +2045,19 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   if (indexHandle != NULL)
   {
     // add index link entry
-    error = Index_addLink(indexHandle,
-                          uuidId,
-                          entityId,
-                          storageId,
-                          name,
-                          destinationName,
-                          timeLastAccess,
-                          timeModified,
-                          timeLastChanged,
-                          userId,
-                          groupId,
-                          permission
-                         );
+    error = IndexEntry_addLink(indexHandle,
+                               uuidId,
+                               entityId,
+                               storageId,
+                               name,
+                               destinationName,
+                               timeLastAccess,
+                               timeModified,
+                               timeLastChanged,
+                               userId,
+                               groupId,
+                               permission
+                              );
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -2207,21 +2211,21 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   if (indexHandle != NULL)
   {
     // add index hardlink entry
-    error = Index_addHardlink(indexHandle,
-                              uuidId,
-                              entityId,
-                              storageId,
-                              name,
-                              size,
-                              timeLastAccess,
-                              timeModified,
-                              timeLastChanged,
-                              userId,
-                              groupId,
-                              permission,
-                              fragmentOffset,
-                              fragmentSize
-                             );
+    error = IndexEntry_addHardlink(indexHandle,
+                                   uuidId,
+                                   entityId,
+                                   storageId,
+                                   name,
+                                   size,
+                                   timeLastAccess,
+                                   timeModified,
+                                   timeLastChanged,
+                                   userId,
+                                   groupId,
+                                   permission,
+                                   fragmentOffset,
+                                   fragmentSize
+                                  );
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -2393,21 +2397,21 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   if (indexHandle != NULL)
   {
     // add index special entry
-    error = Index_addSpecial(indexHandle,
-                             uuidId,
-                             entityId,
-                             storageId,
-                             name,
-                             specialType,
-                             timeLastAccess,
-                             timeModified,
-                             timeLastChanged,
-                             userId,
-                             groupId,
-                             permission,
-                             major,
-                             minor
-                            );
+    error = IndexEntry_addSpecial(indexHandle,
+                                  uuidId,
+                                  entityId,
+                                  storageId,
+                                  name,
+                                  specialType,
+                                  timeLastAccess,
+                                  timeModified,
+                                  timeLastChanged,
+                                  userId,
+                                  groupId,
+                                  permission,
+                                  major,
+                                  minor
+                                 );
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -2461,7 +2465,7 @@ LOCAL void connectorCommand_indexUUIDPurge(ConnectorInfo *connectorInfo, IndexHa
   if (indexHandle != NULL)
   {
     // prune UUID
-    error = Index_purgeUUID(indexHandle,uuidId);
+    error = IndexUUID_purge(indexHandle,NULL,NULL,uuidId);
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -2513,7 +2517,7 @@ LOCAL void connectorCommand_indexUUIDPrune(ConnectorInfo *connectorInfo, IndexHa
   if (indexHandle != NULL)
   {
     // prune UUID
-    error = Index_pruneUUID(indexHandle,uuidId);
+    error = IndexUUID_prune(indexHandle,NULL,NULL,uuidId);
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -2565,7 +2569,7 @@ LOCAL void connectorCommand_indexEntityPurge(ConnectorInfo *connectorInfo, Index
   if (indexHandle != NULL)
   {
     // purge entity
-    error = Index_purgeEntity(indexHandle,entityId);
+    error = IndexEntity_purge(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -2617,7 +2621,7 @@ LOCAL void connectorCommand_indexEntityPrune(ConnectorInfo *connectorInfo, Index
   if (indexHandle != NULL)
   {
     // prune entity
-    error = Index_pruneEntity(indexHandle,entityId);
+    error = IndexEntity_prune(indexHandle,NULL,NULL,entityId);
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -2693,7 +2697,7 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
   if (indexHandle != NULL)
   {
     // set state
-    error = Index_setStorageState(indexHandle,
+    error = IndexStorage_setState(indexHandle,
                                   indexId,
                                   indexState,
                                   lastCheckedDateTime,
@@ -2760,7 +2764,7 @@ LOCAL void connectorCommand_indexUUIDUpdateInfos(ConnectorInfo *connectorInfo, I
   if (indexHandle != NULL)
   {
     // update entity infos
-    error = Index_updateUUIDInfos(indexHandle,
+    error = IndexUUID_updateInfos(indexHandle,
                                   uuidId
                                  );
     if (error != ERROR_NONE)
@@ -2820,7 +2824,7 @@ LOCAL void connectorCommand_indexEntityUpdateInfos(ConnectorInfo *connectorInfo,
   if (indexHandle != NULL)
   {
     // update entity infos
-    error = Index_updateEntityInfos(indexHandle,
+    error = IndexEntity_updateInfos(indexHandle,
                                     entityId
                                    );
     if (error != ERROR_NONE)
@@ -2880,7 +2884,7 @@ LOCAL void connectorCommand_indexEntityUnlock(ConnectorInfo *connectorInfo, Inde
   if (indexHandle != NULL)
   {
     // updunlockate entity
-    error = Index_unlockEntity(indexHandle,
+    error = IndexEntity_unlock(indexHandle,
                                entityId
                               );
     if (error != ERROR_NONE)
@@ -2939,7 +2943,9 @@ LOCAL void connectorCommand_indexEntityDelete(ConnectorInfo *connectorInfo, Inde
   if (indexHandle != NULL)
   {
     // delete storage
-    error = Index_deleteEntity(indexHandle,
+    error = IndexEntity_delete(indexHandle,
+                               NULL,  // doneFlag
+                               NULL,  // deletedCounter
                                entityId
                               );
     if (error != ERROR_NONE)
@@ -3027,7 +3033,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   if (indexHandle != NULL)
   {
     // update index storage
-    error = Index_updateStorage(indexHandle,
+    error = IndexStorage_update(indexHandle,
                                 storageId,
                                 hostName,
                                 userName,
@@ -3099,7 +3105,7 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
   if (indexHandle != NULL)
   {
     // update storage infos
-    error = Index_updateStorageInfos(indexHandle,
+    error = IndexStorage_updateInfos(indexHandle,
                                      storageId
                                     );
     if (error != ERROR_NONE)
@@ -3248,10 +3254,11 @@ LOCAL void connectorCommand_indexStoragePurgeAll(ConnectorInfo *connectorInfo, I
   {
     if (!INDEX_ID_IS_NONE(entityId))
     {
-      error = Index_purgeAllStoragesById(indexHandle,
-                                         entityId,
-                                         keepStorageId
-                                        );
+      error = IndexStorage_purgeAllById(indexHandle,
+                                        entityId,
+                                        keepStorageId,
+                                        NULL  // progressInfo
+                                       );
       if (error != ERROR_NONE)
       {
         sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -3274,11 +3281,12 @@ LOCAL void connectorCommand_indexStoragePurgeAll(ConnectorInfo *connectorInfo, I
       }
 
       // purge storage
-      error = Index_purgeAllStoragesByName(indexHandle,
-                                           &storageSpecifier,
-                                           NULL,
-                                           keepStorageId
-                                          );
+      error = IndexStorage_purgeAllByName(indexHandle,
+                                          &storageSpecifier,
+                                          NULL,  // archiveName
+                                          keepStorageId,
+                                          NULL  // progressInfo
+                                         );
       if (error != ERROR_NONE)
       {
         sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
@@ -3442,7 +3450,7 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
   if (indexHandle != NULL)
   {
     // add index history entry
-    error = Index_newHistory(indexHandle,
+    error = IndexHistory_new(indexHandle,
                              jobUUID,
                              scheduleUUID,
                              hostName,

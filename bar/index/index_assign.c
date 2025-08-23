@@ -810,11 +810,7 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
                             ArchiveTypes toArchiveType
                            )
 {
-  Errors           error;
-  DatabaseId       databaseId;
-  IndexId          toUUIDId;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          entityId;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(!String_isEmpty(toJobUUID));
@@ -827,8 +823,10 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
   error = ERROR_NONE;
 
   // get to-uuid id
+  IndexId toUUIDId;
   if (error == ERROR_NONE)
   {
+    DatabaseId       databaseId;
     error = Database_getId(&indexHandle->databaseHandle,
                            &databaseId,
                            "uuids",
@@ -845,22 +843,24 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
   // assign all enties of job to other job
   if (error == ERROR_NONE)
   {
-    error = Index_initListEntities(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   jobUUID,
-                                   NULL,  // scheduleUUID,
-                                   ARCHIVE_TYPE_ANY,
-                                   INDEX_STATE_SET_ALL,
-                                   INDEX_MODE_SET_ALL,
-                                   NULL,  // name,
-                                   INDEX_ENTITY_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
+    IndexQueryHandle indexQueryHandle;
+    error = IndexEntity_initList(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 jobUUID,
+                                 NULL,  // scheduleUUID,
+                                 ARCHIVE_TYPE_ANY,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // name,
+                                 INDEX_ENTITY_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
+    IndexId entityId;
     while (   (error == ERROR_NONE)
-           && Index_getNextEntity(&indexQueryHandle,
+           && IndexEntity_getNext(&indexQueryHandle,
                                   NULL,  // uuidId,
                                   NULL,  // jobUUID,
                                   NULL,  // scheduleUUID,
@@ -911,7 +911,7 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
 
 // ----------------------------------------------------------------------
 
-Errors Index_assignTo(IndexHandle  *indexHandle,
+Errors IndexAssign_to(IndexHandle  *indexHandle,
                       ConstString  jobUUID,
                       IndexId      entityId,
                       IndexId      storageId,

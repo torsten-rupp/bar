@@ -401,23 +401,23 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
 
   // init variables
 
-  error = Index_initListEntities(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 NULL,  // jobUUID,
-                                 NULL,  // scheduldUUID
-                                 ARCHIVE_TYPE_ANY,
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // name
-                                 INDEX_ENTITY_SORT_MODE_NONE,
-                                 DATABASE_ORDERING_ASCENDING,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
+  error = IndexEntity_initList(&indexQueryHandle,
+                               indexHandle,
+                               INDEX_ID_ANY,  // uuidId
+                               NULL,  // jobUUID,
+                               NULL,  // scheduldUUID
+                               ARCHIVE_TYPE_ANY,
+                               INDEX_STATE_SET_ALL,
+                               INDEX_MODE_SET_ALL,
+                               NULL,  // name
+                               INDEX_ENTITY_SORT_MODE_NONE,
+                               DATABASE_ORDERING_ASCENDING,
+                               0LL,  // offset
+                               INDEX_UNLIMITED
+                              );
   if (error == ERROR_NONE)
   {
-    while (Index_getNextEntity(&indexQueryHandle,
+    while (IndexEntity_getNext(&indexQueryHandle,
                                NULL,  // uuidId,
                                NULL,  // jobUUID,
                                NULL,  // entityUUID,
@@ -432,7 +432,7 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
                               )
           )
     {
-      error = Index_updateEntityInfos(indexHandle,entityId);
+      error = IndexEntity_updateInfos(indexHandle,entityId);
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -482,27 +482,27 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
   uint64           timeModified;
 
 
-  error = Index_initListEntries(&indexQueryHandle,
-                                indexHandle,
-                                NULL,  // indexIds
-                                0L,  // indexIdCount
-                                NULL,  // entryIds
-                                0L,  // entryIdCount
-                                INDEX_TYPESET_ANY_ENTRY,
-                                NULL,  // entryPattern,
-                                FALSE,  // newestOnly
-                                FALSE,  // fragmentsCount
-                                INDEX_ENTRY_SORT_MODE_NONE,
-                                DATABASE_ORDERING_NONE,
-                                0LL,  // offset
-                                INDEX_UNLIMITED
-                               );
+  error = IndexEntry_initList(&indexQueryHandle,
+                              indexHandle,
+                              NULL,  // indexIds
+                              0L,  // indexIdCount
+                              NULL,  // entryIds
+                              0L,  // entryIdCount
+                              INDEX_TYPESET_ANY_ENTRY,
+                              NULL,  // entryPattern,
+                              FALSE,  // newestOnly
+                              FALSE,  // fragmentsCount
+                              INDEX_ENTRY_SORT_MODE_NONE,
+                              DATABASE_ORDERING_NONE,
+                              0LL,  // offset
+                              INDEX_UNLIMITED
+                             );
   if (error != ERROR_NONE)
   {
     return error;
   }
   name = String_new();
-  while (Index_getNextEntry(&indexQueryHandle,
+  while (IndexEntry_getNext(&indexQueryHandle,
                             NULL,  // uuidId
                             NULL,  // jobUUID
                             NULL,  // entityId
@@ -571,10 +571,7 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
                                      uint32      permission
                                     )
 {
-  Errors              error;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          newestEntryId;
-  uint64              newestTimeLastChanged;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(entryId != DATABASE_ID_NONE);
@@ -586,7 +583,11 @@ LOCAL Errors insertUpdateNewestEntry(IndexHandle *indexHandle,
     // atomic add/get entry
     DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
+      DatabaseId newestEntryId;
+      uint64     newestTimeLastChanged;
+
       // get existing newest entry
+      DatabaseStatementHandle databaseStatementHandle;
       error = Database_get(&databaseStatementHandle,
                            CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                            {
@@ -703,10 +704,7 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
                                      ConstString name
                                     )
 {
-  Errors              error;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseId          newestEntryId;
-  uint64              newestTimeLastChanged;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(entryId != DATABASE_ID_NONE);
@@ -786,133 +784,291 @@ LOCAL Errors removeUpdateNewestEntry(IndexHandle *indexHandle,
 
 // ----------------------------------------------------------------------
 
-Errors IndexEntity_cleanUp(IndexHandle *indexHandle)
+Errors IndexEntity_new(IndexHandle  *indexHandle,
+                       const char   *jobUUID,
+                       const char   *entityUUID,
+                       const char   *hostName,
+                       const char   *userName,
+                       ArchiveTypes archiveType,
+                       uint64       createdDateTime,
+                       bool         locked,
+                       IndexId      *entityId
+                      )
 {
   Errors error;
 
   assert(indexHandle != NULL);
+  assert(jobUUID != NULL);
+  assert(entityId != NULL);
 
-UNUSED_VARIABLE(indexHandle);
-
-  error = ERROR_NONE;
-
-  return error;
-}
-
-Errors IndexEntity_delete(IndexHandle *indexHandle,
-                          bool        *doneFlag,
-                          ulong       *deletedCounter,
-                          IndexId     entityId
-                         )
-{
-  String       string;
-  Errors       error;
-  IndexId      uuidId;
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-
-  assert(indexHandle != NULL);
-
-  // init variables
-  string = String_new();
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
 
   if (indexHandle->masterIO == NULL)
   {
-    if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
+    INDEX_DOX(error,
+              indexHandle,
     {
-      // get uuid id, job UUID, created date/time, archive type
-      error = Database_get(&indexHandle->databaseHandle,
-                           CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                           {
-                             assert(values != NULL);
-                             assert(valueCount == 2);
+      IndexId uuidId;
 
-                             UNUSED_VARIABLE(userData);
-                             UNUSED_VARIABLE(valueCount);
-
-                             uuidId = INDEX_ID_UUID(values[0].id);
-                             String_set(jobUUID,values[1].string);
-
-                             return ERROR_NONE;
-                           },NULL),
-                           NULL,  // changedRowCount
-                           DATABASE_TABLES
-                           (
-                             "entities \
-                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                             "
-                           ),
-                           DATABASE_FLAG_NONE,
-                           DATABASE_COLUMNS
-                           (
-                             DATABASE_COLUMN_KEY     ("uuids.id"),
-                             DATABASE_COLUMN_STRING  ("entities.jobUUID")
-                           ),
-                           "entities.id=?",
-                           DATABASE_FILTERS
-                           (
-                             DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
-                           ),
-                           NULL,  // groupBy
-                           NULL,  // orderby
-                           0LL,
-                           1LL
-                          );
+      // create UUID (if it does not exists)
+      DatabaseId databaseId;
+      error = Database_getId(&indexHandle->databaseHandle,
+                             &databaseId,
+                             "uuids",
+                             "id",
+                             "jobUUID=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_CSTRING(jobUUID)
+                             )
+                            );
+      if ((error == ERROR_NONE) && (databaseId == DATABASE_ID_NONE))
+      {
+        error = Database_insert(&indexHandle->databaseHandle,
+                                &databaseId,
+                                "uuids",
+                                DATABASE_FLAG_IGNORE,
+                                DATABASE_VALUES
+                                (
+                                  DATABASE_VALUE_CSTRING("jobUUID", jobUUID)
+                                ),
+                                DATABASE_COLUMNS_NONE,
+                                DATABASE_FILTERS_NONE
+                               );
+      }
       if (error != ERROR_NONE)
       {
-        uuidId = INDEX_ID_NONE;
-        String_clear(jobUUID);
+        return error;
+      }
+      uuidId = INDEX_ID_UUID(databaseId);
+
+      // create entity
+      if (createdDateTime == 0LL) createdDateTime = Misc_getCurrentDateTime();
+
+      error = Database_insert(&indexHandle->databaseHandle,
+                              &databaseId,
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              DATABASE_VALUES
+                              (
+                                DATABASE_VALUE_KEY     ("uuidId",       INDEX_DATABASE_ID(uuidId)),
+                                DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
+                                DATABASE_VALUE_CSTRING ("scheduleUUID", entityUUID),
+                                DATABASE_VALUE_CSTRING ("hostName",     hostName),
+                                DATABASE_VALUE_CSTRING ("userName",     userName),
+                                DATABASE_VALUE_DATETIME("created",      createdDateTime),
+                                DATABASE_VALUE_UINT    ("type",         archiveType),
+                                DATABASE_VALUE_UINT    ("lockedCount",  locked ? 1 : 0)
+                              ),
+                              DATABASE_COLUMNS_NONE,
+                              DATABASE_FILTERS_NONE
+                             );
+      if (error != ERROR_NONE)
+      {
+        return error;
       }
 
-      // delete entity from index
-      error = Database_delete(&indexHandle->databaseHandle,
+      (*entityId) = INDEX_ID_ENTITY(databaseId);
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                    {
+                                      assert(resultMap != NULL);
+
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (StringMap_getIndexId (resultMap,"entityId",entityId,INDEX_TYPE_ENTITY,INDEX_ID_NONE))
+                                      {
+                                        return ERROR_NONE;
+                                      }
+                                      else
+                                      {
+                                        return ERROR_EXPECTED_PARAMETER;
+                                      }
+                                    },NULL),
+                                    "INDEX_NEW_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%"PRIu64" locked=%y",
+                                    jobUUID,
+                                    (entityUUID != NULL) ? entityUUID : "",
+                                    hostName,
+                                    userName,
+                                    Archive_archiveTypeToString(archiveType),
+                                    createdDateTime,
+                                    locked
+                                   );
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors IndexEntity_update(IndexHandle  *indexHandle,
+                          IndexId      entityId,
+                          const char   *jobUUID,
+                          const char   *entityUUID,
+                          const char   *hostName,
+                          const char   *userName,
+                          ArchiveTypes archiveType,
+                          uint64       createdDateTime
+                         )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      error = Database_update(&indexHandle->databaseHandle,
                               NULL,  // changedRowCount
                               "entities",
                               DATABASE_FLAG_NONE,
+                              DATABASE_VALUES
+                              (
+                                DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
+                                DATABASE_VALUE_CSTRING ("scheduleUUID", entityUUID),
+                                DATABASE_VALUE_CSTRING ("hostName",     hostName),
+                                DATABASE_VALUE_CSTRING ("userName",     userName),
+                                DATABASE_VALUE_DATETIME("created",      (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime()),
+                                DATABASE_VALUE_UINT    ("type",         archiveType)
+                              ),
                               "id=?",
                               DATABASE_FILTERS
                               (
                                 DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                              ),
-                              DATABASE_UNLIMITED
-                             );
+                              )
+                            );
       if (error != ERROR_NONE)
       {
-        String_delete(string);
         return error;
       }
 
-      // purge skipped entries of entity
-      error = IndexCommon_delete(indexHandle,
-                                doneFlag,
-                                deletedCounter,
-                                "skippedEntries",
-                                "entityId=?",
-                                DATABASE_FILTERS
-                                (
-                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                                )
-                               );
-      if (error != ERROR_NONE)
-      {
-        String_delete(string);
-        return error;
-      }
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),
+                                    "INDEX_UPDATE_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%"PRIu64,
+                                    jobUUID,
+                                    (entityUUID != NULL) ? entityUUID : "",
+                                    hostName,
+                                    userName,
+                                    Archive_archiveTypeToString(archiveType),
+                                    createdDateTime
+                                   );
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
-      // prune UUID
-      if (!INDEX_ID_IS_NONE(uuidId))
-      {
-        error = IndexUUID_prune(indexHandle,
-                                doneFlag,
-                                deletedCounter,
-                                uuidId
-                               );
-        if (error != ERROR_NONE)
-        {
-          String_delete(string);
-          return error;
-        }
-      }
+  return ERROR_NONE;
+}
+
+Errors IndexEntity_lock(IndexHandle *indexHandle,
+                        IndexId     entityId
+                       )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    error = Database_update(&indexHandle->databaseHandle,
+                            NULL,  // changedRowCount
+                            "entities",
+                            DATABASE_FLAG_NONE,
+                            DATABASE_VALUES
+                            (
+                              DATABASE_VALUE("lockedCount", "lockedCount+1"),
+                            ),
+                            "id=?",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
+                            )
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
     }
+
+    return ERROR_NONE;
+  });
+
+  return error;
+}
+
+Errors IndexEntity_unlock(IndexHandle *indexHandle,
+                          IndexId     entityId
+                         )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return Database_update(&indexHandle->databaseHandle,
+                             NULL,  // changedRowCount
+                             "entities",
+                             DATABASE_FLAG_NONE,
+                             DATABASE_VALUES
+                             (
+                               DATABASE_VALUE("lockedCount", "lockedCount-1"),
+                             ),
+                             "id=? AND lockedCount>0",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
+                             )
+                            );
+    });
   }
   else
   {
@@ -920,34 +1076,33 @@ Errors IndexEntity_delete(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_UUID_PURGE entityId=%"PRIi64,
+                                    "INDEX_ENTITY_UNLOCK entityId=%"PRIi64"",
                                     entityId
                                    );
   }
 
-  // free resources
-  String_delete(string);
-
-
-  return ERROR_NONE;
+  return error;
 }
 
-Errors IndexEntity_prune(IndexHandle *indexHandle,
-                         bool        *doneFlag,
-                         ulong       *deletedCounter,
-                         IndexId     entityId
-                        )
+bool IndexEntity_isLocked(IndexHandle *indexHandle,
+                          IndexId     entityId
+                         )
 {
-  uint   lockedCount;
   Errors error;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
-  if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
   {
-    // get locked count
-// TODO: implement isLockedEntity
+    return FALSE;
+  }
+
+  uint lockedCount;
+  INDEX_DOX(error,
+            indexHandle,
+  {
     error = Database_getUInt(&indexHandle->databaseHandle,
                              &lockedCount,
                              "entities",
@@ -964,106 +1119,452 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
       return error;
     }
 
-    // delete if not locked and entity is empty
-    if ((lockedCount == 0L) && isEmptyEntity(indexHandle,entityId))
-    {
-      error = IndexEntity_delete(indexHandle,
-                                 doneFlag,
-                                 deletedCounter,
-                                 entityId
-                                );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-    }
+    return ERROR_NONE;
+  });
+
+  return (error == ERROR_NONE) && (lockedCount > 0);
+}
+
+bool IndexEntity_isEmpty(IndexHandle *indexHandle,
+                         IndexId     entityId
+                        )
+{
+  assert(indexHandle != NULL);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
+
+  bool emptyFlag;
+  INDEX_DOX(emptyFlag,
+            indexHandle,
+  {
+    return isEmptyEntity(indexHandle,entityId);
+  });
+
+  return emptyFlag;
+}
+
+
+Errors IndexEntity_initList(IndexQueryHandle     *indexQueryHandle,
+                            IndexHandle          *indexHandle,
+                            IndexId              uuidId,
+                            ConstString          jobUUID,
+                            ConstString          entityUUID,
+                            ArchiveTypes         archiveType,
+                            IndexStateSet        indexStateSet,
+                            IndexModeSet         indexModeSet,
+                            ConstString          name,
+                            IndexEntitySortModes sortMode,
+                            DatabaseOrdering     ordering,
+                            uint64               offset,
+                            uint64               limit
+                           )
+{
+  Errors error;
+
+  assert(indexQueryHandle != NULL);
+  assert(indexHandle != NULL);
+  assert(indexHandle->masterIO == NULL);
+  assert(INDEX_ID_IS_ANY(uuidId) || (INDEX_TYPE(uuidId) == INDEX_TYPE_UUID));
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
   }
 
+  // get FTS match string
+  String ftsMatchString = String_new();
+  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages","name",name);
+
+  // get filters
+  String filterString   = Database_newFilter();
+  String string = String_new();
+  Database_filterAppend(filterString,TRUE,"AND","entities.id!=%"PRIi64"",INDEX_DEFAULT_ENTITY_DATABASE_ID);
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%"PRIi64"",INDEX_DATABASE_ID(uuidId));
+  Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
+  Database_filterAppend(filterString,!String_isEmpty(entityUUID),"AND","entities.scheduleUUID=%'S",entityUUID);
+  Database_filterAppend(filterString,archiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",archiveType);
+  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","EXISTS(SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
+  Database_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
+  Database_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
+  String_delete(string);
+
+  // get sort mode, ordering
+  String orderString = String_new();
+  IndexCommon_appendOrdering(orderString,
+                             sortMode != INDEX_ENTITY_SORT_MODE_NONE,
+                             INDEX_ENTITY_SORT_MODE_COLUMNS[sortMode],
+                             ordering
+                            );
+
+  #ifdef INDEX_DEBUG_LIST_INFO
+    fprintf(stderr,"%s, %d: IndexEntity_initList ------------------------------------------------------\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
+    fprintf(stderr,"%s, %d: archiveType=%u\n",__FILE__,__LINE__,archiveType);
+    fprintf(stderr,"%s, %d: ftsMatchString=%s\n",__FILE__,__LINE__,String_cString(ftsMatchString));
+    fprintf(stderr,"%s, %d: offset=%"PRIu64", limit=%"PRIu64"\n",__FILE__,__LINE__,offset,limit);
+  #endif /* INDEX_DEBUG_LIST_INFO */
+
+  // prepare list
+  IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
+  if (String_isEmpty(ftsMatchString))
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      char sqlString[MAX_SQL_COMMAND_LENGTH];
+
+      return Database_select(&indexQueryHandle->databaseStatementHandle,
+                             &indexHandle->databaseHandle,
+                             "entities \
+                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=TRUE \
+                             ",
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
+                               DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                               DATABASE_COLUMN_KEY     ("entities.id"),
+                               DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                               DATABASE_COLUMN_DATETIME("entities.created"),
+                               DATABASE_COLUMN_UINT    ("entities.type"),
+                               DATABASE_COLUMN_STRING  ("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 1)"),
+                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(size) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("entities.lockedCount")
+                             ),
+                             stringFormat(sqlString,sizeof(sqlString),
+                                          "    entities.lockedCount=0 \
+                                           AND entities.deletedFlag!=TRUE \
+                                           AND %s \
+                                          ",
+                                          String_cString(filterString)
+                                         ),
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             "uuids.id,entities.id",
+                             String_cString(orderString),
+                             offset,
+                             limit
+                            );
+    });
+  }
+  else
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      char sqlString[MAX_SQL_COMMAND_LENGTH];
+
+      return Database_select(&indexQueryHandle->databaseStatementHandle,
+                             &indexHandle->databaseHandle,
+                             "FTS_storages \
+                                LEFT JOIN storages ON storages.id=FTS_storages.storageId AND storages.deletedFlag!=TRUE \
+                                LEFT JOIN entities ON entities.id=storages.entityId AND entities.deletedFlag!=TRUE \
+                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                             ",
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
+                               DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                               DATABASE_COLUMN_KEY     ("entities.id"),
+                               DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                               DATABASE_COLUMN_DATETIME("entities.created"),
+                               DATABASE_COLUMN_UINT    ("entities.type"),
+                               DATABASE_COLUMN_STRING  ("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 1)"),
+                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(size) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("entities.lockedCount")
+                             ),
+                             stringFormat(sqlString,sizeof(sqlString),
+                                          "    entities.deletedFlag!=TRUE \
+                                           AND %s \
+                                          ",
+                                          String_cString(filterString)
+                                         ),
+                             DATABASE_FILTERS
+                             (
+                             ),
+                             "uuids.id,entities.id",
+                             String_cString(orderString),
+                             offset,
+                             limit
+                            );
+    });
+  }
+  if (error != ERROR_NONE)
+  {
+    IndexCommon_doneIndexQueryHandle(indexQueryHandle);
+    String_delete(orderString);
+    Database_deleteFilter(filterString);
+    String_delete(ftsMatchString);
+    return error;
+  }
+  #ifdef INDEX_DEBUG_LIST_INFO
+    Database_debugPrintQueryInfo(&indexQueryHandle->databaseStatementHandle);
+    fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
+  #endif
+
   // free resources
+  String_delete(orderString);
+  Database_deleteFilter(filterString);
+  String_delete(ftsMatchString);
+
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
   return ERROR_NONE;
 }
 
-Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
-                            bool        *doneFlag,
-                            ulong       *deletedCounter
-                           )
+bool IndexEntity_getNext(IndexQueryHandle *indexQueryHandle,
+                         IndexId          *uuidId,
+                         String           jobUUID,
+                         String           entityUUID,
+                         IndexId          *entityId,
+                         ArchiveTypes     *archiveType,
+                         uint64           *createdDateTime,
+                         uint             *lastErrorCode,
+                         String           lastErrorData,
+                         uint64           *totalSize,
+                         uint             *totalEntryCount,
+                         uint64           *totalEntrySize,
+                         uint             *lockedCount
+                        )
 {
-  Array         entityIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    databaseId;
+  assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+
+  // check init error
+  if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
+  {
+    return FALSE;
+  }
+
+// TODO:
+if (lastErrorCode != NULL) (*lastErrorCode) = 0;
+  DatabaseId uuidDatabaseId,entityDatatabaseId;
+  if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
+                           &uuidDatabaseId,
+                           jobUUID,
+                           &entityDatatabaseId,
+                           entityUUID,
+                           createdDateTime,
+                           archiveType,
+// TODO:                           lastErrorCode
+                           lastErrorData,
+                           totalSize,
+                           totalEntryCount,
+                           totalEntrySize,
+                           lockedCount
+                          )
+     )
+  {
+    return FALSE;
+  }
+  if (uuidId   != NULL) (*uuidId  ) = INDEX_ID_ENTITY(uuidDatabaseId);
+  if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityDatatabaseId);
+
+  return TRUE;
+}
+
+bool IndexEntity_find(IndexHandle  *indexHandle,
+                      IndexId      findEntityId,
+                      ConstString  findJobUUID,
+                      ConstString  findEntityUUID,
+                      ConstString  findHostName,
+                      ArchiveTypes findArchiveType,
+                      uint64       findCreatedDate,
+                      uint64       findCreatedTime,
+                      String       jobUUID,
+                      String       entityUUID,
+                      IndexId      *uuidId,
+                      IndexId      *entityId,
+                      ArchiveTypes *archiveType,
+                      uint64       *createdDateTime,
+                      String       lastErrorMessage,
+                      uint         *totalEntryCount,
+                      uint64       *totalEntrySize
+                     )
+{
+  Errors error;
 
   assert(indexHandle != NULL);
 
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return FALSE;
+  }
+
   // init variables
-  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  bool foundFlag = FALSE;
 
-  // get all entity ids (Note: skip default entity!)
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &entityIds,
-                          "entities",
-                          "id",
-                          "id!=? \
-                          ",
-                          DATABASE_FILTERS
-                          (
-                            DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
-                          ),
-                          DATABASE_UNLIMITED
-                         );
+  // get filters
+  String filterString = Database_newFilter();
+  Database_filterAppend(filterString,!INDEX_ID_IS_NONE(findEntityId),"AND","entities.id=%"PRIi64"",INDEX_DATABASE_ID(findEntityId));
+  Database_filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","entities.jobUUID=%'S",findJobUUID);
+  Database_filterAppend(filterString,!String_isEmpty(findEntityUUID),"AND","entities.scheduleUUID=%'S",findEntityUUID);
+  Database_filterAppend(filterString,!String_isEmpty(findHostName),"AND","entities.hostName=%'S",findHostName);
+  Database_filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",findArchiveType);
+  Database_filterAppend(filterString,findCreatedDate != 0LL,"AND","%s=%"PRIu64,Database_filterDateString(&indexHandle->databaseHandle,"entities.created"),findCreatedDate);
+  Database_filterAppend(filterString,findCreatedTime != 0L,"AND","%s=%"PRIu64,Database_filterTimeString(&indexHandle->databaseHandle,"entities.created"),findCreatedTime);
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(filterString));
+
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    char sqlString[MAX_SQL_COMMAND_LENGTH];
+
+    return Database_get(&indexHandle->databaseHandle,
+                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                        {
+                          assert(values != NULL);
+                          assert(valueCount == 9);
+
+                          UNUSED_VARIABLE(userData);
+                          UNUSED_VARIABLE(valueCount);
+
+                          if (uuidId           != NULL) (*uuidId)          = INDEX_ID_UUID(values[0].id);
+                          if (jobUUID          != NULL) String_set(jobUUID,values[1].string);
+                          if (entityId         != NULL) (*entityId)        = INDEX_ID_ENTITY(values[2].id);
+                          if (entityUUID       != NULL) String_set(entityUUID,values[3].string);
+                          if (createdDateTime  != NULL) (*createdDateTime) = values[4].id;
+                          if (archiveType      != NULL) (*archiveType)     = values[5].u;
+                          if (lastErrorMessage != NULL) String_set(lastErrorMessage,values[6].string);
+                          if (totalEntryCount  != NULL) (*totalEntryCount) = values[7].u;
+                          if (totalEntrySize   != NULL) (*totalEntrySize)  = values[8].u64;
+
+                          assert((entityId == NULL) || !INDEX_ID_IS_NONE(*entityId));
+
+                          foundFlag = TRUE;
+
+                          return ERROR_NONE;
+                        },NULL),
+                        NULL,  // changedRowCount
+                        DATABASE_TABLES
+                        (
+                          "entities \
+                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                          "
+                        ),
+                        DATABASE_FLAG_NONE,
+                        DATABASE_COLUMNS
+                        (
+                          DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
+                          DATABASE_COLUMN_STRING  ("entities.jobUUID"),
+                          DATABASE_COLUMN_KEY     ("COALESCE(entities.id,0)"),
+                          DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
+                          DATABASE_COLUMN_DATETIME("entities.created"),
+                          DATABASE_COLUMN_UINT    ("entities.type"),
+                          DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 1)"),
+                          DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID)"),
+                          DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize)  FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID)")
+                        ),
+                        stringFormat(sqlString,sizeof(sqlString),
+                                     "    entities.deletedFlag!=TRUE \
+                                      AND %s",
+                                      String_cString(filterString)
+                                    ),
+                        DATABASE_FILTERS
+                        (
+                        ),
+                        NULL,  // groupBy
+                        NULL,  // orderby
+                        0LL,
+                        1LL
+                       );
+  });
   if (error != ERROR_NONE)
   {
-    Array_done(&entityIds);
-    return error;
-  }
-
-  // prune entities
-  ARRAY_ITERATEX(&entityIds,arrayIterator,databaseId,(error == ERROR_NONE) && !indexQuitFlag)
-  {
-    error = IndexEntity_prune(indexHandle,doneFlag,deletedCounter,INDEX_ID_ENTITY(databaseId));
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&entityIds);
-    return error;
+    Database_deleteFilter(filterString);
+    return FALSE;
   }
 
   // free resources
-  Array_done(&entityIds);
+  Database_deleteFilter(filterString);
+
+  return foundFlag;
+}
+
+Errors IndexEntity_getInfos(IndexHandle   *indexHandle,
+                            IndexId       uuidId,
+                            IndexId       entityId,
+//TODO: remove?
+                            ConstString   jobUUID,
+                            const IndexId indexIds[],
+                            uint          indexIdCount,
+                            ConstString   name,
+                            uint          *totalStorageCount,
+                            uint64        *totalStorageSize,
+                            uint          *totalEntryCount,
+                            uint64        *totalEntrySize
+                           )
+{
+UNUSED_VARIABLE(indexHandle);
+UNUSED_VARIABLE(uuidId);
+UNUSED_VARIABLE(entityId);
+UNUSED_VARIABLE(jobUUID);
+UNUSED_VARIABLE(indexIds);
+UNUSED_VARIABLE(indexIdCount);
+UNUSED_VARIABLE(name);
+UNUSED_VARIABLE(totalStorageCount);
+UNUSED_VARIABLE(totalStorageSize);
+UNUSED_VARIABLE(totalEntryCount);
+UNUSED_VARIABLE(totalEntrySize);
+
+return ERROR_STILL_NOT_IMPLEMENTED;
+}
+
+Errors IndexEntity_updateInfos(IndexHandle *indexHandle,
+                               IndexId     entityId
+                              )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(error,
+              indexHandle,
+    {
+      return IndexEntity_updateAggregates(indexHandle,entityId);
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_ENTITY_UPDATE_INFOS entityId=%"PRIi64"",
+                                    entityId
+                                   );
+  }
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   return ERROR_NONE;
 }
-
-/***********************************************************************\
-* Name   : IndexEntity_updateAggregates
-* Purpose: update entity aggregates
-* Input  : indexHandle - index handle
-*          entityId    - entity database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
 
 Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
                                     IndexId     entityId
                                    )
 {
   Errors error;
-  ulong  totalFileCount;
-  uint64 totalFileSize;
-  ulong  totalImageCount;
-  uint64 totalImageSize;
-  ulong  totalDirectoryCount;
-  ulong  totalLinkCount;
-  ulong  totalHardlinkCount;
-  uint64 totalHardlinkSize;
-  ulong  totalSpecialCount;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   // get file aggregate data
+  ulong  totalFileCount;
+  uint64 totalFileSize;
   error = Database_get(&indexHandle->databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -1110,6 +1611,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
   }
 
   // get image aggregate data
+  ulong  totalImageCount;
+  uint64 totalImageSize;
   error = Database_get(&indexHandle->databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -1156,6 +1659,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
   }
 
   // get directory aggregate data
+  ulong totalDirectoryCount;
   error = Database_get(&indexHandle->databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -1198,6 +1702,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
   }
 
   // get link aggregate data
+  ulong totalLinkCount;
   error = Database_get(&indexHandle->databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -1240,6 +1745,8 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
   }
 
   // get hardlink aggregate data
+  ulong  totalHardlinkCount;
+  uint64 totalHardlinkSize;
   error = Database_get(&indexHandle->databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -1286,6 +1793,7 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
   }
 
   // get special aggregate data
+  ulong totalSpecialCount;
   error = Database_get(&indexHandle->databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -1681,173 +2189,131 @@ Errors IndexEntity_updateAggregates(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-/*---------------------------------------------------------------------*/
-
-bool Index_findEntity(IndexHandle  *indexHandle,
-                      IndexId      findEntityId,
-                      ConstString  findJobUUID,
-                      ConstString  findEntityUUID,
-                      ConstString  findHostName,
-                      ArchiveTypes findArchiveType,
-                      uint64       findCreatedDate,
-                      uint64       findCreatedTime,
-                      String       jobUUID,
-                      String       entityUUID,
-                      IndexId      *uuidId,
-                      IndexId      *entityId,
-                      ArchiveTypes *archiveType,
-                      uint64       *createdDateTime,
-                      String       lastErrorMessage,
-                      uint         *totalEntryCount,
-                      uint64       *totalEntrySize
-                     )
+Errors IndexEntity_cleanUp(IndexHandle *indexHandle)
 {
-  bool   foundFlag;
-  String filterString;
   Errors error;
 
   assert(indexHandle != NULL);
 
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return FALSE;
-  }
-
-  // init variables
-  foundFlag = FALSE;
-
-  // get filters
-  filterString = Database_newFilter();
-  Database_filterAppend(filterString,!INDEX_ID_IS_NONE(findEntityId),"AND","entities.id=%"PRIi64"",INDEX_DATABASE_ID(findEntityId));
-  Database_filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","entities.jobUUID=%'S",findJobUUID);
-  Database_filterAppend(filterString,!String_isEmpty(findEntityUUID),"AND","entities.scheduleUUID=%'S",findEntityUUID);
-  Database_filterAppend(filterString,!String_isEmpty(findHostName),"AND","entities.hostName=%'S",findHostName);
-  Database_filterAppend(filterString,findArchiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",findArchiveType);
-  Database_filterAppend(filterString,findCreatedDate != 0LL,"AND","%s=%"PRIu64,Database_filterDateString(&indexHandle->databaseHandle,"entities.created"),findCreatedDate);
-  Database_filterAppend(filterString,findCreatedTime != 0L,"AND","%s=%"PRIu64,Database_filterTimeString(&indexHandle->databaseHandle,"entities.created"),findCreatedTime);
-//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(filterString));
-
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    char sqlString[MAX_SQL_COMMAND_LENGTH];
-
-    return Database_get(&indexHandle->databaseHandle,
-                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                        {
-                          assert(values != NULL);
-                          assert(valueCount == 9);
-
-                          UNUSED_VARIABLE(userData);
-                          UNUSED_VARIABLE(valueCount);
-
-                          if (uuidId           != NULL) (*uuidId)          = INDEX_ID_UUID(values[0].id);
-                          if (jobUUID          != NULL) String_set(jobUUID,values[1].string);
-                          if (entityId         != NULL) (*entityId)        = INDEX_ID_ENTITY(values[2].id);
-                          if (entityUUID       != NULL) String_set(entityUUID,values[3].string);
-                          if (createdDateTime  != NULL) (*createdDateTime) = values[4].id;
-                          if (archiveType      != NULL) (*archiveType)     = values[5].u;
-                          if (lastErrorMessage != NULL) String_set(lastErrorMessage,values[6].string);
-                          if (totalEntryCount  != NULL) (*totalEntryCount) = values[7].u;
-                          if (totalEntrySize   != NULL) (*totalEntrySize)  = values[8].u64;
-
-                          assert((entityId == NULL) || !INDEX_ID_IS_NONE(*entityId));
-
-                          foundFlag = TRUE;
-
-                          return ERROR_NONE;
-                        },NULL),
-                        NULL,  // changedRowCount
-                        DATABASE_TABLES
-                        (
-                          "entities \
-                             LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                          "
-                        ),
-                        DATABASE_FLAG_NONE,
-                        DATABASE_COLUMNS
-                        (
-                          DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
-                          DATABASE_COLUMN_STRING  ("entities.jobUUID"),
-                          DATABASE_COLUMN_KEY     ("COALESCE(entities.id,0)"),
-                          DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
-                          DATABASE_COLUMN_DATETIME("entities.created"),
-                          DATABASE_COLUMN_UINT    ("entities.type"),
-                          DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 1)"),
-                          DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID)"),
-                          DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize)  FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID)")
-                        ),
-                        stringFormat(sqlString,sizeof(sqlString),
-                                     "    entities.deletedFlag!=TRUE \
-                                      AND %s",
-                                      String_cString(filterString)
-                                    ),
-                        DATABASE_FILTERS
-                        (
-                        ),
-                        NULL,  // groupBy
-                        NULL,  // orderby
-                        0LL,
-                        1LL
-                       );
-  });
-  if (error != ERROR_NONE)
-  {
-    Database_deleteFilter(filterString);
-    return FALSE;
-  }
-
-  // free resources
-  Database_deleteFilter(filterString);
-
-  return foundFlag;
-}
-
-Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
-                              IndexId       uuidId,
-                              IndexId       entityId,
-//TODO: remove?
-                              ConstString   jobUUID,
-                              const IndexId indexIds[],
-                              uint          indexIdCount,
-                              ConstString   name,
-                              uint          *totalStorageCount,
-                              uint64        *totalStorageSize,
-                              uint          *totalEntryCount,
-                              uint64        *totalEntrySize
-                             )
-{
 UNUSED_VARIABLE(indexHandle);
-UNUSED_VARIABLE(uuidId);
-UNUSED_VARIABLE(entityId);
-UNUSED_VARIABLE(jobUUID);
-UNUSED_VARIABLE(indexIds);
-UNUSED_VARIABLE(indexIdCount);
-UNUSED_VARIABLE(name);
-UNUSED_VARIABLE(totalStorageCount);
-UNUSED_VARIABLE(totalStorageSize);
-UNUSED_VARIABLE(totalEntryCount);
-UNUSED_VARIABLE(totalEntrySize);
 
-return ERROR_STILL_NOT_IMPLEMENTED;
+  error = ERROR_NONE;
+
+  return error;
 }
 
-Errors Index_updateEntityInfos(IndexHandle *indexHandle,
-                               IndexId     entityId
-                              )
+Errors IndexEntity_delete(IndexHandle *indexHandle,
+                          bool        *doneFlag,
+                          ulong       *deletedCounter,
+                          IndexId     entityId
+                         )
 {
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,
               indexHandle,
     {
-      return IndexEntity_updateAggregates(indexHandle,entityId);
+      if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
+      {
+        // get uuid id, job UUID, created date/time, archive type
+        IndexId      uuidId;
+        StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 2);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               uuidId = INDEX_ID_UUID(values[0].id);
+                               String_set(jobUUID,values[1].string);
+
+                               return ERROR_NONE;
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "entities \
+                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY     ("uuids.id"),
+                               DATABASE_COLUMN_STRING  ("entities.jobUUID")
+                             ),
+                             "entities.id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
+                             ),
+                             NULL,  // groupBy
+                             NULL,  // orderby
+                             0LL,
+                             1LL
+                            );
+        if (error != ERROR_NONE)
+        {
+          uuidId = INDEX_ID_NONE;
+          String_clear(jobUUID);
+        }
+
+        // delete entity from index
+        error = Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "entities",
+                                DATABASE_FLAG_NONE,
+                                "id=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
+                                ),
+                                DATABASE_UNLIMITED
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // purge skipped entries of entity
+        error = IndexCommon_delete(indexHandle,
+                                  doneFlag,
+                                  deletedCounter,
+                                  "skippedEntries",
+                                  "entityId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
+                                  )
+                                 );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // prune UUID
+        if (!INDEX_ID_IS_NONE(uuidId))
+        {
+          error = IndexUUID_prune(indexHandle,
+                                  doneFlag,
+                                  deletedCounter,
+                                  uuidId
+                                 );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+      }
+
+      return ERROR_NONE;
     });
   }
   else
@@ -1856,604 +2322,53 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ENTITY_UPDATE_INFOS entityId=%"PRIi64"",
+                                    "INDEX_ENTITY_DELETE entityId=%"PRIi64"",
                                     entityId
                                    );
-  }
-  if (error != ERROR_NONE)
-  {
-    return error;
   }
 
   return ERROR_NONE;
 }
 
-Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
-                              IndexHandle          *indexHandle,
-                              IndexId              uuidId,
-                              ConstString          jobUUID,
-                              ConstString          entityUUID,
-                              ArchiveTypes         archiveType,
-                              IndexStateSet        indexStateSet,
-                              IndexModeSet         indexModeSet,
-                              ConstString          name,
-                              IndexEntitySortModes sortMode,
-                              DatabaseOrdering     ordering,
-                              uint64               offset,
-                              uint64               limit
-                             )
+bool IndexEntity_isDeleted(IndexHandle *indexHandle,
+                           IndexId     entityId
+                          )
 {
-  String ftsMatchString;
-  String filterString;
-  String string;
-  String orderString;
-  Errors error;
-
-  assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
-  assert(indexHandle->masterIO == NULL);
-  assert(INDEX_ID_IS_ANY(uuidId) || (INDEX_TYPE(uuidId) == INDEX_TYPE_UUID));
+  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
 
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
+  bool deletedFlag;
+  if (indexHandle->masterIO == NULL)
   {
-    return indexHandle->upgradeError;
-  }
-
-  // init variables
-  ftsMatchString = String_new();
-  filterString   = Database_newFilter();
-  orderString    = String_new();
-
-  // get FTS match string
-  IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages","name",name);
-
-  // get filters
-  string = String_new();
-  Database_filterAppend(filterString,TRUE,"AND","entities.id!=%"PRIi64"",INDEX_DEFAULT_ENTITY_DATABASE_ID);
-  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%"PRIi64"",INDEX_DATABASE_ID(uuidId));
-  Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
-  Database_filterAppend(filterString,!String_isEmpty(entityUUID),"AND","entities.scheduleUUID=%'S",entityUUID);
-  Database_filterAppend(filterString,archiveType != ARCHIVE_TYPE_ANY,"AND","entities.type=%u",archiveType);
-  Database_filterAppend(filterString,!String_isEmpty(ftsMatchString),"AND","EXISTS(SELECT storageId FROM FTS_storages WHERE %S)",ftsMatchString);
-  Database_filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",IndexCommon_getIndexStateSetString(string,indexStateSet));
-  Database_filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",IndexCommon_getIndexModeSetString(string,indexModeSet));
-  String_delete(string);
-
-  // get sort mode, ordering
-  IndexCommon_appendOrdering(orderString,
-                             sortMode != INDEX_ENTITY_SORT_MODE_NONE,
-                             INDEX_ENTITY_SORT_MODE_COLUMNS[sortMode],
-                             ordering
-                            );
-
-  #ifdef INDEX_DEBUG_LIST_INFO
-    fprintf(stderr,"%s, %d: Index_initListEntities ------------------------------------------------------\n",__FILE__,__LINE__);
-    fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
-    fprintf(stderr,"%s, %d: archiveType=%u\n",__FILE__,__LINE__,archiveType);
-    fprintf(stderr,"%s, %d: ftsMatchString=%s\n",__FILE__,__LINE__,String_cString(ftsMatchString));
-    fprintf(stderr,"%s, %d: offset=%"PRIu64", limit=%"PRIu64"\n",__FILE__,__LINE__,offset,limit);
-  #endif /* INDEX_DEBUG_LIST_INFO */
-
-  // prepare list
-  IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
-  if (String_isEmpty(ftsMatchString))
-  {
-    INDEX_DOX(error,
+    INDEX_DOX(deletedFlag,
               indexHandle,
     {
-      char sqlString[MAX_SQL_COMMAND_LENGTH];
-
-      return Database_select(&indexQueryHandle->databaseStatementHandle,
-                             &indexHandle->databaseHandle,
-                             "entities \
-                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=TRUE \
-                             ",
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
-                               DATABASE_COLUMN_STRING  ("entities.jobUUID"),
-                               DATABASE_COLUMN_KEY     ("entities.id"),
-                               DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
-                               DATABASE_COLUMN_DATETIME("entities.created"),
-                               DATABASE_COLUMN_UINT    ("entities.type"),
-                               DATABASE_COLUMN_STRING  ("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 1)"),
-                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(size) FROM storages WHERE entityId=entities.id)"),
-                               DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM storages WHERE entityId=entities.id)"),
-                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize) FROM storages WHERE entityId=entities.id)"),
-                               DATABASE_COLUMN_UINT    ("entities.lockedCount")
-                             ),
-                             stringFormat(sqlString,sizeof(sqlString),
-                                          "    entities.lockedCount=0 \
-                                           AND entities.deletedFlag!=TRUE \
-                                           AND %s \
-                                          ",
-                                          String_cString(filterString)
-                                         ),
-                             DATABASE_FILTERS
-                             (
-                             ),
-                             "uuids.id,entities.id",
-                             String_cString(orderString),
-                             offset,
-                             limit
-                            );
+      return !Database_existsValue(&indexHandle->databaseHandle,
+                                   "entities",
+                                   DATABASE_FLAG_NONE,
+                                   "id",
+                                   "id=? AND deletedFlag!=1",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
+                                   )
+                                  );
     });
   }
   else
   {
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      char sqlString[MAX_SQL_COMMAND_LENGTH];
-
-      return Database_select(&indexQueryHandle->databaseStatementHandle,
-                             &indexHandle->databaseHandle,
-                             "FTS_storages \
-                                LEFT JOIN storages ON storages.id=FTS_storages.storageId AND storages.deletedFlag!=TRUE \
-                                LEFT JOIN entities ON entities.id=storages.entityId AND entities.deletedFlag!=TRUE \
-                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                             ",
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
-                               DATABASE_COLUMN_STRING  ("entities.jobUUID"),
-                               DATABASE_COLUMN_KEY     ("entities.id"),
-                               DATABASE_COLUMN_STRING  ("entities.scheduleUUID"),
-                               DATABASE_COLUMN_DATETIME("entities.created"),
-                               DATABASE_COLUMN_UINT    ("entities.type"),
-                               DATABASE_COLUMN_STRING  ("(SELECT errorMessage FROM storages WHERE storages.entityId=entities.id ORDER BY created DESC LIMIT 1)"),
-                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(size) FROM storages WHERE entityId=entities.id)"),
-                               DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM storages WHERE entityId=entities.id)"),
-                               DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize) FROM storages WHERE entityId=entities.id)"),
-                               DATABASE_COLUMN_UINT    ("entities.lockedCount")
-                             ),
-                             stringFormat(sqlString,sizeof(sqlString),
-                                          "    entities.deletedFlag!=TRUE \
-                                           AND %s \
-                                          ",
-                                          String_cString(filterString)
-                                         ),
-                             DATABASE_FILTERS
-                             (
-                             ),
-                             "uuids.id,entities.id",
-                             String_cString(orderString),
-                             offset,
-                             limit
-                            );
-    });
+    // slave mode: always deleted
+    deletedFlag = TRUE;
   }
-  if (error != ERROR_NONE)
-  {
-    IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(orderString);
-    Database_deleteFilter(filterString);
-    String_delete(ftsMatchString);
-    return error;
-  }
-  #ifdef INDEX_DEBUG_LIST_INFO
-    Database_debugPrintQueryInfo(&indexQueryHandle->databaseStatementHandle);
-    fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
-  #endif
 
-  // free resources
-  String_delete(orderString);
-  Database_deleteFilter(filterString);
-  String_delete(ftsMatchString);
-
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
-
-  return ERROR_NONE;
+  return deletedFlag;
 }
 
-bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
-                         IndexId          *uuidId,
-                         String           jobUUID,
-                         String           entityUUID,
-                         IndexId          *entityId,
-                         ArchiveTypes     *archiveType,
-                         uint64           *createdDateTime,
-                         uint             *lastErrorCode,
-                         String           lastErrorData,
-                         uint64           *totalSize,
-                         uint             *totalEntryCount,
-                         uint64           *totalEntrySize,
-                         uint             *lockedCount
+Errors IndexEntity_purge(IndexHandle *indexHandle,
+                         IndexId     entityId
                         )
 {
-  DatabaseId uuidDatabaseId,entityDatatabaseId;
-
-  assert(indexQueryHandle != NULL);
-  assert(indexQueryHandle->indexHandle != NULL);
-
-  // check init error
-  if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
-  {
-    return FALSE;
-  }
-
-// TODO:
-if (lastErrorCode != NULL) (*lastErrorCode) = 0;
-  if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           &uuidDatabaseId,
-                           jobUUID,
-                           &entityDatatabaseId,
-                           entityUUID,
-                           createdDateTime,
-                           archiveType,
-// TODO:                           lastErrorCode
-                           lastErrorData,
-                           totalSize,
-                           totalEntryCount,
-                           totalEntrySize,
-                           lockedCount
-                          )
-     )
-  {
-    return FALSE;
-  }
-  if (uuidId   != NULL) (*uuidId  ) = INDEX_ID_ENTITY(uuidDatabaseId);
-  if (entityId != NULL) (*entityId) = INDEX_ID_ENTITY(entityDatatabaseId);
-
-  return TRUE;
-}
-
-Errors Index_newEntity(IndexHandle  *indexHandle,
-                       const char   *jobUUID,
-                       const char   *entityUUID,
-                       const char   *hostName,
-                       const char   *userName,
-                       ArchiveTypes archiveType,
-                       uint64       createdDateTime,
-                       bool         locked,
-                       IndexId      *entityId
-                      )
-{
-  Errors  error;
-  IndexId uuidId;
-
-  assert(indexHandle != NULL);
-  assert(jobUUID != NULL);
-  assert(entityId != NULL);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  if (indexHandle->masterIO == NULL)
-  {
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      DatabaseId databaseId;
-
-      // create UUID (if it does not exists)
-      error = Database_getId(&indexHandle->databaseHandle,
-                             &databaseId,
-                             "uuids",
-                             "id",
-                             "jobUUID=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_CSTRING(jobUUID)
-                             )
-                            );
-      if ((error == ERROR_NONE) && (databaseId == DATABASE_ID_NONE))
-      {
-        error = Database_insert(&indexHandle->databaseHandle,
-                                &databaseId,
-                                "uuids",
-                                DATABASE_FLAG_IGNORE,
-                                DATABASE_VALUES
-                                (
-                                  DATABASE_VALUE_CSTRING("jobUUID", jobUUID)
-                                ),
-                                DATABASE_COLUMNS_NONE,
-                                DATABASE_FILTERS_NONE
-                               );
-      }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-      uuidId = INDEX_ID_UUID(databaseId);
-
-      // create entity
-      if (createdDateTime == 0LL) createdDateTime = Misc_getCurrentDateTime();
-
-      error = Database_insert(&indexHandle->databaseHandle,
-                              &databaseId,
-                              "entities",
-                              DATABASE_FLAG_NONE,
-                              DATABASE_VALUES
-                              (
-                                DATABASE_VALUE_KEY     ("uuidId",       INDEX_DATABASE_ID(uuidId)),
-                                DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
-                                DATABASE_VALUE_CSTRING ("scheduleUUID", entityUUID),
-                                DATABASE_VALUE_CSTRING ("hostName",     hostName),
-                                DATABASE_VALUE_CSTRING ("userName",     userName),
-                                DATABASE_VALUE_DATETIME("created",      createdDateTime),
-                                DATABASE_VALUE_UINT    ("type",         archiveType),
-                                DATABASE_VALUE_UINT    ("lockedCount",  locked ? 1 : 0)
-                              ),
-                              DATABASE_COLUMNS_NONE,
-                              DATABASE_FILTERS_NONE
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      (*entityId) = INDEX_ID_ENTITY(databaseId);
-
-      return ERROR_NONE;
-    });
-  }
-  else
-  {
-    error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    SERVER_IO_DEBUG_LEVEL,
-                                    SERVER_IO_TIMEOUT,
-                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
-                                    {
-                                      assert(resultMap != NULL);
-
-                                      UNUSED_VARIABLE(userData);
-
-                                      if (StringMap_getIndexId (resultMap,"entityId",entityId,INDEX_TYPE_ENTITY,INDEX_ID_NONE))
-                                      {
-                                        return ERROR_NONE;
-                                      }
-                                      else
-                                      {
-                                        return ERROR_EXPECTED_PARAMETER;
-                                      }
-                                    },NULL),
-                                    "INDEX_NEW_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%"PRIu64" locked=%y",
-                                    jobUUID,
-                                    (entityUUID != NULL) ? entityUUID : "",
-                                    hostName,
-                                    userName,
-                                    Archive_archiveTypeToString(archiveType),
-                                    createdDateTime,
-                                    locked
-                                   );
-  }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
-}
-
-Errors Index_updateEntity(IndexHandle  *indexHandle,
-                          IndexId      entityId,
-                          const char   *jobUUID,
-                          const char   *entityUUID,
-                          const char   *hostName,
-                          const char   *userName,
-                          ArchiveTypes archiveType,
-                          uint64       createdDateTime
-                         )
-{
   Errors error;
-
-  assert(indexHandle != NULL);
-  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  if (indexHandle->masterIO == NULL)
-  {
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      error = Database_update(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
-                              "entities",
-                              DATABASE_FLAG_NONE,
-                              DATABASE_VALUES
-                              (
-                                DATABASE_VALUE_CSTRING ("jobUUID",      jobUUID),
-                                DATABASE_VALUE_CSTRING ("scheduleUUID", entityUUID),
-                                DATABASE_VALUE_CSTRING ("hostName",     hostName),
-                                DATABASE_VALUE_CSTRING ("userName",     userName),
-                                DATABASE_VALUE_DATETIME("created",      (createdDateTime != 0LL) ? createdDateTime : Misc_getCurrentDateTime()),
-                                DATABASE_VALUE_UINT    ("type",         archiveType)
-                              ),
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                              )
-                            );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      return ERROR_NONE;
-    });
-  }
-  else
-  {
-    error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    SERVER_IO_DEBUG_LEVEL,
-                                    SERVER_IO_TIMEOUT,
-                                    CALLBACK_(NULL,NULL),
-                                    "INDEX_UPDATE_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%"PRIu64,
-                                    jobUUID,
-                                    (entityUUID != NULL) ? entityUUID : "",
-                                    hostName,
-                                    userName,
-                                    Archive_archiveTypeToString(archiveType),
-                                    createdDateTime
-                                   );
-  }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
-}
-
-Errors Index_lockEntity(IndexHandle *indexHandle,
-                        IndexId     entityId
-                       )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    error = Database_update(&indexHandle->databaseHandle,
-                            NULL,  // changedRowCount
-                            "entities",
-                            DATABASE_FLAG_NONE,
-                            DATABASE_VALUES
-                            (
-                              DATABASE_VALUE("lockedCount", "lockedCount+1"),
-                            ),
-                            "id=?",
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                            )
-                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
-
-  return error;
-}
-
-Errors Index_unlockEntity(IndexHandle *indexHandle,
-                          IndexId     entityId
-                         )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  if (indexHandle->masterIO == NULL)
-  {
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      return Database_update(&indexHandle->databaseHandle,
-                             NULL,  // changedRowCount
-                             "entities",
-                             DATABASE_FLAG_NONE,
-                             DATABASE_VALUES
-                             (
-                               DATABASE_VALUE("lockedCount", "lockedCount-1"),
-                             ),
-                             "id=? AND lockedCount>0",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                             )
-                            );
-    });
-  }
-  else
-  {
-    error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    SERVER_IO_DEBUG_LEVEL,
-                                    SERVER_IO_TIMEOUT,
-                                    CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ENTITY_UNLOCK entityId=%"PRIi64"",
-                                    entityId
-                                   );
-  }
-
-  return error;
-}
-
-bool Index_isLockedEntity(IndexHandle *indexHandle,
-                          IndexId     entityId
-                         )
-{
-  Errors error;
-  uint   lockedCount;
-
-  assert(indexHandle != NULL);
-  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return FALSE;
-  }
-
-  INDEX_DOX(error,
-            indexHandle,
-  {
-// TODO: implement isLockedEntity
-    error = Database_getUInt(&indexHandle->databaseHandle,
-                             &lockedCount,
-                             "entities",
-                             "lockedCount",
-                             "id=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                             ),
-                             NULL  // group
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
-
-  return (error == ERROR_NONE) && (lockedCount > 0);
-}
-
-// TODO: renamed to Index_purgeEntity
-Errors Index_deleteEntity(IndexHandle *indexHandle,
-                          IndexId     entityId
-                         )
-{
-  Errors        error;
-  DatabaseId    databaseId;
-  IndexId       uuidId;
-  Array         storageIds;
-  ArrayIterator arrayIterator;
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
@@ -2467,12 +2382,15 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
   if (indexHandle->masterIO == NULL)
   {
     // init variables
+    Array storageIds;
     Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
+    IndexId uuidId;
     INDEX_DOX(error,
               indexHandle,
     {
       // get UUID id
+      DatabaseId databaseId;
       error = Database_getId(&indexHandle->databaseHandle,
                              &databaseId,
                              "entities \
@@ -2521,6 +2439,8 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     // purge storages
     if (error == ERROR_NONE)
     {
+      ArrayIterator arrayIterator;
+      DatabaseId    databaseId;
       ARRAY_ITERATEX(&storageIds,arrayIterator,databaseId,error == ERROR_NONE)
       {
         error = IndexStorage_purge(indexHandle,
@@ -2600,61 +2520,9 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
   return error;
 }
 
-bool Index_isDeletedEntity(IndexHandle *indexHandle,
-                           IndexId     entityId
-                          )
-{
-  bool deletedFlag;
-
-  assert(indexHandle != NULL);
-  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
-
-  if (indexHandle->masterIO == NULL)
-  {
-    INDEX_DOX(deletedFlag,
-              indexHandle,
-    {
-      return !Database_existsValue(&indexHandle->databaseHandle,
-                                   "entities",
-                                   DATABASE_FLAG_NONE,
-                                   "id",
-                                   "id=? AND deletedFlag!=1",
-                                   DATABASE_FILTERS
-                                   (
-                                     DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                                   )
-                                  );
-    });
-  }
-  else
-  {
-    // slave mode: always deleted
-    deletedFlag = TRUE;
-  }
-
-  return deletedFlag;
-}
-
-bool Index_isEmptyEntity(IndexHandle *indexHandle,
-                         IndexId     entityId
-                        )
-{
-  bool emptyFlag;
-
-  assert(indexHandle != NULL);
-  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
-
-  INDEX_DOX(emptyFlag,
-            indexHandle,
-  {
-    return isEmptyEntity(indexHandle,entityId);
-  });
-
-  return emptyFlag;
-}
-
-// TODO: renamed to Index_deleteEntity()
-Errors Index_purgeEntity(IndexHandle *indexHandle,
+Errors IndexEntity_prune(IndexHandle *indexHandle,
+                         bool        *doneFlag,
+                         ulong       *deletedCounter,
                          IndexId     entityId
                         )
 {
@@ -2662,54 +2530,49 @@ Errors Index_purgeEntity(IndexHandle *indexHandle,
 
   assert(indexHandle != NULL);
   assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
-  assert(!INDEX_ID_IS_DEFAULT_ENTITY(entityId));
 
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,
               indexHandle,
     {
-      return IndexEntity_delete(indexHandle,
-                                NULL,  // doneFlag
-                                NULL,  // deletedCounter
-                                entityId
-                               );
-    });
-  }
-  else
-  {
-    error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    SERVER_IO_DEBUG_LEVEL,
-                                    SERVER_IO_TIMEOUT,
-                                    CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ENTITY_PURGE entityId=%"PRIi64"",
-                                    entityId
-                                   );
-  }
+      if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
+      {
+        // get locked count
+    // TODO: implement isLockedEntity
+        uint lockedCount;
+        error = Database_getUInt(&indexHandle->databaseHandle,
+                                 &lockedCount,
+                                 "entities",
+                                 "lockedCount",
+                                 "id=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
+                                 ),
+                                 NULL  // group
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
 
-  return error;
-}
+        // delete if not locked and entity is empty
+        if ((lockedCount == 0L) && isEmptyEntity(indexHandle,entityId))
+        {
+          error = IndexEntity_delete(indexHandle,
+                                     doneFlag,
+                                     deletedCounter,
+                                     entityId
+                                    );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+      }
 
-Errors Index_pruneEntity(IndexHandle *indexHandle,
-                         IndexId     entityId
-                        )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(INDEX_TYPE(entityId) == INDEX_TYPE_ENTITY);
-  assert(!INDEX_ID_IS_DEFAULT_ENTITY(entityId));
-
-  if (indexHandle->masterIO == NULL)
-  {
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      return IndexEntity_prune(indexHandle,
-                               NULL,  // doneFlag
-                               NULL,  // deletedCounter
-                               entityId
-                              );
+      return ERROR_NONE;
     });
   }
   else
@@ -2723,7 +2586,60 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
                                    );
   }
 
-  return error;
+  // free resources
+
+  return ERROR_NONE;
+}
+
+Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
+                            bool        *doneFlag,
+                            ulong       *deletedCounter
+                           )
+{
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  Array entityIds;
+  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all entity ids (Note: skip default entity!)
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &entityIds,
+                          "entities",
+                          "id",
+                          "id!=? \
+                          ",
+                          DATABASE_FILTERS
+                          (
+                            DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
+                          ),
+                          DATABASE_UNLIMITED
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&entityIds);
+    return error;
+  }
+
+  // prune entities
+  ArrayIterator arrayIterator;
+  DatabaseId    databaseId;
+  ARRAY_ITERATEX(&entityIds,arrayIterator,databaseId,(error == ERROR_NONE) && !indexQuitFlag)
+  {
+    error = IndexEntity_prune(indexHandle,doneFlag,deletedCounter,INDEX_ID_ENTITY(databaseId));
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&entityIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&entityIds);
+
+  return ERROR_NONE;
 }
 
 #ifdef __cplusplus

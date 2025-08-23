@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS storages(
   errorMessage              TEXT,
   deletedFlag               BOOL DEFAULT FALSE,
 
-  // Note: updated via Index_updateStorageInfos()
+  // Note: updated via IndexStorage_updateInfos()
   totalEntryCount           BIGINT DEFAULT 0,  // total number of entries
   totalEntrySize            BIGINT DEFAULT 0,  // total size of entries [bytes]
 

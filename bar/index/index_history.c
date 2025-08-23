@@ -29,8 +29,6 @@
 #include "common/misc.h"
 #include "errors.h"
 
-// TODO: remove bar.h
-#include "bar.h"
 #include "bar_common.h"
 #include "storage.h"
 #include "server_io.h"
@@ -60,156 +58,7 @@
 
 // ---------------------------------------------------------------------
 
-Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
-                             IndexHandle      *indexHandle,
-                             IndexId          uuidId,
-                             ConstString      jobUUID,
-                             DatabaseOrdering ordering,
-                             uint64           offset,
-                             uint64           limit
-                            )
-{
-  String filterString;
-  String orderString;
-  Errors error;
-
-  assert(indexQueryHandle != NULL);
-  assert(indexHandle != NULL);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  // init variables
-  filterString = Database_newFilter();
-  orderString  = String_new();
-
-  // get filters
-  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%"PRIi64"",INDEX_DATABASE_ID(uuidId));
-  Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","history.jobUUID=%'S",jobUUID);
-
-  // get ordering
-  IndexCommon_appendOrdering(orderString,TRUE,"history.created",ordering);
-
-  // prepare list
-  IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    return Database_select(&indexQueryHandle->databaseStatementHandle,
-                           &indexHandle->databaseHandle,
-                           "history \
-                              LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
-                           ",
-                           DATABASE_FLAG_NONE,
-                           DATABASE_COLUMNS
-                           (
-                             DATABASE_COLUMN_KEY     ("history.id"),
-                             DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
-                             DATABASE_COLUMN_STRING  ("history.jobUUID"),
-                             DATABASE_COLUMN_STRING  ("history.scheduleUUID"),
-                             DATABASE_COLUMN_STRING  ("history.hostName"),
-                             DATABASE_COLUMN_STRING  ("history.userName"),
-                             DATABASE_COLUMN_UINT    ("history.type"),
-                             DATABASE_COLUMN_DATETIME("history.created"),
-                             DATABASE_COLUMN_STRING  ("history.errorMessage"),
-                             DATABASE_COLUMN_UINT64  ("history.duration"),
-                             DATABASE_COLUMN_UINT    ("history.totalEntryCount"),
-                             DATABASE_COLUMN_UINT64  ("history.totalEntrySize"),
-                             DATABASE_COLUMN_UINT    ("history.skippedEntryCount"),
-                             DATABASE_COLUMN_UINT64  ("history.skippedEntrySize"),
-                             DATABASE_COLUMN_UINT    ("history.errorEntryCount"),
-                             DATABASE_COLUMN_UINT64  ("history.errorEntrySize")
-                           ),
-                           String_cString(filterString),
-                           DATABASE_FILTERS
-                           (
-                           ),
-                           NULL,  // groupBy
-                           String_cString(orderString),
-                           offset,
-                           limit
-                          );
-  });
-  if (error != ERROR_NONE)
-  {
-    IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(orderString);
-    Database_deleteFilter(filterString);
-    return error;
-  }
-
-  // free resources
-  String_delete(orderString);
-  Database_deleteFilter(filterString);
-
-  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
-
-  return ERROR_NONE;
-}
-
-bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
-                          IndexId          *historyId,
-                          IndexId          *uuidId,
-                          String           jobUUID,
-                          String           scheduleUUID,
-                          String           hostName,
-                          String           userName,
-                          ArchiveTypes     *archiveType,
-                          uint64           *createdDateTime,
-                          String           errorMessage,
-                          uint64           *duration,
-                          uint             *totalEntryCount,
-                          uint64           *totalEntrySize,
-                          uint             *skippedEntryCount,
-                          uint64           *skippedEntrySize,
-                          uint             *errorEntryCount,
-                          uint64           *errorEntrySize
-                         )
-{
-  DatabaseId historyDatabaseId;
-  DatabaseId uuidDatabaseId;
-
-  assert(indexQueryHandle != NULL);
-  assert(indexQueryHandle->indexHandle != NULL);
-
-  // check init error
-  if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexQueryHandle->indexHandle->upgradeError;
-  }
-
-  if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
-                           &historyDatabaseId,
-                           &uuidDatabaseId,
-                           jobUUID,
-                           scheduleUUID,
-                           hostName,
-                           userName,
-                           archiveType,
-                           createdDateTime,
-                           errorMessage,
-                           duration,
-                           totalEntryCount,
-                           totalEntrySize,
-                           skippedEntryCount,
-                           skippedEntrySize,
-                           errorEntryCount,
-                           errorEntrySize
-                          )
-     )
-  {
-    return FALSE;
-  }
-  if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(historyDatabaseId);
-  if (uuidId    != NULL) (*uuidId   ) = INDEX_ID_UUID   (uuidDatabaseId   );
-
-  return TRUE;
-}
-
-Errors Index_newHistory(IndexHandle  *indexHandle,
+Errors IndexHistory_new(IndexHandle  *indexHandle,
                         ConstString  jobUUID,
                         ConstString  scheduleUUID,
                         ConstString  hostName,
@@ -329,7 +178,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
   return ERROR_NONE;
 }
 
-Errors Index_deleteHistory(IndexHandle *indexHandle,
+Errors IndexHistory_delete(IndexHandle *indexHandle,
                            IndexId     historyId
                           )
 {
@@ -372,6 +221,155 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
   });
 
   return error;
+}
+
+Errors IndexHistory_initList(IndexQueryHandle *indexQueryHandle,
+                             IndexHandle      *indexHandle,
+                             IndexId          uuidId,
+                             ConstString      jobUUID,
+                             DatabaseOrdering ordering,
+                             uint64           offset,
+                             uint64           limit
+                            )
+{
+  String filterString;
+  String orderString;
+  Errors error;
+
+  assert(indexQueryHandle != NULL);
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  // init variables
+  filterString = Database_newFilter();
+  orderString  = String_new();
+
+  // get filters
+  Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%"PRIi64"",INDEX_DATABASE_ID(uuidId));
+  Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","history.jobUUID=%'S",jobUUID);
+
+  // get ordering
+  IndexCommon_appendOrdering(orderString,TRUE,"history.created",ordering);
+
+  // prepare list
+  IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    return Database_select(&indexQueryHandle->databaseStatementHandle,
+                           &indexHandle->databaseHandle,
+                           "history \
+                              LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
+                           ",
+                           DATABASE_FLAG_NONE,
+                           DATABASE_COLUMNS
+                           (
+                             DATABASE_COLUMN_KEY     ("history.id"),
+                             DATABASE_COLUMN_KEY     ("COALESCE(uuids.id,0)"),
+                             DATABASE_COLUMN_STRING  ("history.jobUUID"),
+                             DATABASE_COLUMN_STRING  ("history.scheduleUUID"),
+                             DATABASE_COLUMN_STRING  ("history.hostName"),
+                             DATABASE_COLUMN_STRING  ("history.userName"),
+                             DATABASE_COLUMN_UINT    ("history.type"),
+                             DATABASE_COLUMN_DATETIME("history.created"),
+                             DATABASE_COLUMN_STRING  ("history.errorMessage"),
+                             DATABASE_COLUMN_UINT64  ("history.duration"),
+                             DATABASE_COLUMN_UINT    ("history.totalEntryCount"),
+                             DATABASE_COLUMN_UINT64  ("history.totalEntrySize"),
+                             DATABASE_COLUMN_UINT    ("history.skippedEntryCount"),
+                             DATABASE_COLUMN_UINT64  ("history.skippedEntrySize"),
+                             DATABASE_COLUMN_UINT    ("history.errorEntryCount"),
+                             DATABASE_COLUMN_UINT64  ("history.errorEntrySize")
+                           ),
+                           String_cString(filterString),
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           NULL,  // groupBy
+                           String_cString(orderString),
+                           offset,
+                           limit
+                          );
+  });
+  if (error != ERROR_NONE)
+  {
+    IndexCommon_doneIndexQueryHandle(indexQueryHandle);
+    String_delete(orderString);
+    Database_deleteFilter(filterString);
+    return error;
+  }
+
+  // free resources
+  String_delete(orderString);
+  Database_deleteFilter(filterString);
+
+  DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
+
+  return ERROR_NONE;
+}
+
+bool IndexHistory_getNext(IndexQueryHandle *indexQueryHandle,
+                          IndexId          *historyId,
+                          IndexId          *uuidId,
+                          String           jobUUID,
+                          String           scheduleUUID,
+                          String           hostName,
+                          String           userName,
+                          ArchiveTypes     *archiveType,
+                          uint64           *createdDateTime,
+                          String           errorMessage,
+                          uint64           *duration,
+                          uint             *totalEntryCount,
+                          uint64           *totalEntrySize,
+                          uint             *skippedEntryCount,
+                          uint64           *skippedEntrySize,
+                          uint             *errorEntryCount,
+                          uint64           *errorEntrySize
+                         )
+{
+  DatabaseId historyDatabaseId;
+  DatabaseId uuidDatabaseId;
+
+  assert(indexQueryHandle != NULL);
+  assert(indexQueryHandle->indexHandle != NULL);
+
+  // check init error
+  if (indexQueryHandle->indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexQueryHandle->indexHandle->upgradeError;
+  }
+
+  if (!Database_getNextRow(&indexQueryHandle->databaseStatementHandle,
+                           &historyDatabaseId,
+                           &uuidDatabaseId,
+                           jobUUID,
+                           scheduleUUID,
+                           hostName,
+                           userName,
+                           archiveType,
+                           createdDateTime,
+                           errorMessage,
+                           duration,
+                           totalEntryCount,
+                           totalEntrySize,
+                           skippedEntryCount,
+                           skippedEntrySize,
+                           errorEntryCount,
+                           errorEntrySize
+                          )
+     )
+  {
+    return FALSE;
+  }
+  if (historyId != NULL) (*historyId) = INDEX_ID_HISTORY(historyDatabaseId);
+  if (uuidId    != NULL) (*uuidId   ) = INDEX_ID_UUID   (uuidDatabaseId   );
+
+  return TRUE;
 }
 
 #ifdef __cplusplus

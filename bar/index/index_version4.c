@@ -662,7 +662,7 @@ LOCAL Errors importIndexVersion4(IndexHandle *oldIndexHandle,
                                UNUSED_VARIABLE(fromColumnInfo);
                                UNUSED_VARIABLE(userData);
 
-                               if (   Index_findStorageById(oldIndexHandle,
+                               if (   IndexStorage_findById(oldIndexHandle,
                                                             INDEX_ID_STORAGE(Database_getTableColumnListInt64(fromColumnInfo,"id",DATABASE_ID_NONE)),
                                                             NULL,  // jobUUID
                                                             NULL,  // scheduleUUDI
@@ -678,7 +678,7 @@ LOCAL Errors importIndexVersion4(IndexHandle *oldIndexHandle,
                                                             NULL,  // totalEntryCount
                                                             NULL  // totalEntrySize
                                                            )
-                                   && Index_findEntity(newIndexHandle,
+                                   && IndexEntity_find(newIndexHandle,
                                                        INDEX_ID_NONE,
                                                        jobUUID,
                                                        NULL,  // findScheduleUUID
@@ -702,7 +702,7 @@ LOCAL Errors importIndexVersion4(IndexHandle *oldIndexHandle,
                                }
                                else
                                {
-                                 error = Index_newEntity(newIndexHandle,
+                                 error = IndexEntity_new(newIndexHandle,
                                                          Misc_getUUID(jobUUID),
                                                          NULL,  // hostName
                                                          NULL,  // userName
@@ -1074,7 +1074,7 @@ LOCAL Errors importIndexVersion4(IndexHandle *oldIndexHandle,
                                                            );
                                }
 
-                               (void)Index_unlockEntity(newIndexHandle,entityId);
+                               (void)IndexEntity_unlock(newIndexHandle,entityId);
 
                                return error;
                              },NULL),

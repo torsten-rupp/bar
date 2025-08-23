@@ -52,10 +52,8 @@ extern const char *DATABASE_SAVE_PATTERNS[];
 #define INDEX_OPEN_MASK_MODE  0x0000000F
 #define INDEX_OPEN_MASK_FLAGS 0xFFFF0000
 
-//TODO: 5
 #define DATABASE_TIMEOUT (5*120L*MS_PER_SECOND)
 
-// TODO:
 #define MAX_SQL_COMMAND_LENGTH (2*4096)
 
 #if 0
@@ -630,7 +628,20 @@ Errors IndexCommon_deleteByIds(IndexHandle      *indexHandle,
                                ulong            idCount
                               );
 
-// TODO: comment
+/***********************************************************************\
+* Name   : IndexCommon_verify
+* Purpose: verify condition in index
+* Input  : indexHandle - index handle
+*          tableName   - table name
+*          columnName  - column name
+*          value       - condition value
+*          condition   - SQL condition
+*          ...         - optional arguments for SQL condition
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 void IndexCommon_verify(IndexHandle *indexHandle,
                         const char  *tableName,
                         const char  *columnName,

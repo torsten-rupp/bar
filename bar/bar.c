@@ -62,6 +62,7 @@
 #include "deltasources.h"
 #include "index/index.h"
 #include "index/index_storages.h"
+#include "index/index_entities.h"
 #include "continuous.h"
 #ifdef HAVE_BREAKPAD
   #include "minidump.h"
@@ -3953,7 +3954,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
   {
     // wait until all deleted storages are purged
     printInfo(1,"Wait purge deleted storages...");
-    while (Index_hasDeletedStorages(&indexHandle,&deletedStorageCount))
+    while (IndexStorage_hasDeleted(&indexHandle,&deletedStorageCount))
     {
       printInfo(1,"%5lu\b\b\b\b\b",deletedStorageCount);
       Misc_udelay(60*US_PER_SECOND);
@@ -3980,7 +3981,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     }
 
     // find storage
-    if (!Index_findStorageByName(&indexHandle,
+    if (!IndexStorage_findByName(&indexHandle,
                                  &storageSpecifier,
                                  NULL,  // findArchiveName
                                  NULL,  // uuidId
@@ -4069,7 +4070,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
     // purge storage if it exists
-    if (   (Index_findStorageByName(&indexHandle,
+    if (   (IndexStorage_findByName(&indexHandle,
                                     &storageSpecifier,
                                     globalOptions.debug.indexAddStorage,
                                     NULL,  // uuidId,
@@ -4108,7 +4109,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     // create entity
     if (globalOptions.debug.indexEntityId != DATABASE_ID_NONE)
     {
-      if (!Index_findEntity(&indexHandle,
+      if (!IndexEntity_find(&indexHandle,
                             INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
                             NULL,  // findJobUUID
                             NULL,  // findScheduleUUID
@@ -4128,7 +4129,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                            )
          )
       {
-        // Note: cannot use Index_newEntity(); specific id is required
+        // Note: cannot use IndexEntity_new(); specific id is required
         error = Database_insert(&indexHandle.databaseHandle,
                                 NULL,  // insertRowId
                                 "entities",
@@ -4167,7 +4168,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     }
 
     // create storage
-    error = Index_newStorage(&indexHandle,
+    error = IndexStorage_new(&indexHandle,
                              INDEX_ID_NONE, // uuidId
                              INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
                              NULL,  // hostName
@@ -4190,7 +4191,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     }
 
     // set state 'update'
-    Index_setStorageState(&indexHandle,
+    IndexStorage_setState(&indexHandle,
                           storageId,
                           INDEX_STATE_UPDATE,
                           0LL,  // lastCheckedDateTime
@@ -4214,7 +4215,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     if      (error == ERROR_NONE)
     {
       // done
-      error = Index_setStorageState(&indexHandle,
+      error = IndexStorage_setState(&indexHandle,
                                     storageId,
                                     INDEX_STATE_OK,
                                     Misc_getCurrentDateTime(),
@@ -4224,7 +4225,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
     {
       // interrupt
-      error = Index_setStorageState(&indexHandle,
+      error = IndexStorage_setState(&indexHandle,
                                     storageId,
                                     INDEX_STATE_UPDATE_REQUESTED,
                                     0LL,  // lastCheckedTimestamp
@@ -4234,7 +4235,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     else
     {
       // error
-      error = Index_setStorageState(&indexHandle,
+      error = IndexStorage_setState(&indexHandle,
                                     storageId,
                                     INDEX_STATE_ERROR,
                                     0LL,  // lastCheckedDateTime
@@ -4280,7 +4281,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     }
 
     // find storage
-    if (!Index_findStorageByName(&indexHandle,
+    if (!IndexStorage_findByName(&indexHandle,
                                  &storageSpecifier,
                                  NULL,  // findArchiveName
                                  NULL,  // uuidId
@@ -4332,7 +4333,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
     // set state 'update'
-    Index_setStorageState(&indexHandle,
+    IndexStorage_setState(&indexHandle,
                           storageId,
                           INDEX_STATE_UPDATE,
                           0LL,  // lastCheckedDateTime
@@ -4356,7 +4357,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     if      (error == ERROR_NONE)
     {
       // done
-      (void)Index_setStorageState(&indexHandle,
+      (void)IndexStorage_setState(&indexHandle,
                                   storageId,
                                   INDEX_STATE_OK,
                                   Misc_getCurrentDateTime(),
@@ -4366,7 +4367,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
     {
       // interrupt
-      (void)Index_setStorageState(&indexHandle,
+      (void)IndexStorage_setState(&indexHandle,
                                   storageId,
                                   INDEX_STATE_UPDATE_REQUESTED,
                                   0LL,  // lastCheckedTimestamp
@@ -4376,7 +4377,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     else
     {
       // error
-      (void)Index_setStorageState(&indexHandle,
+      (void)IndexStorage_setState(&indexHandle,
                                   storageId,
                                   INDEX_STATE_ERROR,
                                   0LL,  // lastCheckedDateTime

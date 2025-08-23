@@ -120,7 +120,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                UNUSED_VARIABLE(fromColumnInfo);
                                UNUSED_VARIABLE(userData);
 
-                               error = Index_newEntity(newIndexHandle,
+                               error = IndexEntity_new(newIndexHandle,
                                                        Misc_getUUID(jobUUID),
                                                        NULL,  // scheduleUUID
                                                        NULL,  // hostName
@@ -474,7 +474,7 @@ LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle,
                                                            );
                                }
 
-                               (void)Index_unlockEntity(newIndexHandle,entityId);
+                               (void)IndexEntity_unlock(newIndexHandle,entityId);
 
                                return error;
                              },NULL),

@@ -1163,29 +1163,29 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   DIMPORT("create aggregates");
   if (error == ERROR_NONE)
   {
-    error = Index_initListStorages(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   INDEX_ID_ANY,  // entityId
-                                   NULL,  // jobUUID
-                                   NULL,  // scheduleUUID,
-                                   NULL,  // indexIds
-                                   0,  // indexIdCount,
-                                   INDEX_TYPESET_ALL,
-                                   INDEX_STATE_SET_ALL,
-                                   INDEX_MODE_SET_ALL,
-                                   NULL,  // hostName
-                                   NULL,  // userName
-                                   NULL,  // name
-                                   INDEX_STORAGE_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
+    error = IndexStorage_initList(&indexQueryHandle,
+                                  indexHandle,
+                                  INDEX_ID_ANY,  // uuidId
+                                  INDEX_ID_ANY,  // entityId
+                                  NULL,  // jobUUID
+                                  NULL,  // scheduleUUID,
+                                  NULL,  // indexIds
+                                  0,  // indexIdCount,
+                                  INDEX_TYPESET_ALL,
+                                  INDEX_STATE_SET_ALL,
+                                  INDEX_MODE_SET_ALL,
+                                  NULL,  // hostName
+                                  NULL,  // userName
+                                  NULL,  // name
+                                  INDEX_STORAGE_SORT_MODE_NONE,
+                                  DATABASE_ORDERING_NONE,
+                                  0LL,  // offset
+                                  INDEX_UNLIMITED
+                                 );
     if (error == ERROR_NONE)
     {
       while (   (error == ERROR_NONE)
-             && Index_getNextStorage(&indexQueryHandle,
+             && IndexStorage_getNext(&indexQueryHandle,
                                      NULL,  // uuidId
                                      NULL,  // jobUUID
                                      NULL,  // entityId
@@ -1209,7 +1209,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
             )
       {
         t0 = Misc_getTimestamp();
-        error = Index_updateStorageInfos(indexHandle,storageId);
+        error = IndexStorage_updateInfos(indexHandle,storageId);
         t1 = Misc_getTimestamp();
         if (error == ERROR_NONE)
         {
@@ -1224,24 +1224,24 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   }
   if (error == ERROR_NONE)
   {
-    error = Index_initListEntities(&indexQueryHandle,
-                                   indexHandle,
-                                   INDEX_ID_ANY,  // uuidId
-                                   NULL,  // jobUUID,
-                                   NULL,  // scheduldUUID
-                                   ARCHIVE_TYPE_ANY,
-                                   INDEX_STATE_SET_ALL,
-                                   INDEX_MODE_SET_ALL,
-                                   NULL,  // name
-                                   INDEX_ENTITY_SORT_MODE_NONE,
-                                   DATABASE_ORDERING_NONE,
-                                   0LL,  // offset
-                                   INDEX_UNLIMITED
-                                  );
+    error = IndexEntity_initList(&indexQueryHandle,
+                                 indexHandle,
+                                 INDEX_ID_ANY,  // uuidId
+                                 NULL,  // jobUUID,
+                                 NULL,  // scheduldUUID
+                                 ARCHIVE_TYPE_ANY,
+                                 INDEX_STATE_SET_ALL,
+                                 INDEX_MODE_SET_ALL,
+                                 NULL,  // name
+                                 INDEX_ENTITY_SORT_MODE_NONE,
+                                 DATABASE_ORDERING_NONE,
+                                 0LL,  // offset
+                                 INDEX_UNLIMITED
+                                );
     if (error == ERROR_NONE)
     {
       while (   (error == ERROR_NONE)
-             && Index_getNextEntity(&indexQueryHandle,
+             && IndexEntity_getNext(&indexQueryHandle,
                                     NULL,  // uuidId,
                                     NULL,  // jobUUID,
                                     NULL,  // scheduleUUID,
@@ -1258,7 +1258,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
             )
       {
         t0 = Misc_getTimestamp();
-        error = Index_updateEntityInfos(indexHandle,entityId);
+        error = IndexEntity_updateInfos(indexHandle,entityId);
         t1 = Misc_getTimestamp();
         if (error == ERROR_NONE)
         {
@@ -1273,7 +1273,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
   }
   if (error == ERROR_NONE)
   {
-    error = Index_initListUUIDs(&indexQueryHandle,
+    error = IndexUUID_initList(&indexQueryHandle,
                                 indexHandle,
                                 INDEX_STATE_SET_ALL,
                                 INDEX_MODE_SET_ALL,
@@ -1284,7 +1284,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
     if (error == ERROR_NONE)
     {
       while (   (error == ERROR_NONE)
-             && Index_getNextUUID(&indexQueryHandle,
+             && IndexUUID_getNext(&indexQueryHandle,
                                   &uuidId,
                                   NULL,  // jobUUID
                                   NULL,  // lastCheckedDateTime
@@ -1297,7 +1297,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
             )
       {
         t0 = Misc_getTimestamp();
-        error = Index_updateUUIDInfos(indexHandle,uuidId);
+        error = IndexUUID_updateInfos(indexHandle,uuidId);
         t1 = Misc_getTimestamp();
         if (error == ERROR_NONE)
         {
@@ -1549,7 +1549,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
 
     // request update state of incomplete storages
     error = ERROR_NONE;
-    while (Index_findStorageByState(indexHandle,
+    while (IndexStorage_findByState(indexHandle,
                                     INDEX_STATE_SET(INDEX_STATE_UPDATE),
                                     NULL,  // uuidId
                                     NULL,  // jobUUID
@@ -1578,7 +1578,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
         String_set(printableStorageName,storageName);
       }
 
-      error = Index_setStorageState(indexHandle,
+      error = IndexStorage_setState(indexHandle,
                                     indexId,
                                     INDEX_STATE_UPDATE_REQUESTED,
                                     0LL,  // lastCheckedDateTime
@@ -1664,7 +1664,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
 
   error = ERROR_NONE;
   while (   (error == ERROR_NONE)
-         && (Index_findStorageByState(indexHandle,
+         && (IndexStorage_findByState(indexHandle,
                                       INDEX_STATE_SET(INDEX_STATE_CREATE),
                                       NULL,  // uuidId
                                       NULL,  // jobUUID
@@ -2039,27 +2039,27 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
   uint64           timeModified;
 
 
-  error = Index_initListEntries(&indexQueryHandle,
-                                indexHandle,
-                                NULL,  // indexIds
-                                0L,  // indexIdCount
-                                NULL,  // entryIds
-                                0L,  // entryIdCount
-                                INDEX_TYPESET_ANY_ENTRY,
-                                NULL,  // entryPattern,
-                                FALSE,  // newestOnly
-                                FALSE,  // fragmentsCount
-                                INDEX_ENTRY_SORT_MODE_NONE,
-                                DATABASE_ORDERING_NONE,
-                                0LL,  // offset
-                                INDEX_UNLIMITED
-                               );
+  error = IndexEntry_initList(&indexQueryHandle,
+                              indexHandle,
+                              NULL,  // indexIds
+                              0L,  // indexIdCount
+                              NULL,  // entryIds
+                              0L,  // entryIdCount
+                              INDEX_TYPESET_ANY_ENTRY,
+                              NULL,  // entryPattern,
+                              FALSE,  // newestOnly
+                              FALSE,  // fragmentsCount
+                              INDEX_ENTRY_SORT_MODE_NONE,
+                              DATABASE_ORDERING_NONE,
+                              0LL,  // offset
+                              INDEX_UNLIMITED
+                             );
   if (error != ERROR_NONE)
   {
     return error;
   }
   name = String_new();
-  while (Index_getNextEntry(&indexQueryHandle,
+  while (IndexEntry_getNext(&indexQueryHandle,
                             NULL,  // uuidId
                             NULL,  // jobUUID
                             NULL,  // entityId
@@ -2666,7 +2666,7 @@ LOCAL void indexThreadCode(void)
       #endif /* INDEX_SUPPORT_DELETE */
 
       if (!indexQuitFlag) (void)IndexStorage_pruneAll(&indexHandle,NULL,NULL);
-      if (!indexQuitFlag) (void)IndexEntry_pruneAll(&indexHandle,NULL,NULL);
+      if (!indexQuitFlag) (void)IndexEntry_deleteAllWithoutFragments(&indexHandle,NULL,NULL);
       if (!indexQuitFlag) (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
       if (!indexQuitFlag) (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
     }
