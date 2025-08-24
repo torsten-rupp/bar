@@ -124,17 +124,13 @@ LOCAL_INLINE uint debugNodeHashIndex(const Node *node)
 
 LOCAL DebugListNode *debugFindNode(const DebugListNodeList *debugListNodeList, const Node *node)
 {
-  uint          index;
-  DebugListNode *debugListNode;
-  ulong         n;
-
   assert(debugListNodeList != NULL);
   assert(node != NULL);
 
-  index = debugNodeHashIndex(node);
+  uint index = debugNodeHashIndex(node);
 
-  debugListNode = debugListNodeList->hash[index].first;
-  n             = debugListNodeList->hash[index].count;
+  DebugListNode *debugListNode = debugListNodeList->hash[index].first;
+  ulong         n              = debugListNodeList->hash[index].count;
   while ((debugListNode != NULL) && (n > 0) && (debugListNode->node != node))
   {
     debugListNode = debugListNode->next;
@@ -156,12 +152,10 @@ LOCAL DebugListNode *debugFindNode(const DebugListNodeList *debugListNodeList, c
 
 LOCAL void debugAddNode(DebugListNodeList *debugListNodeList, DebugListNode *debugListNode)
 {
-  uint index;
-
   assert(debugListNodeList != NULL);
   assert(debugListNode != NULL);
 
-  index = debugNodeHashIndex(debugListNode->node);
+  uint index = debugNodeHashIndex(debugListNode->node);
 
   listInsert(debugListNodeList,debugListNode,debugListNodeList->hash[index].first);
   debugListNodeList->hash[index].first = debugListNode;
@@ -180,12 +174,10 @@ LOCAL void debugAddNode(DebugListNodeList *debugListNodeList, DebugListNode *deb
 
 LOCAL void debugRemoveNode(DebugListNodeList *debugListNodeList, DebugListNode *debugListNode)
 {
-  uint index;
-
   assert(debugListNodeList != NULL);
   assert(debugListNode != NULL);
 
-  index = debugNodeHashIndex(debugListNode->node);
+  uint index = debugNodeHashIndex(debugListNode->node);
   assert(debugListNodeList->hash[index].count > 0);
 
   listRemove(debugListNodeList,debugListNode);
@@ -240,21 +232,16 @@ LOCAL void debugCheckDuplicateNode(const char *fileName,
                                    const Node *node
                                   )
 {
-#if 1
-  uint          index;
-  DebugListNode *debugListNode;
-  ulong         n;
-
   assert(list != NULL);
 
-  index = debugNodeHashIndex(node);
+  uint index = debugNodeHashIndex(node);
 
   pthread_once(&debugListInitFlag,debugListInit);
 
   pthread_mutex_lock(&debugListLock);
   {
-    debugListNode = debugListAllocNodeList.hash[index].first;
-    n             = debugListAllocNodeList.hash[index].count;
+    DebugListNode *debugListNode = debugListAllocNodeList.hash[index].first;
+    ulong         n              = debugListAllocNodeList.hash[index].count;
     while ((debugListNode != NULL) && (n > 0))
     {
       if (debugListNode->node == node)
@@ -273,7 +260,6 @@ LOCAL void debugCheckDuplicateNode(const char *fileName,
     }
   }
   pthread_mutex_unlock(&debugListLock);
-#endif
 }
 #endif /* not NDEBUG */
 
@@ -293,10 +279,6 @@ LOCAL_INLINE void listInsert(void *list,
                              void *nextNode
                             )
 {
-  #ifndef NDEBUG
-    DebugListNode *debugListNode;
-  #endif // NDEBUG
-
   assert(list != NULL);
   assert(node != NULL);
 
@@ -350,7 +332,7 @@ LOCAL_INLINE void listInsert(void *list,
     pthread_mutex_lock(&debugListLock);
     {
       // Node: may be NULL in case debug node is inserted
-      debugListNode = debugFindNode(&debugListAllocNodeList,node);
+      DebugListNode *debugListNode = debugFindNode(&debugListAllocNodeList,node);
       if (debugListNode != NULL)
       {
         debugListNode->list = list;
@@ -374,10 +356,6 @@ LOCAL_INLINE void listRemove(void *list,
                              void *node
                             )
 {
-  #ifndef NDEBUG
-    DebugListNode *debugListNode;
-  #endif // NDEBUG
-
   assert(list != NULL);
   assert(((List*)list)->head != NULL);
   assert(((List*)list)->tail != NULL);
@@ -402,7 +380,7 @@ LOCAL_INLINE void listRemove(void *list,
     pthread_mutex_lock(&debugListLock);
     {
       // Node: may be NULL in case debug node is inserted
-      debugListNode = debugFindNode(&debugListAllocNodeList,node);
+      DebugListNode *debugListNode = debugFindNode(&debugListAllocNodeList,node);
       if (debugListNode != NULL)
       {
         debugListNode->list = NULL;
@@ -428,12 +406,10 @@ LOCAL_INLINE bool listContains(void *list,
                                void *node
                               )
 {
-  Node *listNode;
-
   assert(list != NULL);
   assert(node != NULL);
 
-  listNode = ((List*)list)->head;
+  Node *listNode = ((List*)list)->head;
   while (listNode != node)
   {
     listNode = listNode->next;
@@ -452,13 +428,8 @@ Node * List_newNode(ulong size)
 Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
 #endif /* NDEBUG */
 {
-  Node *node;
-  #ifndef NDEBUG
-    DebugListNode *debugListNode;
-  #endif /* not NDEBUG */
-
   // allocate node
-  node = (Node*)malloc(size);
+  Node *node = (Node*)malloc(size);
   if (node == NULL)
   {
     return NULL;
@@ -471,7 +442,7 @@ Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
     pthread_mutex_lock(&debugListLock);
     {
       // find node in free-list; reuse or allocate new debug node
-      debugListNode = debugListFreeNodeList.head;
+      DebugListNode *debugListNode = debugListFreeNodeList.head;
       while ((debugListNode != NULL) && (debugListNode->node != node))
       {
         debugListNode = debugListNode->next;
@@ -512,11 +483,6 @@ Node *List_deleteNode(Node *node)
 Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
 #endif /* NDEBUG */
 {
-  Node *nextNode;
-  #ifndef NDEBUG
-    DebugListNode *debugListNode;
-  #endif /* not NDEBUG */
-
   assert(node != NULL);
 
   // remove from allocated node list, add to node free list, shorten list
@@ -526,7 +492,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
     pthread_mutex_lock(&debugListLock);
     {
       // find node in free-list to check for duplicate free
-      debugListNode = debugFindNode(&debugListFreeNodeList,node);
+      DebugListNode *debugListNode = debugFindNode(&debugListFreeNodeList,node);
       if (debugListNode != NULL)
       {
         fprintf(stderr,"DEBUG WARNING: multiple free of node %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
@@ -606,7 +572,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
   #endif /* not NDEBUG */
 
   // get next node, free node
-  nextNode = node->next;
+  Node *nextNode = node->next;
   free(node);
 
   return nextNode;
@@ -710,9 +676,7 @@ List *__List_new(const char                *__fileName__,
                 )
 #endif /* NDEBUG */
 {
-  List *list;
-
-  list = (List*)malloc(sizeof(List));
+  List *list = (List*)malloc(sizeof(List));
   if (list == NULL) return NULL;
 
   #ifdef NDEBUG
@@ -746,12 +710,10 @@ List *__List_duplicate(const char                *__fileName__,
                       )
 #endif /* NDEBUG */
 {
-  List *list;
-
   assert(fromList != NULL);
   assert(duplicateFunction != NULL);
 
-  list = (List*)malloc(sizeof(List));
+  List *list = (List*)malloc(sizeof(List));
   if (list == NULL) return NULL;
 
   #ifdef NDEBUG
@@ -791,15 +753,13 @@ void List_delete(void *list)
 
 void *List_clear(void *list)
 {
-  Node *node;
-
   assert(list != NULL);
 
   if (((List*)list)->freeFunction != NULL)
   {
     while (!List_isEmpty(list))
     {
-      node = ((List*)list)->tail;
+      Node *node = ((List*)list)->tail;
       listRemove(list,node);
       ((List*)list)->freeFunction(node,((List*)list)->freeUserData);
       LIST_DELETE_NODE(node);
@@ -809,7 +769,7 @@ void *List_clear(void *list)
   {
     while (!List_isEmpty(list))
     {
-      node = ((List*)list)->tail;
+      Node *node = ((List*)list)->tail;
       listRemove(list,node);
       LIST_DELETE_NODE(node);
     }
@@ -827,25 +787,22 @@ void List_copy(void       *toList,
                const void *fromListToNode
               )
 {
-  Node *node;
-  Node *newNode;
-
   assert(toList != NULL);
   assert(fromList != NULL);
   assert(((List*)toList)->duplicateFunction != NULL);
 
   if (fromListFromNode == LIST_START) fromListFromNode = ((List*)fromList)->head;
 
-  node = (Node*)fromListFromNode;
+  Node *node = (Node*)fromListFromNode;
   while (node != fromListToNode)
   {
-    newNode = ((List*)toList)->duplicateFunction(node,((List*)toList)->duplicateUserData);
+    Node *newNode = ((List*)toList)->duplicateFunction(node,((List*)toList)->duplicateUserData);
     List_insert(toList,newNode,toListNextNode);
     node = node->next;
   }
   if (node != NULL)
   {
-    newNode = ((List*)toList)->duplicateFunction(node,((List*)toList)->duplicateUserData);
+    Node *newNode = ((List*)toList)->duplicateFunction(node,((List*)toList)->duplicateUserData);
     List_insert(toList,newNode,toListNextNode);
   }
 }
@@ -857,18 +814,15 @@ void List_move(void       *toList,
                const void *fromListToNode
               )
 {
-  Node *node;
-  Node *nextNode;
-
   assert(toList != NULL);
   assert(fromList != NULL);
 
   if (fromListFromNode == LIST_START) fromListFromNode = ((List*)fromList)->head;
 
-  node = (Node*)fromListFromNode;
+  Node *node = (Node*)fromListFromNode;
   while (node != fromListToNode)
   {
-    nextNode = node->next;
+    Node *nextNode = node->next;
     listRemove(fromList,node);
     listInsert(toList,node,toListNextNode);
     node = nextNode;
@@ -884,15 +838,13 @@ void List_exchange(void *list1,
                    void *list2
                   )
 {
-  Node  *node;
-  ulong count;
-
   assert(list1 != NULL);
   assert(list2 != NULL);
 
-  node  = ((List*)list1)->head;  ((List*)list1)->head  = ((List*)list2)->head;  ((List*)list2)->head  = node;
-  node  = ((List*)list1)->tail;  ((List*)list1)->tail  = ((List*)list2)->tail;  ((List*)list2)->tail  = node;
-  count = ((List*)list1)->count; ((List*)list1)->count = ((List*)list2)->count; ((List*)list2)->count = count;
+  Node *node;
+  node = ((List*)list1)->head;  ((List*)list1)->head  = ((List*)list2)->head;  ((List*)list2)->head  = node;
+  node = ((List*)list1)->tail;  ((List*)list1)->tail  = ((List*)list2)->tail;  ((List*)list2)->tail  = node;
+  ulong count = ((List*)list1)->count; ((List*)list1)->count = ((List*)list2)->count; ((List*)list2)->count = count;
 }
 
 #ifdef NDEBUG
@@ -945,12 +897,10 @@ void *List_remove(void *list,
                   void *node
                  )
 {
-  void *nextNode;
-
   assert(list != NULL);
   assert(node != NULL);
 
-  nextNode = ((Node*)node)->next;
+  void *nextNode = ((Node*)node)->next;
   listRemove(list,node);
 
   return nextNode;
@@ -960,12 +910,10 @@ void *List_removeAndFree(void *list,
                          void *node
                         )
 {
-  void *nextNode;
-
   assert(list != NULL);
   assert(node != NULL);
 
-  nextNode = ((Node*)node)->next;
+  void *nextNode = ((Node*)node)->next;
   listRemove(list,node);
   if (((List*)list)->freeFunction != NULL)
   {
@@ -978,11 +926,9 @@ void *List_removeAndFree(void *list,
 
 Node *List_removeFirst(void *list)
 {
-  Node *node;
-
   assert(list != NULL);
 
-  node = List_first(list);
+  Node *node = List_first(list);
   if (node != NULL) listRemove(list,node);
 
   return node;
@@ -990,11 +936,9 @@ Node *List_removeFirst(void *list)
 
 Node *List_removeLast(void *list)
 {
-  Node *node;
-
   assert(list != NULL);
 
-  node = List_last(list);
+  Node *node = List_last(list);
   if (node != NULL) listRemove(list,node);
 
   return node;
@@ -1006,11 +950,9 @@ bool List_contains(const void             *list,
                    void                   *listNodeEqualsUserData
                   )
 {
-  Node *findNode;
-
   assert(list != NULL);
 
-  findNode = ((List*)list)->head;
+  Node *findNode = ((List*)list)->head;
   while (   (findNode != NULL)
          && (   ((listNodeEqualsFunction == NULL) && (findNode != node))
              || ((listNodeEqualsFunction != NULL) && !listNodeEqualsFunction(findNode,listNodeEqualsUserData))
@@ -1026,10 +968,8 @@ bool List_contains(const void             *list,
 #if 0
 void pp(void *list)
 {
-  void *node;
-
 printf("---\n");
-  node = ((List*)list)->head;
+  void *node = ((List*)list)->head;
   while (node != NULL)
   {
 printf("%p\n",node);
@@ -1044,12 +984,10 @@ void *List_findFirst(const void             *list,
                      void                   *listNodeEqualsUserData
                     )
 {
-  Node *node;
-
   assert(list != NULL);
   assert(listNodeEqualsFunction != NULL);
 
-  node = NULL;
+  Node *node = NULL;
   switch (listFindMode)
   {
     case LIST_FIND_FORWARD:
@@ -1123,12 +1061,10 @@ Node *List_findAndRemove(void                   *list,
                          void                   *listNodeEqualsUserData
                         )
 {
-  Node *node;
-
   assert(list != NULL);
   assert(listNodeEqualsFunction != NULL);
 
-  node = List_findFirst(list,listFindMode,listNodeEqualsFunction,listNodeEqualsUserData);
+  Node *node = List_findFirst(list,listFindMode,listNodeEqualsFunction,listNodeEqualsUserData);
   if (node != NULL)
   {
     List_remove(list,node);
@@ -1142,43 +1078,38 @@ void List_sort(void                    *list,
                void                    *listNodeCompareUserData
               )
 {
-  List  sortedList;
-  void  *node1,*node2;
-  ulong n;
-  bool  mergedFlag;
-  ulong i;
-  ulong n1,n2;
-  void  *node;
-
   assert(list != NULL);
   assert(listNodeCompareFunction != NULL);
 
 //pp(list);
 
   /* sort list with merge-sort */
-  n = 1;
+  bool  mergedFlag;
+  ulong n = 1;
   do
   {
+    List sortedList;
     sortedList.head = NULL;
     sortedList.tail = NULL;
 
     mergedFlag = FALSE;
-    node1 = ((List*)list)->head;
+    void *node1 = ((List*)list)->head;
     while (node1 != NULL)
     {
       /* find start of sub-list 2 */
-      node2 = node1;
-      for (i = 0; (i < n) && (node2 != NULL); i++)
+      void *node2 = node1;
+      for (size_t i = 0; (i < n) && (node2 != NULL); i++)
       {
         node2 = ((Node*)node2)->next;
       }
 
       /* merge */
-      n1 = n;
-      n2 = n;
+      ulong n1 = n;
+      ulong n2 = n;
       while (((n1 > 0) && (node1 != NULL)) || ((n2 > 0) && (node2 != NULL)))
       {
         /* select next node to add to sorted list */
+        void  *node;
         if      ((n1 == 0) || (node1 == NULL))
         {
           /* sub-list 1 is empty -> select node from sub-list 2 */
@@ -1256,12 +1187,11 @@ void List_debugDone(void)
 
 void List_debugDumpInfo(FILE *handle)
 {
-  DebugListNode *debugListNode;
-
   pthread_once(&debugListInitFlag,debugListInit);
 
   pthread_mutex_lock(&debugListLock);
   {
+    DebugListNode *debugListNode;
     LIST_ITERATE(&debugListAllocNodeList,debugListNode)
     {
       fprintf(handle,"DEBUG: list node %p allocated at %s, line %lu\n",

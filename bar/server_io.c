@@ -258,15 +258,13 @@ LOCAL void doneIO(ServerIO *serverIO)
 
 LOCAL bool getLine(ServerIO *serverIO)
 {
-  char ch;
-
   assert(serverIO != NULL);
 
   while (   !serverIO->lineFlag
          && (serverIO->inputBufferIndex < serverIO->inputBufferLength)
         )
   {
-    ch = serverIO->inputBuffer[serverIO->inputBufferIndex]; serverIO->inputBufferIndex++;
+    char ch = serverIO->inputBuffer[serverIO->inputBufferIndex]; serverIO->inputBufferIndex++;
     if      (!iscntrl(ch))
     {
       String_appendChar(serverIO->line,ch);
@@ -310,8 +308,6 @@ LOCAL void doneLine(ServerIO *serverIO)
 LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
 {
   Errors error;
-  uint   n;
-  uint   newOutputBufferSize;
 
   assert(serverIO != NULL);
   assert(line != NULL);
@@ -320,13 +316,13 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
   SEMAPHORE_LOCKED_DO(&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // get line length
-    n = String_length(line);
+    size_t n = String_length(line);
 
 //TODO: avoid copy and add LF?
     // extend output buffer if needed
     if ((n+1) > serverIO->outputBufferSize)
     {
-      newOutputBufferSize = ALIGN((n+1),BUFFER_DELTA_SIZE);
+      size_t newOutputBufferSize = ALIGN((n+1),BUFFER_DELTA_SIZE);
 //fprintf(stderr,"%s, %d: extend output buffer %d -> %d\n",__FILE__,__LINE__,serverIO->outputBufferSize,newOutputBufferSize);
       serverIO->outputBuffer = (char*)realloc(serverIO->outputBuffer,newOutputBufferSize);
       if (serverIO->outputBuffer == NULL)
@@ -377,9 +373,6 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
 
 LOCAL bool receiveData(ServerIO *serverIO, long timeout)
 {
-  uint  maxBytes;
-  ulong readBytes;
-
   assert(serverIO != NULL);
   assert(serverIO->inputBufferIndex <= serverIO->inputBufferLength);
   assert(serverIO->inputBufferLength <= serverIO->inputBufferSize);
@@ -396,8 +389,7 @@ LOCAL bool receiveData(ServerIO *serverIO, long timeout)
   assert(serverIO->inputBufferIndex == 0);
 
   // get max. number of bytes to receive
-  maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-
+  uint maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
   if (maxBytes > 0)
   {
     switch (serverIO->type)
@@ -405,100 +397,107 @@ LOCAL bool receiveData(ServerIO *serverIO, long timeout)
       case SERVER_IO_TYPE_NONE:
         break;
       case SERVER_IO_TYPE_NETWORK:
-        (void)Network_receive(&serverIO->network.socketHandle,
-                              &serverIO->inputBuffer[serverIO->inputBufferLength],
-                              maxBytes,
-                              timeout,
-                              &readBytes
-                             );
-//fprintf(stderr,"%s, %d: received socket: maxBytes=%d received=%d at %d: ",__FILE__,__LINE__,maxBytes,readBytes,serverIO->inputBufferLength);
-//fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr); fprintf(stderr,"\n");
-        if (readBytes > 0)
         {
-          // read as much as possible
-          do
+          ulong readBytes;
+          (void)Network_receive(&serverIO->network.socketHandle,
+                                &serverIO->inputBuffer[serverIO->inputBufferLength],
+                                maxBytes,
+                                timeout,
+                                &readBytes
+                               );
+  //fprintf(stderr,"%s, %d: received socket: maxBytes=%d received=%d at %d: ",__FILE__,__LINE__,maxBytes,readBytes,serverIO->inputBufferLength);
+  //fwrite(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,1,stderr); fprintf(stderr,"\n");
+          if (readBytes > 0)
           {
-//fprintf(stderr,"%s, %d: readBytes=%d: %d\n",__FILE__,__LINE__,readBytes,serverIO->inputBufferLength); debugDumpMemory(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,0);
-            serverIO->inputBufferLength += (uint)readBytes;
+            // read as much as possible
+            do
+            {
+  //fprintf(stderr,"%s, %d: readBytes=%d: %d\n",__FILE__,__LINE__,readBytes,serverIO->inputBufferLength); debugDumpMemory(&serverIO->inputBuffer[serverIO->inputBufferLength],readBytes,0);
+              serverIO->inputBufferLength += (uint)readBytes;
 
-//fprintf(stderr,"%s:%d: c index=%d length=%d size=%d\n",__FILE__,__LINE__,serverIO->inputBufferIndex,serverIO->inputBufferLength,serverIO->inputBufferSize);
-            maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            if (maxBytes > 0)
-            {
-              (void)Network_receive(&serverIO->network.socketHandle,
-                                    &serverIO->inputBuffer[serverIO->inputBufferLength],
-                                    maxBytes,
-                                    NO_WAIT,
-                                    &readBytes
-                                   );
+  //fprintf(stderr,"%s:%d: c index=%d length=%d size=%d\n",__FILE__,__LINE__,serverIO->inputBufferIndex,serverIO->inputBufferLength,serverIO->inputBufferSize);
+              maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
+              if (maxBytes > 0)
+              {
+                (void)Network_receive(&serverIO->network.socketHandle,
+                                      &serverIO->inputBuffer[serverIO->inputBufferLength],
+                                      maxBytes,
+                                      NO_WAIT,
+                                      &readBytes
+                                     );
+              }
+              else
+              {
+                readBytes = 0L;
+              }
             }
-            else
-            {
-              readBytes = 0L;
-            }
+            while (readBytes > 0);
           }
-          while (readBytes > 0);
-        }
-        else
-        {
-          // disconnect
-          return FALSE;
+          else
+          {
+            // disconnect
+            return FALSE;
+          }
         }
         break;
       case SERVER_IO_TYPE_BATCH:
+        {
         // read only single character
 // TODO: how to read as much characters as possible without blocking?
 #if 1
-        (void)File_read(&serverIO->file.inputHandle,
-                        &serverIO->inputBuffer[serverIO->inputBufferLength],
-                        1,
-                        &readBytes
-                       );
-        if (readBytes > 0)
-        {
-          serverIO->inputBufferLength += (uint)readBytes;
-        }
-        else
-        {
-          // disconnect
-          return FALSE;
-        }
-#else
-        (void)File_read(&serverIO->file.inputHandle,
-                        &serverIO->inputBuffer[serverIO->inputBufferLength],
-                        maxBytes,
-                        &readBytes
-                       );
-//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,serverIO->inputBuffer);
-        if (readBytes > 0)
-        {
-          // read as much as possible
-          do
+          ulong readBytes;
+          (void)File_read(&serverIO->file.inputHandle,
+                          &serverIO->inputBuffer[serverIO->inputBufferLength],
+                          1,
+                          &readBytes
+                         );
+          if (readBytes > 0)
           {
             serverIO->inputBufferLength += (uint)readBytes;
-
-            maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
-            if (maxBytes > 0)
-            {
-              (void)File_read(&serverIO->file.inputHandle,
-                              &serverIO->inputBuffer[serverIO->inputBufferLength],
-                              maxBytes,
-                              &readBytes
-                             );
-            }
-            else
-            {
-              readBytes = 0L;
-            }
           }
-          while (readBytes > 0);
-        }
-        else
-        {
-          // disconnect
-          return FALSE;
-        }
+          else
+          {
+            // disconnect
+            return FALSE;
+          }
+#else
+          ulong readBytes;
+          (void)File_read(&serverIO->file.inputHandle,
+                          &serverIO->inputBuffer[serverIO->inputBufferLength],
+                          maxBytes,
+                          &readBytes
+                         );
+//fprintf(stderr,"%s, %d: readBytes=%d buffer=%s\n",__FILE__,__LINE__,readBytes,serverIO->inputBuffer);
+          if (readBytes > 0)
+          {
+            // read as much as possible
+            do
+            {
+              serverIO->inputBufferLength += (uint)readBytes;
+
+              maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
+              if (maxBytes > 0)
+              {
+                (void)File_read(&serverIO->file.inputHandle,
+                                &serverIO->inputBuffer[serverIO->inputBufferLength],
+                                maxBytes,
+                                &readBytes
+                               );
+              }
+              else
+              {
+                readBytes = 0L;
+              }
+            }
+            while (readBytes > 0);
+          }
+          else
+          {
+            // disconnect
+            return FALSE;
+          }
 #endif
+        }
         break;
     #ifndef NDEBUG
       default:
@@ -530,25 +529,20 @@ LOCAL Errors vsendCommand(ServerIO   *serverIO,
                           va_list    arguments
                          )
 {
-  String   s;
-  Errors   error;
-  #ifdef HAVE_NEWLOCALE
-    locale_t oldLocale;
-  #endif /* HAVE_NEWLOCALE */
+  Errors error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(id != NULL);
   assert(format != NULL);
 
-  // init variables
-  s = String_new();
-
   // get new command id
   (*id) = atomicIncrement(&serverIO->commandId,1);
 
   // format command
+  String s = String_new();
   #ifdef HAVE_NEWLOCALE
+    locale_t oldLocale;
     oldLocale = uselocale(POSIXLocale);
   #endif /* HAVE_NEWLOCALE */
   {
@@ -600,15 +594,7 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
                            StringMap resultMap
                           )
 {
-  bool               resultFlag;
-  TimeoutInfo        timeoutInfo;
-  Errors             error;
-  uint               errorCode;
-  String             data;
-  #ifndef NDEBUG
-    size_t             iteratorVariable;
-    Codepoint          codepoint;
-  #endif /* not NDEBU G */
+  Errors error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -616,12 +602,12 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
   assert(completedFlag != NULL);
   assert(resultMap != NULL);
 
-  // init variables
-  data = String_new();
-  Misc_initTimeout(&timeoutInfo,timeout);
+  bool resultFlag = FALSE;
 
-  resultFlag = FALSE;
-  error      = ERROR_UNKNOWN;
+  error = ERROR_UNKNOWN;
+  TimeoutInfo timeoutInfo;
+  Misc_initTimeout(&timeoutInfo,timeout);
+  String data = String_new();
   do
   {
 //fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
@@ -635,6 +621,7 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
     if (getLine(serverIO))
     {
       // parse
+      uint errorCode;
       if      (String_parse(serverIO->line,STRING_BEGIN,"%u %y %u % S",NULL,id,completedFlag,&errorCode,data))
       {
         // command results: <id> <complete flag> <error code> <data>
@@ -675,6 +662,8 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
           if (globalOptions.debug.serverLevel >= 1)
           {
             fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
+            size_t    iteratorVariable;
+            Codepoint codepoint;
             STRING_CHAR_ITERATE_UTF8(serverIO->line,iteratorVariable,codepoint)
             {
               if (iswprint(codepoint))
@@ -699,8 +688,6 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
     error = ERROR_NETWORK_TIMEOUT_RECEIVE;
   }
   assert(error != ERROR_UNKNOWN);
-
-  // free resources
   Misc_doneTimeout(&timeoutInfo);
   String_delete(data);
 
@@ -731,20 +718,18 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
                                  va_list                       arguments
                                 )
 {
-  uint        id;
-  Errors      error;
-  TimeoutInfo timeoutInfo;
-  bool        completedFlag;
-  StringMap   resultMap;
+  Errors error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
 
   // init variables
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,timeout);
 
   // send command
+  uint id;
   error = vsendCommand(serverIO,
                        debugLevel,
                        &id,
@@ -758,7 +743,8 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
   }
 
   // wait for result
-  resultMap = StringMap_new();
+  bool      completedFlag;
+  StringMap resultMap = StringMap_new();
   do
   {
     error = receiveResult(serverIO,
@@ -822,13 +808,13 @@ LOCAL Errors syncExecuteCommand(ServerIO                      *serverIO,
                                 ...
                                )
 {
-  va_list arguments;
-  Errors  error;
+  Errors error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
 
+  va_list arguments;
   va_start(arguments,format);
   error = vsyncExecuteCommand(serverIO,
                               debugLevel,
@@ -924,14 +910,7 @@ bool ServerIO_parseAction(const char      *actionText,
                                   )
 #endif /* NDEBUG */
 {
-  Errors          error;
-  String          line;
-  StringMap       argumentMap;
-  String          id;
-  String          encryptTypes;
-  String          n,e;
-  StringTokenizer stringTokenizer;
-  ConstString     token;
+  Errors error;
 
   assert(serverIO != NULL);
   assert(hostName != NULL);
@@ -970,20 +949,10 @@ bool ServerIO_parseAction(const char      *actionText,
   }
 
   // read session data
-  line         = String_new();
-  argumentMap  = StringMap_new();
-  id           = String_new();
-  encryptTypes = String_new();
-  n            = String_new();
-  e            = String_new();
+  String line = String_new();
   error = Network_readLine(&serverIO->network.socketHandle,line,READ_TIMEOUT);
   if (error != ERROR_NONE)
   {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
-    StringMap_delete(argumentMap);
     String_delete(line);
     Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
@@ -991,22 +960,14 @@ bool ServerIO_parseAction(const char      *actionText,
   }
   if (!String_startsWithCString(line,"SESSION"))
   {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
-    StringMap_delete(argumentMap);
     String_delete(line);
     Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
     return ERROR_INVALID_RESPONSE;
   }
+  StringMap argumentMap = StringMap_new();
   if (!StringMap_parse(argumentMap,line,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,7,NULL))
   {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
     Network_disconnect(&serverIO->network.socketHandle);
@@ -1015,11 +976,9 @@ bool ServerIO_parseAction(const char      *actionText,
   }
 
   // get id, encryptTypes, n, e
+  String id = String_new();
   if (!StringMap_getString(argumentMap,"id",id,NULL))
   {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
@@ -1027,10 +986,9 @@ bool ServerIO_parseAction(const char      *actionText,
     doneIO(serverIO);
     return ERRORX_(EXPECTED_PARAMETER,0,"id");
   }
+  String encryptTypes = String_new();
   if (!StringMap_getString(argumentMap,"encryptTypes",encryptTypes,NULL))
   {
-    String_delete(e);
-    String_delete(n);
     String_delete(encryptTypes);
     String_delete(id);
     StringMap_delete(argumentMap);
@@ -1039,7 +997,9 @@ bool ServerIO_parseAction(const char      *actionText,
     doneIO(serverIO);
     return ERRORX_(EXPECTED_PARAMETER,0,"encryptTypes");
   }
+  String n = String_new();
   StringMap_getString(argumentMap,"n",n,NULL);
+  String e = String_new();
   StringMap_getString(argumentMap,"e",e,NULL);
 //fprintf(stderr,"%s, %d: connector public n=%s\n",__FILE__,__LINE__,String_cString(n));
 //fprintf(stderr,"%s, %d: connector public e=%s\n",__FILE__,__LINE__,String_cString(e));
@@ -1065,6 +1025,8 @@ bool ServerIO_parseAction(const char      *actionText,
   }
 
   // get first usable encryption type
+  StringTokenizer stringTokenizer;
+  ConstString     token;
   String_initTokenizer(&stringTokenizer,encryptTypes,STRING_BEGIN,",",NULL,TRUE);
   while (String_getNextToken(&stringTokenizer,&token,NULL))
   {
@@ -1218,10 +1180,6 @@ bool ServerIO_parseAction(const char      *actionText,
 {
   Errors error;
 
-  String encodedId;
-  String n,e;
-  String s;
-
   assert(serverIO != NULL);
   assert(serverSocketHandle != NULL);
 
@@ -1248,12 +1206,12 @@ bool ServerIO_parseAction(const char      *actionText,
   // start session
 
   // get encoded session id
-  encodedId = Misc_hexEncode(String_new(),serverIO->sessionId,sizeof(SessionId));
+  String encodedId = Misc_hexEncode(String_new(),serverIO->sessionId,sizeof(SessionId));
 
   // create new session keys
-  n         = String_new();
-  e         = String_new();
-  s         = String_new();
+  String n = String_new();
+  String e = String_new();
+  String s = String_new();
   error = Crypt_createPublicPrivateKeyPair(&serverIO->publicKey,
                                            &serverIO->privateKey,
                                            SESSION_KEY_SIZE,
@@ -1450,12 +1408,7 @@ Errors ServerIO_decryptData(const ServerIO       *serverIO,
                             ConstString          encryptedString
                            )
 {
-  byte   encryptedBuffer[1024];
-  uint   encryptedBufferLength;
   Errors error;
-  byte   *buffer;
-  uint   bufferLength;
-  uint   i;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1464,6 +1417,8 @@ Errors ServerIO_decryptData(const ServerIO       *serverIO,
   assert(dataLength != NULL);
 
   // convert hex/base64-string to data
+  byte encryptedBuffer[1024];
+  uint encryptedBufferLength;
   if      (String_startsWithCString(encryptedString,"base64:"))
   {
 //TODO: dynamic dalloc
@@ -1491,8 +1446,8 @@ Errors ServerIO_decryptData(const ServerIO       *serverIO,
 //fprintf(stderr,"%s, %d: encryptedBufferLength=%d\n",__FILE__,__LINE__,encryptedBufferLength); debugDumpMemory(encryptedBuffer,encryptedBufferLength,0);
 
   // allocate secure memory
-  bufferLength = encryptedBufferLength;
-  buffer = allocSecure(bufferLength);
+  uint bufferLength = encryptedBufferLength;
+  byte *buffer = allocSecure(bufferLength);
   if (buffer == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
@@ -1534,7 +1489,7 @@ Errors ServerIO_decryptData(const ServerIO       *serverIO,
 
   // decode data (XOR with session id)
 //fprintf(stderr,"%s, %d: session id\n",__FILE__,__LINE__); debugDumpMemory(serverIO->sessionId,SESSION_ID_LENGTH,0);
-  for (i = 0; i < bufferLength; i++)
+  for (uint i = 0; i < bufferLength; i++)
   {
     buffer[i] = buffer[i]^serverIO->sessionId[i%SESSION_ID_LENGTH];
   }
@@ -1562,38 +1517,31 @@ Errors ServerIO_encryptData(const ServerIO *serverIO,
                             String         encryptedString
                            )
 {
-  byte   *buffer;
-  uint   bufferLength;
-  uint   i;
   Errors error;
-  byte   encryptedBuffer[1024];
-  uint   encryptedBufferLength;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(data != NULL);
-  assert(dataLength < sizeof(encryptedBuffer));
   assert(encryptedString != NULL);
-//fprintf(stderr,"%s, %d: data %d\n",__FILE__,__LINE__,dataLength); debugDumpMemory(data,dataLength,0);
 
   // allocate secure memory
-  bufferLength = dataLength;
-  buffer = allocSecure(bufferLength);
+  uint bufferLength = dataLength;
+  byte *buffer = allocSecure(bufferLength);
   if (buffer == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
   }
 
   // encode data (XOR with session id)
-//fprintf(stderr,"%s, %d: session id\n",__FILE__,__LINE__); debugDumpMemory(serverIO->sessionId,SESSION_ID_LENGTH,0);
-  for (i = 0; i < bufferLength; i++)
+  for (uint i = 0; i < bufferLength; i++)
   {
     buffer[i] = ((const byte*)data)[i]^serverIO->sessionId[i%SESSION_ID_LENGTH];
   }
-//fprintf(stderr,"%s, %d: encoded data %d\n",__FILE__,__LINE__,bufferLength); debugDumpMemory(buffer,bufferLength,0);
 
   // encrypt
-  encryptedBufferLength = 0;
+  byte encryptedBuffer[1024];
+  uint encryptedBufferLength = 0;
+  assert(dataLength < sizeof(encryptedBuffer));
   switch (serverIO->encryptType)
   {
     case SERVER_IO_ENCRYPT_TYPE_NONE:
@@ -1643,8 +1591,6 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
                              )
 {
   Errors error;
-  void   *data;
-  uint   dataLength;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1652,6 +1598,8 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
   assert(encryptedString != NULL);
 
   // decrypt
+  void *data;
+  uint dataLength;
   error = ServerIO_decryptData(serverIO,
                                &data,
                                &dataLength,
@@ -1679,8 +1627,6 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
                                )
 {
   Errors error;
-  void   *data;
-  uint   dataLength;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1688,6 +1634,8 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
   assert(encryptedPassword != NULL);
 
   // decrypt
+  void *data;
+  uint dataLength;
   error = ServerIO_decryptData(serverIO,
                                &data,
                                &dataLength,
@@ -1714,14 +1662,7 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
                            ServerIOEncryptTypes encryptType
                           )
 {
-  byte   encryptedBuffer[2048];
-  uint   encryptedBufferLength;
   Errors error;
-  byte   encodedBuffer[2048];
-  uint   encodedBufferLength;
-  byte   *keyData;
-  uint   keyDataLength;
-  uint   i;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1729,13 +1670,16 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
   assert(encryptedKey != NULL);
 
   // decode base64
+  byte encryptedBuffer[2048];
+  uint encryptedBufferLength;
   if (!Misc_base64Decode(encryptedBuffer,sizeof(encryptedBuffer),&encryptedBufferLength,encryptedKey,STRING_BEGIN))
   {
     return FALSE;
   }
 
   // decrypt key
-  encodedBufferLength = 0;
+  byte encodedBuffer[2048];
+  uint encodedBufferLength = 0;
   switch (encryptType)
   {
     case SERVER_IO_ENCRYPT_TYPE_NONE:
@@ -1768,13 +1712,13 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
 //fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
 
   // decode key (XOR with session id)
-  keyDataLength = encodedBufferLength;
-  keyData = allocSecure(keyDataLength);
+  uint keyDataLength = encodedBufferLength;
+  byte *keyData = allocSecure(keyDataLength);
   if (keyData == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
   }
-  for (i = 0; i < encodedBufferLength; i++)
+  for (uint i = 0; i < encodedBufferLength; i++)
   {
     keyData[i] = encodedBuffer[i]^serverIO->sessionId[i];
   }
@@ -1802,21 +1746,19 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
                              const Hash           *passwordHash
                             )
 {
-  Errors     error;
-  void       *data;
-  uint       dataLength;
-  const char *password;
-  CryptHash  cryptHash;
-  bool       okFlag;
+  Errors error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(passwordHash != NULL);
 
+  bool okFlag;
   if (passwordHash->cryptHashAlgorithm != CRYPT_HASH_ALGORITHM_NONE)
   {
     // decrypt password
 //fprintf(stderr,"%s, %d: encryptedPassword=%s\n",__FILE__,__LINE__,String_cString(encryptedPassword));
+    void *data;
+    uint dataLength;
     error = ServerIO_decryptData(serverIO,
                                  &data,
                                  &dataLength,
@@ -1827,11 +1769,12 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
     {
       return error;
     }
-    password = (const char*)data;
+    const char *password = (const char*)data;
 //fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
 //fprintf(stderr,"%s, %d: decrypted password '%s'\n",__FILE__,__LINE__,password);
 
     // calculate password hash
+    CryptHash cryptHash;
     Crypt_initHash(&cryptHash,passwordHash->cryptHashAlgorithm);
     Crypt_updateHash(&cryptHash,password,stringLength(password));
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); Crypt_dumpHash(&cryptHash);
@@ -1860,11 +1803,7 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
                          const CryptHash      *requiredHash
                         )
 {
-  Errors    error;
-  void      *data;
-  uint      dataLength;
-  CryptHash hash;
-  bool      okFlag;
+  Errors error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1872,6 +1811,8 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
   assert(requiredHash != NULL);
 
   // decrypt and get hash
+  void *data;
+  uint dataLength;
   error = ServerIO_decryptData(serverIO,
                                &data,
                                &dataLength,
@@ -1887,6 +1828,7 @@ fprintf(stderr,"%s, %d: decrypted data: %d\n",__FILE__,__LINE__,dataLength); deb
 #endif
 
   // get hash
+  CryptHash hash;
   error = Crypt_initHash(&hash,requiredHash->cryptHashAlgorithm);
   if (error != ERROR_NONE)
   {
@@ -1896,7 +1838,7 @@ fprintf(stderr,"%s, %d: decrypted data: %d\n",__FILE__,__LINE__,dataLength); deb
   Crypt_updateHash(&hash,data,dataLength);
 
   // compare hashes
-  okFlag = Crypt_equalsHash(requiredHash,&hash);
+  bool okFlag = Crypt_equalsHash(requiredHash,&hash);
 
   // free resources
   Crypt_doneHash(&hash);
@@ -1921,32 +1863,23 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
                          StringMap argumentMap
                         )
 {
-  bool               commandFlag;
-  uint               resultId;
-  bool               completedFlag;
-  uint               errorCode;
-  String             data;
-  ServerIOResultNode *resultNode;
-  #ifndef NDEBUG
-    size_t             iteratorVariable;
-    Codepoint          codepoint;
-  #endif /* not NDEBU G */
-
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(id != NULL);
   assert(name != NULL);
 
-  // init variables
-  data = String_new();
+  bool commandFlag = FALSE;
 
-  commandFlag = FALSE;
+  String data = String_new();
   while (   !commandFlag
          && getLine(serverIO)
         )
   {
 //fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
     // parse
+    uint resultId;
+    bool completedFlag;
+    uint errorCode;
     if      (String_parse(serverIO->line,STRING_BEGIN,"%u %y %u % S",NULL,&resultId,&completedFlag,&errorCode,data))
     {
       // command results: <id> <complete flag> <error code> <data>
@@ -1958,7 +1891,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
       #endif /* not DEBUG */
 
       // init result
-      resultNode = LIST_NEW_NODE(ServerIOResultNode);
+      ServerIOResultNode *resultNode = LIST_NEW_NODE(ServerIOResultNode);
       if (resultNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
@@ -2024,6 +1957,8 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
         if (globalOptions.debug.serverLevel >= 1)
         {
           fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
+          size_t    iteratorVariable;
+          Codepoint codepoint;
           STRING_CHAR_ITERATE_UTF8(serverIO->line,iteratorVariable,codepoint)
           {
             if (iswprint(codepoint))
@@ -2039,8 +1974,6 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     // done line
     doneLine(serverIO);
   }
-
-  // free resources
   String_delete(data);
 
   return commandFlag;
@@ -2066,13 +1999,13 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
                             ...
                            )
 {
-  va_list arguments;
-  Errors  error;
+  Errors error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
 
+  va_list arguments;
   va_start(arguments,format);
   error = vsendCommand(serverIO,debugLevel,id,format,arguments);
   va_end(arguments);
@@ -2089,10 +2022,7 @@ Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
                                 va_list                       arguments
                                )
 {
-  uint      id;
-  Errors    error;
-  bool      completedFlag;
-  StringMap resultMap;
+  Errors error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -2101,6 +2031,7 @@ Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
   error = ERROR_UNKNOWN;
 
   // send command
+  uint id;
   error = ServerIO_vsendCommand(serverIO,
                                 debugLevel,
                                 &id,
@@ -2113,7 +2044,8 @@ Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
   }
 
   // wait for results
-  resultMap = StringMap_new();
+  bool      completedFlag;
+  StringMap resultMap = StringMap_new();
   do
   {
     error = ServerIO_waitResult(serverIO,
@@ -2152,13 +2084,13 @@ Errors ServerIO_executeCommand(ServerIO                      *serverIO,
                                ...
                               )
 {
-  va_list arguments;
   Errors  error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
 
+  va_list arguments;
   va_start(arguments,format);
   error = ServerIO_vexecuteCommand(serverIO,
                                    debugLevel,
@@ -2181,20 +2113,14 @@ Errors ServerIO_vsendResult(ServerIO   *serverIO,
                             va_list    arguments
                            )
 {
-  String   s;
-  #ifdef HAVE_NEWLOCALE
-    locale_t oldLocale;
-  #endif /* HAVE_NEWLOCALE */
-
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
 
-  // init variables
-  s = String_new();
-
   // format result
+  String s = String_new();
   #ifdef HAVE_NEWLOCALE
+    locale_t oldLocale;
     oldLocale = uselocale(POSIXLocale);
   #endif /* HAVE_NEWLOCALE */
   {
@@ -2233,12 +2159,11 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
                            ...
                           )
 {
-  va_list arguments;
-
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(format != NULL);
 
+  va_list arguments;
   va_start(arguments,format);
   error = ServerIO_vsendResult(serverIO,id,completedFlag,error,format,arguments);
   va_end(arguments);
@@ -2253,29 +2178,24 @@ Errors ServerIO_passResult(ServerIO        *serverIO,
                            const StringMap resultMap
                           )
 {
-  String            s,t;
-  #ifdef HAVE_NEWLOCALE
-    locale_t        oldLocale;
-  #endif /* HAVE_NEWLOCALE */
-  StringMapIterator iteratorVariable;
-  const char        *name;
-  StringMapTypes    type;
-  StringMapValue    value;
+  Errors erorr;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(resultMap != NULL);
 
-  // init variables
-  s = String_new();
-  t = String_new();
-
   // format result
+  String s = String_new();
   #ifdef HAVE_NEWLOCALE
+    locale_t oldLocale;
     oldLocale = uselocale(POSIXLocale);
   #endif /* HAVE_NEWLOCALE */
   {
     String_format(s,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
+    StringMapIterator iteratorVariable;
+    const char        *name;
+    StringMapTypes    type;
+    StringMapValue    value;
     STRINGMAP_ITERATE(resultMap,iteratorVariable,name,type,value)
     {
       UNUSED_VARIABLE(type);
@@ -2291,7 +2211,6 @@ Errors ServerIO_passResult(ServerIO        *serverIO,
   error = sendData(serverIO,s);
   if (error != ERROR_NONE)
   {
-    String_delete(t);
     String_delete(s);
     return error;
   }
@@ -2303,7 +2222,6 @@ Errors ServerIO_passResult(ServerIO        *serverIO,
   #endif /* not DEBUG */
 
   // free resources
-  String_delete(t);
   String_delete(s);
 
   return ERROR_NONE;
@@ -2318,23 +2236,21 @@ Errors ServerIO_waitResults(ServerIO   *serverIO,
                             StringMap  resultMap
                            )
 {
-  TimeoutInfo        timeoutInfo;
-  uint               i;
-  ServerIOResultNode *resultNode;
-  Errors             error;
+  Errors error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   // wait for result, timeout, or quit
-  resultNode     = NULL;
+  ServerIOResultNode *resultNode = NULL;
+  TimeoutInfo        timeoutInfo;
   Misc_initTimeout(&timeoutInfo,timeout);
   SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,timeout)
   {
     do
     {
       // find some matching result
-      i          = 0;
+      uint i     = 0;
       resultNode = NULL;
       while ((i < idCount) && (resultNode == NULL))
       {
@@ -2414,30 +2330,26 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
                              ...
                             )
 {
-  uint          id;
-  String        s;
-  va_list       arguments;
-  Errors        error;
-  #ifdef HAVE_NEWLOCALE
-    locale_t oldLocale;
-  #endif /* HAVE_NEWLOCALE */
+  Errors error;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(actionCommand != NULL);
 
   // init variables
-  s = String_new();
 
   // get new command id
-  id = atomicIncrement(&serverIO->commandId,1);
+  uint id = atomicIncrement(&serverIO->commandId,1);
 
   // format action command
+  String s = String_new();
   #ifdef HAVE_NEWLOCALE
+    locale_t oldLocale;
     oldLocale = uselocale(POSIXLocale);
   #endif /* HAVE_NEWLOCALE */
   {
     String_format(s,"%u %s ",id,actionCommand);
+    va_list arguments;
     va_start(arguments,format);
     String_appendVFormat(s,format,arguments);
     va_end(arguments);
@@ -2474,11 +2386,9 @@ void ServerIO_clientActionResult(ServerIO   *serverIO,
                                  StringMap  resultMap
                                 )
 {
-  ServerIOResultNode *resultNode;
-
   SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    resultNode = LIST_FIND(&serverIO->resultList,resultNode,resultNode->id == id);
+    ServerIOResultNode *resultNode = LIST_FIND(&serverIO->resultList,resultNode,resultNode->id == id);
     if (resultNode != NULL)
     {
       resultNode->error         = error;

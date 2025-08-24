@@ -55,9 +55,6 @@
 
 LOCAL Errors CompressBZ2_compressData(CompressInfo *compressInfo)
 {
-  ulong maxCompressBytes,maxDataBytes;
-  int   bzlibResult;
-
   assert(compressInfo != NULL);
 
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
@@ -68,15 +65,15 @@ LOCAL Errors CompressBZ2_compressData(CompressInfo *compressInfo)
       if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                 // unprocessed data available
       {
         // get max. number of data and max. number of compressed bytes
-        maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
-        maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+        ulong maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
         // compress: transfer data buffer -> compress buffer
         compressInfo->bzlib.stream.next_in   = (char*)RingBuffer_cArrayOut(&compressInfo->dataRingBuffer);
         compressInfo->bzlib.stream.avail_in  = maxDataBytes;
         compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
         compressInfo->bzlib.stream.avail_out = maxCompressBytes;
-        bzlibResult = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_RUN);
+        int bzlibResult = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_RUN);
 //fprintf(stderr,"%s, %d: bzlibResult=%d input=%u,%u output=%u,%u\n",__FILE__,__LINE__,bzlibResult,maxDataBytes-compressInfo->bzlib.stream.avail_in,maxDataBytes,maxCompressBytes-compressInfo->bzlib.stream.avail_out,maxCompressBytes);
         if (bzlibResult != BZ_RUN_OK)
         {
@@ -102,14 +99,14 @@ LOCAL Errors CompressBZ2_compressData(CompressInfo *compressInfo)
          )
       {
         // get max. number of compressed bytes
-        maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
         // compress with flush: transfer to compress buffer
         compressInfo->bzlib.stream.next_in   = NULL;
         compressInfo->bzlib.stream.avail_in  = 0;
         compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
         compressInfo->bzlib.stream.avail_out = maxCompressBytes;
-        bzlibResult = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_FINISH);
+        int bzlibResult = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_FINISH);
 //fprintf(stderr,"%s, %d: bzlibResult=%d output=%u,%u\n",__FILE__,__LINE__,bzlibResult,maxCompressBytes-compressInfo->bzlib.stream.avail_out,maxCompressBytes);
         if      (bzlibResult == BZ_STREAM_END)
         {
@@ -140,10 +137,6 @@ LOCAL Errors CompressBZ2_compressData(CompressInfo *compressInfo)
 
 LOCAL Errors CompressBZ2_decompressData(CompressInfo *compressInfo)
 {
-  int bzlibResult;
-
-  ulong maxCompressBytes,maxDataBytes;
-
   assert(compressInfo != NULL);
 
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
@@ -154,15 +147,15 @@ LOCAL Errors CompressBZ2_decompressData(CompressInfo *compressInfo)
       if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))             // unprocessed compressed data available
       {
         // get max. number of compressed and max. number of data bytes
-        maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
-        maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
+        ulong maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
 
         // decompress: transfer compress buffer -> data buffer
         compressInfo->bzlib.stream.next_in   = (char*)RingBuffer_cArrayOut(&compressInfo->compressRingBuffer);
         compressInfo->bzlib.stream.avail_in  = maxCompressBytes;
         compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->dataRingBuffer);
         compressInfo->bzlib.stream.avail_out = maxDataBytes;
-        bzlibResult = BZ2_bzDecompress(&compressInfo->bzlib.stream);
+        int bzlibResult = BZ2_bzDecompress(&compressInfo->bzlib.stream);
 //fprintf(stderr,"%s, %d: bzlibResult=%d input=%u,%u output=%u,%u\n",__FILE__,__LINE__,bzlibResult,maxCompressBytes-compressInfo->bzlib.stream.avail_in,maxCompressBytes,maxDataBytes-compressInfo->bzlib.stream.avail_out,maxDataBytes);
         if      (bzlibResult == BZ_STREAM_END)
         {
@@ -195,14 +188,14 @@ LOCAL Errors CompressBZ2_decompressData(CompressInfo *compressInfo)
          )
       {
         // get max. number of data bytes
-        maxDataBytes = RingBuffer_getFree(&compressInfo->dataRingBuffer);
+        ulong maxDataBytes = RingBuffer_getFree(&compressInfo->dataRingBuffer);
 
         // decompress with flush: transfer rest of internal data -> data buffer
         compressInfo->bzlib.stream.next_in   = NULL;
         compressInfo->bzlib.stream.avail_in  = 0;
         compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->dataRingBuffer);
         compressInfo->bzlib.stream.avail_out = maxDataBytes;
-        bzlibResult = BZ2_bzDecompress(&compressInfo->bzlib.stream);
+        int bzlibResult = BZ2_bzDecompress(&compressInfo->bzlib.stream);
 //fprintf(stderr,"%s, %d: bzlibResult=%d output=%u,%u\n",__FILE__,__LINE__,bzlibResult,maxDataBytes-compressInfo->bzlib.stream.avail_out,maxDataBytes);
         if      (bzlibResult == BZ_STREAM_END)
         {
@@ -229,8 +222,6 @@ LOCAL Errors CompressBZ2_init(CompressInfo       *compressInfo,
                               CompressAlgorithms compressAlgorithm
                              )
 {
-  int bz2Result;
-
   assert(compressInfo != NULL);
 
   compressInfo->bzlib.compressionLevel = 0;
@@ -257,7 +248,7 @@ LOCAL Errors CompressBZ2_init(CompressInfo       *compressInfo,
   switch (compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-      bz2Result = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
+      int bz2Result = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
       if (bz2Result != BZ_OK)
       {
         return ERRORX_(INIT_COMPRESS,bz2Result,NULL);
@@ -302,11 +293,9 @@ LOCAL void CompressBZ2_done(CompressInfo *compressInfo)
 
 LOCAL Errors CompressBZ2_reset(CompressInfo *compressInfo)
 {
-  int bzlibResult;
-
   assert(compressInfo != NULL);
 
-  bzlibResult = BZ_PARAM_ERROR;
+  int bzlibResult = BZ_PARAM_ERROR;
   switch (compressInfo->compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
@@ -319,7 +308,7 @@ LOCAL Errors CompressBZ2_reset(CompressInfo *compressInfo)
       break;
     case COMPRESS_MODE_INFLATE:
       BZ2_bzDecompressEnd(&compressInfo->bzlib.stream);
-      bzlibResult = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
+      int bzlibResult = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
       if (bzlibResult != BZ_OK)
       {
         return ERROR_(INFLATE,bzlibResult);

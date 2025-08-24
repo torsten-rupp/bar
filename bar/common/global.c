@@ -181,12 +181,10 @@ LOCAL void debugResourceInit(void)
 
 unsigned long gcd(unsigned long a, unsigned long b)
 {
-  unsigned long tmp;
-
   while (a != 0L)
   {
-    tmp = a;
-    a = b%a;
+    unsigned long tmp = a;
+    a = b % a;
     b = tmp;
   }
 
@@ -195,9 +193,7 @@ unsigned long gcd(unsigned long a, unsigned long b)
 
 unsigned long lcm(unsigned long a, unsigned long b)
 {
-  unsigned long n;
-
-  n = gcd(a,b);
+  unsigned long n = gcd(a,b);
 
   return (n > 0) ? (b/n)*a : 0;
 }
@@ -239,22 +235,17 @@ void *__allocSecure(const char *__fileName__,
                    )
 #endif /* NDEBUG */
 {
-  void *p;
-  #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
-    MemoryHeader *memoryHeader;
-  #endif
-
   #ifdef HAVE_GCRYPT
     #ifndef NDEBUG
-      memoryHeader = gcry_malloc_secure(sizeof(MemoryHeader)+size);
+      MemoryHeader *memoryHeader = gcry_malloc_secure(sizeof(MemoryHeader)+size);
       if (memoryHeader == NULL)
       {
         return NULL;
       }
       memoryHeader->size = size;
-      p = (byte*)memoryHeader+sizeof(MemoryHeader);
+      void *p = (byte*)memoryHeader+sizeof(MemoryHeader);
     #else
-      p = gcry_malloc_secure(size);
+      void *p = gcry_malloc_secure(size);
       if (p == NULL)
       {
         return NULL;
@@ -262,13 +253,13 @@ void *__allocSecure(const char *__fileName__,
     #endif
     memset(p,0,size);
   #else /* not HAVE_GCRYPT */
-    memoryHeader = (MemoryHeader*)calloc(1,sizeof(MemoryHeader)+size);
+    MemoryHeader *memoryHeader = (MemoryHeader*)calloc(1,sizeof(MemoryHeader)+size);
     if (memoryHeader == NULL)
     {
       return NULL;
     }
     memoryHeader->size = size;
-    p = (byte*)memoryHeader+sizeof(MemoryHeader);
+    void *p = (byte*)memoryHeader+sizeof(MemoryHeader);
   #endif /* HAVE_GCRYPT */
 
   #ifdef NDEBUG
@@ -289,10 +280,6 @@ void __freeSecure(const char *__fileName__,
                  )
 #endif /* NDEBUG */
 {
-  #if !defined(NDEBUG) || !defined(HAVE_GCRYPT)
-    MemoryHeader *memoryHeader;
-  #endif
-
   assert(p != NULL);
 
   #ifdef NDEBUG
@@ -303,13 +290,13 @@ void __freeSecure(const char *__fileName__,
 
   #ifdef HAVE_GCRYPT
     #ifndef NDEBUG
-      memoryHeader = (MemoryHeader*)((byte*)p-sizeof(MemoryHeader));
+      MemoryHeader *memoryHeader = (MemoryHeader*)((byte*)p-sizeof(MemoryHeader));
       gcry_free(memoryHeader);
     #else
       gcry_free(p);
     #endif
   #else /* not HAVE_GCRYPT */
-    memoryHeader = (MemoryHeader*)((byte*)p-sizeof(MemoryHeader));
+    MemoryHeader *memoryHeader = (MemoryHeader*)((byte*)p-sizeof(MemoryHeader));
     memset(memoryHeader,0,sizeof(MemoryHeader)+memoryHeader->size);
     free(memoryHeader);
   #endif /* HAVE_GCRYPT */
@@ -325,23 +312,17 @@ void __dprintf__(const char *__fileName__,
                 )
 {
   #if   defined(PLATFORM_LINUX)
-    pid_t threadLWPId;
-  #elif defined(PLATFORM_WINDOWS)
-    pid_t threadLWPId;
-  #endif /* PLATFORM_... */
-  va_list arguments;
-
-  #if   defined(PLATFORM_LINUX)
     #ifdef SYS_gettid
-      threadLWPId = syscall(SYS_gettid);
+      pid_t threadLWPId = syscall(SYS_gettid);
     #else
-      threadLWPId = 0;
+      pid_t threadLWPId = 0;
     #endif
   #elif defined(PLATFORM_WINDOWS)
-    threadLWPId = 0;
+    pid_t threadLWPId = 0;
   #endif /* PLATFORM_... */
 
   fprintf(stdout,"DEBUG [%6u] %s, %lu: ",threadLWPId,__fileName__,__lineNb__);
+  va_list arguments;
   va_start(arguments,format);
   vfprintf(stdout,format,arguments);
   va_end(arguments);
@@ -363,13 +344,12 @@ void __halt(const char *__fileName__,
            )
 #endif /* NDEBUG */
 {
-  va_list arguments;
-
   #ifndef NDEBUG
     assert(__fileName__ != NULL);
   #endif /* not NDEBUG */
   assert(format != NULL);
 
+  va_list arguments;
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
   va_end(arguments);
@@ -395,17 +375,13 @@ void __abort(const char *__fileName__,
             )
 #endif /* NDEBUG */
 {
-  va_list arguments;
-  #ifdef HAVE_SIGACTION
-    struct sigaction signalAction;
-  #endif /* HAVE_SIGACTION */
-
   #ifndef NDEBUG
     assert(__fileName__ != NULL);
   #endif /* not NDEBUG */
   assert(format != NULL);
 
   if (prefix != NULL) fprintf(stderr,"%s", prefix);
+  va_list arguments;
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
   va_end(arguments);
@@ -417,6 +393,7 @@ void __abort(const char *__fileName__,
 
   // remove signal abort handler
   #ifdef HAVE_SIGACTION
+    struct sigaction signalAction;
     sigfillset(&signalAction.sa_mask);
     signalAction.sa_handler = SIG_DFL;
     signalAction.sa_flags   = 0;
@@ -434,12 +411,11 @@ void __abortAt(const char *fileName,
                ...
               )
 {
-  va_list arguments;
-
   assert(fileName != NULL);
   assert(format != NULL);
 
   if (prefix != NULL) fprintf(stderr,"%s", prefix);
+  va_list arguments;
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
   va_end(arguments);
@@ -461,7 +437,6 @@ void __abortAt(const char *fileName,
 uint __sync_add_and_fetch_4(void *p, uint n)
 {
   uint x;
-
   pthread_mutex_lock(&syncLock);
   {
     (*((int32_t*)p)) += n;
@@ -589,22 +564,15 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
                             uint       counter
                            )
 {
-  bool       isTestCodeEnabledFlag;
-  const char *value;
-  bool       isInListFileFlag,isInSkipFileFlag,isInDoneFileFlag;
-  FILE       *file;
-  char       line[1024];
-  char       *s,*t;
-
   assert(functionName != NULL);
 
-  isTestCodeEnabledFlag = FALSE;
+  bool isTestCodeEnabledFlag = FALSE;
 
   // get testcode name
   stringFormat(debugTestCodeName,sizeof(debugTestCodeName),"%s%d",functionName,counter);
 
   // check environment variable
-  value = getenv(DEBUG_TESTCODE_NAME);
+  const char *value = getenv(DEBUG_TESTCODE_NAME);
   if ((value != NULL) && !stringIsEmpty(value))
   {
     isTestCodeEnabledFlag = stringEquals(debugTestCodeName,value);
@@ -612,21 +580,22 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
   else
   {
     // check test code list file
-    isInListFileFlag = FALSE;
-    value = getenv(DEBUG_TESTCODE_LIST_FILENAME);
+    bool       isInListFileFlag = FALSE;
+    const char *value           = getenv(DEBUG_TESTCODE_LIST_FILENAME);
     if (value != NULL)
     {
       // open file
-      file = fopen(value,"r");
+      FILE *file = fopen(value,"r");
       if (file != NULL)
       {
         // read file
+        char line[1024];
         while ((fgets(line,sizeof(line),file) != NULL) && !isInListFileFlag)
         {
           // trim spaces, LF
-          s = line;
+          char *s = line;
           while (isspace(*s)) { s++; }
-          t = s;
+          char *t = s;
           while ((*t) != '\0') { t++; }
           t--;
           while ((t > s) && isspace(*t)) { (*t) = '\0'; t--; }
@@ -655,22 +624,23 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
     }
 
     // check test code skip file
-    isInSkipFileFlag = FALSE;
+    bool isInSkipFileFlag = FALSE;
     if (isInListFileFlag)
     {
       value = getenv(DEBUG_TESTCODE_SKIP_FILENAME);
       if (value != NULL)
       {
         // check if name is in done file
-        file = fopen(value,"r");
+        FILE *file = fopen(value,"r");
         if (file != NULL)
         {
+          char line[1024];
           while ((fgets(line,sizeof(line),file) != NULL) && !isInSkipFileFlag)
           {
             // trim spaces, LF
-            s = line;
+            char *s = line;
             while (isspace(*s)) { s++; }
-            t = s;
+            char *t = s;
             while ((*t) != '\0') { t++; }
             t--;
             while ((t > s) && isspace(*t)) { (*t) = '\0'; t--; }
@@ -689,7 +659,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
     }
 
     // check test code done file
-    isInDoneFileFlag = TRUE;
+    bool isInDoneFileFlag = TRUE;
     if (isInListFileFlag && !isInSkipFileFlag)
     {
       value = getenv(DEBUG_TESTCODE_DONE_FILENAME);
@@ -698,15 +668,16 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
         isInDoneFileFlag = FALSE;
 
         // check if name is in done file
-        file = fopen(value,"r");
+        FILE *file = fopen(value,"r");
         if (file != NULL)
         {
+          char line[1024];
           while ((fgets(line,sizeof(line),file) != NULL) && !isInDoneFileFlag)
           {
             // trim spaces, LF
-            s = line;
+            char *s = line;
             while (isspace(*s)) { s++; }
-            t = s;
+            char *t = s;
             while ((*t) != '\0') { t++; }
             t--;
             while ((t > s) && isspace(*t)) { (*t) = '\0'; t--; }
@@ -729,11 +700,13 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
 
   if (isTestCodeEnabledFlag)
   {
+    const char *value;
+
     // append to done-list
     value = getenv(DEBUG_TESTCODE_DONE_FILENAME);
     if (value != NULL)
     {
-      file = fopen(value,"a");
+      FILE *file = fopen(value,"a");
       if (file != NULL)
       {
         fprintf(file,"%s\n",debugTestCodeName);
@@ -746,7 +719,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
     if (value != NULL)
     {
       // write name to file
-      file = fopen(value,"w");
+      FILE *file = fopen(value,"w");
       if (file != NULL)
       {
         fprintf(file,"%s\n",debugTestCodeName);
@@ -797,18 +770,16 @@ void debugAddResourceTrace(const char *__fileName__,
                            const void *resource
                           )
 {
-  DebugResourceNode *debugResourceNode;
-
   pthread_once(&debugResourceInitFlag,debugResourceInit);
 
   pthread_mutex_lock(&debugResourceLock);
   {
     // check for duplicate initialization in allocated list
-    debugResourceNode = LIST_FIND(&debugResourceAllocList,
-                                  debugResourceNode,
-                                     (debugResourceNode->resource == resource)
-                                  && stringEquals(debugResourceNode->typeName,typeName)
-                                 );
+    DebugResourceNode *debugResourceNode = LIST_FIND(&debugResourceAllocList,
+                                                     debugResourceNode,
+                                                        (debugResourceNode->resource == resource)
+                                                     && stringEquals(debugResourceNode->typeName,typeName)
+                                                    );
     if (debugResourceNode != NULL)
     {
       fprintf(stderr,"DEBUG WARNING: multiple init of resource %s '%s' 0x%016"PRIxPTR" at %s, %lu which was previously initialized at %s, %ld!\n",
@@ -873,18 +844,16 @@ void debugRemoveResourceTrace(const char *__fileName__,
                               const void *resource
                              )
 {
-  DebugResourceNode *debugResourceNode;
-
   pthread_once(&debugResourceInitFlag,debugResourceInit);
 
   pthread_mutex_lock(&debugResourceLock);
   {
     // find in free-list to check for duplicate free
-    debugResourceNode = LIST_FIND(&debugResourceFreeList,
-                                  debugResourceNode,
-                                     (debugResourceNode->resource == resource)
-                                  && stringEquals(debugResourceNode->typeName,typeName)
-                                 );
+    DebugResourceNode *debugResourceNode = LIST_FIND(&debugResourceFreeList,
+                                                     debugResourceNode,
+                                                        (debugResourceNode->resource == resource)
+                                                     && stringEquals(debugResourceNode->typeName,typeName)
+                                                    );
     if (debugResourceNode != NULL)
     {
       fprintf(stderr,"DEBUG ERROR: multiple free of resource %s '%s', 0x%016"PRIxPTR" at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
@@ -957,14 +926,12 @@ void debugCheckResourceTrace(const char *__fileName__,
                              const void *resource
                             )
 {
-  DebugResourceNode *debugResourceNode;
-
   pthread_once(&debugResourceInitFlag,debugResourceInit);
 
   pthread_mutex_lock(&debugResourceLock);
   {
     // find in allocate-list
-    debugResourceNode = LIST_FIND(&debugResourceAllocList,debugResourceNode,debugResourceNode->resource == resource);
+    DebugResourceNode *debugResourceNode = LIST_FIND(&debugResourceAllocList,debugResourceNode,debugResourceNode->resource == resource);
     if (debugResourceNode == NULL)
     {
       // find in free-list to check if already freed
@@ -1065,32 +1032,27 @@ void debugResourceDumpInfo(FILE                     *handle,
     else                                  return  0;
   }
 
-  ulong                 n;
-  ulong                 count;
-  DebugResourceNode     *debugResourceNode;
-  ResourceHistogramList resourceHistogramList;
-  ResourceHistogramNode *resourceHistogramNode;
-  char                  s[34+1];
-
   pthread_once(&debugResourceInitFlag,debugResourceInit);
 
   pthread_mutex_lock(&debugResourceLock);
   {
     // init variables
+    ResourceHistogramList resourceHistogramList;
     List_init(&resourceHistogramList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-    n     = 0L;
-    count = 0L;
+    ulong n     = 0L;
+    ulong count = 0L;
 
     // collect histogram data
     if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
     {
+      DebugResourceNode *debugResourceNode;
       LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
       {
-        resourceHistogramNode = LIST_FIND(&resourceHistogramList,
-                                          resourceHistogramNode,
-                                             (resourceHistogramNode->debugResourceNode->allocFileName == debugResourceNode->allocFileName)
-                                          && (resourceHistogramNode->debugResourceNode->allocLineNb   == debugResourceNode->allocLineNb)
-                                         );
+        ResourceHistogramNode *resourceHistogramNode = LIST_FIND(&resourceHistogramList,
+                                                                 resourceHistogramNode,
+                                                                    (resourceHistogramNode->debugResourceNode->allocFileName == debugResourceNode->allocFileName)
+                                                                 && (resourceHistogramNode->debugResourceNode->allocLineNb   == debugResourceNode->allocLineNb)
+                                                                );
         if (resourceHistogramNode == NULL)
         {
           resourceHistogramNode = LIST_NEW_NODE(ResourceHistogramNode);
@@ -1122,6 +1084,7 @@ void debugResourceDumpInfo(FILE                     *handle,
     // dump allocations
     if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_ALLOCATED))
     {
+      DebugResourceNode *debugResourceNode;
       LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
       {
         fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIxPTR" allocated at %s, line %lu\n",
@@ -1158,8 +1121,10 @@ void debugResourceDumpInfo(FILE                     *handle,
     // dump histogram
     if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
     {
+      ResourceHistogramNode *resourceHistogramNode;
       LIST_ITERATE(&resourceHistogramList,resourceHistogramNode)
       {
+        char s[34+1];
         stringSet(s,sizeof(s),"'");
         stringAppend(s,sizeof(s),resourceHistogramNode->debugResourceNode->variableName);
         stringAppend(s,sizeof(s),"'");

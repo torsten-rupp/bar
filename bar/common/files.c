@@ -311,10 +311,9 @@ LOCAL Errors __getLastError(const char *__fileName__,
                            )
 #endif /* NDEBUG */
 {
-  int    n;
   Errors error;
 
-  n = errno;
+  int n = errno;
 
   switch (n)
   {
@@ -387,8 +386,6 @@ LOCAL void fileCheckValid(const char       *fileName,
                           const FileHandle *fileHandle
                          )
 {
-  DebugFileNode *debugFileNode;
-
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
 
@@ -397,7 +394,7 @@ LOCAL void fileCheckValid(const char       *fileName,
   pthread_mutex_lock(&debugFileLock);
   {
     // check if file was closed
-    debugFileNode = debugClosedFileList.head;
+    DebugFileNode *debugFileNode = debugClosedFileList.head;
     while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
     {
       debugFileNode = debugFileNode->next;
@@ -469,9 +466,6 @@ LOCAL Errors initFileHandle(const char *__fileName__,
 {
   int64_t n;
   Errors  error;
-  #ifndef NDEBUG
-    DebugFileNode *debugFileNode;
-  #endif /* not NDEBUG */
 
   assert(fileHandle != NULL);
   assert(fileDescriptor >= 0);
@@ -615,7 +609,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
     pthread_mutex_lock(&debugFileLock);
     {
       // check if file is already in open-list
-      debugFileNode = debugOpenFileList.head;
+      DebugFileNode *debugFileNode = debugOpenFileList.head;
       while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
       {
         debugFileNode = debugFileNode->next;
@@ -708,10 +702,6 @@ LOCAL Errors doneFileHandle(const char  *__fileName__,
 {
   Errors error;
 
-  #ifndef NDEBUG
-    DebugFileNode *debugFileNode;
-  #endif /* not NDEBUG */
-
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
 
@@ -751,7 +741,7 @@ LOCAL Errors doneFileHandle(const char  *__fileName__,
     pthread_mutex_lock(&debugFileLock);
     {
       // find file in open-list
-      debugFileNode = debugOpenFileList.head;
+      DebugFileNode *debugFileNode = debugOpenFileList.head;
       while ((debugFileNode != NULL) && (debugFileNode->fileHandle != fileHandle))
       {
         debugFileNode = debugFileNode->next;
@@ -5781,14 +5771,12 @@ void File_debugDumpInfo(FILE                 *handle,
                         void                 *fileDumpInfoUserData
                        )
 {
-  ulong          n;
-  DebugFileNode *debugFileNode;
-
   pthread_once(&debugFileInitFlag,debugFileInit);
 
   pthread_mutex_lock(&debugFileLock);
   {
-    n = 0L;
+    ulong         n = 0L;
+    DebugFileNode *debugFileNode;
     LIST_ITERATE(&debugOpenFileList,debugFileNode)
     {
       assert(debugFileNode->fileHandle != NULL);

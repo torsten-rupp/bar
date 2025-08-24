@@ -93,9 +93,7 @@ LOCAL_INLINE ulong getIndex(const HashTable *hashTable, ulong hash)
 
 LOCAL ulong getHashTableSize(ulong minSize)
 {
-  uint i;
-
-  i = 0;
+  uint i = 0;
   while (   (i < SIZE_OF_ARRAY(TABLE_SIZES))
          && (minSize > TABLE_SIZES[i])
         )
@@ -119,24 +117,22 @@ LOCAL ulong getHashTableSize(ulong minSize)
 
 LOCAL ulong defaultHashFunction(const void *keyData, ulong keyLength, void *userData)
 {
-  byte       hashBytes[4];
-  const byte *p;
-  uint       z;
 
   assert(keyData != NULL);
   assert(keyLength > 0);
 
   UNUSED_VARIABLE(userData);
 
-  p = (const byte*)keyData;
+  const byte *p = (const byte*)keyData;
 
+  byte hashBytes[4];
   hashBytes[0] = (keyLength > 0) ? (*p) : 0; p++;
   hashBytes[1] = (keyLength > 1) ? (*p) : 0; p++;
   hashBytes[2] = (keyLength > 2) ? (*p) : 0; p++;
   hashBytes[3] = (keyLength > 3) ? (*p) : 0; p++;
-  for (z = 4; z < keyLength; z++)
+  for (size_t i = 4; i < keyLength; i++)
   {
-    hashBytes[z%4] ^= (*p); p++;
+    hashBytes[i % 4] ^= (*p); p++;
   }
 
   return (ulong)(hashBytes[3] << 24) |
@@ -191,7 +187,7 @@ LOCAL_INLINE ulong modulo(ulong n, ulong m)
 
 LOCAL_INLINE ulong addModulo(ulong n, uint d, ulong m)
 {
-  return (n+d)%m;
+  return (n + d) % m;
 }
 
 /***********************************************************************\
@@ -205,7 +201,7 @@ LOCAL_INLINE ulong addModulo(ulong n, uint d, ulong m)
 
 LOCAL_INLINE ulong subModulo(ulong n, uint d, ulong m)
 {
-  return (n+m-d)%m;
+  return (n + m - d) % m;
 }
 #endif /* COLLISION_ALGORITHM==COLLISION_ALGORITHM_QUADRATIC_PROBING */
 
@@ -221,11 +217,9 @@ LOCAL_INLINE ulong subModulo(ulong n, uint d, ulong m)
 
 LOCAL_INLINE ulong rotHash(ulong hash, int n)
 {
-  uint shift;
-
   assert(n < 32);
 
-  shift = 32-n;
+  uint shift = 32 - n;
   return ((hash & (0xFFFFffff << shift)) >> shift) | (hash << n);
 }
 #endif
@@ -253,18 +247,15 @@ LOCAL bool findEntry(HashTable      *hashTable,
                      HashTableEntry **prevHashTableEntry
                     )
 {
-  HashTableEntry *hashTableEntry;
-  ulong          tableIndex;
-
   assert(hashTable != NULL);
   assert(keyData != NULL);
   assert(keyLength > 0);
 
-  tableIndex = getIndex(hashTable,hash);
+  ulong tableIndex = getIndex(hashTable,hash);
 
   #if   COLLISION_ALGORITHM==COLLISION_ALGORITHM_NONE
     if (prevHashTableEntry != NULL) (*prevHashTableEntry) = NULL;
-    hashTableEntry = hashTable->entries[tableIndex];
+    HashTableEntry *hashTableEntry = hashTable->entries[tableIndex];
     assert((hashTableEntry == NULL) || ((hashTableEntry->keyData != NULL) && (hashTableEntry->keyLength > 0)));
     while (   (hashTableEntry != NULL)
            && (   (keyLength != hashTableEntry->keyLength)
@@ -292,7 +283,8 @@ LOCAL bool findEntry(HashTable      *hashTable,
       return FALSE;
     }
   #elif COLLISION_ALGORITHM==COLLISION_ALGORITHM_LINEAR_PROBING
-    i = 0L;
+    size_t         i = 0L;
+    HashTableEntry *hashTableEntry;
     do
     {
       hashTableEntry = &hashTable->entries[(tableIndex+i)%hashTable->size];
@@ -330,22 +322,20 @@ LOCAL HashTableEntry* allocateEntry(HashTable *hashTable,
                                     ulong     hash
                                    )
 {
-  HashTableEntry *hashTableEntry;
-  ulong          tableIndex;
-
   assert(hashTable != NULL);
 
-  tableIndex = getIndex(hashTable,hash);
+  ulong tableIndex = getIndex(hashTable,hash);
 
   #if   COLLISION_ALGORITHM==COLLISION_ALGORITHM_NONE
-    hashTableEntry = (HashTableEntry*)malloc(sizeof(HashTableEntry));
+    HashTableEntry *hashTableEntry = (HashTableEntry*)malloc(sizeof(HashTableEntry));
     if (hashTableEntry != NULL)
     {
       hashTableEntry->next = hashTable->entries[tableIndex];
       hashTable->entries[tableIndex] = hashTableEntry;
     }
   #elif COLLISION_ALGORITHM==COLLISION_ALGORITHM_LINEAR_PROBING
-    i = 0L;
+    size_t         i = 0L;
+    HashTableEntry *hashTableEntry;
     do
     {
       hashTableEntry = &hashTable->entries[(tableIndex+i)%hashTable->size];
@@ -385,11 +375,9 @@ LOCAL void freeEntry(HashTable      *hashTable,
                      ulong          hash
                     )
 {
-  ulong tableIndex;
-
   assert(hashTable != NULL);
 
-  tableIndex = getIndex(hashTable,hash);
+  ulong tableIndex = getIndex(hashTable,hash);
 
   #if   COLLISION_ALGORITHM==COLLISION_ALGORITHM_NONE
     assert(hashTable->entries[tableIndex] == hashTableEntry);
@@ -446,13 +434,11 @@ LOCAL HashTableEntry *growTable(HashTableEntry *entries, uint oldSize, uint newS
 
 LOCAL HashTableEntry *getNext(HashTableIterator *hashTableIterator)
 {
-  HashTableEntry *hashTableEntry;
-
   assert(hashTableIterator != NULL);
   assert(hashTableIterator->hashTable != NULL);
   assert(hashTableIterator->hashTable->entries != NULL);
 
-  hashTableEntry = NULL;
+  HashTableEntry *hashTableEntry = NULL;
 
   #if HASH_TABLE_COLLISION_ALGORITHM == HASH_TABLE_COLLISION_ALGORITHM_NONE
     if (hashTableIterator->nextHashTableEntry != NULL)
@@ -507,11 +493,9 @@ bool HashTable_init(HashTable               *hashTable,
                     void                    *freeUserData
                    )
 {
-  ulong size;
-
   assert(hashTable != NULL);
 
-  size = getHashTableSize(minSize);
+  ulong size = getHashTableSize(minSize);
 
   #if HASH_TABLE_COLLISION_ALGORITHM == HASH_TABLE_COLLISION_ALGORITHM_NONE
     hashTable->entries = (HashTableEntry**)calloc(size,sizeof(HashTableEntry*));
@@ -537,18 +521,15 @@ bool HashTable_init(HashTable               *hashTable,
 
 void HashTable_done(HashTable *hashTable)
 {
-  uint           i;
-  HashTableEntry *hashTableEntry;
-
   assert(hashTable != NULL);
   assert(hashTable->entries != NULL);
 
-  for (i = 0; i < hashTable->size; i++)
+  for (uint i = 0; i < hashTable->size; i++)
   {
     #if HASH_TABLE_COLLISION_ALGORITHM == HASH_TABLE_COLLISION_ALGORITHM_NONE
       while (hashTable->entries[i] != NULL)
       {
-        hashTableEntry = hashTable->entries[i];
+        HashTableEntry *hashTableEntry = hashTable->entries[i];
         assert(hashTableEntry->keyData != NULL);
         assert(hashTableEntry->keyLength > 0);
 
@@ -585,18 +566,15 @@ void HashTable_done(HashTable *hashTable)
 
 void HashTable_clear(HashTable *hashTable)
 {
-  uint           i;
-  HashTableEntry *hashTableEntry;
-
   assert(hashTable != NULL);
   assert(hashTable->entries != NULL);
 
-  for (i = 0; i < hashTable->size; i++)
+  for (uint i = 0; i < hashTable->size; i++)
   {
     #if HASH_TABLE_COLLISION_ALGORITHM == HASH_TABLE_COLLISION_ALGORITHM_NONE
       while (hashTable->entries[i] != NULL)
       {
-        hashTableEntry = hashTable->entries[i];
+        HashTableEntry *hashTableEntry = hashTable->entries[i];
         assert(hashTableEntry->keyData != NULL);
         assert(hashTableEntry->keyLength > 0);
 
@@ -640,18 +618,15 @@ HashTableEntry *HashTable_put(HashTable *hashTable,
                               ulong      length
                              )
 {
-  ulong          hash;
-  HashTableEntry *hashTableEntry;
-  void           *newData;
-
   assert(hashTable != NULL);
   assert(hashTable->hashFunction != NULL);
   assert(hashTable->entries != NULL);
   assert(keyData != NULL);
   assert(keyLength > 0);
 
-  hash = hashTable->hashFunction(keyData,keyLength,hashTable->hashUserData);
+  ulong hash = hashTable->hashFunction(keyData,keyLength,hashTable->hashUserData);
 
+  HashTableEntry *hashTableEntry;
   if (findEntry(hashTable,hash,keyData,keyLength,&hashTableEntry,NULL))
   {
     // update entry
@@ -659,7 +634,7 @@ HashTableEntry *HashTable_put(HashTable *hashTable,
     // allocate/resize data memory
     if (hashTableEntry->length != length)
     {
-      newData = realloc(hashTableEntry->data,length);
+      void *newData = realloc(hashTableEntry->data,length);
       if (newData == NULL)
       {
         return NULL;
@@ -678,11 +653,9 @@ HashTableEntry *HashTable_put(HashTable *hashTable,
     // debug: check for duplicate
     #ifndef NDEBUG
     {
-      HashTableIterator    hashTableIterator;
-      const HashTableEntry *hashTableEntry;
-
+      HashTableIterator hashTableIterator;
       HashTable_initIterator(&hashTableIterator,hashTable);
-      hashTableEntry = getNext(&hashTableIterator);
+      const HashTableEntry *hashTableEntry = getNext(&hashTableIterator);
       while (hashTableEntry != NULL)
       {
         assert(!memEquals(keyData,keyLength,hashTableEntry->keyData,hashTableEntry->keyLength));
@@ -728,17 +701,15 @@ void HashTable_remove(HashTable  *hashTable,
                       ulong      keyLength
                      )
 {
-  ulong          hash;
-  HashTableEntry *hashTableEntry,*prevHashTableEntry;
-
   assert(hashTable != NULL);
   assert(hashTable->entries != NULL);
   assert(keyData != NULL);
   assert(keyLength > 0);
 
-  hash = hashTable->hashFunction(keyData,keyLength,hashTable->hashUserData);
+  ulong hash = hashTable->hashFunction(keyData,keyLength,hashTable->hashUserData);
 
   // remove entry
+  HashTableEntry *hashTableEntry,*prevHashTableEntry;
   if (findEntry(hashTable,hash,keyData,keyLength,&hashTableEntry,&prevHashTableEntry))
   {
     assert(hashTable->entryCount > 0);
@@ -777,16 +748,14 @@ HashTableEntry *HashTable_find(HashTable  *hashTable,
                                ulong      keyLength
                               )
 {
-  ulong          hash;
-  HashTableEntry *hashTableEntry;
-
   assert(hashTable != NULL);
   assert(hashTable->entries != NULL);
   assert(keyData != NULL);
   assert(keyLength > 0);
 
-  hash = hashTable->hashFunction(keyData,keyLength,hashTable->hashUserData);
+  ulong hash = hashTable->hashFunction(keyData,keyLength,hashTable->hashUserData);
 
+  HashTableEntry *hashTableEntry;
   if (findEntry(hashTable,hash,keyData,keyLength,&hashTableEntry,NULL))
   {
     return hashTableEntry;
@@ -824,13 +793,11 @@ HashTableEntry *HashTable_getNext(HashTableIterator *hashTableIterator,
                                   ulong             *length
                                  )
 {
-  HashTableEntry *hashTableEntry;
-
   assert(hashTableIterator != NULL);
   assert(hashTableIterator->hashTable != NULL);
   assert(hashTableIterator->hashTable->entries != NULL);
 
-  hashTableEntry = getNext(hashTableIterator);
+  HashTableEntry *hashTableEntry = getNext(hashTableIterator);
   if (hashTableEntry != NULL)
   {
     assert(hashTableEntry->keyData != NULL);
@@ -850,16 +817,13 @@ bool HashTable_iterate(HashTable                *hashTable,
                        void                     *iterateUserData
                       )
 {
-  HashTableIterator    hashTableIterator;
-  bool                 okFlag;
-  const HashTableEntry *hashTableEntry;
-
   assert(hashTable != NULL);
   assert(iterateFunction != NULL);
 
-  okFlag = TRUE;
+  bool okFlag = TRUE;
+  HashTableIterator hashTableIterator;
   HashTable_initIterator(&hashTableIterator,hashTable);
-  hashTableEntry = getNext(&hashTableIterator);
+  const HashTableEntry *hashTableEntry = getNext(&hashTableIterator);
   while (   (hashTableEntry != NULL)
          && okFlag
         )
@@ -879,14 +843,13 @@ bool HashTable_iterate(HashTable                *hashTable,
 
 void HashTable_dump(FILE *handle, const HashTable *hashTable)
 {
-  HashTableIterator    hashTableIterator;
-  const HashTableEntry *hashTableEntry;
 
   assert(hashTable != NULL);
 
   fprintf(handle,"Hash table %p:\n",hashTable);
+  HashTableIterator hashTableIterator;
   HashTable_initIterator(&hashTableIterator,hashTable);
-  hashTableEntry = getNext(&hashTableIterator);
+  const HashTableEntry *hashTableEntry = getNext(&hashTableIterator);
   while (hashTableEntry != NULL)
   {
     assert(hashTableEntry->keyData != NULL);

@@ -55,9 +55,6 @@
 
 LOCAL Errors CompressZIP_compressData(CompressInfo *compressInfo)
 {
-  ulong maxCompressBytes,maxDataBytes;
-  int   zlibError;
-
   assert(compressInfo != NULL);
 
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
@@ -68,15 +65,15 @@ LOCAL Errors CompressZIP_compressData(CompressInfo *compressInfo)
       if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                 // unprocessed data available
       {
         // get max. number of data and max. number of compressed bytes
-        maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
-        maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+        ulong maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
         // compress: data buffer -> compress buffer
         compressInfo->zlib.stream.next_in   = (Bytef*)RingBuffer_cArrayOut(&compressInfo->dataRingBuffer);
         compressInfo->zlib.stream.avail_in  = maxDataBytes;
         compressInfo->zlib.stream.next_out  = (Bytef*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
         compressInfo->zlib.stream.avail_out = maxCompressBytes;
-        zlibError = deflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
+        int zlibError = deflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
         if (    (zlibError != Z_OK)
              && (zlibError != Z_BUF_ERROR)
            )
@@ -103,14 +100,14 @@ LOCAL Errors CompressZIP_compressData(CompressInfo *compressInfo)
          )
       {
         // get max. number of compressed bytes
-        maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
         // compress with flush: transfer to compress buffer
         compressInfo->zlib.stream.next_in   = NULL;
         compressInfo->zlib.stream.avail_in  = 0;
         compressInfo->zlib.stream.next_out  = (Bytef*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
         compressInfo->zlib.stream.avail_out = maxCompressBytes;
-        zlibError = deflate(&compressInfo->zlib.stream,Z_FINISH);
+        int zlibError = deflate(&compressInfo->zlib.stream,Z_FINISH);
         if      (zlibError == Z_STREAM_END)
         {
           compressInfo->endOfDataFlag = TRUE;
@@ -142,10 +139,6 @@ LOCAL Errors CompressZIP_compressData(CompressInfo *compressInfo)
 
 LOCAL Errors CompressZIP_decompressData(CompressInfo *compressInfo)
 {
-  int zlibResult;
-
-  ulong maxCompressBytes,maxDataBytes;
-
   assert(compressInfo != NULL);
 
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
@@ -156,8 +149,8 @@ LOCAL Errors CompressZIP_decompressData(CompressInfo *compressInfo)
       if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))             // unprocessed compressed data available
       {
         // get max. number of compressed and max. number of data bytes
-        maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
-        maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
+        ulong maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
 
         // decompress: transfer compress buffer -> data buffer
         compressInfo->zlib.stream.next_in   = (Bytef*)RingBuffer_cArrayOut(&compressInfo->compressRingBuffer);
@@ -166,7 +159,7 @@ LOCAL Errors CompressZIP_decompressData(CompressInfo *compressInfo)
         compressInfo->zlib.stream.avail_out = maxDataBytes;
 //memClear(compressInfo->zlib.stream.next_in,compressInfo->zlib.stream.avail_in);
 //memClear(compressInfo->zlib.stream.next_out,compressInfo->zlib.stream.avail_out);
-        zlibResult = inflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
+        int zlibResult = inflate(&compressInfo->zlib.stream,Z_NO_FLUSH);
         if      (zlibResult == Z_STREAM_END)
         {
           compressInfo->endOfDataFlag = TRUE;
@@ -197,14 +190,14 @@ LOCAL Errors CompressZIP_decompressData(CompressInfo *compressInfo)
          )
       {
         // get max. number of data bytes
-        maxDataBytes = RingBuffer_getFree(&compressInfo->dataRingBuffer);
+        ulong maxDataBytes = RingBuffer_getFree(&compressInfo->dataRingBuffer);
 
         // decompress with flush: transfer rest of internal data -> data buffer
         compressInfo->zlib.stream.next_in   = NULL;
         compressInfo->zlib.stream.avail_in  = 0;
         compressInfo->zlib.stream.next_out  = (Bytef*)RingBuffer_cArrayIn(&compressInfo->dataRingBuffer);
         compressInfo->zlib.stream.avail_out = maxDataBytes;
-        zlibResult = inflate(&compressInfo->zlib.stream,Z_FINISH);
+        int zlibResult = inflate(&compressInfo->zlib.stream,Z_FINISH);
         if      (zlibResult == Z_STREAM_END)
         {
           compressInfo->endOfDataFlag = TRUE;
@@ -232,12 +225,9 @@ LOCAL Errors CompressZIP_init(CompressInfo       *compressInfo,
                               CompressAlgorithms compressAlgorithm
                              )
 {
-  int compressionLevel;
-  int zlibResult;
-
   assert(compressInfo != NULL);
 
-  compressionLevel = 0;
+  int compressionLevel = 0;
   switch (compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_ZIP_0: compressionLevel = 0; break;
@@ -262,7 +252,7 @@ LOCAL Errors CompressZIP_init(CompressInfo       *compressInfo,
   switch (compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-      zlibResult = deflateInit(&compressInfo->zlib.stream,compressionLevel);
+      int zlibResult = deflateInit(&compressInfo->zlib.stream,compressionLevel);
       if (zlibResult != Z_OK)
       {
         return ERRORX_(INIT_COMPRESS,zlibResult,"%s",zError(zlibResult));
@@ -307,25 +297,26 @@ LOCAL void CompressZIP_done(CompressInfo *compressInfo)
 
 LOCAL Errors CompressZIP_reset(CompressInfo *compressInfo)
 {
-  int zlibResult;
-
   assert(compressInfo != NULL);
 
-  zlibResult = Z_ERRNO;
   switch (compressInfo->compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-      zlibResult = deflateReset(&compressInfo->zlib.stream);
-      if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
       {
-        return ERROR_(DEFLATE,zlibResult);
+        int zlibResult = deflateReset(&compressInfo->zlib.stream);
+        if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
+        {
+          return ERROR_(DEFLATE,zlibResult);
+        }
       }
       break;
     case COMPRESS_MODE_INFLATE:
-      zlibResult = inflateReset(&compressInfo->zlib.stream);
-      if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
       {
-        return ERROR_(INFLATE,zlibResult);
+        int zlibResult = inflateReset(&compressInfo->zlib.stream);
+        if ((zlibResult != Z_OK) && (zlibResult != Z_STREAM_END))
+        {
+          return ERROR_(INFLATE,zlibResult);
+        }
       }
       break;
     #ifndef NDEBUG

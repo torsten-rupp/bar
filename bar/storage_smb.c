@@ -121,8 +121,7 @@ LOCAL bool StorageSMB_parseSpecifier(ConstString smbSpecifier,
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
   const char* LOGINNAME_MAP_TO[]   = {"@"};
 
-  bool   result;
-  String s,t;
+  bool result;
 
   assert(smbSpecifier != NULL);
   assert(hostName != NULL);
@@ -133,8 +132,8 @@ LOCAL bool StorageSMB_parseSpecifier(ConstString smbSpecifier,
   if (password != NULL) Password_clear(password);
   String_clear(shareName);
 
-  s = String_new();
-  t = String_new();
+  String s = String_new();
+  String t = String_new();
   if      (String_matchCString(smbSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@/]*?):([^:]*?)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,shareName,NULL))
   {
     // <login name>:<login password>@<host name>:<share>
@@ -234,11 +233,10 @@ LOCAL String StorageSMB_getName(String                 string,
                                 ConstString            archiveName
                                )
 {
-  ConstString storageFileName;
-
   assert(storageSpecifier != NULL);
 
   // get file to use
+  ConstString storageFileName;
   if      (archiveName != NULL)
   {
     storageFileName = archiveName;
@@ -297,13 +295,12 @@ LOCAL void StorageSMB_getPrintableName(String                 string,
                                        ConstString            archiveName
                                       )
 {
-  ConstString storageFileName;
-
   assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SMB);
 
   // get file to use
+  ConstString storageFileName;
   if      (!String_isEmpty(archiveName))
   {
     storageFileName = archiveName;
@@ -356,14 +353,11 @@ LOCAL bool initSMBLogin(ConstString             hostName,
                         void                    *getNamePasswordUserData
                        )
 {
-  String s;
-  bool   initFlag;
-
   assert(!String_isEmpty(hostName));
   assert(userName != NULL);
   assert(password != NULL);
 
-  initFlag = FALSE;
+  bool initFlag = FALSE;
 
   if (jobOptions != NULL)
   {
@@ -376,9 +370,9 @@ LOCAL bool initSMBLogin(ConstString             hostName,
           case RUN_MODE_INTERACTIVE:
             if (Password_isEmpty(&defaultSMBPassword))
             {
-              s = !String_isEmpty(userName)
-                    ? String_format(String_new(),"SMB login password for %S@%S",userName,hostName)
-                    : String_format(String_new(),"SMB login password for %S",hostName);
+              String s = !String_isEmpty(userName)
+                           ? String_format(String_new(),"SMB login password for %S@%S",userName,hostName)
+                           : String_format(String_new(),"SMB login password for %S",hostName);
               if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
               {
                 initFlag = TRUE;
@@ -395,9 +389,9 @@ LOCAL bool initSMBLogin(ConstString             hostName,
           case RUN_MODE_SERVER:
             if (getNamePasswordFunction != NULL)
             {
-              s = !String_isEmpty(userName)
-                    ? String_format(String_new(),"%S@%S",userName,hostName)
-                    : String_format(String_new(),"%S",hostName);
+              String s = !String_isEmpty(userName)
+                           ? String_format(String_new(),"%S@%S",userName,hostName)
+                           : String_format(String_new(),"%S",hostName);
               if (getNamePasswordFunction(userName,
                                           password,
                                           PASSWORD_TYPE_SMB,
@@ -501,7 +495,6 @@ LOCAL Errors smb2ConnectShare(struct smb2_context **smbContext,
                               ConstString         shareName
                              )
 {
-  int    smbErrorCode;
   Errors error;
 
   assert(smbContext != NULL);
@@ -523,11 +516,11 @@ LOCAL Errors smb2ConnectShare(struct smb2_context **smbContext,
   }
 
   // connect share
-  smbErrorCode = smb2_connect_share(*smbContext,
-                                    String_cString(hostName),
-                                    String_cString(shareName),
-                                    String_cString(userName)
-                                   );
+  int smbErrorCode = smb2_connect_share(*smbContext,
+                                        String_cString(hostName),
+                                        String_cString(shareName),
+                                        String_cString(userName)
+                                       );
   assert(smbErrorCode <= 0);
   if (smbErrorCode != 0)
   {
@@ -577,10 +570,9 @@ LOCAL Errors smb2stat(struct smb2_stat_64 *smbStatus,
                       ConstString         path
                      )
 {
-  Errors              error;
-  struct smb2_context *smbContext;
-  int                 smbErrorCode;
+  Errors error;
 
+  struct smb2_context *smbContext;
   error = smb2ConnectShare(&smbContext,
                            hostName,
                            userName,
@@ -589,10 +581,10 @@ LOCAL Errors smb2stat(struct smb2_stat_64 *smbStatus,
                           );
   if (error == ERROR_NONE)
   {
-    smbErrorCode = smb2_stat(smbContext,
-                             String_cString(path),
-                             smbStatus
-                            );
+    int smbErrorCode = smb2_stat(smbContext,
+                                 String_cString(path),
+                                 smbStatus
+                                );
     if (smbErrorCode != 0)
     {
       error = ERRORX_(SMB,(uint)(-smbErrorCode),"%s",strerror(-smbErrorCode));
@@ -622,13 +614,13 @@ LOCAL Errors checkSMBLogin(ConstString hostName,
                            ConstString shareName
                           )
 {
-  struct smb2_context *smbContext;
-  Errors              error;
+  Errors error;
 
   assert(userName != NULL);
 
   printInfo(5,"SMB: host %s\n",String_cString(hostName));
 
+  struct smb2_context *smbContext;
   error = smb2ConnectShare(&smbContext,hostName,userName,password,shareName);
   if (error == ERROR_NONE)
   {
@@ -659,24 +651,18 @@ LOCAL Errors StorageSMB_init(StorageInfo                *storageInfo,
                              ServerConnectionPriorities serverConnectionPriority
                             )
 {
-  #ifdef HAVE_SMB2
-    AutoFreeList autoFreeList;
-    String       shareName,path;
-    Errors       error;
-    SMBServer    smbServer;
-    uint         retries;
-  #endif /* HAVE_SMB2 */
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
   #ifdef HAVE_SMB2
     // init variables
+    AutoFreeList autoFreeList;
     AutoFree_init(&autoFreeList);
     initBandWidthLimiter(&storageInfo->smb.bandWidthLimiter,maxBandWidthList);
     AUTOFREE_ADD(&autoFreeList,&storageInfo->smb.bandWidthLimiter,{ doneBandWidthLimiter(&storageInfo->smb.bandWidthLimiter); });
 
     // get SMB/CIFS server settings
+    SMBServer smbServer;
     storageInfo->smb.serverId = Configuration_initSMBServerSettings(&smbServer,storageInfo->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&smbServer,{ Configuration_doneSMBServerSettings(&smbServer); });
     if (String_isEmpty(storageInfo->storageSpecifier.userName)) String_set(storageInfo->storageSpecifier.userName,smbServer.userName);
@@ -701,7 +687,10 @@ LOCAL Errors StorageSMB_init(StorageInfo                *storageInfo,
     AUTOFREE_ADD(&autoFreeList,&storageInfo->smb.serverId,{ freeServer(storageInfo->smb.serverId); });
 
     // get share, path
+    String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageInfo->storageSpecifier,storageInfo->storageSpecifier.archiveName);
+
+    Errors error;
 
     // check if SMB login is possible
     error = ERROR_SMB_AUTHENTICATION;
@@ -740,7 +729,7 @@ LOCAL Errors StorageSMB_init(StorageInfo                *storageInfo,
     if (Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION)
     {
       // initialize interactive/default password
-      retries = 0;
+      uint retries = 0;
       while ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
         if (initSMBLogin(storageInfo->storageSpecifier.hostName,
@@ -832,12 +821,10 @@ LOCAL Errors StorageSMB_done(StorageInfo *storageInfo)
 
 LOCAL bool StorageSMB_isServerAllocationPending(const StorageInfo *storageInfo)
 {
-  bool serverAllocationPending;
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
-  serverAllocationPending = FALSE;
+  bool serverAllocationPending = FALSE;
   #if defined(HAVE_SMB2)
     serverAllocationPending = isServerAllocationPending(storageInfo->smb.serverId);
   #else /* not HAVE_SMB2 */
@@ -867,23 +854,17 @@ LOCAL Errors StorageSMB_preProcess(const StorageInfo *storageInfo,
                                    bool              initialFlag
                                   )
 {
-  Errors error;
-  #ifdef HAVE_SMB2
-    TextMacros (textMacros,3);
-  #endif /* HAVE_SMB2 */
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
 
   #ifdef HAVE_SMB2
     if (!initialFlag)
     {
-      // init variables
-      String directory = String_new();
-
       // init macros
+      String directory = String_new();
+      TextMacros (textMacros,3);
       TEXT_MACROS_INIT(textMacros)
       {
         TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
@@ -939,9 +920,6 @@ LOCAL Errors StorageSMB_postProcess(const StorageInfo *storageInfo,
                                    )
 {
   Errors error;
-  #ifdef HAVE_SMB2
-    TextMacros (textMacros,3);
-  #endif /* HAVE_SMB2 */
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
@@ -951,10 +929,9 @@ LOCAL Errors StorageSMB_postProcess(const StorageInfo *storageInfo,
   #ifdef HAVE_SMB2
     if (!finalFlag)
     {
-      // init variables
-      String directory = String_new();
-
       // init macros
+      String directory = String_new();
+      TextMacros (textMacros,3);
       TEXT_MACROS_INIT(textMacros)
       {
         TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
@@ -1007,20 +984,19 @@ LOCAL bool StorageSMB_exists(const StorageInfo *storageInfo, ConstString archive
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
   #ifdef HAVE_SMB2
-    bool existsFlag;
-
     String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageInfo->storageSpecifier,archiveName);
 
     struct smb2_stat_64 smbStatus;
-    existsFlag = (smb2stat(&smbStatus,
-                           storageInfo->storageSpecifier.hostName,
-                           storageInfo->storageSpecifier.userName,
-                           &storageInfo->storageSpecifier.password,
-                           shareName,
-                           path
-                          ) == ERROR_NONE
-                 );
+    bool existsFlag = (smb2stat(&smbStatus,
+                                storageInfo->storageSpecifier.hostName,
+                                storageInfo->storageSpecifier.userName,
+                                &storageInfo->storageSpecifier.password,
+                                shareName,
+                                path
+                               ) == ERROR_NONE
+                      );
+
     smb2DoneSharePath(shareName,path);
 
     return existsFlag;
@@ -1061,6 +1037,7 @@ LOCAL bool StorageSMB_isFile(const StorageInfo *storageInfo, ConstString archive
                                   ) == ERROR_NONE
                          )
                       && (smbStatus.smb2_type == SMB2_TYPE_FILE);
+
     smb2DoneSharePath(shareName,path);
 
     return isFileFlag;
@@ -1101,6 +1078,7 @@ LOCAL bool StorageSMB_isDirectory(const StorageInfo *storageInfo, ConstString ar
                                        ) == ERROR_NONE
                               )
                            && (smbStatus.smb2_type == SMB2_TYPE_DIRECTORY);
+
     smb2DoneSharePath(shareName,path);
 
     return isDirectoryFlag;
@@ -1201,14 +1179,6 @@ LOCAL Errors StorageSMB_create(StorageHandle *storageHandle,
                                bool          forceFlag
                               )
 {
-  #ifdef HAVE_SMB2
-    String              shareName,path;
-    Errors              error;
-    String              directoryName;
-    struct smb2_stat_64 smbStatus;
-    int                 smbErrorCode;
-  #endif /* HAVE_SMB2 */
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
   assert(!String_isEmpty(fileName));
@@ -1238,7 +1208,10 @@ LOCAL Errors StorageSMB_create(StorageHandle *storageHandle,
 //    storageHandle->smb.readAheadBuffer.offset = 0LL;
 //    storageHandle->smb.readAheadBuffer.length = 0L;
 
+    String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageHandle->storageInfo->storageSpecifier,fileName);
+
+    Errors error;
 
     // connect share
     error = smb2ConnectShare(&storageHandle->smb.context,
@@ -1257,9 +1230,10 @@ LOCAL Errors StorageSMB_create(StorageHandle *storageHandle,
     storageHandle->smb.maxReadWriteBytes = smb2_get_max_write_size(storageHandle->smb.context);
 
     // create directory if not existing
-    directoryName = File_getDirectoryName(String_new(),path);
+    String directoryName = File_getDirectoryName(String_new(),path);
     if (!String_isEmpty(directoryName))
     {
+      struct smb2_stat_64 smbStatus;
       if (smb2_stat(storageHandle->smb.context,
                       String_cString(directoryName),
                       &smbStatus
@@ -1279,7 +1253,7 @@ LOCAL Errors StorageSMB_create(StorageHandle *storageHandle,
       else
       {
         // create directory
-        smbErrorCode = smb2_mkdir(storageHandle->smb.context,String_cString(directoryName));
+        int smbErrorCode = smb2_mkdir(storageHandle->smb.context,String_cString(directoryName));
         if (smbErrorCode != 0)
         {
           error = ERRORX_(SMB,(uint)(-smbErrorCode),"create '%s' fail: %s",String_cString(directoryName),strerror(-smbErrorCode));
@@ -1333,13 +1307,6 @@ LOCAL Errors StorageSMB_open(StorageHandle *storageHandle,
                              ConstString   archiveName
                             )
 {
-  #ifdef HAVE_SMB2
-    String              shareName,path;
-    Errors              error;
-    int                 smbErrorCode;
-    struct smb2_stat_64 status;
-  #endif /* HAVE_SMB2 */
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
   assert(!String_isEmpty(archiveName));
@@ -1352,7 +1319,10 @@ LOCAL Errors StorageSMB_open(StorageHandle *storageHandle,
     storageHandle->smb.index              = 0LL;
     storageHandle->smb.size               = 0LL;
 
+    String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageHandle->storageInfo->storageSpecifier,archiveName);
+
+    Errors error;
 
     // connect share
     error = smb2ConnectShare(&storageHandle->smb.context,
@@ -1385,10 +1355,11 @@ LOCAL Errors StorageSMB_open(StorageHandle *storageHandle,
     }
 
     // get file size
-    smbErrorCode = smb2_stat(storageHandle->smb.context,
-                             String_cString(path),
-                             &status
-                            );
+    struct smb2_stat_64 status;
+    int smbErrorCode = smb2_stat(storageHandle->smb.context,
+                                 String_cString(path),
+                                 &status
+                                );
     assert(smbErrorCode <= 0);
     if (smbErrorCode != 0)
     {
@@ -1491,15 +1462,6 @@ LOCAL Errors StorageSMB_read(StorageHandle *storageHandle,
                              ulong         *bytesRead
                             )
 {
-  #ifdef HAVE_SMB2
-    Errors  error;
-//    ulong   index;
-    ulong   length;
-    uint64  startTimestamp,endTimestamp;
-    int     n;
-    uint64  startTotalReceivedBytes,endTotalReceivedBytes;
-  #endif /* HAVE_SMB2 */
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
@@ -1514,7 +1476,7 @@ LOCAL Errors StorageSMB_read(StorageHandle *storageHandle,
   #ifdef HAVE_SMB2
     if (bytesRead != NULL) (*bytesRead) = 0L;
 
-    error = ERROR_NONE;
+    Errors error = ERROR_NONE;
     while (   (bufferSize > 0)
            && (error == ERROR_NONE)
           )
@@ -1546,6 +1508,7 @@ LOCAL Errors StorageSMB_read(StorageHandle *storageHandle,
 //          assert(storageHandle->smb.index >= (storageHandle->smb.readAheadBuffer.offset+storageHandle->smb.readAheadBuffer.length));
 
         // get max. number of bytes to receive in one step
+        ulong length;
         if (storageHandle->storageInfo->smb.bandWidthLimiter.maxBandWidthList != NULL)
         {
           length = MIN(MIN(storageHandle->storageInfo->smb.bandWidthLimiter.blockSize,bufferSize),storageHandle->smb.maxReadWriteBytes);
@@ -1557,8 +1520,8 @@ LOCAL Errors StorageSMB_read(StorageHandle *storageHandle,
         assert(length > 0L);
 
         // get start time, start received bytes
-        startTimestamp          = Misc_getTimestamp();
-        startTotalReceivedBytes = storageHandle->smb.totalReceivedBytes;
+        uint64 startTimestamp          = Misc_getTimestamp();
+        uint64 startTotalReceivedBytes = storageHandle->smb.totalReceivedBytes;
 
 #if 0
         if (length <= MAX_BUFFER_SIZE)
@@ -1591,11 +1554,11 @@ LOCAL Errors StorageSMB_read(StorageHandle *storageHandle,
         {
 #endif
           // read direct
-          n = smb2_read(storageHandle->smb.context,
-                        storageHandle->smb.fileHandle,
-                        buffer,
-                        length
-                       );
+          int n = smb2_read(storageHandle->smb.context,
+                            storageHandle->smb.fileHandle,
+                            buffer,
+                            length
+                           );
           if (n <= 0)
           {
             error = ERRORX_(SMB,(uint)(-n),"%s",smb2_get_error(storageHandle->smb.context));
@@ -1610,8 +1573,8 @@ LOCAL Errors StorageSMB_read(StorageHandle *storageHandle,
 //          }
 
         // get end time, end received bytes
-        endTimestamp          = Misc_getTimestamp();
-        endTotalReceivedBytes = storageHandle->smb.totalReceivedBytes;
+        uint64 endTimestamp          = Misc_getTimestamp();
+        uint64 endTotalReceivedBytes = storageHandle->smb.totalReceivedBytes;
         assert(endTotalReceivedBytes >= startTotalReceivedBytes);
 
         /* limit used band width if requested (note: when the system time is
@@ -1658,15 +1621,6 @@ LOCAL Errors StorageSMB_write(StorageHandle *storageHandle,
                               ulong         bufferLength
                              )
 {
-  #ifdef HAVE_SMB2
-    Errors  error;
-    ulong   writtenBytes;
-    ulong   length;
-    uint64  startTimestamp,endTimestamp;
-    uint64  startTotalSentBytes,endTotalSentBytes;
-    int     n;
-  #endif /* HAVE_SMB2 */
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
@@ -1678,11 +1632,12 @@ LOCAL Errors StorageSMB_write(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   #ifdef HAVE_SMB2
-    writtenBytes = 0L;
-    error        = ERROR_NONE;
+    Errors error        = ERROR_NONE;
+    ulong  writtenBytes = 0L;
     while (writtenBytes < bufferLength)
     {
       // get max. number of bytes to send in one step
+      ulong length;
       if (storageHandle->storageInfo->smb.bandWidthLimiter.maxBandWidthList != NULL)
       {
         length = MIN(MIN(storageHandle->storageInfo->smb.bandWidthLimiter.blockSize,bufferLength-writtenBytes),storageHandle->smb.maxReadWriteBytes);
@@ -1694,15 +1649,15 @@ LOCAL Errors StorageSMB_write(StorageHandle *storageHandle,
       assert(length > 0L);
 
       // get start time, start received bytes
-      startTimestamp      = Misc_getTimestamp();
-      startTotalSentBytes = storageHandle->smb.totalSentBytes;
+      uint64 startTimestamp      = Misc_getTimestamp();
+      uint64 startTotalSentBytes = storageHandle->smb.totalSentBytes;
 
       // send data
-      n = smb2_write(storageHandle->smb.context,
-                     storageHandle->smb.fileHandle,
-                     buffer,
-                     length
-                    );
+      int n = smb2_write(storageHandle->smb.context,
+                         storageHandle->smb.fileHandle,
+                         buffer,
+                         length
+                        );
       if (n <= 0)
       {
         error = ERRORX_(SMB,(uint)(-n),"%s",smb2_get_error(storageHandle->smb.context));
@@ -1712,8 +1667,8 @@ LOCAL Errors StorageSMB_write(StorageHandle *storageHandle,
       writtenBytes += n;
 
       // get end time, end received bytes
-      endTimestamp      = Misc_getTimestamp();
-      endTotalSentBytes = storageHandle->smb.totalSentBytes;
+      uint64 endTimestamp      = Misc_getTimestamp();
+      uint64 endTotalSentBytes = storageHandle->smb.totalSentBytes;
       assert(endTotalSentBytes >= startTotalSentBytes);
 
       /* limit used band width if requested (note: when the system time is
@@ -1754,13 +1709,11 @@ LOCAL Errors StorageSMB_write(StorageHandle *storageHandle,
 
 LOCAL uint64 StorageSMB_getSize(StorageHandle *storageHandle)
 {
-  uint64 size;
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
-  size = 0LL;
+  uint64 size = 0LL;
   #ifdef HAVE_SMB2
     size = storageHandle->smb.size;
   #else /* not HAVE_SMB2 */
@@ -1813,18 +1766,11 @@ LOCAL Errors StorageSMB_seek(StorageHandle *storageHandle,
                              uint64        offset
                             )
 {
-  Errors error;
-  #ifdef HAVE_SMB2
-//    uint64 skip;
-//    uint64 i;
-    int64 n;
-  #endif /* HAVE_SMB2 */
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
-  error = ERROR_UNKNOWN;
+  Errors error = ERROR_UNKNOWN;
   #ifdef HAVE_SMB2
 // TODO:
     assert(storageHandle->smb.context != NULL);
@@ -1898,12 +1844,12 @@ LOCAL Errors StorageSMB_seek(StorageHandle *storageHandle,
       }
     }
 #else
-    n = smb2_lseek(storageHandle->smb.context,
-                   storageHandle->smb.fileHandle,
-                   (int64)offset,
-                   SEEK_SET,
-                   NULL
-                  );
+    int64 n = smb2_lseek(storageHandle->smb.context,
+                         storageHandle->smb.fileHandle,
+                         (int64)offset,
+                         SEEK_SET,
+                         NULL
+                        );
     if (n >= 0)
     {
       storageHandle->smb.index = (uint64)n;
@@ -1968,20 +1914,17 @@ LOCAL Errors StorageSMB_makeDirectory(const StorageInfo *storageInfo,
                                       ConstString       directoryName
                                      )
 {
-  #ifdef HAVE_SMB2
-    String              shareName,path;
-    Errors              error;
-    struct smb2_context *smbContext;
-    int                 smbErrorCode;
-  #endif /* HAVE_SMB2 */
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
   assert(!String_isEmpty(directoryName));
 
   #ifdef HAVE_SMB2
+    String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageInfo->storageSpecifier,directoryName);
 
+    Errors error;
+
+    struct smb2_context *smbContext;
     error = smb2ConnectShare(&smbContext,
                              storageInfo->storageSpecifier.hostName,
                              storageInfo->storageSpecifier.userName,
@@ -1990,7 +1933,7 @@ LOCAL Errors StorageSMB_makeDirectory(const StorageInfo *storageInfo,
                             );
     if (error == ERROR_NONE)
     {
-      smbErrorCode = smb2_mkdir(smbContext,String_cString(path));
+      int smbErrorCode = smb2_mkdir(smbContext,String_cString(path));
       if (smbErrorCode != 0)
       {
         error = ERRORX_(SMB,(uint)(-smbErrorCode),"%s",strerror(-smbErrorCode));
@@ -2022,20 +1965,17 @@ LOCAL Errors StorageSMB_delete(const StorageInfo *storageInfo,
                                ConstString       archiveName
                               )
 {
-  #ifdef HAVE_SMB2
-    String              shareName,path;
-    Errors              error;
-    struct smb2_context *smbContext;
-    int                 smbErrorCode;
-  #endif /* HAVE_SMB2 */
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_SMB2
+    String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageInfo->storageSpecifier,archiveName);
 
+    Errors error;
+
+    struct smb2_context *smbContext;
     error = smb2ConnectShare(&smbContext,
                              storageInfo->storageSpecifier.hostName,
                              storageInfo->storageSpecifier.userName,
@@ -2044,7 +1984,7 @@ LOCAL Errors StorageSMB_delete(const StorageInfo *storageInfo,
                             );
     if (error == ERROR_NONE)
     {
-      smbErrorCode = smb2_unlink(smbContext,String_cString(path));
+      int smbErrorCode = smb2_unlink(smbContext,String_cString(path));
       if (smbErrorCode != 0)
       {
         error = ERRORX_(SMB,(uint)(-smbErrorCode),"%s",strerror(-smbErrorCode));
@@ -2078,8 +2018,6 @@ LOCAL Errors StorageSMB_getFileInfo(FileInfo          *fileInfo,
                                     ConstString       archiveName
                                    )
 {
-  Errors error;
-
   assert(fileInfo != NULL);
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
@@ -2087,7 +2025,7 @@ LOCAL Errors StorageSMB_getFileInfo(FileInfo          *fileInfo,
 
   memClear(fileInfo,sizeof(FileInfo));
 
-  error = ERROR_UNKNOWN;
+  Errors error = ERROR_UNKNOWN;
   #ifdef HAVE_SMB2
     String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageInfo->storageSpecifier,archiveName);
@@ -2156,14 +2094,6 @@ LOCAL Errors StorageSMB_openDirectoryList(StorageDirectoryListHandle *storageDir
                                           ServerConnectionPriorities serverConnectionPriority
                                          )
 {
-  #ifdef HAVE_SMB2
-    AutoFreeList autoFreeList;
-    String       shareName,path;
-    Errors       error;
-    SMBServer    smbServer;
-    uint         retries;
-  #endif /* HAVE_SMB2 */
-
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_SMB);
@@ -2175,9 +2105,11 @@ LOCAL Errors StorageSMB_openDirectoryList(StorageDirectoryListHandle *storageDir
 
   #ifdef HAVE_SMB2
     // init variables
+    AutoFreeList autoFreeList;
     AutoFree_init(&autoFreeList);
 
     // get SMB/CIFS server settings
+    SMBServer smbServer;
     storageDirectoryListHandle->smb.serverId = Configuration_initSMBServerSettings(&smbServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&smbServer,{ Configuration_doneSMBServerSettings(&smbServer); });
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_set(storageDirectoryListHandle->storageSpecifier.userName,smbServer.userName);
@@ -2201,8 +2133,11 @@ LOCAL Errors StorageSMB_openDirectoryList(StorageDirectoryListHandle *storageDir
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->smb.serverId,{ freeServer(storageDirectoryListHandle->smb.serverId); });
 
     // get share, path
+    String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageDirectoryListHandle->storageSpecifier,pathName);
     AUTOFREE_ADD(&autoFreeList,&shareName,{ smb2DoneSharePath(shareName,path); });
+
+    Errors error;
 
     // check if SMB/CIFS login is possible
     error = ERROR_SMB_AUTHENTICATION;
@@ -2229,7 +2164,7 @@ LOCAL Errors StorageSMB_openDirectoryList(StorageDirectoryListHandle *storageDir
     if (Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION)
     {
       // initialize interactive/default password
-      retries = 0;
+      uint retries = 0;
       while ((Error_getCode(error) == ERROR_CODE_SMB_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
       {
         if (initSMBLogin(storageDirectoryListHandle->storageSpecifier.hostName,
@@ -2346,12 +2281,10 @@ LOCAL void StorageSMB_closeDirectoryList(StorageDirectoryListHandle *storageDire
 
 LOCAL bool StorageSMB_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
-  bool endOfDirectoryFlag;
-
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_SMB);
 
-  endOfDirectoryFlag = TRUE;
+  bool endOfDirectoryFlag = TRUE;
   #ifdef HAVE_SMB2
     {
       // read entry iff not already read
@@ -2388,12 +2321,10 @@ LOCAL Errors StorageSMB_readDirectoryList(StorageDirectoryListHandle *storageDir
                                           FileInfo                   *fileInfo
                                          )
 {
-  Errors error;
-
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_SMB);
 
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
   #ifdef HAVE_SMB2
     {
       // read entry iff not already read

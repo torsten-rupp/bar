@@ -88,19 +88,16 @@ const char *STRING_MAP_TYPE_NAMES[] =
 
 LOCAL uint calculateHash(const char *name)
 {
-  uint n;
-  byte hashBytes[4];
-  uint i;
-
   assert(name != NULL);
 
-  n = strlen(name);
+  uint n = strlen(name);
 
+  byte hashBytes[4];
   hashBytes[0] = (n > 0) ? name[0] : 0;
   hashBytes[1] = (n > 1) ? name[1] : 0;
   hashBytes[2] = (n > 2) ? name[2] : 0;
   hashBytes[3] = (n > 3) ? name[3] : 0;
-  for (i = 4; i < n; i++)
+  for (uint i = 4; i < n; i++)
   {
     hashBytes[i%4] ^= name[i];
   }
@@ -129,17 +126,11 @@ LOCAL StringMapEntry *addStringMapEntry(StringMap stringMap, const char *name)
 LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name)
 #endif /* NDEBUG */
 {
-  uint           hashIndex;
-  uint           n;
-  uint           i;
-  uint           newStringMapSize;
-  StringMapEntry *newEntries;
-
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  hashIndex = calculateHash(name) % stringMap->size;
-  n = 0;
+  uint hashIndex = calculateHash(name) % stringMap->size;
+  uint n         = 0;
   while (   (stringMap->entries[hashIndex].name != NULL)
          && (n < stringMap->size)
         )
@@ -151,15 +142,15 @@ LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb
   if (n >= stringMap->size)
   {
     // re-allocate new entries
-    newStringMapSize    = stringMap->size+STRINGMAP_DELTA_SIZE;
-    newEntries = (StringMapEntry*)malloc(sizeof(StringMapEntry)*newStringMapSize);
+    uint           newStringMapSize = stringMap->size+STRINGMAP_DELTA_SIZE;
+    StringMapEntry *newEntries      = (StringMapEntry*)malloc(sizeof(StringMapEntry)*newStringMapSize);
     if (newEntries == NULL)
     {
       return NULL;
     }
 
     // init new entries
-    for (i = 0; i < newStringMapSize; i++)
+    for (uint i = 0; i < newStringMapSize; i++)
     {
       newEntries[i].name             = NULL;
       newEntries[i].type             = STRINGMAP_TYPE_NONE;
@@ -173,12 +164,12 @@ LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb
     }
 
     // rehash existing entries
-    for (i = 0; i < stringMap->size; i++)
+    for (uint i = 0; i < stringMap->size; i++)
     {
       assert(stringMap->entries[i].name != NULL);
 
       hashIndex = calculateHash(stringMap->entries[i].name)%newStringMapSize;
-      n = 0;
+      uint n = 0;
       while (   (newEntries[hashIndex].name != NULL)
              && (n < newStringMapSize)
             )
@@ -274,14 +265,11 @@ LOCAL void removeStringMapEntry(StringMapEntry *stringMapEntry)
 
 LOCAL StringMapEntry *findStringMapEntry(const StringMap stringMap, const char *name)
 {
-  uint i;
-  uint n;
-
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  i = calculateHash(name)%stringMap->size;
-  n = 0;
+  uint i = calculateHash(name)%stringMap->size;
+  uint n = 0;
   while (   ((stringMap->entries[i].name == NULL) || !stringEquals(stringMap->entries[i].name,name))
          && (n < stringMap->size)
         )
@@ -303,11 +291,8 @@ StringMap __StringMap_new(const char *__fileName__,
                          )
 #endif /* NDEBUG */
 {
-  uint      i;
-  StringMap stringMap;
-
   // allocate string map
-  stringMap = (StringMap)malloc(sizeof(struct __StringMap));
+  StringMap stringMap = (StringMap)malloc(sizeof(struct __StringMap));
   if (stringMap == NULL)
   {
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
@@ -329,7 +314,7 @@ StringMap __StringMap_new(const char *__fileName__,
       return NULL;
     #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
-  for (i = 0; i < STRINGMAP_START_SIZE; i++)
+  for (uint i = 0; i < STRINGMAP_START_SIZE; i++)
   {
     stringMap->entries[i].name = NULL;
   }
@@ -375,9 +360,6 @@ StringMap __StringMap_duplicate(const char *__fileName__, ulong __lineNb__, cons
 
 StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
 {
-  StringMapEntry *newEntries;
-  uint           i;
-
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
   assert(fromStringMap != NULL);
@@ -385,7 +367,7 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
 
   // allocate new entries
   StringMap_clear(stringMap);
-  newEntries = (StringMapEntry*)realloc(stringMap->entries,sizeof(StringMapEntry)*fromStringMap->size);
+  StringMapEntry *newEntries = (StringMapEntry*)realloc(stringMap->entries,sizeof(StringMapEntry)*fromStringMap->size);
   if (newEntries == NULL)
   {
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
@@ -398,7 +380,7 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
   stringMap->entries = newEntries;
 
   // copy entries
-  for (i = 0; i < fromStringMap->size; i++)
+  for (uint i = 0; i < fromStringMap->size; i++)
   {
     if (fromStringMap->entries[i].name != NULL)
     {
@@ -442,9 +424,6 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
 
 StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
 {
-  StringMapEntry *newEntries;
-  uint           i;
-
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
   assert(fromStringMap != NULL);
@@ -452,7 +431,7 @@ StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
 
   // allocate new entries
   StringMap_clear(stringMap);
-  newEntries = (StringMapEntry*)realloc(stringMap->entries,sizeof(StringMapEntry)*fromStringMap->size);
+  StringMapEntry *newEntries = (StringMapEntry*)realloc(stringMap->entries,sizeof(StringMapEntry)*fromStringMap->size);
   if (newEntries == NULL)
   {
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
@@ -465,7 +444,7 @@ StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
   stringMap->entries = newEntries;
 
   // move entries
-  for (i = 0; i < fromStringMap->size; i++)
+  for (uint i = 0; i < fromStringMap->size; i++)
   {
     stringMap->entries[i].name             = fromStringMap->entries[i].name;
     stringMap->entries[i].type             = fromStringMap->entries[i].type;
@@ -508,8 +487,6 @@ void StringMap_delete(StringMap stringMap)
 void __StringMap_delete(const char *__fileName__, ulong __lineNb__, StringMap stringMap)
 #endif /* NDEBUG */
 {
-  uint i;
-
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
@@ -519,7 +496,7 @@ void __StringMap_delete(const char *__fileName__, ulong __lineNb__, StringMap st
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,stringMap,StringMap);
   #endif /* NDEBUG */
 
-  for (i = 0; i < stringMap->size; i++)
+  for (uint i = 0; i < stringMap->size; i++)
   {
     if (stringMap->entries[i].name != NULL)
     {
@@ -532,12 +509,10 @@ void __StringMap_delete(const char *__fileName__, ulong __lineNb__, StringMap st
 
 StringMap StringMap_clear(StringMap stringMap)
 {
-  uint i;
-
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  for (i = 0; i < stringMap->size; i++)
+  for (uint i = 0; i < stringMap->size; i++)
   {
     if (stringMap->entries[i].name != NULL)
     {
@@ -551,14 +526,11 @@ StringMap StringMap_clear(StringMap stringMap)
 
 uint StringMap_count(const StringMap stringMap)
 {
-  uint count;
-  uint i;
-
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  count = 0L;
-  for (i = 0; i < stringMap->size; i++)
+  uint count = 0L;
+  for (uint i = 0; i < stringMap->size; i++)
   {
     if (stringMap->entries[i].name != NULL)
     {
@@ -571,14 +543,11 @@ uint StringMap_count(const StringMap stringMap)
 
 const StringMapEntry *StringMap_index(const StringMap stringMap, uint index)
 {
-  StringMapEntry *stringMapEntry;
-  uint           i;
-
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  stringMapEntry = NULL;
-  for (i = 0; i < stringMap->size; i++)
+  StringMapEntry *stringMapEntry = NULL;
+  for (uint i = 0; i < stringMap->size; i++)
   {
     if (stringMap->entries[i].name != NULL)
     {
@@ -599,31 +568,25 @@ const StringMapEntry *StringMap_index(const StringMap stringMap, uint index)
 
 const char *StringMap_indexName(const StringMap stringMap, uint index)
 {
-  const StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
 
-  stringMapEntry = StringMap_index(stringMap,index);
+  const StringMapEntry *stringMapEntry = StringMap_index(stringMap,index);
   return (stringMapEntry != NULL) ? stringMapEntry->name : NULL;
 }
 
 StringMapTypes StringMap_indexType(const StringMap stringMap, uint index)
 {
-  const StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
 
-  stringMapEntry = StringMap_index(stringMap,index);
+  const StringMapEntry *stringMapEntry = StringMap_index(stringMap,index);
   return (stringMapEntry != NULL) ? stringMapEntry->type : STRINGMAP_TYPE_NONE;
 }
 
 StringMapValue StringMap_indexValue(const StringMap stringMap, uint index)
 {
-  const StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
 
-  stringMapEntry = StringMap_index(stringMap,index);
+  const StringMapEntry *stringMapEntry = StringMap_index(stringMap,index);
   return (stringMapEntry != NULL) ? stringMapEntry->value : STRINGMAP_VALUE_NONE;
 }
 
@@ -633,11 +596,10 @@ void StringMap_putText(StringMap stringMap, const char *name, ConstString text)
 void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ConstString text)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -658,11 +620,10 @@ void StringMap_putTextCString(StringMap stringMap, const char *name, const char 
 void __StringMap_putTextCString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, const char *text)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -683,11 +644,10 @@ void StringMap_put(StringMap stringMap, const char *name, void *value)
 void __StringMap_put(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, void *value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -708,11 +668,10 @@ void StringMap_putInt(StringMap stringMap, const char *name, int value)
 void __StringMap_putInt(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, int value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -733,11 +692,10 @@ void StringMap_putLong(StringMap stringMap, const char *name, long value)
 void __StringMap_putLong(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, long value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -758,11 +716,10 @@ void StringMap_putInt64(StringMap stringMap, const char *name, int64 value)
 void __StringMap_putInt64(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, int64 value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -783,11 +740,10 @@ void StringMap_putUInt(StringMap stringMap, const char *name, uint value)
 void __StringMap_putUInt(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, uint value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -808,11 +764,10 @@ void StringMap_putULong(StringMap stringMap, const char *name, ulong value)
 void __StringMap_putULong(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ulong value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -833,11 +788,10 @@ void StringMap_putUInt64(StringMap stringMap, const char *name, uint64 value)
 void __StringMap_putUInt64(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, uint64 value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -858,11 +812,10 @@ void StringMap_putDouble(StringMap stringMap, const char *name, double value)
 void __StringMap_putDouble(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, double value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -883,11 +836,10 @@ void StringMap_putBool(StringMap stringMap, const char *name, bool value)
 void __StringMap_putBool(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, bool value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -908,11 +860,10 @@ void StringMap_putFlag(StringMap stringMap, const char *name, ulong value)
 void __StringMap_putFlag(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ulong value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -933,11 +884,10 @@ void StringMap_putChar(StringMap stringMap, const char *name, char value)
 void __StringMap_putChar(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, char value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -958,11 +908,10 @@ void StringMap_putCString(StringMap stringMap, const char *name, const char *val
 void __StringMap_putCString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, const char *value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -984,11 +933,10 @@ void StringMap_putString(StringMap stringMap, const char *name, ConstString valu
 void __StringMap_putString(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ConstString value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -1010,11 +958,10 @@ void StringMap_putData(StringMap stringMap, const char *name, void *data, String
 void __StringMap_putData(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, void *data, StringMapFormatFunction stringMapFormatFunction, void *stringMapFormatUserData)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -1035,12 +982,11 @@ void StringMap_putValue(StringMap stringMap, const char *name, StringMapTypes ty
 void __StringMap_putValue(const char *__fileName__, ulong __lineNb__,StringMap stringMap, const char *name, StringMapTypes type, const StringMapValue *value)
 #endif /* NDEBUG */
 {
-  StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
   assert(value != NULL);
 
+  StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
     stringMapEntry = addStringMapEntry(stringMap,name);
   #else /* not NDEBUG */
@@ -1077,12 +1023,10 @@ void __StringMap_putValue(const char *__fileName__, ulong __lineNb__,StringMap s
 
 ConstString StringMap_getText(const StringMap stringMap, const char *name, ConstString defaultValue)
 {
-  const StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  const StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
     return stringMapEntry->value.text;
@@ -1095,12 +1039,10 @@ ConstString StringMap_getText(const StringMap stringMap, const char *name, Const
 
 const char *StringMap_getTextCString(const StringMap stringMap, const char *name, const char *defaultValue)
 {
-  const StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  const StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
     return String_cString(stringMapEntry->value.text);
@@ -1113,12 +1055,10 @@ const char *StringMap_getTextCString(const StringMap stringMap, const char *name
 
 StringMapValue StringMap_get(const StringMap stringMap, const char *name)
 {
-  const StringMapEntry *stringMapEntry;
-
   assert(stringMap != NULL);
   assert(name != NULL);
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  const StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if (stringMapEntry != NULL)
   {
     return stringMapEntry->value;
@@ -1131,16 +1071,14 @@ StringMapValue StringMap_get(const StringMap stringMap, const char *name)
 
 bool StringMap_getInt(const StringMap stringMap, const char *name, int *data, int defaultValue)
 {
-  StringMapEntry *stringMapEntry;
-  char           *nextData;
-
   assert(stringMap != NULL);
   assert(name != NULL);
   assert(data != NULL);
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
+    char *nextData;
     (*data) = strtol(String_cString(stringMapEntry->value.text),&nextData,0);
     return ((*nextData) == '\0');
   }
@@ -1153,16 +1091,14 @@ bool StringMap_getInt(const StringMap stringMap, const char *name, int *data, in
 
 bool StringMap_getLong(const StringMap stringMap, const char *name, long *data, long defaultValue)
 {
-  StringMapEntry *stringMapEntry;
-  char           *nextData;
-
   assert(stringMap != NULL);
   assert(name != NULL);
   assert(data != NULL);
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
+    char *nextData;
     (*data) = (ulong)strtoll(String_cString(stringMapEntry->value.text),&nextData,0);
     return ((*nextData) == '\0');
   }
@@ -1175,16 +1111,14 @@ bool StringMap_getLong(const StringMap stringMap, const char *name, long *data, 
 
 bool StringMap_getInt64(const StringMap stringMap, const char *name, int64 *data, int64 defaultValue)
 {
-  StringMapEntry *stringMapEntry;
-  char           *nextData;
-
   assert(stringMap != NULL);
   assert(name != NULL);
   assert(data != NULL);
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
+    char *nextData;
     (*data) = (int64)strtoll(String_cString(stringMapEntry->value.text),&nextData,0);
     return ((*nextData) == '\0');
   }
@@ -1197,16 +1131,14 @@ bool StringMap_getInt64(const StringMap stringMap, const char *name, int64 *data
 
 bool StringMap_getUInt(const StringMap stringMap, const char *name, uint *data, uint defaultValue)
 {
-  StringMapEntry *stringMapEntry;
-  char           *nextData;
-
   assert(stringMap != NULL);
   assert(name != NULL);
   assert(data != NULL);
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
+    char *nextData;
     (*data) = (uint)strtol(String_cString(stringMapEntry->value.text),&nextData,0);
     return ((*nextData) == '\0');
   }
@@ -1219,16 +1151,14 @@ bool StringMap_getUInt(const StringMap stringMap, const char *name, uint *data, 
 
 bool StringMap_getULong(const StringMap stringMap, const char *name, ulong *data, ulong defaultValue)
 {
-  StringMapEntry *stringMapEntry;
-  char           *nextData;
-
   assert(stringMap != NULL);
   assert(name != NULL);
   assert(data != NULL);
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
+    char *nextData;
     (*data) = (ulong)strtol(String_cString(stringMapEntry->value.text),&nextData,0);
     return ((*nextData) == '\0');
   }
@@ -1241,16 +1171,14 @@ bool StringMap_getULong(const StringMap stringMap, const char *name, ulong *data
 
 bool StringMap_getUInt64(const StringMap stringMap, const char *name, uint64 *data, uint64 defaultValue)
 {
-  StringMapEntry *stringMapEntry;
-  char           *nextData;
-
   assert(stringMap != NULL);
   assert(name != NULL);
   assert(data != NULL);
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
+    char *nextData;
     (*data) = (uint64)strtoll(String_cString(stringMapEntry->value.text),&nextData,0);
     return ((*nextData) == '\0');
   }

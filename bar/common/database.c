@@ -859,9 +859,7 @@ LOCAL bool areCompatibleTypes(DatabaseDataTypes dataType0, DatabaseDataTypes dat
 
 LOCAL void debugAddThreadLWPId(ThreadLWPId threadLWPIds[], uint threadLWPIdSize)
 {
-  uint i;
-
-  i = 0;
+  uint i = 0;
   while ((i < threadLWPIdSize) && threadLWPIds[i] != 0)
   {
     i++;
@@ -884,12 +882,9 @@ LOCAL void debugAddThreadLWPId(ThreadLWPId threadLWPIds[], uint threadLWPIdSize)
 
 LOCAL void debugRemoveThreadLWPId(ThreadLWPId threadLWPIds[], uint threadLWPIdSize)
 {
-  ThreadLWPId id;
-  uint i;
+  ThreadLWPId id = Thread_getCurrentLWPId();
 
-  id = Thread_getCurrentLWPId();
-
-  i = 0;
+  uint i = 0;
   while ((i < threadLWPIdSize) && threadLWPIds[i] != id)
   {
     i++;
@@ -920,11 +915,9 @@ LOCAL void debugRemoveThreadLWPId(ThreadLWPId threadLWPIds[], uint threadLWPIdSi
 
 LOCAL int logTraceCommandHandler(unsigned int traceCommand, void *context, void *p, void *t)
 {
-  FILE *handle;
-
   UNUSED_VARIABLE(context);
 
-  handle = fopen("database.log","a");
+  FILE *handle = fopen("database.log","a");
   if (handle == NULL)
   {
     return 0;
@@ -1008,15 +1001,13 @@ LOCAL_INLINE void initTimeSpec(struct timespec *timespec, ulong timeout)
 
 LOCAL void debugPrint(sqlite3_context *context, int argc, sqlite3_value *argv[])
 {
-  const char    *text;
-
   assert(context != NULL);
   assert(argc >= 1);
   assert(argv != NULL);
 
   UNUSED_VARIABLE(argc);
 
-  text   = (const char*)sqlite3_value_text(argv[0]);
+  const char *text = (const char*)sqlite3_value_text(argv[0]);
   fprintf(stderr,"DEBUG database: %s\n",text);
 }
 #endif
@@ -1034,15 +1025,13 @@ LOCAL void debugPrint(sqlite3_context *context, int argc, sqlite3_value *argv[])
 #pragma GCC diagnostic ignored "-Wunused-function"
 LOCAL int debugPrintQueryPlanCallback(void *userData, int argc, char *argv[], char *columns[])
 {
-  int i;
-
   assert(argc >= 0);
   assert(argv != NULL);
   assert(columns != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  for (i = 0; i < argc; i++)
+  for (int i = 0; i < argc; i++)
   {
     fprintf(stderr,"  %s=%s",columns[i],argv[i]);
   }
@@ -1179,10 +1168,8 @@ LOCAL_INLINE void debugAddDatabaseThreadInfo(const char         *__fileName__,
                                              uint               databaseThreadInfoSize
                                             )
 {
-  uint i;
-
   // increment existing
-  i = 0;
+  uint i = 0;
   while (i < databaseThreadInfoSize)
   {
     if (Thread_isCurrentThread(databaseThreadInfo[i].threadId))
@@ -1222,9 +1209,7 @@ LOCAL_INLINE void debugClearDatabaseThreadInfo(DatabaseThreadInfo databaseThread
                                                uint               databaseThreadInfoSize
                                               )
 {
-  uint i;
-
-  i = 0;
+  uint i = 0;
   while (i < databaseThreadInfoSize)
   {
     if (Thread_isCurrentThread(databaseThreadInfo[i].threadId))
@@ -1286,15 +1271,12 @@ LOCAL_INLINE void debugAddHistoryDatabaseThreadInfo(const char                  
 LOCAL const char *debugGetLockedByInfo(const DatabaseHandle *databaseHandle)
 {
   static char buffer[128];
-  uint        i;
-  long        index;
-
   stringClear(buffer);
   pthread_mutex_lock(&debugDatabaseLock);
   {
     if      (databaseHandle->databaseNode->transactionCount > 0)
     {
-      index = stringFindReverseChar(databaseHandle->databaseNode->debug.transaction.fileName,FILE_PATH_SEPARATOR_CHAR);
+      long index = stringFindReverseChar(databaseHandle->databaseNode->debug.transaction.fileName,FILE_PATH_SEPARATOR_CHAR);
 
       stringFormat(buffer,sizeof(buffer),
                    "transaction by '%s':%s:%s:%u",
@@ -1307,9 +1289,9 @@ LOCAL const char *debugGetLockedByInfo(const DatabaseHandle *databaseHandle)
     else if (databaseHandle->databaseNode->readWriteCount > 0)
     {
       stringSet(buffer,sizeof(buffer),"read/write by");
-      for (i = 0; i < databaseHandle->databaseNode->readWriteCount; i++)
+      for (uint i = 0; i < databaseHandle->databaseNode->readWriteCount; i++)
       {
-        index = stringFindReverseChar(databaseHandle->databaseNode->debug.readWrites[i].fileName,FILE_PATH_SEPARATOR_CHAR);
+        long index = stringFindReverseChar(databaseHandle->databaseNode->debug.readWrites[i].fileName,FILE_PATH_SEPARATOR_CHAR);
 
         stringAppendFormat(buffer,sizeof(buffer),
                            " '%s':%s:%s:%u",
@@ -1323,9 +1305,9 @@ LOCAL const char *debugGetLockedByInfo(const DatabaseHandle *databaseHandle)
     else if (databaseHandle->databaseNode->readCount > 0)
     {
       stringSet(buffer,sizeof(buffer),"read by");
-      for (i = 0; i < databaseHandle->databaseNode->readCount; i++)
+      for (uint i = 0; i < databaseHandle->databaseNode->readCount; i++)
       {
-        index = stringFindReverseChar(databaseHandle->databaseNode->debug.reads[i].fileName,FILE_PATH_SEPARATOR_CHAR);
+        long index = stringFindReverseChar(databaseHandle->databaseNode->debug.reads[i].fileName,FILE_PATH_SEPARATOR_CHAR);
 
         stringAppendFormat(buffer,sizeof(buffer),
                            " '%s':%s:%s:%u",
@@ -1353,20 +1335,17 @@ LOCAL const char *debugGetLockedByInfo(const DatabaseHandle *databaseHandle)
 
 LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
 {
-  String string;
-  uint   i;
-
   assert(databaseNode != NULL);
 
   pthread_once(&debugDatabaseInitFlag,debugDatabaseInit);
-
-  string = String_new();
 
   pthread_mutex_lock(&debugDatabaseLock);
   {
     pthread_mutex_lock(&debugConsoleLock);
     {
+      String string = String_new();
       fprintf(stderr,"Database lock info '%s':\n",String_cString(Database_getPrintableName(string,&databaseNode->databaseSpecifier,NULL)));
+      String_delete(string);
       fprintf(stderr,
               "  pending r %2u, locked r %2u, pending rw %2u, locked rw %2u, transactions %2u\n",
               databaseNode->pendingReadCount,
@@ -1375,7 +1354,7 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
               databaseNode->readWriteCount,
               databaseNode->transactionCount
              );
-      for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads); i++)
+      for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads); i++)
       {
         if (!Thread_isNone(databaseNode->debug.reads[i].threadId))
         {
@@ -1405,7 +1384,7 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
 #endif
         }
       }
-      for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites); i++)
+      for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites); i++)
       {
         if (!Thread_isNone(databaseNode->debug.readWrites[i].threadId))
         {
@@ -1439,8 +1418,6 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
     pthread_mutex_unlock(&debugConsoleLock);
   }
   pthread_mutex_unlock(&debugDatabaseLock);
-
-  String_delete(string);
 }
 
 #endif /* not NDEBUG */
@@ -1486,17 +1463,15 @@ LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
 
 LOCAL int progressHandler(void *userData)
 {
-  DatabaseHandle                    *databaseHandle = (DatabaseHandle*)userData;
-  bool                              interruptFlag;
-  const DatabaseProgressHandlerNode *progressHandlerNode;
-
+  DatabaseHandle *databaseHandle = (DatabaseHandle*)userData;
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
 
   // execute registered progress handlers
-  interruptFlag = FALSE;
+  bool interruptFlag = FALSE;
   SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
+    const DatabaseProgressHandlerNode *progressHandlerNode;
     LIST_ITERATEX(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode,!interruptFlag)
     {
       interruptFlag = !progressHandlerNode->function(progressHandlerNode->userData);
@@ -1528,17 +1503,6 @@ LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_valu
     };
   #endif
 
-  const char *text,*format;
-  const char *s;
-  uint64     timestamp;
-  #ifdef HAVE_STRPTIME
-    uint i;
-  #endif
-  #if defined(HAVE_GETDATE_R) || defined(HAVE_STRPTIME)
-    struct tm tmBuffer;
-  #endif
-  struct tm  *tm;
-
   assert(context != NULL);
   assert(argc >= 1);
   assert(argv != NULL);
@@ -1546,10 +1510,10 @@ LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_valu
   UNUSED_VARIABLE(argc);
 
   // get text to convert, optional date/time format
-  text   = (const char*)sqlite3_value_text(argv[0]);
-  format = (argc >= 2) ? (const char *)argv[1] : NULL;
+  const char *text   = (const char*)sqlite3_value_text(argv[0]);
+  const char *format = (argc >= 2) ? (const char *)argv[1] : NULL;
 
-  timestamp = 0LL;
+  uint64 timestamp = 0LL;
 
   // convert to Unix timestamp
   if (text != NULL)
@@ -1562,7 +1526,9 @@ LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_valu
     else
     {
       // try convert string value
+      struct tm  *tm;
       #if   defined(HAVE_GETDATE_R)
+        struct tm tmBuffer;
         tm = (getdate_r(text,&tmBuffer) == 0) ? &tmBuffer : NULL;
       #elif defined(HAVE_GETDATE)
         tm = getdate(text);
@@ -1585,7 +1551,7 @@ LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_valu
       }
       else
       {
-        s = NULL;
+        const char *s = NULL;
         #ifdef HAVE_STRPTIME
           memClear(&tmBuffer,sizeof(tmBuffer));
           if (format != NULL)
@@ -1594,7 +1560,7 @@ LOCAL void sqlite3UnixTimestamp(sqlite3_context *context, int argc, sqlite3_valu
           }
           else
           {
-            i = 0;
+            uint i = 0;
             do
             {
               s = strptime(text,DATE_TIME_FORMATS[i],&tmBuffer);
@@ -1641,9 +1607,6 @@ UNUSED_VARIABLE(format);
 
 LOCAL void sqlite3FromUnixTime(sqlite3_context *context, int argc, sqlite3_value *argv[])
 {
-  uint64     timestamp;
-  const char *format;
-  char       text[64];
 
   assert(context != NULL);
   assert(argc >= 1);
@@ -1652,10 +1615,11 @@ LOCAL void sqlite3FromUnixTime(sqlite3_context *context, int argc, sqlite3_value
   UNUSED_VARIABLE(argc);
 
   // get text to convert, optional date/time format
-  timestamp = (uint64)sqlite3_value_int64(argv[0]);
-  format    = (argc >= 2) ? (const char *)argv[1] : NULL;
+  uint64     timestamp = (uint64)sqlite3_value_int64(argv[0]);
+  const char *format   = (argc >= 2) ? (const char *)argv[1] : NULL;
 
   // convert to Unix timestamp
+  char text[64];
   Misc_formatDateTimeCString(text,sizeof(text),timestamp,TIME_TYPE_GMT,format);
 
   sqlite3_result_text(context,text,stringLength(text),SQLITE_TRANSIENT);
@@ -1674,8 +1638,6 @@ LOCAL void sqlite3FromUnixTime(sqlite3_context *context, int argc, sqlite3_value
 
 LOCAL void sqlite3Now(sqlite3_context *context, int argc, sqlite3_value *argv[])
 {
-  char text[64];
-
   assert(context != NULL);
   assert(argc == 0);
   assert(argv != NULL);
@@ -1684,6 +1646,7 @@ LOCAL void sqlite3Now(sqlite3_context *context, int argc, sqlite3_value *argv[])
   UNUSED_VARIABLE(argv);
 
   // convert to Unix timestamp
+  char text[64];
   Misc_formatDateTimeCString(text,sizeof(text),Misc_getCurrentDateTime(),TIME_TYPE_GMT,DATE_TIME_FORMAT_DEFAULT);
 
   sqlite3_result_text(context,text,stringLength(text),SQLITE_TRANSIENT);
@@ -1719,13 +1682,6 @@ LOCAL void sqlite3RegexpDelete(void *data)
 
 LOCAL void sqlite3RegexpMatch(sqlite3_context *context, int argc, sqlite3_value *argv[])
 {
-  const char *text;
-  bool       caseSensitive;
-  const char *patternText;
-  int        flags;
-  regex_t    *regex;
-  int        result;
-
   assert(context != NULL);
   assert(argc == 3);
   assert(argv != NULL);
@@ -1733,15 +1689,16 @@ LOCAL void sqlite3RegexpMatch(sqlite3_context *context, int argc, sqlite3_value 
   UNUSED_VARIABLE(argc);
 
   // get text to match
-  text = (const char*)sqlite3_value_text(argv[2]);
+  const char *text = (const char*)sqlite3_value_text(argv[2]);
 
   // check if pattern already exists, create pattern
+  regex_t *regex;
   regex = (regex_t*)sqlite3_get_auxdata(context,0);
   if (regex == NULL)
   {
     // get pattern, case-sensitive flag
-    patternText   = (const char*)sqlite3_value_text(argv[0]);
-    caseSensitive = atoi((const char*)sqlite3_value_text(argv[1])) != 0;
+    const char *patternText  = (const char*)sqlite3_value_text(argv[0]);
+    bool       caseSensitive = atoi((const char*)sqlite3_value_text(argv[1])) != 0;
 
     // allocate pattern
     regex = (regex_t*)malloc(sizeof(regex_t));
@@ -1752,7 +1709,7 @@ LOCAL void sqlite3RegexpMatch(sqlite3_context *context, int argc, sqlite3_value 
     }
 
     // compile pattern
-    flags = REG_NOSUB;
+    int flags = REG_NOSUB;
     if (!caseSensitive) flags |= REG_ICASE;
     if (regcomp(regex,patternText,flags) != 0)
     {
@@ -1765,7 +1722,7 @@ LOCAL void sqlite3RegexpMatch(sqlite3_context *context, int argc, sqlite3_value 
   }
 
   // match pattern
-  result = (regexec(regex,text,0,NULL,0) == 0) ? 1 : 0;
+  int result = (regexec(regex,text,0,NULL,0) == 0) ? 1 : 0;
 
   sqlite3_result_int(context,result);
 }
@@ -1783,9 +1740,6 @@ LOCAL void sqlite3RegexpMatch(sqlite3_context *context, int argc, sqlite3_value 
 
 LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *argv[])
 {
-  const char *string;
-  String     directoryName;
-
   assert(context != NULL);
   assert(argc == 1);
   assert(argv != NULL);
@@ -1793,10 +1747,10 @@ LOCAL void sqlite3Dirname(sqlite3_context *context, int argc, sqlite3_value *arg
   UNUSED_VARIABLE(argc);
 
   // get string
-  string = (const char*)sqlite3_value_text(argv[0]);
+  const char *string = (const char*)sqlite3_value_text(argv[0]);
 
   // get directory
-  directoryName = File_getDirectoryNameCString(String_new(),string);
+  String directoryName = File_getDirectoryNameCString(String_new(),string);
 
   // store result
   sqlite3_result_text(context,String_cString(directoryName),String_length(directoryName),SQLITE_TRANSIENT);
@@ -1821,14 +1775,13 @@ LOCAL Errors sqlite3Execute(sqlite3    *handle,
 {
   const uint MAX_RETRIES = 3;
 
-  int    sqliteResult;
-  uint   retries;
   Errors error;
 
   assert(handle != NULL);
   assert(sqlString != NULL);
 
-  retries = 0;
+  int  sqliteResult;
+  uint retries = 0;
   do
   {
     sqliteResult = sqlite3_exec(handle,
@@ -1901,7 +1854,6 @@ LOCAL Errors sqlite3StatementPrepare(DatabaseStatementHandle *databaseStatementH
                                      const char              *sqlString
                                     )
 {
-  int    sqliteResult;
   Errors error;
 
   assert(databaseStatementHandle != NULL);
@@ -1910,12 +1862,12 @@ LOCAL Errors sqlite3StatementPrepare(DatabaseStatementHandle *databaseStatementH
   assert(databaseStatementHandle->databaseHandle->sqlite.handle != NULL);
   assert(sqlString != NULL);
 
-  sqliteResult = sqlite3_prepare_v2(databaseStatementHandle->databaseHandle->sqlite.handle,
-                                    sqlString,
-                                    -1,
-                                    &databaseStatementHandle->sqlite.statementHandle,
-                                    NULL
-                                   );
+  int sqliteResult = sqlite3_prepare_v2(databaseStatementHandle->databaseHandle->sqlite.handle,
+                                        sqlString,
+                                        -1,
+                                        &databaseStatementHandle->sqlite.statementHandle,
+                                        NULL
+                                       );
   if      (sqliteResult == SQLITE_MISUSE)
   {
     HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d: %s",
@@ -2229,12 +2181,12 @@ LOCAL Errors sqlite3GetTriggerList(StringList     *triggerList,
 
 LOCAL void sqlite3UnlockNotifyCallback(void *argv[], int argc)
 {
-  sem_t *semaphore;
   assert(argv != NULL);
   assert(argc >= 1);
 
   UNUSED_VARIABLE(argc);
 
+  sem_t *semaphore;
   semaphore = (sem_t*)argv[0];
 
   assert(semaphore != NULL);
@@ -2252,14 +2204,12 @@ LOCAL void sqlite3UnlockNotifyCallback(void *argv[], int argc)
 
 LOCAL int sqlite3WaitUnlockNotify(sqlite3 *handle)
 {
-  int   sqliteResult;
-  sem_t semaphore;
-
   // init variables
+  sem_t semaphore;
   sem_init(&semaphore,0,0);
 
   // register call-back
-  sqliteResult = sqlite3_unlock_notify(handle,sqlite3UnlockNotifyCallback,&semaphore);
+  int sqliteResult = sqlite3_unlock_notify(handle,sqlite3UnlockNotifyCallback,&semaphore);
   if (sqliteResult != SQLITE_OK)
   {
     sem_destroy(&semaphore);
@@ -2290,9 +2240,7 @@ LOCAL Errors mariaDBExecute(MYSQL      *handle,
                             const char *sqlString
                            )
 {
-  MYSQL_RES *mysqlResult;
-  Errors    error;
-
+  Errors error;
 
   assert(handle != NULL);
   assert(sqlString != NULL);
@@ -2300,12 +2248,14 @@ LOCAL Errors mariaDBExecute(MYSQL      *handle,
   switch (mysql_query(handle,sqlString))
   {
     case 0:
-      mysqlResult = mysql_store_result(handle);
-      if (mysqlResult != NULL)
       {
-        mysql_free_result(mysqlResult);
+        MYSQL_RES *mysqlResult = mysql_store_result(handle);
+        if (mysqlResult != NULL)
+        {
+          mysql_free_result(mysqlResult);
+        }
+        error = ERROR_NONE;
       }
-      error = ERROR_NONE;
       break;
     case CR_COMMANDS_OUT_OF_SYNC:
       HALT_INTERNAL_ERROR("MariaDB library reported misuse %s",
@@ -2347,7 +2297,6 @@ LOCAL Errors mariaDBPrepareStatement(DatabaseStatementHandle *databaseStatementH
                                      const char              *sqlString
                                     )
 {
-  int    mysqlResult;
   Errors error;
 
   assert(databaseStatementHandle != NULL);
@@ -2369,10 +2318,10 @@ LOCAL Errors mariaDBPrepareStatement(DatabaseStatementHandle *databaseStatementH
       }
     #endif /* not NDEBUG */
 
-    mysqlResult = mysql_stmt_prepare(databaseStatementHandle->mariadb.statementHandle,
-                                     sqlString,
-                                     stringLength(sqlString)
-                                    );
+    int mysqlResult = mysql_stmt_prepare(databaseStatementHandle->mariadb.statementHandle,
+                                         sqlString,
+                                         stringLength(sqlString)
+                                        );
     if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
     {
       HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s: %s",
@@ -2467,12 +2416,11 @@ LOCAL Errors mariaDBPrepareStatement(DatabaseStatementHandle *databaseStatementH
 
 LOCAL Errors mariaDBExecutePreparedStatement(MYSQL_STMT *statementHandle)
 {
-  int    mysqlResult;
   Errors error;
 
   assert(statementHandle != NULL);
 
-  mysqlResult = mysql_stmt_execute(statementHandle);
+  int mysqlResult = mysql_stmt_execute(statementHandle);
   if      (mysqlResult == 0)
   {
     error = ERROR_NONE;
@@ -2519,8 +2467,6 @@ LOCAL Errors mariaDBExecutePreparedStatement(MYSQL_STMT *statementHandle)
 
 LOCAL void mariaDBFinalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
 {
-  uint i;
-
   assert(databaseStatementHandle != NULL);
 
   // finalize statement
@@ -2528,7 +2474,7 @@ LOCAL void mariaDBFinalizeStatement(DatabaseStatementHandle *databaseStatementHa
 
   // free bind data
   assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
-  for (i = 0; i < databaseStatementHandle->resultCount; i++)
+  for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
   {
     switch (databaseStatementHandle->mariadb.results.bind[i].buffer_type)
     {
@@ -2605,13 +2551,12 @@ LOCAL Errors mariaDBSetCharacterSet(MYSQL      *handle,
                                     const char *characterSet
                                    )
 {
-  int    mysqlResult;
   Errors error;
 
   assert(handle != NULL);
   assert(characterSet != NULL);
 
-  mysqlResult = mysql_set_character_set(handle,characterSet);
+  int mysqlResult = mysql_set_character_set(handle,characterSet);
   if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
     HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
@@ -2657,13 +2602,12 @@ LOCAL Errors mariaDBSelectDatabase(MYSQL      *handle,
                                    const char *databaseName
                                   )
 {
-  int    mysqlResult;
   Errors error;
 
   assert(handle != NULL);
   assert(databaseName != NULL);
 
-  mysqlResult = mysql_select_db(handle,databaseName);
+  int mysqlResult = mysql_select_db(handle,databaseName);
   if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
     HALT_INTERNAL_ERROR("MariaDB library reported misuse %d: %s",
@@ -2717,15 +2661,7 @@ LOCAL Errors mariaDBConnect(MYSQL          **handle,
                             const char     *characterSet
                            )
 {
-  union
-  {
-    bool b;
-    uint u;
-  }      optionValue;
-  uint   errorCode;
   Errors error;
-  ulong  serverVersion;
-  char   sqlString[256];
 
   assert(handle != NULL);
   assert(serverName != NULL);
@@ -2738,6 +2674,11 @@ LOCAL Errors mariaDBConnect(MYSQL          **handle,
   {
     return ERROR_DATABASE;
   }
+  union
+  {
+    bool b;
+    uint u;
+  }      optionValue;
   optionValue.b = TRUE;
   mysql_options(*handle,MYSQL_OPT_RECONNECT,&optionValue);
   optionValue.u = MARIADB_TIMEOUT;
@@ -2782,7 +2723,7 @@ LOCAL Errors mariaDBConnect(MYSQL          **handle,
     }
     if (error != ERROR_NONE)
     {
-      errorCode = mysql_errno(*handle);
+      uint errorCode = mysql_errno(*handle);
       switch (errorCode)
       {
         case ER_DBACCESS_DENIED_ERROR:
@@ -2822,7 +2763,7 @@ LOCAL Errors mariaDBConnect(MYSQL          **handle,
   }
 
   // check min. version
-  serverVersion = mysql_get_server_version(*handle);
+  ulong serverVersion = mysql_get_server_version(*handle);
   if (serverVersion < MARIADB_MIN_SERVER_VERSION)
   {
     error = ERRORX_(DATABASE_VERSION,0,"available %lu, required %lu",
@@ -2845,6 +2786,7 @@ LOCAL Errors mariaDBConnect(MYSQL          **handle,
   }
 
   // other options
+  char sqlString[256];
   error = mariaDBExecute(*handle,
                          stringFormat(sqlString,sizeof(sqlString),
                                       "SET innodb_lock_wait_timeout=%u",
@@ -2910,9 +2852,6 @@ LOCAL Errors mariaDBCreateDatabase(const char     *serverName,
                                    const char     *collate
                                   )
 {
-  MYSQL  *handle;
-  char   sqlString[256];
-  int    mysqlResult;
   Errors error;
 
   assert(serverName != NULL);
@@ -2923,6 +2862,7 @@ LOCAL Errors mariaDBCreateDatabase(const char     *serverName,
   assert(collate != NULL);
 
   // connect to database
+  MYSQL *handle;
   error = mariaDBConnect(&handle,serverName,userName,password,NULL,NULL);
   if (error != ERROR_NONE)
   {
@@ -2930,6 +2870,7 @@ LOCAL Errors mariaDBCreateDatabase(const char     *serverName,
   }
 
   // create database
+  char sqlString[256];
   stringFormat(sqlString,sizeof(sqlString),
                "CREATE DATABASE IF NOT EXISTS %s CHARACTER SET '%s' COLLATE '%s_bin'",
                databaseName,
@@ -2937,7 +2878,7 @@ LOCAL Errors mariaDBCreateDatabase(const char     *serverName,
                collate
               );
 
-  mysqlResult = mysql_query(handle,sqlString);
+  int mysqlResult = mysql_query(handle,sqlString);
   if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
     HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s",
@@ -2992,9 +2933,6 @@ LOCAL Errors mariaDBDropDatabase(const char     *serverName,
                                  const char     *databaseName
                                 )
 {
-  MYSQL  *handle;
-  char   sqlString[256];
-  int    mysqlResult;
   Errors error;
 
   assert(serverName != NULL);
@@ -3003,6 +2941,7 @@ LOCAL Errors mariaDBDropDatabase(const char     *serverName,
   assert(databaseName != NULL);
 
   // connect to database
+  MYSQL *handle;
   error = mariaDBConnect(&handle,serverName,userName,password,NULL,NULL);
   if (error != ERROR_NONE)
   {
@@ -3010,12 +2949,13 @@ LOCAL Errors mariaDBDropDatabase(const char     *serverName,
   }
 
   // drop database
+  char sqlString[256];
   stringFormat(sqlString,sizeof(sqlString),
                "DROP DATABASE %s",
                databaseName
               );
 
-  mysqlResult = mysql_query(handle,sqlString);
+  int mysqlResult = mysql_query(handle,sqlString);
   if      (mysqlResult == CR_COMMANDS_OUT_OF_SYNC)
   {
     HALT_INTERNAL_ERROR("MariaDB library reported misuse %d %s",
@@ -3068,12 +3008,11 @@ LOCAL Errors mariaDBGetTableList(StringList     *tableList,
                                  const char     *databaseName
                                 )
 {
-  char sqlString[256];
-
   assert(tableList != NULL);
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
 
+  char sqlString[256];
   return databaseGet(databaseHandle,
                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                      {
@@ -3123,11 +3062,10 @@ LOCAL Errors mariaDBGetViewList(StringList     *viewList,
                                 const char     *databaseName
                                )
 {
-  char sqlString[256];
-
   assert(viewList != NULL);
   assert(databaseHandle != NULL);
 
+  char sqlString[256];
   return databaseGet(databaseHandle,
                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                      {
@@ -3177,13 +3115,13 @@ LOCAL Errors mariaDBGetIndexList(StringList     *indexList,
                                 )
 {
   Errors error;
-  char   sqlString[256];
 
   assert(indexList != NULL);
   assert(databaseHandle != NULL);
 
   if (tableName != NULL)
   {
+    char sqlString[256];
     error = databaseGet(databaseHandle,
                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                         {
@@ -3231,6 +3169,7 @@ LOCAL Errors mariaDBGetIndexList(StringList     *indexList,
   }
   else
   {
+    char sqlString[256];
     error = databaseGet(databaseHandle,
                         CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                         {
@@ -3320,12 +3259,11 @@ LOCAL Errors mariaDBGetTriggerList(StringList     *triggerList,
                                    const char     *databaseName
                                   )
 {
-  char sqlString[256];
-
   assert(triggerList != NULL);
   assert(databaseHandle != NULL);
 
 // TODO: databaseName, wrong
+  char sqlString[256];
   return databaseGet(databaseHandle,
                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                      {
@@ -3393,13 +3331,12 @@ LOCAL const char *postgresqlErrorMessage(PGconn *handle)
 {
   static char errorMessage[128];
 
-  const char       *s,*t;
-  CStringTokenizer tokenizer;
-
-  s = PQerrorMessage(handle);
+  const char *s = PQerrorMessage(handle);
   if (s != NULL)
   {
+    CStringTokenizer tokenizer;
     stringTokenizerInit(&tokenizer,s,"\n\r");
+    const char *t;
     if (stringGetNextToken(&tokenizer,&t))
     {
       stringSet(errorMessage,sizeof(errorMessage),stringTrimBegin(t));
@@ -3444,17 +3381,13 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
     keywords[i] = name; \
     values[i]   = value
 
-  const char     *keywords[6+1],*values[6+1];
-  PGconn         *connection;
-  ConnStatusType postgreSQLConnectionStatus;
-  char           sqlString[256];
-  PGresult       *postgresqlResult;
-  Errors         error;
+  Errors error = ERROR_UNKNOWN;
 
   // connect (with database 'template1')
-  error = ERROR_UNKNOWN;
+  PGconn *connection;
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
+    const char *keywords[6+1],*values[6+1];
     POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
     POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
     POSTGRESQL_CONNECT_PARAMETER(2,"password",       plainPassword);
@@ -3482,7 +3415,7 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
     return error;
   }
 
-  postgreSQLConnectionStatus = PQstatus(connection);
+  ConnStatusType postgreSQLConnectionStatus = PQstatus(connection);
   if (postgreSQLConnectionStatus != CONNECTION_OK)
   {
     error = ERRORX_(DATABASE,
@@ -3498,6 +3431,7 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
                      );
 
   // create database
+  char sqlString[256];
   stringFormat(sqlString,sizeof(sqlString),
                "CREATE DATABASE %s WITH OWNER=%s ENCODING '%s' LC_COLLATE='%s' TEMPLATE=template0",
                databaseName,
@@ -3505,7 +3439,7 @@ LOCAL Errors postgresqlCreateDatabase(const char     *serverName,
                characterSet,
                collate
               );
-  postgresqlResult = PQexec(connection,sqlString);
+  PGresult *postgresqlResult = PQexec(connection,sqlString);
   if (postgresqlResult != NULL)
   {
     // Note: ignore status
@@ -3551,17 +3485,13 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
     keywords[i] = name; \
     values[i]   = value
 
-  const char     *keywords[6+1],*values[6+1];
-  PGconn         *connection;
-  ConnStatusType postgreSQLConnectionStatus;
-  char           sqlString[256];
-  PGresult       *postgresqlResult;
-  Errors         error;
+  Errors error = ERROR_UNKNOWN;
 
   // connect (with database 'template1')
-  error = ERROR_UNKNOWN;
+  PGconn *connection;
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
+    const char *keywords[6+1],*values[6+1];
     POSTGRESQL_CONNECT_PARAMETER(0,"host",           serverName);
     POSTGRESQL_CONNECT_PARAMETER(1,"user",           userName);
     POSTGRESQL_CONNECT_PARAMETER(2,"password",       plainPassword);
@@ -3589,7 +3519,7 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
     return error;
   }
 
-  postgreSQLConnectionStatus = PQstatus(connection);
+  ConnStatusType postgreSQLConnectionStatus = PQstatus(connection);
   if (postgreSQLConnectionStatus != CONNECTION_OK)
   {
     error = ERRORX_(DATABASE,
@@ -3605,11 +3535,12 @@ LOCAL Errors postgresqlDropDatabase(const char     *serverName,
                      );
 
   // create database
+  char sqlString[256];
   stringFormat(sqlString,sizeof(sqlString),
                "DROP DATABASE %s",
                databaseName
               );
-  postgresqlResult = PQexec(connection,sqlString);
+  PGresult *postgresqlResult = PQexec(connection,sqlString);
   if (postgresqlResult != NULL)
   {
     // Note: ignore status
@@ -3665,22 +3596,18 @@ LOCAL Errors postgresqlConnect(PGconn         **connection,
     values[connectParameterCount]   = value; \
     connectParameterCount++
 
-  String                    string;
-  uint                      connectParameterCount;
-  const char                *keywords[6+1],*values[6+1];
-  PostgresPollingStatusType postgresPollingStatusType;
-  ConnStatusType            postgreConnectionSQLStatus;
-  Errors                    error;
-
   assert(connection != NULL);
   assert(serverName != NULL);
   assert(databaseName != NULL);
 
+  Errors error = ERROR_UNKNOWN;
+
   // connect
-  error = ERROR_UNKNOWN;
-  string = String_toLower(String_newCString(databaseName));  // Note: PostgreSQL require lower case database name :-(
+  String string = String_toLower(String_newCString(databaseName));  // Note: PostgreSQL require lower case database name :-(
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
+    const char *keywords[6+1],*values[6+1];
+    uint       connectParameterCount;
     POSTGRESQL_INIT_CONNECT_PARAMETER();
     POSTGRESQL_CONNECT_PARAMETER("host",           serverName);
     POSTGRESQL_CONNECT_PARAMETER("user",           userName);
@@ -3693,6 +3620,7 @@ LOCAL Errors postgresqlConnect(PGconn         **connection,
     (*connection) = PQconnectStartParams(keywords,values,0);
     if ((*connection) != NULL)
     {
+      PostgresPollingStatusType postgresPollingStatusType;
       do
       {
         postgresPollingStatusType = PQconnectPoll(*connection);
@@ -3746,7 +3674,7 @@ LOCAL Errors postgresqlConnect(PGconn         **connection,
   }
   String_delete(string);
 
-  postgreConnectionSQLStatus = PQstatus(*connection);
+  ConnStatusType postgreConnectionSQLStatus = PQstatus(*connection);
   if (postgreConnectionSQLStatus != CONNECTION_OK)
   {
     error = ERRORX_(DATABASE,
@@ -3803,25 +3731,23 @@ LOCAL Errors postgresqlExecute(PGconn     *connection,
                                uint       parameterCount
                               )
 {
-  PGresult       *postgresqlResult;
-  ExecStatusType postgreSQLExecStatus;
-  Errors         error;
+  Errors error;
 
   assert(connection != NULL);
   assert(sqlString != NULL);
 
-  postgresqlResult = PQexecParams(connection,
-                                  sqlString,
-                                  parameterCount,
-                                  parameterTypes,
-                                  parameterValues,
-                                  parameterLengths,
-                                  parameterFormats,
-                                  0  // resultFormat
-                                 );
+  PGresult *postgresqlResult = PQexecParams(connection,
+                                            sqlString,
+                                            parameterCount,
+                                            parameterTypes,
+                                            parameterValues,
+                                            parameterLengths,
+                                            parameterFormats,
+                                            0  // resultFormat
+                                           );
   if (postgresqlResult != NULL)
   {
-    postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+    ExecStatusType postgreSQLExecStatus = PQresultStatus(postgresqlResult);
     if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
          || (postgreSQLExecStatus == PGRES_TUPLES_OK)
        )
@@ -3873,10 +3799,7 @@ LOCAL Errors postgresqlPrepareStatement(DatabaseStatementHandle *databaseStateme
                                         uint                    parameterCount
                                        )
 {
-  uint           n;
-  PGresult       *postgresqlResult;
-  Errors         error;
-  ExecStatusType postgreSQLExecStatus;
+  Errors error;
 
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
@@ -3888,16 +3811,14 @@ LOCAL Errors postgresqlPrepareStatement(DatabaseStatementHandle *databaseStateme
   databaseStatementHandle->postgresql.rowCount = 0L;
 
   // get prepared statement name (via hash table)
-  n = stringLength(sqlString);
+  uint n = stringLength(sqlString);
   databaseStatementHandle->postgresql.hashTableEntry = HashTable_find(&databaseStatementHandle->databaseHandle->postgresql.sqlStringHashTable,
                                                                       sqlString,
                                                                       n
                                                                      );
   if (databaseStatementHandle->postgresql.hashTableEntry != NULL)
   {
-    PostgresSQLUseInfo *useInfo;
-
-    useInfo = (PostgresSQLUseInfo*)databaseStatementHandle->postgresql.hashTableEntry->data;
+    PostgresSQLUseInfo *useInfo = (PostgresSQLUseInfo*)databaseStatementHandle->postgresql.hashTableEntry->data;
     assert(databaseStatementHandle->postgresql.hashTableEntry->length == sizeof(PostgresSQLUseInfo));
     useInfo->count++;
     useInfo->timestamp = Misc_getTimestamp();
@@ -3911,9 +3832,8 @@ LOCAL Errors postgresqlPrepareStatement(DatabaseStatementHandle *databaseStateme
   }
   else
   {
-    PostgresSQLUseInfo useInfo;
-
     // add SQL string to hashtable, get statement name
+    PostgresSQLUseInfo useInfo;
     useInfo.count     = 1;
     useInfo.timestamp = Misc_getTimestamp();
 
@@ -3931,6 +3851,7 @@ LOCAL Errors postgresqlPrepareStatement(DatabaseStatementHandle *databaseStateme
                 );
 
     // prepare statement
+    PGresult *postgresqlResult;
     DATABASE_DEBUG_TIME_START(databaseStatementHandle);
     {
       postgresqlResult = PQprepare(databaseStatementHandle->databaseHandle->postgresql.handle,
@@ -3943,7 +3864,7 @@ LOCAL Errors postgresqlPrepareStatement(DatabaseStatementHandle *databaseStateme
     DATABASE_DEBUG_TIME_END(databaseStatementHandle);
     if (postgresqlResult != NULL)
     {
-      postgreSQLExecStatus = PQresultStatus(postgresqlResult);
+      ExecStatusType postgreSQLExecStatus = PQresultStatus(postgresqlResult);
       if (    (postgreSQLExecStatus == PGRES_COMMAND_OK)
            || (postgreSQLExecStatus == PGRES_TUPLES_OK)
          )
@@ -3985,9 +3906,9 @@ LOCAL Errors postgresqlPrepareStatement(DatabaseStatementHandle *databaseStateme
   }
 
   // get value/result count
-  postgresqlResult = PQdescribePrepared(databaseStatementHandle->databaseHandle->postgresql.handle,
-                                        databaseStatementHandle->postgresql.name
-                                       );
+  PGresult *postgresqlResult = PQdescribePrepared(databaseStatementHandle->databaseHandle->postgresql.handle,
+                                                  databaseStatementHandle->postgresql.name
+                                                 );
   if (PQresultStatus(postgresqlResult) != PGRES_COMMAND_OK)
   {
     #ifndef NDEBUG
@@ -4162,8 +4083,6 @@ for (int i =0; i < parameterCount; i++) {
 
 LOCAL void postgresqlFinalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
 {
-  PostgresSQLUseInfo *useInfo;
-
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->postgresql.hashTableEntry != NULL);
   assert(databaseStatementHandle->postgresql.hashTableEntry->data != NULL);
@@ -4175,7 +4094,8 @@ LOCAL void postgresqlFinalizeStatement(DatabaseStatementHandle *databaseStatemen
   {
     PQclear(databaseStatementHandle->postgresql.result);
   }
-  useInfo = (PostgresSQLUseInfo*)databaseStatementHandle->postgresql.hashTableEntry->data;
+  PostgresSQLUseInfo *useInfo = (PostgresSQLUseInfo*)databaseStatementHandle->postgresql.hashTableEntry->data;
+  assert(useInfo != NULL);
   assert(useInfo->count > 0);
   useInfo->count--;
 
@@ -4245,21 +4165,19 @@ LOCAL void postgresqlFinalizeStatement(DatabaseStatementHandle *databaseStatemen
 
 LOCAL DatabaseId postgresqlGetLastInsertId(PGconn *handle)
 {
-  PGresult   *postgresqlResult;
-  uint64     n;
-  DatabaseId databaseId;
-
   assert(handle != NULL);
 
-  postgresqlResult = PQexecParams(handle,
-                                  "SELECT LASTVAL()",
-                                  0,  // nParams
-                                  NULL,  // paramTypes
-                                  NULL,  // paramValues
-                                  NULL,  // paramLengths
-                                  NULL,  // paramFormats
-                                  0  // resultFormat text
-                                 );
+  PGresult *postgresqlResult = PQexecParams(handle,
+                                            "SELECT LASTVAL()",
+                                            0,  // nParams
+                                            NULL,  // paramTypes
+                                            NULL,  // paramValues
+                                            NULL,  // paramLengths
+                                            NULL,  // paramFormats
+                                            0  // resultFormat text
+                                           );
+  uint64     n;
+  DatabaseId databaseId;
   if (   (postgresqlResult != NULL)
       && (PQresultStatus(postgresqlResult) == PGRES_TUPLES_OK)
       && stringToUInt64(PQgetvalue(postgresqlResult,0,0),&n,NULL)
@@ -4525,12 +4443,7 @@ LOCAL Errors postgresqlGetTriggerList(StringList     *triggerList,
                             )
 #endif /* NDEBUG */
 {
-  String        directoryName;
-  Errors        error;
-  DatabaseNode  *databaseNode;
-  #ifndef NDEBUG
-    uint          i;
-  #endif /* NDEBUG */
+  Errors error;
 
   assert(databaseHandle != NULL);
   assert(databaseSpecifier != NULL);
@@ -4558,14 +4471,14 @@ LOCAL Errors postgresqlGetTriggerList(StringList     *triggerList,
   // get database node
   SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    databaseNode = LIST_FIND(&databaseList,
-                             databaseNode,
-                             Database_equalSpecifiers(&databaseNode->databaseSpecifier,
-                                                      NULL,
-                                                      databaseSpecifier,
-                                                      databaseName
-                                                     )
-                            );
+    DatabaseNode *databaseNode = LIST_FIND(&databaseList,
+                                           databaseNode,
+                                           Database_equalSpecifiers(&databaseNode->databaseSpecifier,
+                                                                    NULL,
+                                                                    databaseSpecifier,
+                                                                    databaseName
+                                                                   )
+                                          );
     if (databaseNode != NULL)
     {
       databaseNode->openCount++;
@@ -4628,14 +4541,14 @@ LOCAL Errors postgresqlGetTriggerList(StringList     *triggerList,
       #endif /* DATABASE_DEBUG_LOCK */
 
       #ifndef NDEBUG
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads);      i++) databaseNode->debug.pendingReads[i].threadId      = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads);             i++) databaseNode->debug.reads[i].threadId             = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++) databaseNode->debug.pendingReadWrites[i].threadId = THREAD_ID_NONE;
+        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads);      i++) databaseNode->debug.pendingReads[i].threadId      = THREAD_ID_NONE;
+        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads);             i++) databaseNode->debug.reads[i].threadId             = THREAD_ID_NONE;
+        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++) databaseNode->debug.pendingReadWrites[i].threadId = THREAD_ID_NONE;
         databaseNode->debug.readWriteLockedBy               = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites);        i++) databaseNode->debug.readWrites[i].threadId        = THREAD_ID_NONE;
+        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites);        i++) databaseNode->debug.readWrites[i].threadId        = THREAD_ID_NONE;
         databaseNode->debug.lastTrigger.threadInfo.threadId = THREAD_ID_NONE;
         databaseNode->debug.transaction.threadId            = THREAD_ID_NONE;
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history);           i++) databaseNode->debug.history[i].threadId           = THREAD_ID_NONE;
+        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history);           i++) databaseNode->debug.history[i].threadId           = THREAD_ID_NONE;
         databaseNode->debug.historyIndex                    = 0;
       #endif /* not NDEBUG */
 
@@ -4668,7 +4581,7 @@ LOCAL Errors postgresqlGetTriggerList(StringList     *triggerList,
                      : String_cString(databaseSpecifier->sqlite.fileName);
 
         // create directory if needed
-        directoryName = File_getDirectoryNameCString(String_new(),fileName);
+        String directoryName = File_getDirectoryNameCString(String_new(),fileName);
         if (   !String_isEmpty(directoryName)
             && !File_isDirectory(directoryName)
            )
@@ -5176,10 +5089,6 @@ LOCAL Errors postgresqlGetTriggerList(StringList     *triggerList,
                             )
 #endif /* NDEBUG */
 {
-  #ifndef NDEBUG
-    DatabaseHandle *debugDatabaseHandle;
-  #endif /* not NDEBUG */
-
   assert(databaseHandle != NULL);
   assert(databaseHandle->readWriteLockCount == 0);
   assert(databaseHandle->readLockCount == 0);
@@ -5195,6 +5104,7 @@ LOCAL Errors postgresqlGetTriggerList(StringList     *triggerList,
     pthread_mutex_lock(&debugDatabaseLock);
     {
       // check if database opened
+      DatabaseHandle *debugDatabaseHandle;
       if (!LIST_CONTAINS(&debugDatabaseHandleList,
                          debugDatabaseHandle,
                          debugDatabaseHandle == databaseHandle
@@ -5787,8 +5697,6 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
                                    )
 #endif /* NDEBUG */
 {
-  struct timespec timespec;
-
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
   assert(DATABASE_HANDLE_IS_LOCKED(databaseHandle));
@@ -5826,6 +5734,7 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
   #else /* not DATABASE_LOCK_PER_INSTANCE */
     if (timeout != WAIT_FOREVER)
     {
+      struct timespec timespec;
       initTimeSpec(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,
                                  &databaseLock,
@@ -5970,9 +5879,6 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
                                           )
 #endif /* NDEBUG */
 {
-  struct timespec  timespec;
-  DatabaseLockedBy lockedBySave;
-
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
   assert(DATABASE_HANDLE_IS_LOCKED(databaseHandle));
@@ -5985,6 +5891,7 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
   #ifdef DATABASE_LOCK_PER_INSTANCE
     if (timeout != WAIT_FOREVER)
     {
+      struct timespec  timespec;
       getTime(&timespec,timeout);
       if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,
                                  databaseHandle->databaseNode->lock,
@@ -6187,16 +6094,10 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
   #define DT (5*MS_PER_SECOND)
 #endif
 
-  bool lockedFlag;
-//TODO: how to handle lost triggers?
-#ifdef DATABASE_WAIT_TRIGGER_WORK_AROUND
-  TimeoutInfo timeoutInfo;
-#endif
-
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
 
-  lockedFlag = FALSE;
+  bool lockedFlag = FALSE;
 
   switch (lockType)
   {
@@ -6232,6 +6133,7 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
         pendingReadsIncrement(databaseHandle);
         {
 #ifdef DATABASE_WAIT_TRIGGER_WORK_AROUND
+          TimeoutInfo timeoutInfo;
           Misc_initTimeout(&timeoutInfo,timeout);
 #endif
           // check if there is no writer
@@ -6362,6 +6264,7 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
         pendingReadWritesIncrement(databaseHandle);
         {
 #ifdef DATABASE_WAIT_TRIGGER_WORK_AROUND
+          TimeoutInfo timeoutInfo;
           Misc_initTimeout(&timeoutInfo,timeout);
 #endif
           // check if there is no other reader
@@ -6718,10 +6621,9 @@ LOCAL_INLINE bool begin(DatabaseHandle *databaseHandle, DatabaseLockTypes lockTy
 LOCAL_INLINE bool __begin(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, DatabaseLockTypes lockType, long timeout)
 #endif /* NDEBUG */
 {
-  bool locked;
-
   assert(databaseHandle != NULL);
 
+  bool locked;
   #ifndef NDEBUG
     locked = __lock(__fileName__,__lineNb__,databaseHandle,lockType,timeout);
   #else /* NDEBUG */
@@ -6862,19 +6764,10 @@ LOCAL String vformatSQLString(String     sqlString,
                               va_list    arguments
                              )
 {
-  const char                *s;
-  bool                      longFlag,longLongFlag;
-  char                      quoteFlag;
-  Value                     value;
-  const char                *t;
-  ulong                     i;
-  char                      ch;
-  DatabaseTemporaryTableIds id;
-
   assert(sqlString != NULL);
   assert(command != NULL);
 
-  s  = command;
+  const char *s = command;
   while (!stringIsEmpty(s))
   {
     switch (stringAt(s,0))
@@ -6894,8 +6787,8 @@ LOCAL String vformatSQLString(String     sqlString,
         s++;
 
         // check for longlong/long flag
-        longLongFlag = FALSE;
-        longFlag     = FALSE;
+        bool longLongFlag = FALSE;
+        bool longFlag     = FALSE;
         if (stringAt(s,0) == 'l')
         {
           s++;
@@ -6911,6 +6804,7 @@ LOCAL String vformatSQLString(String     sqlString,
         }
 
         // quoting flag (ignore quote char)
+        bool quoteFlag;
         if (   !stringIsEmpty(s)
             && !isalpha(stringAt(s,0))
             && (stringAt(s,0) != '%')
@@ -6938,16 +6832,19 @@ LOCAL String vformatSQLString(String     sqlString,
 
               if      (longLongFlag)
               {
+                Value value;
                 value.ll = va_arg(arguments,long long int);
                 String_appendFormat(sqlString,"%"PRIi64,value.ll);
               }
               else if (longFlag)
               {
+                Value value;
                 value.l = va_arg(arguments,long int);
                 String_appendFormat(sqlString,"%ld",value.l);
               }
               else
               {
+                Value value;
                 value.i = va_arg(arguments,int);
                 String_appendFormat(sqlString,"%d",value.i);
               }
@@ -6958,16 +6855,19 @@ LOCAL String vformatSQLString(String     sqlString,
 
               if      (longLongFlag)
               {
+                Value value;
                 value.ull = va_arg(arguments,unsigned long long int);
                 String_appendFormat(sqlString,"%"PRIu64,value.ull);
               }
               else if (longFlag)
               {
+                Value value;
                 value.ul = va_arg(arguments,unsigned long);
                 String_appendFormat(sqlString,"%lu",value.ul);
               }
               else
               {
+                Value value;
                 value.ui = va_arg(arguments,uint);
                 String_appendFormat(sqlString,"%u",value.ui);
               }
@@ -6976,12 +6876,13 @@ LOCAL String vformatSQLString(String     sqlString,
               // C string
               s++;
 
+              Value value;
               value.s = va_arg(arguments,const char*);
 
               if (quoteFlag) String_appendChar(sqlString,'\'');
               if (value.s != NULL)
               {
-                t = value.s;
+                const char *t = value.s;
                 while (!stringIsEmpty(t))
                 {
                   switch (stringAt(t,0))
@@ -7006,38 +6907,41 @@ LOCAL String vformatSQLString(String     sqlString,
               if (quoteFlag) String_appendChar(sqlString,'\'');
               break;
             case 'S':
-              // string
-              s++;
-
-              value.string = va_arg(arguments,String);
-
-              if (quoteFlag) String_appendChar(sqlString,'\'');
-              if (value.string != NULL)
               {
-                i = 0L;
-                while (i < String_length(value.string))
+                // string
+                s++;
+
+                Value value;
+                value.string = va_arg(arguments,String);
+
+                if (quoteFlag) String_appendChar(sqlString,'\'');
+                if (value.string != NULL)
                 {
-                  ch = String_index(value.string,i);
-                  switch (ch)
+                  ulong i = 0L;
+                  while (i < String_length(value.string))
                   {
-                    case '\'':
-                      if (quoteFlag)
-                      {
-                        String_appendCString(sqlString,"''");
-                      }
-                      else
-                      {
-                        String_appendChar(sqlString,'\'');
-                      }
-                      break;
-                    default:
-                      String_appendChar(sqlString,ch);
-                      break;
+                    char ch = String_index(value.string,i);
+                    switch (ch)
+                    {
+                      case '\'':
+                        if (quoteFlag)
+                        {
+                          String_appendCString(sqlString,"''");
+                        }
+                        else
+                        {
+                          String_appendChar(sqlString,'\'');
+                        }
+                        break;
+                      default:
+                        String_appendChar(sqlString,ch);
+                        break;
+                    }
+                    i++;
                   }
-                  i++;
                 }
+                if (quoteFlag) String_appendChar(sqlString,'\'');
               }
-              if (quoteFlag) String_appendChar(sqlString,'\'');
               break;
             case '1':
             case '2':
@@ -7048,12 +6952,14 @@ LOCAL String vformatSQLString(String     sqlString,
             case '7':
             case '8':
             case '9':
-              // temporary table name
-              id = (DatabaseTemporaryTableIds)(stringAt(s,0)-'1');
-              s++;
+              {
+                // temporary table name
+                DatabaseTemporaryTableIds id = (DatabaseTemporaryTableIds)(stringAt(s,0)-'1');
+                s++;
 
-              String_appendCString(sqlString,DATABASE_AUX ".");
-              String_appendCString(sqlString,TEMPORARY_TABLE_NAMES[id]);
+                String_appendCString(sqlString,DATABASE_AUX ".");
+                String_appendCString(sqlString,TEMPORARY_TABLE_NAMES[id]);
+              }
               break;
             case '%':
               // %%
@@ -7095,7 +7001,6 @@ LOCAL String formatSQLString(String     sqlString,
                             )
 {
   va_list arguments;
-
   va_start(arguments,command);
   {
     vformatSQLString(sqlString,command,arguments);
@@ -7145,10 +7050,6 @@ LOCAL int busyHandler(void *userData, int n)
 {
   #define SLEEP_TIME 500L
 
-  DatabaseHandle *databaseHandle = (DatabaseHandle*)userData;
-
-  assert(databaseHandle != NULL);
-
   #ifndef NDEBUG
     if ((n > 60) && ((n % 60) == 0))
     {
@@ -7157,6 +7058,8 @@ LOCAL int busyHandler(void *userData, int n)
   #endif /* not NDEBUG */
 
   // execute registered busy handlers
+  DatabaseHandle *databaseHandle = (DatabaseHandle*)userData;
+  assert(databaseHandle != NULL);
   if (databaseHandle->busyHandlerFunction != NULL)
   {
     databaseHandle->busyHandlerFunction(databaseHandle->busyHandlerUserData);
@@ -7287,9 +7190,7 @@ LOCAL Errors prepareStatement(DatabaseStatementHandle *databaseStatementHandle,
 {
   #define MAX_SLEEP_TIME 500L  // [ms]
 
-  Errors                        error;
-  TimeoutInfo                   timeoutInfo;
-  const DatabaseBusyHandlerNode *busyHandlerNode;
+  Errors error = ERROR_UNKNOWN;
 
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
@@ -7319,7 +7220,7 @@ LOCAL Errors prepareStatement(DatabaseStatementHandle *databaseStatementHandle,
     String_setCString(databaseHandle->debug.current.sqlString,sqlString);
   #endif /* not NDEBUG */
 
-  error = ERROR_UNKNOWN;
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,timeout);
   do
   {
@@ -7356,6 +7257,7 @@ LOCAL Errors prepareStatement(DatabaseStatementHandle *databaseStatementHandle,
     {
       // call busy handlers
 //TODO: lock list?
+      const DatabaseBusyHandlerNode *busyHandlerNode;
       LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
       {
         assert(busyHandlerNode->function != NULL);
@@ -7675,20 +7577,17 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
 {
   #define MAX_SLEEP_TIME 500L  // [ms]
 
-  bool                          done;
-  Errors                        error;
-  TimeoutInfo                   timeoutInfo;
-  const DatabaseBusyHandlerNode *busyHandlerNode;
-
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
   assert(isReadLock(databaseStatementHandle->databaseHandle) || isReadWriteLock(databaseStatementHandle->databaseHandle));
 
+  Errors error = ERROR_NONE;
+
   // init variables
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,timeout);
 
-  done  = FALSE;
-  error = ERROR_NONE;
+  bool done  = FALSE;
   do
   {
 //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->debug.sqlString));
@@ -7881,6 +7780,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
     {
       // call busy handlers
 //TODO: lock list?
+      const DatabaseBusyHandlerNode *busyHandlerNode;
       LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
       {
         assert(busyHandlerNode->function != NULL);
@@ -7953,14 +7853,11 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
 {
   #define SLEEP_TIME 500L
 
-  uint n;
-  bool rowFlag;
-
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
 
-  n       = 0;
-  rowFlag = FALSE;
+  uint n       = 0;
+  bool rowFlag = FALSE;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -8358,12 +8255,10 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
 
 LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHandle)
 {
-  DatabaseId id;
-
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
 
-  id = DATABASE_ID_NONE;
+  DatabaseId id = DATABASE_ID_NONE;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -8410,19 +8305,14 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
 {
   #define SLEEP_TIME 500L  // [ms]
 
-  bool                          done;
-  Errors                        error;
-  uint                          maxRetryCount;
-  uint                          retryCount;
-  const DatabaseBusyHandlerNode *busyHandlerNode;
-
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
   assert(databaseStatementHandle->databaseHandle->databaseNode != NULL);
   assert(isReadLock(databaseStatementHandle->databaseHandle) || isReadWriteLock(databaseStatementHandle->databaseHandle));
 
+  Errors error = ERROR_UNKNOWN;
+
   // bind prepared values+results
-  error = ERROR_UNKNOWN;
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -8484,10 +8374,9 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
     return error;
   }
 
-  done          = FALSE;
-  error         = ERROR_NONE;
-  maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
-  retryCount    = 0;
+  bool done          = FALSE;
+  uint maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
+  uint retryCount    = 0;
   do
   {
 //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,String_cString(databaseStatementHandle->sqlString));
@@ -8609,6 +8498,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
 //Database_debugPrintLockInfo(databaseHandle);
       // execute registered busy handlers
 //TODO: lock list?
+      const DatabaseBusyHandlerNode *busyHandlerNode;
       LIST_ITERATE(&databaseStatementHandle->databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
       {
         assert(busyHandlerNode->function != NULL);
@@ -8666,15 +8556,13 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
 
 LOCAL void finalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
 {
-  uint i;
-
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
 
   // free result data
   assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
-  for (i = 0; i < databaseStatementHandle->resultCount; i++)
+  for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
   {
     switch (databaseStatementHandle->results[i].type)
     {
@@ -8768,15 +8656,13 @@ LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
                             uint                    parameterCount
                            )
 {
-  Errors error;
-  uint   i;
-
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
   assert((parameterCount == 0) || (parameters != NULL));
 
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
+
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -8787,7 +8673,7 @@ LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
         sqliteResult = sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
         if (sqliteResult == SQLITE_OK)
         {
-          for (i = 0; i < parameterCount; i++)
+          for (uint i = 0; i < parameterCount; i++)
           {
             switch (parameters[i].type)
             {
@@ -8979,7 +8865,7 @@ LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
       #if defined(HAVE_MARIADB)
         {
           // bind values
-          for (i = 0; i < parameterCount; i++)
+          for (uint i = 0; i < parameterCount; i++)
           {
             switch (parameters[i].type)
             {
@@ -9175,7 +9061,7 @@ LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
       #if defined(HAVE_POSTGRESQL)
         {
           // bind values
-          for (i = 0; i < parameterCount; i++)
+          for (uint i = 0; i < parameterCount; i++)
           {
             switch (parameters[i].type)
             {
@@ -9420,15 +9306,13 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
                         uint                    valueCount
                        )
 {
-  Errors error;
-  uint   i;
-
   assert(databaseStatementHandle != NULL);
   assert(databaseStatementHandle->databaseHandle != NULL);
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
   assert((valueCount == 0) || (values != NULL));
 
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
+
   switch (Database_getType(databaseStatementHandle->databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -9439,7 +9323,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
         sqliteResult = sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
         if (sqliteResult == SQLITE_OK)
         {
-          for (i = 0; i < valueCount; i++)
+          for (uint i = 0; i < valueCount; i++)
           {
             switch (values[i].type)
             {
@@ -9631,7 +9515,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
       #if defined(HAVE_MARIADB)
         {
           // bind values
-          for (i = 0; i < valueCount; i++)
+          for (uint i = 0; i < valueCount; i++)
           {
             switch (values[i].type)
             {
@@ -9827,7 +9711,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
       #if defined(HAVE_POSTGRESQL)
         {
           // bind values
-          for (i = 0; i < valueCount; i++)
+          for (uint i = 0; i < valueCount; i++)
           {
             switch (values[i].type)
             {
@@ -10106,7 +9990,6 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
                         )
 {
   Errors error;
-  uint   i;
 
   assert(databaseStatementHandle != NULL);
   assertx((databaseStatementHandle->parameterIndex+filterCount) <= databaseStatementHandle->parameterCount,
@@ -10122,7 +10005,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
       {
         int sqliteResult = SQLITE_ERROR;
 
-        for (i = 0; i < filterCount; i++)
+        for (uint i = 0; i < filterCount; i++)
         {
           switch (filters[i].type)
           {
@@ -10324,7 +10207,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
-          for (i = 0; i < filterCount; i++)
+          for (uint i = 0; i < filterCount; i++)
           {
             switch (filters[i].type)
             {
@@ -10510,7 +10393,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
         {
-          for (i = 0; i < filterCount; i++)
+          for (uint i = 0; i < filterCount; i++)
           {
             switch (filters[i].type)
             {
@@ -10784,23 +10667,18 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
 {
   #define SLEEP_TIME 500L  // [ms]
 
-  TimeoutInfo                   timeoutInfo;
-  bool                          done;
-  Errors                        error;
-  uint                          maxRetryCount;
-  uint                          retryCount;
-  const DatabaseBusyHandlerNode *busyHandlerNode;
-
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
   assert(sqlString != NULL);
 
   UNUSED_VARIABLE(flags);
 
-  done          = FALSE;
-  error         = ERROR_NONE;
-  maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
-  retryCount    = 0;
+  Errors error = ERROR_NONE;
+
+  bool done          = FALSE;
+  uint maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
+  uint retryCount    = 0;
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,timeout);
   do
   {
@@ -10861,6 +10739,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
     {
       // execute registered busy handlers
 //TODO: lock list?
+      const DatabaseBusyHandlerNode *busyHandlerNode;
       LIST_ITERATE(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
       {
         assert(busyHandlerNode->function != NULL);
@@ -10925,22 +10804,17 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
                          uint64               limit
                         )
 {
-  TimeoutInfo             timeoutInfo;
-  String                  sqlString;
-  uint                    parameterCount;
-  Errors                  error;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseColumn          statementColumns[DATABASE_MAX_TABLE_COLUMNS];
-  uint                    statementColumnCount;
+  Errors error;
 
   assert(databaseHandle != NULL);
 
   // init variables
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
   // create SQL string
-  sqlString      = String_new();
-  parameterCount = 0;
+  String sqlString      = String_new();
+  uint parameterCount = 0;
   if (!IS_SET(flags,DATABASE_FLAG_PLAIN))
   {
     for (uint i = 0; i < tableNameCount; i++)
@@ -11040,6 +10914,7 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
   assert(parameterCount == (tableNameCount*filterCount));
 
   // prepare statement
+  DatabaseStatementHandle databaseStatementHandle;
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
@@ -11054,7 +10929,8 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
   }
 
   // get statement columns if not defined
-  statementColumnCount = 0;
+  DatabaseColumn statementColumns[DATABASE_MAX_TABLE_COLUMNS];
+  uint           statementColumnCount = 0;
   if (columns == NULL)
   {
     getStatementColumns(statementColumns,
@@ -11151,14 +11027,13 @@ LOCAL Errors getTableColumns(DatabaseColumn columns[],
                             )
 {
   Errors error;
-  uint   i;
 
   assert(columns != NULL);
   assert(columnCount != NULL);
   assert(databaseHandle != NULL);
   assert(tableName != NULL);
 
-  i = 0;
+  uint i = 0;
   DATABASE_DOX(error,
                #ifndef NDEBUG
                  ERRORX_(DATABASE_TIMEOUT,0,"locked %s",debugGetLockedByInfo(databaseHandle)),
@@ -11503,9 +11378,7 @@ LOCAL void freeTableColumns(DatabaseColumn columns[],
                             uint           columnCount
                            )
 {
-  uint i;
-
-  for (i = 0; i < columnCount; i++)
+  for (uint i = 0; i < columnCount; i++)
   {
     // Note: suppress warning
     free((char*)columns[i].name);
@@ -11532,8 +11405,6 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
                                  DatabaseStatementHandle *databaseStatementHandle
                                 )
 {
-  uint i;
-
   assert(columns != NULL);
   assert(columnCount != NULL);
   assert(databaseStatementHandle != NULL);
@@ -11545,7 +11416,7 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
       {
         (*columnCount) = sqlite3_column_count(databaseStatementHandle->sqlite.statementHandle);
 
-        for (i = 0; i < (*columnCount); i++)
+        for (uint i = 0; i < (*columnCount); i++)
         {
           if (i < maxColumnCount)
           {
@@ -11574,7 +11445,7 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
 
             mysqlFields = mysql_fetch_fields(mysqlMetaData);
             assert(mysqlFields != NULL);
-            for (i = 0; i < (*columnCount); i++)
+            for (uint i = 0; i < (*columnCount); i++)
             {
               if (i < maxColumnCount)
               {
@@ -11623,7 +11494,7 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
           }
           (*columnCount) = PQnfields(postgresqlResult);
 
-          for (i = 0; i < (*columnCount); i++)
+          for (uint i = 0; i < (*columnCount); i++)
           {
             if (i < maxColumnCount)
             {
@@ -11656,11 +11527,9 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
 
 LOCAL DatabaseValue *findTableColumn(const DatabaseColumnInfo *columnInfo, const char *columnName)
 {
-  uint i;
-
   assert(columnInfo != NULL);
 
-  for (i = 0; i < columnInfo->count; i++)
+  for (uint i = 0; i < columnInfo->count; i++)
   {
     // Note: ignore case, because PostgreSQL does not support names in camel-case :-(
     if (stringEqualsIgnoreCase(columnInfo->values[i].name,columnName))
@@ -11750,11 +11619,10 @@ Errors Database_parseSpecifier(DatabaseSpecifier *databaseSpecifier,
                                const char        *defaultDatabaseName
                               )
 {
-  const char *s1,*s2,*s3,*s4;
-  size_t     n1,n2,n3,n4;
-
   if (databaseURI != NULL)
   {
+    const char *s1,*s2,*s3,*s4;
+    size_t     n1,n2,n3,n4;
     if      (stringStartsWith(databaseURI,"sqlite:"))
     {
       databaseSpecifier->type            = DATABASE_TYPE_SQLITE3;
@@ -12020,16 +11888,13 @@ DatabaseSpecifier *Database_newSpecifier(const char *databaseURI,
                                          bool       *validURIPrefixFlag
                                         )
 {
-  DatabaseSpecifier *databaseSpecifier;
-  Errors            error;
-
-  databaseSpecifier = (DatabaseSpecifier*)malloc(sizeof(DatabaseSpecifier));
+  DatabaseSpecifier *databaseSpecifier = (DatabaseSpecifier*)malloc(sizeof(DatabaseSpecifier));
   if (databaseSpecifier == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  error = Database_parseSpecifier(databaseSpecifier,databaseURI,defaultDatabaseName);
+  Errors error = Database_parseSpecifier(databaseSpecifier,databaseURI,defaultDatabaseName);
   if (validURIPrefixFlag != NULL) (*validURIPrefixFlag) = (error == ERROR_NONE);
 
   return databaseSpecifier;
@@ -12037,9 +11902,7 @@ DatabaseSpecifier *Database_newSpecifier(const char *databaseURI,
 
 DatabaseSpecifier *Database_duplicateSpecifier(const DatabaseSpecifier *databaseSpecifier)
 {
-  DatabaseSpecifier *newDatabaseSpecifier;
-
-  newDatabaseSpecifier =(DatabaseSpecifier*)malloc(sizeof(DatabaseSpecifier));
+  DatabaseSpecifier *newDatabaseSpecifier =(DatabaseSpecifier*)malloc(sizeof(DatabaseSpecifier));
   if (newDatabaseSpecifier == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -12061,11 +11924,10 @@ bool Database_exists(const DatabaseSpecifier *databaseSpecifier,
                      ConstString             databaseName
                     )
 {
-  Errors         error;
-  DatabaseHandle databaseHandle;
-  bool           existsFlag;
+  bool existsFlag;
 
-  error = openDatabase(&databaseHandle,databaseSpecifier,String_cString(databaseName),DATABASE_OPEN_MODE_READ,NO_WAIT);
+  DatabaseHandle databaseHandle;
+  Errors error = openDatabase(&databaseHandle,databaseSpecifier,String_cString(databaseName),DATABASE_OPEN_MODE_READ,NO_WAIT);
   if (error == ERROR_NONE)
   {
     closeDatabase(&databaseHandle);
@@ -12186,14 +12048,11 @@ Errors Database_rename(const DatabaseSpecifier *databaseSpecifier,
                        const char              *newDatabaseName
                       )
 {
-  Errors error;
-
   assert(databaseSpecifier != NULL);
   assert(newDatabaseName != NULL);
 
-  // init variables
+  Errors error = ERROR_UNKNOWN;
 
-  error = ERROR_UNKNOWN;
   switch (databaseSpecifier->type)
   {
     case DATABASE_TYPE_SQLITE3:
@@ -12352,11 +12211,10 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
                        const char              *databaseName
                       )
 {
-  Errors error;
-
   assert(databaseSpecifier != NULL);
 
-  error = ERROR_UNKNOWN;
+  Errors error = ERROR_UNKNOWN;
+
   switch (databaseSpecifier->type)
   {
     case DATABASE_TYPE_SQLITE3:
@@ -12472,11 +12330,10 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
                      const char              *databaseName
                     )
 {
-  Errors error;
-
   assert(databaseSpecifier != NULL);
 
-  error = ERROR_UNKNOWN;
+  Errors error = ERROR_UNKNOWN;
+
   switch (databaseSpecifier->type)
   {
     case DATABASE_TYPE_SQLITE3:
@@ -12536,11 +12393,10 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
                         )
 #endif /* NDEBUG */
 {
-  Errors error;
-
   assert(databaseHandle != NULL);
   assert(databaseSpecifier != NULL);
 
+  Errors error;
   #ifdef NDEBUG
     error = openDatabase(databaseHandle,
                          databaseSpecifier,
@@ -12678,8 +12534,6 @@ void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
                              void                        *busyHandlerUserData
                             )
 {
-  DatabaseBusyHandlerNode *busyHandlerNode;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
@@ -12689,11 +12543,11 @@ void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
   SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing busy handler
-    busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
-                                busyHandlerNode,
-                                   (busyHandlerNode->function == busyHandlerFunction)
-                                && (busyHandlerNode->userData == busyHandlerUserData)
-                               );
+    DatabaseBusyHandlerNode *busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
+                                                         busyHandlerNode,
+                                                            (busyHandlerNode->function == busyHandlerFunction)
+                                                         && (busyHandlerNode->userData == busyHandlerUserData)
+                                                        );
 
     // add busy handler
     if (busyHandlerNode == NULL)
@@ -12715,8 +12569,6 @@ void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
                                 void                        *busyHandlerUserData
                                )
 {
-  DatabaseBusyHandlerNode *busyHandlerNode;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
@@ -12726,11 +12578,11 @@ void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
   SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing busy handler
-    busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
-                                busyHandlerNode,
-                                   (busyHandlerNode->function == busyHandlerFunction)
-                                && (busyHandlerNode->userData == busyHandlerUserData)
-                               );
+    DatabaseBusyHandlerNode *busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
+                                                         busyHandlerNode,
+                                                            (busyHandlerNode->function == busyHandlerFunction)
+                                                         && (busyHandlerNode->userData == busyHandlerUserData)
+                                                        );
 
     // remove busy handler
     if (busyHandlerNode != NULL)
@@ -12746,8 +12598,6 @@ void Database_addProgressHandler(DatabaseHandle                  *databaseHandle
                                  void                            *progressHandlerUserData
                                 )
 {
-  DatabaseProgressHandlerNode *progressHandlerNode;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
@@ -12757,11 +12607,11 @@ void Database_addProgressHandler(DatabaseHandle                  *databaseHandle
   SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing busy handler
-    progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
-                                    progressHandlerNode,
-                                       (progressHandlerNode->function == progressHandlerFunction)
-                                    && (progressHandlerNode->userData == progressHandlerUserData)
-                                   );
+    DatabaseProgressHandlerNode *progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
+                                                                 progressHandlerNode,
+                                                                    (progressHandlerNode->function == progressHandlerFunction)
+                                                                 && (progressHandlerNode->userData == progressHandlerUserData)
+                                                                );
 
     // add progress handler
     if (progressHandlerNode == NULL)
@@ -12783,8 +12633,6 @@ void Database_removeProgressHandler(DatabaseHandle                  *databaseHan
                                     void                            *progressHandlerUserData
                                    )
 {
-  DatabaseProgressHandlerNode *progressHandlerNode;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
@@ -12794,11 +12642,11 @@ void Database_removeProgressHandler(DatabaseHandle                  *databaseHan
   SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing progress handler
-    progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
-                                    progressHandlerNode,
-                                       (progressHandlerNode->function == progressHandlerFunction)
-                                    && (progressHandlerNode->userData == progressHandlerUserData)
-                                   );
+    DatabaseProgressHandlerNode *progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
+                                                                 progressHandlerNode,
+                                                                    (progressHandlerNode->function == progressHandlerFunction)
+                                                                 && (progressHandlerNode->userData == progressHandlerUserData)
+                                                                );
 
     // remove progress handler
     if (progressHandlerNode != NULL)
@@ -13429,14 +13277,12 @@ Errors Database_dropTable(DatabaseHandle *databaseHandle,
 
 Errors Database_dropTables(DatabaseHandle *databaseHandle)
 {
-  StringList         tableNameList;
-  Errors             error;
-  StringListIterator iteratorTableName;
-  String             tableName;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
+  StringList tableNameList;
   StringList_init(&tableNameList);
   error = Database_getTableList(&tableNameList,databaseHandle,NULL);
   if ((error == ERROR_NONE) && !StringList_isEmpty(&tableNameList))
@@ -13446,6 +13292,8 @@ Errors Database_dropTables(DatabaseHandle *databaseHandle)
     savedEnabledForeignKeys = databaseHandle->enabledForeignKeys;
     Database_setEnabledForeignKeys(databaseHandle,FALSE);
 
+    StringListIterator iteratorTableName;
+    String             tableName;
     STRINGLIST_ITERATEX(&tableNameList,iteratorTableName,tableName,error == ERROR_NONE)
     {
       error = Database_dropTable(databaseHandle,String_cString(tableName));
@@ -13462,11 +13310,10 @@ Errors Database_createTemporaryTable(DatabaseHandle            *databaseHandle,
                                      const char                *definition
                                     )
 {
-  char sqlString[256];
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
+  char sqlString[256];
   return executeQuery(databaseHandle,
                       NULL,  // changedRowCount
                       databaseHandle->timeout,
@@ -13507,29 +13354,16 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
                          const char     *viewName
                         )
 {
-  Errors error;
-  char   sqlString[256];
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(viewName != NULL);
 
-  error = ERROR_UNKNOWN;
+  Errors error = ERROR_UNKNOWN;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      error = executeQuery(databaseHandle,
-                           NULL,  // changedRowCount
-                           databaseHandle->timeout,
-                           DATABASE_FLAG_NONE,
-                           stringFormat(sqlString,sizeof(sqlString),
-                                        "DROP VIEW %s",
-                                        viewName
-                                       )
-                          );
-      break;
-    case DATABASE_TYPE_MARIADB:
-      #if defined(HAVE_MARIADB)
+      {
+        char sqlString[256];
         error = executeQuery(databaseHandle,
                              NULL,  // changedRowCount
                              databaseHandle->timeout,
@@ -13539,24 +13373,43 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
                                           viewName
                                          )
                             );
-      #else /* HAVE_MARIADB */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_MARIADB */
+      }
+      break;
+    case DATABASE_TYPE_MARIADB:
+      {
+        #if defined(HAVE_MARIADB)
+          char sqlString[256];
+          error = executeQuery(databaseHandle,
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_FLAG_NONE,
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "DROP VIEW %s",
+                                            viewName
+                                           )
+                              );
+        #else /* HAVE_MARIADB */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_MARIADB */
+      }
       break;
     case DATABASE_TYPE_POSTGRESQL:
-      #if defined(HAVE_POSTGRESQL)
-        error = executeQuery(databaseHandle,
-                             NULL,  // changedRowCount
-                             databaseHandle->timeout,
-                             DATABASE_FLAG_NONE,
-                             stringFormat(sqlString,sizeof(sqlString),
-                                          "DROP VIEW %s CASCADE",
-                                          viewName
-                                         )
-                            );
-      #else /* HAVE_POSTGRESQL */
-        error = ERROR_FUNCTION_NOT_SUPPORTED;
-      #endif /* HAVE_POSTGRESQL */
+      {
+        #if defined(HAVE_POSTGRESQL)
+          char sqlString[256];
+          error = executeQuery(databaseHandle,
+                               NULL,  // changedRowCount
+                               databaseHandle->timeout,
+                               DATABASE_FLAG_NONE,
+                               stringFormat(sqlString,sizeof(sqlString),
+                                            "DROP VIEW %s CASCADE",
+                                            viewName
+                                           )
+                              );
+        #else /* HAVE_POSTGRESQL */
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif /* HAVE_POSTGRESQL */
+      }
       break;
   }
   assert(error != ERROR_UNKNOWN);
@@ -13566,16 +13419,16 @@ Errors Database_dropView(DatabaseHandle *databaseHandle,
 
 Errors Database_dropViews(DatabaseHandle *databaseHandle)
 {
-  StringList         viewNameList;
-  Errors             error;
-  StringListIterator iteratorViewName;
-  String             viewName;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
+  StringList viewNameList;
   StringList_init(&viewNameList);
   error = Database_getViewList(&viewNameList,databaseHandle,NULL);
+  StringListIterator iteratorViewName;
+  String             viewName;
   STRINGLIST_ITERATEX(&viewNameList,iteratorViewName,viewName,error == ERROR_NONE)
   {
     error = Database_dropView(databaseHandle,String_cString(viewName));
@@ -13667,10 +13520,7 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
 
 Errors Database_dropIndices(DatabaseHandle *databaseHandle)
 {
-  StringList         indexNameList;
-  Errors             error;
-  StringListIterator iteratorIndexName;
-  String             indexName;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -13679,13 +13529,18 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
-      StringList_init(&indexNameList);
-      error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
-      STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
       {
-        error = Database_dropIndex(databaseHandle,String_cString(indexName));
+        StringList indexNameList;
+        StringList_init(&indexNameList);
+        error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
+        StringListIterator iteratorIndexName;
+        String             indexName;
+        STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
+        {
+          error = Database_dropIndex(databaseHandle,String_cString(indexName));
+        }
+        StringList_done(&indexNameList);
       }
-      StringList_done(&indexNameList);
       break;
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
@@ -13710,13 +13565,13 @@ Errors Database_dropTrigger(DatabaseHandle *databaseHandle,
                             const char     *triggerName
                            )
 {
-  Errors  error;
-  char   sqlString[256];
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(triggerName != NULL);
 
+  char sqlString[256];
   error = executeQuery(databaseHandle,
                        NULL,  // changedRowCount
                        databaseHandle->timeout,
@@ -13732,16 +13587,16 @@ Errors Database_dropTrigger(DatabaseHandle *databaseHandle,
 
 Errors Database_dropTriggers(DatabaseHandle *databaseHandle)
 {
-  StringList         triggerNameList;
-  Errors             error;
-  StringListIterator iteratorTriggerName;
-  String             triggerName;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
+  StringList triggerNameList;
   StringList_init(&triggerNameList);
   error = Database_getTriggerList(&triggerNameList,databaseHandle,NULL);
+  StringListIterator iteratorTriggerName;
+  String             triggerName;
   STRINGLIST_ITERATEX(&triggerNameList,iteratorTriggerName,triggerName,error == ERROR_NONE)
   {
     error = Database_dropTrigger(databaseHandle,String_cString(triggerName));
@@ -13758,13 +13613,7 @@ Errors Database_compare(DatabaseHandle     *referenceDatabaseHandle,
                         uint               compareFlags
                        )
 {
-  Errors             error;
-  StringList         referenceTableNameList,tableNameList;
-  StringListIterator stringListIterator;
-  String             tableName;
-  DatabaseColumn     referenceColumns[DATABASE_MAX_TABLE_COLUMNS],columns[DATABASE_MAX_TABLE_COLUMNS];
-  uint               referenceColumnCount,columnCount;
-  uint               i,j;
+  Errors error;
 
   assert(referenceDatabaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(referenceDatabaseHandle);
@@ -13776,6 +13625,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
   assert(checkDatabaseInitialized(databaseHandle));
 
   // get table lists
+  StringList referenceTableNameList;
   StringList_init(&referenceTableNameList);
   error = Database_getTableList(&referenceTableNameList,referenceDatabaseHandle,NULL);
   if (error != ERROR_NONE)
@@ -13795,6 +13645,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
 //fprintf(stderr,"%s:%d: ref tables: \n",__FILE__,__LINE__); STRINGLIST_ITERATE(&referenceTableNameList,stringListIterator,tableName) fprintf(stderr,"%s:%d:   %s\n",__FILE__,__LINE__,String_cString(tableName));
 //assert(StringList_count(&referenceTableNameList) > 0);
 
+  StringList tableNameList;
   StringList_init(&tableNameList);
   error = Database_getTableList(&tableNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
@@ -13816,6 +13667,8 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
 //fprintf(stderr,"%s:%d: tables: \n",__FILE__,__LINE__); STRINGLIST_ITERATE(&tableNameList,stringListIterator,tableName) fprintf(stderr,"%s:%d:   %s\n",__FILE__,__LINE__,String_cString(tableName));
 
   // compare tables
+  StringListIterator stringListIterator;
+  String             tableName;
   STRINGLIST_ITERATEX(&referenceTableNameList,stringListIterator,tableName,error == ERROR_NONE)
   {
     if (   (tableNames == NULL)
@@ -13825,6 +13678,8 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
       if (StringList_contains(&tableNameList,tableName))
       {
         // get column lists
+        DatabaseColumn referenceColumns[DATABASE_MAX_TABLE_COLUMNS];
+        uint           referenceColumnCount;
         error = getTableColumns(referenceColumns,
                                 &referenceColumnCount,
                                 DATABASE_MAX_TABLE_COLUMNS,
@@ -13835,6 +13690,8 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
         {
           break;
         }
+        DatabaseColumn columns[DATABASE_MAX_TABLE_COLUMNS];
+        uint           columnCount;
         error = getTableColumns(columns,
                                 &columnCount,
                                 DATABASE_MAX_TABLE_COLUMNS,
@@ -13847,10 +13704,10 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
         }
 
         // compare columns (Note: case-insesitive, because some database engines do not support case-sensitive names)
-        for (i = 0; i < referenceColumnCount; i++)
+        for (uint i = 0; i < referenceColumnCount; i++)
         {
           // find column
-          j = ARRAY_FIND(columnNames,columnCount,j,stringEqualsIgnoreCase(referenceColumns[i].name,columns[j].name));
+          uint j = ARRAY_FIND(columnNames,columnCount,j,stringEqualsIgnoreCase(referenceColumns[i].name,columns[j].name));
           if (j < columnCount)
           {
             if (   (referenceColumns[j].type != DATABASE_DATATYPE_NONE)
@@ -13873,10 +13730,10 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
         if (!IS_SET(compareFlags,DATABASE_COMPARE_IGNORE_OBSOLETE))
         {
           // check for obsolete columns (Note: case-insesitive, because some database engines do not support case-sensitive names)
-          for (i = 0; i < columnCount; i++)
+          for (uint i = 0; i < columnCount; i++)
           {
             // find column
-            j = ARRAY_FIND(referenceColumns,referenceColumnCount,j,stringEqualsIgnoreCase(columns[i].name,referenceColumns[j].name));
+            uint j = ARRAY_FIND(referenceColumns,referenceColumnCount,j,stringEqualsIgnoreCase(columns[i].name,referenceColumns[j].name));
             if (j >= referenceColumnCount)
             {
               error = ERRORX_(DATABASE_OBSOLETE_COLUMN,0,"%s in %s",columns[i].name,String_cString(tableName));
@@ -13982,34 +13839,7 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
 
   const int UNUSED = -1;
 
-  Errors                  error;
-  uint64                  t;
-
-  DatabaseColumn          fromColumns[DATABASE_MAX_TABLE_COLUMNS],toColumns[DATABASE_MAX_TABLE_COLUMNS];
-  uint                    fromColumnCount,toColumnCount;
-
-  int                     fromColumnMap[DATABASE_MAX_TABLE_COLUMNS];
-  uint                    parameterMap[DATABASE_MAX_TABLE_COLUMNS];
-  uint                    parameterMapCount;
-  int                     toColumnPrimaryKeyIndex;
-  DatabaseValue           toValues[DATABASE_MAX_TABLE_COLUMNS];
-  uint                    toValueCount;
-  DatabaseValue           parameterValues[DATABASE_MAX_TABLE_COLUMNS];
-  uint                    parameterValueCount;
-
-  uint                    i,j;
-  uint                    n;
-  String                  sqlSelectString,sqlInsertString;
-  uint                    selectParameterCount,insertParameterCount;
-
-  DatabaseColumnInfo      fromColumnInfo,toColumnInfo;
-
-  DatabaseStatementHandle fromDatabaseStatementHandle,toDatabaseStatementHandle;
-  DatabaseId              lastRowId;
-  #ifdef DATABASE_DEBUG_COPY_TABLE
-    uint64 t0,t1;
-    ulong  rowCount;
-  #endif /* DATABASE_DEBUG_COPY_TABLE */
+  Errors error;
 
   assert(fromDatabaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(fromDatabaseHandle);
@@ -14025,12 +13855,16 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   assert(toTableName != NULL);
 
   #ifdef DATABASE_DEBUG_COPY_TABLE
-    t0 = Misc_getTimestamp();
-    rowCount = 0;
+    uint64 t0       = Misc_getTimestamp();
+    ulong  rowCount = 0;
   #endif /* DATABASE_DEBUG_COPY_TABLE */
+
+  uint64 t;
 
   // get table columns
   START_TIMER();
+  DatabaseColumn          fromColumns[DATABASE_MAX_TABLE_COLUMNS];
+  uint                    fromColumnCount;
   error = getTableColumns(fromColumns,
                           &fromColumnCount,
                           DATABASE_MAX_TABLE_COLUMNS,
@@ -14049,6 +13883,8 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     }
   #endif /* DEBUG_COPY_TABLE */
 
+  DatabaseColumn          toColumns[DATABASE_MAX_TABLE_COLUMNS];
+  uint                    toColumnCount;
   error = getTableColumns(toColumns,
                           &toColumnCount,
                           DATABASE_MAX_TABLE_COLUMNS,
@@ -14070,9 +13906,10 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   END_TIMER();
 
   // get column mapping: toColumn[i] := fromColumn[fromColumnMap[i]]
-  for (i = 0; i < toColumnCount; i++)
+  int fromColumnMap[DATABASE_MAX_TABLE_COLUMNS];
+  for (uint i = 0; i < toColumnCount; i++)
   {
-    j = ARRAY_FIND(fromColumns,fromColumnCount,j,stringEqualsIgnoreCase(fromColumns[j].name,toColumns[i].name));
+    uint j = ARRAY_FIND(fromColumns,fromColumnCount,j,stringEqualsIgnoreCase(fromColumns[j].name,toColumns[i].name));
     if (j < fromColumnCount)
     {
       fromColumnMap[i] = j;
@@ -14100,9 +13937,10 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   #endif /* DEBUG_COPY_TABLE */
 
   // get parameter mapping+to-table primary key column index
-  toColumnPrimaryKeyIndex = UNUSED;
-  parameterMapCount = 0;
-  for (i = 0; i < toColumnCount; i++)
+  int  toColumnPrimaryKeyIndex = UNUSED;
+  uint parameterMap[DATABASE_MAX_TABLE_COLUMNS];
+  uint parameterMapCount       = 0;
+  for (uint i = 0; i < toColumnCount; i++)
   {
     if (toColumns[i].type != DATABASE_DATATYPE_PRIMARY_KEY)
     {
@@ -14140,23 +13978,26 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   #endif /* DEBUG_COPY_TABLE */
 
   // init to-values, parameters
-  for (i = 0; i < toColumnCount; i++)
+  DatabaseValue toValues[DATABASE_MAX_TABLE_COLUMNS];
+  uint          toValueCount;
+  for (uint i = 0; i < toColumnCount; i++)
   {
     toValues[i].type = toColumns[i].type;
     toValues[i].name = toColumns[i].name;
   }
   toValueCount = toColumnCount;
 
-  for (i = 0; i < parameterMapCount; i++)
+  DatabaseValue parameterValues[DATABASE_MAX_TABLE_COLUMNS];
+  uint          parameterValueCount = parameterMapCount;
+  for (uint i = 0; i < parameterMapCount; i++)
   {
     parameterValues[i].type = toColumns[parameterMap[i]].type;
   }
-  parameterValueCount = parameterMapCount;
 
   // create SQL select statement strings
-  sqlSelectString      = String_format(String_new(),"SELECT ");
-  selectParameterCount = 0;
-  for (i = 0; i < fromColumnCount; i++)
+  String sqlSelectString      = String_format(String_new(),"SELECT ");
+  uint   selectParameterCount = 0;
+  for (uint i = 0; i < fromColumnCount; i++)
   {
     if (i > 0) String_appendChar(sqlSelectString,',');
     String_appendCString(sqlSelectString,fromColumns[i].name);
@@ -14188,15 +14029,15 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     fprintf(stderr,"SQL select: %s\n",String_cString(sqlSelectString));
   #endif /* DEBUG_COPY_TABLE */
 
-  sqlInsertString      = String_format(String_new(),"INSERT INTO %s (",toTableName);
-  insertParameterCount = 0;
-  for (i = 0; i < parameterMapCount; i++)
+  String sqlInsertString      = String_format(String_new(),"INSERT INTO %s (",toTableName);
+  uint   insertParameterCount = 0;
+  for (uint i = 0; i < parameterMapCount; i++)
   {
     if (i > 0) String_appendChar(sqlInsertString,',');
     String_appendCString(sqlInsertString,fromColumns[fromColumnMap[parameterMap[i]]].name);
   }
   String_appendFormat(sqlInsertString,") VALUES (");
-  for (i = 0; i < parameterMapCount; i++)
+  for (uint i = 0; i < parameterMapCount; i++)
   {
     if (i > 0) String_appendChar(sqlInsertString,',');
     formatParameters(sqlInsertString,toDatabaseHandle,"?",&insertParameterCount);
@@ -14208,6 +14049,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   #endif /* DEBUG_COPY_TABLE */
 
   // create select+insert statements
+  DatabaseStatementHandle fromDatabaseStatementHandle;
   error = prepareStatement(&fromDatabaseStatementHandle,
                            fromDatabaseHandle,
                            String_cString(sqlSelectString),
@@ -14249,9 +14091,11 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     freeTableColumns(fromColumns,fromColumnCount);
     return error;
   }
+  DatabaseColumnInfo fromColumnInfo;
   fromColumnInfo.values = fromDatabaseStatementHandle.results;
   fromColumnInfo.count  = fromColumnCount;
 
+  DatabaseStatementHandle toDatabaseStatementHandle;
   error = prepareStatement(&toDatabaseStatementHandle,
                            toDatabaseHandle,
                            String_cString(sqlInsertString),
@@ -14267,6 +14111,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     freeTableColumns(fromColumns,fromColumnCount);
     return error;
   }
+  DatabaseColumnInfo toColumnInfo;
   toColumnInfo.values = toValues;
   toColumnInfo.count  = toValueCount;
 
@@ -14300,7 +14145,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     }
 
     // copy rows
-    n = 0;
+    uint n = 0;
     error = executePreparedStatement(&fromDatabaseStatementHandle,
                                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                      {
@@ -14315,7 +14160,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
                                        #endif /* DATABASE_DEBUG_COPY_TABLE */
 
                                        // set to-values
-                                       for (i = 0; i < parameterMapCount; i++)
+                                       for (uint i = 0; i < parameterMapCount; i++)
                                        {
                                          assert(i < parameterValueCount);
                                          assert(parameterMap[i] < toColumnCount);
@@ -14342,7 +14187,7 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
 #endif
                                        }
 
-                                       for (i = 0; i < toColumnCount; i++)
+                                       for (uint i = 0; i < toColumnCount; i++)
                                        {
                                          if (fromColumnMap[i] != UNUSED)
                                          {
@@ -14381,7 +14226,7 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
                                        }
 
                                        // copy parameter data
-                                       for (i = 0; i < parameterMapCount; i++)
+                                       for (uint i = 0; i < parameterMapCount; i++)
                                        {
                                          assert(i < parameterValueCount);
 
@@ -14432,7 +14277,7 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
                                          }
 
                                          // get insert id
-                                         lastRowId = getLastInsertRowId(&toDatabaseStatementHandle);
+                                         DatabaseId lastRowId = getLastInsertRowId(&toDatabaseStatementHandle);
                                          if (toColumnPrimaryKeyIndex != UNUSED)
                                          {
                                            toValues[toColumnPrimaryKeyIndex].id = lastRowId;
@@ -14588,7 +14433,7 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
   freeTableColumns(fromColumns,fromColumnCount);
 
   #ifdef DATABASE_DEBUG_COPY_TABLE
-    t1 = Misc_getTimestamp();
+    uint64 t1 = Misc_getTimestamp();
     if (rowCount > 0L)
     {
       fprintf(stderr,
@@ -14611,12 +14456,10 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
 
 DatabaseId Database_getTableColumnId(DatabaseColumnInfo *columnInfo, const char *columnName, DatabaseId defaultValue)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
@@ -14651,12 +14494,10 @@ DatabaseId Database_getTableColumnId(DatabaseColumnInfo *columnInfo, const char 
 
 int Database_getTableColumnInt(DatabaseColumnInfo *columnInfo, const char *columnName, int defaultValue)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
@@ -14681,12 +14522,10 @@ int Database_getTableColumnInt(DatabaseColumnInfo *columnInfo, const char *colum
 
 uint Database_getTableColumnUInt(DatabaseColumnInfo *columnInfo, const char *columnName, uint defaultValue)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
@@ -14711,12 +14550,10 @@ uint Database_getTableColumnUInt(DatabaseColumnInfo *columnInfo, const char *col
 
 int64 Database_getTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 defaultValue)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
@@ -14741,12 +14578,10 @@ int64 Database_getTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *c
 
 uint64 Database_getTableColumnUInt64(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_PRIMARY_KEY)
@@ -14771,12 +14606,10 @@ uint64 Database_getTableColumnUInt64(DatabaseColumnInfo *columnInfo, const char 
 
 double Database_getTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double defaultValue)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_DOUBLE);
@@ -14790,12 +14623,10 @@ double Database_getTableColumnDouble(DatabaseColumnInfo *columnInfo, const char 
 
 uint Database_getTableColumnEnum(DatabaseColumnInfo *columnInfo, const char *columnName, uint defaultValue)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_INT )
@@ -14811,12 +14642,10 @@ uint Database_getTableColumnEnum(DatabaseColumnInfo *columnInfo, const char *col
 
 uint64 Database_getTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 defaultValue)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_DATETIME);
@@ -14830,12 +14659,10 @@ uint64 Database_getTableColumnDateTime(DatabaseColumnInfo *columnInfo, const cha
 
 String Database_getTableColumnString(DatabaseColumnInfo *columnInfo, const char *columnName, String value, const char *defaultValue)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_CSTRING);
@@ -14851,12 +14678,10 @@ String Database_getTableColumnString(DatabaseColumnInfo *columnInfo, const char 
 
 const char *Database_getTableColumnCString(DatabaseColumnInfo *columnInfo, const char *columnName, const char *defaultValue)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_STRING);
@@ -14870,15 +14695,13 @@ const char *Database_getTableColumnCString(DatabaseColumnInfo *columnInfo, const
 
 void Database_getTableColumnBlob(DatabaseColumnInfo *columnInfo, const char *columnName, void *data, uint length)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
 UNUSED_VARIABLE(data);
 UNUSED_VARIABLE(length);
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_BLOB);
@@ -14892,12 +14715,10 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 bool Database_setTableColumnId(DatabaseColumnInfo *columnInfo, const char *columnName, DatabaseId value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_KEY)
@@ -14917,12 +14738,10 @@ bool Database_setTableColumnId(DatabaseColumnInfo *columnInfo, const char *colum
 
 bool Database_setTableColumnBool(DatabaseColumnInfo *columnInfo, const char *columnName, bool value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_BOOL);
@@ -14937,12 +14756,10 @@ bool Database_setTableColumnBool(DatabaseColumnInfo *columnInfo, const char *col
 
 bool Database_setTableColumnInt(DatabaseColumnInfo *columnInfo, const char *columnName, int value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_INT64);
@@ -14957,12 +14774,10 @@ bool Database_setTableColumnInt(DatabaseColumnInfo *columnInfo, const char *colu
 
 bool Database_setTableColumnUInt(DatabaseColumnInfo *columnInfo, const char *columnName, uint value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_UINT);
@@ -14977,12 +14792,10 @@ bool Database_setTableColumnUInt(DatabaseColumnInfo *columnInfo, const char *col
 
 bool Database_setTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *columnName, int64 value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_INT64);
@@ -14997,12 +14810,10 @@ bool Database_setTableColumnInt64(DatabaseColumnInfo *columnInfo, const char *co
 
 bool Database_setTableColumnUInt64(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_UINT64);
@@ -15017,12 +14828,10 @@ bool Database_setTableColumnUInt64(DatabaseColumnInfo *columnInfo, const char *c
 
 bool Database_setTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *columnName, double value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_DOUBLE);
@@ -15037,12 +14846,10 @@ bool Database_setTableColumnDouble(DatabaseColumnInfo *columnInfo, const char *c
 
 bool Database_setTableColumnEnum(DatabaseColumnInfo *columnInfo, const char *columnName, uint value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(   (databaseValue->type == DATABASE_DATATYPE_INT )
@@ -15059,12 +14866,10 @@ bool Database_setTableColumnEnum(DatabaseColumnInfo *columnInfo, const char *col
 
 bool Database_setTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char *columnName, uint64 value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_DATETIME);
@@ -15079,12 +14884,10 @@ bool Database_setTableColumnDateTime(DatabaseColumnInfo *columnInfo, const char 
 
 bool Database_setTableColumnString(DatabaseColumnInfo *columnInfo, const char *columnName, ConstString value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_CSTRING);
@@ -15099,12 +14902,10 @@ bool Database_setTableColumnString(DatabaseColumnInfo *columnInfo, const char *c
 
 bool Database_setTableColumnCString(DatabaseColumnInfo *columnInfo, const char *columnName, const char *value)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_CSTRING);
@@ -15118,12 +14919,10 @@ bool Database_setTableColumnCString(DatabaseColumnInfo *columnInfo, const char *
 }
 bool Database_setTableColumnBlob(DatabaseColumnInfo *columnInfo, const char *columnName, const void *data, uint length)
 {
-  DatabaseValue *databaseValue;
-
   assert(columnInfo != NULL);
   assert(columnName != NULL);
 
-  databaseValue = findTableColumn(columnInfo,columnName);
+  DatabaseValue *databaseValue = findTableColumn(columnInfo,columnName);
   if (databaseValue != NULL)
   {
     assert(databaseValue->type == DATABASE_DATATYPE_BLOB);
@@ -15148,9 +14947,7 @@ Errors Database_addColumn(DatabaseHandle    *databaseHandle,
                           DatabaseDataTypes columnDataType
                          )
 {
-  const char *columnTypeString;
-  Errors     error;
-  char       sqlString[256];
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -15158,7 +14955,7 @@ Errors Database_addColumn(DatabaseHandle    *databaseHandle,
   assert(columnName != NULL);
 
   // get column type name
-  columnTypeString = NULL;
+  const char *columnTypeString = NULL;
   switch (columnDataType)
   {
     case DATABASE_DATATYPE:
@@ -15209,6 +15006,7 @@ Errors Database_addColumn(DatabaseHandle    *databaseHandle,
   }
 
   // execute SQL command
+  char sqlString[256];
   error = executeQuery(databaseHandle,
                        NULL,  // changedRowCount
                        databaseHandle->timeout,
@@ -15229,11 +15027,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                              const char     *columnName
                             )
 {
-  String         sqlString,value;
-  Errors         error;
-  DatabaseColumn columns[DATABASE_MAX_TABLE_COLUMNS];
-  uint           columnCount;
-  uint           n;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -15243,26 +15037,24 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   assert(tableName != NULL);
   assert(columnName != NULL);
 
-  // init variables
-  sqlString = String_new();
-  value     = String_new();
-
   // get table columns
+  DatabaseColumn columns[DATABASE_MAX_TABLE_COLUMNS];
+  uint           columnCount;
   error = getTableColumns(columns,&columnCount,DATABASE_MAX_TABLE_COLUMNS,databaseHandle,tableName);
   if (error != ERROR_NONE)
   {
-    String_delete(value);
-    String_delete(sqlString);
     return error;
   }
 
+  String sqlString = String_new();
+  String value     = String_new();
   BLOCK_DOX(error,
             begin(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
             end(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
   {
     // create new table
     formatSQLString(String_clear(sqlString),"CREATE TABLE IF NOT EXISTS __new__(");
-    n = 0;
+    uint n = 0;
     for (uint i = 0; i < columnCount; i++)
     {
       if (!stringEquals(columns[i].name,columnName))
@@ -15422,11 +15214,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                     )
 #endif /* NDEBUG */
 {
-  #ifdef DATABASE_SUPPORT_TRANSACTIONS
-    String      sqlString;
-    TimeoutInfo timeoutInfo;
-    Errors      error;
-  #endif /* DATABASE_SUPPORT_TRANSACTIONS */
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -15493,6 +15281,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
               )
         )
     {
+      TimeoutInfo timeoutInfo;
       Misc_initTimeout(&timeoutInfo,250);
       while (   (   (databaseHandle->databaseNode->pendingReadCount > 0)
                  || (databaseHandle->databaseNode->readCount > 0)
@@ -15508,7 +15297,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     }
 
     // format SQL command string
-    sqlString = String_new();
+    String sqlString = String_new();
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
@@ -15622,10 +15411,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                   )
 #endif /* NDEBUG */
 {
-  #ifdef DATABASE_SUPPORT_TRANSACTIONS
-    String sqlString;
-    Errors error;
-  #endif /* DATABASE_SUPPORT_TRANSACTIONS */
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -15673,7 +15459,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     });
 
     // format SQL command string
-    sqlString = String_new();
+    String sqlString = String_new();
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
@@ -15786,10 +15572,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                                        )
 #endif /* NDEBUG */
 {
-  #ifdef DATABASE_SUPPORT_TRANSACTIONS
-    String sqlString;
-    Errors error;
-  #endif /* DATABASE_SUPPORT_TRANSACTIONS */
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -15839,7 +15622,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     });
 
     // format SQL command string
-    sqlString = String_format(String_new(),"ROLLBACK TRANSACTION;");
+    String sqlString = String_format(String_new(),"ROLLBACK TRANSACTION;");
 
     // rollback transaction
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
@@ -16033,10 +15816,9 @@ const char *Database_valueToCString(char *buffer, uint bufferSize, const Databas
 
 void Database_filter(String filterString, const char *format, ...)
 {
-  va_list arguments;
-
   assert(filterString != NULL);
 
+  va_list arguments;
   va_start(arguments,format);
   String_vformat(filterString,format,arguments);
   va_end(arguments);
@@ -16044,8 +15826,6 @@ void Database_filter(String filterString, const char *format, ...)
 
 void Database_filterAppend(String filterString, bool condition, const char *concatenator, const char *format, ...)
 {
-  va_list arguments;
-
   assert(filterString != NULL);
 
   if (condition)
@@ -16057,6 +15837,7 @@ void Database_filterAppend(String filterString, bool condition, const char *conc
       String_appendChar(filterString,' ');
     }
 
+    va_list arguments;
     va_start(arguments,format);
     String_appendVFormat(filterString,format,arguments);
     va_end(arguments);
@@ -16131,12 +15912,7 @@ Errors Database_execute(DatabaseHandle *databaseHandle,
 {
   #define SLEEP_TIME 500L  // [ms]
 
-  TimeoutInfo                   timeoutInfo;
-  bool                          done;
-  Errors                        error;
-  uint                          maxRetryCount;
-  uint                          retryCount;
-  const DatabaseBusyHandlerNode *busyHandlerNode;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -16146,6 +15922,7 @@ Errors Database_execute(DatabaseHandle *databaseHandle,
 
   UNUSED_VARIABLE(flags);
 
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
@@ -16158,10 +15935,10 @@ Errors Database_execute(DatabaseHandle *databaseHandle,
                databaseHandle->timeout,
   {
     // execute query with retry
-    done          = FALSE;
-    error         = ERROR_NONE;
-    maxRetryCount = (databaseHandle->timeout != WAIT_FOREVER) ? (uint)((databaseHandle->timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
-    retryCount    = 0;
+    error = ERROR_NONE;
+    bool done          = FALSE;
+    uint maxRetryCount = (databaseHandle->timeout != WAIT_FOREVER) ? (uint)((databaseHandle->timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
+    uint retryCount    = 0;
     do
     {
       // execute query
@@ -16181,6 +15958,7 @@ Errors Database_execute(DatabaseHandle *databaseHandle,
       {
         // execute registered busy handlers
 //TODO: lock list?
+        const DatabaseBusyHandlerNode *busyHandlerNode;
         LIST_ITERATE(&databaseHandle->databaseNode->busyHandlerList,busyHandlerNode)
         {
           assert(busyHandlerNode->function != NULL);
@@ -16220,11 +15998,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
                        uint                 filterCount
                       )
 {
-  String                  sqlString;
-  uint                    parameterCount;
-  DatabaseStatementHandle databaseStatementHandle;
-  TimeoutInfo             timeoutInfo;
-  Errors                  error;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -16245,11 +16019,12 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
         );
 
   // init variables
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
   // create SQL string
-  sqlString      = String_new();
-  parameterCount = 0;
+  String sqlString      = String_new();
+  uint   parameterCount = 0;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -16391,6 +16166,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   #endif
 
   // prepare statement
+  DatabaseStatementHandle databaseStatementHandle;
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
@@ -16527,11 +16303,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
                              uint64               limit
                             )
 {
-  String                  sqlString;
-  uint                    parameterCount;
-  DatabaseStatementHandle databaseStatementHandle;
-  TimeoutInfo             timeoutInfo;
-  Errors                  error;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -16543,11 +16315,12 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   assert(toColumnCount == fromColumnCount);
 
   // init variables
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
   // create SQL string
-  sqlString      = String_new();
-  parameterCount = 0;
+  String sqlString      = String_new();
+  uint   parameterCount = 0;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -16646,6 +16419,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   #endif
 
   // prepare statement
+  DatabaseStatementHandle databaseStatementHandle;
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
@@ -16720,11 +16494,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
                        uint                 filterCount
                       )
 {
-  TimeoutInfo             timeoutInfo;
-  String                  sqlString;
-  uint                    parameterCount;
-  DatabaseStatementHandle databaseStatementHandle;
-  Errors                  error;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -16733,11 +16503,12 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   assert(valueCount > 0);
 
   // init variales
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
   // create SQL string, count parameters
-  sqlString      = String_newCString("UPDATE ");
-  parameterCount = 0;
+  String sqlString      = String_newCString("UPDATE ");
+  uint   parameterCount = 0;
   if (IS_SET(flags,DATABASE_FLAG_IGNORE))
   {
     switch (Database_getType(databaseHandle))
@@ -16787,6 +16558,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
   #endif
 
   // prepare statement
+  DatabaseStatementHandle databaseStatementHandle;
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
@@ -16871,11 +16643,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
                        uint64               limit
                       )
 {
-  String                  sqlString;
-  uint                    parameterCount;
-  DatabaseStatementHandle databaseStatementHandle;
-  TimeoutInfo             timeoutInfo;
-  Errors                  error;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -16884,11 +16652,12 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 (void)flags;
 
   // init variables
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
   // create SQL string
-  sqlString      = String_newCString("DELETE FROM ");
-  parameterCount = 0;
+  String sqlString      = String_newCString("DELETE FROM ");
+  uint   parameterCount = 0;
   String_appendCString(sqlString,tableName);
   if (filter != NULL)
   {
@@ -16922,6 +16691,7 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
   #endif
 
   // prepare statement
+  DatabaseStatementHandle databaseStatementHandle;
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
@@ -16995,13 +16765,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
                             uint64               limit
                            )
 {
-  String                  sqlString;
-  uint                    parameterCount;
-  DatabaseStatementHandle databaseStatementHandle;
-  ulong                   i;
-  DatabaseFilter          filters[1];
-  TimeoutInfo             timeoutInfo;
-  Errors                  error;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -17009,8 +16773,8 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
 // TODO:
 (void)flags;
   // create SQL string
-  sqlString      = String_newCString("DELETE FROM ");
-  parameterCount = 0;
+  String sqlString      = String_newCString("DELETE FROM ");
+  uint   parameterCount = 0;
   String_appendCString(sqlString,tableName);
   if (filter != NULL)
   {
@@ -17043,7 +16807,12 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
     }
   #endif
 
+  // init variables
+  TimeoutInfo timeoutInfo;
+  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
+
   // prepare statement
+  DatabaseStatementHandle databaseStatementHandle;
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
@@ -17056,8 +16825,8 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
     return error;
   }
 
+  DatabaseFilter filters[1];
   filters[0].type = filterDataType;
-  Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
   DATABASE_DOX(error,
                #ifndef NDEBUG
                  ERRORX_(DATABASE_TIMEOUT,0,"locked %s: %s",debugGetLockedByInfo(databaseHandle),String_cString(sqlString)),
@@ -17068,7 +16837,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    for (i = 0; i < filterArrayLength; i++)
+    for (ulong i = 0; i < filterArrayLength; i++)
     {
       if (filter != NULL)
       {
@@ -17132,11 +16901,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
                             ulong            length
                            )
 {
-  TimeoutInfo             timeoutInfo;
-  String                  sqlString;
-  ulong                   i;
-  DatabaseStatementHandle databaseStatementHandle;
-  Errors                  error;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -17148,11 +16913,12 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
   if (length > 0L)
   {
     // init variables
+    TimeoutInfo timeoutInfo;
     Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
     // create SQL string
-    sqlString = String_format(String_new(),"DELETE FROM %s WHERE %s IN (",tableName,columnName);
-    for (i = 0; i < length; i++)
+    String sqlString = String_format(String_new(),"DELETE FROM %s WHERE %s IN (",tableName,columnName);
+    for (ulong i = 0; i < length; i++)
     {
       if (i > 0) String_appendChar(sqlString,',');
       String_appendFormat(sqlString,"%"PRIi64,ids[i]);
@@ -17166,6 +16932,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
     #endif
 
     // prepare statement
+    DatabaseStatementHandle databaseStatementHandle;
     error = prepareStatement(&databaseStatementHandle,
                              databaseHandle,
                              String_cString(sqlString),
@@ -17250,10 +17017,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
                           )
 #endif /* NDEBUG */
 {
-  TimeoutInfo timeoutInfo;
-  String      sqlString;
-  uint        parameterCount;
-  Errors      error;
+  Errors error;
 
   assert(databaseStatementHandle != NULL);
   assert(databaseHandle != NULL);
@@ -17262,11 +17026,12 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
   assert((columnCount == 0) || (columns != NULL));
 
   // init variables
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
   // create SQL string
-  sqlString      = String_newCString("SELECT ");
-  parameterCount = 0;
+  String sqlString      = String_newCString("SELECT ");
+  uint   parameterCount = 0;
 (void)flags;
 // TODO: distinct
 #if 0
@@ -17445,24 +17210,6 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                          ...
                         )
 {
-  bool    rowFlag;
-  va_list arguments;
-  union
-  {
-    DatabaseId *id;
-    bool       *b;
-    int        *i;
-    int64      *i64;
-    uint       *u;
-    uint64     *u64;
-    float      *f;
-    double     *d;
-    char       *ch;
-    uint64     *dateTime;
-    const char **s;
-    String     string;
-  }       value;
-
   assert(databaseStatementHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseStatementHandle);
   assert(databaseStatementHandle->databaseHandle != NULL);
@@ -17470,14 +17217,30 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   assert(checkDatabaseInitialized(databaseStatementHandle->databaseHandle));
 
   DATABASE_DEBUG_TIME_START(databaseStatementHandle);
-  rowFlag = getNextRow(databaseStatementHandle,DATABASE_FLAG_NONE,NO_WAIT,NULL);
+  bool rowFlag = getNextRow(databaseStatementHandle,DATABASE_FLAG_NONE,NO_WAIT,NULL);
   if (rowFlag)
   {
     assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
 
+    va_list arguments;
     va_start(arguments,databaseStatementHandle);
     for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
     {
+      union
+      {
+        DatabaseId *id;
+        bool       *b;
+        int        *i;
+        int64      *i64;
+        uint       *u;
+        uint64     *u64;
+        float      *f;
+        double     *d;
+        char       *ch;
+        uint64     *dateTime;
+        const char **s;
+        String     string;
+      } value;
       switch (databaseStatementHandle->results[i].type)
       {
         case DATABASE_DATATYPE_NONE:
@@ -17635,13 +17398,12 @@ bool Database_existsValue(DatabaseHandle       *databaseHandle,
                           uint                 filterCount
                          )
 {
-  bool   existsFlag;
   Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
-  existsFlag = FALSE;
+  bool existsFlag = FALSE;
 
   error = databaseGet(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -17697,23 +17459,18 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
                     uint64               limit
                    )
 {
-  String                  sqlString;
-  uint                    parameterCount;
-  Errors                  error;
-  DatabaseStatementHandle databaseStatementHandle;
-  DatabaseColumn          statementColumns[DATABASE_MAX_TABLE_COLUMNS];
-  uint                    statementColumnCount;
-  TimeoutInfo             timeoutInfo;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   // init variables
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,databaseHandle->timeout);
 
   // create SQL string
-  sqlString      = String_new();
-  parameterCount = 0;
+  String sqlString      = String_new();
+  uint   parameterCount = 0;
   if (!IS_SET(flags,DATABASE_FLAG_PLAIN))
   {
     for (uint i = 0; i < tableNameCount; i++)
@@ -17813,6 +17570,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   assert(parameterCount == (tableNameCount*filterCount));
 
   // prepare statement
+  DatabaseStatementHandle databaseStatementHandle;
   error = prepareStatement(&databaseStatementHandle,
                            databaseHandle,
                            String_cString(sqlString),
@@ -17827,7 +17585,8 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   }
 
   // get statement columns if not defined
-  statementColumnCount = 0;
+  DatabaseColumn statementColumns[DATABASE_MAX_TABLE_COLUMNS];
+  uint           statementColumnCount = 0;
   if (columns == NULL)
   {
     getStatementColumns(statementColumns,
@@ -18712,6 +18471,7 @@ Errors Database_vacuum(DatabaseHandle     *databaseHandle,
       }
       break;
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -18827,12 +18587,10 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
 
 Errors Database_reindex(DatabaseHandle *databaseHandle)
 {
-  Errors error;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
-  error = ERROR_UNKNOWN;
+  Errors error = ERROR_UNKNOWN;
   switch (Database_getType(databaseHandle))
   {
     case DATABASE_TYPE_SQLITE3:
@@ -18866,9 +18624,6 @@ Errors Database_reindex(DatabaseHandle *databaseHandle)
 #ifdef DATABASE_DEBUG_LOCK
 void Database_debugPrintSimpleLockInfo(void)
 {
-  const DatabaseNode *databaseNode;
-  uint               i;
-
   // Note: debug only, no locking
   LIST_ITERATE(&databaseList,databaseNode)
   {
@@ -18981,12 +18736,6 @@ void Database_debugPrintInfo(void)
     "unlocked"
   };
 
-  const DatabaseHandle *databaseHandle;
-  const DatabaseNode   *databaseNode;
-  uint                 i;
-  uint                 index;
-  const char           *s;
-
   pthread_once(&debugDatabaseInitFlag,debugDatabaseInit);
 
   pthread_mutex_lock(&debugDatabaseLock);
@@ -18994,6 +18743,7 @@ void Database_debugPrintInfo(void)
     pthread_mutex_lock(&debugConsoleLock);
     {
       fprintf(stderr,"Database debug info:\n");
+      const DatabaseNode *databaseNode;
       LIST_ITERATE(&databaseList,databaseNode)
       {
         switch (databaseNode->databaseSpecifier.type)
@@ -19029,6 +18779,7 @@ void Database_debugPrintInfo(void)
             break;
             break;
         }
+        const DatabaseHandle *databaseHandle;
         LIST_ITERATE(&debugDatabaseHandleList,databaseHandle)
         {
           assert(databaseHandle->databaseNode != NULL);
@@ -19051,7 +18802,7 @@ void Database_debugPrintInfo(void)
                 databaseNode->readWriteCount,
                 databaseNode->transactionCount
                );
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads); i++)
+        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads); i++)
         {
           if (!Thread_isNone(databaseNode->debug.pendingReads[i].threadId))
           {
@@ -19074,7 +18825,7 @@ void Database_debugPrintInfo(void)
             #endif /* HAVE_BACKTRACE */
           }
         }
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads); i++)
+        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads); i++)
         {
           if (!Thread_isNone(databaseNode->debug.reads[i].threadId))
           {
@@ -19097,7 +18848,7 @@ void Database_debugPrintInfo(void)
             #endif /* HAVE_BACKTRACE */
           }
         }
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++)
+        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++)
         {
           if (!Thread_isNone(databaseNode->debug.pendingReadWrites[i].threadId))
           {
@@ -19120,7 +18871,7 @@ void Database_debugPrintInfo(void)
             #endif /* HAVE_BACKTRACE */
           }
         }
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites); i++)
+        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites); i++)
         {
           if (!Thread_isNone(databaseNode->debug.readWrites[i].threadId))
           {
@@ -19170,7 +18921,7 @@ void Database_debugPrintInfo(void)
         }
         if (!Thread_isNone(databaseNode->debug.lastTrigger.threadInfo.threadId))
         {
-          s = "-";
+          const char *s = "-";
           switch (databaseNode->debug.lastTrigger.lockType)
           {
             case DATABASE_LOCK_TYPE_NONE      : s = "- "; break;
@@ -19214,9 +18965,9 @@ databaseNode->debug.lastTrigger.transactionCount
         fprintf(stderr,
                 "  lock history (ascending):\n"
                );
-        for (i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history); i++)
+        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history); i++)
         {
-          index = (databaseNode->debug.historyIndex+i) % SIZE_OF_ARRAY(databaseNode->debug.history);
+          uint index = (databaseNode->debug.historyIndex+i) % SIZE_OF_ARRAY(databaseNode->debug.history);
 
           if (!Thread_isNone(databaseNode->debug.history[index].threadId))
           {
@@ -19254,8 +19005,6 @@ databaseNode->debug.lastTrigger.transactionCount
 
 void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
 {
-  uint i;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
@@ -19305,7 +19054,7 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
               databaseHandle->databaseNode->readWriteCount,
               databaseHandle->databaseNode->transactionCount
              );
-      for (i = 0; i < SIZE_OF_ARRAY(databaseHandle->databaseNode->debug.reads); i++)
+      for (uint i = 0; i < SIZE_OF_ARRAY(databaseHandle->databaseNode->debug.reads); i++)
       {
         if (!Thread_isNone(databaseHandle->databaseNode->debug.reads[i].threadId))
         {
@@ -19331,7 +19080,7 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
           #endif /* HAVE_BACKTRACE */
         }
       }
-      for (i = 0; i < SIZE_OF_ARRAY(databaseHandle->databaseNode->debug.readWrites); i++)
+      for (uint i = 0; i < SIZE_OF_ARRAY(databaseHandle->databaseNode->debug.readWrites); i++)
       {
         if (!Thread_isNone(databaseHandle->databaseNode->debug.readWrites[i].threadId))
         {
@@ -19442,11 +19191,9 @@ LOCAL void debugFreeColumnsWidth(size_t widths[])
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void debugPrintSpaces(int n)
+LOCAL void debugPrintSpaces(size_t n)
 {
-  int i;
-
-  for (i = 0; i < n; i++)
+  for (size_t i = 0; i < n; i++)
   {
     printf(" ");
   }
@@ -19463,18 +19210,15 @@ LOCAL void debugPrintSpaces(int n)
 
 LOCAL size_t* debugGetColumnsWidth(const DatabaseValue values[], uint valueCount)
 {
-  size_t *widths;
-  uint   i;
-  char   buffer[1024];
-
   assert(values != NULL);
 
-  widths = (size_t*)malloc(valueCount*sizeof(size_t));
+  size_t *widths = (size_t*)malloc(valueCount*sizeof(size_t));
   assert(widths != NULL);
 
-  for (i = 0; i < valueCount; i++)
+  for (uint i = 0; i < valueCount; i++)
   {
     widths[i] = 0;
+    char buffer[1024];
     Database_valueToCString(buffer,sizeof(buffer),&values[i]);
     if (stringLength(buffer) > widths[i])
     {
@@ -19487,16 +19231,14 @@ LOCAL size_t* debugGetColumnsWidth(const DatabaseValue values[], uint valueCount
 
 void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableName, bool showHeaderFlag)
 {
-  Errors         error;
-  DatabaseColumn columns[DATABASE_MAX_TABLE_COLUMNS];
-  uint           columnCount;
-  char           sqlString[256];
-  DumpTableData  dumpTableData;
-
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
+  Errors error;
+
   // get table columns
+  DatabaseColumn columns[DATABASE_MAX_TABLE_COLUMNS];
+  uint           columnCount;
   error = getTableColumns(columns,&columnCount,DATABASE_MAX_TABLE_COLUMNS,databaseHandle,tableName);
   if (error != ERROR_NONE)
   {
@@ -19505,15 +19247,15 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
   }
 
   // print table
+  DumpTableData  dumpTableData;
   dumpTableData.showHeaderFlag    = showHeaderFlag;
   dumpTableData.headerPrintedFlag = FALSE;
   dumpTableData.widths            = NULL;
+  char           sqlString[256];
   error = databaseGet(databaseHandle,
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
                         DumpTableData *dumpTableData = (DumpTableData*)userData;
-                        uint          i;
-                        char          buffer[1024];
 
                         assert(values != NULL);
                         assert(dumpTableData != NULL);
@@ -19523,8 +19265,9 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
                         if (dumpTableData->widths == NULL) dumpTableData->widths = debugGetColumnsWidth(values,valueCount);
                         assert(dumpTableData->widths != NULL);
 
-                        for (i = 0; i < valueCount; i++)
+                        for (uint i = 0; i < valueCount; i++)
                         {
+                          char buffer[1024];
                           Database_valueToCString(buffer,sizeof(buffer),&values[i]);
                           dumpTableData->widths[i] = MAX(stringLength(buffer),dumpTableData->widths[i]);
                         }
@@ -19555,8 +19298,6 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                       {
                         DumpTableData *dumpTableData = (DumpTableData*)userData;
-                        uint          i;
-                        char          buffer[1024];
 
                         assert(values != NULL);
                         assert(dumpTableData != NULL);
@@ -19566,7 +19307,7 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
 
                         if (dumpTableData->showHeaderFlag && !dumpTableData->headerPrintedFlag)
                         {
-                          for (i = 0; i < columnCount; i++)
+                          for (uint i = 0; i < columnCount; i++)
                           {
                             printf("%s ",columns[i].name); debugPrintSpaces(dumpTableData->widths[i]-stringLength(columns[i].name));
                           }
@@ -19574,8 +19315,9 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
 
                           dumpTableData->headerPrintedFlag = TRUE;
                         }
-                        for (i = 0; i < valueCount; i++)
+                        for (uint i = 0; i < valueCount; i++)
                         {
+                          char buffer[1024];
                           Database_valueToCString(buffer,sizeof(buffer),&values[i]);
                           printf("%s ",buffer);
                           if (dumpTableData->showHeaderFlag)

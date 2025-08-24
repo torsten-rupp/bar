@@ -162,16 +162,7 @@ LOCAL Errors restoreFile(StorageSpecifier        *storageSpecifier,
                          LogHandle               *logHandle
                         )
 {
-  String            printableStorageName;
-  bool              restoredFlag;
-  byte              *buffer;
-  StorageInfo       storageInfo;
-//  bool              abortFlag;
-  Errors            error;
-  ArchiveHandle     archiveHandle;
-  Errors            failError;
-  ArchiveEntryInfo  archiveEntryInfo;
-  ArchiveEntryTypes archiveEntryType;
+  Errors error;
 
   assert(storageSpecifier != NULL);
   assert(name != NULL);
@@ -179,18 +170,17 @@ LOCAL Errors restoreFile(StorageSpecifier        *storageSpecifier,
   assert(destinationFileName != NULL);
 
   // initialize variables
-  printableStorageName = String_new();
-  restoredFlag         = FALSE;
-  buffer = malloc(BUFFER_SIZE);
+  byte *buffer = malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
   // get printable storage name
-  Storage_getPrintableName(printableStorageName,storageSpecifier,NULL);
+  String printableStorageName = Storage_getPrintableName(String_new(),storageSpecifier,NULL);
 
   // init storage
+  StorageInfo storageInfo;
   error = Storage_init(&storageInfo,
 NULL, // masterIO
                        storageSpecifier,
@@ -214,6 +204,7 @@ NULL, // masterIO
   }
 
   // open archive
+  ArchiveHandle archiveHandle;
   error = Archive_open(&archiveHandle,
                        &storageInfo,
                        NULL,  // archive name
@@ -229,7 +220,8 @@ NULL, // masterIO
   }
 
   // read archive entries
-  failError = ERROR_NONE;
+  bool   restoredFlag = FALSE;
+  Errors failError    = ERROR_NONE;
   while (   !restoredFlag
          && ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
          && !Archive_eof(&archiveHandle)
@@ -243,6 +235,7 @@ NULL, // masterIO
     }
 
     // get next archive entry type
+    ArchiveEntryTypes archiveEntryType;
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         NULL,  // archiveCryptInfo
@@ -262,14 +255,10 @@ NULL, // masterIO
         break;
       case ARCHIVE_ENTRY_TYPE_FILE:
         {
-          String     fileName;
-          uint64     fragmentOffset,fragmentSize;
-          FileHandle fileHandle;
-          uint64     length;
-          ulong      bufferLength;
-
           // read file
-          fileName = String_new();
+          String           fileName = String_new();
+          ArchiveEntryInfo archiveEntryInfo;
+          uint64           fragmentOffset,fragmentSize;
           error = Archive_readFileEntry(&archiveEntryInfo,
                                         &archiveHandle,
                                         NULL,  // deltaCompressAlgorithm
@@ -298,6 +287,7 @@ NULL, // masterIO
 //            abortFlag = !updateStatusInfo(&restoreInfo);
 
             // open file
+            FileHandle fileHandle;
             error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
             if (error != ERROR_NONE)
             {
@@ -327,7 +317,7 @@ NULL, // masterIO
             }
 
             // write file data
-            length = 0;
+            uint64 length = 0;
             while (   ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
                    && (length < fragmentSize)
                   )
@@ -338,7 +328,7 @@ NULL, // masterIO
                 Misc_udelay(500LL*US_PER_MS);
               }
 
-              bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
+              ulong bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
               // read data from archive
               error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
@@ -403,15 +393,11 @@ NULL, // masterIO
         break;
       case ARCHIVE_ENTRY_TYPE_IMAGE:
         {
-          String     imageName;
-          DeviceInfo deviceInfo;
-          uint64     blockOffset,blockCount;
-          FileHandle fileHandle;
-          uint64     block;
-          ulong      bufferBlockCount;
-
           // read image
-          imageName = String_new();
+          ArchiveEntryInfo archiveEntryInfo;
+          String           imageName         = String_new();
+          DeviceInfo       deviceInfo;
+          uint64           blockOffset,blockCount;
           error = Archive_readImageEntry(&archiveEntryInfo,
                                          &archiveHandle,
                                          NULL,  // deltaCompressAlgorithm
@@ -447,6 +433,7 @@ NULL, // masterIO
 //            abortFlag = !updateStatusInfo(&restoreInfo);
 
             // open file
+            FileHandle fileHandle;
             error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
             if (error != ERROR_NONE)
             {
@@ -476,7 +463,7 @@ NULL, // masterIO
             }
 
             // write image data to file
-            block = 0;
+            uint64 block = 0;
             while (   ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
                    && (block < blockCount)
                   )
@@ -487,7 +474,7 @@ NULL, // masterIO
                 Misc_udelay(500LL*US_PER_MS);
               }
 
-              bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
+              ulong bufferBlockCount = MIN(blockCount-block,BUFFER_SIZE/deviceInfo.blockSize);
 
               // read data from archive
               error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*(uint64)deviceInfo.blockSize);
@@ -538,16 +525,11 @@ NULL, // masterIO
         break;
       case ARCHIVE_ENTRY_TYPE_HARDLINK:
         {
-          StringList       fileNameList;
-          uint64           fragmentOffset,fragmentSize;
-//          const StringNode *stringNode;
-//          String           fileName;
-          FileHandle       fileHandle;
-          uint64           length;
-          ulong            bufferLength;
-
           // read hard link
+          ArchiveEntryInfo archiveEntryInfo;
+          StringList       fileNameList;
           StringList_init(&fileNameList);
+          uint64           fragmentOffset,fragmentSize;
           error = Archive_readHardLinkEntry(&archiveEntryInfo,
                                             &archiveHandle,
                                             NULL,  // deltaCompressAlgorithm
@@ -576,6 +558,7 @@ NULL, // masterIO
 //              abortFlag = !updateStatusInfo(&restoreInfo);
 
             // open file
+            FileHandle fileHandle;
             error = File_open(&fileHandle,destinationFileName,FILE_OPEN_WRITE);
             if (error != ERROR_NONE)
             {
@@ -605,7 +588,7 @@ NULL, // masterIO
             }
 
             // write file data
-            length = 0;
+            uint64 length = 0;
             while (   ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
                    && (length < fragmentSize)
                   )
@@ -616,7 +599,7 @@ NULL, // masterIO
                 Misc_udelay(500LL*US_PER_MS);
               }
 
-              bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
+              ulong bufferLength = MIN(fragmentSize-length,BUFFER_SIZE);
 
               // read data from archive
               error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
@@ -757,13 +740,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
                              const JobOptions  *jobOptions
                             )
 {
-  bool             restoredFlag;
-  Errors           error;
-  FragmentNode     fragmentNode;
-  DeltaSourceNode  *deltaSourceNode;
-  String           tmpFileName;
-  StorageSpecifier storageSpecifier,localStorageSpecifier;
-//  String           localStorageName;
+  Errors error;
 
   assert(deltaSourceHandle != NULL);
   assert(name != NULL);
@@ -774,10 +751,12 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
   deltaSourceHandle->size        = 0LL;
   deltaSourceHandle->tmpFileName = NULL;
   deltaSourceHandle->baseOffset  = 0LL;
+  StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
+  StorageSpecifier localStorageSpecifier;
   Storage_initSpecifier(&localStorageSpecifier);
 
-  restoredFlag = FALSE;
+  bool restoredFlag = FALSE;
   error        = ERROR_UNKNOWN;
 
 //fprintf(stderr,"%s, %d: name=%s storage=%s\n",__FILE__,__LINE__,String_cString(name),String_cString(sourceStorageName));
@@ -789,6 +768,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
     {
       SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
+        DeltaSourceNode *deltaSourceNode;
         LIST_ITERATE(deltaSourceList,deltaSourceNode)
         {
 //fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(deltaSourceNode->storageName));
@@ -822,15 +802,17 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
     if (deltaSourceList != NULL)
     {
       // create temporary file as delta source
-      tmpFileName = String_new();
+      String tmpFileName = String_new();
       error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
       if (error == ERROR_NONE)
       {
         // init variables
+        FragmentNode fragmentNode;
         FragmentList_initNode(&fragmentNode,name,size,NULL,0,0);
 
         SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
+          DeltaSourceNode *deltaSourceNode;
           LIST_ITERATE(deltaSourceList,deltaSourceNode)
           {
             // check if restore in progress (avoid infinite loops)
@@ -911,15 +893,17 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
     if (deltaSourceList != NULL)
     {
       // create temporary file as delta source
-      tmpFileName = String_new();
+      String tmpFileName = String_new();
       error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
       if (error == ERROR_NONE)
       {
         // init variables
+        FragmentNode fragmentNode;
         FragmentList_initNode(&fragmentNode,name,size,NULL,0,0);
 
         SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
+          DeltaSourceNode *deltaSourceNode;
           LIST_ITERATE(deltaSourceList,deltaSourceNode)
           {
             // check if restore in progress (avoid infinite loops)
@@ -1015,7 +999,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
       if (Archive_isArchiveFile(storageSpecifier.archiveName))
       {
         // create temporary file as delta source
-        tmpFileName = String_new();
+        String tmpFileName = String_new();
         error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
         if (error == ERROR_NONE)
         {
@@ -1076,7 +1060,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
        )
     {
       // create temporary restore file as delta source
-      tmpFileName = String_new();
+      String tmpFileName = String_new();
       error = File_getTmpFileName(tmpFileName,NULL,tmpDirectory);
       if (error == ERROR_NONE)
       {

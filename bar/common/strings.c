@@ -260,17 +260,13 @@ LOCAL_INLINE uint debugStringHashIndex(ConstString string)
 
 LOCAL DebugStringNode *debugFindString(const DebugStringList *debugStringList, ConstString string)
 {
-  uint            index;
-  DebugStringNode *debugStringNode;
-  ulong           n;
-
   assert(debugStringList != NULL);
   assert(string != NULL);
 
-  index = debugStringHashIndex(string);
+  uint index = debugStringHashIndex(string);
 
-  debugStringNode = debugStringList->hash[index].first;
-  n               = debugStringList->hash[index].count;
+  DebugStringNode *debugStringNode = debugStringList->hash[index].first;
+  ulong           n                = debugStringList->hash[index].count;
   while ((debugStringNode != NULL) && (n > 0) && (debugStringNode->string != string))
   {
     debugStringNode = debugStringNode->next;
@@ -292,12 +288,10 @@ LOCAL DebugStringNode *debugFindString(const DebugStringList *debugStringList, C
 
 LOCAL void debugAddString(DebugStringList *debugStringList, DebugStringNode *debugStringNode)
 {
-  uint index;
-
   assert(debugStringList != NULL);
   assert(debugStringNode != NULL);
 
-  index = debugStringHashIndex(debugStringNode->string);
+  uint index = debugStringHashIndex(debugStringNode->string);
 
   if (debugStringList->hash[index].first != NULL)
   {
@@ -323,12 +317,10 @@ LOCAL void debugAddString(DebugStringList *debugStringList, DebugStringNode *deb
 
 LOCAL void debugRemoveString(DebugStringList *debugStringList, DebugStringNode *debugStringNode)
 {
-  uint index;
-
   assert(debugStringList != NULL);
   assert(debugStringNode != NULL);
 
-  index = debugStringHashIndex(debugStringNode->string);
+  uint index = debugStringHashIndex(debugStringNode->string);
   assert(debugStringList->hash[index].count > 0);
 
   List_remove(debugStringList,debugStringNode);
@@ -359,40 +351,39 @@ LOCAL void debugRemoveString(DebugStringList *debugStringList, DebugStringNode *
 
 void __extendStringSize(struct __String *string, size_t newSize)
 {
-  char  *newData;
-  ulong newMaxLength;
-
   assert(string != NULL);
   assert(newSize > string->maxLength);
 
   switch (string->type)
   {
     case STRING_TYPE_DYNAMIC:
-      newMaxLength = ALIGN(newSize,__STRING_DELTA_LENGTH);
-      assert(newMaxLength >= newSize);
-      newData = realloc(string->data,newMaxLength*sizeof(char));
-      if (newData == NULL)
       {
-        fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",(ulong)(newSize*sizeof(char)),strerror(errno));
-        abort();
+        ulong newMaxLength = ALIGN(newSize,__STRING_DELTA_LENGTH);
+        assert(newMaxLength >= newSize);
+        char *newData = (char*)realloc(string->data,newMaxLength*sizeof(char));
+        if (newData == NULL)
+        {
+          fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",(ulong)(newSize*sizeof(char)),strerror(errno));
+          abort();
+        }
+        #ifndef NDEBUG
+          #ifdef TRACE_STRING_ALLOCATIONS
+            pthread_once(&debugStringInitFlag,debugStringInit);
+
+            pthread_mutex_lock(&debugStringLock);
+            {
+              debugStringAllocList.memorySize += (newMaxLength-string->maxLength);
+            }
+            pthread_mutex_unlock(&debugStringLock);
+          #endif /* TRACE_STRING_ALLOCATIONS */
+          #ifdef FILL_MEMORY
+            memset(&newData[string->maxLength],DEBUG_FILL_BYTE,newMaxLength-string->maxLength);
+          #endif /* FILL_MEMORY */
+        #endif /* not NDEBUG */
+
+        string->data      = newData;
+        string->maxLength = newMaxLength;
       }
-      #ifndef NDEBUG
-        #ifdef TRACE_STRING_ALLOCATIONS
-          pthread_once(&debugStringInitFlag,debugStringInit);
-
-          pthread_mutex_lock(&debugStringLock);
-          {
-            debugStringAllocList.memorySize += (newMaxLength-string->maxLength);
-          }
-          pthread_mutex_unlock(&debugStringLock);
-        #endif /* TRACE_STRING_ALLOCATIONS */
-        #ifdef FILL_MEMORY
-          memset(&newData[string->maxLength],DEBUG_FILL_BYTE,newMaxLength-string->maxLength);
-        #endif /* FILL_MEMORY */
-      #endif /* not NDEBUG */
-
-      string->data      = newData;
-      string->maxLength = newMaxLength;
       break;
     case STRING_TYPE_STATIC:
       HALT_INTERNAL_ERROR("exceeded static string (required length %lu, max. length %lu) - program halted\n",(ulong)(newSize*sizeof(char)),(ulong)string->maxLength);
@@ -457,9 +448,7 @@ void __extendStringSize(struct __String *string, size_t newSize)
 
 LOCAL_INLINE struct __String* allocString(void)
 {
-  struct __String *string;
-
-  string = (struct __String*)malloc(sizeof(struct __String));
+  struct __String *string = (struct __String*)malloc(sizeof(struct __String));
   if (string == NULL)
   {
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
@@ -510,14 +499,7 @@ LOCAL_INLINE struct __String* allocTmpString(void)
 LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __lineNb__)
 #endif /* NDEBUG */
 {
-  String tmpString;
-  #ifndef NDEBUG
-    #ifdef TRACE_STRING_ALLOCATIONS
-      DebugStringNode *debugStringNode;
-    #endif /* TRACE_STRING_ALLOCATIONS */
-  #endif /* not NDEBUG */
-
-  tmpString = allocString();
+  String tmpString = allocString();
 
   #ifndef NDEBUG
     #ifdef TRACE_STRING_ALLOCATIONS
@@ -526,7 +508,7 @@ LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __l
       pthread_mutex_lock(&debugStringLock);
       {
         // allocate new debug node
-        debugStringNode = (DebugStringNode*)__List_newNode(__fileName__,__lineNb__,sizeof(DebugStringNode));
+        DebugStringNode *debugStringNode = (DebugStringNode*)__List_newNode(__fileName__,__lineNb__,sizeof(DebugStringNode));
         if (debugStringNode == NULL)
         {
           HALT_INSUFFICIENT_MEMORY();
@@ -573,12 +555,6 @@ LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __l
 
 LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpString)
 {
-  #ifndef NDEBUG
-    #ifdef TRACE_STRING_ALLOCATIONS
-      DebugStringNode *debugStringNode;
-    #endif /* TRACE_STRING_ALLOCATIONS */
-  #endif /* not NDEBUG */
-
   assert(string != NULL);
   assert(string->data != NULL);
   assert((string->type == STRING_TYPE_DYNAMIC) || (string->type == STRING_TYPE_STATIC));
@@ -603,7 +579,7 @@ LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpS
       pthread_mutex_lock(&debugStringLock);
       {
         // remove string from allocated list
-        debugStringNode = debugFindString(&debugStringAllocList,tmpString);
+        DebugStringNode *debugStringNode = debugFindString(&debugStringAllocList,tmpString);
         if (debugStringNode == NULL)
         {
           HALT_INTERNAL_ERROR("Temporary string not found in allocated string list!");
@@ -644,8 +620,6 @@ LOCAL_INLINE void assignTmpString(struct __String *string, struct __String *tmpS
 
 LOCAL const char *getNextFormatToken(const char *format, FormatToken *formatToken)
 {
-  const char *nextFormat;
-
   #define ADD_CHAR(formatToken,ch) \
     do \
     { \
@@ -669,7 +643,7 @@ LOCAL const char *getNextFormatToken(const char *format, FormatToken *formatToke
   formatToken->quoteChar        = NUL;
   formatToken->conversionChar   = NUL;
 
-  nextFormat = format;
+  const char *nextFormat = format;
 
   // format start character
   assert((*nextFormat) == '%');
@@ -899,58 +873,26 @@ LOCAL void formatString(struct __String *string,
                         va_list         arguments
                        )
 {
-  const char   *nextFormat;
-  FormatToken  formatToken;
-  union
-  {
-    int                ch;
-    int                i;
-    long               l;
-    #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
-      long long          ll;
-    #endif
-    unsigned int       ui;
-    unsigned long      ul;
-    #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
-      unsigned long long ull;
-    #endif
-    float              f;
-    double             d;
-    const char         *s;
-    void               *p;
-    #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
-      unsigned long long bits;
-    #else
-      unsigned long      bits;
-    #endif
-    struct __String    *string;
-  } data;
-  char          buffer[64];
-  int           length;
-  const char    *s;
-  uint          i0,i1;
-  char          ch;
-  uint          j;
-  size_t        index;
-
   assert(format != NULL);
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
-  nextFormat = format;
+  const char *nextFormat = format;
   while ((*nextFormat) != NUL)
   {
     if ((*nextFormat) == '%')
     {
       // get format token
+      FormatToken formatToken;
       nextFormat = getNextFormatToken(nextFormat,&formatToken);
 
       // format and store string
-      i0 = formatToken.width;
+      uint i0 = formatToken.width;
       if (formatToken.widthArguments > 0)
       {
         i0 = (uint)va_arg(arguments,int);
       }
+      uint i1;
       if (formatToken.widthArguments > 1)
       {
         i1 = (uint)va_arg(arguments,int);
@@ -959,35 +901,41 @@ LOCAL void formatString(struct __String *string,
       {
         i1 = 0;
       }
+
+      union
+      {
+        int                ch;
+        int                i;
+        long               l;
+        #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+          long long          ll;
+        #endif
+        unsigned int       ui;
+        unsigned long      ul;
+        #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+          unsigned long long ull;
+        #endif
+        float              f;
+        double             d;
+        const char         *s;
+        void               *p;
+        #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
+          unsigned long long bits;
+        #else
+          unsigned long      bits;
+        #endif
+        struct __String    *string;
+      } data;
       switch (formatToken.conversionChar)
       {
         case 'c':
-          data.ch = va_arg(arguments,int);
+          {
+            data.ch = va_arg(arguments,int);
 
-          length = (formatToken.widthArguments > 0)
-                     ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.ch)
-                     : snprintf(buffer,sizeof(buffer),formatToken.token,data.ch);
-          assert(length >= 0);
-          if ((uint)length < sizeof(buffer))
-          {
-            String_appendCString(string,buffer);
-          }
-          else
-          {
-            __ensureStringLength(string,string->length+length);
-            length = (formatToken.widthArguments > 0)
-                       ? snprintf(&string->data[string->length],length+1,formatToken.token,i0,data.ch)
-                       : snprintf(&string->data[string->length],length+1,formatToken.token,data.ch);
-            string->length += length;
-            STRING_UPDATE_VALID(string);
-          }
-          break;
-        case 'C':
-          data.ch = va_arg(arguments,int);
-
-          while (i0 > 0)
-          {
-            length = snprintf(buffer,sizeof(buffer),"%c",data.ch);
+            char buffer[64];
+            int length = (formatToken.widthArguments > 0)
+                           ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.ch)
+                           : snprintf(buffer,sizeof(buffer),formatToken.token,data.ch);
             assert(length >= 0);
             if ((uint)length < sizeof(buffer))
             {
@@ -996,11 +944,36 @@ LOCAL void formatString(struct __String *string,
             else
             {
               __ensureStringLength(string,string->length+length);
-              length = snprintf(&string->data[string->length],length+1,"%c",data.ch);
+              length = (formatToken.widthArguments > 0)
+                         ? snprintf(&string->data[string->length],length+1,formatToken.token,i0,data.ch)
+                         : snprintf(&string->data[string->length],length+1,formatToken.token,data.ch);
               string->length += length;
               STRING_UPDATE_VALID(string);
             }
-            i0--;
+          }
+          break;
+        case 'C':
+          {
+            data.ch = va_arg(arguments,int);
+
+            while (i0 > 0)
+            {
+              char buffer[64];
+              int length = snprintf(buffer,sizeof(buffer),"%c",data.ch);
+              assert(length >= 0);
+              if ((uint)length < sizeof(buffer))
+              {
+                String_appendCString(string,buffer);
+              }
+              else
+              {
+                __ensureStringLength(string,string->length+length);
+                length = snprintf(&string->data[string->length],length+1,"%c",data.ch);
+                string->length += length;
+                STRING_UPDATE_VALID(string);
+              }
+              i0--;
+            }
           }
           break;
         case 'i':
@@ -1010,9 +983,11 @@ LOCAL void formatString(struct __String *string,
             case FORMAT_LENGTH_TYPE_INTEGER:
               {
                 data.i = va_arg(arguments,int);
-                length = (formatToken.widthArguments > 0)
-                           ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.i)
-                           : snprintf(buffer,sizeof(buffer),formatToken.token,data.i);
+
+                char buffer[64];
+                int length = (formatToken.widthArguments > 0)
+                               ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.i)
+                               : snprintf(buffer,sizeof(buffer),formatToken.token,data.i);
                 assert(length >= 0);
                 if ((uint)length < sizeof(buffer))
                 {
@@ -1032,9 +1007,11 @@ LOCAL void formatString(struct __String *string,
             case FORMAT_LENGTH_TYPE_LONG:
               {
                 data.l = va_arg(arguments,long);
-                length = (formatToken.widthArguments > 0)
-                           ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.l)
-                           : snprintf(buffer,sizeof(buffer),formatToken.token,data.l);
+
+                char buffer[64];
+                int length = (formatToken.widthArguments > 0)
+                               ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.l)
+                               : snprintf(buffer,sizeof(buffer),formatToken.token,data.l);
                 assert(length >= 0);
                 if ((uint)length < sizeof(buffer))
                 {
@@ -1055,9 +1032,11 @@ LOCAL void formatString(struct __String *string,
               {
                 #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
                   data.ll = va_arg(arguments,long long);
-                  length = (formatToken.widthArguments > 0)
-                             ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.ll)
-                             : snprintf(buffer,sizeof(buffer),formatToken.token,data.ll);
+
+                  char buffer[64];
+                  int length = (formatToken.widthArguments > 0)
+                                 ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.ll)
+                                 : snprintf(buffer,sizeof(buffer),formatToken.token,data.ll);
                   assert(length >= 0);
                   if ((uint)length < sizeof(buffer))
                   {
@@ -1093,9 +1072,11 @@ LOCAL void formatString(struct __String *string,
             case FORMAT_LENGTH_TYPE_INTEGER:
               {
                 data.ui = va_arg(arguments,unsigned int);
-                length = (formatToken.widthArguments > 0)
-                           ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.ui)
-                           : snprintf(buffer,sizeof(buffer),formatToken.token,data.ui);
+
+                char buffer[64];
+                int length = (formatToken.widthArguments > 0)
+                               ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.ui)
+                               : snprintf(buffer,sizeof(buffer),formatToken.token,data.ui);
                 assert(length >= 0);
                 if ((uint)length < sizeof(buffer))
                 {
@@ -1115,9 +1096,11 @@ LOCAL void formatString(struct __String *string,
             case FORMAT_LENGTH_TYPE_LONG:
               {
                 data.ul = va_arg(arguments,unsigned long);
-                length = (formatToken.widthArguments > 0)
-                           ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.ul)
-                           : snprintf(buffer,sizeof(buffer),formatToken.token,data.ul);
+
+                char buffer[64];
+                int length = (formatToken.widthArguments > 0)
+                               ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.ul)
+                               : snprintf(buffer,sizeof(buffer),formatToken.token,data.ul);
                 assert(length >= 0);
                 if ((uint)length < sizeof(buffer))
                 {
@@ -1138,9 +1121,11 @@ LOCAL void formatString(struct __String *string,
               {
                 #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
                   data.ull = va_arg(arguments,unsigned long long);
-                  length = (formatToken.widthArguments > 0)
-                             ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.ull)
-                             : snprintf(buffer,sizeof(buffer),formatToken.token,data.ull);
+
+                  char buffer[64];
+                  int length = (formatToken.widthArguments > 0)
+                                 ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.ull)
+                                 : snprintf(buffer,sizeof(buffer),formatToken.token,data.ull);
                   assert(length >= 0);
                   if ((uint)length < sizeof(buffer))
                   {
@@ -1181,7 +1166,9 @@ LOCAL void formatString(struct __String *string,
             case FORMAT_LENGTH_TYPE_LONG:
               {
                 data.d = va_arg(arguments,double);
-                length = 0;
+
+                char buffer[64];
+                int length = 0;
                 switch (formatToken.widthArguments)
                 {
                   case 0: length = snprintf(buffer,sizeof(buffer),formatToken.token,data.d);       break;
@@ -1238,8 +1225,9 @@ LOCAL void formatString(struct __String *string,
             String_appendChar(string,formatToken.quoteChar);
             if (data.s != NULL)
             {
-              s = data.s;
-              j = 0;
+              const char *s = data.s;
+              uint       j  = 0;
+              char       ch;
               while (((ch = (*s)) != NUL) && ((i0 == 0) || (j < i0)))
               {
                 if (ch == formatToken.quoteChar)
@@ -1287,9 +1275,10 @@ LOCAL void formatString(struct __String *string,
             // non quoted string
             if (data.s != NULL)
             {
-              length = (formatToken.widthArguments > 0)
-                         ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.s)
-                         : snprintf(buffer,sizeof(buffer),formatToken.token,data.s);
+              char buffer[64];
+              int length = (formatToken.widthArguments > 0)
+                             ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.s)
+                             : snprintf(buffer,sizeof(buffer),formatToken.token,data.s);
               assert(length >= 0);
               if ((uint)length < sizeof(buffer))
               {
@@ -1310,9 +1299,11 @@ LOCAL void formatString(struct __String *string,
         case 'p':
         case 'n':
           data.p = va_arg(arguments,void*);
-          length = (formatToken.widthArguments > 0)
-                   ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.p)
-                   : snprintf(buffer,sizeof(buffer),formatToken.token,data.p);
+
+          char buffer[64];
+          int length = (formatToken.widthArguments > 0)
+                         ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,data.p)
+                         : snprintf(buffer,sizeof(buffer),formatToken.token,data.p);
           assert(length >= 0);
           if ((uint)length < sizeof(buffer))
           {
@@ -1338,10 +1329,10 @@ LOCAL void formatString(struct __String *string,
           {
             // quoted string
             String_appendChar(string,formatToken.quoteChar);
-            index = 0L;
+            size_t index = 0L;
             while (index < String_length(data.string))
             {
-              ch = String_index(data.string,index);
+              char ch = String_index(data.string,index);
               if (ch == formatToken.quoteChar)
               {
                 String_appendChar(string,STRING_ESCAPE_CHARACTER);
@@ -1350,7 +1341,7 @@ LOCAL void formatString(struct __String *string,
               else
               {
                 // check if mapped character
-                j = 0;
+                uint j = 0;
                 while ((j < STRING_ESCAPE_CHARACTER_MAP_LENGTH) && (STRING_ESCAPE_CHARACTERS_MAP_FROM[j] != ch))
                 {
                   j++;
@@ -1383,7 +1374,8 @@ LOCAL void formatString(struct __String *string,
           else
           {
             // non quoted string format
-            length = snprintf(buffer,sizeof(buffer),formatToken.token,String_cString(data.string));
+            char buffer[64];
+            int length = snprintf(buffer,sizeof(buffer),formatToken.token,String_cString(data.string));
             assert(length >= 0);
             if ((uint)length < sizeof(buffer))
             {
@@ -1402,6 +1394,7 @@ LOCAL void formatString(struct __String *string,
           break;
         case 'b':
           // binaray value
+          data.bits = 0;
           switch (formatToken.lengthType)
           {
             case FORMAT_LENGTH_TYPE_INTEGER:
@@ -1468,7 +1461,8 @@ LOCAL void formatString(struct __String *string,
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX("format '%s': conversion '%c'",format,formatToken.conversionChar);
 #if 0
-          length = snprintf(buffer,sizeof(buffer),formatToken.token);
+          char buffer[64];
+          int length = snprintf(buffer,sizeof(buffer),formatToken.token);
           assert(length >= 0);
           if ((uint)length < sizeof(buffer))
           {
@@ -1512,8 +1506,6 @@ LOCAL void formatString(struct __String *string,
 
 LOCAL const char *getNextParseToken(const char *format, FormatToken *formatToken)
 {
-  const char *nextFormat;
-
   #define ADD_CHAR(formatToken,ch) \
     do \
     { \
@@ -1537,7 +1529,7 @@ LOCAL const char *getNextParseToken(const char *format, FormatToken *formatToken
   formatToken->quoteChar        = NUL;
   formatToken->conversionChar   = NUL;
 
-  nextFormat = format;
+  const char *nextFormat = format;
 
   // format start character
   assert((*nextFormat) == '%');
@@ -1753,31 +1745,7 @@ LOCAL bool parseString(const char *string,
                        long       *nextIndex
                       )
 {
-  const char  *nextFormat;
-  FormatToken formatToken;
-  union
-  {
-    int                *i;
-    long               *l;
-    long long          *ll;
-    unsigned int       *ui;
-    unsigned long      *ul;
-    unsigned long long *ull;
-    float              *f;
-    double             *d;
-    char               *c;
-    char               *s;
-    void               *p;
-    bool               *b;
-    struct __String    *string;
-  } value;
-  char        buffer[64];
-  size_t      i;
-  uint        z;
-  const char  *stringQuote;
-  bool        foundFlag;
-
-  nextFormat = format;
+  const char  *nextFormat = format;
   while ((*nextFormat) != NUL)
   {
     // skip white spaces in format
@@ -1797,6 +1765,7 @@ LOCAL bool parseString(const char *string,
       if ((*nextFormat) == '%')
       {
         // get format token
+        FormatToken formatToken;
         nextFormat = getNextParseToken(nextFormat,&formatToken);
 
         // parse string and store values
@@ -1804,110 +1773,164 @@ LOCAL bool parseString(const char *string,
         {
           case 'i':
           case 'd':
-            i = 0L;
-
-            // get +,-
-            if ((index < length) && ((string[index] == '+') || (string[index] == '-')))
             {
-              buffer[i] = string[index];
-              i++;
-              index++;
-            }
+              size_t i = 0L;
 
-            // get data
-            while (   (index < length)
-                   && (i < sizeof(buffer)-1)
-                   && isdigit(string[index])
-                  )
-            {
-              buffer[i] = string[index];
-              i++;
-              index++;
-            }
-            buffer[i] = NUL;
-
-            // convert
-            if (i > 0)
-            {
-              switch (formatToken.lengthType)
+              // get +,-
+              char buffer[64];
+              if ((index < length) && ((string[index] == '+') || (string[index] == '-')))
               {
-                case FORMAT_LENGTH_TYPE_INTEGER:
-                  value.i = va_arg(arguments,int*);
-                  if (value.i != NULL) (*value.i) = strtol(buffer,NULL,10);
-                  break;
-                case FORMAT_LENGTH_TYPE_LONG:
-                  value.l = va_arg(arguments,long int*);
-                  if (value.l != NULL) (*value.l) = strtol(buffer,NULL,10);
-                  break;
-                case FORMAT_LENGTH_TYPE_LONGLONG:
-                  value.ll = va_arg(arguments,long long int*);
-                  if (value.ll != NULL) (*value.ll) = strtoll(buffer,NULL,10);
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break; /* not reached */
+                buffer[i] = string[index];
+                i++;
+                index++;
               }
-            }
-            else
-            {
-              return FALSE;
+
+              // get data
+              while (   (index < length)
+                     && (i < sizeof(buffer)-1)
+                     && isdigit(string[index])
+                    )
+              {
+                buffer[i] = string[index];
+                i++;
+                index++;
+              }
+              buffer[i] = NUL;
+
+              // convert
+              if (i > 0)
+              {
+                union
+                {
+                  int                *i;
+                  long               *l;
+                  long long          *ll;
+                  unsigned int       *ui;
+                  unsigned long      *ul;
+                  unsigned long long *ull;
+                  float              *f;
+                  double             *d;
+                  char               *c;
+                  char               *s;
+                  void               *p;
+                  bool               *b;
+                  struct __String    *string;
+                } value;
+                switch (formatToken.lengthType)
+                {
+                  case FORMAT_LENGTH_TYPE_INTEGER:
+                    value.i = va_arg(arguments,int*);
+                    if (value.i != NULL) (*value.i) = strtol(buffer,NULL,10);
+                    break;
+                  case FORMAT_LENGTH_TYPE_LONG:
+                    value.l = va_arg(arguments,long int*);
+                    if (value.l != NULL) (*value.l) = strtol(buffer,NULL,10);
+                    break;
+                  case FORMAT_LENGTH_TYPE_LONGLONG:
+                    value.ll = va_arg(arguments,long long int*);
+                    if (value.ll != NULL) (*value.ll) = strtoll(buffer,NULL,10);
+                    break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
+                }
+              }
+              else
+              {
+                return FALSE;
+              }
             }
             break;
           case 'u':
-            // skip +
-            if ((index < length) && (string[index] == '+'))
             {
-              index++;
-            }
-
-            // get data
-            i = 0L;
-            while (   (index < length)
-                   && (i < sizeof(buffer)-1)
-                   && isdigit(string[index])
-                  )
-            {
-              buffer[i] = string[index];
-              i++;
-              index++;
-            }
-            buffer[i] = NUL;
-
-            // convert
-            if (i > 0)
-            {
-              switch (formatToken.lengthType)
+              // skip +
+              if ((index < length) && (string[index] == '+'))
               {
-                case FORMAT_LENGTH_TYPE_INTEGER:
-                  value.ui = va_arg(arguments,unsigned int*);
-                  if (value.ui != NULL) (*value.i) = (unsigned int)strtol(buffer,NULL,10);
-                  break;
-                case FORMAT_LENGTH_TYPE_LONG:
-                  value.ul = va_arg(arguments,unsigned long int*);
-                  if (value.ul != NULL) (*value.l) = (unsigned long int)strtol(buffer,NULL,10);
-                  break;
-                case FORMAT_LENGTH_TYPE_LONGLONG:
-                  value.ull = va_arg(arguments,unsigned long long int*);
-                  if (value.ull != NULL) (*value.ull) = (unsigned long long int)strtoll(buffer,NULL,10);
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break; /* not reached */
+                index++;
               }
-            }
-            else
-            {
-              return FALSE;
+
+              // get data
+              size_t i = 0L;
+              char   buffer[64];
+              while (   (index < length)
+                     && (i < sizeof(buffer)-1)
+                     && isdigit(string[index])
+                    )
+              {
+                buffer[i] = string[index];
+                i++;
+                index++;
+              }
+              buffer[i] = NUL;
+
+              // convert
+              if (i > 0)
+              {
+                union
+                {
+                  int                *i;
+                  long               *l;
+                  long long          *ll;
+                  unsigned int       *ui;
+                  unsigned long      *ul;
+                  unsigned long long *ull;
+                  float              *f;
+                  double             *d;
+                  char               *c;
+                  char               *s;
+                  void               *p;
+                  bool               *b;
+                  struct __String    *string;
+                } value;
+                switch (formatToken.lengthType)
+                {
+                  case FORMAT_LENGTH_TYPE_INTEGER:
+                    value.ui = va_arg(arguments,unsigned int*);
+                    if (value.ui != NULL) (*value.i) = (unsigned int)strtol(buffer,NULL,10);
+                    break;
+                  case FORMAT_LENGTH_TYPE_LONG:
+                    value.ul = va_arg(arguments,unsigned long int*);
+                    if (value.ul != NULL) (*value.l) = (unsigned long int)strtol(buffer,NULL,10);
+                    break;
+                  case FORMAT_LENGTH_TYPE_LONGLONG:
+                    value.ull = va_arg(arguments,unsigned long long int*);
+                    if (value.ull != NULL) (*value.ull) = (unsigned long long int)strtoll(buffer,NULL,10);
+                    break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
+                }
+              }
+              else
+              {
+                return FALSE;
+              }
             }
             break;
           case 'c':
             // convert
             if (index < length)
             {
+              union
+              {
+                int                *i;
+                long               *l;
+                long long          *ll;
+                unsigned int       *ui;
+                unsigned long      *ul;
+                unsigned long long *ull;
+                float              *f;
+                double             *d;
+                char               *c;
+                char               *s;
+                void               *p;
+                bool               *b;
+                struct __String    *string;
+              } value;
               value.c = va_arg(arguments,char*);
               if (value.c != NULL) (*value.c) = string[index];
               index++;
@@ -1918,97 +1941,135 @@ LOCAL bool parseString(const char *string,
             }
             break;
           case 'o':
-            // get data
-            i = 0L;
-            while (   (index < length)
-                   && (i < sizeof(buffer)-1)
-                   && (string[index] >= '0')
-                   && (string[index] <= '7')
-                  )
             {
-              buffer[i] = string[index];
-              i++;
-              index++;
-            }
-            buffer[i] = NUL;
-
-            // convert
-            if (i > 0)
-            {
-              switch (formatToken.lengthType)
+              // get data
+              size_t i = 0L;
+              char   buffer[64];
+              while (   (index < length)
+                     && (i < sizeof(buffer)-1)
+                     && (string[index] >= '0')
+                     && (string[index] <= '7')
+                    )
               {
-                case FORMAT_LENGTH_TYPE_INTEGER:
-                  value.i = va_arg(arguments,int*);
-                  if (value.i != NULL) (*value.i) = strtol(buffer,NULL,8);
-                  break;
-                case FORMAT_LENGTH_TYPE_LONG:
-                  value.l = va_arg(arguments,long int*);
-                  if (value.l != NULL) (*value.l) = strtol(buffer,NULL,10);
-                  break;
-                case FORMAT_LENGTH_TYPE_LONGLONG:
-                  value.ll = va_arg(arguments,long long int*);
-                  if (value.ll != NULL) (*value.ll) = strtoll(buffer,NULL,10);
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break; /* not reached */
+                buffer[i] = string[index];
+                i++;
+                index++;
               }
-            }
-            else
-            {
-              return FALSE;
+              buffer[i] = NUL;
+
+              // convert
+              if (i > 0)
+              {
+                union
+                {
+                  int                *i;
+                  long               *l;
+                  long long          *ll;
+                  unsigned int       *ui;
+                  unsigned long      *ul;
+                  unsigned long long *ull;
+                  float              *f;
+                  double             *d;
+                  char               *c;
+                  char               *s;
+                  void               *p;
+                  bool               *b;
+                  struct __String    *string;
+                } value;
+                switch (formatToken.lengthType)
+                {
+                  case FORMAT_LENGTH_TYPE_INTEGER:
+                    value.i = va_arg(arguments,int*);
+                    if (value.i != NULL) (*value.i) = strtol(buffer,NULL,8);
+                    break;
+                  case FORMAT_LENGTH_TYPE_LONG:
+                    value.l = va_arg(arguments,long int*);
+                    if (value.l != NULL) (*value.l) = strtol(buffer,NULL,10);
+                    break;
+                  case FORMAT_LENGTH_TYPE_LONGLONG:
+                    value.ll = va_arg(arguments,long long int*);
+                    if (value.ll != NULL) (*value.ll) = strtoll(buffer,NULL,10);
+                    break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
+                }
+              }
+              else
+              {
+                return FALSE;
+              }
             }
             break;
           case 'x':
           case 'X':
-            // skip prefix 0x
-            if (((index+1) < length) && (string[index+0] == '0') && (string[index+1] == 'x'))
             {
-              index += 2;
-            }
-
-            // get data
-            i = 0L;
-            while (   (index < length)
-                   && (i < sizeof(buffer)-1)
-                   && isdigit(string[index])
-                  )
-            {
-              buffer[i] = string[index];
-              i++;
-              index++;
-            }
-            buffer[i] = NUL;
-
-            // convert
-            if (i > 0)
-            {
-              switch (formatToken.lengthType)
+              // skip prefix 0x
+              if (((index+1) < length) && (string[index+0] == '0') && (string[index+1] == 'x'))
               {
-                case FORMAT_LENGTH_TYPE_INTEGER:
-                  value.i = va_arg(arguments,int*);
-                  if (value.i != NULL) (*value.i) = strtol(buffer,NULL,16);
-                  break;
-                case FORMAT_LENGTH_TYPE_LONG:
-                  value.l = va_arg(arguments,long int*);
-                  if (value.l != NULL) (*value.l) = strtol(buffer,NULL,16);
-                  break;
-                case FORMAT_LENGTH_TYPE_LONGLONG:
-                  value.ll = va_arg(arguments,long long int*);
-                  if (value.ll != NULL) (*value.ll) = strtol(buffer,NULL,16);
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break; /* not reached */
+                index += 2;
               }
-            }
-            else
-            {
-              return FALSE;
+
+              // get data
+              size_t i = 0L;
+              char   buffer[64];
+              while (   (index < length)
+                     && (i < sizeof(buffer)-1)
+                     && isdigit(string[index])
+                    )
+              {
+                buffer[i] = string[index];
+                i++;
+                index++;
+              }
+              buffer[i] = NUL;
+
+              // convert
+              if (i > 0)
+              {
+                union
+                {
+                  int                *i;
+                  long               *l;
+                  long long          *ll;
+                  unsigned int       *ui;
+                  unsigned long      *ul;
+                  unsigned long long *ull;
+                  float              *f;
+                  double             *d;
+                  char               *c;
+                  char               *s;
+                  void               *p;
+                  bool               *b;
+                  struct __String    *string;
+                } value;
+                switch (formatToken.lengthType)
+                {
+                  case FORMAT_LENGTH_TYPE_INTEGER:
+                    value.i = va_arg(arguments,int*);
+                    if (value.i != NULL) (*value.i) = strtol(buffer,NULL,16);
+                    break;
+                  case FORMAT_LENGTH_TYPE_LONG:
+                    value.l = va_arg(arguments,long int*);
+                    if (value.l != NULL) (*value.l) = strtol(buffer,NULL,16);
+                    break;
+                  case FORMAT_LENGTH_TYPE_LONGLONG:
+                    value.ll = va_arg(arguments,long long int*);
+                    if (value.ll != NULL) (*value.ll) = strtol(buffer,NULL,16);
+                    break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
+                }
+              }
+              else
+              {
+                return FALSE;
+              }
             }
             break;
           case 'e':
@@ -2019,31 +2080,19 @@ LOCAL bool parseString(const char *string,
           case 'G':
           case 'a':
           case 'A':
-            i = 0L;
+            {
+              size_t i = 0L;
 
-            // get +,0,.
-            if ((index < length) && ((string[index] == '+') || (string[index] == '-')  || (string[index] == '.')))
-            {
-              buffer[i] = string[index];
-              i++;
-              index++;
-            }
+              // get +,0,.
+              char buffer[64];
+              if ((index < length) && ((string[index] == '+') || (string[index] == '-')  || (string[index] == '.')))
+              {
+                buffer[i] = string[index];
+                i++;
+                index++;
+              }
 
-            // get data
-            while (   (index < length)
-                   && (i < sizeof(buffer)-1)
-                   && isdigit(string[index])
-                  )
-            {
-              buffer[i] = string[index];
-              i++;
-              index++;
-            }
-            if ((index < length) && (string[index] == '.'))
-            {
-              buffer[i] = '.';
-              i++;
-              index++;
+              // get data
               while (   (index < length)
                      && (i < sizeof(buffer)-1)
                      && isdigit(string[index])
@@ -2053,136 +2102,185 @@ LOCAL bool parseString(const char *string,
                 i++;
                 index++;
               }
-            }
-            buffer[i] = NUL;
-
-            // convert
-            if (i > 0)
-            {
-              switch (formatToken.lengthType)
+              if ((index < length) && (string[index] == '.'))
               {
-                case FORMAT_LENGTH_TYPE_INTEGER:
-                  value.f = va_arg(arguments,float*);
-                  if (value.f != NULL) (*value.f) = strtod(buffer,NULL);
-                  break;
-                case FORMAT_LENGTH_TYPE_LONG:
-                  value.d = va_arg(arguments,double*);
-                  if (value.d != NULL) (*value.d) = strtod(buffer,NULL);
-                  break;
-                case FORMAT_LENGTH_TYPE_LONGLONG:
-                  HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-                  break;
-                default:
-                  #ifndef NDEBUG
-                    HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                  #endif /* NDEBUG */
-                  break; /* not reached */
+                buffer[i] = '.';
+                i++;
+                index++;
+                while (   (index < length)
+                       && (i < sizeof(buffer)-1)
+                       && isdigit(string[index])
+                      )
+                {
+                  buffer[i] = string[index];
+                  i++;
+                  index++;
+                }
               }
-            }
-            else
-            {
-              return FALSE;
+              buffer[i] = NUL;
+
+              // convert
+              if (i > 0)
+              {
+                union
+                {
+                  int                *i;
+                  long               *l;
+                  long long          *ll;
+                  unsigned int       *ui;
+                  unsigned long      *ul;
+                  unsigned long long *ull;
+                  float              *f;
+                  double             *d;
+                  char               *c;
+                  char               *s;
+                  void               *p;
+                  bool               *b;
+                  struct __String    *string;
+                } value;
+                switch (formatToken.lengthType)
+                {
+                  case FORMAT_LENGTH_TYPE_INTEGER:
+                    value.f = va_arg(arguments,float*);
+                    if (value.f != NULL) (*value.f) = strtod(buffer,NULL);
+                    break;
+                  case FORMAT_LENGTH_TYPE_LONG:
+                    value.d = va_arg(arguments,double*);
+                    if (value.d != NULL) (*value.d) = strtod(buffer,NULL);
+                    break;
+                  case FORMAT_LENGTH_TYPE_LONGLONG:
+                    HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
+                    break;
+                  default:
+                    #ifndef NDEBUG
+                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                    #endif /* NDEBUG */
+                    break; /* not reached */
+                }
+              }
+              else
+              {
+                return FALSE;
+              }
             }
             break;
           case 's':
-            // get and copy data
-            value.s = va_arg(arguments,char*);
-            assert((value.s == NULL) || (formatToken.width > 0));
-
-            i = 0L;
-            if (index < length)
             {
-              while (   (index < length)
-                     && (formatToken.blankFlag || !isspace(string[index]))
-                     && (string[index] != (*nextFormat))
-                    )
+              // get and copy data
+              union
               {
-                if (   (string[index] == STRING_ESCAPE_CHARACTER)
-                    && ((index+1) < length)
-                    && !formatToken.blankFlag
-                   )
-                {
-                  // quoted character
-                  if ((formatToken.width == 0) || (i < formatToken.width-1))
-                  {
-                    if (value.s != NULL) value.s[i] = string[index+1];
-                    i++;
-                  }
-                  index += 2;
-                }
-                else
-                {
-                  // check for string quote
-                  stringQuote = NULL;
-                  if ((formatToken.quoteChar != NUL) && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
-                  if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
+                int                *i;
+                long               *l;
+                long long          *ll;
+                unsigned int       *ui;
+                unsigned long      *ul;
+                unsigned long long *ull;
+                float              *f;
+                double             *d;
+                char               *c;
+                char               *s;
+                void               *p;
+                bool               *b;
+                struct __String    *string;
+              } value;
+              value.s = va_arg(arguments,char*);
+              assert((value.s == NULL) || (formatToken.width > 0));
 
-                  if (   (stringQuote != NULL)
+              size_t i = 0L;
+              if (index < length)
+              {
+                while (   (index < length)
+                       && (formatToken.blankFlag || !isspace(string[index]))
+                       && (string[index] != (*nextFormat))
+                      )
+                {
+                  if (   (string[index] == STRING_ESCAPE_CHARACTER)
+                      && ((index+1) < length)
                       && !formatToken.blankFlag
                      )
                   {
-                    do
+                    // quoted character
+                    if ((formatToken.width == 0) || (i < formatToken.width-1))
                     {
-                      // skip quote-char
-                      index++;
-
-                      // get string
-                      while ((index < length) && (string[index] != (*stringQuote)))
-                      {
-                        if (   ((index+1) < length)
-                            && (string[index] == STRING_ESCAPE_CHARACTER)
-                            && (string[index+1] == (*stringQuote))
-                           )
-                        {
-                          if ((formatToken.width == 0) || (i < formatToken.width-1))
-                          {
-                            if (value.s != NULL) value.s[i] = string[index+1];
-                            i++;
-                          }
-                          index += 2;
-                        }
-                        else
-                        {
-                          if (i < (formatToken.width-1))
-                          {
-                            if (value.s != NULL) value.s[i] = string[index];
-                            i++;
-                          }
-                          index++;
-                        }
-                      }
-
-                      // skip quote-char
-                      if (index < length)
-                      {
-                        index++;
-                      }
-
-                      stringQuote = NULL;
-                      if (index < length)
-                      {
-                        if ((formatToken.quoteChar != NUL) && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
-                        if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
-                      }
+                      if (value.s != NULL) value.s[i] = string[index+1];
+                      i++;
                     }
-                    while (stringQuote != NULL);
+                    index += 2;
                   }
                   else
                   {
-                    if (i < (formatToken.width-1))
+                    // check for string quote
+                    const char *stringQuote = NULL;
+                    if ((formatToken.quoteChar != NUL) && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
+                    if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
+
+                    if (   (stringQuote != NULL)
+                        && !formatToken.blankFlag
+                       )
                     {
-                      if (value.s != NULL) value.s[i] = string[index];
-                      i++;
+                      do
+                      {
+                        // skip quote-char
+                        index++;
+
+                        // get string
+                        while ((index < length) && (string[index] != (*stringQuote)))
+                        {
+                          if (   ((index+1) < length)
+                              && (string[index] == STRING_ESCAPE_CHARACTER)
+                              && (string[index+1] == (*stringQuote))
+                             )
+                          {
+                            if ((formatToken.width == 0) || (i < formatToken.width-1))
+                            {
+                              if (value.s != NULL) value.s[i] = string[index+1];
+                              i++;
+                            }
+                            index += 2;
+                          }
+                          else
+                          {
+                            if (i < (formatToken.width-1))
+                            {
+                              if (value.s != NULL) value.s[i] = string[index];
+                              i++;
+                            }
+                            index++;
+                          }
+                        }
+
+                        // skip quote-char
+                        if (index < length)
+                        {
+                          index++;
+                        }
+
+                        stringQuote = NULL;
+                        if (index < length)
+                        {
+                          if ((formatToken.quoteChar != NUL) && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
+                          if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
+                        }
+                      }
+                      while (stringQuote != NULL);
                     }
-                    index++;
+                    else
+                    {
+                      if (i < (formatToken.width-1))
+                      {
+                        if (value.s != NULL) value.s[i] = string[index];
+                        i++;
+                      }
+                      index++;
+                    }
                   }
                 }
               }
-            }
-            if (value.s != NULL)
-            {
-              if (i <= 0) return FALSE;
-              value.s[i] = NUL;
+              if (value.s != NULL)
+              {
+                if (i <= 0) return FALSE;
+                value.s[i] = NUL;
+              }
             }
             break;
           case 'p':
@@ -2190,6 +2288,22 @@ LOCAL bool parseString(const char *string,
             break;
           case 'S':
             // get and copy data
+            union
+            {
+              int                *i;
+              long               *l;
+              long long          *ll;
+              unsigned int       *ui;
+              unsigned long      *ul;
+              unsigned long long *ull;
+              float              *f;
+              double             *d;
+              char               *c;
+              char               *s;
+              void               *p;
+              bool               *b;
+              struct __String    *string;
+            } value;
             value.string = va_arg(arguments,String);
             STRING_CHECK_VALID(value.string);
             STRING_CHECK_ASSIGNABLE(value.string);
@@ -2197,7 +2311,7 @@ LOCAL bool parseString(const char *string,
             String_clear(value.string);
             if (index < length)
             {
-              i = 0;
+              size_t i = 0;
               while (   (index < length)
                      && (formatToken.blankFlag || !isspace(string[index]))
 // NUL in string here a problem?
@@ -2220,7 +2334,7 @@ LOCAL bool parseString(const char *string,
                 else
                 {
                   // check for string quote
-                  stringQuote = NULL;
+                  const char *stringQuote = NULL;
                   if ((formatToken.quoteChar != NUL) && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
                   if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
 
@@ -2332,55 +2446,59 @@ still not implemented
             break;
 #endif /* 0 */
           case 'y':
-            // get data
-            i = 0L;
-            while (   (index < length)
-                   && !isspace(string[index])
-                  )
             {
-              if (i < sizeof(buffer)-1)
+              // get data
+              size_t i = 0L;
+              char   buffer[64];
+              while (   (index < length)
+                     && !isspace(string[index])
+                    )
               {
-                buffer[i] = string[index];
-                i++;
-              }
-              index++;
-            }
-            buffer[i] = NUL;
-
-            // convert
-            if (i > 0)
-            {
-              value.b = va_arg(arguments,bool*);
-              foundFlag = FALSE;
-              z = 0;
-              while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS)))
-              {
-                if (stringEquals(buffer,DEFAULT_TRUE_STRINGS[z]))
+                if (i < sizeof(buffer)-1)
                 {
-                  if (value.b != NULL) (*value.b) = TRUE;
-                  foundFlag = TRUE;
+                  buffer[i] = string[index];
+                  i++;
                 }
-                z++;
+                index++;
               }
-              z = 0;
-              while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS)))
-              {
-                if (stringEquals(buffer,DEFAULT_FALSE_STRINGS[z]))
-                {
-                  if (value.b != NULL) (*value.b) = FALSE;
-                  foundFlag = TRUE;
-                }
-                z++;
-              }
+              buffer[i] = NUL;
 
-              if (!foundFlag)
+              // convert
+              if (i > 0)
+              {
+                value.b = va_arg(arguments,bool*);
+                bool foundFlag = FALSE;
+                size_t z;
+                z = 0;
+                while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS)))
+                {
+                  if (stringEquals(buffer,DEFAULT_TRUE_STRINGS[z]))
+                  {
+                    if (value.b != NULL) (*value.b) = TRUE;
+                    foundFlag = TRUE;
+                  }
+                  z++;
+                }
+                z = 0;
+                while (!foundFlag && (z < SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS)))
+                {
+                  if (stringEquals(buffer,DEFAULT_FALSE_STRINGS[z]))
+                  {
+                    if (value.b != NULL) (*value.b) = FALSE;
+                    foundFlag = TRUE;
+                  }
+                  z++;
+                }
+
+                if (!foundFlag)
+                {
+                  return FALSE;
+                }
+              }
+              else
               {
                 return FALSE;
               }
-            }
-            else
-            {
-              return FALSE;
             }
             break;
           case '*':
@@ -2452,20 +2570,18 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
                           long             *nextIndex
                          )
 {
-  uint  i;
-  ulong factor;
-
   assert(stringUnits != NULL);
   assert(string != NULL);
   assert(unitString != NULL);
 
-  i = 0;
+  uint i = 0;
   while (   (i < stringUnitCount)
          && !stringEquals(unitString,stringUnits[i].name)
         )
   {
     i++;
   }
+  ulong factor;
   if (i < stringUnitCount)
   {
     factor = stringUnits[i].factor;
@@ -2499,25 +2615,22 @@ LOCAL bool matchString(const char *string,
                        long       *nextIndex
                       )
 {
-  bool       matchFlag;
-  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
-    regex_t    regex;
-    regmatch_t subMatches[1];
-  #endif /* HAVE_PCRE || HAVE_REGEX_H */
-
   assert(string != NULL);
   assert(pattern != NULL);
 
+  bool matchFlag;
   if (index < stringLength(string))
   {
     #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
       // compile pattern
+      regex_t regex;
       if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
       {
         return FALSE;
       }
 
       // match
+      regmatch_t subMatches[1];
       matchFlag = (regexec(&regex,
                            &string[index],
                            1,  // subMatchCount
@@ -2578,31 +2691,25 @@ LOCAL bool vmatchString(const char *string,
                         va_list    matchedSubStrings
                        )
 {
-  bool       matchFlag;
-  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
-    regex_t    regex;
-    va_list    arguments;
-    String     matchedSubString;
-    regmatch_t *subMatches;
-    uint       subMatchCount;
-    uint       i;
-  #endif /* HAVE_PCRE || HAVE_REGEX_H */
-
   assert(string != NULL);
   assert(pattern != NULL);
 
+  bool matchFlag;
   if (index < stringLength(string))
   {
     #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
       // compile pattern
+      regex_t regex;
       if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
       {
         return FALSE;
       }
 
       // count sub-patterns (=1 for total matched string + number of matched-sub-strings)
+      va_list arguments;
       va_copy(arguments,matchedSubStrings);
-      subMatchCount = 1;
+      String matchedSubString;
+      uint   subMatchCount = 1;
       do
       {
         matchedSubString = (String)va_arg(arguments,void*);
@@ -2612,7 +2719,7 @@ LOCAL bool vmatchString(const char *string,
       va_end(arguments);
 
       // allocate sub-patterns array
-      subMatches = (regmatch_t*)malloc(subMatchCount*sizeof(regmatch_t));
+      regmatch_t *subMatches = (regmatch_t*)malloc(subMatchCount*sizeof(regmatch_t));
       if (subMatches == NULL)
       {
         regfree(&regex);
@@ -2643,7 +2750,7 @@ LOCAL bool vmatchString(const char *string,
         }
 
         va_copy(arguments,matchedSubStrings);
-        for (i = 1; i < subMatchCount; i++)
+        for (uint i = 1; i < subMatchCount; i++)
         {
           matchedSubString = (String)va_arg(arguments,void*);
           assert(matchedSubString != NULL);
@@ -2687,17 +2794,7 @@ String String_new(void)
 String __String_new(const char *__fileName__, ulong __lineNb__)
 #endif /* NDEBUG */
 {
-  struct __String *string;
-  #ifndef NDEBUG
-    #ifdef TRACE_STRING_ALLOCATIONS
-      DebugStringNode *debugStringNode;
-    #endif /* TRACE_STRING_ALLOCATIONS */
-    #ifdef MAX_STRINGS_CHECK
-      ulong debugStringCount;
-    #endif /* MAX_STRINGS_CHECK */
-  #endif /* not NDEBUG */
-
-  string = allocString();
+  struct __String *string = allocString();
   if (string == NULL)
   {
     return NULL;
@@ -2710,7 +2807,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
     {
       #ifdef TRACE_STRING_ALLOCATIONS
         // find string in free-list; reuse or allocate new debug node
-        debugStringNode = debugFindString(&debugStringFreeList,string);
+        DebugStringNode *debugStringNode = debugFindString(&debugStringFreeList,string);
         if (debugStringNode != NULL)
         {
           debugRemoveString(&debugStringFreeList,debugStringNode);
@@ -2745,7 +2842,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
         // add string to allocated-list
         debugAddString(&debugStringAllocList,debugStringNode);
         #ifdef MAX_STRINGS_CHECK
-          debugStringCount = List_count(&debugStringAllocList);
+          ulong debugStringCount = List_count(&debugStringAllocList);
           if (debugStringCount >= debugMaxStringNextWarningCount)
           {
             fprintf(stderr,"DEBUG Warning: %lu strings allocated!\n",debugStringCount);
@@ -2774,7 +2871,6 @@ String __String_newCString(const char *__fileName__, ulong __lineNb__, const cha
 #endif /* NDEBUG */
 {
   String string;
-
   #ifdef NDEBUG
     string = String_new();
   #else /* not DEBUG */
@@ -2794,7 +2890,6 @@ String __String_newChar(const char *__fileName__, ulong __lineNb__, char ch)
 #endif /* NDEBUG */
 {
   String string;
-
   #ifdef NDEBUG
     string = String_new();
   #else /* not DEBUG */
@@ -2814,7 +2909,6 @@ String __String_newBuffer(const char *__fileName__, ulong __lineNb__, const void
 #endif /* NDEBUG */
 {
   String string;
-
   #ifdef NDEBUG
     string = String_new();
   #else /* not DEBUG */
@@ -2833,14 +2927,13 @@ String String_duplicate(ConstString fromString)
 String __String_duplicate(const char *__fileName__, ulong __lineNb__, ConstString fromString)
 #endif /* NDEBUG */
 {
-  struct __String *string;
-
   #ifdef NDEBUG
     STRING_CHECK_VALID(fromString);
   #else /* not NDEBUG */
     STRING_CHECK_VALID_AT(__fileName__,__lineNb__,fromString);
   #endif /* NDEBUG */
 
+  struct __String *string;
   if (fromString != NULL)
   {
     assert(fromString->data != NULL);
@@ -2876,8 +2969,6 @@ String String_copy(String *string, ConstString fromString)
 String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, ConstString fromString)
 #endif /* NDEBUG */
 {
-  struct __String *copyString;
-
   #ifdef NDEBUG
     if (string != NULL) STRING_CHECK_VALID(*string);
   #else /* not NDEBUG */
@@ -2890,6 +2981,7 @@ String __String_copy(const char *__fileName__, ulong __lineNb__, String *string,
     STRING_CHECK_VALID_AT(__fileName__,__lineNb__,fromString);
   #endif /* NDEBUG */
 
+  struct __String *copyString;
   if (string != NULL)
   {
     copyString = (*string);
@@ -2935,12 +3027,6 @@ void String_delete(ConstString string)
 void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString string)
 #endif /* NDEBUG */
 {
-  #ifndef NDEBUG
-    #ifdef TRACE_STRING_ALLOCATIONS
-      DebugStringNode *debugStringNode;
-    #endif /* TRACE_STRING_ALLOCATIONS */
-  #endif /* not NDEBUG */
-
   #ifdef NDEBUG
     STRING_CHECK_VALID(string);
   #else /* not NDEBUG */
@@ -2959,7 +3045,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString str
         pthread_mutex_lock(&debugStringLock);
         {
           // find string in free-list to check for duplicate free
-          debugStringNode = debugFindString(&debugStringFreeList,string);
+          DebugStringNode *debugStringNode = debugFindString(&debugStringFreeList,string);
           if (debugStringNode != NULL)
           {
             fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
@@ -3164,8 +3250,6 @@ String String_setBuffer(String string, const void *buffer, size_t bufferLength)
 
 String String_format(String string, const char *format, ...)
 {
-  va_list arguments;
-
   assert(string != NULL);
   assert(format != NULL);
 
@@ -3177,6 +3261,7 @@ String String_format(String string, const char *format, ...)
     string->length = 0;
     STRING_UPDATE_VALID(string);
 
+    va_list arguments;
     va_start(arguments,format);
     formatString(string,format,arguments);
     va_end(arguments);
@@ -3206,8 +3291,6 @@ String String_vformat(String string, const char *format, va_list arguments)
 
 String String_append(String string, ConstString appendString)
 {
-  size_t n;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(appendString);
@@ -3217,7 +3300,7 @@ String String_append(String string, ConstString appendString)
     assert(string->data != NULL);
     if (appendString != NULL)
     {
-      n = string->length+appendString->length;
+      size_t n = string->length+appendString->length;
       __ensureStringLength(string,n);
       memmove(&string->data[string->length],&appendString->data[0],appendString->length);
       string->data[n] = NUL;
@@ -3232,8 +3315,6 @@ String String_append(String string, ConstString appendString)
 
 String String_appendSub(String string, ConstString fromString, size_t fromIndex, long fromLength)
 {
-  size_t n;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(fromString);
@@ -3247,6 +3328,7 @@ String String_appendSub(String string, ConstString fromString, size_t fromIndex,
 
       if (fromIndex < fromString->length)
       {
+        size_t n;
         if (fromIndex == STRING_END)
         {
           n = MIN(fromString->length,fromString->length-(size_t)fromLength);
@@ -3288,17 +3370,14 @@ String String_appendCString(String string, const char *s)
 
 String String_appendCharUTF8(String string, Codepoint codepoint)
 {
-  size_t l;
-  size_t n;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
     assert(string->data != NULL);
-    l = charUTF8Length(codepoint);
-    n = string->length+l;
+    size_t l = charUTF8Length(codepoint);
+    size_t n = string->length+l;
     __ensureStringLength(string,n);
     memcpy(&string->data[string->length],charUTF8(codepoint),l);
     string->data[n] = NUL;
@@ -3312,8 +3391,6 @@ String String_appendCharUTF8(String string, Codepoint codepoint)
 
 String String_appendBuffer(String string, const char *buffer, size_t bufferLength)
 {
-  size_t n;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -3322,7 +3399,7 @@ String String_appendBuffer(String string, const char *buffer, size_t bufferLengt
     assert(string->data != NULL);
     if (buffer != NULL)
     {
-      n = string->length+bufferLength;
+      size_t n = string->length+bufferLength;
       __ensureStringLength(string,n);
       memmove(&string->data[string->length],buffer,bufferLength);
       string->data[n] = NUL;
@@ -3353,8 +3430,6 @@ String String_appendVFormat(String string, const char *format, va_list arguments
 
 String String_appendFormat(String string, const char *format, ...)
 {
-  va_list arguments;
-
   assert(string != NULL);
   assert(format != NULL);
 
@@ -3363,6 +3438,7 @@ String String_appendFormat(String string, const char *format, ...)
 
   if (string != NULL)
   {
+    va_list arguments;
     va_start(arguments,format);
     formatString(string,format,arguments);
     va_end(arguments);
@@ -3373,8 +3449,6 @@ String String_appendFormat(String string, const char *format, ...)
 
 String String_insert(String string, size_t index, ConstString insertString)
 {
-  size_t n;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(insertString);
@@ -3387,7 +3461,7 @@ String String_insert(String string, size_t index, ConstString insertString)
     {
       if      (index == STRING_END)
       {
-        n = string->length+insertString->length;
+        size_t n = string->length+insertString->length;
         __ensureStringLength(string,n);
         memmove(&string->data[string->length],&insertString->data[0],insertString->length);
         string->data[n] = NUL;
@@ -3395,7 +3469,7 @@ String String_insert(String string, size_t index, ConstString insertString)
       }
       else if (index <= string->length)
       {
-        n = string->length+insertString->length;
+        size_t n = string->length+insertString->length;
         __ensureStringLength(string,n);
         memmove(&string->data[index+insertString->length],&string->data[index],string->length-index);
         memmove(&string->data[index],&insertString->data[0],insertString->length);
@@ -3412,8 +3486,6 @@ String String_insert(String string, size_t index, ConstString insertString)
 
 String String_insertSub(String string, size_t index, ConstString fromString, size_t fromIndex, long fromLength)
 {
-  size_t n;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
   STRING_CHECK_VALID(fromString);
@@ -3426,6 +3498,7 @@ String String_insertSub(String string, size_t index, ConstString fromString, siz
     {
       if (fromIndex < fromString->length)
       {
+        size_t n;
         if (fromIndex == STRING_END)
         {
           n = MIN(fromString->length,fromString->length-(size_t)fromLength);
@@ -3494,8 +3567,6 @@ String String_insertChar(String string, size_t index, char ch)
 
 String String_insertBuffer(String string, size_t index, const char *buffer, size_t bufferLength)
 {
-  size_t n;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -3507,7 +3578,7 @@ String String_insertBuffer(String string, size_t index, const char *buffer, size
     {
       if      (index == STRING_END)
       {
-        n = string->length+bufferLength;
+        size_t n = string->length+bufferLength;
         __ensureStringLength(string,n);
         memmove(&string->data[string->length],buffer,bufferLength);
         string->data[n] = NUL;
@@ -3515,7 +3586,7 @@ String String_insertBuffer(String string, size_t index, const char *buffer, size
       }
       else if (index <= string->length)
       {
-        n = string->length+bufferLength;
+        size_t n = string->length+bufferLength;
         __ensureStringLength(string,n);
         memmove(&string->data[index+bufferLength],&string->data[index],string->length-index);
         memmove(&string->data[index],buffer,bufferLength);
@@ -3532,8 +3603,6 @@ String String_insertBuffer(String string, size_t index, const char *buffer, size
 
 String String_remove(String string, size_t index, size_t length)
 {
-  size_t n;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -3543,12 +3612,13 @@ String String_remove(String string, size_t index, size_t length)
 
     if      (index == STRING_END)
     {
-      n = (string->length > length) ? string->length-length : 0L;
+      size_t n = (string->length > length) ? string->length-length : 0L;
       string->data[n] = NUL;
       string->length  = n;
     }
     else if (index < string->length)
     {
+      size_t n;
       if ((index + length) < string->length)
       {
         memmove(&string->data[index],&string->data[index + length],string->length - (index + length));
@@ -3666,12 +3736,6 @@ String String_map(String            string,
                   const char        *quoteChars
                  )
 {
-  const char *t;
-  char       quoteChar;
-  uint       i;
-  size_t     l0,l1;
-  bool       replaceFlag;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -3684,10 +3748,10 @@ String String_map(String            string,
       // skip quoted parts
       if (quoteChars != NULL)
       {
-        t = strchr(quoteChars,string->data[index]);
+        const char *t = strchr(quoteChars,string->data[index]);
         if (t != NULL)
         {
-          quoteChar = (*t);
+          char quoteChar = (*t);
           do
           {
             index++;
@@ -3702,11 +3766,11 @@ String String_map(String            string,
       // map
       if (index < string->length)
       {
-        replaceFlag = FALSE;
-        for (i = 0; i < count; i++)
+        bool replaceFlag = FALSE;
+        for (uint i = 0; i < count; i++)
         {
-          l0 = String_length(from[i]);
-          l1 = String_length(to[i]);
+          size_t l0 = String_length(from[i]);
+          size_t l1 = String_length(to[i]);
 
           if (String_subEquals(string,from[i],index,l0))
           {
@@ -3732,12 +3796,6 @@ String String_mapCString(String     string,
                          const char *quoteChars
                         )
 {
-  const char *t;
-  char       quoteChar;
-  uint       i;
-  size_t     l0,l1;
-  bool       replaceFlag;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -3750,10 +3808,10 @@ String String_mapCString(String     string,
       // skip quoted parts
       if (quoteChars != NULL)
       {
-        t = strchr(quoteChars,string->data[index]);
+        const char * t = strchr(quoteChars,string->data[index]);
         if (t != NULL)
         {
-          quoteChar = (*t);
+          char quoteChar = (*t);
           do
           {
             index++;
@@ -3768,11 +3826,11 @@ String String_mapCString(String     string,
       // map
       if (index < string->length)
       {
-        replaceFlag = FALSE;
-        for (i = 0; i < count; i++)
+        bool replaceFlag = FALSE;
+        for (uint i = 0; i < count; i++)
         {
-          l0 = strlen(from[i]);
-          l1 = strlen(to[i]);
+          size_t l0 = strlen(from[i]);
+          size_t l1 = strlen(to[i]);
 
           if (String_subEqualsCString(string,from[i],index,l0))
           {
@@ -3798,10 +3856,6 @@ String String_mapChar(String     string,
                       const char *quoteChars
                      )
 {
-  const char *t;
-  char       quoteChar;
-  uint       i;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -3814,10 +3868,10 @@ String String_mapChar(String     string,
       // skip quoted parts
       if (quoteChars != NULL)
       {
-        t = strchr(quoteChars,string->data[index]);
+        const char * t = strchr(quoteChars,string->data[index]);
         if (t != NULL)
         {
-          quoteChar = (*t);
+          char quoteChar = (*t);
           do
           {
             index++;
@@ -3832,7 +3886,7 @@ String String_mapChar(String     string,
       // map
       if (index < string->length)
       {
-        for (i = 0; i < count; i++)
+        for (uint i = 0; i < count; i++)
         {
           if (string->data[index] == from[i])
           {
@@ -3851,7 +3905,6 @@ String String_mapChar(String     string,
 
 String String_sub(String string, ConstString fromString, size_t fromIndex, long fromLength)
 {
-  size_t n;
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
@@ -3867,6 +3920,7 @@ String String_sub(String string, ConstString fromString, size_t fromIndex, long 
 
       if      (fromIndex == STRING_END)
       {
+        size_t n;
         if (fromLength == STRING_END)
         {
           n = fromString->length;
@@ -3882,6 +3936,7 @@ String String_sub(String string, ConstString fromString, size_t fromIndex, long 
       }
       else if (fromIndex < fromString->length)
       {
+        size_t n;
         if (fromLength == STRING_END)
         {
           n = fromString->length-fromIndex;
@@ -3915,8 +3970,6 @@ String String_sub(String string, ConstString fromString, size_t fromIndex, long 
 
 char *String_subCString(char *s, ConstString fromString, size_t fromIndex, long fromLength)
 {
-  size_t n;
-
   assert(s != NULL);
 
   STRING_CHECK_VALID(fromString);
@@ -3929,6 +3982,7 @@ char *String_subCString(char *s, ConstString fromString, size_t fromIndex, long 
 
       if      (fromIndex == STRING_END)
       {
+        size_t n;
         if (fromLength == STRING_END)
         {
           n = fromString->length;
@@ -3942,6 +3996,7 @@ char *String_subCString(char *s, ConstString fromString, size_t fromIndex, long 
       }
       else if (fromIndex < fromString->length)
       {
+        size_t n;
         if (fromLength == STRING_END)
         {
           n = fromString->length-fromIndex;
@@ -3969,8 +4024,6 @@ char *String_subCString(char *s, ConstString fromString, size_t fromIndex, long 
 
 char *String_subBuffer(char *buffer, ConstString fromString, size_t fromIndex, long fromLength)
 {
-  size_t n;
-
   assert(buffer != NULL);
 
   STRING_CHECK_VALID(fromString);
@@ -3983,6 +4036,7 @@ char *String_subBuffer(char *buffer, ConstString fromString, size_t fromIndex, l
 
       if      (fromIndex == STRING_END)
       {
+        size_t n;
         if (fromLength == STRING_END)
         {
           n = fromString->length;
@@ -3996,6 +4050,7 @@ char *String_subBuffer(char *buffer, ConstString fromString, size_t fromIndex, l
       }
       else if (fromIndex < fromString->length)
       {
+        size_t n;
         if (fromLength == STRING_END)
         {
           n = fromString->length-fromIndex;
@@ -4068,17 +4123,15 @@ String String_joinBuffer(String string, const char *buffer, size_t bufferLength,
 
 String String_makeValidUTF8(String string, size_t index)
 {
-  size_t nextIndex;
-  size_t toIndex;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
   if (string != NULL)
   {
-    toIndex = index;
+    size_t toIndex = index;
     while (string->data[index] != NUL)
     {
+      size_t nextIndex;
       if (stringIsValidUTF8Codepoint(string->data,index,&nextIndex))
       {
         while (index < nextIndex)
@@ -4108,19 +4161,15 @@ int String_compare(ConstString           string1,
                    void                  *stringCompareUserData
                   )
 {
-  size_t n;
-  size_t i;
-  int    result;
-
   assert(string1 != NULL);
   assert(string2 != NULL);
 
   STRING_CHECK_VALID(string1);
   STRING_CHECK_VALID(string2);
 
-  result = 0;
-  n = MIN(string1->length,string2->length);
-  i = 0L;
+  int    result = 0;
+  size_t n      = MIN(string1->length,string2->length);
+  size_t i      = 0L;
   if (stringCompareFunction != NULL)
   {
     while ((result == 0) && (i < n))
@@ -4149,18 +4198,16 @@ int String_compare(ConstString           string1,
 
 bool String_equalsCString(ConstString string, const char *s)
 {
-  size_t n;
-  bool   equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     assert(string->data != NULL);
 
     if (s != NULL)
     {
-      n = strlen(s);
+      size_t n = strlen(s);
       if (string->length == (size_t)n)
       {
         equalFlag = (memcmp(string->data,s,string->length) == 0);
@@ -4185,10 +4232,9 @@ bool String_equalsCString(ConstString string, const char *s)
 
 bool String_equalsChar(ConstString string, char ch)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     assert(string->data != NULL);
@@ -4205,11 +4251,10 @@ bool String_equalsChar(ConstString string, char ch)
 
 bool String_equalsBuffer(ConstString string, const char *buffer, size_t bufferLength)
 {
-  bool equalFlag;
-
   assert(string != NULL);
   assert(buffer != NULL);
 
+  bool equalFlag;
   if (string != NULL)
   {
     STRING_CHECK_VALID(string);
@@ -4234,7 +4279,6 @@ bool String_equalsBuffer(ConstString string, const char *buffer, size_t bufferLe
 bool String_equalsIgnoreCase(ConstString string1, ConstString string2)
 {
   bool equalFlag;
-
   if ((string1 != NULL) && (string2 != NULL))
   {
     STRING_CHECK_VALID(string1);
@@ -4252,10 +4296,9 @@ bool String_equalsIgnoreCase(ConstString string1, ConstString string2)
 
 bool String_equalsIgnoreCaseCString(ConstString string, const char *s)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     assert(string->data != NULL);
@@ -4279,10 +4322,9 @@ bool String_equalsIgnoreCaseCString(ConstString string, const char *s)
 
 bool String_equalsIgnoreCaseChar(ConstString string, char ch)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     assert(string->data != NULL);
@@ -4299,12 +4341,10 @@ bool String_equalsIgnoreCaseChar(ConstString string, char ch)
 
 bool String_equalsIgnoreCaseBuffer(ConstString string, const char *buffer, size_t bufferLength)
 {
-  bool   equalFlag;
-  size_t i;
-
   assert(string != NULL);
   assert(buffer != NULL);
 
+  bool   equalFlag;
   if (string != NULL)
   {
     STRING_CHECK_VALID(string);
@@ -4312,7 +4352,7 @@ bool String_equalsIgnoreCaseBuffer(ConstString string, const char *buffer, size_
     if (string->length == bufferLength)
     {
       equalFlag = TRUE;
-      i         = 0L;
+      size_t i = 0L;
       while (equalFlag && (i < string->length))
       {
         equalFlag = (toupper(string->data[i]) == toupper(buffer[i]));
@@ -4334,14 +4374,13 @@ bool String_equalsIgnoreCaseBuffer(ConstString string, const char *buffer, size_
 
 bool String_subEquals(ConstString string1, ConstString string2, long index, size_t length)
 {
-  bool  equalFlag;
-
   assert(string1 != NULL);
   assert(string2 != NULL);
 
   STRING_CHECK_VALID(string1);
   STRING_CHECK_VALID(string2);
 
+  bool  equalFlag;
   if ((string1 != NULL) && (string2 != NULL))
   {
     equalFlag = String_subEqualsBuffer(string1,string2->data,string2->length,index,length);
@@ -4356,10 +4395,9 @@ bool String_subEquals(ConstString string1, ConstString string2, long index, size
 
 bool String_subEqualsCString(ConstString string, const char *s, long index, size_t length)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     assert(string->data != NULL);
@@ -4383,10 +4421,9 @@ bool String_subEqualsCString(ConstString string, const char *s, long index, size
 
 bool String_subEqualsChar(ConstString string, char ch, long index)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     assert(string->data != NULL);
@@ -4403,24 +4440,21 @@ bool String_subEqualsChar(ConstString string, char ch, long index)
 
 bool String_subEqualsBuffer(ConstString string, const char *buffer, size_t bufferLength, long index, size_t length)
 {
-  long   i;
-  bool   equalFlag;
-  size_t j;
-
   assert(buffer != NULL);
 
+  bool   equalFlag;
   if (string != NULL)
   {
     STRING_CHECK_VALID(string);
 
-    i = (index != STRING_END) ? index : (long)string->length-(long)length;
+    long i = (index != STRING_END) ? index : (long)string->length-(long)length;
     if (   (i >= 0)
         && ((i+length) <= string->length)
         && (length <= bufferLength)
        )
     {
       equalFlag = TRUE;
-      j         = 0L;
+      size_t j = 0L;
       while (equalFlag && (j < length))
       {
         equalFlag = (string->data[i+j] == buffer[j]);
@@ -4442,14 +4476,13 @@ bool String_subEqualsBuffer(ConstString string, const char *buffer, size_t buffe
 
 bool String_subEqualsIgnoreCase(ConstString string1, ConstString string2, long index, size_t length)
 {
-  bool  equalFlag;
-
   assert(string1 != NULL);
   assert(string2 != NULL);
 
   STRING_CHECK_VALID(string1);
   STRING_CHECK_VALID(string2);
 
+  bool equalFlag;
   if ((string1 != NULL) && (string2 != NULL))
   {
     equalFlag = String_subEqualsIgnoreCaseBuffer(string1,string2->data,string2->length,index,length);
@@ -4464,10 +4497,9 @@ bool String_subEqualsIgnoreCase(ConstString string1, ConstString string2, long i
 
 bool String_subEqualsIgnoreCaseCString(ConstString string, const char *s, long index, size_t length)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     assert(string->data != NULL);
@@ -4491,10 +4523,9 @@ bool String_subEqualsIgnoreCaseCString(ConstString string, const char *s, long i
 
 bool String_subEqualsIgnoreCaseChar(ConstString string, char ch, long index)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     assert(string->data != NULL);
@@ -4511,24 +4542,21 @@ bool String_subEqualsIgnoreCaseChar(ConstString string, char ch, long index)
 
 bool String_subEqualsIgnoreCaseBuffer(ConstString string, const char *buffer, size_t bufferLength, long index, size_t length)
 {
-  long   i;
-  bool   equalFlag;
-  size_t j;
-
   assert(buffer != NULL);
 
+  bool equalFlag;
   if (string != NULL)
   {
     STRING_CHECK_VALID(string);
 
-    i = (index != STRING_END) ? index : (long)string->length-(long)length;
+    long i = (index != STRING_END) ? index : (long)string->length-(long)length;
     if (   (i >= 0)
         && ((i+length) <= string->length)
         && (length <= bufferLength)
        )
     {
       equalFlag = TRUE;
-      j         = 0L;
+      size_t j = 0L;
       while (equalFlag && (j < length))
       {
         equalFlag = (toupper(string->data[i+j]) == toupper(buffer[j]));
@@ -4550,11 +4578,10 @@ bool String_subEqualsIgnoreCaseBuffer(ConstString string, const char *buffer, si
 
 bool String_startsWith(ConstString string1, ConstString string2)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string1);
   STRING_CHECK_VALID(string2);
 
+  bool equalFlag;
   if ((string1 != NULL) && (string2 != NULL))
   {
     equalFlag = String_startsWithBuffer(string1,string2->data,string2->length);
@@ -4569,10 +4596,9 @@ bool String_startsWith(ConstString string1, ConstString string2)
 
 bool String_startsWithCString(ConstString string, const char *s)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if ((string != NULL) && (s != NULL))
   {
     equalFlag = String_startsWithBuffer(string,s,(size_t)strlen(s));
@@ -4587,10 +4613,9 @@ bool String_startsWithCString(ConstString string, const char *s)
 
 bool String_startsWithChar(ConstString string, char ch)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     assert(string->data != NULL);
@@ -4607,19 +4632,17 @@ bool String_startsWithChar(ConstString string, char ch)
 
 bool String_startsWithBuffer(ConstString string, const char *buffer, size_t bufferLength)
 {
-  bool   equalFlag;
-  size_t i;
-
   assert(buffer != NULL);
 
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     if (string->length >= bufferLength)
     {
       equalFlag = TRUE;
-      i         = 0L;
+      size_t i = 0L;
       while (equalFlag && (i < bufferLength))
       {
         equalFlag = (string->data[i] == buffer[i]);
@@ -4641,11 +4664,10 @@ bool String_startsWithBuffer(ConstString string, const char *buffer, size_t buff
 
 bool String_endsWith(ConstString string1, ConstString string2)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string1);
   STRING_CHECK_VALID(string2);
 
+  bool equalFlag;
   if ((string1 != NULL) && (string2 != NULL))
   {
     equalFlag = String_endsWithBuffer(string1,string2->data,string2->length);
@@ -4660,10 +4682,9 @@ bool String_endsWith(ConstString string1, ConstString string2)
 
 bool String_endsWithCString(ConstString string, const char *s)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if ((string != NULL) && (s != NULL))
   {
     equalFlag = String_endsWithBuffer(string,s,(size_t)strlen(s));
@@ -4678,10 +4699,9 @@ bool String_endsWithCString(ConstString string, const char *s)
 
 bool String_endsWithChar(ConstString string, char ch)
 {
-  bool equalFlag;
-
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     assert(string->data != NULL);
@@ -4698,21 +4718,18 @@ bool String_endsWithChar(ConstString string, char ch)
 
 bool String_endsWithBuffer(ConstString string, const char *buffer, size_t bufferLength)
 {
-  bool   equalFlag;
-  size_t j;
-  size_t i;
-
   assert(buffer != NULL);
 
   STRING_CHECK_VALID(string);
 
+  bool equalFlag;
   if (string != NULL)
   {
     if (string->length >= bufferLength)
     {
       equalFlag = TRUE;
-      j         = 0L;
-      i         = string->length-bufferLength;
+      size_t j = 0L;
+      size_t i = string->length-bufferLength;
       while (equalFlag && (j < bufferLength))
       {
         equalFlag = (string->data[i] == buffer[j]);
@@ -4735,22 +4752,18 @@ bool String_endsWithBuffer(ConstString string, const char *buffer, size_t buffer
 
 long String_find(ConstString string, size_t index, ConstString findString)
 {
-  long   findIndex;
-  long   i;
-  size_t j;
-
   assert(string != NULL);
   assert(findString != NULL);
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_VALID(findString);
 
-  findIndex = -1;
+  long findIndex = -1;
 
-  i = (index != STRING_BEGIN) ? index : 0L;
+  long i = (index != STRING_BEGIN) ? index : 0L;
   while (((i+(long)findString->length) <= (long)string->length) && (findIndex < 0))
   {
-    j = 0L;
+    size_t j = 0L;
     while ((j < findString->length) && (string->data[i+j] == findString->data[j]))
     {
       j++;
@@ -4765,23 +4778,18 @@ long String_find(ConstString string, size_t index, ConstString findString)
 
 long String_findCString(ConstString string, size_t index, const char *s)
 {
-  long   findIndex;
-  size_t sLength;
-  long   i;
-  size_t j;
-
   assert(string != NULL);
   assert(s != NULL);
 
   STRING_CHECK_VALID(string);
 
-  findIndex = -1L;
+  long findIndex = -1L;
 
-  sLength = (size_t)strlen(s);
-  i = (index != STRING_BEGIN) ? index : 0L;
+  size_t sLength = (size_t)strlen(s);
+  long   i       = (index != STRING_BEGIN) ? index : 0L;
   while (((i+sLength) <= string->length) && (findIndex < 0))
   {
-    j = 0L;
+    size_t j = 0L;
     while ((j < sLength) && (string->data[i+j] == s[j]))
     {
       j++;
@@ -4796,13 +4804,11 @@ long String_findCString(ConstString string, size_t index, const char *s)
 
 long String_findChar(ConstString string, size_t index, char ch)
 {
-  long i;
-
   assert(string != NULL);
 
   STRING_CHECK_VALID(string);
 
-  i = (index != STRING_BEGIN) ? index : 0L;
+  long i = (index != STRING_BEGIN) ? index : 0L;
   while ((i < (long)string->length) && (string->data[i] != ch))
   {
     i++;
@@ -4813,21 +4819,17 @@ long String_findChar(ConstString string, size_t index, char ch)
 
 long String_findLast(ConstString string, long index, ConstString findString)
 {
-  long   findIndex;
-  long   i;
-  size_t j;
-
   assert(string != NULL);
   assert(findString != NULL);
 
   STRING_CHECK_VALID(string);
 
-  findIndex = -1;
+  long findIndex = -1;
 
-  i = (index != STRING_END) ? index : (long)string->length-1;
+  long i = (index != STRING_END) ? index : (long)string->length-1;
   while ((i >= 0) && (findIndex < 0))
   {
-    j = 0L;
+    size_t j = 0L;
     while ((j < findString->length) && (string->data[i+j] == findString->data[j]))
     {
       j++;
@@ -4842,23 +4844,18 @@ long String_findLast(ConstString string, long index, ConstString findString)
 
 long String_findLastCString(ConstString string, long index, const char *s)
 {
-  long   findIndex;
-  size_t sLength;
-  long   i;
-  size_t j;
-
   assert(string != NULL);
   assert(s != NULL);
 
   STRING_CHECK_VALID(string);
 
-  findIndex = -1L;
+  long findIndex = -1L;
 
-  sLength = (size_t)strlen(s);
-  i = (index != STRING_END) ? index : (long)string->length-1;
+  size_t sLength = (size_t)strlen(s);
+  long   i       = (index != STRING_END) ? index : (long)string->length-1;
   while ((i >= 0) && (findIndex < 0))
   {
-    j = 0L;
+    size_t j = 0L;
     while ((j < sLength) && (string->data[i+j] == s[j]))
     {
       j++;
@@ -4873,13 +4870,11 @@ long String_findLastCString(ConstString string, long index, const char *s)
 
 long String_findLastChar(ConstString string, long index, char ch)
 {
-  long i;
-
   assert(string != NULL);
 
   STRING_CHECK_VALID(string);
 
-  i = (index != STRING_END) ? index : (long)string->length-1;
+  long i = (index != STRING_END) ? index : (long)string->length-1;
   while ((i >= 0) && (string->data[i] != ch))
   {
     i--;
@@ -4893,10 +4888,6 @@ String String_iterate(                      String string,
                       void                  *stringIterateUserData
                      )
 {
-  size_t     j;
-  const char *s;
-  size_t     n;
-
   assert(stringIterateFunction != NULL);
 
   STRING_CHECK_VALID(string);
@@ -4906,13 +4897,13 @@ String String_iterate(                      String string,
   {
     assert(string->data != NULL);
 
-    j = 0L;
+    size_t j = 0L;
     while (j < string->length)
     {
-      s = stringIterateFunction(string->data[j],stringIterateUserData);
+      const char *s = stringIterateFunction(string->data[j],stringIterateUserData);
       if (s != NULL)
       {
-        n = strlen(s);
+        size_t n = strlen(s);
         __ensureStringLength(string,string->length+n-1);
         memmove(&string->data[j+n],&string->data[j+1],string->length-(j+1));
         memmove(&string->data[j],s,n);
@@ -4935,8 +4926,6 @@ String String_iterate(                      String string,
 
 String String_toLower(String string)
 {
-  size_t i;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -4944,7 +4933,7 @@ String String_toLower(String string)
   {
     assert(string->data != NULL);
 
-    for (i = 0L; i < string->length; i++)
+    for (size_t i = 0L; i < string->length; i++)
     {
       string->data[i] = tolower(string->data[i]);
     }
@@ -4957,8 +4946,6 @@ String String_toLower(String string)
 
 String String_toUpper(String string)
 {
-  size_t i;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -4966,7 +4953,7 @@ String String_toUpper(String string)
   {
     assert(string->data != NULL);
 
-    for (i = 0L; i < string->length; i++)
+    for (size_t i = 0L; i < string->length; i++)
     {
       string->data[i] = toupper(string->data[i]);
     }
@@ -4990,8 +4977,6 @@ String String_trim(String string, const char *chars)
 
 String String_trimBegin(String string, const char *chars)
 {
-  size_t i,n;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -4999,14 +4984,14 @@ String String_trimBegin(String string, const char *chars)
   {
     assert(string->data != NULL);
 
-    i = 0L;
+    size_t i = 0L;
     while ((i < string->length) && (strchr(chars,string->data[i]) != NULL))
     {
       i++;
     }
     if (i > 0)
     {
-      n = string->length-i;
+      size_t n = string->length-i;
       memmove(&string->data[0],&string->data[i],n);
       string->data[n] = NUL;
       string->length  = n;
@@ -5020,8 +5005,6 @@ String String_trimBegin(String string, const char *chars)
 
 String String_trimEnd(String string, const char *chars)
 {
-  size_t n;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -5029,7 +5012,7 @@ String String_trimEnd(String string, const char *chars)
   {
     assert(string->data != NULL);
 
-    n = string->length;
+    size_t n = string->length;
     while ((n > 0) && (strchr(chars,string->data[n-1]) != NULL))
     {
       n--;
@@ -5051,10 +5034,6 @@ String String_escape(String     string,
                      uint       count
                     )
 {
-  String  s;
-  size_t  i;
-  uint    z;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -5062,12 +5041,13 @@ String String_escape(String     string,
   {
     assert(string->data != NULL);
 
+    String s;
     #ifdef NDEBUG
       s = allocTmpString();
     #else /* not NDEBUG */
       s = allocTmpString(__FILE__,__LINE__);
     #endif /* NDEBUG */
-    for (i = 0L; i < string->length; i++)
+    for (size_t i = 0L; i < string->length; i++)
     {
       if      (string->data[i] == escapeChar)
       {
@@ -5084,7 +5064,7 @@ String String_escape(String     string,
       else if ((from != NULL) && (to != NULL))
       {
         // check if mapped character
-        z = 0;
+        size_t z = 0;
         while ((z < count) && (string->data[i] != from[z]))
         {
           z++;
@@ -5120,10 +5100,6 @@ String String_unescape(String     string,
                        uint       count
                       )
 {
-  String s;
-  size_t i;
-  uint   z;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -5131,12 +5107,13 @@ String String_unescape(String     string,
   {
     assert(string->data != NULL);
 
+    String s;
     #ifdef NDEBUG
       s = allocTmpString();
     #else /* not NDEBUG */
       s = allocTmpString(__FILE__,__LINE__);
     #endif /* NDEBUG */
-    i = 0L;
+    size_t i = 0L;
     while (i < string->length)
     {
       if (   (string->data[i] == escapeChar)
@@ -5148,7 +5125,7 @@ String String_unescape(String     string,
         if ((from != NULL) && (to != NULL))
         {
           // check if mapped character
-          z = 0;
+          size_t z = 0;
           while ((z < count) && (string->data[i] != from[z]))
           {
             z++;
@@ -5185,10 +5162,6 @@ String String_unescape(String     string,
 
 String String_quote(String string, char quoteChar, const char *forceQuoteChars)
 {
-  bool   quoteFlag;
-  String s;
-  size_t i;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -5196,10 +5169,11 @@ String String_quote(String string, char quoteChar, const char *forceQuoteChars)
   {
     assert(string->data != NULL);
 
+    bool quoteFlag;
     if (forceQuoteChars != NULL)
     {
       quoteFlag = FALSE;
-      for (i = 0L; i < string->length; i++)
+      for (size_t i = 0L; i < string->length; i++)
       {
         if (strchr(forceQuoteChars,string->data[i]) != NULL)
         {
@@ -5215,13 +5189,14 @@ String String_quote(String string, char quoteChar, const char *forceQuoteChars)
 
     if (quoteFlag)
     {
+      String s;
       #ifdef NDEBUG
         s = allocTmpString();
       #else /* not NDEBUG */
         s = allocTmpString(__FILE__,__LINE__);
       #endif /* NDEBUG */
       String_appendChar(s,quoteChar);
-      for (i = 0L; i < string->length; i++)
+      for (size_t i = 0L; i < string->length; i++)
       {
         if (string->data[i] == quoteChar)
         {
@@ -5239,10 +5214,6 @@ String String_quote(String string, char quoteChar, const char *forceQuoteChars)
 
 String String_unquote(String string, const char *quoteChars)
 {
-  const char *t0,*t1;
-  String     s;
-  size_t     i;
-
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
@@ -5252,16 +5223,17 @@ String String_unquote(String string, const char *quoteChars)
 
     if (string->length > 0)
     {
-      t0 = strchr(quoteChars,string->data[0]);
-      t1 = strchr(quoteChars,string->data[string->length-1]);
+      const char *t0 = strchr(quoteChars,string->data[0]);
+      const char *t1 = strchr(quoteChars,string->data[string->length-1]);
       if ((t0 != NULL) && (t1 != NULL) && ((*t0) == (*t1)))
       {
+        String s;
         #ifdef NDEBUG
           s = allocTmpString();
         #else /* not NDEBUG */
           s = allocTmpString(__FILE__,__LINE__);
         #endif /* NDEBUG */
-        i = 1;
+        size_t i = 1;
         while (i < (string->length-1))
         {
           if (   (string->data[i] == STRING_ESCAPE_CHARACTER)
@@ -5289,8 +5261,6 @@ String String_unquote(String string, const char *quoteChars)
 
 String String_padRight(String string, size_t length, char ch)
 {
-  size_t n;
-
   assert(string != NULL);
 
   STRING_CHECK_VALID(string);
@@ -5300,7 +5270,7 @@ String String_padRight(String string, size_t length, char ch)
   {
     if (string->length < length)
     {
-      n = length-string->length;
+      size_t n = length-string->length;
       __ensureStringLength(string,length);
       memset(&string->data[string->length],ch,n);
       string->data[length] = NUL;
@@ -5315,8 +5285,6 @@ String String_padRight(String string, size_t length, char ch)
 
 String String_padLeft(String string, size_t length, char ch)
 {
-  size_t n;
-
   assert(string != NULL);
 
   STRING_CHECK_VALID(string);
@@ -5326,7 +5294,7 @@ String String_padLeft(String string, size_t length, char ch)
   {
     if (string->length < length)
     {
-      n = length-string->length;
+      size_t n = length-string->length;
       __ensureStringLength(string,length);
       memmove(&string->data[n],&string->data[0],string->length);
       memset(&string->data[0],ch,n);
@@ -5420,8 +5388,6 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
                          long            *tokenIndex
                         )
 {
-  const char *s;
-
   assert(stringTokenizer != NULL);
 
   do
@@ -5453,7 +5419,7 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
              && (strchr(stringTokenizer->separatorChars,stringTokenizer->data[stringTokenizer->index]) == NULL)
             )
       {
-        s = strchr(stringTokenizer->quoteChars,stringTokenizer->data[stringTokenizer->index]);
+        const char *s = strchr(stringTokenizer->quoteChars,stringTokenizer->data[stringTokenizer->index]);
         if (s != NULL)
         {
           stringTokenizer->index++;
@@ -5517,9 +5483,6 @@ bool String_getNextToken(StringTokenizer *stringTokenizer,
 
 bool String_scan(ConstString string, size_t index, const char *format, ...)
 {
-  va_list arguments;
-  long    nextIndex;
-  bool    result;
 
   assert(string != NULL);
   assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
@@ -5527,8 +5490,10 @@ bool String_scan(ConstString string, size_t index, const char *format, ...)
 
   STRING_CHECK_VALID(string);
 
+  va_list arguments;
   va_start(arguments,format);
-  result = parseString(string->data,string->length,index,format,arguments,NULL,&nextIndex);
+  long nextIndex;
+  bool result = parseString(string->data,string->length,index,format,arguments,NULL,&nextIndex);
   UNUSED_VARIABLE(nextIndex);
   va_end(arguments);
 
@@ -5537,15 +5502,13 @@ bool String_scan(ConstString string, size_t index, const char *format, ...)
 
 bool String_scanCString(const char *s, const char *format, ...)
 {
-  va_list arguments;
-  long    nextIndex;
-  bool    result;
-
   assert(s != NULL);
   assert(format != NULL);
 
+  va_list arguments;
   va_start(arguments,format);
-  result = parseString(s,strlen(s),STRING_BEGIN,format,arguments,NULL,&nextIndex);
+  long nextIndex;
+  bool result = parseString(s,strlen(s),STRING_BEGIN,format,arguments,NULL,&nextIndex);
   UNUSED_VARIABLE(nextIndex);
   va_end(arguments);
 
@@ -5554,17 +5517,15 @@ bool String_scanCString(const char *s, const char *format, ...)
 
 bool String_parse(ConstString string, size_t index, const char *format, long *nextIndex, ...)
 {
-  va_list arguments;
-  bool    result;
-
   assert(string != NULL);
   assert((index == STRING_BEGIN) || (index == STRING_END) || (index < string->length));
   assert(format != NULL);
 
   STRING_CHECK_VALID(string);
 
+  va_list arguments;
   va_start(arguments,nextIndex);
-  result = parseString(string->data,string->length,index,format,arguments,STRING_QUOTES,nextIndex);
+  bool result = parseString(string->data,string->length,index,format,arguments,STRING_QUOTES,nextIndex);
   va_end(arguments);
 
   return result;
@@ -5572,14 +5533,12 @@ bool String_parse(ConstString string, size_t index, const char *format, long *ne
 
 bool String_parseCString(const char *s, const char *format, long *nextIndex, ...)
 {
-  va_list arguments;
-  bool    result;
-
   assert(s != NULL);
   assert(format != NULL);
 
+  va_list arguments;
   va_start(arguments,nextIndex);
-  result = parseString(s,strlen(s),STRING_BEGIN,format,arguments,STRING_QUOTES,nextIndex);
+  bool result = parseString(s,strlen(s),STRING_BEGIN,format,arguments,STRING_QUOTES,nextIndex);
   va_end(arguments);
 
   return result;
@@ -5587,11 +5546,10 @@ bool String_parseCString(const char *s, const char *format, long *nextIndex, ...
 
 bool String_match(ConstString string, size_t index, ConstString pattern, long *nextIndex, String matchedString, ...)
 {
-  va_list arguments;
-  bool    matchFlag;
-
+  bool matchFlag;
   if (matchedString != NULL)
   {
+    va_list arguments;
     va_start(arguments,matchedString);
     matchFlag = vmatchString(String_cString(string),index,String_cString(pattern),nextIndex,matchedString,arguments);
     va_end(arguments);
@@ -5606,11 +5564,10 @@ bool String_match(ConstString string, size_t index, ConstString pattern, long *n
 
 bool String_matchCString(ConstString string, size_t index, const char *pattern, long *nextIndex, String matchedString, ...)
 {
-  va_list arguments;
-  bool    matchFlag;
-
+  bool matchFlag;
   if (matchedString != NULL)
   {
+    va_list arguments;
     va_start(arguments,matchedString);
     matchFlag = vmatchString(String_cString(string),index,pattern,nextIndex,matchedString,arguments);
     va_end(arguments);
@@ -5625,17 +5582,15 @@ bool String_matchCString(ConstString string, size_t index, const char *pattern, 
 
 int String_toInteger(ConstString convertString, size_t index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
 {
-  double d;
-  int    n;
-  char   *nextData;
-
   assert(convertString != NULL);
 
   STRING_CHECK_VALID(convertString);
 
+  int n;
   if (index < convertString->length)
   {
-    d = strtod(&convertString->data[index],&nextData);
+    char   *nextData;
+    double d = strtod(&convertString->data[index],&nextData);
     if ((size_t)(nextData-convertString->data) < convertString->length)
     {
       if (stringUnitCount > 0)
@@ -5665,15 +5620,13 @@ int String_toInteger(ConstString convertString, size_t index, long *nextIndex, c
 
 int64 String_toInteger64(ConstString convertString, size_t index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
 {
-  double d;
-  int64  n;
-  char   *nextData;
-
   assert(convertString != NULL);
 
+  int64 n;
   if (index < convertString->length)
   {
-    d = strtod(&convertString->data[index],&nextData);
+    char *nextData;
+    double d = strtod(&convertString->data[index],&nextData);
     if ((size_t)(nextData-convertString->data) < convertString->length)
     {
       if (stringUnitCount > 0)
@@ -5706,11 +5659,9 @@ StringUnit String_getMatchingUnit(int n, const StringUnit units[], uint unitCoun
   static const StringUnit NO_UNIT = {"",1LL};
 
   StringUnit unit;
-  uint       i;
-
   if (n != 0)
   {
-    i = 0;
+    uint i = 0;
     while (   (i < unitCount)
            && (   ((uint64)abs(n) < units[i].factor)
                || (((uint64)abs(n) % units[i].factor) != 0LL)
@@ -5734,11 +5685,9 @@ StringUnit String_getMatchingUnit64(int64 n, const StringUnit units[], uint unit
   static const StringUnit NO_UNIT = {"",1LL};
 
   StringUnit unit;
-  uint       i;
-
   if (n != 0)
   {
-    i = 0;
+    uint i = 0;
     while (   (i < unitCount)
            && (   ((uint64)llabs(n) < units[i].factor)
                || (((uint64)llabs(n) % units[i].factor) != 0LL)
@@ -5762,11 +5711,9 @@ StringUnit String_getMatchingUnitDouble(double n, const StringUnit units[], uint
   static const StringUnit NO_UNIT = {"",1LL};
 
   StringUnit unit;
-  uint       i;
-
   if (fabs(n) > DBL_EPSILON)
   {
-    i = 0;
+    uint i = 0;
     while (   (i < unitCount)
            && (   (fabs(n) < (double)units[i].factor)
                || (fmod(fabs(n),(double)units[i].factor) > DBL_EPSILON)
@@ -5787,36 +5734,34 @@ StringUnit String_getMatchingUnitDouble(double n, const StringUnit units[], uint
 
 double String_toDouble(ConstString convertString, size_t index, long *nextIndex, const StringUnit stringUnits[], uint stringUnitCount)
 {
-  double n;
-  char   *nextData;
-
   assert(convertString != NULL);
 
   STRING_CHECK_VALID(convertString);
 
+  double n = 0.0;
   if (index < convertString->length)
   {
-    n = strtod(&convertString->data[index],&nextData);
+    char   *nextData;
+    double d = strtod(&convertString->data[index],&nextData);
     if ((size_t)(nextData-convertString->data) < convertString->length)
     {
       if (stringUnitCount > 0)
       {
-        n = n*(double)(long)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
+        n = d*(double)(long)getUnitFactor(stringUnits,stringUnitCount,convertString->data,nextData,nextIndex);
       }
       else
       {
-        n = 0;
         if (nextIndex != NULL) (*nextIndex) = (size_t)(nextData-convertString->data);
       }
     }
     else
     {
+      n = d;
       if (nextIndex != NULL) (*nextIndex) = STRING_END;
     }
   }
   else
   {
-    n = 0.0;
     if (nextIndex != NULL) (*nextIndex) = index;
   }
 
@@ -5825,23 +5770,19 @@ double String_toDouble(ConstString convertString, size_t index, long *nextIndex,
 
 bool String_toBoolean(ConstString convertString, size_t index, long *nextIndex, const char *trueStrings[], uint trueStringCount, const char *falseStrings[], uint falseStringCount)
 {
-  bool       n;
-  bool       foundFlag;
-  const char **strings;
-  uint       stringCount;
-  uint       z;
-
   assert(convertString != NULL);
 
   STRING_CHECK_VALID(convertString);
 
-  n = FALSE;
+  bool n = FALSE;
 
   if (index < convertString->length)
   {
-    foundFlag = FALSE;
+    bool foundFlag = FALSE;
     if (!foundFlag)
     {
+      const char **strings;
+      size_t     stringCount;
       if (trueStrings != NULL)
       {
         strings     = trueStrings;
@@ -5852,19 +5793,21 @@ bool String_toBoolean(ConstString convertString, size_t index, long *nextIndex, 
         strings     = DEFAULT_TRUE_STRINGS;
         stringCount = SIZE_OF_ARRAY(DEFAULT_TRUE_STRINGS);
       }
-      z = 0;
-      while (!foundFlag && (z < stringCount))
+      size_t i = 0;
+      while (!foundFlag && (i < stringCount))
       {
-        if (stringEquals(&convertString->data[index],strings[z]))
+        if (stringEquals(&convertString->data[index],strings[i]))
         {
           n = TRUE;
           foundFlag = TRUE;
         }
-        z++;
+        i++;
       }
     }
     if (!foundFlag)
     {
+      const char **strings;
+      size_t     stringCount;
       if (falseStrings != NULL)
       {
         strings     = falseStrings;
@@ -5875,15 +5818,15 @@ bool String_toBoolean(ConstString convertString, size_t index, long *nextIndex, 
         strings     = DEFAULT_FALSE_STRINGS;
         stringCount = SIZE_OF_ARRAY(DEFAULT_FALSE_STRINGS);
       }
-      z = 0;
-      while (!foundFlag && (z < stringCount))
+      size_t i = 0;
+      while (!foundFlag && (i < stringCount))
       {
-        if (stringEquals(&convertString->data[index],strings[z]))
+        if (stringEquals(&convertString->data[index],strings[i]))
         {
           n = FALSE;
           foundFlag = TRUE;
         }
-        z++;
+        i++;
       }
     }
     if (!foundFlag)
@@ -5902,13 +5845,11 @@ bool String_toBoolean(ConstString convertString, size_t index, long *nextIndex, 
 
 String String_toString(String string, ConstString convertString, size_t index, long *nextIndex, const char *stringQuotes)
 {
-  char *stringQuote;
-
   if (index < convertString->length)
   {
     while ((index < convertString->length) && !isspace(convertString->data[index]))
     {
-      stringQuote = (stringQuotes != NULL) ? strchr(stringQuotes,convertString->data[index]) : NULL;
+      const char *stringQuote = (stringQuotes != NULL) ? strchr(stringQuotes,convertString->data[index]) : NULL;
       if (stringQuote != NULL)
       {
         do
@@ -5957,13 +5898,11 @@ String String_toString(String string, ConstString convertString, size_t index, l
 
 char* String_toCString(ConstString string)
 {
-  char *cString;
-
   assert(string != NULL);
 
   STRING_CHECK_VALID(string);
 
-  cString = (char*)malloc(string->length+1);
+  char *cString = (char*)malloc(string->length+1);
   if (cString == NULL)
   {
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
@@ -6042,10 +5981,6 @@ void String_debugDone(void)
 
 void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string)
 {
-  #ifdef TRACE_STRING_ALLOCATIONS
-    DebugStringNode *debugStringNode;
-  #endif /* TRACE_STRING_ALLOCATIONS */
-
   if ((string != NULL) && (string != STRING_EMPTY))
   {
     ulong checkSum;
@@ -6060,7 +5995,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
 
           pthread_mutex_lock(&debugStringLock);
           {
-            debugStringNode = debugFindString(&debugStringAllocList,string);
+            DebugStringNode *debugStringNode = debugFindString(&debugStringAllocList,string);
             if (debugStringNode != NULL)
             {
               #ifdef HAVE_BACKTRACE
@@ -6233,31 +6168,27 @@ void String_debugDumpInfo(FILE                   *handle,
       else                                  return  0;
     }
 
-    size_t              n;
-    ulong               count;
-    DebugStringNode     *debugStringNode;
-    StringHistogramList stringHistogramList;
-    StringHistogramNode *stringHistogramNode;
-
     pthread_once(&debugStringInitFlag,debugStringInit);
 
     pthread_mutex_lock(&debugStringLock);
     {
       // init variables
+      StringHistogramList stringHistogramList;
       List_init(&stringHistogramList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-      n     = 0L;
-      count = 0L;
+      size_t n     = 0L;
+      ulong count = 0L;
 
       // collect histogram data
       if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
       {
+        const DebugStringNode *debugStringNode;
         LIST_ITERATE(&debugStringAllocList,debugStringNode)
         {
-          stringHistogramNode = LIST_FIND(&stringHistogramList,
-                                          stringHistogramNode,
-                                             (stringHistogramNode->debugStringNode->allocFileName == debugStringNode->allocFileName)
-                                          && (stringHistogramNode->debugStringNode->allocLineNb   == debugStringNode->allocLineNb)
-                                         );
+          StringHistogramNode *stringHistogramNode = LIST_FIND(&stringHistogramList,
+                                                               stringHistogramNode,
+                                                                  (stringHistogramNode->debugStringNode->allocFileName == debugStringNode->allocFileName)
+                                                               && (stringHistogramNode->debugStringNode->allocLineNb   == debugStringNode->allocLineNb)
+                                                              );
           if (stringHistogramNode == NULL)
           {
             stringHistogramNode = LIST_NEW_NODE(StringHistogramNode);
@@ -6289,6 +6220,7 @@ void String_debugDumpInfo(FILE                   *handle,
       // dump allocations
       if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_ALLOCATED))
       {
+        const DebugStringNode *debugStringNode;
         LIST_ITERATE(&debugStringAllocList,debugStringNode)
         {
           fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %lu\n",
@@ -6324,6 +6256,7 @@ void String_debugDumpInfo(FILE                   *handle,
       // dump histogram
       if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
       {
+        const StringHistogramNode *stringHistogramNode,
         LIST_ITERATE(&stringHistogramList,stringHistogramNode)
         {
           fprintf(handle,"DEBUG: string allocated %u times at %s, line %lu\n",

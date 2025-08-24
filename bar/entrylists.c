@@ -74,19 +74,14 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
                                     void      *userData
                                    )
 {
-  EntryNode *newEntryNode;
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    String    string;
-  #endif /* PLATFORM_... */
-  Errors    error;
+  Errors error;
 
   assert(entryNode != NULL);
 
   UNUSED_VARIABLE(userData);
 
   // allocate entry node
-  newEntryNode = LIST_NEW_NODE(EntryNode);
+  EntryNode *newEntryNode = LIST_NEW_NODE(EntryNode);
   if (newEntryNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -109,7 +104,7 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
                         );
   #elif defined(PLATFORM_WINDOWS)
     // escape all '\' by '\\'
-    string = String_duplicate(entryNode->string);
+    String string = String_duplicate(entryNode->string);
     String_replaceAllCString(string,STRING_BEGIN,"\\","\\\\");
 
     error = Pattern_init(&newEntryNode->pattern,
@@ -166,16 +161,14 @@ void EntryList_doneAll(void)
 
 const char *EntryList_entryTypeToString(EntryTypes entryType, const char *defaultValue)
 {
-  uint       i;
-  const char *name;
-
-  i = 0;
+  uint i = 0;
   while (   (i < SIZE_OF_ARRAY(ENTRY_TYPES))
          && (ENTRY_TYPES[i].entryType != entryType)
         )
   {
     i++;
   }
+  const char *name;
   if (i < SIZE_OF_ARRAY(ENTRY_TYPES))
   {
     name = ENTRY_TYPES[i].name;
@@ -190,14 +183,12 @@ const char *EntryList_entryTypeToString(EntryTypes entryType, const char *defaul
 
 bool EntryList_parseEntryType(const char *name, EntryTypes *entryType, void *userData)
 {
-  uint i;
-
   assert(name != NULL);
   assert(entryType != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  i = 0;
+  uint i = 0;
   while (   (i < SIZE_OF_ARRAY(ENTRY_TYPES))
          && !stringEqualsIgnoreCase(ENTRY_TYPES[i].name,name)
         )
@@ -291,7 +282,6 @@ bool EntryList_contains(EntryList    *entryList,
   assert(string != NULL);
 
   EntryNode *entryNode;
-
   return LIST_CONTAINS(entryList,
                        entryNode,
                           (entryNode->type == type)
@@ -320,18 +310,13 @@ Errors EntryList_appendCString(EntryList    *entryList,
                                uint         *id
                               )
 {
-  EntryNode *entryNode;
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    String    escapedString;
-  #endif /* PLATFORM_... */
-  Errors    error;
+  Errors error;
 
   assert(entryList != NULL);
   assert(string != NULL);
 
   // allocate entry node
-  entryNode = LIST_NEW_NODE(EntryNode);
+  EntryNode *entryNode = LIST_NEW_NODE(EntryNode);
   if (entryNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -354,7 +339,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
                                );
   #elif defined(PLATFORM_WINDOWS)
     // escape all '\' by '\\'
-    escapedString = String_newCString(string);
+    String escapedString = String_newCString(string);
     String_replaceAllCString(escapedString,STRING_BEGIN,"\\","\\\\");
 
     error = Pattern_init(&entryNode->pattern,
@@ -401,22 +386,17 @@ Errors EntryList_updateCString(EntryList    *entryList,
                                PatternTypes patternType
                               )
 {
-  EntryNode *entryNode;
-  Pattern   pattern;
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    String    escapedString;
-  #endif /* PLATFORM_... */
-  Errors    error;
+  Errors error;
 
   assert(entryList != NULL);
   assert(string != NULL);
 
   // find pattern node
-  entryNode = (EntryNode*)LIST_FIND(entryList,entryNode,entryNode->id == id);
+  EntryNode *entryNode = (EntryNode*)LIST_FIND(entryList,entryNode,entryNode->id == id);
   if (entryNode != NULL)
   {
     // init pattern
+    Pattern pattern;
     #if   defined(PLATFORM_LINUX)
       error = Pattern_initCString(&pattern,
                                   string,
@@ -425,7 +405,7 @@ Errors EntryList_updateCString(EntryList    *entryList,
                                  );
     #elif defined(PLATFORM_WINDOWS)
       // escape all '\' by '\\'
-      escapedString = String_newCString(string);
+      String escapedString = String_newCString(string);
       String_replaceAllCString(escapedString,STRING_BEGIN,"\\","\\\\");
 
       error = Pattern_init(&pattern,
@@ -457,11 +437,9 @@ bool EntryList_remove(EntryList *entryList,
                       uint      id
                      )
 {
-  EntryNode *entryNode;
-
   assert(entryList != NULL);
 
-  entryNode = (EntryNode*)LIST_FIND(entryList,entryNode,entryNode->id == id);
+  EntryNode *entryNode = (EntryNode*)LIST_FIND(entryList,entryNode,entryNode->id == id);
   if (entryNode != NULL)
   {
     List_removeAndFree(entryList,entryNode);
@@ -478,14 +456,12 @@ bool EntryList_match(const EntryList   *entryList,
                      PatternMatchModes patternMatchMode
                     )
 {
-  bool      matchFlag;
-  EntryNode *entryNode;
 
   assert(entryList != NULL);
   assert(string != NULL);
 
-  matchFlag = FALSE;
-  entryNode = entryList->head;
+  bool      matchFlag  = FALSE;
+  EntryNode *entryNode = entryList->head;
   while ((entryNode != NULL) && !matchFlag)
   {
     matchFlag = Pattern_match(&entryNode->pattern,string,STRING_BEGIN,patternMatchMode,NULL,NULL);
@@ -500,14 +476,11 @@ bool EntryList_matchStringList(const EntryList   *entryList,
                                PatternMatchModes patternMatchMode
                               )
 {
-  bool       matchFlag;
-  StringNode *stringNode;
-
   assert(entryList != NULL);
   assert(stringList != NULL);
 
-  matchFlag  = FALSE;
-  stringNode = stringList->head;
+  bool       matchFlag   = FALSE;
+  StringNode *stringNode = stringList->head;
   while ((stringNode != NULL) && !matchFlag)
   {
     matchFlag = EntryList_match(entryList,stringNode->string,patternMatchMode);

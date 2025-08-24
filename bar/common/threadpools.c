@@ -52,7 +52,6 @@ typedef struct
   sem_t          started;
 } StartInfo;
 
-
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
@@ -79,9 +78,7 @@ typedef struct
 LOCAL void threadPoolTerminated(void *userData)
 {
   Thread *thread = (Thread*)userData;
-
   assert(thread != NULL);
-
   thread->terminatedFlag = TRUE;
 }
 
@@ -96,18 +93,13 @@ LOCAL void threadPoolTerminated(void *userData)
 
 LOCAL void *threadPoolStartCode(void *userData)
 {
-  StartInfo      *startInfo = (StartInfo*)userData;
-  ThreadPool     *threadPool;
-  ThreadPoolNode *threadPoolNode;
-  struct timeval  timeval;
-  struct timespec timespec;
-  void           (*entryFunction)(void*);
-  void           *argument;
-
+  StartInfo *startInfo = (StartInfo*)userData;
   assert(startInfo != NULL);
   assert(startInfo->threadPool != NULL);
   assert(startInfo->threadPoolNode != NULL);
 
+  ThreadPool     *threadPool     = startInfo->threadPool;
+  ThreadPoolNode *threadPoolNode = startInfo->threadPoolNode;
   pthread_cleanup_push(threadPoolTerminated,&startInfo->threadPoolNode->thread);
   {
     // try to set thread name
@@ -127,8 +119,7 @@ LOCAL void *threadPoolStartCode(void *userData)
     #endif /* PLATFORM_... */
 
     // get local copy of start data
-    threadPool     = startInfo->threadPool;
-    threadPoolNode = startInfo->threadPoolNode;
+    threadPool = startInfo->threadPool;
 
     // signal thread started
     sem_post(&startInfo->started);
@@ -140,7 +131,9 @@ LOCAL void *threadPoolStartCode(void *userData)
         // wait for function to execute
 //fprintf(stderr,"%s:%d: wait=%p %p\n",__FILE__,__LINE__,threadPoolNode,&threadPoolNode->trigger);
 // TODO: work-around for missed signal; replace by semaphore per thread
+        struct timeval  timeval;
         gettimeofday(&timeval,NULL);
+        struct timespec timespec;
         timespec.tv_sec  = timeval.tv_sec+1;
         timespec.tv_nsec = timeval.tv_usec*1000;
         (void)pthread_cond_timedwait(&threadPoolNode->trigger,&threadPool->lock,&timespec);
@@ -149,8 +142,8 @@ LOCAL void *threadPoolStartCode(void *userData)
         if (!threadPool->quitFlag && (threadPoolNode->state == THREADPOOL_THREAD_STATE_RUNNING))
         {
           // get local copy of function
-          entryFunction = threadPoolNode->entryFunction;
-          argument      = threadPoolNode->argument;
+          void (*entryFunction)(void*) = threadPoolNode->entryFunction;
+          void *argument      = threadPoolNode->argument;
 
           if (entryFunction != NULL)
           {
@@ -199,7 +192,6 @@ LOCAL void *threadPoolStartCode(void *userData)
 * Name   : newThread
 * Purpose: add new thread to thread pool
 * Input  : threadPool - thread pool
-*          niceLevel  - nice level
 * Output : -
 * Return : thread pool node or nULL
 * Notes  : -
@@ -207,15 +199,10 @@ LOCAL void *threadPoolStartCode(void *userData)
 
 LOCAL ThreadPoolNode *newThread(ThreadPool *threadPool)
 {
-  ThreadPoolNode *threadPoolNode;
-  StartInfo      startInfo;
-  pthread_attr_t threadAttributes;
-  int            result;
-
   assert(threadPool != NULL);
 
   // new thread pool node
-  threadPoolNode = LIST_NEW_NODE(ThreadPoolNode);
+  ThreadPoolNode *threadPoolNode = LIST_NEW_NODE(ThreadPoolNode);
   if (threadPoolNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -224,6 +211,7 @@ LOCAL ThreadPoolNode *newThread(ThreadPool *threadPool)
   pthread_cond_init(&threadPoolNode->trigger,NULL);
 
   // init start info
+  StartInfo startInfo;
   if (sem_init(&startInfo.started,0,0) != 0)
   {
     HALT_INTERNAL_ERROR("cannot initialize start trigger");
@@ -233,6 +221,7 @@ LOCAL ThreadPoolNode *newThread(ThreadPool *threadPool)
   stringFormat(startInfo.name,sizeof(startInfo.name),"%s%d",threadPool->namePrefix,threadPool->size);
 
   // init thread attributes
+  pthread_attr_t threadAttributes;
   pthread_attr_init(&threadAttributes);
   #ifdef HAVE_PTHREAD_ATTR_SETNAME
     if (name != NULL)
@@ -258,6 +247,7 @@ LOCAL ThreadPoolNode *newThread(ThreadPool *threadPool)
   pthread_attr_destroy(&threadAttributes);
 
   // wait until thread started
+  int result;
   do
   {
     result = sem_wait(&startInfo.started);
@@ -268,12 +258,11 @@ LOCAL ThreadPoolNode *newThread(ThreadPool *threadPool)
     HALT_INTERNAL_ERROR("wait for start lock failed");
   }
 
-  // add to idle list
-  List_append(&threadPool->idle,threadPoolNode);
-  threadPool->size++;
-
   // free resources
   sem_destroy(&startInfo.started);
+
+  // increase thread pool
+  threadPool->size++;
 
   return threadPoolNode;
 }
@@ -289,8 +278,6 @@ LOCAL ThreadPoolNode *newThread(ThreadPool *threadPool)
 
 LOCAL void waitQuitThreads(ThreadPool *threadPool)
 {
-  ThreadPoolNode *threadPoolNode;
-
   assert(threadPool != NULL);
 
   // wait until threads not running
@@ -305,6 +292,7 @@ LOCAL void waitQuitThreads(ThreadPool *threadPool)
   }
 
   // wait until threads quit
+  ThreadPoolNode *threadPoolNode;
   do
   {
     // find not terminated thread pool thread
@@ -376,9 +364,6 @@ bool ThreadPool_init(ThreadPool *threadPool,
                      uint       maxSize
                     )
 {
-  uint           i;
-  ThreadPoolNode *threadPoolNode;
-
   assert(threadPool != NULL);
 
   // init
@@ -392,10 +377,14 @@ bool ThreadPool_init(ThreadPool *threadPool,
   threadPool->size      = 0;
   threadPool->quitFlag  = FALSE;
 
-  for (i = 0; i < size; i++)
+  for (uint i = 0; i < size; i++)
   {
-    threadPoolNode = newThread(threadPool);
-    if (threadPoolNode == NULL)
+    ThreadPoolNode *threadPoolNode = newThread(threadPool);
+    if (threadPoolNode != NULL)
+    {
+      List_append(&threadPool->idle,threadPoolNode);
+    }
+    else
     {
       // quit all threads
       threadPool->quitFlag = TRUE;
@@ -434,8 +423,6 @@ bool ThreadPool_init(ThreadPool *threadPool,
 
 void ThreadPool_done(ThreadPool *threadPool)
 {
-  ThreadPoolNode *threadPoolNode;
-
   assert(threadPool != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(threadPool);
 
@@ -456,7 +443,7 @@ void ThreadPool_done(ThreadPool *threadPool)
   // free thread pool threads
   while (!List_isEmpty(&threadPool->idle))
   {
-    threadPoolNode = (ThreadPoolNode*)List_removeFirst(&threadPool->idle);
+    ThreadPoolNode *threadPoolNode = (ThreadPoolNode*)List_removeFirst(&threadPool->idle);
     pthread_join(threadPoolNode->thread,NULL);
     pthread_cond_destroy(&threadPoolNode->trigger);
     LIST_DELETE_NODE(threadPoolNode);
@@ -510,12 +497,11 @@ ThreadPoolNode *ThreadPool_run(ThreadPool *threadPool,
                                void       *argument
                               )
 {
-  ThreadPoolNode *threadPoolNode;
-
   assert(threadPool != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(threadPool);
   assert(entryFunction != NULL);
 
+  ThreadPoolNode *threadPoolNode;
   pthread_mutex_lock(&threadPool->lock);
   {
     if (   List_isEmpty(&threadPool->idle)
@@ -532,10 +518,8 @@ ThreadPoolNode *ThreadPool_run(ThreadPool *threadPool,
       {
         pthread_cond_wait(&threadPool->modified,&threadPool->lock);
       }
+      threadPoolNode = (ThreadPoolNode*)List_removeFirst(&threadPool->idle);
     }
-
-    // remove from idle list
-    threadPoolNode = (ThreadPoolNode*)List_removeFirst(&threadPool->idle);
 
     // add to running list
     threadPoolNode->state         = THREADPOOL_THREAD_STATE_RUNNING;
@@ -572,12 +556,11 @@ bool ThreadPool_join(ThreadPool *threadPool, ThreadPoolNode *threadPoolNode)
 
 bool ThreadPool_joinSet(ThreadPoolSet *threadPoolSet)
 {
-  ArrayIterator  arrayIterator;
-  ThreadPoolNode *threadPoolNode;
-
   assert(threadPoolSet != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(threadPoolSet);
 
+  ArrayIterator  arrayIterator;
+  ThreadPoolNode *threadPoolNode;
   ARRAY_ITERATE(&threadPoolSet->threadPoolNodes,arrayIterator,threadPoolNode)
   {
     ThreadPool_join(threadPoolSet->threadPool,threadPoolNode);
@@ -588,14 +571,13 @@ bool ThreadPool_joinSet(ThreadPoolSet *threadPoolSet)
 
 bool ThreadPool_joinAll(ThreadPool *threadPool)
 {
-  ThreadPoolNode *threadPoolNode;
-
   assert(threadPool != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(threadPool);
 
   pthread_mutex_lock(&threadPool->lock);
   {
 //    waitRunningThreads(threadPool);
+    ThreadPoolNode *threadPoolNode;
     do
     {
       // find running thread pool thread started by this thread

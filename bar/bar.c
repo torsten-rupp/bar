@@ -222,10 +222,6 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
 LOCAL void signalHandler(int signalNumber)
 #endif /* HAVE_SIGACTION */
 {
-  #ifdef HAVE_SIGACTION
-    struct sigaction signalAction;
-  #endif /* HAVE_SIGACTION */
-
   #ifdef HAVE_SIGINFO_T
     UNUSED_VARIABLE(siginfo);
     UNUSED_VARIABLE(context);
@@ -242,6 +238,7 @@ LOCAL void signalHandler(int signalNumber)
 
   // deinstall signal handlers
   #ifdef HAVE_SIGACTION
+    struct sigaction signalAction;
     sigfillset(&signalAction.sa_mask);
     signalAction.sa_handler = SIG_DFL;
     signalAction.sa_flags   = 0;
@@ -271,13 +268,9 @@ LOCAL void signalHandler(int signalNumber)
   // output error message
   if (signalNumber != SIGTERM)
   {
-    static char    line[256];
-    #if   defined(PLATFORM_LINUX)
-    #elif defined(PLATFORM_WINDOWS)
-    #endif /* PLATFORM_... */
-
     UNUSED_RESULT(fprintf(stderr,"FATAL ERROR:\n"));
 
+    static char line[256];
     stringFormat(line,sizeof(line),"BAR version %s%s\n",
                  VERSION_STRING,
                  #ifndef NDEBUG
@@ -460,14 +453,7 @@ LOCAL void printUsage(const char *programName, uint level)
 
 LOCAL Errors initAll(void)
 {
-  #ifdef HAVE_SIGACTION
-    struct sigaction signalAction;
-  #endif /* HAVE_SIGACTION */
-  AutoFreeList     autoFreeList;
-  Errors           error;
-  #if defined(HAVE_SETLOCALE) && defined(HAVE_BINDTEXTDOMAIN) && defined(HAVE_TEXTDOMAIN)
-    const char       *localePath;
-  #endif /* defined(HAVE_SETLOCALE) && defined(HAVE_BINDTEXTDOMAIN) && defined(HAVE_TEXTDOMAIN) */
+  Errors error;
 
   // initialize fatal log handler, crash dump handler
   #ifndef NDEBUG
@@ -482,6 +468,7 @@ LOCAL Errors initAll(void)
 
   // install signal handlers
   #ifdef HAVE_SIGACTION
+    struct sigaction signalAction;
     sigfillset(&signalAction.sa_mask);
     signalAction.sa_flags     = SA_SIGINFO;
     signalAction.sa_sigaction = signalHandler;
@@ -509,6 +496,7 @@ LOCAL Errors initAll(void)
     #endif /* HAVE_SIGBUS */
   #endif /* HAVE_SIGACTION */
 
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // init secure memory
@@ -546,7 +534,7 @@ LOCAL Errors initAll(void)
   #if defined(HAVE_SETLOCALE) && defined(HAVE_BINDTEXTDOMAIN) && defined(HAVE_TEXTDOMAIN)
     setlocale(LC_ALL,"");
     #ifdef HAVE_BINDTEXTDOMAIN
-      localePath = getenv("__BAR_LOCALE__");
+      const char *localePath = getenv("__BAR_LOCALE__");
       if (localePath != NULL)
       {
         bindtextdomain("bar",localePath);
@@ -743,10 +731,6 @@ LOCAL Errors initAll(void)
 
 LOCAL void doneAll(void)
 {
-  #ifdef HAVE_SIGACTION
-    struct sigaction signalAction;
-  #endif /* HAVE_SIGACTION */
-
   // deinitialize command line options and config values
   CmdOption_done(BAR_COMMAND_LINE_OPTIONS);
   ConfigValue_done(BAR_CONFIG_VALUES);
@@ -800,6 +784,7 @@ LOCAL void doneAll(void)
 
   // deinstall signal handlers
   #ifdef HAVE_SIGACTION
+    struct sigaction signalAction;
     sigfillset(&signalAction.sa_mask);
     signalAction.sa_handler = SIG_DFL;
     signalAction.sa_flags   = 0;
@@ -847,13 +832,11 @@ LOCAL void doneAll(void)
 
 LOCAL void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
 {
-  String line;
-
   assert(format != NULL);
 
   if (isPrintInfo(verboseLevel))
   {
-    line = String_new();
+    String line = String_new();
 
     // format line
     if (prefix != NULL) String_appendCString(line,prefix);
@@ -881,19 +864,16 @@ LOCAL void vprintInfo(uint verboseLevel, const char *prefix, const char *format,
 
 void outputConsole(FILE *file, ConstString string)
 {
-  String outputLine;
-  ulong  i;
-  long   j;
-
   assert(file != NULL);
   assert(Semaphore_isLocked(&consoleLock));
 
-  outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
+  String outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
   if (outputLine != NULL)
   {
     if (File_isTerminal(file) || globalOptions.forceConsoleEncodingFlag)
     {
       // wipe out if new output line is different to last line
+      uint i;
       if (outputLine != lastOutputLine)
       {
         // wipe-out last line
@@ -917,15 +897,15 @@ void outputConsole(FILE *file, ConstString string)
           }
 
           // wipe out old line
-          for (i = 0; i < n; i++)
+          for (uint i = 0; i < n; i++)
           {
             UNUSED_RESULT(fwrite("\b",1,1,file));
           }
-          for (i = 0; i < n; i++)
+          for (uint i = 0; i < n; i++)
           {
             UNUSED_RESULT(fwrite(" ",1,1,file));
           }
-          for (i = 0; i < n; i++)
+          for (uint i = 0; i < n; i++)
           {
             UNUSED_RESULT(fwrite("\b",1,1,file));
           }
@@ -945,7 +925,7 @@ void outputConsole(FILE *file, ConstString string)
       UNUSED_RESULT(fwrite(String_cString(outputLine)+i,1,String_length(outputLine)-i,file));
 
       // store new output line
-      j = String_findLastChar(outputLine,STRING_END,'\n');
+      long j = String_findLastChar(outputLine,STRING_END,'\n');
       if (j >= 0)
       {
         String_remove(outputLine,STRING_BEGIN,(ulong)(j+1));
@@ -990,8 +970,6 @@ void unlockConsole(void)
 
 void saveConsole(FILE *file, String *saveLine)
 {
-  ulong i;
-
   assert(file != NULL);
   assert(saveLine != NULL);
   assert(Semaphore_isLocked(&consoleLock));
@@ -1003,15 +981,15 @@ void saveConsole(FILE *file, String *saveLine)
     // wipe-out last line
     if (lastOutputLine != NULL)
     {
-      for (i = 0; i < String_length(lastOutputLine); i++)
+      for (size_t i = 0; i < String_length(lastOutputLine); i++)
       {
         UNUSED_RESULT(fwrite("\b",1,1,file));
       }
-      for (i = 0; i < String_length(lastOutputLine); i++)
+      for (size_t i = 0; i < String_length(lastOutputLine); i++)
       {
         UNUSED_RESULT(fwrite(" ",1,1,file));
       }
-      for (i = 0; i < String_length(lastOutputLine); i++)
+      for (size_t i = 0; i < String_length(lastOutputLine); i++)
       {
         UNUSED_RESULT(fwrite("\b",1,1,file));
       }
@@ -1040,15 +1018,13 @@ void restoreConsole(FILE *file, const String *saveLine)
 
 void printConsole(FILE *file, uint width, const char *format, ...)
 {
-  String  line;
-  va_list arguments;
-
   assert(file != NULL);
   assert(format != NULL);
 
-  line = String_new();
+  String line = String_new();
 
   // format line
+  va_list arguments;
   va_start(arguments,format);
   String_vformat(line,format,arguments);
   va_end(arguments);
@@ -1075,18 +1051,16 @@ void printConsole(FILE *file, uint width, const char *format, ...)
 
 void printWarning(const char *text, ...)
 {
-  va_list arguments;
-  String  line;
-
   assert(text != NULL);
 
   // output log line
+  va_list arguments;
   va_start(arguments,text);
   vlogMessage(NULL,LOG_TYPE_WARNING,"Warning",text,arguments);
   va_end(arguments);
 
   // output line
-  line = String_new();
+  String line = String_new();
   va_start(arguments,text);
   String_appendCString(line,"Warning: ");
   String_appendVFormat(line,text,arguments);
@@ -1102,18 +1076,16 @@ void printWarning(const char *text, ...)
 
 void printError(const char *text, ...)
 {
-  va_list arguments;
-  String  line;
-
   assert(text != NULL);
 
   // output log line
+  va_list arguments;
   va_start(arguments,text);
   vlogMessage(NULL,LOG_TYPE_ERROR,"ERROR",text,arguments);
   va_end(arguments);
 
   // output line
-  line = String_new();
+  String line = String_new();
   va_start(arguments,text);
   String_appendCString(line,"ERROR: ");
   String_appendVFormat(line,text,arguments);
@@ -1153,10 +1125,9 @@ void executeIOOutput(ConstString line,
                      void        *userData
                     )
 {
-  StringList *stringList = (StringList*)userData;
-
   assert(line != NULL);
 
+  StringList *stringList = (StringList*)userData;
   printInfo(4,"%s\n",String_cString(line));
   if (stringList != NULL) StringList_append(stringList,line);
 }
@@ -1200,12 +1171,6 @@ void doneLog(LogHandle *logHandle)
 
 void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, va_list arguments)
 {
-  static uint64 lastReopenTimestamp = 0LL;
-
-  String  dateTime;
-  va_list tmpArguments;
-  uint64  nowTimestamp;
-
   assert(text != NULL);
 
   SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -1214,7 +1179,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
     {
       if ((logType == LOG_TYPE_ALWAYS) || ((globalOptions.logTypes & logType) != 0))
       {
-        dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,globalOptions.logFormat);
+        String dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,globalOptions.logFormat);
 
         // log to session log file
         if (logHandle != NULL)
@@ -1228,6 +1193,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
               UNUSED_RESULT(fputs(prefix,logHandle->logFile));
               UNUSED_RESULT(fprintf(logHandle->logFile,": "));
             }
+            va_list tmpArguments;
             va_copy(tmpArguments,arguments);
             UNUSED_RESULT(vfprintf(logHandle->logFile,text,tmpArguments));
             va_end(tmpArguments);
@@ -1239,7 +1205,9 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
         if (logFile != NULL)
         {
           // re-open log for log-rotation
-          nowTimestamp = Misc_getTimestamp();
+          static uint64 lastReopenTimestamp = 0LL;
+
+          uint64 nowTimestamp = Misc_getTimestamp();
           if (nowTimestamp > (lastReopenTimestamp+10LL*US_PER_MINUTE))
           {
             reopenLog();
@@ -1253,6 +1221,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
             UNUSED_RESULT(fputs(prefix,logFile));
             UNUSED_RESULT(fprintf(logFile,": "));
           }
+          va_list tmpArguments;
           va_copy(tmpArguments,arguments);
           UNUSED_RESULT(vfprintf(logFile,text,tmpArguments));
           va_end(tmpArguments);
@@ -1268,10 +1237,9 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 
 void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const char *text, ...)
 {
-  va_list arguments;
-
   assert(text != NULL);
 
+  va_list arguments;
   va_start(arguments,text);
   vlogMessage(logHandle,logType,prefix,text,arguments);
   va_end(arguments);
@@ -1279,10 +1247,9 @@ void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 
 void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
 {
-  va_list arguments;
-
   assert(text != NULL);
 
+  va_list arguments;
   va_start(arguments,text);
   vlogMessage(logHandle,logType,NULL,text,arguments);
   va_end(arguments);
@@ -1290,11 +1257,10 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
 
 void logLines(LogHandle *logHandle, ulong logType, const char *prefix, const StringList *lines)
 {
-  StringNode *stringNode;
-  String     line;
-
   assert(lines != NULL);
 
+  StringNode *stringNode;
+  String     line;
   STRINGLIST_ITERATE(lines,stringNode,line)
   {
     logMessage(logHandle,logType,"%s%s",prefix,String_cString(line));
@@ -1303,8 +1269,6 @@ void logLines(LogHandle *logHandle, ulong logType, const char *prefix, const Str
 
 void fatalLogMessage(const char *text, void *userData)
 {
-  String dateTime;
-
   assert(text != NULL);
 
   UNUSED_VARIABLE(userData);
@@ -1319,7 +1283,7 @@ void fatalLogMessage(const char *text, void *userData)
 
     if (logFile != NULL)
     {
-      dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,globalOptions.logFormat);
+      String dateTime = Misc_formatDateTime(String_new(),Misc_getCurrentDateTime(),TIME_TYPE_LOCAL,globalOptions.logFormat);
 
       // append to log file
       UNUSED_RESULT(fprintf(logFile,"%s> ",String_cString(dateTime)));
@@ -1374,11 +1338,10 @@ LOCAL void executeIOlogPostProcess(ConstString line,
                                    void        *userData
                                   )
 {
-  StringList *stringList = (StringList*)userData;
-
-  assert(stringList != NULL);
   assert(line != NULL);
 
+  StringList *stringList = (StringList*)userData;
+  assert(stringList != NULL);
   StringList_append(stringList,line);
   while (StringList_count(stringList) > 5)
   {
@@ -1397,13 +1360,6 @@ void logPostProcess(LogHandle        *logHandle,
                     ConstString      message
                    )
 {
-  String     command;
-  TextMacros (textMacros,7);
-  StringList stderrList;
-  Errors     error;
-  StringNode *stringNode;
-  String     string;
-
   UNUSED_VARIABLE(jobOptions);
 
   assert(jobName != NULL);
@@ -1414,7 +1370,7 @@ void logPostProcess(LogHandle        *logHandle,
     if (logHandle != NULL)
     {
       // init variables
-      command = String_new();
+      String command = String_new();
 
       if (logHandle->logFile != NULL)
       {
@@ -1425,6 +1381,7 @@ void logPostProcess(LogHandle        *logHandle,
         assert(logHandle->logFileName != NULL);
 
         // log post command for job log file
+        TextMacros (textMacros,7);
         TEXT_MACROS_INIT(textMacros)
         {
           TEXT_MACRO_X_STRING ("%file",   logHandle->logFileName,                       TEXT_MACRO_PATTERN_STRING);
@@ -1446,18 +1403,21 @@ void logPostProcess(LogHandle        *logHandle,
         printInfo(2,"Log post process '%s'...\n",String_cString(command));
         assert(logHandle->logFileName != NULL);
 
+        StringList stderrList;
         StringList_init(&stderrList);
-        error = Misc_executeCommand(globalOptions.logPostCommand,
-                                    textMacros.data,
-                                    textMacros.count,
-                                    NULL,  // commandLine
-                                    CALLBACK_(NULL,NULL),
-                                    CALLBACK_(executeIOlogPostProcess,&stderrList),
-                                    (globalOptions.commandTimeout > 0) ? (long)globalOptions.commandTimeout : WAIT_FOREVER
-                                   );
+        Errors error = Misc_executeCommand(globalOptions.logPostCommand,
+                                           textMacros.data,
+                                           textMacros.count,
+                                           NULL,  // commandLine
+                                           CALLBACK_(NULL,NULL),
+                                           CALLBACK_(executeIOlogPostProcess,&stderrList),
+                                           (globalOptions.commandTimeout > 0) ? (long)globalOptions.commandTimeout : WAIT_FOREVER
+                                          );
         if (error != ERROR_NONE)
         {
           printError(_("cannot post-process log file (error: %s)"),Error_getText(error));
+          StringNode *stringNode;
+          String     string;
           STRINGLIST_ITERATE(&stderrList,stringNode,string)
           {
             printError("  %s",String_cString(string));
@@ -1484,15 +1444,12 @@ void logPostProcess(LogHandle        *logHandle,
 
 bool allocateServer(uint serverId, ServerConnectionPriorities priority, long timeout)
 {
-  ServerNode *serverNode;
-  uint       maxConnectionCount;
-
   if (serverId != 0)
   {
     SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // find server
-      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
+      ServerNode *serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
       if (serverNode == NULL)
       {
         Semaphore_unlock(&globalOptions.serverList.lock);
@@ -1500,6 +1457,7 @@ bool allocateServer(uint serverId, ServerConnectionPriorities priority, long tim
       }
 
       // get max. number of allowed concurrent connections
+      uint maxConnectionCount;
       if (serverNode->server.maxConnectionCount != 0)
       {
         maxConnectionCount = serverNode->server.maxConnectionCount;
@@ -1619,17 +1577,14 @@ void freeServer(uint serverId)
 
 bool isServerAllocationPending(uint serverId)
 {
-  bool       pendingFlag;
-  ServerNode *serverNode;
-
-  pendingFlag = FALSE;
+  bool pendingFlag = FALSE;
 
   if (serverId != 0)
   {
     SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       // find server
-      serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
+      ServerNode *serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
       if (serverNode != NULL)
       {
         pendingFlag = (serverNode->server.connection.highPriorityRequestCount > 0);
@@ -1642,9 +1597,7 @@ bool isServerAllocationPending(uint serverId)
 
 Errors mountAll(const MountList *mountList)
 {
-  const MountNode *mountNode;
-  MountedNode     *mountedNode;
-  Errors          error;
+  Errors error;
 
   assert(mountList != NULL);
 
@@ -1652,15 +1605,15 @@ Errors mountAll(const MountList *mountList)
 
   SEMAPHORE_LOCKED_DO(&mountedList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    mountNode = LIST_HEAD(mountList);
+    const MountNode *mountNode = LIST_HEAD(mountList);
     while (mountNode != NULL)
     {
       // find/add mounted node
-      mountedNode = LIST_FIND(&mountedList,
-                              mountedNode,
-                                 String_equals(mountedNode->name,mountNode->name)
-                              && String_equals(mountedNode->device,mountNode->device)
-                             );
+      MountedNode *mountedNode = LIST_FIND(&mountedList,
+                                           mountedNode,
+                                              String_equals(mountedNode->name,mountNode->name)
+                                           && String_equals(mountedNode->device,mountNode->device)
+                                          );
       if (mountedNode == NULL)
       {
         mountedNode = LIST_NEW_NODE(MountedNode);
@@ -1716,11 +1669,11 @@ Errors mountAll(const MountList *mountList)
       while (mountNode != NULL)
       {
         // find mounted node
-        mountedNode = LIST_FIND(&mountedList,
-                                mountedNode,
-                                   String_equals(mountedNode->name,mountNode->name)
-                                && String_equals(mountedNode->device,mountNode->device)
-                               );
+        MountNode *mountedNode = LIST_FIND(&mountedList,
+                                           mountedNode,
+                                              String_equals(mountedNode->name,mountNode->name)
+                                           && String_equals(mountedNode->device,mountNode->device)
+                                          );
         if (mountedNode != NULL)
         {
           assert(mountedNode->mountCount > 0);
@@ -1744,21 +1697,19 @@ Errors mountAll(const MountList *mountList)
 
 Errors unmountAll(const MountList *mountList)
 {
-  MountNode   *mountNode;
-  MountedNode *mountedNode;
-
   assert(mountList != NULL);
 
   SEMAPHORE_LOCKED_DO(&mountedList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+    MountNode *mountNode;
     LIST_ITERATE(mountList,mountNode)
     {
       // find mounted node
-      mountedNode = LIST_FIND(&mountedList,
-                              mountedNode,
-                                 String_equals(mountedNode->name,mountNode->name)
-                              && String_equals(mountedNode->device,mountNode->device)
-                             );
+      MountedNode *mountedNode = LIST_FIND(&mountedList,
+                                           mountedNode,
+                                              String_equals(mountedNode->name,mountNode->name)
+                                           && String_equals(mountedNode->device,mountNode->device)
+                                          );
       if (mountedNode != NULL)
       {
         assert(mountedNode->mountCount > 0);
@@ -1772,12 +1723,9 @@ Errors unmountAll(const MountList *mountList)
 
 void purgeMounts(bool forceFlag)
 {
-  MountedNode *mountedNode;
-  Errors      error;
-
   SEMAPHORE_LOCKED_DO(&mountedList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    mountedNode = mountedList.head;
+    MountedNode *mountedNode = mountedList.head;
     while (mountedNode != NULL)
     {
       if (   (mountedNode->mountCount == 0)
@@ -1788,7 +1736,7 @@ void purgeMounts(bool forceFlag)
       {
         if (Device_isMounted(mountedNode->name))
         {
-          error = Device_umount(globalOptions.unmountCommand,mountedNode->name);
+          Errors error = Device_umount(globalOptions.unmountCommand,mountedNode->name);
           if (error != ERROR_NONE)
           {
             printWarning(_("cannot unmount '%s' (error: %s)"),
@@ -1809,9 +1757,7 @@ void purgeMounts(bool forceFlag)
 
 const char *getPasswordTypeText(PasswordTypes passwordType)
 {
-  const char *text;
-
-  text = NULL;
+  const char *text = NULL;
   switch (passwordType)
   {
     case PASSWORD_TYPE_CRYPT:  text = "crypt";    break;
@@ -1952,10 +1898,6 @@ Errors getPasswordFromConsole(String        name,
 
 Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patternType)
 {
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    String    string;
-  #endif /* PLATFORM_... */
   Errors error;
 
   assert(pattern != NULL);
@@ -1970,7 +1912,7 @@ Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patt
                         );
   #elif defined(PLATFORM_WINDOWS)
     // escape all '\' by '\\'
-    string = String_duplicate(fileName);
+    String string = String_duplicate(fileName);
     String_replaceAllCString(string,STRING_BEGIN,"\\","\\\\");
 
     error = Pattern_init(pattern,
@@ -1988,16 +1930,15 @@ Errors initFilePattern(Pattern *pattern, ConstString fileName, PatternTypes patt
 
 Errors addStorageNameListFromFile(StringList *storageNameList, const char *fileName)
 {
-  Errors     error;
-  FileHandle fileHandle;
-  String     line;
+  Errors error;
 
   assert(storageNameList != NULL);
 
   // init variables
-  line = String_new();
+  String line = String_new();
 
   // open file
+  FileHandle fileHandle;
   if ((fileName == NULL) || stringEquals(fileName,"-"))
   {
     error = File_openDescriptor(&fileHandle,FILE_DESCRIPTOR_STDIN,FILE_OPEN_READ|FILE_STREAM);
@@ -2036,14 +1977,13 @@ Errors addStorageNameListFromFile(StringList *storageNameList, const char *fileN
 
 Errors addStorageNameListFromCommand(StringList *storageNameList, const char *template)
 {
-  String script;
   Errors error;
 
   assert(storageNameList != NULL);
   assert(template != NULL);
 
   // init variables
-  script = String_new();
+  String script = String_new();
 
   // expand template
   Misc_expandMacros(script,
@@ -2079,17 +2019,16 @@ Errors addStorageNameListFromCommand(StringList *storageNameList, const char *te
 
 Errors addIncludeListFromFile(EntryTypes entryType, EntryList *entryList, const char *fileName)
 {
-  Errors     error;
-  FileHandle fileHandle;
-  String     line;
+  Errors error;
 
   assert(entryList != NULL);
   assert(fileName != NULL);
 
   // init variables
-  line = String_new();
+  String line = String_new();
 
   // open file
+  FileHandle fileHandle;
   if (stringEquals(fileName,"-"))
   {
     error = File_openDescriptor(&fileHandle,FILE_DESCRIPTOR_STDIN,FILE_OPEN_READ|FILE_STREAM);
@@ -2128,14 +2067,13 @@ Errors addIncludeListFromFile(EntryTypes entryType, EntryList *entryList, const 
 
 Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, const char *template)
 {
-  String script;
   Errors error;
 
   assert(entryList != NULL);
   assert(template != NULL);
 
   // init variables
-  script = String_new();
+  String script = String_new();
 
   // expand template
   Misc_expandMacros(script,
@@ -2171,18 +2109,16 @@ Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, con
 
 Errors addExcludeListFromFile(PatternList *patternList, const char *fileName)
 {
-  Errors     error;
-  FileHandle fileHandle;
-  String     line;
+  Errors error;
 
   assert(patternList != NULL);
   assert(fileName != NULL);
 
   // init variables
-  line = String_new();
+  String line = String_new();
 
   // open file
-  // open file
+  FileHandle fileHandle;
   if (stringEquals(fileName,"-"))
   {
     error = File_openDescriptor(&fileHandle,FILE_DESCRIPTOR_STDIN,FILE_OPEN_READ|FILE_STREAM);
@@ -2221,14 +2157,13 @@ Errors addExcludeListFromFile(PatternList *patternList, const char *fileName)
 
 Errors addExcludeListFromCommand(PatternList *patternList, const char *template)
 {
-  String script;
   Errors error;
 
   assert(patternList != NULL);
   assert(template != NULL);
 
   // init variables
-  script = String_new();
+  String script = String_new();
 
   // expand template
   Misc_expandMacros(script,
@@ -2276,11 +2211,10 @@ bool isInIncludedList(const EntryList *includeEntryList,
                       ConstString     name
                      )
 {
-  const EntryNode *entryNode;
-
   assert(includeEntryList != NULL);
   assert(name != NULL);
 
+  const EntryNode *entryNode;
   LIST_ITERATE(includeEntryList,entryNode)
   {
     if (Pattern_match(&entryNode->pattern,name,STRING_BEGIN,PATTERN_MATCH_MODE_BEGIN,NULL,NULL))
@@ -2304,14 +2238,11 @@ bool isInExcludedList(const PatternList *excludePatternList,
 
 bool hasNoBackup(ConstString pathName)
 {
-  String fileName;
-  bool   hasNoBackupFlag;
-
   assert(pathName != NULL);
 
-  hasNoBackupFlag = FALSE;
+  bool hasNoBackupFlag = FALSE;
 
-  fileName = String_new();
+  String fileName = String_new();
   hasNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".nobackup"));
   hasNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".NOBACKUP"));
   String_delete(fileName);
@@ -2321,13 +2252,11 @@ bool hasNoBackup(ConstString pathName)
 
 bool hasNoDumpAttribute(ConstString name)
 {
-  bool     hasNoDumpAttributeFlag;
-  FileInfo fileInfo;
-
   assert(name != NULL);
 
-  hasNoDumpAttributeFlag = FALSE;
+  bool hasNoDumpAttributeFlag = FALSE;
 
+  FileInfo fileInfo;
   if (File_getInfo(&fileInfo,name))
   {
     hasNoDumpAttributeFlag = File_hasAttributeNoDump(&fileInfo);
@@ -2350,8 +2279,8 @@ bool hasNoDumpAttribute(ConstString name)
 
 LOCAL bool readFromJob(ConstString fileName)
 {
-  Errors     error;
-  FileHandle fileHandle;
+  assert(fileName != NULL);
+
   bool       failFlag;
   uint       lineNb;
   String     line;
@@ -2361,10 +2290,9 @@ LOCAL bool readFromJob(ConstString fileName)
   long       nextIndex;
   uint       i;
 
-  assert(fileName != NULL);
-
   // open file
-  error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
+  FileHandle fileHandle;
+  Erroor error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
     printError(_("cannot open job file '%s' (error: %s)!"),
@@ -2486,13 +2414,12 @@ LOCAL bool readFromJob(ConstString fileName)
 
 LOCAL Errors createPIDFile(void)
 {
-  String     fileName;
-  Errors     error;
-  FileHandle fileHandle;
+  Errors error;
 
   if (!stringIsEmpty(globalOptions.pidFileName))
   {
-    fileName = String_new();
+    String     fileName = String_new();
+    FileHandle fileHandle;
     error = File_open(&fileHandle,File_setFileNameCString(fileName,globalOptions.pidFileName),FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
@@ -2572,16 +2499,11 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                     Password   *cryptPassword
                                    )
 {
-  String   publicKeyFileName,privateKeyFileName;
-  void     *data;
-  uint     dataLength;
-  Errors   error;
-  CryptKey publicKey,privateKey;
-  String   directoryName;
+  Errors error;
 
   // initialize variables
-  publicKeyFileName  = String_new();
-  privateKeyFileName = String_new();
+  String publicKeyFileName  = String_new();
+  String privateKeyFileName = String_new();
 
   if (keyFileBaseName != NULL)
   {
@@ -2630,7 +2552,9 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
 
   // generate new key pair for encryption
   if (Misc_isStdoutTerminal()) printInfo(1,"Generate keys (collecting entropie)...");
+  CryptKey publicKey;
   Crypt_initKey(&publicKey,CRYPT_PADDING_TYPE_NONE);
+  CryptKey privateKey;
   Crypt_initKey(&privateKey,CRYPT_PADDING_TYPE_NONE);
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,globalOptions.generateKeyBits,globalOptions.generateKeyMode);
   if (error != ERROR_NONE)
@@ -2650,7 +2574,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   if (keyFileBaseName != NULL)
   {
     // create directory if it does not exists
-    directoryName = File_getDirectoryNameCString(String_new(),keyFileBaseName);
+    String directoryName = File_getDirectoryNameCString(String_new(),keyFileBaseName);
     if (!String_isEmpty(directoryName))
     {
       if      (!File_exists(directoryName))
@@ -2712,7 +2636,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
       printError(_("cannot write encryption private key file (error: %s)!"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
-      String_delete(data);
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -2721,6 +2644,8 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   }
   else
   {
+    void   *data;
+    uint   dataLength;
     String base64Data;
 
     // output encryption public key to stdout
@@ -2796,16 +2721,11 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
 
 LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
 {
-  String   publicKeyFileName,privateKeyFileName;
-  void     *data;
-  uint     dataLength;
-  Errors   error;
-  CryptKey publicKey,privateKey;
-  String   directoryName;
+  Errors error;
 
   // initialize variables
-  publicKeyFileName  = String_new();
-  privateKeyFileName = String_new();
+  String publicKeyFileName  = String_new();
+  String privateKeyFileName = String_new();
 
   if (keyFileBaseName != NULL)
   {
@@ -2834,7 +2754,9 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
 
   // generate new key pair for signature
   if (Misc_isStdoutTerminal()) printInfo(1,"Generate signature keys (collecting entropie)...");
+  CryptKey publicKey;
   Crypt_initKey(&publicKey,CRYPT_PADDING_TYPE_NONE);
+  CryptKey privateKey;
   Crypt_initKey(&privateKey,CRYPT_PADDING_TYPE_NONE);
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,globalOptions.generateKeyBits,globalOptions.generateKeyMode);
   if (error != ERROR_NONE)
@@ -2852,7 +2774,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   if (keyFileBaseName != NULL)
   {
     // create directory if it does not exists
-    directoryName = File_getDirectoryNameCString(String_new(),keyFileBaseName);
+    String directoryName = File_getDirectoryNameCString(String_new(),keyFileBaseName);
     if (!String_isEmpty(directoryName))
     {
       if      (!File_exists(directoryName))
@@ -2922,6 +2844,8 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
   else
   {
+    void   *data;
+    uint   dataLength;
     String base64Data;
 
     // output signature public key to stdout
@@ -3135,12 +3059,7 @@ LOCAL Errors runBatch(void)
 
 LOCAL Errors runJob(ConstString jobUUIDOrName)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode *jobNode;
-  ArchiveTypes  archiveType;
-  JobOptions    jobOptions;
-  StaticString  (entityUUID,MISC_UUID_STRING_LENGTH);
-  Errors        error;
+  Errors error;
 
   // read all jobs
   error = Job_rereadAll(globalOptions.jobsDirectory);
@@ -3154,12 +3073,14 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
   }
 
   // get job to execute
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String_clear(jobUUID);
-  archiveType = ARCHIVE_TYPE_NONE;
+  JobOptions   jobOptions;
+  ArchiveTypes archiveType = ARCHIVE_TYPE_NONE;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
   {
     // find job by name or UUID
-    jobNode = NULL;
+    const JobNode *jobNode = NULL;
     if (jobNode == NULL) jobNode = Job_findByName(jobUUIDOrName);
     if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDOrName);
     if      (jobNode == NULL)
@@ -3187,6 +3108,7 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
   globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
   // create new entity UUID
+  StaticString (entityUUID,MISC_UUID_STRING_LENGTH);
   Misc_getUUID(entityUUID);
 
   // create archive
@@ -3240,9 +3162,7 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
 
 LOCAL Errors runInteractive(int argc, const char *argv[])
 {
-  StaticString (entityUUID,MISC_UUID_STRING_LENGTH);
-  JobOptions   jobOptions;
-  Errors       error;
+  Errors error;
 
   if (Configuration_isCommandLineOptionSet(&globalOptions.logFileName))
   {
@@ -3330,6 +3250,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
   // init job options
+  JobOptions jobOptions;
   Job_initOptions(&jobOptions);
 
   error = ERROR_NONE;
@@ -3421,6 +3342,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         if (error == ERROR_NONE)
         {
           // create new entity UUID
+          StaticString (entityUUID,MISC_UUID_STRING_LENGTH);
           Misc_getUUID(entityUUID);
 
           // create archive
@@ -3550,25 +3472,29 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         switch (globalOptions.command)
         {
           case COMMAND_NONE:
-            // default: info/list content
-            error = Command_list(&storageNameList,
-                                 &globalOptions.includeEntryList,
-                                 &globalOptions.excludePatternList,
-                                 !globalOptions.metaInfoFlag,  // showEntriesFlag
-                                 &jobOptions,
-                                 CALLBACK_(getPasswordFromConsole,NULL),
-                                 NULL  // logHandle
-                                );
+            {
+              // default: info/list content
+              error = Command_list(&storageNameList,
+                                   &globalOptions.includeEntryList,
+                                   &globalOptions.excludePatternList,
+                                   !globalOptions.metaInfoFlag,  // showEntriesFlag
+                                   &jobOptions,
+                                   CALLBACK_(getPasswordFromConsole,NULL),
+                                   NULL  // logHandle
+                                  );
+            }
             break;
           case COMMAND_LIST:
-            error = Command_list(&storageNameList,
-                                 &globalOptions.includeEntryList,
-                                 &globalOptions.excludePatternList,
-                                 TRUE,  // showEntriesFlag
-                                 &jobOptions,
-                                 CALLBACK_(getPasswordFromConsole,NULL),
-                                 NULL  // logHandle
-                                );
+            {
+              error = Command_list(&storageNameList,
+                                   &globalOptions.includeEntryList,
+                                   &globalOptions.excludePatternList,
+                                   TRUE,  // showEntriesFlag
+                                   &jobOptions,
+                                   CALLBACK_(getPasswordFromConsole,NULL),
+                                   NULL  // logHandle
+                                  );
+            }
             break;
           case COMMAND_TEST:
             error = Command_test(&storageNameList,
@@ -3604,32 +3530,35 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                    );
             break;
           case COMMAND_CONVERT:
-            // create new entity UUID
-            Misc_getUUID(entityUUID);
+            {
+              // create new entity UUID
+              StaticString (entityUUID,MISC_UUID_STRING_LENGTH);
+              Misc_getUUID(entityUUID);
 
-            error = Command_convert(&storageNameList,
-                                    #ifndef NDEBUG
-                                      Configuration_isCommandLineOptionSet(&globalOptions.jobUUIDOrName)
-                                        ? String_cString(globalOptions.jobUUIDOrName)
-                                        : (Configuration_isCommandLineOptionSet(&globalOptions.debug.indexUUID)
-                                             ? String_cString(globalOptions.debug.indexUUID)
-                                             : NULL
-                                          ),
-                                      Configuration_isCommandLineOptionSet(&globalOptions.newEntityUUID)
-                                        ? String_cString(globalOptions.newEntityUUID)
-                                        : (Configuration_isCommandLineOptionSet(&globalOptions.debug.indexUUID)
-                                             ? String_cString(globalOptions.debug.indexUUID)
-                                             : NULL
-                                          ),
-                                    #else
-                                      Configuration_isCommandLineOptionSet(&globalOptions.jobUUIDOrName) ? String_cString(globalOptions.jobUUIDOrName) : NULL,
-                                      Configuration_isCommandLineOptionSet(&globalOptions.newEntityUUID) ? String_cString(globalOptions.newEntityUUID) : NULL,
-                                    #endif
-                                    0LL,  // newCreatedDateTime
-                                    &jobOptions,
-                                    CALLBACK_(getPasswordFromConsole,NULL),
-                                    NULL  // logHandle
-                                   );
+              error = Command_convert(&storageNameList,
+                                      #ifndef NDEBUG
+                                        Configuration_isCommandLineOptionSet(&globalOptions.jobUUIDOrName)
+                                          ? String_cString(globalOptions.jobUUIDOrName)
+                                          : (Configuration_isCommandLineOptionSet(&globalOptions.debug.indexUUID)
+                                               ? String_cString(globalOptions.debug.indexUUID)
+                                               : NULL
+                                            ),
+                                        Configuration_isCommandLineOptionSet(&globalOptions.newEntityUUID)
+                                          ? String_cString(globalOptions.newEntityUUID)
+                                          : (Configuration_isCommandLineOptionSet(&globalOptions.debug.indexUUID)
+                                               ? String_cString(globalOptions.debug.indexUUID)
+                                               : NULL
+                                            ),
+                                      #else
+                                        Configuration_isCommandLineOptionSet(&globalOptions.jobUUIDOrName) ? String_cString(globalOptions.jobUUIDOrName) : NULL,
+                                        Configuration_isCommandLineOptionSet(&globalOptions.newEntityUUID) ? String_cString(globalOptions.newEntityUUID) : NULL,
+                                      #endif
+                                      0LL,  // newCreatedDateTime
+                                      &jobOptions,
+                                      CALLBACK_(getPasswordFromConsole,NULL),
+                                      NULL  // logHandle
+                                     );
+            }
             break;
           default:
             break;
@@ -3687,22 +3616,12 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
 #ifndef NDEBUG
 LOCAL Errors runDebug(int argc, const char *argv[])
 {
-  AutoFreeList      autoFreeList;
-  Errors            error;
-  DatabaseSpecifier databaseSpecifier;
-  String            printableDatabaseURI;
-  IndexHandle       indexHandle;
-  DatabaseHandle    continuousDatabaseHandle;
-  uint              deletedStorageCount;
-  JobOptions        jobOptions;
-  StorageSpecifier  storageSpecifier;
-  IndexId           entityId,storageId;
-  StorageInfo       storageInfo;
-  ulong             totalEntryCount;
-  uint64            totalEntrySize;
+  Errors error;
 
   // initialize variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
+
   error = ERROR_NONE;
 
 #if 0
@@ -3719,6 +3638,11 @@ LOCAL Errors runDebug(int argc, const char *argv[])
   }
 #endif
 
+  JobOptions        jobOptions;
+  DatabaseSpecifier databaseSpecifier;
+  String            printableDatabaseURI;
+  IndexHandle       indexHandle;
+  DatabaseHandle    continuousDatabaseHandle;
   if (   globalOptions.debugFlag
       && (   !StringList_isEmpty(&globalOptions.debug.continuousNameList)
           || globalOptions.debug.showChunkIdsFlag
@@ -3954,6 +3878,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
   {
     // wait until all deleted storages are purged
     printInfo(1,"Wait purge deleted storages...");
+    uint deletedStorageCount;
     while (IndexStorage_hasDeleted(&indexHandle,&deletedStorageCount))
     {
       printInfo(1,"%5lu\b\b\b\b\b",deletedStorageCount);
@@ -3965,6 +3890,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
   if (globalOptions.debug.indexRemoveStorage != NULL)
   {
     // remove storage from index
+    StorageSpecifier  storageSpecifier;
     Storage_initSpecifier(&storageSpecifier);
     AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
@@ -3981,6 +3907,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     }
 
     // find storage
+    IndexId storageId;
     if (!IndexStorage_findByName(&indexHandle,
                                  &storageSpecifier,
                                  NULL,  // findArchiveName
@@ -4029,6 +3956,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
   if (globalOptions.debug.indexAddStorage != NULL)
   {
     // add storage to index
+    StorageSpecifier  storageSpecifier;
     Storage_initSpecifier(&storageSpecifier);
     AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
@@ -4045,6 +3973,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     }
 
     // init storage
+    StorageInfo storageInfo;
     error = Storage_init(&storageInfo,
                          NULL,  // masterIO
                          &storageSpecifier,
@@ -4070,6 +3999,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_done(&storageInfo); });
 
     // purge storage if it exists
+    IndexId entityId,storageId;
     if (   (IndexStorage_findByName(&indexHandle,
                                     &storageSpecifier,
                                     globalOptions.debug.indexAddStorage,
@@ -4199,6 +4129,8 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                          );
 
     // index update
+    ulong  totalEntryCount;
+    uint64 totalEntrySize;
     error = Archive_updateIndex(&indexHandle,
                                 INDEX_ID_NONE,
                                 INDEX_ID_ENTITY(globalOptions.debug.indexEntityId),
@@ -4265,6 +4197,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
   if (globalOptions.debug.indexRefreshStorage != NULL)
   {
     // refresh storage in index
+    StorageSpecifier  storageSpecifier;
     Storage_initSpecifier(&storageSpecifier);
     AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
@@ -4281,6 +4214,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     }
 
     // find storage
+    IndexId storageId;
     if (!IndexStorage_findByName(&indexHandle,
                                  &storageSpecifier,
                                  NULL,  // findArchiveName
@@ -4308,6 +4242,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     }
 
     // init storage
+    StorageInfo storageInfo;
     error = Storage_init(&storageInfo,
                          NULL,  // masterIO
                          &storageSpecifier,
@@ -4341,6 +4276,8 @@ LOCAL Errors runDebug(int argc, const char *argv[])
                          );
 
     // index update
+    ulong  totalEntryCount;
+    uint64 totalEntrySize;
     error = Archive_updateIndex(&indexHandle,
                                 INDEX_ID_NONE,
                                 INDEX_ID_NONE,
@@ -4455,9 +4392,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
 #include "unicode/ucal.h"
 LOCAL Errors bar(int argc, const char *argv[])
 {
-  String fileName;
   Errors error;
-  bool   printInfoFlag;
 
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
@@ -4518,7 +4453,7 @@ LOCAL Errors bar(int argc, const char *argv[])
 
   if (!globalOptions.noDefaultConfigFlag)
   {
-    fileName = String_new();
+    String fileName = String_new();
 
     // read default global configuration from <CONFIG_DIR>/<CONFIG_SUB_DIR>/bar.cfg (ignore errors)
     File_getSystemDirectoryCString(fileName,FILE_SYSTEM_PATH_CONFIGURATION,CONFIG_SUB_DIR FILE_SEPARATOR_STRING DEFAULT_CONFIG_FILE_NAME);
@@ -4551,7 +4486,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   }
 
   // if daemon: print info
-  printInfoFlag = !globalOptions.quietFlag && globalOptions.daemonFlag;
+  bool printInfoFlag = !globalOptions.quietFlag && globalOptions.daemonFlag;
 
   // read all configuration files
   error = Configuration_readAll(isPrintInfo(2) || printInfoFlag);

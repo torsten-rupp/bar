@@ -64,10 +64,9 @@ LOCAL StringNode *insertString(StringList *stringList, const String string, Stri
 LOCAL StringNode *insertString(const char *__fileName__, ulong __lineNb__, StringList *stringList, const String string, StringNode *nextStringNode)
 #endif /* NDEBUG */
 {
-  StringNode *stringNode;
-
   assert(stringList != NULL);
 
+  StringNode *stringNode;
   #ifdef NDEBUG
     stringNode = LIST_NEW_NODE(StringNode);
   #else /* not NDEBUG */
@@ -133,11 +132,9 @@ StringList *StringList_new(void)
 
 StringList *StringList_duplicate(const StringList *stringList)
 {
-  StringList *newStringList;
-
   assert(stringList != NULL);
 
-  newStringList = StringList_new();
+  StringList *newStringList = StringList_new();
   if (newStringList == NULL)
   {
     return NULL;
@@ -150,12 +147,10 @@ StringList *StringList_duplicate(const StringList *stringList)
 
 void StringList_copy(StringList *stringList, const StringList *fromStringList)
 {
-  StringNode *stringNode;
-
   assert(stringList != NULL);
   assert(fromStringList != NULL);
 
-  stringNode = fromStringList->head;
+  StringNode *stringNode = fromStringList->head;
   while (stringNode != NULL)
   {
     StringList_append(stringList,stringNode->string);
@@ -332,12 +327,10 @@ StringNode *StringList_remove(StringList *stringList, StringNode *stringNode)
 StringNode *__StringList_remove(const char *__fileName__, ulong __lineNb__, StringList *stringList, StringNode *stringNode)
 #endif /* NDEBUG */
 {
-  StringNode *nextStringNode;
-
   assert(stringList != NULL);
   assert(stringNode != NULL);
 
-  nextStringNode = (StringNode*)List_remove(stringList,stringNode);
+  StringNode *nextStringNode = (StringNode*)List_remove(stringList,stringNode);
 
   #ifdef NDEBUG
     String_delete(stringNode->string);
@@ -356,11 +349,9 @@ String StringList_removeFirst(StringList *stringList, String string)
 String __StringList_removeFirst(const char *__fileName__, ulong __lineNb__, StringList *stringList, String string)
 #endif /* NDEBUG */
 {
-  StringNode *stringNode;
-
   assert(stringList != NULL);
 
-  stringNode = (StringNode*)List_removeFirst(stringList);
+  StringNode *stringNode = (StringNode*)List_removeFirst(stringList);
   if (stringNode != NULL)
   {
     if (string != NULL)
@@ -401,11 +392,9 @@ String StringList_removeLast(StringList *stringList, String string)
 String __StringList_removeLast(const char *__fileName__, ulong __lineNb__, StringList *stringList, String string)
 #endif /* NDEBUG */
 {
-  StringNode *stringNode;
-
   assert(stringList != NULL);
 
-  stringNode = (StringNode*)List_removeLast(stringList);
+  StringNode *stringNode = (StringNode*)List_removeLast(stringList);
   if (stringNode != NULL)
   {
     if (string != NULL)
@@ -463,11 +452,9 @@ StringNode *StringList_find(const StringList *stringList, ConstString string)
 
 StringNode *StringList_findCString(const StringList *stringList, const char *s)
 {
-  StringNode *stringNode;
-
   assert(stringList != NULL);
 
-  stringNode = stringList->head;
+  StringNode *stringNode = stringList->head;
   while (   (stringNode != NULL)
          && !String_equalsCString(stringNode->string,s)
         )
@@ -485,16 +472,13 @@ StringNode *StringList_match(const StringList *stringList, const String pattern)
 
 StringNode *StringList_matchCString(const StringList *stringList, const char *pattern)
 {
-  StringNode *stringNode;
-  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
-    regex_t    regex;
-  #endif /* HAVE_PCRE || HAVE_REGEX_H */
-
   assert(stringList != NULL);
   assert(pattern != NULL);
 
+  StringNode *stringNode;
   #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
     /* compile pattern */
+    regex_t regex;
     if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
     {
       return NULL;
@@ -523,22 +507,18 @@ StringNode *StringList_matchCString(const StringList *stringList, const char *pa
 
 const char* const *StringList_toCStringArray(const StringList *stringList)
 {
-  char const **cStringArray;
-  StringNode *stringNode;
-  uint       z;
-
   assert(stringList != NULL);
 
-  cStringArray = (const char**)malloc(stringList->count*sizeof(char*));
+  char const **cStringArray = (const char**)malloc(stringList->count*sizeof(char*));
   if (cStringArray != NULL)
   {
-    stringNode = stringList->head;
-    z = 0;
+    StringNode *stringNode = stringList->head;
+    size_t i = 0;
     while (stringNode != NULL)
     {
-      cStringArray[z] = String_cString(stringNode->string);
+      cStringArray[i] = String_cString(stringNode->string);
       stringNode = stringNode->next;
-      z++;
+      i++;
     }
   }
 
@@ -548,18 +528,16 @@ const char* const *StringList_toCStringArray(const StringList *stringList)
 #ifndef NDEBUG
 void StringList_debugDump(FILE *handle, const StringList *stringList)
 {
-  StringNode *stringNode;
-  uint       z;
 
   assert(stringList != NULL);
 
-  stringNode = stringList->head;
-  z = 1;
+  StringNode *stringNode = stringList->head;
+  size_t i = 1;
   while (stringNode != NULL)
   {
-    fprintf(handle,"DEBUG %03d %p: %s\n",z,stringNode,String_cString(stringNode->string));
+    fprintf(handle,"DEBUG %03u %p: %s\n",i,stringNode,String_cString(stringNode->string));
     stringNode = stringNode->next;
-    z++;
+    i++;
   }
 }
 

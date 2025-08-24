@@ -87,14 +87,11 @@ LOCAL bool initFTPLogin(ConstString             hostName,
                         void                    *getNamePasswordUserData
                        )
 {
-  String s;
-  bool   initFlag;
-
   assert(!String_isEmpty(hostName));
   assert(userName != NULL);
   assert(password != NULL);
 
-  initFlag = FALSE;
+  bool initFlag = FALSE;
 
   if (jobOptions != NULL)
   {
@@ -107,9 +104,9 @@ LOCAL bool initFTPLogin(ConstString             hostName,
           case RUN_MODE_INTERACTIVE:
             if (Password_isEmpty(&defaultFTPPassword))
             {
-              s = !String_isEmpty(userName)
-                    ? String_format(String_new(),"FTP login password for %S@%S",userName,hostName)
-                    : String_format(String_new(),"FTP login password for %S",hostName);
+              String s = !String_isEmpty(userName)
+                           ? String_format(String_new(),"FTP login password for %S@%S",userName,hostName)
+                           : String_format(String_new(),"FTP login password for %S",hostName);
               if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
               {
                 initFlag = TRUE;
@@ -126,9 +123,9 @@ LOCAL bool initFTPLogin(ConstString             hostName,
           case RUN_MODE_SERVER:
             if (getNamePasswordFunction != NULL)
             {
-              s = !String_isEmpty(userName)
-                    ? String_format(String_new(),"%S@%S",userName,hostName)
-                    : String_format(String_new(),"%S",hostName);
+              String s = !String_isEmpty(userName)
+                           ? String_format(String_new(),"%S@%S",userName,hostName)
+                           : String_format(String_new(),"%S",hostName);
               if (getNamePasswordFunction(userName,
                                           password,
                                           PASSWORD_TYPE_FTP,
@@ -170,12 +167,10 @@ LOCAL bool initFTPLogin(ConstString             hostName,
 
 LOCAL CURLcode setFTPLogin(CURL *curlHandle, ConstString userName, Password *password, long timeout)
 {
-  CURLcode curlCode;
-
   // reset
   curl_easy_reset(curlHandle);
 
-  curlCode = CURLE_OK;
+  CURLcode curlCode = CURLE_OK;
 
   if (curlCode == CURLE_OK)
   {
@@ -259,12 +254,6 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
                            Password    *password
                           )
 {
-  #if   defined(HAVE_CURL)
-    CURL       *curlHandle;
-    String     url;
-    CURLcode   curlCode;
-  #endif
-
   // check host name (Note: FTP library crash if host name is not valid!)
   if (!Network_hostExists(hostName))
   {
@@ -273,18 +262,18 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
 
   #if   defined(HAVE_CURL)
     // init handle
-    curlHandle = curl_easy_init();
+    CURL *curlHandle = curl_easy_init();
     if (curlHandle == NULL)
     {
       return ERROR_FTP_SESSION_FAIL;
     }
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",hostName);
+    String url = String_format(String_new(),"ftp://%S",hostName);
     if (hostPort != 0) String_appendFormat(url,":%d",hostPort);
 
     // init FTP connect
-    curlCode = setFTPLogin(curlHandle,userName,password,FTP_TIMEOUT);
+    CURLcode curlCode = setFTPLogin(curlHandle,userName,password,FTP_TIMEOUT);
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
@@ -345,14 +334,14 @@ LOCAL size_t curlFTPReadDataCallback(void   *buffer,
                                      void   *userData
                                     )
 {
-  StorageHandle *storageHandle = (StorageHandle*)userData;
-  size_t               bytesSent;
+  size_t bytesSent;
 
   assert(buffer != NULL);
   assert(size > 0);
+
+  StorageHandle *storageHandle = (StorageHandle*)userData;
   assert(storageHandle != NULL);
   assert(storageHandle->ftp.buffer != NULL);
-
   if (storageHandle->ftp.transferedBytes < storageHandle->ftp.length)
   {
     bytesSent = MIN(n,(size_t)(storageHandle->ftp.length-storageHandle->ftp.transferedBytes)/size)*size;
@@ -389,14 +378,14 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
                                       void       *userData
                                      )
 {
-  StorageHandle *storageHandle = (StorageHandle*)userData;
-  size_t        bytesReceived;
+  size_t bytesReceived;
 
   assert(buffer != NULL);
   assert(size > 0);
+
+  StorageHandle *storageHandle = (StorageHandle*)userData;
   assert(storageHandle != NULL);
   assert(storageHandle->ftp.buffer != NULL);
-
   if ((n*size) <= (storageHandle->ftp.length-storageHandle->ftp.transferedBytes))
   {
     bytesReceived = n*size;
@@ -433,12 +422,11 @@ LOCAL size_t curlFTPLineListCallback(const void *buffer,
                                      void       *userData
                                     )
 {
-  StringList *stringList = (StringList*)userData;
-
   assert(buffer != NULL);
   assert(size > 0);
-  assert(stringList != NULL);
 
+  StringList *stringList = (StringList*)userData;
+  assert(stringList != NULL);
   String     line = String_new();
   const char *s   = (const char*)buffer;
   for (size_t i = 0; i < n; i++)
@@ -531,15 +519,6 @@ LOCAL bool parseFTPDirectoryLine(String          line,
     {"12",12},
   };
 
-  bool       parsedFlag;
-  char       permissionString[32];
-  uint       permissionStringLength;
-  uint       year,month,day;
-  uint       hour,minute;
-  char       monthName[32];
-  const char *s;
-  uint       i;
-
   assert(line != NULL);
   assert(fileName != NULL);
   assert(type != NULL);
@@ -549,8 +528,13 @@ LOCAL bool parseFTPDirectoryLine(String          line,
   assert(groupId != NULL);
   assert(permission != NULL);
 
-  parsedFlag = FALSE;
+  bool parsedFlag = FALSE;
 
+  char permissionString[32];
+  uint permissionStringLength;
+  uint year,month,day;
+  uint hour,minute;
+  char monthName[32];
   if      (String_parse(line,
                         STRING_BEGIN,
                         "%32s %* %* %* %"PRIu64" %u-%u-%u %u:%u % S",
@@ -620,12 +604,12 @@ LOCAL bool parseFTPDirectoryLine(String          line,
                        NULL,  // weekDay
                        NULL  // isDayLightSaving
                       );
-    s = monthName;
+    const char *s = monthName;
     while (((*s) == '0'))
     {
       s++;
     }
-    for (i = 0; i < SIZE_OF_ARRAY(MONTH_DEFINITIONS); i++)
+    for (size_t i = 0; i < SIZE_OF_ARRAY(MONTH_DEFINITIONS); i++)
     {
       if (stringEqualsIgnoreCase(MONTH_DEFINITIONS[i].name,s))
       {
@@ -687,12 +671,12 @@ LOCAL bool parseFTPDirectoryLine(String          line,
                        NULL,  // weekDay
                        NULL  // isDayLightSaving
                       );
-    s = monthName;
+    const char *s = monthName;
     while (((*s) == '0'))
     {
       s++;
     }
-    for (i = 0; i < SIZE_OF_ARRAY(MONTH_DEFINITIONS); i++)
+    for (size_t i = 0; i < SIZE_OF_ARRAY(MONTH_DEFINITIONS); i++)
     {
       if (stringEqualsIgnoreCase(MONTH_DEFINITIONS[i].name,s))
       {
@@ -831,8 +815,7 @@ LOCAL bool StorageFTP_parseSpecifier(ConstString ftpSpecifier,
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
   const char* LOGINNAME_MAP_TO[]   = {"@"};
 
-  bool   result;
-  String s,t;
+  bool result;
 
   assert(ftpSpecifier != NULL);
   assert(hostName != NULL);
@@ -843,8 +826,8 @@ LOCAL bool StorageFTP_parseSpecifier(ConstString ftpSpecifier,
   String_clear(userName);
   if (password != NULL) Password_clear(password);
 
-  s = String_new();
-  t = String_new();
+  String s = String_new();
+  String t = String_new();
   if      (String_matchCString(ftpSpecifier,STRING_BEGIN,"^([^:]*?):(([^@]|\\@)*?)@([^@:/]*?):([[:digit:]]+)$",NULL,STRING_NO_ASSIGN,userName,s,STRING_NO_ASSIGN,hostName,t,NULL))
   {
     // <login name>:<login password>@<host name>:<host port>
@@ -924,12 +907,11 @@ LOCAL void StorageFTP_getName(String                 string,
                               ConstString            archiveName
                              )
 {
-  ConstString storageFileName;
-
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
 
   // get file to use
+  ConstString storageFileName;
   if      (archiveName != NULL)
   {
     storageFileName = archiveName;
@@ -985,13 +967,12 @@ LOCAL void StorageFTP_getPrintableName(String                 string,
                                        ConstString            archiveName
                                       )
 {
-  ConstString storageFileName;
-
   assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
 
   // get file to use
+  ConstString storageFileName;
   if      (!String_isEmpty(archiveName))
   {
     storageFileName = archiveName;
@@ -1042,10 +1023,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
                              ServerConnectionPriorities serverConnectionPriority
                             )
 {
-  #ifdef HAVE_CURL
-    Errors   error;
-    uint     retries;
-  #endif /* defined(HAVE_CURL) || defined(HAVE_FTP) */
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -1118,7 +1096,7 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
       if (Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION)
       {
         // initialize interactive/default password
-        retries = 0;
+        uint retries = 0;
         while ((Error_getCode(error) == ERROR_CODE_FTP_AUTHENTICATION) && (retries < MAX_PASSWORD_REQUESTS))
         {
           if (initFTPLogin(storageInfo->storageSpecifier.hostName,
@@ -1165,15 +1143,18 @@ LOCAL Errors StorageFTP_init(StorageInfo                *storageInfo,
       // free resources
       Configuration_doneFTPServerSettings(&ftpServer);
     }
-    return ERROR_NONE;
+
+    error = ERROR_NONE;
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(jobOptions);
     UNUSED_VARIABLE(maxBandWidthList);
     UNUSED_VARIABLE(serverConnectionPriority);
 
-    return ERROR_FUNCTION_NOT_SUPPORTED;
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL || HAVE_FTP */
+
+  return error;
 }
 
 LOCAL Errors StorageFTP_done(StorageInfo *storageInfo)
@@ -1216,9 +1197,6 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
                                   )
 {
   Errors error;
-  #ifdef HAVE_CURL
-    TextMacros (textMacros,3);
-  #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -1232,6 +1210,7 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
       String directory = String_new();
 
       // init macros
+      TextMacros (textMacros,3);
       TEXT_MACROS_INIT(textMacros)
       {
         TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
@@ -1275,9 +1254,6 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
                                    )
 {
   Errors error;
-  #ifdef HAVE_CURL
-    TextMacros (textMacros,3);
-  #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -1291,6 +1267,7 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
       String directory = String_new();
 
       // init macros
+      TextMacros (textMacros,3);
       TEXT_MACROS_INIT(textMacros)
       {
         TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
@@ -1332,15 +1309,6 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo,
                             )
 {
   bool existsFlag;
-  #if   defined(HAVE_CURL)
-    CURL            *curlHandle;
-    String          directoryName,baseName;
-    String          url;
-    CURLcode        curlCode;
-    StringTokenizer nameTokenizer;
-    ConstString     token;
-  #else /* not HAVE_CURL || HAVE_FTP */
-  #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -1350,20 +1318,22 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo,
 
   #if   defined(HAVE_CURL)
     // open curl handle
-    curlHandle = curl_easy_init();
+    CURL *curlHandle = curl_easy_init();
     if (curlHandle == NULL)
     {
       return ERROR_FTP_SESSION_FAIL;
     }
 
     // get directory name, base name
-    directoryName = File_getDirectoryName(String_new(),archiveName);
-    baseName      = File_getBaseName(String_new(),archiveName,TRUE);
+    String directoryName = File_getDirectoryName(String_new(),archiveName);
+    String baseName      = File_getBaseName(String_new(),archiveName,TRUE);
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+    String url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
     if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageInfo->storageSpecifier.hostPort);
+    StringTokenizer nameTokenizer;
     File_initSplitFileName(&nameTokenizer,directoryName);
+    ConstString     token;
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
@@ -1374,11 +1344,11 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo,
     String_append(url,baseName);
 
     // set FTP connect
-    curlCode = setFTPLogin(curlHandle,
-                           storageInfo->storageSpecifier.userName,
-                           &storageInfo->storageSpecifier.password,
-                           FTP_TIMEOUT
-                          );
+    CURLcode curlCode = setFTPLogin(curlHandle,
+                                    storageInfo->storageSpecifier.userName,
+                                    &storageInfo->storageSpecifier.password,
+                                    FTP_TIMEOUT
+                                   );
     if (curlCode != CURLE_OK)
     {
       String_delete(url);
@@ -1478,19 +1448,6 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
                                bool          forceFlag
                               )
 {
-  #if   defined(HAVE_CURL)
-    String            directoryName,baseName;
-    String            url;
-    CURLcode          curlCode;
-    String            ftpCommand;
-    struct curl_slist *curlSList;
-    CURLMcode         curlMCode;
-    StringTokenizer   nameTokenizer;
-    ConstString       token;
-    int               runningHandles;
-  #else /* not HAVE_CURL || HAVE_FTP */
-  #endif /* HAVE_CURL || HAVE_FTP */
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -1533,11 +1490,11 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     }
 
     // set FTP connect
-    curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
-                           storageHandle->storageInfo->storageSpecifier.userName,
-                           &storageHandle->storageInfo->storageSpecifier.password,
-                           FTP_TIMEOUT
-                          );
+    CURLcode curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
+                                    storageHandle->storageInfo->storageSpecifier.userName,
+                                    &storageHandle->storageInfo->storageSpecifier.password,
+                                    FTP_TIMEOUT
+                                   );
     if (curlCode != CURLE_OK)
     {
       (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
@@ -1546,13 +1503,15 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
     }
 
     // get directory name, base name
-    directoryName = File_getDirectoryName(String_new(),fileName);
-    baseName      = File_getBaseName(String_new(),fileName,TRUE);
+    String directoryName = File_getDirectoryName(String_new(),fileName);
+    String baseName      = File_getBaseName(String_new(),fileName,TRUE);
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
+    String url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
     if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageHandle->storageInfo->storageSpecifier.hostPort);
+    StringTokenizer   nameTokenizer;
     File_initSplitFileName(&nameTokenizer,directoryName);
+    ConstString       token;
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
@@ -1591,24 +1550,26 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         break;
       case ARCHIVE_FILE_MODE_OVERWRITE:
         // delete existing file (ignore error)
-        ftpCommand = String_format(String_new(),"*DELE %S",fileName);
-        curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
-        curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_URL,String_cString(url));
-        if (curlCode == CURLE_OK)
         {
-          curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOBODY,1L);
+          String            ftpCommand = String_format(String_new(),"*DELE %S",fileName);
+          struct curl_slist *curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
+          CURLcode curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_URL,String_cString(url));
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_NOBODY,1L);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_QUOTE,curlSList);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            (void)curl_easy_perform(storageHandle->ftp.curlHandle);
+          }
+          (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_QUOTE,NULL);
+          curl_slist_free_all(curlSList);
+          String_delete(ftpCommand);
         }
-        if (curlCode == CURLE_OK)
-        {
-          curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_QUOTE,curlSList);
-        }
-        if (curlCode == CURLE_OK)
-        {
-          (void)curl_easy_perform(storageHandle->ftp.curlHandle);
-        }
-        (void)curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_QUOTE,NULL);
-        curl_slist_free_all(curlSList);
-        String_delete(ftpCommand);
         break;
       #ifndef NDEBUG
         default:
@@ -1647,7 +1608,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       (void)curl_multi_cleanup(storageHandle->ftp.curlMultiHandle);
       return ERRORX_(CREATE_DIRECTORY,0,"%s",curl_easy_strerror(curlCode));
     }
-    curlMCode = curl_multi_add_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
+    CURLMcode curlMCode = curl_multi_add_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
     if (curlMCode != CURLM_OK)
     {
       String_delete(url);
@@ -1659,6 +1620,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     }
 
     // start FTP upload
+    int runningHandles;
     do
     {
       curlMCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
@@ -1697,18 +1659,6 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
                              ConstString   archiveName
                             )
 {
-  #if   defined(HAVE_CURL)
-    String          directoryName,baseName;
-    String          url;
-    CURLcode        curlCode;
-    CURLMcode       curlMCode;
-    StringTokenizer nameTokenizer;
-    ConstString     token;
-    double          fileSize;
-    int             runningHandles;
-  #else /* not HAVE_CURL || HAVE_FTP */
-  #endif /* HAVE_CURL || HAVE_FTP */
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -1748,11 +1698,11 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     }
 
     // set FTP login
-    curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
-                           storageHandle->storageInfo->storageSpecifier.userName,
-                           &storageHandle->storageInfo->storageSpecifier.password,
-                           FTP_TIMEOUT
-                          );
+    CURLcode curlCode = setFTPLogin(storageHandle->ftp.curlHandle,
+                                    storageHandle->storageInfo->storageSpecifier.userName,
+                                    &storageHandle->storageInfo->storageSpecifier.password,
+                                    FTP_TIMEOUT
+                                   );
     if (curlCode != CURLE_OK)
     {
       (void)curl_easy_cleanup(storageHandle->ftp.curlHandle);
@@ -1762,13 +1712,15 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     }
 
     // get pathname, basename
-    directoryName = File_getDirectoryName(String_new(),archiveName);
-    baseName      = File_getBaseName(String_new(),archiveName,TRUE);
+    String directoryName = File_getDirectoryName(String_new(),archiveName);
+    String baseName      = File_getBaseName(String_new(),archiveName,TRUE);
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
+    String url = String_format(String_new(),"ftp://%S",storageHandle->storageInfo->storageSpecifier.hostName);
     if (storageHandle->storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageHandle->storageInfo->storageSpecifier.hostPort);
+    StringTokenizer nameTokenizer;
     File_initSplitFileName(&nameTokenizer,directoryName);
+    ConstString     token;
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
@@ -1796,6 +1748,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     }
 
     // get file size
+    double fileSize;
     curlCode = curl_easy_getinfo(storageHandle->ftp.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&fileSize);
     if (   (curlCode != CURLE_OK)
         || (fileSize < 0.0)
@@ -1831,7 +1784,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
       free(storageHandle->ftp.readAheadBuffer.data);
       return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
-    curlMCode = curl_multi_add_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
+    CURLMcode curlMCode = curl_multi_add_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
     if (curlMCode != CURLM_OK)
     {
       String_delete(url);
@@ -1844,6 +1797,7 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     }
 
     // start FTP download
+    int runningHandles;
     do
     {
       curlMCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
@@ -1938,16 +1892,6 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
                             )
 {
   Errors error;
-  #if   defined(HAVE_CURL)
-    ulong     index;
-    ulong     bytesAvail;
-    ulong     length;
-    uint64    startTimestamp,endTimestamp;
-    uint64    startTotalReceivedBytes,endTotalReceivedBytes;
-    CURLMcode curlmCode;
-    int       runningHandles;
-  #else /* not HAVE_CURL || HAVE_FTP */
-  #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
@@ -1966,8 +1910,8 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
        )
     {
       // copy data from read-ahead buffer
-      index      = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
-      bytesAvail = MIN(bufferSize,storageHandle->ftp.readAheadBuffer.length-index);
+      ulong index      = (ulong)(storageHandle->ftp.index-storageHandle->ftp.readAheadBuffer.offset);
+      ulong bytesAvail = MIN(bufferSize,storageHandle->ftp.readAheadBuffer.length-index);
       memCopyFast(buffer,bytesAvail,storageHandle->ftp.readAheadBuffer.data+index,bytesAvail);
 
       // adjust buffer, bufferSize, bytes read, index
@@ -1986,6 +1930,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       assert(storageHandle->ftp.index >= (storageHandle->ftp.readAheadBuffer.offset+storageHandle->ftp.readAheadBuffer.length));
 
       // get max. number of bytes to receive in one step
+      ulong length;
       if (storageHandle->storageInfo->ftp.bandWidthLimiter.maxBandWidthList != NULL)
       {
         length = MIN(storageHandle->storageInfo->ftp.bandWidthLimiter.blockSize,bufferSize);
@@ -1997,16 +1942,17 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       assert(length > 0L);
 
       // get start time, start received bytes
-      startTimestamp          = Misc_getTimestamp();
-      startTotalReceivedBytes = 0;
+      uint64 startTimestamp          = Misc_getTimestamp();
+      uint64 startTotalReceivedBytes = 0;
 
+      ulong bytesAvail;
       if (length < BUFFER_SIZE)
       {
         // read into read-ahead buffer
         storageHandle->ftp.buffer          = storageHandle->ftp.readAheadBuffer.data;
         storageHandle->ftp.length          = MIN((size_t)(storageHandle->ftp.size-storageHandle->ftp.index),BUFFER_SIZE);
         storageHandle->ftp.transferedBytes = 0L;
-        runningHandles = 1;
+        int runningHandles = 1;
         while (   (storageHandle->ftp.transferedBytes == 0L)
                && (runningHandles > 0)
               )
@@ -2019,6 +1965,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           }
 
           // perform curl action
+          CURLMcode curlmCode;
           do
           {
             curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
@@ -2075,7 +2022,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
         storageHandle->ftp.buffer          = buffer;
         storageHandle->ftp.length          = length;
         storageHandle->ftp.transferedBytes = 0L;
-        runningHandles = 1;
+        int runningHandles = 1;
         while (   (storageHandle->ftp.transferedBytes == 0L)
                && (runningHandles > 0)
               )
@@ -2088,6 +2035,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           }
 
           // perform curl action
+          CURLMcode curlmCode;
           do
           {
             curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
@@ -2135,8 +2083,8 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       }
 
       // get end time, end received bytes
-      endTimestamp          = Misc_getTimestamp();
-      endTotalReceivedBytes = bytesAvail;
+      uint64 endTimestamp          = Misc_getTimestamp();
+      uint64 endTotalReceivedBytes = bytesAvail;
       assert(endTotalReceivedBytes >= startTotalReceivedBytes);
 
       /* limit used band width if requested (note: when the system time is
@@ -2173,16 +2121,6 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
                              )
 {
   Errors error;
-  #if   defined(HAVE_CURL)
-    char      errorBuffer[CURL_ERROR_SIZE];
-    ulong     writtenBytes;
-    ulong     length;
-    uint64    startTimestamp,endTimestamp;
-    uint64    startTotalSentBytes,endTotalSentBytes;
-    CURLMcode curlmCode;
-    int       runningHandles;
-  #else /* not HAVE_CURL || HAVE_FTP */
-  #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
@@ -2195,14 +2133,16 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
     assert(storageHandle->ftp.curlMultiHandle != NULL);
 
     // try to get error message
+    char errorBuffer[CURL_ERROR_SIZE];
     stringClear(errorBuffer);
     (void)curl_easy_setopt(storageHandle->ftp.curlHandle, CURLOPT_ERRORBUFFER, errorBuffer);
 
-    error        = ERROR_NONE;
-    writtenBytes = 0L;
+    error              = ERROR_NONE;
+    ulong writtenBytes = 0L;
     while (writtenBytes < bufferLength)
     {
       // get max. number of bytes to send in one step
+      ulong length;
       if (storageHandle->storageInfo->ftp.bandWidthLimiter.maxBandWidthList != NULL)
       {
         length = MIN(storageHandle->storageInfo->ftp.bandWidthLimiter.blockSize,bufferLength-writtenBytes);
@@ -2214,14 +2154,14 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
       assert(length > 0L);
 
       // get start time, start received bytes
-      startTimestamp      = Misc_getTimestamp();
-      startTotalSentBytes = 0;
+      uint64 startTimestamp      = Misc_getTimestamp();
+      uint64 startTotalSentBytes = 0;
 
       // send data
       storageHandle->ftp.buffer          = (void*)buffer;
       storageHandle->ftp.length          = length;
       storageHandle->ftp.transferedBytes = 0L;
-      runningHandles = 1;
+      int runningHandles = 1;
       while (   (storageHandle->ftp.transferedBytes == 0L)
              && (runningHandles > 0)
             )
@@ -2234,6 +2174,7 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
         }
 
         // perform curl action
+        CURLMcode curlmCode;
         do
         {
           curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
@@ -2266,8 +2207,8 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
       writtenBytes += storageHandle->ftp.transferedBytes;
 
       // get end time, end received bytes
-      endTimestamp      = Misc_getTimestamp();
-      endTotalSentBytes = storageHandle->ftp.transferedBytes;
+      uint64 endTimestamp      = Misc_getTimestamp();
+      uint64 endTotalSentBytes = storageHandle->ftp.transferedBytes;
       assert(endTotalSentBytes >= startTotalSentBytes);
 
       /* limit used band width if requested (note: when the system time is
@@ -2329,11 +2270,6 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
                             )
 {
   Errors error;
-  #if   defined(HAVE_CURL)
-     CURLcode  curlCode;
-     CURLMcode curlMCode;
-     int       runningHandles;
-  #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
@@ -2345,16 +2281,17 @@ LOCAL Errors StorageFTP_seek(StorageHandle *storageHandle,
 
     // restart download
     (void)curl_multi_remove_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
-    curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_RESUME_FROM_LARGE,(curl_off_t)offset);
+    CURLcode curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_RESUME_FROM_LARGE,(curl_off_t)offset);
     if (curlCode != CURLE_OK)
     {
       return ERRORX_(IO,0,"%s",curl_easy_strerror(curlCode));
     }
-    curlMCode = curl_multi_add_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
+    CURLMcode curlMCode = curl_multi_add_handle(storageHandle->ftp.curlMultiHandle,storageHandle->ftp.curlHandle);
     if (curlMCode != CURLM_OK)
     {
       return ERRORX_(IO,0,"%s",curl_easy_strerror(curlCode));
     }
+    int runningHandles;
     do
     {
       curlMCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
@@ -2425,30 +2362,18 @@ LOCAL Errors StorageFTP_makeDirectory(StorageInfo *storageInfo,
                                       ConstString directoryName
                                      )
 {
-  #if   defined(HAVE_CURL)
-    CURLM             *curlMultiHandle;
-    CURL              *curlHandle;
-    String            url;
-    CURLcode          curlCode;
-    CURLMcode         curlMCode;
-    StringTokenizer   nameTokenizer;
-    ConstString       token;
-    int               runningHandles;
-  #else /* not HAVE_CURL || HAVE_FTP */
-  #endif /* HAVE_CURL || HAVE_FTP */
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
   assert(!String_isEmpty(directoryName));
 
   #if   defined(HAVE_CURL)
     // open curl handles
-    curlMultiHandle = curl_multi_init();
+    CURLM *curlMultiHandle = curl_multi_init();
     if (curlMultiHandle == NULL)
     {
       return ERROR_FTP_SESSION_FAIL;
     }
-    curlHandle = curl_easy_init();
+    CURL *curlHandle = curl_easy_init();
     if (curlHandle == NULL)
     {
       curl_multi_cleanup(curlMultiHandle);
@@ -2456,9 +2381,11 @@ LOCAL Errors StorageFTP_makeDirectory(StorageInfo *storageInfo,
     }
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+    String url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
     if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageInfo->storageSpecifier.hostPort);
+    StringTokenizer   nameTokenizer;
     File_initSplitFileName(&nameTokenizer,directoryName);
+    ConstString       token;
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
@@ -2469,11 +2396,11 @@ LOCAL Errors StorageFTP_makeDirectory(StorageInfo *storageInfo,
     String_append(url,directoryName);
 
     // set FTP connect
-    curlCode = setFTPLogin(curlHandle,
-                           storageInfo->storageSpecifier.userName,
-                           &storageInfo->storageSpecifier.password,
-                           FTP_TIMEOUT
-                          );
+    CURLcode curlCode = setFTPLogin(curlHandle,
+                                    storageInfo->storageSpecifier.userName,
+                                    &storageInfo->storageSpecifier.password,
+                                    FTP_TIMEOUT
+                                   );
     if (curlCode != CURLE_OK)
     {
       String_delete(url);
@@ -2488,7 +2415,7 @@ LOCAL Errors StorageFTP_makeDirectory(StorageInfo *storageInfo,
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_FTP_CREATE_MISSING_DIRS,1L);
     }
-    curlMCode = curl_multi_add_handle(curlMultiHandle,curlHandle);
+    CURLMcode curlMCode = curl_multi_add_handle(curlMultiHandle,curlHandle);
     if (curlMCode != CURLM_OK)
     {
       String_delete(url);
@@ -2498,6 +2425,7 @@ LOCAL Errors StorageFTP_makeDirectory(StorageInfo *storageInfo,
     }
 
     // start create
+    int runningHandles;
     do
     {
       curlMCode = curl_multi_perform(curlMultiHandle,&runningHandles);
@@ -2531,18 +2459,7 @@ LOCAL Errors StorageFTP_delete(StorageInfo *storageInfo,
                                ConstString archiveName
                               )
 {
-  Errors            error;
-  #if   defined(HAVE_CURL)
-    CURL              *curlHandle;
-    String            directoryName,baseName;
-    String            url;
-    CURLcode          curlCode;
-    StringTokenizer   nameTokenizer;
-    ConstString       token;
-    String            ftpCommand;
-    struct curl_slist *curlSList;
-  #else /* not HAVE_CURL || HAVE_FTP */
-  #endif /* HAVE_CURL || HAVE_FTP */
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -2551,17 +2468,19 @@ LOCAL Errors StorageFTP_delete(StorageInfo *storageInfo,
   error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)
     // open curl handle
-    curlHandle = curl_easy_init();
+    CURL *curlHandle = curl_easy_init();
     if (curlHandle != NULL)
     {
       // get directory name, base name
-      directoryName = File_getDirectoryName(String_new(),archiveName);
-      baseName      = File_getBaseName(String_new(),archiveName,TRUE);
+      String directoryName = File_getDirectoryName(String_new(),archiveName);
+      String baseName      = File_getBaseName(String_new(),archiveName,TRUE);
 
       // get URL
-      url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+      String url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
       if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageInfo->storageSpecifier.hostPort);
+      StringTokenizer nameTokenizer;
       File_initSplitFileName(&nameTokenizer,directoryName);
+      ConstString token;
       while (File_getNextSplitFileName(&nameTokenizer,&token))
       {
         String_appendChar(url,'/');
@@ -2572,19 +2491,19 @@ LOCAL Errors StorageFTP_delete(StorageInfo *storageInfo,
       String_append(url,baseName);
 
       // delete file
-      curlCode = setFTPLogin(curlHandle,
-                             storageInfo->storageSpecifier.userName,
-                             &storageInfo->storageSpecifier.password,
-                             FTP_TIMEOUT
-                            );
+      CURLcode curlCode = setFTPLogin(curlHandle,
+                                      storageInfo->storageSpecifier.userName,
+                                      &storageInfo->storageSpecifier.password,
+                                      FTP_TIMEOUT
+                                     );
       if (curlCode == CURLE_OK)
       {
         curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
       }
       if (curlCode == CURLE_OK)
       {
-        ftpCommand = String_format(String_new(),"*DELE %S",archiveName);
-        curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
+        String ftpCommand            = String_format(String_new(),"*DELE %S",archiveName);
+        struct curl_slist *curlSList = curl_slist_append(NULL,String_cString(ftpCommand));
         curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
         if (curlCode == CURLE_OK)
         {
@@ -2791,18 +2710,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
                                           ServerConnectionPriorities serverConnectionPriority
                                          )
 {
-  #if defined(HAVE_CURL)
-    Errors          error;
-    AutoFreeList    autoFreeList;
-    FTPServer       ftpServer;
-    Password        password;
-    CURL            *curlHandle;
-    String          url;
-    CURLcode        curlCode;
-    StringTokenizer nameTokenizer;
-    ConstString     token;
-  #else /* not HAVE_CURL || HAVE_FTP */
-  #endif /* HAVE_CURL || HAVE_FTP */
+  Errors error;
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -2817,17 +2725,17 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
 
   // open directory listing
   #if   defined(HAVE_CURL)
-    // init variables
+    AutoFreeList autoFreeList;
     AutoFree_init(&autoFreeList);
-    Password_init(&password);
+
     StringList_init(&storageDirectoryListHandle->ftp.lineList);
     storageDirectoryListHandle->ftp.fileName      = String_new();
     storageDirectoryListHandle->ftp.entryReadFlag = FALSE;
-    AUTOFREE_ADD(&autoFreeList,&password,{ Password_done(&password); });
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.lineList,{ StringList_done(&storageDirectoryListHandle->ftp.lineList); });
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.fileName,{ String_delete(storageDirectoryListHandle->ftp.fileName); });
 
     // get FTP server settings
+    FTPServer ftpServer;
     storageDirectoryListHandle->ftp.serverId = Configuration_initFTPServerSettings(&ftpServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
     AUTOFREE_ADD(&autoFreeList,&ftpServer,{ Configuration_doneFTPServerSettings(&ftpServer); });
     if (String_isEmpty(storageDirectoryListHandle->storageSpecifier.userName)) String_set(storageDirectoryListHandle->storageSpecifier.userName,ftpServer.userName);
@@ -2911,7 +2819,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     }
 
     // init curl handle
-    curlHandle = curl_easy_init();
+    CURL *curlHandle = curl_easy_init();
     if (curlHandle == NULL)
     {
       AutoFree_cleanup(&autoFreeList);
@@ -2919,9 +2827,11 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     }
 
     // get URL
-    url = String_format(String_new(),"ftp://%S",storageDirectoryListHandle->storageSpecifier.hostName);
+    String url = String_format(String_new(),"ftp://%S",storageDirectoryListHandle->storageSpecifier.hostName);
     if (storageDirectoryListHandle->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageDirectoryListHandle->storageSpecifier.hostPort);
+    StringTokenizer nameTokenizer;
     File_initSplitFileName(&nameTokenizer,pathName);
+    ConstString token;
     while (File_getNextSplitFileName(&nameTokenizer,&token))
     {
       String_appendChar(url,'/');
@@ -2931,11 +2841,11 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     File_doneSplitFileName(&nameTokenizer);
 
     // read directory
-    curlCode = setFTPLogin(curlHandle,
-                           storageDirectoryListHandle->storageSpecifier.userName,
-                           &storageDirectoryListHandle->storageSpecifier.password,
-                           FTP_TIMEOUT
-                          );
+    CURLcode curlCode = setFTPLogin(curlHandle,
+                                    storageDirectoryListHandle->storageSpecifier.userName,
+                                    &storageDirectoryListHandle->storageSpecifier.password,
+                                    FTP_TIMEOUT
+                                   );
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
@@ -2965,7 +2875,6 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     String_delete(url);
     (void)curl_easy_cleanup(curlHandle);
     Configuration_doneFTPServerSettings(&ftpServer);
-    Password_done(&password);
     AutoFree_done(&autoFreeList);
 
     return ERROR_NONE;
@@ -2997,10 +2906,6 @@ LOCAL void StorageFTP_closeDirectoryList(StorageDirectoryListHandle *storageDire
 LOCAL bool StorageFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
   bool endOfDirectoryFlag;
-  #if   defined(HAVE_CURL)
-    String line;
-  #else /* not HAVE_CURL || HAVE_FTP */
-  #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -3012,7 +2917,7 @@ LOCAL bool StorageFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDire
           )
     {
       // get next line
-      line = StringList_removeFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
+      String line = StringList_removeFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
 
       // parse
       storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,
@@ -3043,10 +2948,6 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
                                          )
 {
   Errors error;
-  #if   defined(HAVE_CURL)
-    String line;
-  #else /* not HAVE_CURL || HAVE_FTP */
-  #endif /* HAVE_CURL || HAVE_FTP */
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
@@ -3058,7 +2959,7 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
           )
     {
       // get next line
-      line = StringList_removeFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
+      String line = StringList_removeFirst(&storageDirectoryListHandle->ftp.lineList,NULL);
 
       // parse
       storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,

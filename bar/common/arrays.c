@@ -106,10 +106,6 @@ void __Array_init(const char           *__fileName__,
                  )
 #endif /* NDEBUG */
 {
-  #ifndef NDEBUG
-    DebugArrayNode *debugArrayNode;
-  #endif /* not NDEBUG */
-
   assert(array != NULL);
   assert(elementSize > 0);
 
@@ -138,7 +134,7 @@ void __Array_init(const char           *__fileName__,
 
     pthread_mutex_lock(&debugArrayLock);
     {
-      debugArrayNode = LIST_NEW_NODE(DebugArrayNode);
+      DebugArrayNode *debugArrayNode = LIST_NEW_NODE(DebugArrayNode);
       if (debugArrayNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
@@ -155,19 +151,14 @@ void __Array_init(const char           *__fileName__,
 
 void Array_done(Array *array)
 {
-  ulong z;
-  #ifndef NDEBUG
-    DebugArrayNode *debugArrayNode;
-  #endif /* not NDEBUG */
-
   assert(array != NULL);
   assert(array->data != NULL);
 
   if (array->arrayFreeFunction != NULL)
   {
-    for (z = 0; z < array->length; z++)
+    for (ulong i = 0; i < array->length; i++)
     {
-      array->arrayFreeFunction(array->data+z*array->elementSize,array->arrayFreeUserData);
+      array->arrayFreeFunction(array->data + i * array->elementSize,array->arrayFreeUserData);
     }
   }
 
@@ -176,7 +167,7 @@ void Array_done(Array *array)
 
     pthread_mutex_lock(&debugArrayLock);
     {
-      debugArrayNode = debugArrayList.head;
+      DebugArrayNode *debugArrayNode = debugArrayList.head;
       while ((debugArrayNode != NULL) && (debugArrayNode->array != array))
       {
         debugArrayNode = debugArrayNode->next;
@@ -225,11 +216,9 @@ Array *__Array_new(const char           *__fileName__,
                   )
 #endif /* NDEBUG */
 {
-  Array *array;
-
   assert(elementSize > 0);
 
-  array = (Array*)malloc(sizeof(Array));
+  Array *array = (Array*)malloc(sizeof(Array));
   if (array == NULL)
   {
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
@@ -259,38 +248,93 @@ void Array_delete(Array *array)
 
 void Array_clear(Array *array)
 {
-  ulong z;
+  assert(array != NULL);
+  assert(array->data != NULL);
 
-  if (array != NULL)
+  if (array->arrayFreeFunction != NULL)
   {
-    assert(array->data != NULL);
-
-    if (array->arrayFreeFunction != NULL)
+    for (ulong i = 0; i < array->length; i++)
     {
-      for (z = 0; z < array->length; z++)
-      {
-        array->arrayFreeFunction(array->data+z*array->elementSize,array->arrayFreeUserData);
-      }
+      array->arrayFreeFunction(array->data + i * array->elementSize,array->arrayFreeUserData);
     }
-    array->length = 0;
   }
+  array->length = 0;
 }
 
 bool Array_put(Array *array, ulong index, const void *data)
 {
-  void  *newData;
-  ulong newMaxLength;
+  assert(array != NULL);
+  assert(array->data != NULL);
 
-  if (array != NULL)
+  // extend array if needed
+  if (index >= array->maxLength)
   {
-    assert(array->data != NULL);
+    ulong newMaxLength = index + 1;
 
-    // extend array if needed
-    if (index >= array->maxLength)
+    void *newData = realloc(array->data,newMaxLength*array->elementSize);
+    if (newData == NULL)
     {
-      newMaxLength = index+1;
+      return FALSE;
+    }
 
-      newData = realloc(array->data,newMaxLength*array->elementSize);
+    #ifndef NDEBUG
+      pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+      pthread_mutex_lock(&debugArrayLock);
+      {
+        debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
+      }
+      pthread_mutex_unlock(&debugArrayLock);
+    #endif /* not NDEBUG */
+
+    array->maxLength = newMaxLength;
+    array->data      = newData;
+  }
+
+  // store element
+  memcpy(array->data+index*array->elementSize,data,array->elementSize);
+  if (index >= array->length) array->length = index+1;
+
+  return TRUE;
+}
+
+void *Array_get(const Array *array, ulong index, void *data)
+{
+  assert(array != NULL);
+  assert(array->data != NULL);
+
+  void *element = NULL;
+
+  // get element
+  if (index < array->length)
+  {
+    if (data != NULL)
+    {
+      memcpy(data,array->data+index*array->elementSize,array->elementSize);
+      element = data;
+    }
+    else
+    {
+      element = array->data+index*array->elementSize;
+    }
+  }
+
+  return element;
+}
+
+bool Array_insert(Array *array, long nextIndex, const void *data)
+{
+  assert(array != NULL);
+  assert(array->data != NULL);
+
+  if (nextIndex != ARRAY_END)
+  {
+    // extend array if needed
+    if ((ulong)nextIndex+1L >= array->maxLength)
+    {
+      ulong newMaxLength = nextIndex+1L;
+
+      byte *newData = realloc(array->data,newMaxLength*array->elementSize);
       if (newData == NULL)
       {
         return FALSE;
@@ -310,149 +354,24 @@ bool Array_put(Array *array, ulong index, const void *data)
       array->data      = newData;
     }
 
-    // store element
-    memcpy(array->data+index*array->elementSize,data,array->elementSize);
-    if (index > array->length) array->length = index+1;
-
-    return TRUE;
+    // insert element
+    if (nextIndex < (long)array->length)
+    {
+      memmove(array->data+(nextIndex+1)*array->elementSize,
+              array->data+nextIndex*array->elementSize,
+              array->elementSize*(array->length-nextIndex)
+             );
+    }
+    memcpy(array->data+nextIndex*array->elementSize,data,array->elementSize);
   }
   else
   {
-    return FALSE;
-  }
-}
-
-void *Array_get(const Array *array, ulong index, void *data)
-{
-  void *element;
-
-  element = NULL;
-  if (array != NULL)
-  {
-    assert(array->data != NULL);
-
-    // get element
-    if (index < array->length)
-    {
-      if (data != NULL)
-      {
-        memcpy(data,array->data+index*array->elementSize,array->elementSize);
-        element = data;
-      }
-      else
-      {
-        element = array->data+index*array->elementSize;
-      }
-    }
-  }
-
-  return element;
-}
-
-bool Array_insert(Array *array, long nextIndex, const void *data)
-{
-  ulong newMaxLength;
-  byte  *newData;
-
-  if (array != NULL)
-  {
-    assert(array->data != NULL);
-
-    if      (nextIndex != ARRAY_END)
-    {
-      // extend array if needed
-      if ((ulong)nextIndex+1L >= array->maxLength)
-      {
-        newMaxLength = nextIndex+1L;
-
-        newData = realloc(array->data,newMaxLength*array->elementSize);
-        if (newData == NULL)
-        {
-          return FALSE;
-        }
-
-        #ifndef NDEBUG
-          pthread_once(&debugArrayInitFlag,debugArrayInit);
-
-          pthread_mutex_lock(&debugArrayLock);
-          {
-            debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
-          }
-          pthread_mutex_unlock(&debugArrayLock);
-        #endif /* not NDEBUG */
-
-        array->maxLength = newMaxLength;
-        array->data      = newData;
-      }
-
-      // insert element
-      if (nextIndex < (long)array->length)
-      {
-        memmove(array->data+(nextIndex+1)*array->elementSize,
-                array->data+nextIndex*array->elementSize,
-                array->elementSize*(array->length-nextIndex)
-               );
-      }
-      memcpy(array->data+nextIndex*array->elementSize,data,array->elementSize);
-      if (nextIndex > (long)array->length) array->length = (ulong)nextIndex+1;
-
-      return TRUE;
-    }
-    else
-    {
-      // extend array if needed
-      if (array->length >= array->maxLength)
-      {
-        newMaxLength = array->maxLength+DELTA_LENGTH;
-
-        newData = realloc(array->data,newMaxLength*array->elementSize);
-        if (newData == NULL)
-        {
-          return FALSE;
-        }
-
-        #ifndef NDEBUG
-          pthread_once(&debugArrayInitFlag,debugArrayInit);
-
-          pthread_mutex_lock(&debugArrayLock);
-          {
-            debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
-          }
-          pthread_mutex_unlock(&debugArrayLock);
-        #endif /* not NDEBUG */
-
-        array->maxLength = newMaxLength;
-        array->data      = newData;
-      }
-
-      // store element
-      memcpy(array->data+array->length*array->elementSize,data,array->elementSize);
-      array->length++;
-
-      return TRUE;
-    }
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
-bool Array_append(Array *array, const void *data)
-{
-  ulong newMaxLength;
-  byte  *newData;
-
-  if (array != NULL)
-  {
-    assert(array->data != NULL);
-
     // extend array if needed
     if (array->length >= array->maxLength)
     {
-      newMaxLength = array->maxLength+DELTA_LENGTH;
+      ulong newMaxLength = array->maxLength+DELTA_LENGTH;
 
-      newData = realloc(array->data,newMaxLength*array->elementSize);
+      byte *newData = realloc(array->data,newMaxLength*array->elementSize);
       if (newData == NULL)
       {
         return FALSE;
@@ -474,40 +393,71 @@ bool Array_append(Array *array, const void *data)
 
     // store element
     memcpy(array->data+array->length*array->elementSize,data,array->elementSize);
-    array->length++;
+  }
+  array->length++;
 
-    return TRUE;
-  }
-  else
+  return TRUE;
+}
+
+bool Array_append(Array *array, const void *data)
+{
+  assert(array != NULL);
+  assert(array->data != NULL);
+
+  // extend array if needed
+  if (array->length >= array->maxLength)
   {
-    return FALSE;
+    ulong newMaxLength = array->maxLength+DELTA_LENGTH;
+
+    byte *newData = realloc(array->data,newMaxLength*array->elementSize);
+    if (newData == NULL)
+    {
+      return FALSE;
+    }
+
+    #ifndef NDEBUG
+      pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+      pthread_mutex_lock(&debugArrayLock);
+      {
+        debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
+      }
+      pthread_mutex_unlock(&debugArrayLock);
+    #endif /* not NDEBUG */
+
+    array->maxLength = newMaxLength;
+    array->data      = newData;
   }
+
+  // store element
+  memcpy(array->data+array->length*array->elementSize,data,array->elementSize);
+  array->length++;
+
+  return TRUE;
 }
 
 void Array_remove(Array *array, ulong index)
 {
-  if (array != NULL)
+  assert(array != NULL);
+  assert(array->data != NULL);
+
+  if (index < array->length)
   {
-    assert(array->data != NULL);
-
-    if (index < array->length)
+    // free element
+    if (array->arrayFreeFunction != NULL)
     {
-      // free element
-      if (array->arrayFreeFunction != NULL)
-      {
-        array->arrayFreeFunction(array->data+index*array->elementSize,array->arrayFreeUserData);
-      }
-
-      // remove element
-      if (index < array->length-1L)
-      {
-        memmove(array->data+index*array->elementSize,
-                array->data+(index+1)*array->elementSize,
-                array->elementSize*(array->length-index)
-               );
-      }
-      array->length--;
+      array->arrayFreeFunction(array->data+index*array->elementSize,array->arrayFreeUserData);
     }
+
+    // remove element
+    if (index < array->length-1L)
+    {
+      memmove(array->data+index*array->elementSize,
+              array->data+(index+1)*array->elementSize,
+              array->elementSize*(array->length-index)
+             );
+    }
+    array->length--;
   }
 }
 
@@ -517,37 +467,35 @@ void Array_removeAll(Array                *array,
                      void                 *arrayCompareUserData
                     )
 {
-  ulong index;
+  assert(array != NULL);
+  assert(array->data != NULL);
 
-  if (array != NULL)
+  ulong index = 0;
+  if (arrayCompareFunction != NULL)
   {
-    index = 0;
-    if (arrayCompareFunction != NULL)
+    while (index < array->length)
     {
-      while (index < array->length)
+      if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
       {
-        if (arrayCompareFunction(array->data+index*array->elementSize,data,arrayCompareUserData) == 0)
-        {
-          Array_remove(array,index);
-        }
-        else
-        {
-          index++;
-        }
+        Array_remove(array,index);
+      }
+      else
+      {
+        index++;
       }
     }
-    else
+  }
+  else
+  {
+    while (index < array->length)
     {
-      while (index < array->length)
+      if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
       {
-        if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
-        {
-          Array_remove(array,index);
-        }
-        else
-        {
-          index++;
-        }
+        Array_remove(array,index);
+      }
+      else
+      {
+        index++;
       }
     }
   }
@@ -557,13 +505,12 @@ bool Array_contains(const Array *array,
                     const void  *data
                    )
 {
-  ulong index;
-
   assert(array != NULL);
+  assert(array->data != NULL);
 
   if (array->arrayCompareFunction != NULL)
   {
-    for (index = 0; index < array->length; index++)
+    for (ulong index = 0; index < array->length; index++)
     {
       if (array->arrayCompareFunction(array->data+index*array->elementSize,data,array->arrayCompareUserData) == 0)
       {
@@ -573,7 +520,7 @@ bool Array_contains(const Array *array,
   }
   else
   {
-    for (index = 0; index < array->length; index++)
+    for (ulong index = 0; index < array->length; index++)
     {
       if (memcmp(array->data+index*array->elementSize,data,array->elementSize) == 0)
       {
@@ -592,14 +539,13 @@ long Array_find(const Array          *array,
                 void                 *arrayCompareUserData
                )
 {
-  long i;
-
   assert(array != NULL);
+  assert(array->data != NULL);
 
   switch (arrayFindMode)
   {
     case ARRAY_FIND_FORWARD:
-      i = 0;
+      long i = 0;
       if      (arrayCompareFunction != NULL)
       {
         while (i < (long)array->length)
@@ -683,16 +629,15 @@ long Array_findNext(const Array          *array,
                     void                 *arrayCompareUserData
                    )
 {
-  long i;
-
   assert(array != NULL);
+  assert(array->data != NULL);
 
   switch (arrayFindMode)
   {
     case ARRAY_FIND_FORWARD:
       if (index < array->length)
       {
-        i = (long)index+1;
+        long i = (long)index + 1;
         if (arrayCompareFunction != NULL)
         {
           while (i < (long)array->length)
@@ -720,7 +665,7 @@ long Array_findNext(const Array          *array,
     case ARRAY_FIND_BACKWARD:
       if (index > 0)
       {
-        i = (long)index-1;
+        long i = (long)index - 1;
         if (arrayCompareFunction != NULL)
         {
           while (i >= 0)
@@ -756,6 +701,7 @@ void Array_sort(Array                *array,
                )
 {
   assert(array != NULL);
+  assert(array->data != NULL);
 
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 UNUSED_VARIABLE(array);
@@ -782,14 +728,12 @@ void Array_debugDumpInfo(FILE                  *handle,
                          void                  *arrayDumpInfoUserData
                         )
 {
-  ulong                n;
-  const DebugArrayNode *debugArrayNode;
-
   pthread_once(&debugArrayInitFlag,debugArrayInit);
 
   pthread_mutex_lock(&debugArrayLock);
   {
-    n = 0L;
+    ulong                n = 0L;
+    const DebugArrayNode *debugArrayNode;
     LIST_ITERATE(&debugArrayList,debugArrayNode)
     {
       fprintf(handle,"DEBUG: array %p[%ld] allocated at %s, line %ld\n",
@@ -843,8 +787,6 @@ void Array_debugPrintStatistics(void)
 
 void Array_debugCheck(void)
 {
-  const DebugArrayNode *debugArrayNode;
-
   pthread_once(&debugArrayInitFlag,debugArrayInit);
 
   Array_debugPrintInfo(CALLBACK_(NULL,NULL));
@@ -854,6 +796,7 @@ void Array_debugCheck(void)
   {
     if (!List_isEmpty(&debugArrayList))
     {
+      const DebugArrayNode *debugArrayNode;
       LIST_ITERATE(&debugArrayList,debugArrayNode)
       {
         fprintf(stderr,"DEBUG: array %p[%ld] allocated at %s, line %ld\n",

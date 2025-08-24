@@ -56,9 +56,6 @@
 
 LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
 {
-  ulong  maxCompressBytes,maxDataBytes;
-  size_t zstdResult;
-
   assert(compressInfo != NULL);
 
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
@@ -69,8 +66,8 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
       if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                 // unprocessed data available
       {
         // get max. number of data and max. number of compressed bytes
-        maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
-        maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+        ulong maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
         // compress: data buffer -> compress buffer
         compressInfo->zstd.inBuffer.src   = RingBuffer_cArrayOut(&compressInfo->dataRingBuffer);
@@ -79,7 +76,7 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.dst  = RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
         compressInfo->zstd.outBuffer.size = maxCompressBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
-        zstdResult = ZSTD_compressStream(compressInfo->zstd.cStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
+        size_t zstdResult = ZSTD_compressStream(compressInfo->zstd.cStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
 //fprintf(stderr,"%s, %d: zstdResult=%lu input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
         if (ZSTD_isError(zstdResult))
         {
@@ -108,13 +105,13 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
          )
       {
         // get max. number of compressed bytes
-        maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
         // compress with flush: transfer to compress buffer
         compressInfo->zstd.outBuffer.dst  = RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
         compressInfo->zstd.outBuffer.size = maxCompressBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
-        zstdResult = ZSTD_endStream(compressInfo->zstd.cStream,&compressInfo->zstd.outBuffer);
+        size_t zstdResult = ZSTD_endStream(compressInfo->zstd.cStream,&compressInfo->zstd.outBuffer);
 //fprintf(stderr,"%s, %d: zstdResult=%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
         if      (zstdResult == 0)
         {
@@ -147,10 +144,6 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
 
 LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
 {
-  size_t zstdResult;
-
-  ulong maxCompressBytes,maxDataBytes;
-
   assert(compressInfo != NULL);
 
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
@@ -161,8 +154,8 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
       if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))             // unprocessed compressed data available
       {
         // get max. number of compressed and max. number of data bytes
-        maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
-        maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
+        ulong maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
 
         // decompress: transfer compress buffer -> data buffer
         compressInfo->zstd.inBuffer.src   = RingBuffer_cArrayOut(&compressInfo->compressRingBuffer);
@@ -171,7 +164,7 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.dst  = RingBuffer_cArrayIn(&compressInfo->dataRingBuffer);
         compressInfo->zstd.outBuffer.size = maxDataBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
-        zstdResult = ZSTD_decompressStream(compressInfo->zstd.dStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
+        size_t zstdResult = ZSTD_decompressStream(compressInfo->zstd.dStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
 //fprintf(stderr,"%s, %d: zstdResult=%lu input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
         if      (   (zstdResult == 0)
                  && ((compressInfo->zstd.totalOut+(uint64)compressInfo->zstd.outBuffer.pos) >= compressInfo->length)
@@ -205,7 +198,7 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
          )
       {
         // get max. number of data bytes
-        maxDataBytes = RingBuffer_getFree(&compressInfo->dataRingBuffer);
+        ulong maxDataBytes = RingBuffer_getFree(&compressInfo->dataRingBuffer);
 
         // decompress with flush: transfer rest of internal data -> data buffer
         compressInfo->zstd.inBuffer.src   = NULL;
@@ -214,7 +207,7 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.dst  = (Bytef*)RingBuffer_cArrayIn(&compressInfo->dataRingBuffer);
         compressInfo->zstd.outBuffer.size = maxDataBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
-        zstdResult = ZSTD_decompressStream(compressInfo->zstd.dStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
+        size_t zstdResult = ZSTD_decompressStream(compressInfo->zstd.dStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
 //fprintf(stderr,"%s, %d: zstdResult=%lu input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
         if      (compressInfo->zstd.outBuffer.pos < compressInfo->zstd.outBuffer.size)
         {
@@ -242,8 +235,6 @@ LOCAL Errors CompressZStd_init(CompressInfo       *compressInfo,
                                CompressAlgorithms compressAlgorithm
                               )
 {
-  size_t zstdResult;
-
   assert(compressInfo != NULL);
 
   compressInfo->zstd.compressionLevel = 0;
@@ -280,31 +271,33 @@ LOCAL Errors CompressZStd_init(CompressInfo       *compressInfo,
   switch (compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,ZSTD_CStreamInSize(),ZSTD_CStreamOutSize());
-      compressInfo->zstd.cStream = ZSTD_createCStream();
-      if (compressInfo->zstd.cStream == NULL)
       {
-        return ERROR_INIT_COMPRESS;
-      }
-      zstdResult = ZSTD_initCStream(compressInfo->zstd.cStream,compressInfo->zstd.compressionLevel);
-      if (ZSTD_isError(zstdResult))
-      {
-        ZSTD_freeCStream(compressInfo->zstd.cStream);
-        return ERRORX_(INIT_COMPRESS,zstdResult,"%s",ZSTD_getErrorName(zstdResult));
+        compressInfo->zstd.cStream = ZSTD_createCStream();
+        if (compressInfo->zstd.cStream == NULL)
+        {
+          return ERROR_INIT_COMPRESS;
+        }
+        size_t zstdResult = ZSTD_initCStream(compressInfo->zstd.cStream,compressInfo->zstd.compressionLevel);
+        if (ZSTD_isError(zstdResult))
+        {
+          ZSTD_freeCStream(compressInfo->zstd.cStream);
+          return ERRORX_(INIT_COMPRESS,zstdResult,"%s",ZSTD_getErrorName(zstdResult));
+        }
       }
       break;
     case COMPRESS_MODE_INFLATE:
-//fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,ZSTD_DStreamInSize(),ZSTD_DStreamOutSize());
-      compressInfo->zstd.dStream = ZSTD_createDStream();
-      if (compressInfo->zstd.dStream == NULL)
       {
-        return ERROR_INIT_DECOMPRESS;
-      }
-      zstdResult = ZSTD_initDStream(compressInfo->zstd.dStream);
-      if (ZSTD_isError(zstdResult))
-      {
-        ZSTD_freeDStream(compressInfo->zstd.dStream);
-        return ERRORX_(INIT_DECOMPRESS,zstdResult,"%s",ZSTD_getErrorName(zstdResult));
+        compressInfo->zstd.dStream = ZSTD_createDStream();
+        if (compressInfo->zstd.dStream == NULL)
+        {
+          return ERROR_INIT_DECOMPRESS;
+        }
+        size_t zstdResult = ZSTD_initDStream(compressInfo->zstd.dStream);
+        if (ZSTD_isError(zstdResult))
+        {
+          ZSTD_freeDStream(compressInfo->zstd.dStream);
+          return ERRORX_(INIT_DECOMPRESS,zstdResult,"%s",ZSTD_getErrorName(zstdResult));
+        }
       }
       break;
     #ifndef NDEBUG
@@ -339,16 +332,13 @@ LOCAL void CompressZStd_done(CompressInfo *compressInfo)
 
 LOCAL Errors CompressZStd_reset(CompressInfo *compressInfo)
 {
-  int zstdResult;
-
   assert(compressInfo != NULL);
 
-  zstdResult = Z_ERRNO;
   switch (compressInfo->compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
       #ifdef HAVE_ZSTD_CCTX_RESET
-        zstdResult = ZSTD_CCtx_reset(compressInfo->zstd.cStream, ZSTD_reset_session_only);
+        size_t zstdResult = ZSTD_CCtx_reset(compressInfo->zstd.cStream, ZSTD_reset_session_only);
         if (ZSTD_isError(zstdResult))
         {
           return ERROR_(DEFLATE,ZSTD_getErrorCode(zstdResult));
@@ -367,14 +357,16 @@ LOCAL Errors CompressZStd_reset(CompressInfo *compressInfo)
       #endif /* HAVE_ZSTD_CCTX_RESET */
       break;
     case COMPRESS_MODE_INFLATE:
-      #ifdef HAVE_ZSTD_CCTX_RESET
-        zstdResult = ZSTD_DCtx_reset(compressInfo->zstd.dStream, ZSTD_reset_session_only);
-      #else /* not HAVE_ZSTD_CCTX_RESET */
-        zstdResult = ZSTD_resetDStream(compressInfo->zstd.dStream);
-      #endif /* HAVE_ZSTD_CCTX_RESET */
-      if (ZSTD_isError(zstdResult))
       {
-        return ERROR_(INFLATE,ZSTD_getErrorCode(zstdResult));
+        #ifdef HAVE_ZSTD_CCTX_RESET
+          size_t zstdResult = ZSTD_DCtx_reset(compressInfo->zstd.dStream, ZSTD_reset_session_only);
+        #else /* not HAVE_ZSTD_CCTX_RESET */
+          size_t zstdResult = ZSTD_resetDStream(compressInfo->zstd.dStream);
+        #endif /* HAVE_ZSTD_CCTX_RESET */
+        if (ZSTD_isError(zstdResult))
+        {
+          return ERROR_(INFLATE,ZSTD_getErrorCode(zstdResult));
+        }
       }
       break;
     #ifndef NDEBUG

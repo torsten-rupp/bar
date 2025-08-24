@@ -263,6 +263,8 @@ bool Dictionary_valueCompareEntry(const void *value0, const void *value1, ulong 
 
 static inline bool Dictionary_initValue(Dictionary *dictionary)
 {
+  assert(dictionary != NULL);
+
   return Dictionary_init(dictionary,
                          DICTIONARY_VALUE_INIT_ENTRY,
                          DICTIONARY_VALUE_DONE_ENTRY,
@@ -335,6 +337,8 @@ static inline bool Dictionary_addValue(Dictionary *dictionary,
                                        intptr_t   data
                                       )
 {
+  assert(dictionary != NULL);
+
   return Dictionary_add(dictionary,(const void*)key,0,(void**)data,0);
 }
 
@@ -358,6 +362,8 @@ static inline void Dictionary_removeValue(Dictionary *dictionary,
                                           intptr_t   key
                                          )
 {
+  assert(dictionary != NULL);
+
   Dictionary_remove(dictionary,(void*)key,0);
 }
 
@@ -385,6 +391,8 @@ static inline bool Dictionary_findValue(Dictionary *dictionary,
                                         intptr_t   *value
                                        )
 {
+  assert(dictionary != NULL);
+
   return Dictionary_find(dictionary,(void*)key,0,(void**)value,0);
 }
 
@@ -419,6 +427,8 @@ static inline bool Dictionary_containsValue(Dictionary *dictionary,
                                             intptr_t   key
                                            )
 {
+  assert(dictionary != NULL);
+
   return Dictionary_contains(dictionary,(const void*)key,0);
 }
 
@@ -471,6 +481,8 @@ static inline bool Dictionary_getNextValue(DictionaryIterator *dictionaryIterato
                                            intptr_t           *value
                                           )
 {
+  assert(dictionaryIterator != NULL);
+
   return Dictionary_getNext(dictionaryIterator,(void*)key,0,(void**)value,0);
 }
 

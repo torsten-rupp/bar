@@ -97,7 +97,6 @@ LOCAL const lzma_allocator ALLOCATOR = { CompressLZMA_alloc, CompressLZMA_free, 
 LOCAL const char *CompressLZMA_getErrorText(lzma_ret lzmaResult)
 {
   const char *errorText;
-
   switch (lzmaResult)
   {
       case LZMA_OK:                errorText = NULL; break;
@@ -129,9 +128,6 @@ LOCAL const char *CompressLZMA_getErrorText(lzma_ret lzmaResult)
 
 LOCAL Errors CompressLZMA_compressData(CompressInfo *compressInfo)
 {
-  ulong maxCompressBytes,maxDataBytes;
-  lzma_ret lzmaResult;
-
   assert(compressInfo != NULL);
 
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
@@ -142,15 +138,15 @@ LOCAL Errors CompressLZMA_compressData(CompressInfo *compressInfo)
       if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                 // unprocessed data available
       {
         // get max. number of data and max. number of compressed bytes
-        maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
-        maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+        ulong maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
         // compress: transfer data buffer -> compress buffer
         compressInfo->lzmalib.stream.next_in   = (uint8_t*)RingBuffer_cArrayOut(&compressInfo->dataRingBuffer);
         compressInfo->lzmalib.stream.avail_in  = maxDataBytes;
         compressInfo->lzmalib.stream.next_out  = (uint8_t*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
         compressInfo->lzmalib.stream.avail_out = maxCompressBytes;
-        lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
+        lzma_ret lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
         if (lzmaResult != LZMA_OK)
         {
           return ERRORX_(DEFLATE,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
@@ -175,14 +171,14 @@ LOCAL Errors CompressLZMA_compressData(CompressInfo *compressInfo)
          )
       {
         // get max. number of compressed bytes
-        maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
         // compress with flush: transfer to compress buffer
         compressInfo->lzmalib.stream.next_in   = NULL;
         compressInfo->lzmalib.stream.avail_in  = 0;
         compressInfo->lzmalib.stream.next_out  = (uint8_t*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
         compressInfo->lzmalib.stream.avail_out = maxCompressBytes;
-        lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_FINISH);
+        lzma_ret lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_FINISH);
         if      (lzmaResult == LZMA_STREAM_END)
         {
           compressInfo->endOfDataFlag = TRUE;
@@ -212,10 +208,6 @@ LOCAL Errors CompressLZMA_compressData(CompressInfo *compressInfo)
 
 LOCAL Errors CompressLZMA_decompressData(CompressInfo *compressInfo)
 {
-  lzma_ret lzmaResult;
-
-  ulong maxCompressBytes,maxDataBytes;
-
   assert(compressInfo != NULL);
 
   if (!compressInfo->endOfDataFlag)                                           // not end-of-data
@@ -226,15 +218,15 @@ LOCAL Errors CompressLZMA_decompressData(CompressInfo *compressInfo)
       if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))             // unprocessed compressed data available
       {
         // get max. number of compressed and max. number of data bytes
-        maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
-        maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
+        ulong maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
+        ulong maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
 
         // decompress: transfer compress buffer -> data buffer
         compressInfo->lzmalib.stream.next_in   = (uint8_t*)RingBuffer_cArrayOut(&compressInfo->compressRingBuffer);
         compressInfo->lzmalib.stream.avail_in  = maxCompressBytes;
         compressInfo->lzmalib.stream.next_out  = (uint8_t*)RingBuffer_cArrayIn(&compressInfo->dataRingBuffer);
         compressInfo->lzmalib.stream.avail_out = maxDataBytes;
-        lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
+        lzma_ret lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_RUN);
         if      (lzmaResult == LZMA_STREAM_END)
         {
           compressInfo->endOfDataFlag = TRUE;
@@ -266,14 +258,14 @@ LOCAL Errors CompressLZMA_decompressData(CompressInfo *compressInfo)
          )
       {
         // get max. number of data bytes
-        maxDataBytes = RingBuffer_getFree(&compressInfo->dataRingBuffer);
+        ulong maxDataBytes = RingBuffer_getFree(&compressInfo->dataRingBuffer);
 
         // decompress with flush: transfer rest of internal data -> data buffer
         compressInfo->lzmalib.stream.next_in   = NULL;
         compressInfo->lzmalib.stream.avail_in  = 0;
         compressInfo->lzmalib.stream.next_out  = (uint8_t*)RingBuffer_cArrayIn(&compressInfo->dataRingBuffer);
         compressInfo->lzmalib.stream.avail_out = maxDataBytes;
-        lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_FINISH);
+        lzma_ret lzmaResult = lzma_code(&compressInfo->lzmalib.stream,LZMA_FINISH);
         if      (lzmaResult == LZMA_STREAM_END)
         {
           compressInfo->endOfDataFlag = TRUE;
@@ -299,9 +291,6 @@ LOCAL Errors CompressLZMA_init(CompressInfo       *compressInfo,
                                CompressAlgorithms compressAlgorithm
                               )
 {
-  lzma_stream streamInit = LZMA_STREAM_INIT;
-  lzma_ret    lzmaResult;
-
   assert(compressInfo != NULL);
 
   compressInfo->lzmalib.compressionLevel = 0;
@@ -322,6 +311,7 @@ LOCAL Errors CompressLZMA_init(CompressInfo       *compressInfo,
       #endif /* NDEBUG */
       break;
   }
+  lzma_stream streamInit = LZMA_STREAM_INIT;
   compressInfo->lzmalib.stream = streamInit;
   #ifdef USE_ALLOCATOR
     compressInfo->lzmalib.stream.allocator = &ALLOCATOR;
@@ -331,17 +321,21 @@ LOCAL Errors CompressLZMA_init(CompressInfo       *compressInfo,
   switch (compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-      lzmaResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
-      if (lzmaResult != LZMA_OK)
       {
-        return ERRORX_(INIT_COMPRESS,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
+        lzma_ret lzmaResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
+        if (lzmaResult != LZMA_OK)
+        {
+          return ERRORX_(INIT_COMPRESS,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
+        }
       }
       break;
     case COMPRESS_MODE_INFLATE:
-      lzmaResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
-      if (lzmaResult != LZMA_OK)
       {
-        return ERRORX_(INIT_DECOMPRESS,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
+        lzma_ret lzmaResult = lzma_auto_decoder(&compressInfo->lzmalib.stream,0xFFFffffFFFFffffLL,0);
+        if (lzmaResult != LZMA_OK)
+        {
+          return ERRORX_(INIT_DECOMPRESS,lzmaResult,"%s",CompressLZMA_getErrorText(lzmaResult));
+        }
       }
       break;
     #ifndef NDEBUG

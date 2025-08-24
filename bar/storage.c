@@ -154,11 +154,10 @@ LOCAL void signalHandler(int signalNumber)
 
 LOCAL bool updateStorageRunningInfo(const StorageInfo *storageInfo)
 {
-  bool result;
-
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
+  bool result;
   if (storageInfo->updateProgressFunction != NULL)
   {
     result = storageInfo->updateProgressFunction(storageInfo->progress.storageDoneBytes,
@@ -252,22 +251,21 @@ LOCAL size_t curlNopDataCallback(void   *buffer,
 
 LOCAL Errors waitCurlSocketRead(CURLM *curlMultiHandle)
 {
-  CURLMcode curlmCode;
-  long      curlTimeout;
-  Errors    error;
-  int       fdCount;
+  Errors error;
 
   assert(curlMultiHandle != NULL);
 
   // get a suitable timeout
+  long curlTimeout;
   curl_multi_timeout(curlMultiHandle,&curlTimeout);
 
   // wait
-  curlmCode = curl_multi_poll(curlMultiHandle,
-                              NULL,0,  // extra fds
-                              MAX(curlTimeout,READ_TIMEOUT),
-                              &fdCount
-                             );
+  int fdCount = 0;
+  CURLMcode curlmCode = curl_multi_poll(curlMultiHandle,
+                                        NULL,0,  // extra fds
+                                        MAX(curlTimeout,READ_TIMEOUT),
+                                        &fdCount
+                                       );
   switch (curlmCode)
   {
     case CURLM_OK:
@@ -279,6 +277,7 @@ LOCAL Errors waitCurlSocketRead(CURLM *curlMultiHandle)
       error = ERROR_NETWORK_RECEIVE;
       break;
   }
+  UNUSED_VARIABLE(fdCount);
 
   return error;
 }
@@ -294,23 +293,21 @@ LOCAL Errors waitCurlSocketRead(CURLM *curlMultiHandle)
 
 LOCAL Errors waitCurlSocketWrite(CURLM *curlMultiHandle)
 {
-  CURLMcode curlmCode;
-  long      curlTimeout;
-  Errors    error;
-  int       fdCount;
+  Errors error;
 
   assert(curlMultiHandle != NULL);
 
   // get a suitable timeout
+  long curlTimeout;
   curl_multi_timeout(curlMultiHandle,&curlTimeout);
 
   // wait
-  fdCount=0;
-  curlmCode = curl_multi_poll(curlMultiHandle,
-                              NULL,0,  // extra fds
-                              MAX(curlTimeout,WRITE_TIMEOUT),
-                              &fdCount
-                             );
+  int fdCount = 0;
+  CURLMcode curlmCode = curl_multi_poll(curlMultiHandle,
+                                        NULL,0,  // extra fds
+                                        MAX(curlTimeout,WRITE_TIMEOUT),
+                                        &fdCount
+                                       );
   switch (curlmCode)
   {
     case CURLM_OK:
@@ -323,6 +320,7 @@ LOCAL Errors waitCurlSocketWrite(CURLM *curlMultiHandle)
       error = ERROR_NETWORK_RECEIVE;
       break;
   }
+  UNUSED_VARIABLE(fdCount);
 
   return error;
 }
@@ -339,13 +337,12 @@ LOCAL Errors waitCurlSocketWrite(CURLM *curlMultiHandle)
 
 LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle, ConstString archiveName)
 {
-  CURLcode curlCode;
-  long     responseCode;
-  Errors   error;
+  Errors error;
 
   assert(curlHandle != NULL);
 
-  curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
+  long responseCode;
+  CURLcode curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
   if (curlCode == CURLE_OK)
   {
     switch (responseCode)
@@ -401,17 +398,14 @@ LOCAL void initBandWidthLimiter(StorageBandWidthLimiter *storageBandWidthLimiter
                                 BandWidthList           *maxBandWidthList
                                )
 {
-  ulong maxBandWidth;
-  uint  i;
-
   assert(storageBandWidthLimiter != NULL);
 
-  maxBandWidth = (maxBandWidthList != NULL) ? getBandWidth(maxBandWidthList) : 0L;
+  ulong maxBandWidth = (maxBandWidthList != NULL) ? getBandWidth(maxBandWidthList) : 0L;
 
   storageBandWidthLimiter->maxBandWidthList     = maxBandWidthList;
   storageBandWidthLimiter->maxBlockSize         = 64*1024;
   storageBandWidthLimiter->blockSize            = 64*1024;
-  for (i = 0; i < SIZE_OF_ARRAY(storageBandWidthLimiter->measurements); i++)
+  for (size_t i = 0; i < SIZE_OF_ARRAY(storageBandWidthLimiter->measurements); i++)
   {
     storageBandWidthLimiter->measurements[i] = maxBandWidth;
   }
@@ -453,12 +447,6 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
                           uint64                  transmissionTime
                          )
 {
-  uint   i;
-  ulong  averageBandWidth;   // average band width [bits/s]
-  ulong  maxBandWidth;
-  uint64 calculatedTime;
-  uint64 delayTime;          // delay time [us]
-
   assert(storageBandWidthLimiter != NULL);
 
   if (storageBandWidthLimiter->maxBandWidthList != NULL)
@@ -473,10 +461,10 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
        )
     {
       // calculate average band width
-      averageBandWidth = 0;
+      ulong averageBandWidth = 0;   // average band width [bits/s]
       if (storageBandWidthLimiter->measurementCount > 0)
       {
-        for (i = 0; i < storageBandWidthLimiter->measurementCount; i++)
+        for (uint i = 0; i < storageBandWidthLimiter->measurementCount; i++)
         {
           averageBandWidth += storageBandWidthLimiter->measurements[i];
         }
@@ -485,15 +473,16 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
 //fprintf(stderr,"%s, %d: averageBandWidth=%lu bits/s\n",__FILE__,__LINE__,averageBandWidth);
 
       // get max. band width to use [bit/s]
-      maxBandWidth = getBandWidth(storageBandWidthLimiter->maxBandWidthList);
+      ulong maxBandWidth = getBandWidth(storageBandWidthLimiter->maxBandWidthList);
 
       // calculate delay time
+      uint64 delayTime;  // [us]
       if (maxBandWidth > 0L)
       {
-        calculatedTime = (BYTES_TO_BITS(storageBandWidthLimiter->measurementBytes)*US_PER_SECOND)/maxBandWidth;  // [us]
-        delayTime      = (calculatedTime > storageBandWidthLimiter->measurementTime)
-                           ? calculatedTime-storageBandWidthLimiter->measurementTime
-                           : 0LL;
+        uint64 calculatedTime = (BYTES_TO_BITS(storageBandWidthLimiter->measurementBytes)*US_PER_SECOND)/maxBandWidth;  // [us]
+        delayTime = (calculatedTime > storageBandWidthLimiter->measurementTime)
+                      ? calculatedTime-storageBandWidthLimiter->measurementTime
+                      : 0LL;
       }
       else
       {
@@ -577,14 +566,11 @@ LOCAL bool initSSHLogin(ConstString             hostName,
                         void                    *getNamePasswordUserData
                        )
 {
-  String s;
-  bool   initFlag;
-
   assert(!String_isEmpty(hostName));
   assert(userName != NULL);
   assert(password != NULL);
 
-  initFlag = FALSE;
+  bool initFlag = FALSE;
 
   if (jobOptions != NULL)
   {
@@ -597,7 +583,7 @@ LOCAL bool initSSHLogin(ConstString             hostName,
           case RUN_MODE_INTERACTIVE:
             if (Password_isEmpty(&defaultSSHPassword))
             {
-              s = !String_isEmpty(userName)
+              String s = !String_isEmpty(userName)
                     ? String_format(String_new(),"SSH login password for %S@%S",userName,hostName)
                     : String_format(String_new(),"SSH login password for %S",hostName);
               if (Password_input(password,String_cString(s),PASSWORD_INPUT_MODE_ANY))
@@ -616,7 +602,7 @@ LOCAL bool initSSHLogin(ConstString             hostName,
           case RUN_MODE_SERVER:
             if (getNamePasswordFunction != NULL)
             {
-              s = !String_isEmpty(userName)
+              String s = !String_isEmpty(userName)
                     ? String_format(String_new(),"%S@%S",userName,hostName)
                     : String_format(String_new(),"%S",hostName);
               if (getNamePasswordFunction(userName,
@@ -672,12 +658,12 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
                            uint        privateKeyLength
                           )
 {
-  SocketHandle socketHandle;
-  Errors       error;
+  Errors error;
 
   assert(userName != NULL);
 
   printInfo(5,"SSH: host '%s:%d', user '%s'\n",String_cString(hostName),hostPort,String_cString(userName));
+  SocketHandle socketHandle;
   error = Network_connect(&socketHandle,
                           SOCKET_TYPE_SSH,
                           hostName,
@@ -718,11 +704,10 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
 
 LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 {
-  SignalMask signalMask;
-
   assert(socketHandle != NULL);
 
   // Note: ignore SIGALRM in Misc_waitHandle()
+  SignalMask signalMask;
   MISC_SIGNAL_MASK_CLEAR(signalMask);
   #ifdef HAVE_SIGALRM
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
@@ -1321,18 +1306,14 @@ LOCAL Errors transferFileToStorage(FileHandle                  *fileHandle,
 {
   #define TRANSFER_BUFFER_SIZE (1024*1024)
 
-  void    *buffer;
-  Errors  error;
-  uint64  size;
-  uint64  transferedBytes;
-  ulong   n;
+  Errors error;
 
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle);
   assert(fileHandle != NULL);
 
   // init variables
-  buffer = malloc(TRANSFER_BUFFER_SIZE);
+  void *buffer = malloc(TRANSFER_BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -1347,10 +1328,10 @@ LOCAL Errors transferFileToStorage(FileHandle                  *fileHandle,
   }
 
   // get total size
-  size = File_getSize(fileHandle);
+  uint64 size = File_getSize(fileHandle);
 
   // transfer data
-  transferedBytes = 0L;
+  uint64 transferedBytes = 0L;
   while (   (transferedBytes < size)
          && (   (isAbortedFunction == NULL)
              || !isAbortedFunction(isAbortedUserData)
@@ -1360,7 +1341,7 @@ LOCAL Errors transferFileToStorage(FileHandle                  *fileHandle,
         )
   {
     // get block size
-    n = (ulong)MIN(size-transferedBytes,TRANSFER_BUFFER_SIZE);
+    ulong n = (ulong)MIN(size-transferedBytes,TRANSFER_BUFFER_SIZE);
 
     // read data
     error = File_read(fileHandle,buffer,n,NULL);
@@ -1438,11 +1419,7 @@ LOCAL Errors transferStorageToStorage(StorageHandle               *fromStorageHa
 {
   #define TRANSFER_BUFFER_SIZE (1024*1024)
 
-  void    *buffer;
-  Errors  error;
-  uint64  size;
-  uint64  transferedBytes;
-  ulong   n;
+  Errors error;
 
   assert(fromStorageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(fromStorageHandle);
@@ -1450,18 +1427,18 @@ LOCAL Errors transferStorageToStorage(StorageHandle               *fromStorageHa
   DEBUG_CHECK_RESOURCE_TRACE(toStorageHandle);
 
   // init variables
-  buffer = malloc(TRANSFER_BUFFER_SIZE);
+  void *buffer = malloc(TRANSFER_BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
   // get total size
-  size = Storage_getSize(fromStorageHandle);
+  uint64 size = Storage_getSize(fromStorageHandle);
 
   // transfer data
   error           = ERROR_NONE;
-  transferedBytes = 0L;
+  uint64 transferedBytes = 0L;
   while (   (transferedBytes < size)
          && (error == ERROR_NONE)
          && (   (isAbortedFunction == NULL)
@@ -1470,7 +1447,7 @@ LOCAL Errors transferStorageToStorage(StorageHandle               *fromStorageHa
         )
   {
     // get data size
-    n = (ulong)MIN(size-transferedBytes,TRANSFER_BUFFER_SIZE);
+    ulong n = (ulong)MIN(size-transferedBytes,TRANSFER_BUFFER_SIZE);
 
     // read data
     error = Storage_read(fromStorageHandle,buffer,n,NULL);
@@ -1760,14 +1737,12 @@ bool Storage_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
                              ConstString            archiveName2
                             )
 {
-  bool result;
-
   assert(storageSpecifier1 != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier1);
   assert(storageSpecifier2 != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier2);
 
-  result = FALSE;
+  bool result = FALSE;
 
   if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
   if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
@@ -1834,8 +1809,6 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
   const char* LOGINNAME_MAP_FROM[] = {"\\@"};
   const char* LOGINNAME_MAP_TO[]   = {"@"};
 
-  bool   result;
-  String s;
 
   assert(sshSpecifier != NULL);
   assert(hostName != NULL);
@@ -1845,7 +1818,8 @@ bool Storage_parseSSHSpecifier(ConstString sshSpecifier,
   if (hostPort != NULL) (*hostPort) = 0;
   String_clear(userName);
 
-  s = String_new();
+  bool   result;
+  String s = String_new();
   if      (String_matchCString(sshSpecifier,STRING_BEGIN,"^(([^@]|\\@)*?)@([^:]+?):(\\d*)/{0,1}$",NULL,STRING_NO_ASSIGN,userName,STRING_NO_ASSIGN,hostName,s,NULL))
   {
     // <login name>@<host name>:<host port>
@@ -1971,12 +1945,11 @@ bool Storage_parseDeviceSpecifier(ConstString deviceSpecifier,
 
 StorageTypes Storage_parseType(ConstString storageName)
 {
-  StorageSpecifier storageSpecifier;
-  StorageTypes     type;
-
   assert(storageName != NULL);
 
+  StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
+  StorageTypes type;
   if (Storage_parseName(&storageSpecifier,storageName) == ERROR_NONE)
   {
     type = storageSpecifier.type;
@@ -1994,25 +1967,15 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
                          ConstString      storageName
                         )
 {
-  AutoFreeList    autoFreeList;
-  String          string;
-  String          archiveName;
-  long            nextIndex;
-  bool            hasPatternFlag;
-  StringTokenizer archiveNameTokenizer;
-  ConstString     token;
-  Errors          error;
+  Errors error;
 
   assert(storageSpecifier != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
   assert(storageName != NULL);
 
   // initialize variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
-  string      = String_new();
-  archiveName = String_new();
-  AUTOFREE_ADD(&autoFreeList,&string,{ String_delete(string); });
-  AUTOFREE_ADD(&autoFreeList,&archiveName,{ String_delete(archiveName); });
 
   String_clear(storageSpecifier->hostName);
   storageSpecifier->hostPort = 0;
@@ -2020,8 +1983,13 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   Password_clear(&storageSpecifier->password);
   String_clear(storageSpecifier->deviceName);
 
+  String string      = String_new();
+  String archiveName = String_new();
+  AUTOFREE_ADD(&autoFreeList,&string,{ String_delete(string); });
+  AUTOFREE_ADD(&autoFreeList,&archiveName,{ String_delete(archiveName); });
   if      (String_startsWithCString(storageName,"ftp://"))
   {
+    long nextIndex;
     if (   String_matchCString(storageName,6,"^[^:]+:([^@]|\\@)+?@[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)  // ftp://<login name>:<login password>@<host name>:[<host port>]/<file name>
         || String_matchCString(storageName,6,"^[^:]+:([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)       // ftp://<login name>:<login password>@<host name>/<file name>
         || String_matchCString(storageName,6,"^([^@]|\\@)+?@[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)        // ftp://<login name>@<host name>:[<host port>]/<file name>
@@ -2055,6 +2023,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"scp://"))
   {
+    long nextIndex;
     if (   String_matchCString(storageName,6,"^([^@]|\\@)+?@[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)   // scp://<login name>@<host name>:[<host port>]/<file name>
         || String_matchCString(storageName,6,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // scp://<login name>@<host name>/<file name>
         || String_matchCString(storageName,6,"^[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)                // scp://<host name>:[<host port>]/<file name>
@@ -2086,6 +2055,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"sftp://"))
   {
+    long nextIndex;
     if (   String_matchCString(storageName,7,"^([^@]|\\@)+?@[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)   // sftp://<login name>@<host name>:[<host port>]/<file name>
         || String_matchCString(storageName,7,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // sftp://<login name>@<host name>/<file name>
         || String_matchCString(storageName,7,"^[^:]+:\\d*/{0,1}",&nextIndex,NULL,NULL)                // sftp://<host name>:[<host port>]/<file name>
@@ -2117,6 +2087,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"webdav://"))
   {
+    long nextIndex;
     if (   String_matchCString(storageName,9,"^[^:]+:([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)  // webdav://<login name>:<login password>@<host name>/<file name>
         || String_matchCString(storageName,9,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // webdav://<login name>@<host name>/<file name>
         || String_matchCString(storageName,9,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
@@ -2147,6 +2118,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"webdavs://"))
   {
+    long nextIndex;
     if (   String_matchCString(storageName,10,"^[^:]+:([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)  // webdav://<login name>:<login password>@<host name>/<file name>
         || String_matchCString(storageName,10,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // webdav://<login name>@<host name>/<file name>
         || String_matchCString(storageName,10,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // webdav://<host name>/<file name>
@@ -2177,6 +2149,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"smb://"))
   {
+    long nextIndex;
     if (   String_matchCString(storageName,6,"^[^:]+:([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)  // smb://<login name>:<login password>@<host name>/<file name>
         || String_matchCString(storageName,6,"^([^@]|\\@)+?@[^/]+/{0,1}",&nextIndex,NULL,NULL)        // smb://<login name>@<host name>/<file name>
         || String_matchCString(storageName,6,"^[^/]+/{0,1}",&nextIndex,NULL,NULL)                     // smb://<host name>/<file name>
@@ -2207,6 +2180,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"cd://"))
   {
+    long nextIndex;
     if (String_matchCString(storageName,5,"^[^:]*:",&nextIndex,NULL,NULL))  // cd://<device>:<file name>
     {
       String_sub(string,storageName,5,nextIndex-5);
@@ -2232,6 +2206,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"dvd://"))
   {
+    long nextIndex;
     if (String_matchCString(storageName,6,"^[^:]*:",&nextIndex,NULL,NULL))  // dvd://<device>:<file name>
     {
       String_sub(string,storageName,6,nextIndex-6);
@@ -2257,6 +2232,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"bd://"))
   {
+    long nextIndex;
     if (String_matchCString(storageName,5,"^[^:]*:",&nextIndex,NULL,NULL))  // bd://<device>:<file name>
     {
       String_sub(string,storageName,5,nextIndex-5);
@@ -2282,6 +2258,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else if (String_startsWithCString(storageName,"device://"))
   {
+    long nextIndex;
     if (String_matchCString(storageName,9,"^[^:]*:",&nextIndex,NULL,NULL))  // device://<device>:<file name>
     {
       String_sub(string,storageName,9,nextIndex-9);
@@ -2319,10 +2296,12 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
 
   // get archive base name (all which is not a pattern), check if pattern
-  hasPatternFlag = FALSE;
+  bool hasPatternFlag = FALSE;
   String_clear(storageSpecifier->archiveName);
+  StringTokenizer archiveNameTokenizer;
   File_initSplitFileName(&archiveNameTokenizer,archiveName);
   {
+    ConstString token;
     if (File_getNextSplitFileName(&archiveNameTokenizer,&token))
     {
       if (!Pattern_checkIsPattern(token))
@@ -2357,13 +2336,12 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
 
   if (hasPatternFlag)
   {
-    String  archivePatternString;
-    Pattern archivePattern;
-
     // get file pattern string
-    archivePatternString = String_new();
+    String          archivePatternString = String_new();
+    StringTokenizer archiveNameTokenizer;
     File_initSplitFileName(&archiveNameTokenizer,archiveName);
     {
+      ConstString token;
       if (File_getNextSplitFileName(&archiveNameTokenizer,&token))
       {
         if (!String_isEmpty(token))
@@ -2383,6 +2361,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     File_doneSplitFileName(&archiveNameTokenizer);
 
     // parse file pattern
+    Pattern archivePattern;
     error = Pattern_init(&archivePattern,
                          archivePatternString,
                          globalOptions.patternType,
@@ -2415,7 +2394,9 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
 
   // free resources
+  AUTOFREE_REMOVE(&autoFreeList,&archiveName);
   String_delete(archiveName);
+  AUTOFREE_REMOVE(&autoFreeList,&string);
   String_delete(string);
   AutoFree_done(&autoFreeList);
 
@@ -2426,16 +2407,13 @@ bool Storage_equalNames(ConstString storageName1,
                         ConstString storageName2
                        )
 {
-  StorageSpecifier storageSpecifier1,storageSpecifier2;
-  bool             result;
-
-  result = FALSE;
-
-  // init variables
-  Storage_initSpecifier(&storageSpecifier1);
-  Storage_initSpecifier(&storageSpecifier2);
+  bool result = FALSE;
 
   // parse storage names and compare
+  StorageSpecifier storageSpecifier1;
+  Storage_initSpecifier(&storageSpecifier1);
+  StorageSpecifier storageSpecifier2;
+  Storage_initSpecifier(&storageSpecifier2);
   if (   (Storage_parseName(&storageSpecifier1,storageName1) == ERROR_NONE)
       && (Storage_parseName(&storageSpecifier2,storageName2) == ERROR_NONE)
      )
@@ -2594,8 +2572,7 @@ uint Storage_getServerSettings(Server                 *server,
                                const JobOptions       *jobOptions
                               )
 {
-  uint             serverId;
-  const ServerNode *existingServerNode;
+  uint serverId;
 
   assert(server != NULL);
   assert(storageSpecifier != NULL);
@@ -2618,11 +2595,11 @@ uint Storage_getServerSettings(Server                 *server,
       SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find server
-        existingServerNode = LIST_FIND(&globalOptions.serverList,
-                                       existingServerNode,
-                                          (existingServerNode->server.type == SERVER_TYPE_FILE)
-                                       && String_startsWith(existingServerNode->server.name,storageSpecifier->archiveName)
-                                      );
+        const ServerNode *existingServerNode = LIST_FIND(&globalOptions.serverList,
+                                                         existingServerNode,
+                                                            (existingServerNode->server.type == SERVER_TYPE_FILE)
+                                                         && String_startsWith(existingServerNode->server.name,storageSpecifier->archiveName)
+                                                        );
         if (existingServerNode != NULL)
         {
           // get server settings
@@ -2643,11 +2620,11 @@ uint Storage_getServerSettings(Server                 *server,
       SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find server
-        existingServerNode = LIST_FIND(&globalOptions.serverList,
-                               existingServerNode,
-                                  (existingServerNode->server.type == SERVER_TYPE_FTP)
-                               && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
-                              );
+        const ServerNode *existingServerNode = LIST_FIND(&globalOptions.serverList,
+                                                         existingServerNode,
+                                                            (existingServerNode->server.type == SERVER_TYPE_FTP)
+                                                         && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
+                                                        );
         if (existingServerNode != NULL)
         {
           // get server settings
@@ -2670,11 +2647,11 @@ uint Storage_getServerSettings(Server                 *server,
       SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find server
-        existingServerNode = LIST_FIND(&globalOptions.serverList,
-                               existingServerNode,
-                                  (existingServerNode->server.type == SERVER_TYPE_SSH)
-                               && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
-                              );
+        const ServerNode *existingServerNode = LIST_FIND(&globalOptions.serverList,
+                                                         existingServerNode,
+                                                            (existingServerNode->server.type == SERVER_TYPE_SSH)
+                                                         && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
+                                                        );
         if (existingServerNode != NULL)
         {
           // get server settings
@@ -2700,11 +2677,11 @@ uint Storage_getServerSettings(Server                 *server,
       SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find server
-        existingServerNode = LIST_FIND(&globalOptions.serverList,
-                               existingServerNode,
-                                  (existingServerNode->server.type == SERVER_TYPE_SSH)
-                               && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
-                              );
+        const ServerNode *existingServerNode = LIST_FIND(&globalOptions.serverList,
+                                                         existingServerNode,
+                                                            (existingServerNode->server.type == SERVER_TYPE_SSH)
+                                                         && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
+                                                        );
         if (existingServerNode != NULL)
         {
           // get server settings
@@ -2730,11 +2707,11 @@ uint Storage_getServerSettings(Server                 *server,
       SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find server
-        existingServerNode = LIST_FIND(&globalOptions.serverList,
-                                       existingServerNode,
-                                          (existingServerNode->server.type == SERVER_TYPE_WEBDAV)
-                                       && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
-                                      );
+        const ServerNode *existingServerNode = LIST_FIND(&globalOptions.serverList,
+                                                         existingServerNode,
+                                                            (existingServerNode->server.type == SERVER_TYPE_WEBDAV)
+                                                         && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
+                                                        );
         if (existingServerNode != NULL)
         {
           // get server settings
@@ -2760,11 +2737,11 @@ uint Storage_getServerSettings(Server                 *server,
       SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find server
-        existingServerNode = LIST_FIND(&globalOptions.serverList,
-                                       existingServerNode,
-                                          (existingServerNode->server.type == SERVER_TYPE_WEBDAVS)
-                                       && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
-                                      );
+        const ServerNode *existingServerNode = LIST_FIND(&globalOptions.serverList,
+                                                         existingServerNode,
+                                                            (existingServerNode->server.type == SERVER_TYPE_WEBDAVS)
+                                                         && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
+                                                        );
         if (existingServerNode != NULL)
         {
           // get server settings
@@ -2790,11 +2767,11 @@ uint Storage_getServerSettings(Server                 *server,
       SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         // find server
-        existingServerNode = LIST_FIND(&globalOptions.serverList,
-                                       existingServerNode,
-                                          (existingServerNode->server.type == SERVER_TYPE_SMB)
-                                       && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
-                                      );
+        const ServerNode *existingServerNode = LIST_FIND(&globalOptions.serverList,
+                                                         existingServerNode,
+                                                            (existingServerNode->server.type == SERVER_TYPE_SMB)
+                                                         && String_equals(existingServerNode->server.name,storageSpecifier->hostName)
+                                                        );
         if (existingServerNode != NULL)
         {
           // get server settings
@@ -2879,8 +2856,7 @@ uint Storage_getServerSettings(Server                 *server,
                        )
 #endif /* NDEBUG */
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageSpecifier != NULL);
@@ -2892,6 +2868,7 @@ uint Storage_getServerSettings(Server                 *server,
   #endif /* !defined(HAVE_CURL) && !defined(HAVE_FTP) && !defined(HAVE_SSH2) */
 
   // initialize variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
   Semaphore_init(&storageInfo->lock,SEMAPHORE_TYPE_BINARY);
   Storage_duplicateSpecifier(&storageInfo->storageSpecifier,storageSpecifier);
@@ -4503,13 +4480,7 @@ Errors Storage_copyToLocal(const StorageSpecifier        *storageSpecifier,
                            void                          *storageVolumeRequestUserData
                           )
 {
-  AutoFreeList  autoFreeList;
-  void          *buffer;
-  Errors        error;
-  StorageInfo   storageInfo;
-  StorageHandle storageHandle;
-  FileHandle    fileHandle;
-  ulong         bytesRead;
+  Errors error;
 
   assert(storageSpecifier != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageSpecifier);
@@ -4517,8 +4488,9 @@ Errors Storage_copyToLocal(const StorageSpecifier        *storageSpecifier,
   assert(localFileName != NULL);
 
   // init variables
+  AutoFreeList  autoFreeList;
   AutoFree_init(&autoFreeList);
-  buffer = (byte*)malloc(BUFFER_SIZE);
+  void *buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -4526,6 +4498,7 @@ Errors Storage_copyToLocal(const StorageSpecifier        *storageSpecifier,
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
 
   // open storage
+  StorageInfo storageInfo;
   error = Storage_init(&storageInfo,
 NULL, // masterIO
                        storageSpecifier,
@@ -4544,6 +4517,7 @@ NULL, // masterIO
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  StorageHandle storageHandle;
   error = Storage_open(&storageHandle,
                        &storageInfo,
                        NULL  // archiveName
@@ -4557,6 +4531,7 @@ NULL, // masterIO
   AUTOFREE_ADD(&autoFreeList,&storageInfo,{ Storage_close(&storageHandle); (void)Storage_done(&storageInfo); });
 
   // create local file
+  FileHandle fileHandle;
   error = File_open(&fileHandle,
                     localFileName,
                     FILE_OPEN_CREATE
@@ -4574,6 +4549,7 @@ NULL, // masterIO
          && !Storage_eof(&storageHandle)
         )
   {
+    ulong bytesRead;
     error = Storage_read(&storageHandle,
                          buffer,
                          BUFFER_SIZE,
@@ -4617,15 +4593,16 @@ Errors Storage_copy(StorageInfo                 *fromStorageInfo,
                     void                        *isAbortedUserData
                    )
 {
-  StorageHandle fromStorageHandle,toStorageHandle;
-  Errors        error;
+  Errors error;
 
   // open storages
+  StorageHandle fromStorageHandle;
   error = Storage_open(&fromStorageHandle,fromStorageInfo,fromArchiveName);
   if (error != ERROR_NONE)
   {
     return error;
   }
+  StorageHandle toStorageHandle;
   error = Storage_create(&toStorageHandle,toStorageInfo,toArchiveName,archiveSize,TRUE);
   if (error != ERROR_NONE)
   {
@@ -4731,11 +4708,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
 
 Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName)
 {
-  String          directoryName;
-  ConstString     name;
-  JobOptions      jobOptions;
-  StringTokenizer stringTokenizer;
-  Errors          error;
+  Errors error;
 
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
@@ -4747,10 +4720,13 @@ Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
-  error         = ERROR_NONE;
-  directoryName = String_new();
+  error                = ERROR_NONE;
+  String directoryName = String_new();
+  JobOptions jobOptions;
   Job_initOptions(&jobOptions);
+  StringTokenizer stringTokenizer;
   File_initSplitFileName(&stringTokenizer,pathName);
+  ConstString name;
   while (   (error == ERROR_NONE)
          && File_getNextSplitFileName(&stringTokenizer,&name)
         )
@@ -4807,11 +4783,7 @@ Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName)
 
 Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString pathName)
 {
-  String                     directoryName;
-  JobOptions                 jobOptions;
-  bool                       isEmpty;
-  Errors                     error;
-  StorageDirectoryListHandle storageDirectoryListHandle;
+  Errors error;
 
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
@@ -4823,12 +4795,15 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString pathName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
-  directoryName = File_getDirectoryName(String_new(),pathName);
+  bool   isEmpty;
+  String directoryName = File_getDirectoryName(String_new(),pathName);
+  JobOptions jobOptions;
   Job_initOptions(&jobOptions);
   do
   {
     // check if directory is empty
     isEmpty = FALSE;
+    StorageDirectoryListHandle storageDirectoryListHandle;
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageInfo->storageSpecifier,
                                       directoryName,
@@ -5062,7 +5037,6 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
                                  ServerConnectionPriorities serverConnectionPriority
                                 )
 {
-  String directory;
   Errors error;
 
   assert(storageDirectoryListHandle != NULL);
@@ -5073,6 +5047,7 @@ Errors Storage_openDirectoryList(StorageDirectoryListHandle *storageDirectoryLis
   Storage_duplicateSpecifier(&storageDirectoryListHandle->storageSpecifier,storageSpecifier);
 
   // get directory
+  String directory;
   if      (!String_isEmpty(pathName))
   {
     directory = String_duplicate(pathName);
@@ -5298,17 +5273,6 @@ Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
                       void                    *storageProgressUserData
                      )
 {
-  JobOptions                 jobOptions;
-  StringList                 directoryList;
-  String                     name;
-  Pattern                    pattern;
-  FileSystemInfo             fileSystemInfo;
-  ulong                      totalCount;
-  Errors                     error;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  ulong                      doneCount;
-  FileInfo                   fileInfo;
-
   assert(storageSpecifier != NULL);
   assert(storageFunction != NULL);
 
@@ -5318,12 +5282,10 @@ Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
 #endif
 UNUSED_VARIABLE(skipUnreadableFlag);
 
-  // init variables
-  Job_initOptions(&jobOptions);
-  StringList_init(&directoryList);
-  name = String_new();
+  Errors error;
 
   // parse pattern
+  Pattern pattern;
   if (patternString != NULL)
   {
     error = Pattern_initCString(&pattern,
@@ -5333,17 +5295,15 @@ UNUSED_VARIABLE(skipUnreadableFlag);
                                );
     if (error != ERROR_NONE)
     {
-      String_delete(name);
-      StringList_done(&directoryList);
-      Job_doneOptions(&jobOptions);
       return error;
     }
   }
 
   // get total number of files (if possible)
-  totalCount = 0L;
+  ulong totalCount = 0L;
   if ((directory != NULL) || !String_isEmpty(storageSpecifier->archiveName))
   {
+    FileSystemInfo fileSystemInfo;
     if (File_getFileSystemInfo(&fileSystemInfo,
                                (directory != NULL)
                                  ? directory
@@ -5356,9 +5316,14 @@ UNUSED_VARIABLE(skipUnreadableFlag);
   }
 
   // read directory and scan all sub-directories
+  StringList directoryList;
+  StringList_init(&directoryList);
   StringList_append(&directoryList,(directory != NULL) ? directory : storageSpecifier->archiveName);
-  doneCount = 0L;
-  error     = ERROR_NONE;
+  ulong  doneCount = 0L;
+  String name      = String_new();
+  JobOptions jobOptions;
+  Job_initOptions(&jobOptions);
+  error            = ERROR_NONE;
   while (   !StringList_isEmpty(&directoryList)
          && (error == ERROR_NONE)
         )
@@ -5366,6 +5331,7 @@ UNUSED_VARIABLE(skipUnreadableFlag);
     StringList_removeLast(&directoryList,name);
 
     // open directory
+    StorageDirectoryListHandle storageDirectoryListHandle;
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       storageSpecifier,
                                       name,
@@ -5380,6 +5346,7 @@ UNUSED_VARIABLE(skipUnreadableFlag);
             )
       {
         // read next directory entry
+        FileInfo fileInfo;
         error = Storage_readDirectoryList(&storageDirectoryListHandle,name,&fileInfo);
         if (error != ERROR_NONE)
         {
@@ -5444,15 +5411,15 @@ UNUSED_VARIABLE(skipUnreadableFlag);
       Storage_closeDirectoryList(&storageDirectoryListHandle);
     }
   }
+  String_delete(name);
+  StringList_done(&directoryList);
+  Job_doneOptions(&jobOptions);
 
   // free resources
   if (patternString != NULL)
   {
     Pattern_done(&pattern);
   }
-  String_delete(name);
-  StringList_done(&directoryList);
-  Job_doneOptions(&jobOptions);
 
   return error;
 }

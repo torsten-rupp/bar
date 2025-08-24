@@ -468,11 +468,10 @@ LOCAL_INLINE bool isQuit(void)
 
 LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
 {
-  TimeoutInfo timeoutInfo;
-
   // use delay trigger as a default
   if (trigger == NULL) trigger = &delayThreadTrigger;
 
+  TimeoutInfo timeoutInfo;
   Misc_initTimeout(&timeoutInfo,sleepTime*MS_PER_SECOND);
   SEMAPHORE_LOCKED_DO(trigger,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
@@ -509,7 +508,6 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
                                      )
 {
   Errors error;
-  String s0,s1,s2;
 
   assert(maintenanceNode != NULL);
   assert(date != NULL);
@@ -520,9 +518,9 @@ LOCAL Errors parseMaintenanceDateTime(MaintenanceNode *maintenanceNode,
   error = ERROR_NONE;
 
   // init variables
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
+  String s0 = String_new();
+  String s1 = String_new();
+  String s2 = String_new();
 
   // parse date
   if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
@@ -624,7 +622,6 @@ LOCAL Errors parseScheduleTime(ScheduleTime *scheduleTime,
                               )
 {
   Errors error;
-  String s0,s1;
 
   assert(scheduleTime != NULL);
   assert(string != NULL);
@@ -632,8 +629,8 @@ LOCAL Errors parseScheduleTime(ScheduleTime *scheduleTime,
   error = ERROR_NONE;
 
   // init variables
-  s0 = String_new();
-  s1 = String_new();
+  String s0 = String_new();
+  String s1 = String_new();
 
   // parse time
   if (String_parse(string,STRING_BEGIN,"%S:%S",NULL,s0,s1))
@@ -684,7 +681,6 @@ LOCAL Errors parseScheduleDateTime(ScheduleDate       *scheduleDate,
                                   )
 {
   Errors error;
-  String s0,s1,s2;
 
   assert(scheduleDate != NULL);
   assert(scheduleWeekDaySet != NULL);
@@ -696,9 +692,9 @@ LOCAL Errors parseScheduleDateTime(ScheduleDate       *scheduleDate,
   error = ERROR_NONE;
 
   // init variables
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
+  String s0 = String_new();
+  String s1 = String_new();
+  String s2 = String_new();
 
   // parse date
   if (error == ERROR_NONE)
@@ -883,8 +879,6 @@ LOCAL StorageVolumeRequestResults storageVolumeRequest(StorageVolumeRequestTypes
 
 LOCAL void beginPairingMaster(uint timeout, PairingModes pairingMode)
 {
-  ClientNode *clientNode,*disconnectClientNode;
-
   SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     if (newMaster.pairingMode == PAIRING_MODE_NONE)
@@ -906,12 +900,12 @@ LOCAL void beginPairingMaster(uint timeout, PairingModes pairingMode)
   // disconnect all currently connected masters for re-pairing
   SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    clientNode = clientList.head;
+    ClientNode *clientNode = clientList.head;
     while (clientNode != NULL)
     {
       if (IS_SET(clientNode->clientInfo.authorizationState,AUTHORIZATION_STATE_MASTER))
       {
-        disconnectClientNode = clientNode;
+        ClientNode *disconnectClientNode = clientNode;
         clientNode = List_remove(&clientList,disconnectClientNode);
         deleteClient(disconnectClientNode);
       }
@@ -935,13 +929,12 @@ LOCAL void beginPairingMaster(uint timeout, PairingModes pairingMode)
 
 LOCAL Errors endPairingMaster(ConstString name, const CryptHash *uuidHash)
 {
-  bool   modifiedFlag;
   Errors error;
 
   assert(name != NULL);
   assert(uuidHash != NULL);
 
-  modifiedFlag = FALSE;
+  bool modifiedFlag = FALSE;
   SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // set/clear paired master
@@ -1035,12 +1028,10 @@ LOCAL void abortPairingMaster(void)
 
 LOCAL Errors clearPairedMaster(void)
 {
-  bool       clearedFlag;
-  ClientNode *clientNode,*disconnectClientNode;
-  Errors     error;
+  Errors error;
 
   // clear paired master
-  clearedFlag = FALSE;
+  bool clearedFlag = FALSE;
   SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     assert(newMaster.pairingMode == PAIRING_MODE_NONE);
@@ -1063,12 +1054,12 @@ LOCAL Errors clearPairedMaster(void)
     // disconnect all currently connected masters
     SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      clientNode = clientList.head;
+      ClientNode *clientNode = clientList.head;
       while (clientNode != NULL)
       {
         if (IS_SET(clientNode->clientInfo.authorizationState,AUTHORIZATION_STATE_MASTER))
         {
-          disconnectClientNode = clientNode;
+          ClientNode *disconnectClientNode = clientNode;
           clientNode = List_remove(&clientList,disconnectClientNode);
           deleteClient(disconnectClientNode);
         }
@@ -1117,9 +1108,7 @@ LOCAL_INLINE bool isSlavePaired(const JobNode *jobNode)
 
 LOCAL const char *getSlaveStateText(SlaveStates slaveState)
 {
-  const char *stateText;
-
-  stateText = "UNKNOWN";
+  const char *stateText = "UNKNOWN";
   switch (slaveState)
   {
     case SLAVE_STATE_OFFLINE:
@@ -1288,30 +1277,19 @@ LOCAL void pairingThreadCode(void)
     }
   }
 
-  JobNode     *jobNode;
-  SlaveNode   *slaveNode;
-  Errors      error;
-  bool        anyOfflineFlag,anyUnpairedFlag;
-  uint        slaveProtocolVersionMajor;
-  ServerModes slaveServerMode;
-  FileHandle  fileHandle;
-  FileInfo    fileInfo;
-  String      line;
-  uint64      pairingStopDateTime;
-  bool        clearPairing;
-
-  line = String_new();
+  String line = String_new();
   while (!isQuit())
   {
     switch (globalOptions.serverMode)
     {
       case SERVER_MODE_MASTER:
         // try pairing all slaves
-        anyOfflineFlag  = FALSE;
-        anyUnpairedFlag = FALSE;
+        bool anyOfflineFlag  = FALSE;
+        bool anyUnpairedFlag = FALSE;
         JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           // disconnect shutdown slaves
+          SlaveNode *slaveNode;
           JOB_SLAVE_LIST_ITERATE(slaveNode)
           {
             if (Connector_isShutdown(&slaveNode->connectorInfo))
@@ -1340,6 +1318,7 @@ LOCAL void pairingThreadCode(void)
           JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
             // collect new slaves
+            JobNode *jobNode;
             JOB_LIST_ITERATE(jobNode)
             {
               if (Job_isRemote(jobNode))
@@ -1392,17 +1371,17 @@ LOCAL void pairingThreadCode(void)
               // try connect to slave
               if (!Connector_isConnected(&slaveNode->connectorInfo))
               {
-                error = Connector_connect(&slaveNode->connectorInfo,
-                                          slaveNode->name,
-                                          slaveNode->port,
-                                          slaveNode->tlsMode,
-                                          globalOptions.serverCA.data,
-                                          globalOptions.serverCA.length,
-                                          globalOptions.serverCert.data,
-                                          globalOptions.serverCert.length,
-                                          globalOptions.serverKey.data,
-                                          globalOptions.serverKey.length
-                                         );
+                Errors error = Connector_connect(&slaveNode->connectorInfo,
+                                                 slaveNode->name,
+                                                 slaveNode->port,
+                                                 slaveNode->tlsMode,
+                                                 globalOptions.serverCA.data,
+                                                 globalOptions.serverCA.length,
+                                                 globalOptions.serverCert.data,
+                                                 globalOptions.serverCert.length,
+                                                 globalOptions.serverKey.data,
+                                                 globalOptions.serverKey.length
+                                                );
                 if (error == ERROR_NONE)
                 {
                   // log info
@@ -1427,7 +1406,7 @@ LOCAL void pairingThreadCode(void)
                   && !Connector_isAuthorized(&slaveNode->connectorInfo)
                  )
               {
-                error = Connector_authorize(&slaveNode->connectorInfo,30*MS_PER_SECOND);
+                Errors error = Connector_authorize(&slaveNode->connectorInfo,30*MS_PER_SECOND);
                 if (error == ERROR_NONE)
                 {
                   slaveNode->authorizedFlag = TRUE;
@@ -1448,11 +1427,13 @@ LOCAL void pairingThreadCode(void)
               // update slave state in job
               if      (Connector_isAuthorized(&slaveNode->connectorInfo))
               {
-                error = Connector_getVersion(&slaveNode->connectorInfo,
-                                             &slaveProtocolVersionMajor,
-                                             NULL,  // slaveProtocolVersionMinor
-                                             &slaveServerMode
-                                            );
+                uint        slaveProtocolVersionMajor;
+                ServerModes slaveServerMode;
+                Errors error = Connector_getVersion(&slaveNode->connectorInfo,
+                                                    &slaveProtocolVersionMajor,
+                                                    NULL,  // slaveProtocolVersionMinor
+                                                    &slaveServerMode
+                                                   );
                 if (error == ERROR_NONE)
                 {
                   if (slaveServerMode == SERVER_MODE_SLAVE)
@@ -1528,12 +1509,14 @@ Connector_isConnected(&slaveNode->connectorInfo)
         break;
       case SERVER_MODE_SLAVE:
         // check if pairing/clear master requested
-        pairingStopDateTime = 0LL;
+        uint64      pairingStopDateTime = 0LL;
+        FileHandle  fileHandle;
         if (File_open(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
         {
-          clearPairing = FALSE;
+          bool clearPairing = FALSE;
 
           // get modified time
+          FileInfo fileInfo;
           if (File_getInfo(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
           {
             pairingStopDateTime = fileInfo.timeModified+DEFAULT_PAIRING_MASTER_TIMEOUT;
@@ -1597,6 +1580,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
       // disconnect slaves
       JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
+        SlaveNode *slaveNode;
         JOB_SLAVE_LIST_ITERATE(slaveNode)
         {
           if (   Connector_isConnected(&slaveNode->connectorInfo)
@@ -2147,9 +2131,6 @@ LOCAL void schedulerThreadCode(void)
 
 LOCAL void pauseThreadCode(void)
 {
-  SlaveNode *slaveNode;
-  Errors    error;
-
   while (!isQuit())
   {
     // decrement pause time, continue
@@ -2171,16 +2152,17 @@ LOCAL void pauseThreadCode(void)
           {
             JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
             {
+              SlaveNode *slaveNode;
               JOB_SLAVE_LIST_ITERATE(slaveNode)
               {
                 if (Connector_isAuthorized(&slaveNode->connectorInfo))
                 {
-                  error = Connector_executeCommand(&slaveNode->connectorInfo,
-                                                   1,
-                                                   10*MS_PER_SECOND,
-                                                   CALLBACK_(NULL,NULL),
-                                                   "CONTINUE"
-                                                  );
+                  Errors error = Connector_executeCommand(&slaveNode->connectorInfo,
+                                                          1,
+                                                          10*MS_PER_SECOND,
+                                                          CALLBACK_(NULL,NULL),
+                                                          "CONTINUE"
+                                                         );
                   if (error != ERROR_NONE)
                   {
                     logMessage(NULL,  // logHandle,
@@ -2219,17 +2201,9 @@ LOCAL void pauseThreadCode(void)
 
 LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
 {
-  bool                  maintenanceTimeFlag;
-  uint                  year;
-  uint                  month;
-  uint                  day;
-  uint                  hour;
-  uint                  minute;
-  WeekDays              weekDay;
-  const MaintenanceNode *maintenanceNode;
-
   UNUSED_VARIABLE(userData);
 
+  bool maintenanceTimeFlag;
   if      (pauseFlags.indexMaintenance)
   {
     maintenanceTimeFlag = FALSE;
@@ -2242,6 +2216,12 @@ LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
   {
     maintenanceTimeFlag = FALSE;
 
+    uint     year;
+    uint     month;
+    uint     day;
+    uint     hour;
+    uint     minute;
+    WeekDays weekDay;
     Misc_splitDateTime(dateTime,
                        TIME_TYPE_LOCAL,
                        &year,
@@ -2258,6 +2238,7 @@ LOCAL bool isMaintenanceTime(uint64 dateTime, void *userData)
     {
       if (!List_isEmpty(&globalOptions.maintenanceList))
       {
+        const MaintenanceNode *maintenanceNode;
         LIST_ITERATE(&globalOptions.maintenanceList,maintenanceNode)
         {
           if (   (   (maintenanceNode->date.year == DATE_ANY)
@@ -2433,12 +2414,9 @@ LOCAL uint64 getNextSchedule(const JobNode *jobNode,
 
 LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
 {
-  bool abortedFlag;
-  uint *abortedCommandId;
-
   assert(clientInfo != NULL);
 
-  abortedFlag = FALSE;
+  bool abortedFlag = FALSE;
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
@@ -2453,6 +2431,7 @@ LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
       if (commandId >= clientInfo->abortedCommandIdStart)
       {
         // check if command aborted
+        uint *abortedCommandId;
         RINGBUFFER_ITERATEX(&clientInfo->abortedCommandIds,abortedCommandId,!abortedFlag)
         {
           abortedFlag = (commandId == (*abortedCommandId));
@@ -2649,13 +2628,13 @@ LOCAL Errors testEntity(IndexHandle             *indexHandle,
                         void                    *isAbortedUserData
                        )
 {
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
+  Errors error;
 
   assert(indexHandle != NULL);
 
   // find entity
+  IndexQueryHandle indexQueryHandle;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!IndexEntity_find(indexHandle,
                         entityId,
                         NULL,  // findJobUUID,
@@ -2813,14 +2792,12 @@ LOCAL Errors testUUID(IndexHandle             *indexHandle,
                       void                    *isAbortedUserData
                      )
 {
-  Errors           error;
-  IndexId          uuidId;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          entityId;
+  Errors error;
 
   assert(indexHandle != NULL);
 
   // find UUID
+  IndexId          uuidId;
   if (!IndexUUID_find(indexHandle,
                       String_cString(jobUUID),
                       NULL,  // findScheduleUUID
@@ -2849,6 +2826,7 @@ LOCAL Errors testUUID(IndexHandle             *indexHandle,
   // get all entities with uuid id
   Array entityIdArray;
   Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  IndexQueryHandle indexQueryHandle;
   error = IndexEntity_initList(&indexQueryHandle,
                                indexHandle,
                                uuidId,
@@ -2868,6 +2846,7 @@ LOCAL Errors testUUID(IndexHandle             *indexHandle,
     Array_done(&entityIdArray);
     return error;
   }
+  IndexId entityId;
   while (   (error == ERROR_NONE)
          && !isQuit()
          && IndexEntity_getNext(&indexQueryHandle,
@@ -3564,9 +3543,7 @@ LOCAL EntityNode *newExpirationNode(IndexId      entityId,
                                     bool         lockedFlag
                                    )
 {
-  EntityNode *entityNode;
-
-  entityNode = LIST_NEW_NODE(EntityNode);
+  EntityNode *entityNode = LIST_NEW_NODE(EntityNode);
   if (entityNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -3595,11 +3572,9 @@ LOCAL EntityNode *newExpirationNode(IndexId      entityId,
 
 LOCAL EntityNode *duplicateEntityNode(const EntityNode *fromEntityNode)
 {
-  EntityNode *entityNode;
-
   assert(fromEntityNode != NULL);
 
-  entityNode = LIST_NEW_NODE(EntityNode);
+  EntityNode *entityNode = LIST_NEW_NODE(EntityNode);
   if (entityNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -3631,18 +3606,6 @@ LOCAL bool getEntityList(EntityList  *entityList,
                          IndexHandle *indexHandle
                         )
 {
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          entityId;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes     archiveType;
-  uint64           createdDateTime;
-  uint64           totalSize;
-  uint             totalEntryCount;
-  uint64           totalEntrySize;
-  uint             lockedCount;
-  EntityNode       *entityNode;
-
   assert(entityList != NULL);
 
   // init variables
@@ -3654,25 +3617,34 @@ LOCAL bool getEntityList(EntityList  *entityList,
   if (indexHandle != NULL)
   {
     // get entities
-    error = IndexEntity_initList(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 NULL,  // jobUUID,
-                                 NULL,  // scheduldUUID
-                                 ARCHIVE_TYPE_ANY,
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // name
-                                 INDEX_ENTITY_SORT_MODE_CREATED,
-                                 DATABASE_ORDERING_DESCENDING,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
+    IndexQueryHandle indexQueryHandle;
+    Errors error = IndexEntity_initList(&indexQueryHandle,
+                                        indexHandle,
+                                        INDEX_ID_ANY,  // uuidId
+                                        NULL,  // jobUUID,
+                                        NULL,  // scheduldUUID
+                                        ARCHIVE_TYPE_ANY,
+                                        INDEX_STATE_SET_ALL,
+                                        INDEX_MODE_SET_ALL,
+                                        NULL,  // name
+                                        INDEX_ENTITY_SORT_MODE_CREATED,
+                                        DATABASE_ORDERING_DESCENDING,
+                                        0LL,  // offset
+                                        INDEX_UNLIMITED
+                                       );
     if (error != ERROR_NONE)
     {
       return FALSE;
     }
 
+    StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+    IndexId      entityId;
+    ArchiveTypes archiveType;
+    uint64       createdDateTime;
+    uint64       totalSize;
+    uint         totalEntryCount;
+    uint64       totalEntrySize;
+    uint         lockedCount;
     while (IndexEntity_getNext(&indexQueryHandle,
                                NULL,  // uuidId,
                                jobUUID,
@@ -3691,15 +3663,15 @@ LOCAL bool getEntityList(EntityList  *entityList,
     {
 //fprintf(stderr,"%s, %d: %"PRIu64" entityId=%"PRIi64" archiveType=%d totalSize=%"PRIu64" now=%"PRIu64" createdDateTime=%"PRIu64" -> age=%"PRIu64"\n",__FILE__,__LINE__,Misc_getTimestamp()/1000,entityId,archiveType,totalSize,Misc_getCurrentDateTime(),createdDateTime,(Misc_getCurrentDateTime()-createdDateTime)/S_PER_DAY);
       // create expiration node
-      entityNode = newExpirationNode(entityId,
-                                     jobUUID,
-                                     archiveType,
-                                     createdDateTime,
-                                     totalSize,
-                                     totalEntryCount,
-                                     totalEntrySize,
-                                     (lockedCount > 0)
-                                    );
+      EntityNode *entityNode = newExpirationNode(entityId,
+                                                 jobUUID,
+                                                 archiveType,
+                                                 createdDateTime,
+                                                 totalSize,
+                                                 totalEntryCount,
+                                                 totalEntrySize,
+                                                 (lockedCount > 0)
+                                                );
       assert(entityNode != NULL);
 
       // add to list
@@ -3713,6 +3685,7 @@ LOCAL bool getEntityList(EntityList  *entityList,
   #ifndef NDEBUG
     {
       uint64 lastCreatedDateTime = MAX_UINT64;
+      const EntityNode *entityNode;
       LIST_ITERATE(entityList,entityNode)
       {
         assert(entityNode->createdDateTime <= lastCreatedDateTime);
@@ -3743,12 +3716,6 @@ LOCAL void getJobEntityList(EntityList            *jobEntityList,
                             const PersistenceList *persistenceList
                            )
 {
-  uint64                 now;
-  const EntityNode      *entityNode;
-  EntityNode            *jobEntityNode;
-  int                   age;
-  const PersistenceNode *persistenceNode,*nextPersistenceNode;
-
   assert(jobEntityList != NULL);
   assert(entityList != NULL);
   assert(jobUUID != NULL);
@@ -3757,7 +3724,8 @@ LOCAL void getJobEntityList(EntityList            *jobEntityList,
   // check if list is sorted descending by create date/time
   #ifndef NDEBUG
     {
-      uint64 lastCreatedDateTime = MAX_UINT64;
+      uint64     lastCreatedDateTime = MAX_UINT64;
+      EntityNode *entityNode;
       LIST_ITERATE(entityList,entityNode)
       {
         assert(entityNode->createdDateTime <= lastCreatedDateTime);
@@ -3769,7 +3737,8 @@ LOCAL void getJobEntityList(EntityList            *jobEntityList,
   // init variables
   List_init(jobEntityList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeEntityNode,NULL));
 
-  now = Misc_getCurrentDateTime();
+  uint64     now = Misc_getCurrentDateTime();
+  EntityNode *entityNode;
   LIST_ITERATE(entityList,entityNode)
   {
 //fprintf(stderr,"%s:%d: uuid=%s id=%"PRIu64"\n",__FILE__,__LINE__,String_cString(entityNode->jobUUID),INDEX_DATABASE_ID(entityNode->entityId));
@@ -3780,12 +3749,12 @@ LOCAL void getJobEntityList(EntityList            *jobEntityList,
        )
     {
       // create expiration node
-      jobEntityNode = duplicateEntityNode(entityNode);
+      EntityNode *jobEntityNode = duplicateEntityNode(entityNode);
       assert(jobEntityNode != NULL);
 
       // find persistence node for entity
-      age             = (now-entityNode->createdDateTime)/S_PER_DAY;
-      persistenceNode = LIST_HEAD(persistenceList);
+      int                   age              = (now-entityNode->createdDateTime)/S_PER_DAY;
+      const PersistenceNode *persistenceNode = LIST_HEAD(persistenceList);
       do
       {
         // find persistence node for archive type
@@ -3797,7 +3766,7 @@ LOCAL void getJobEntityList(EntityList            *jobEntityList,
         }
 
         // find next persistence node for archive type
-        nextPersistenceNode = persistenceNode;
+        const PersistenceNode *nextPersistenceNode = persistenceNode;
         if (nextPersistenceNode != NULL)
         {
           do
@@ -3857,11 +3826,10 @@ LOCAL bool hasPersistence(const JobNode *jobNode,
                           ArchiveTypes  archiveType
                          )
 {
-  const PersistenceNode *persistenceNode;
-
   assert(jobNode != NULL);
   assert(Job_isListLocked());
 
+  const PersistenceNode *persistenceNode;
   return LIST_CONTAINS(&jobNode->job.options.persistenceList,
                        persistenceNode,
                        persistenceNode->archiveType == archiveType
@@ -3879,19 +3847,17 @@ LOCAL bool hasPersistence(const JobNode *jobNode,
 
 LOCAL bool isInTransit(const EntityNode *entityNode)
 {
-  const PersistenceNode *nextPersistenceNode;
-  const EntityNode      *nextEntityNode;
 
   assert(entityNode != NULL);
 
-  nextPersistenceNode = LIST_FIND_NEXT(entityNode->persistenceNode,
-                                       nextPersistenceNode,
-                                       nextPersistenceNode->archiveType == entityNode->archiveType
-                                      );
-  nextEntityNode      = LIST_FIND_NEXT(entityNode,
-                                       nextEntityNode,
-                                       nextEntityNode->archiveType == entityNode->archiveType
-                                      );
+  const PersistenceNode *nextPersistenceNode = LIST_FIND_NEXT(entityNode->persistenceNode,
+                                                              nextPersistenceNode,
+                                                              nextPersistenceNode->archiveType == entityNode->archiveType
+                                                             );
+  const EntityNode      *nextEntityNode      = LIST_FIND_NEXT(entityNode,
+                                                              nextEntityNode,
+                                                              nextEntityNode->archiveType == entityNode->archiveType
+                                                             );
 
   return (   (nextPersistenceNode != NULL)
           && (   (nextEntityNode == NULL)
@@ -4261,21 +4227,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                         void                   *isAbortedUserData
                        )
 {
-  String           storageName;
-  StorageSpecifier storageSpecifier;
-  String           directoryPath,baseName;
-  String           moveToArchivePath;
-  BandWidthList    maxFromBandWidthList,maxToBandWidthList;
-  Errors           error;
-  uint             totalStorageCount;
-  uint64           totalStorageSize;
-  IndexQueryHandle indexQueryHandle;
-  uint             doneStorageCount;
-  uint64           doneStorageSize;
-  IndexId          storageId;
-  uint64           size;
-  IndexStates      indexState;
-  StorageInfo      fromStorageInfo,toStorageInfo;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(jobOptions != NULL);
@@ -4283,17 +4235,11 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
   assert(moveToPath != NULL);
   assert(IndexEntity_isLocked(indexHandle,entityId));
 
-  // init variables
-  storageName       = String_new();
-  Storage_initSpecifier(&storageSpecifier);
-  directoryPath     = String_new();
-  baseName          = String_new();
-  moveToArchivePath = String_new();
-// TODO: bandwidht limitor NYI
-  List_init(&maxFromBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
-  List_init(&maxToBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
-
   // get storage infos
+  uint        totalStorageCount;
+  uint64      totalStorageSize;
+  uint64      size;
+  IndexStates indexState;
   error = IndexStorage_getsInfos(indexHandle,
                                  INDEX_ID_ANY,  // uuidId
                                  entityId,
@@ -4313,12 +4259,20 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
   if (error == ERROR_NONE)
   {
     // move storages
-    doneStorageCount = 0;
-    doneStorageSize  = 0LL;
+    uint    doneStorageCount = 0;
+    uint64  doneStorageSize  = 0LL;
+    IndexId storageId        = INDEX_ID_NONE;
     do
     {
+      String           storageName       = String_new();
+      StorageSpecifier storageSpecifier;
+      Storage_initSpecifier(&storageSpecifier);
+      String           directoryPath     = String_new();
+      String           baseName          = String_new();
+      String           moveToArchivePath = String_new();
+
       // find next storage to move (Note: do not iterate with index list to avoid long running lock)
-      storageId = INDEX_ID_NONE;
+      IndexQueryHandle indexQueryHandle;
       error = IndexStorage_initList(&indexQueryHandle,
                                     indexHandle,
                                     INDEX_ID_ANY,  // uuidId
@@ -4422,6 +4376,10 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
           // init storages
           if (error == ERROR_NONE)
           {
+            StorageInfo   fromStorageInfo;
+// TODO: bandwidht limitor NYI
+            BandWidthList maxFromBandWidthList;
+            List_init(&maxFromBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
             error = Storage_init(&fromStorageInfo,
                                  NULL,  // masterIO
                                  &storageSpecifier,
@@ -4439,6 +4397,9 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
             {
               if (Storage_exists(&fromStorageInfo,NULL))
               {
+                StorageInfo   toStorageInfo;
+                BandWidthList maxToBandWidthList;
+                List_init(&maxToBandWidthList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)Configuration_freeBandWidthNode,NULL));
                 error = Storage_init(&toStorageInfo,
                                      NULL,  // masterIO
                                      moveToStorageSpecifier,
@@ -4594,6 +4555,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
 
                   // done storage
                   Storage_done(&toStorageInfo);
+                  List_done(&maxToBandWidthList);
                 }
               }
               else
@@ -4609,6 +4571,7 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
 
               // done storage
               Storage_done(&fromStorageInfo);
+              List_done(&maxFromBandWidthList);
             }
           }
         }
@@ -4630,6 +4593,13 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
                               );
         }
       }
+
+      // free resources
+      String_delete(moveToArchivePath);
+      String_delete(baseName);
+      String_delete(directoryPath);
+      Storage_doneSpecifier(&storageSpecifier);
+      String_delete(storageName);
     }
     while (   !INDEX_ID_IS_NONE(storageId)
            && (   (isAbortedFunction == NULL)
@@ -4638,15 +4608,6 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
            && (error == ERROR_NONE)
           );
   }
-
-  // free resources
-  List_done(&maxToBandWidthList);
-  List_done(&maxFromBandWidthList);
-  String_delete(moveToArchivePath);
-  String_delete(baseName);
-  String_delete(directoryPath);
-  Storage_doneSpecifier(&storageSpecifier);
-  String_delete(storageName);
 
   return error;
 }
@@ -4662,57 +4623,32 @@ LOCAL Errors moveEntity(IndexHandle            *indexHandle,
 
 LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
 {
-  Array            entityIdArray;
-  StorageSpecifier moveToStorageSpecifier;
-  StorageSpecifier storageSpecifier;
-  String           directoryPath,baseName;
-  String           moveToPath;
-  String           moveToArchivePath;
-  String           storageName;
-  EntityList       entityList;
-  IndexId          moveToEntityId;
-  const JobNode    *jobNode;
-  EntityList       jobEntityList;
-  const EntityNode *jobEntityNode;
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          storageId;
-  String           moveToJobUUID,moveToJobName;
-  ArchiveTypes     moveToArchiveType;
-  uint64           moveToCreatedDateTime;
-  JobOptions       jobOptions;
-  AutoFreeList     autoFreeList;
-  char             string[64];
-
-  // init variables
-  Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  Storage_initSpecifier(&moveToStorageSpecifier);
-  Storage_initSpecifier(&storageSpecifier);
-  directoryPath     = String_new();
-  baseName          = String_new();
-  moveToPath        = String_new();
-  moveToArchivePath = String_new();
-  storageName       = String_new();
-  moveToJobUUID     = String_new();
-  moveToJobName     = String_new();
-  Job_initOptions(&jobOptions);
+  Errors error;
 
   // get entity list
+  EntityList entityList;
   getEntityList(&entityList,indexHandle);
 
   error = ERROR_NONE;
+  IndexId moveToEntityId;
   do
   {
-    // init variables
-    moveToEntityId        = INDEX_ID_NONE;
-    moveToArchiveType     = ARCHIVE_TYPE_NONE;
-    moveToCreatedDateTime = 0LL;
+    moveToEntityId = INDEX_ID_NONE;
 
+    ArchiveTypes moveToArchiveType     = ARCHIVE_TYPE_NONE;
+    uint64       moveToCreatedDateTime = 0LL;
+    Array        entityIdArray;
+    Array_init(&entityIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+    String       moveToJobUUID         = String_new();
+    String       moveToJobName         = String_new();
+    String       moveToPath            = String_new();
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
+      const JobNode *jobNode;
       JOB_LIST_ITERATE(jobNode)
       {
         // get entity list for job with assigned persistence
+        EntityList jobEntityList;
         getJobEntityList(&jobEntityList,
                          &entityList,
                          jobNode->job.uuid,
@@ -4720,6 +4656,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                         );
 
         // find entity to move
+        const EntityNode *jobEntityNode;
         LIST_ITERATE(&jobEntityList,jobEntityNode)
         {
           if (   !jobEntityNode->lockedFlag
@@ -4729,6 +4666,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
              )
           {
             // parse move-to name
+            StorageSpecifier moveToStorageSpecifier;
             error = Storage_parseName(&moveToStorageSpecifier,jobEntityNode->persistenceNode->moveTo);
             if (error != ERROR_NONE)
             {
@@ -4736,6 +4674,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
             }
 
             // check if some storages have to be moved
+            IndexQueryHandle indexQueryHandle;
             error = IndexStorage_initList(&indexQueryHandle,
                                           indexHandle,
                                           INDEX_ID_ANY,  // uuidId
@@ -4761,6 +4700,8 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                                          );
             if (error == ERROR_NONE)
             {
+              IndexId storageId;
+              String  storageName = String_new();
               while (   INDEX_ID_IS_NONE(moveToEntityId)
                      && IndexStorage_getNext(&indexQueryHandle,
                                              NULL,  // uuidId
@@ -4786,13 +4727,18 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                     )
               {
                 // parse storage name
+                StorageSpecifier storageSpecifier;
+                Storage_initSpecifier(&storageSpecifier);
                 error = Storage_parseName(&storageSpecifier,storageName);
                 if (error != ERROR_NONE)
                 {
+                  Storage_doneSpecifier(&storageSpecifier);
                   continue;
                 }
 
                 // get path
+                String directoryPath = String_new();
+                String baseName      = String_new();
                 File_splitFileName(storageSpecifier.archiveName,directoryPath,baseName,NULL);
 
                 // get move-to path name (expand macros)
@@ -4807,10 +4753,14 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                                           );
                 if (error != ERROR_NONE)
                 {
+                  String_delete(baseName);
+                  String_delete(directoryPath);
+                  Storage_doneSpecifier(&storageSpecifier);
                   continue;
                 }
 
                 // check if path is or storage type are different
+                String moveToArchivePath = String_new();
                 File_setFileName(moveToArchivePath,moveToPath);
                 File_appendFileName(moveToArchivePath,baseName);
                 if (Storage_equalSpecifiers(&storageSpecifier,
@@ -4820,6 +4770,10 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                                            )
                    )
                 {
+                  String_delete(moveToArchivePath);
+                  String_delete(baseName);
+                  String_delete(directoryPath);
+                  Storage_doneSpecifier(&storageSpecifier);
                   continue;
                 }
 
@@ -4829,9 +4783,17 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                 String_set(moveToJobName,jobNode->name);
                 moveToArchiveType     = jobEntityNode->archiveType;
                 moveToCreatedDateTime = jobEntityNode->createdDateTime;
+
+                String_delete(moveToArchivePath);
+                String_delete(baseName);
+                String_delete(directoryPath);
+                Storage_doneSpecifier(&storageSpecifier);
               }
               Index_doneList(&indexQueryHandle);
+              String_delete(storageName);
             }
+
+            Storage_doneSpecifier(&moveToStorageSpecifier);
           }
         }
 
@@ -4844,6 +4806,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
     {
       Array_append(&entityIdArray,&moveToEntityId);
 
+      AutoFreeList autoFreeList;
       AutoFree_init(&autoFreeList);
       error = ERROR_NONE;
 
@@ -4862,19 +4825,23 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
       {
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
-          jobNode = Job_findByUUID(moveToJobUUID);
+          const JobNode *jobNode = Job_findByUUID(moveToJobUUID);
           if (jobNode != NULL)
           {
             error = mountAll(&jobNode->job.options.mountList);
+            if (error == ERROR_NONE)
+            {
+              AUTOFREE_ADD(&autoFreeList,&jobNode->job.options.mountList,{ (void)unmountAll(&jobNode->job.options.mountList); });
+            }
           }
-        }
-        if (error == ERROR_NONE)
-        {
-          AUTOFREE_ADD(&autoFreeList,&jobNode->job.options.mountList,{ (void)unmountAll(&jobNode->job.options.mountList); });
         }
       }
 
       // move entity
+      JobOptions       jobOptions;
+      Job_initOptions(&jobOptions);
+      StorageSpecifier moveToStorageSpecifier;
+      Storage_initSpecifier(&moveToStorageSpecifier);
       if (error == ERROR_NONE)
       {
         error = moveEntity(indexHandle,
@@ -4890,10 +4857,17 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
       // unmount devices
       if (error == ERROR_NONE)
       {
-        AUTOFREE_REMOVE(&autoFreeList,&jobNode->job.options.mountList);
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
-          jobNode = Job_findByUUID(moveToJobUUID);
+          const JobNode *jobNode = Job_findByUUID(moveToJobUUID);
+          if (jobNode != NULL)
+          {
+            AUTOFREE_REMOVE(&autoFreeList,&jobNode->job.options.mountList);
+          }
+        }
+        JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+        {
+          const JobNode *jobNode = Job_findByUUID(moveToJobUUID);
           if (jobNode != NULL)
           {
             (void)unmountAll(&jobNode->job.options.mountList);
@@ -4910,6 +4884,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
 
       if (error == ERROR_NONE)
       {
+        char string[64];
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_INDEX,
                    "Moved archives of entity #%"PRIi64" '%s': %s, created at %s to '%s'",
@@ -4922,6 +4897,7 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
       }
       else
       {
+        char string[64];
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ERROR,
                    "Failed to move archives of entity #%"PRIi64" '%s': %s, created at %s to '%s': %s",
@@ -4934,8 +4910,15 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
                    );
       }
 
+      Job_doneOptions(&jobOptions);
       AutoFree_done(&autoFreeList);
     }
+
+    // free resources
+    String_delete(moveToPath);
+    String_delete(moveToJobName);
+    String_delete(moveToJobUUID);
+    Array_done(&entityIdArray);
   }
   while (   !INDEX_ID_IS_NONE(moveToEntityId)
          && !isQuit()
@@ -4943,17 +4926,6 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
 
   // free resources
   List_done(&entityList);
-  Job_doneOptions(&jobOptions);
-  String_delete(moveToJobName);
-  String_delete(moveToJobUUID);
-  String_delete(storageName);
-  String_delete(moveToArchivePath);
-  String_delete(moveToPath);
-  String_delete(baseName);
-  String_delete(directoryPath);
-  Storage_doneSpecifier(&storageSpecifier);
-  Storage_doneSpecifier(&moveToStorageSpecifier);
-  Array_done(&entityIdArray);
 
   return error;
 }
@@ -4969,12 +4941,11 @@ LOCAL Errors moveAllEntities(IndexHandle *indexHandle)
 
 LOCAL void persistenceThreadCode(void)
 {
-  Errors      error;
-  IndexHandle indexHandle;
-
   if (Index_isAvailable())
   {
     // open index
+    IndexHandle indexHandle;
+    Errors      error;
     do
     {
       error = Index_open(&indexHandle,NULL,10*MS_PER_SECOND);
@@ -4996,7 +4967,7 @@ LOCAL void persistenceThreadCode(void)
     {
       if (Index_isInitialized())
       {
-        error = ERROR_NONE;
+        Errors error = ERROR_NONE;
 
         // purge expired entities
         if (error == ERROR_NONE)
@@ -5276,35 +5247,11 @@ LOCAL void updateIndexThreadCode(void)
            && Password_equals(loginNode->password,login->password);
   }
 
-  IndexHandle       indexHandle;
-  IndexId           uuidId,entityId,storageId;
-  StorageSpecifier  addStorageSpecifier,storageSpecifier;
-  String            storageName,printableStorageName;
-  Login             login;
-  LoginList         loginList;
-  LoginNode         *loginNode;
-  StorageInfo       storageInfo;
-  CryptPasswordList cryptPasswordList;
-  JobOptions        jobOptions;
-  uint64            startTimestamp,endTimestamp;
-  bool              loginFlag;
-  Errors            error;
-  const JobNode     *jobNode;
-  CryptPasswordNode *cryptPasswordNode;
-  ulong             totalEntryCount;
-  uint64            totalEntrySize;
-
-  // initialize variables
-  List_init(&cryptPasswordList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeCryptPasswordNode,NULL));
-  List_init(&loginList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeLoginNode,NULL));
-  Storage_initSpecifier(&addStorageSpecifier);
-  Storage_initSpecifier(&storageSpecifier);
-  storageName          = String_new();
-  printableStorageName = String_new();
-
   if (Index_isAvailable())
   {
     // open index
+    IndexHandle indexHandle;
+    Errors      error;
     do
     {
       error = Index_open(&indexHandle,NULL,10*MS_PER_SECOND);
@@ -5318,23 +5265,27 @@ LOCAL void updateIndexThreadCode(void)
                   "Cannot open index database (error: %s)",
                   Error_getText(error)
                  );
-      String_delete(printableStorageName);
-      String_delete(storageName);
-      Storage_doneSpecifier(&storageSpecifier);
-      Storage_doneSpecifier(&addStorageSpecifier);
-      List_done(&loginList);
-      List_done(&cryptPasswordList);
       return;
     }
 
     // add/update index database
+    CryptPasswordList cryptPasswordList;
+    List_init(&cryptPasswordList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeCryptPasswordNode,NULL));
+    LoginList         loginList;
+    List_init(&loginList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeLoginNode,NULL));
+    StorageSpecifier  addStorageSpecifier;
+    Storage_initSpecifier(&addStorageSpecifier);
+    StorageSpecifier  storageSpecifier;
+    Storage_initSpecifier(&storageSpecifier);
+    String storageName          = String_new();
+    String printableStorageName = String_new();
     while (!isQuit())
     {
       // pause
       pauseIndexUpdate();
       if (isQuit()) break;
 
-      storageId = INDEX_ID_NONE;
+      IndexId storageId = INDEX_ID_NONE;
       if (   Index_isInitialized()
           && globalOptions.indexDatabaseUpdateFlag
           && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
@@ -5343,6 +5294,7 @@ LOCAL void updateIndexThreadCode(void)
         // collect all job crypt passwords and crypt private keys (including no password and default crypt password)
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
+          const JobNode *jobNode;
           JOB_LIST_ITERATE(jobNode)
           {
             if (!Password_isEmpty(&jobNode->job.options.cryptPassword))
@@ -5357,6 +5309,7 @@ LOCAL void updateIndexThreadCode(void)
 // TODO: lock via entityLock?
         // update index entries
         storageId = INDEX_ID_NONE;
+        IndexId uuidId,entityId;
         if (IndexStorage_findByState(&indexHandle,
                                      INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                      &uuidId,
@@ -5397,10 +5350,12 @@ LOCAL void updateIndexThreadCode(void)
 
           // collect possible login passwords for server
           List_clear(&loginList);
+          Login login;
           login.name     = storageSpecifier.userName;
           login.password = &storageSpecifier.password;
           JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
+            const JobNode *jobNode;
             JOB_LIST_ITERATE(jobNode)
             {
               error = Storage_parseName(&storageSpecifier,jobNode->job.storageName);
@@ -5417,10 +5372,12 @@ LOCAL void updateIndexThreadCode(void)
           }
 
           // init storage
-          startTimestamp = 0LL;
-          endTimestamp   = 0LL;
+          uint64     startTimestamp = 0LL;
+          uint64     endTimestamp   = 0LL;
+          JobOptions jobOptions;
           Job_initOptions(&jobOptions);
-          loginFlag      = FALSE;
+          bool loginFlag      = FALSE;
+          StorageInfo storageInfo;
           error = Storage_init(&storageInfo,
                                NULL,  // masterIO
                                &addStorageSpecifier,
@@ -5435,6 +5392,7 @@ LOCAL void updateIndexThreadCode(void)
                                NULL  // logHandle
                               );
           loginFlag = (error == ERROR_NONE);
+          const LoginNode *loginNode;
           LIST_ITERATEX(&loginList,loginNode,!loginFlag)
           {
             String_set(addStorageSpecifier.userName,loginNode->name);
@@ -5481,6 +5439,9 @@ LOCAL void updateIndexThreadCode(void)
                                        );
 
             // try to create index
+            const CryptPasswordNode *cryptPasswordNode;
+            ulong                   totalEntryCount;
+            uint64                  totalEntrySize;
             LIST_ITERATE(&cryptPasswordList,cryptPasswordNode)
             {
               // set password/key
@@ -5604,6 +5565,12 @@ LOCAL void updateIndexThreadCode(void)
         delayThread(SLEEP_TIME_INDEX_THREAD,&updateIndexThreadTrigger);
       }
     }
+    String_delete(printableStorageName);
+    String_delete(storageName);
+    Storage_doneSpecifier(&storageSpecifier);
+    Storage_doneSpecifier(&addStorageSpecifier);
+    List_done(&loginList);
+    List_done(&cryptPasswordList);
 
     // close index
     Index_close(&indexHandle);
@@ -5616,14 +5583,6 @@ LOCAL void updateIndexThreadCode(void)
                 "Index database not available - disabled index update"
                );
   }
-
-  // free resources
-  String_delete(printableStorageName);
-  String_delete(storageName);
-  Storage_doneSpecifier(&storageSpecifier);
-  Storage_doneSpecifier(&addStorageSpecifier);
-  List_done(&loginList);
-  List_done(&cryptPasswordList);
 }
 
 /***********************************************************************\
@@ -5637,20 +5596,14 @@ LOCAL void updateIndexThreadCode(void)
 
 LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 {
-  StorageSpecifier      storageSpecifier;
-  String                directoryName;
-  String                storageDirectoryName;
-  const JobNode         *jobNode;
-  const PersistenceNode *persistenceNode;
-
-  // init variables
-  Storage_initSpecifier(&storageSpecifier);
-  directoryName        = String_new();
-  storageDirectoryName = String_new();
-
   // collect storage locations to check for BAR files
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
+    StorageSpecifier storageSpecifier;
+    Storage_initSpecifier(&storageSpecifier);
+    String           directoryName        = String_new();
+    String           storageDirectoryName = String_new();
+    const JobNode *jobNode;
     JOB_LIST_ITERATE(jobNode)
     {
       if (Storage_parseName(&storageSpecifier,jobNode->job.storageName) == ERROR_NONE)
@@ -5674,6 +5627,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
         }
       }
 
+      const PersistenceNode *persistenceNode;
       LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
       {
         if (   !String_isEmpty(persistenceNode->moveTo)
@@ -5699,12 +5653,10 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
         }
       }
     }
+    String_delete(storageDirectoryName);
+    String_delete(directoryName);
+    Storage_doneSpecifier(&storageSpecifier);
   }
-
-  // free resources
-  String_delete(storageDirectoryName);
-  String_delete(directoryName);
-  Storage_doneSpecifier(&storageSpecifier);
 }
 
 /***********************************************************************\
@@ -5718,7 +5670,12 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 
 LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
 {
-  // init variables
+  // collect storage locations to check for BAR files
+  StringList storageDirectoryList;
+  StringList_init(&storageDirectoryList);
+  getStorageDirectories(&storageDirectoryList);
+
+  // check storage locations for BAR files, send index update requests
   StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
   String baseName             = String_new();
@@ -5726,13 +5683,6 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
   String printableStorageName = String_new();
   JobOptions jobOptions;
   Job_initOptions(&jobOptions);
-
-  // collect storage locations to check for BAR files
-  StringList storageDirectoryList;
-  StringList_init(&storageDirectoryList);
-  getStorageDirectories(&storageDirectoryList);
-
-  // check storage locations for BAR files, send index update requests
   while (!StringList_isEmpty(&storageDirectoryList))
   {
     String storageDirectoryName = StringList_removeFirst(&storageDirectoryList,NULL);
@@ -5909,8 +5859,6 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
 
     String_delete(storageDirectoryName);
   }
-
-  // free resources
   StringList_done(&storageDirectoryList);
   Job_doneOptions(&jobOptions);
   String_delete(printableStorageName);
@@ -5930,29 +5878,20 @@ LOCAL void autoAddUpdateIndex(IndexHandle *indexHandle)
 
 LOCAL void autoCleanIndex(IndexHandle *indexHandle)
 {
-  StorageSpecifier storageSpecifier;
-  String           storageName;
-  String           printableStorageName;
-  Errors           error;
   IndexId          purgeStorageId;
-  uint64           now;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          storageId;
-  uint64           createdDateTime;
-  IndexStates      indexState;
-  IndexModes       indexMode;
-  uint64           lastCheckedDateTime;
-
-  // init variables
+  StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
-  storageName          = String_new();
-  printableStorageName = String_new();
-
+  String           storageName          = String_new();
+  String           printableStorageName = String_new();
+  uint64           lastCheckedDateTime;
   do
   {
     purgeStorageId = INDEX_ID_NONE;
 
+    Errors error;
+
     // get not existing and expired storage index to purge
+    IndexQueryHandle indexQueryHandle;
     error = IndexStorage_initList(&indexQueryHandle,
                                   indexHandle,
                                   INDEX_ID_ANY,  // uuidId
@@ -5974,7 +5913,11 @@ LOCAL void autoCleanIndex(IndexHandle *indexHandle)
                                  );
     if (error == ERROR_NONE)
     {
-      now = Misc_getCurrentDateTime();
+      uint64      now = Misc_getCurrentDateTime();
+      IndexId     storageId;
+      uint64      createdDateTime;
+      IndexStates indexState;
+      IndexModes  indexMode;
       while (   !isQuit()
              && !INDEX_ID_IS_NONE(purgeStorageId)
              && IndexStorage_getNext(&indexQueryHandle,
@@ -6045,10 +5988,8 @@ LOCAL void autoCleanIndex(IndexHandle *indexHandle)
   while (   !INDEX_ID_IS_NONE(purgeStorageId)
          && isMaintenanceTime(Misc_getCurrentDateTime(),NULL)
         );
-
-  // free resources
-  String_delete(storageName);
   String_delete(printableStorageName);
+  String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
 }
 
@@ -6063,14 +6004,13 @@ LOCAL void autoCleanIndex(IndexHandle *indexHandle)
 
 LOCAL void autoIndexThreadCode(void)
 {
-  IndexHandle indexHandle;
-  Errors      error;
-
   // initialize variables
 
   if (Index_isAvailable())
   {
     // open index
+    IndexHandle indexHandle;
+    Errors      error;
     do
     {
       error = Index_open(&indexHandle,NULL,10*MS_PER_SECOND);
@@ -6169,16 +6109,14 @@ LOCAL Errors getCryptPasswordFromConfig(String        name,
                                         void          *userData
                                        )
 {
-  JobNode *jobNode = (JobNode*)userData;
-
-  assert(jobNode != NULL);
-
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(passwordType);
   UNUSED_VARIABLE(text);
   UNUSED_VARIABLE(validateFlag);
   UNUSED_VARIABLE(weakCheckFlag);
 
+  JobNode *jobNode = (JobNode*)userData;
+  assert(jobNode != NULL);
   if (Password_isEmpty(&jobNode->job.options.cryptPassword))
   {
     Password_set(password,&jobNode->job.options.cryptPassword);
@@ -6206,9 +6144,6 @@ LOCAL void updateRunningInfo(Errors      error,
                              void        *userData
                             )
 {
-  JobNode *jobNode = (JobNode*)userData;
-
-  assert(jobNode != NULL);
   assert(runningInfo != NULL);
 
   UNUSED_VARIABLE(error);
@@ -6216,6 +6151,9 @@ LOCAL void updateRunningInfo(Errors      error,
   // Note: update progress info has low priority; only try for 2s
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
+    JobNode *jobNode = (JobNode*)userData;
+    assert(jobNode != NULL);
+
     setRunningInfo(&jobNode->runningInfo,runningInfo);
 
     // calculate statics values
@@ -6259,14 +6197,14 @@ LOCAL void restoreRunningInfo(const RunningInfo *runningInfo,
                               void              *userData
                              )
 {
-  JobNode *jobNode = (JobNode*)userData;
-
-  assert(jobNode != NULL);
   assert(runningInfo != NULL);
 
   // Note: update progress info has low priority; only try for 2s
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
+    JobNode *jobNode = (JobNode*)userData;
+    assert(jobNode != NULL);
+
     setRunningInfo(&jobNode->runningInfo,runningInfo);
 
     // calculate estimated rest time
@@ -6322,7 +6260,6 @@ LOCAL_INLINE bool isPauseStorage(void *userData)
 LOCAL_INLINE bool isAborted(void *userData)
 {
   const JobNode *jobNode = (const JobNode*)userData;
-
   assert(jobNode != NULL);
 
   return jobNode->requestedAbortFlag;
@@ -6339,64 +6276,32 @@ LOCAL_INLINE bool isAborted(void *userData)
 
 LOCAL void jobThreadCode(void)
 {
-  StorageSpecifier storageSpecifier;
-  String           jobName;
-  String           storageName;
-  String           directory;
-  EntryList        includeEntryList;
-  PatternList      excludePatternList;
-  String           customText;
-  String           byName;
-  ConnectorInfo    *connectorInfo;
-  AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
-  StringMap        resultMap;
-  JobNode          *jobNode;
-  ArchiveTypes     archiveType;
-  uint64           startDateTime;
-  JobOptions       jobOptions;
-  String           nextJobName;
-  StaticString     (nextJobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString     (nextScheduleUUID,MISC_UUID_STRING_LENGTH);
-  uint64           nextScheduleDateTime;
-  LogHandle        logHandle;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  StaticString     (entityUUID,MISC_UUID_STRING_LENGTH);
-  uint64           executeStartDateTime,executeEndDateTime;
-  StringList       storageNameList;
-  TextMacros       (textMacros,14);
-  StaticString     (s,64);
-  IndexHandle      indexHandle;
-  bool             isIndexOpened;
-  uint             n;
-  Errors           error;
-  ScheduleNode     *scheduleNode;
-
-  // initialize variables
-  Storage_initSpecifier(&storageSpecifier);
-  jobName            = String_new();
-  storageName        = String_new();
-  directory          = String_new();
+  String jobName            = String_new();
+  String storageName        = String_new();
+  EntryList includeEntryList;
   EntryList_init(&includeEntryList);
+  PatternList excludePatternList;
   PatternList_init(&excludePatternList);
-  customText         = String_new();
-  byName             = String_new();
-  connectorInfo      = NULL;
+  String customText         = String_new();
+  String byName             = String_new();
+  StorageSpecifier storageSpecifier;
+  Storage_initSpecifier(&storageSpecifier);
+  String nextJobName        = String_new();
+  AggregateInfo jobAggregateInfo;
   initAggregateInfo(&jobAggregateInfo);
+  AggregateInfo    scheduleAggregateInfo;
   initAggregateInfo(&scheduleAggregateInfo);
-  resultMap          = StringMap_new();
-  if (resultMap == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  jobNode            = NULL;
-  archiveType        = ARCHIVE_TYPE_UNKNOWN;
-  startDateTime      = 0LL;
-  nextJobName        = String_new();
-
   while (!isQuit())
   {
     // wait and get next job to run
+    JobNode       *jobNode = NULL;
+    StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+    StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
+    StaticString  (entityUUID,MISC_UUID_STRING_LENGTH);
+    JobOptions    jobOptions;
+    ArchiveTypes  archiveType        = ARCHIVE_TYPE_UNKNOWN;
+    uint64        startDateTime      = 0LL;
+    ConnectorInfo *connectorInfo      = NULL;
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // wait and get next job to execute
@@ -6472,9 +6377,11 @@ LOCAL void jobThreadCode(void)
     // Note: job is now protected by running state from being deleted
 
     // init log
+    LogHandle logHandle;
     initLog(&logHandle);
 
     // get info string
+    StaticString (s,64);
     String_clear(s);
     if (Job_isRemote(jobNode))
     {
@@ -6483,7 +6390,7 @@ LOCAL void jobThreadCode(void)
     if (jobOptions.noStorage || jobOptions.dryRun)
     {
       String_appendCString(s," (");
-      n = 0;
+      size_t n = 0;
       if (jobOptions.noStorage)
       {
         if (n > 0) String_appendCString(s,", ");
@@ -6527,8 +6434,11 @@ LOCAL void jobThreadCode(void)
     }
 
     // open index (depending on local/remote job)
+    IndexHandle indexHandle;
+    bool        isIndexOpened;
     if (Index_isAvailable())
     {
+      Errors error;
       do
       {
         error = Index_open(&indexHandle,jobNode->masterIO,INDEX_TIMEOUT);
@@ -6559,22 +6469,26 @@ LOCAL void jobThreadCode(void)
     }
 
     // get start date/time
-    executeStartDateTime = Misc_getCurrentDateTime();
+    uint64 executeStartDateTime = Misc_getCurrentDateTime();
 
     // get next schedule
-    nextScheduleDateTime = getNextSchedule(jobNode,
-                                           scheduleUUID,
-                                           executeStartDateTime,
-                                           nextJobName,
-                                           nextJobUUID,
-                                           nextScheduleUUID
-                                          );
+    StaticString (nextJobUUID,MISC_UUID_STRING_LENGTH);
+    StaticString (nextScheduleUUID,MISC_UUID_STRING_LENGTH);
+    uint64 nextScheduleDateTime = getNextSchedule(jobNode,
+                                                  scheduleUUID,
+                                                  executeStartDateTime,
+                                                  nextJobName,
+                                                  nextJobUUID,
+                                                  nextScheduleUUID
+                                                 );
 
     // job pre-process command
     if (jobNode->runningInfo.error == ERROR_NONE)
     {
       if (!String_isEmpty(jobNode->job.options.preProcessScript))
       {
+        String directory = String_new();
+        TextMacros (textMacros,14);
         TEXT_MACROS_INIT(textMacros)
         {
           TEXT_MACRO_X_STRING ("%name",                jobName,                                                      NULL);
@@ -6602,13 +6516,13 @@ LOCAL void jobThreadCode(void)
             TEXT_MACRO_X_CSTRING("%nextScheduleDateTime","",                                                         NULL);
           }
         }
-        error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
-                                executeStartDateTime,
-                                textMacros.data,
-                                textMacros.count,
-                                CALLBACK_(executeIOOutput,NULL),
-                                globalOptions.commandTimeout
-                               );
+        Errors error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
+                                       executeStartDateTime,
+                                       textMacros.data,
+                                       textMacros.count,
+                                       CALLBACK_(executeIOOutput,NULL),
+                                       globalOptions.commandTimeout
+                                      );
         if (error == ERROR_NONE)
         {
           logMessage(&logHandle,
@@ -6627,6 +6541,7 @@ LOCAL void jobThreadCode(void)
                      Error_getText(jobNode->runningInfo.error)
                     );
         }
+        String_delete(directory);
       }
     }
 
@@ -6759,6 +6674,7 @@ LOCAL void jobThreadCode(void)
               break;
             case JOB_TYPE_RESTORE:
               // restore archive
+              StringList storageNameList;
               StringList_init(&storageNameList);
               StringList_append(&storageNameList,storageName);
               jobNode->runningInfo.error = Command_restore(&storageNameList,
@@ -6858,6 +6774,8 @@ LOCAL void jobThreadCode(void)
     // job post-process command
     if (!String_isEmpty(jobNode->job.options.postProcessScript))
     {
+      String directory = String_new();
+      TextMacros (textMacros,14);
       TEXT_MACROS_INIT(textMacros)
       {
         TEXT_MACRO_X_STRING ("%name",                jobName,                                                               NULL);
@@ -6888,13 +6806,13 @@ LOCAL void jobThreadCode(void)
           TEXT_MACRO_X_CSTRING("%nextScheduleDateTime","",                                                                  NULL);
         }
       }
-      error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
-                              executeStartDateTime,
-                              textMacros.data,
-                              textMacros.count,
-                              CALLBACK_(executeIOOutput,NULL),
-                              globalOptions.commandTimeout
-                             );
+      Errors error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
+                                     executeStartDateTime,
+                                     textMacros.data,
+                                     textMacros.count,
+                                     CALLBACK_(executeIOOutput,NULL),
+                                     globalOptions.commandTimeout
+                                    );
       if (error == ERROR_NONE)
       {
         logMessage(&logHandle,
@@ -6913,10 +6831,11 @@ LOCAL void jobThreadCode(void)
                    Error_getText(jobNode->runningInfo.error)
                   );
       }
+      String_delete(directory);
     }
 
     // get end date/time
-    executeEndDateTime = Misc_getCurrentDateTime();
+    uint64 executeEndDateTime = Misc_getCurrentDateTime();
 
     // store final compress ratio: 100%-totalSum/totalCompressedSum
     jobNode->runningInfo.progress.compressionRatio = (!jobOptions.dryRun && (jobNode->runningInfo.progress.total.size > 0))
@@ -7016,23 +6935,23 @@ LOCAL void jobThreadCode(void)
         {
           if (isIndexOpened)
           {
-            error = IndexHistory_new(&indexHandle,
-                                     jobUUID,
-                                     entityUUID,
-                                     hostName,
-                                     NULL,  // userName
-                                     archiveType,
-                                     Misc_getCurrentDateTime(),
-                                     "aborted",
-                                     executeEndDateTime-executeStartDateTime,
-                                     jobNode->runningInfo.progress.total.count,
-                                     jobNode->runningInfo.progress.total.size,
-                                     jobNode->runningInfo.progress.skipped.count,
-                                     jobNode->runningInfo.progress.skipped.size,
-                                     jobNode->runningInfo.progress.error.count,
-                                     jobNode->runningInfo.progress.error.size,
-                                     NULL  // historyId
-                                    );
+            Errors error = IndexHistory_new(&indexHandle,
+                                            jobUUID,
+                                            entityUUID,
+                                            hostName,
+                                            NULL,  // userName
+                                            archiveType,
+                                            Misc_getCurrentDateTime(),
+                                            "aborted",
+                                            executeEndDateTime-executeStartDateTime,
+                                            jobNode->runningInfo.progress.total.count,
+                                            jobNode->runningInfo.progress.total.size,
+                                            jobNode->runningInfo.progress.skipped.count,
+                                            jobNode->runningInfo.progress.skipped.size,
+                                            jobNode->runningInfo.progress.error.count,
+                                            jobNode->runningInfo.progress.error.size,
+                                            NULL  // historyId
+                                           );
             if (error != ERROR_NONE)
             {
               logMessage(&logHandle,
@@ -7048,23 +6967,23 @@ LOCAL void jobThreadCode(void)
         {
           if (isIndexOpened)
           {
-            error = IndexHistory_new(&indexHandle,
-                                     jobUUID,
-                                     entityUUID,
-                                     hostName,
-                                     NULL,  // userName
-                                     archiveType,
-                                     Misc_getCurrentDateTime(),
-                                     Error_getText(jobNode->runningInfo.error),
-                                     executeEndDateTime-executeStartDateTime,
-                                     jobNode->runningInfo.progress.total.count,
-                                     jobNode->runningInfo.progress.total.size,
-                                     jobNode->runningInfo.progress.skipped.count,
-                                     jobNode->runningInfo.progress.skipped.size,
-                                     jobNode->runningInfo.progress.error.count,
-                                     jobNode->runningInfo.progress.error.size,
-                                     NULL  // historyId
-                                    );
+            Errors error = IndexHistory_new(&indexHandle,
+                                            jobUUID,
+                                            entityUUID,
+                                            hostName,
+                                            NULL,  // userName
+                                            archiveType,
+                                            Misc_getCurrentDateTime(),
+                                            Error_getText(jobNode->runningInfo.error),
+                                            executeEndDateTime-executeStartDateTime,
+                                            jobNode->runningInfo.progress.total.count,
+                                            jobNode->runningInfo.progress.total.size,
+                                            jobNode->runningInfo.progress.skipped.count,
+                                            jobNode->runningInfo.progress.skipped.size,
+                                            jobNode->runningInfo.progress.error.count,
+                                            jobNode->runningInfo.progress.error.size,
+                                            NULL  // historyId
+                                           );
             if (error != ERROR_NONE)
             {
               logMessage(&logHandle,
@@ -7080,23 +6999,23 @@ LOCAL void jobThreadCode(void)
         {
           if (isIndexOpened)
           {
-            error = IndexHistory_new(&indexHandle,
-                                     jobUUID,
-                                     entityUUID,
-                                     hostName,
-                                     NULL,  // userName
-                                     archiveType,
-                                     Misc_getCurrentDateTime(),
-                                     NULL,  // errorMessage
-                                     executeEndDateTime-executeStartDateTime,
-                                     jobNode->runningInfo.progress.total.count,
-                                     jobNode->runningInfo.progress.total.size,
-                                     jobNode->runningInfo.progress.skipped.count,
-                                     jobNode->runningInfo.progress.skipped.size,
-                                     jobNode->runningInfo.progress.error.count,
-                                     jobNode->runningInfo.progress.error.size,
-                                     NULL  // historyId
-                                    );
+            Errors error = IndexHistory_new(&indexHandle,
+                                            jobUUID,
+                                            entityUUID,
+                                            hostName,
+                                            NULL,  // userName
+                                            archiveType,
+                                            Misc_getCurrentDateTime(),
+                                            NULL,  // errorMessage
+                                            executeEndDateTime-executeStartDateTime,
+                                            jobNode->runningInfo.progress.total.count,
+                                            jobNode->runningInfo.progress.total.size,
+                                            jobNode->runningInfo.progress.skipped.count,
+                                            jobNode->runningInfo.progress.skipped.size,
+                                            jobNode->runningInfo.progress.error.count,
+                                            jobNode->runningInfo.progress.error.size,
+                                            NULL  // historyId
+                                           );
             if (error != ERROR_NONE)
             {
               logMessage(&logHandle,
@@ -7173,7 +7092,7 @@ LOCAL void jobThreadCode(void)
       jobNode->totalEntryCount              = jobAggregateInfo.totalEntryCount;
       jobNode->totalEntrySize               = jobAggregateInfo.totalEntrySize;
 
-      scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+      ScheduleNode *scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
       if (scheduleNode != NULL)
       {
         scheduleNode->active               = FALSE;
@@ -7205,14 +7124,12 @@ LOCAL void jobThreadCode(void)
 
   // free resources
   String_delete(nextJobName);
-  StringMap_delete(resultMap);
   doneAggregateInfo(&scheduleAggregateInfo);
   doneAggregateInfo(&jobAggregateInfo);
   String_delete(byName);
   String_delete(customText);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
-  String_delete(directory);
   String_delete(storageName);
   String_delete(jobName);
   Storage_doneSpecifier(&storageSpecifier);
@@ -7231,12 +7148,10 @@ LOCAL void jobThreadCode(void)
 
 LOCAL DirectoryInfoNode *newDirectoryInfo(ConstString pathName)
 {
-  DirectoryInfoNode *directoryInfoNode;
-
   assert(pathName != NULL);
 
   // allocate job node
-  directoryInfoNode = LIST_NEW_NODE(DirectoryInfoNode);
+  DirectoryInfoNode *directoryInfoNode = LIST_NEW_NODE(DirectoryInfoNode);
   if (directoryInfoNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -7290,12 +7205,10 @@ LOCAL void freeDirectoryInfoNode(DirectoryInfoNode *directoryInfoNode, void *use
 
 LOCAL DirectoryInfoNode *findDirectoryInfo(DirectoryInfoList *directoryInfoList, ConstString pathName)
 {
-  DirectoryInfoNode *directoryInfoNode;
-
   assert(directoryInfoList != NULL);
   assert(pathName != NULL);
 
-  directoryInfoNode = directoryInfoList->head;
+  DirectoryInfoNode *directoryInfoNode = directoryInfoList->head;
   while ((directoryInfoNode != NULL) && !String_equals(directoryInfoNode->pathName,pathName))
   {
     directoryInfoNode = directoryInfoNode->next;
@@ -7323,22 +7236,15 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
                             bool              *timedOut
                            )
 {
-  uint64   startTimestamp;
-  String   pathName;
-  String   fileName;
-  FileInfo fileInfo;
-  Errors   error;
-//uint n;
-
   assert(directoryInfoNode != NULL);
   assert(fileCount != NULL);
   assert(totalFileSize != NULL);
 
   // get start timestamp
-  startTimestamp = Misc_getTimestamp();
+  uint64 startTimestamp = Misc_getTimestamp();
 
-  pathName = String_new();
-  fileName = String_new();
+  String pathName = String_new();
+  String fileName = String_new();
   if (timedOut != NULL) (*timedOut) = FALSE;
   while (   !isQuit()
          && (   !StringList_isEmpty(&directoryInfoNode->pathNameList)
@@ -7353,7 +7259,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
       StringList_removeLast(&directoryInfoNode->pathNameList,pathName);
 
       // open directory for reading
-      error = File_openDirectoryList(&directoryInfoNode->directoryListHandle,pathName);
+      Errors error = File_openDirectoryList(&directoryInfoNode->directoryListHandle,pathName);
       if (error != ERROR_NONE)
       {
         continue;
@@ -7367,6 +7273,8 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
            && ((timedOut == NULL) || !(*timedOut))
           )
     {
+      Errors error;
+
       // read next directory entry
       error = File_readDirectoryList(&directoryInfoNode->directoryListHandle,fileName);
       if (error != ERROR_NONE)
@@ -7374,6 +7282,7 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
         continue;
       }
       directoryInfoNode->fileCount++;
+      FileInfo fileInfo;
       error = File_getInfo(&fileInfo,fileName);
       if (error != ERROR_NONE)
       {
@@ -7446,21 +7355,19 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
 
 LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint64 n;
-  Errors error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get error code
+  uint64 n;
   if (!StringMap_getUInt64(argumentMap,"error",&n,(uint64)ERROR_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"error=<n>");
     return;
   }
-  error = (Errors)n;
+  Errors error = (Errors)n;
 
   // format result
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
@@ -7484,11 +7391,6 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  #ifdef HAVE_GNU_TLS
-    Errors error;
-    char   buffer[64];
-  #endif /* HAVE_GNU_TLS */
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -7511,19 +7413,20 @@ LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHand
 
     SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      error = Network_startTLS(&clientInfo->io.network.socketHandle,
-                               NETWORK_TLS_TYPE_SERVER,
-                               globalOptions.serverCA.data,
-                               globalOptions.serverCA.length,
-                               globalOptions.serverCert.data,
-                               globalOptions.serverCert.length,
-                               globalOptions.serverKey.data,
-                               globalOptions.serverKey.length,
-                               30*MS_PER_SECOND
-                              );
+      Errors error = Network_startTLS(&clientInfo->io.network.socketHandle,
+                                      NETWORK_TLS_TYPE_SERVER,
+                                      globalOptions.serverCA.data,
+                                      globalOptions.serverCA.length,
+                                      globalOptions.serverCert.data,
+                                      globalOptions.serverCert.length,
+                                      globalOptions.serverKey.data,
+                                      globalOptions.serverKey.length,
+                                      30*MS_PER_SECOND
+                                     );
       if (error != ERROR_NONE)
       {
         Network_disconnect(&clientInfo->io.network.socketHandle);
+        char buffer[64];
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
                    "Start TLS failed - disconnected %s (error: %s)",
@@ -7562,32 +7465,22 @@ LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  ServerIOEncryptTypes encryptType;
-  String               name;
-  String               encryptedPassword;
-  String               encryptedUUID;
-  Errors               error;
-  void                 *buffer;
-  uint                 bufferLength;
-  CryptHash            uuidHash;
-  char                 s[256];
-  AuthorizationStates  authorizationState;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password/UUID
+  ServerIOEncryptTypes encryptType;
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
-  name = String_new();
+  String name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
-  encryptedPassword = String_new();
-  encryptedUUID     = String_new();
+  String encryptedPassword = String_new();
+  String encryptedUUID     = String_new();
   if (   !StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL)
       && !StringMap_getString(argumentMap,"encryptedUUID",encryptedUUID,NULL)
      )
@@ -7598,12 +7491,9 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     String_delete(name);
     return;
   }
-//fprintf(stderr,"%s, %d: encryptType=%d\n",__FILE__,__LINE__,encryptType);
-//fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-//fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
-  error              = ERROR_UNKNOWN;
-  authorizationState = AUTHORIZATION_STATE_FAIL;
+  Errors               error              = ERROR_UNKNOWN;
+  AuthorizationStates  authorizationState = AUTHORIZATION_STATE_FAIL;
   if      (!String_isEmpty(encryptedPassword))
   {
     // client => verify password
@@ -7624,6 +7514,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       }
       else
       {
+        char s[256];
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
                    "Authorization of client %s failed - invalid password",
@@ -7646,6 +7537,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     if (globalOptions.serverMode == SERVER_MODE_SLAVE)
     {
       // decrypt UUID
+      void *buffer;
+      uint bufferLength;
       error = ServerIO_decryptData(&clientInfo->io,
                                    &buffer,
                                    &bufferLength,
@@ -7663,6 +7556,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
             // not pairing -> verify master UUID
 
             // calculate hash from UUID
+            CryptHash uuidHash;
             (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
             Crypt_updateHash(&uuidHash,Misc_getMachineId(),MISC_MACHINE_ID_LENGTH);
             Crypt_updateHash(&uuidHash,buffer,bufferLength);
@@ -7673,6 +7567,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
               error = ((globalOptions.serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
                         ? ERROR_NOT_PAIRED
                         : ERROR_INVALID_PASSWORD_;
+              char s[256];
               logMessage(NULL,  // logHandle,
                          LOG_TYPE_ALWAYS,
                          "Authorization of master %s failed (error: %s)",
@@ -7722,6 +7617,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       }
       else
       {
+        char s[256];
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
                    "Authorization of master %s failed (error: %s)",
@@ -7734,6 +7630,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     {
       error = ERROR_NOT_A_SLAVE;
 
+      char s[256];
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  "Authorization of master %s failed (error: %s)",
@@ -7784,8 +7681,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  const char *s;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
   assert(argumentMap != NULL);
@@ -7793,7 +7688,7 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandl
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  s = NULL;
+  const char *s = NULL;
   switch (globalOptions.serverMode)
   {
     case SERVER_MODE_MASTER: s = "MASTER"; break;
@@ -7830,8 +7725,6 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandl
 
 LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  JobNode *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
   assert(argumentMap != NULL);
@@ -7854,6 +7747,7 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
   }
 
   // abort all jobs
+  JobNode *jobNode;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     JOB_LIST_ITERATE(jobNode)
@@ -7883,13 +7777,6 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
 
 LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-Errors error;
-//  uint           stringMapIterator;
-  uint64         n;
-//  const char     *name;
-//  StringMapTypes type;
-//  StringMapValue value;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
   assert(argumentMap != NULL);
@@ -7910,8 +7797,9 @@ Errors error;
   SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // get error
+    uint64 n;
     StringMap_getUInt64(argumentMap,"errorCode",&n,ERROR_CODE_UNKNOWN);
-    error = Error_(n,0);
+    Errors error = Error_(n,0);
 
     // set action result
     ServerIO_clientActionResult(&clientInfo->io,id,error,argumentMap);
@@ -7956,15 +7844,13 @@ Errors error;
 
 LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String name;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get name
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
@@ -8003,18 +7889,13 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, u
 
 LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String            name;
-  uint              i;
-  String            value;
-  ConfigValueFormat configValueFormat;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get name
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
@@ -8023,7 +7904,7 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // find config value
-  i = ConfigValue_valueIndex(BAR_CONFIG_VALUES,NULL,String_cString(name));
+  uint i = ConfigValue_valueIndex(BAR_CONFIG_VALUES,NULL,String_cString(name));
   if (i == CONFIG_VALUE_INDEX_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"server config '%S'",name);
@@ -8033,7 +7914,8 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
   assert(BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
   // send value
-  value = String_new();
+  String            value = String_new();
+  ConfigValueFormat configValueFormat;
   ConfigValue_formatInit(&configValueFormat,
                          &BAR_CONFIG_VALUES[i],
                          CONFIG_VALUE_FORMAT_MODE_VALUE,
@@ -8065,23 +7947,20 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String name,value;
-  uint   i;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get name, value
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
-  value = String_new();
+  String value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"value=<value>");
@@ -8091,11 +7970,11 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // parse
-  i = ConfigValue_find(BAR_CONFIG_VALUES,
-                       CONFIG_VALUE_INDEX_NONE,
-                       CONFIG_VALUE_INDEX_NONE,
-                       String_cString(name)
-                      );
+  uint i = ConfigValue_find(BAR_CONFIG_VALUES,
+                            CONFIG_VALUE_INDEX_NONE,
+                            CONFIG_VALUE_INDEX_NONE,
+                            String_cString(name)
+                           );
   if (i == CONFIG_VALUE_INDEX_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown server config '%S'",name);
@@ -8145,15 +8024,13 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_serverOptionFlush(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  Errors error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  error = Configuration_update();
+  Errors error = Configuration_update();
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
@@ -8205,15 +8082,13 @@ LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  Errors error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  error = clearPairedMaster();
+  Errors error = clearPairedMaster();
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
@@ -8239,14 +8114,13 @@ LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_masterPairingStart(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint timeout;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get timeout
+  uint timeout;
   StringMap_getUInt(argumentMap,"timeout",&timeout,DEFAULT_PAIRING_MASTER_TIMEOUT);
 
   // start pairing
@@ -8272,15 +8146,13 @@ LOCAL void serverCommand_masterPairingStart(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_masterPairingStop(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  bool   pairFlag;
-  Errors error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get pair flag
+  bool pairFlag;
   if (!StringMap_getBool(argumentMap,"pair",&pairFlag,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pair=yes|no");
@@ -8289,7 +8161,7 @@ LOCAL void serverCommand_masterPairingStop(ClientInfo *clientInfo, IndexHandle *
 
   if (pairFlag)
   {
-    error = endPairingMaster(newMaster.name,&newMaster.uuidHash);
+    Errors error = endPairingMaster(newMaster.name,&newMaster.uuidHash);
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
@@ -8360,9 +8232,6 @@ LOCAL void serverCommand_masterPairingStatus(ClientInfo *clientInfo, IndexHandle
 
 LOCAL void serverCommand_maintenanceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String          date,weekDays,beginTime,endTime;
-  MaintenanceNode *maintenanceNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -8370,13 +8239,14 @@ LOCAL void serverCommand_maintenanceList(ClientInfo *clientInfo, IndexHandle *in
   UNUSED_VARIABLE(argumentMap);
 
   // init variables
-  date      = String_new();
-  weekDays  = String_new();
-  beginTime = String_new();
-  endTime   = String_new();
 
   SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
+    String date      = String_new();
+    String weekDays  = String_new();
+    String beginTime = String_new();
+    String endTime   = String_new();
+    MaintenanceNode *maintenanceNode;
     LIST_ITERATE(&globalOptions.maintenanceList,maintenanceNode)
     {
       // get date string
@@ -8474,15 +8344,13 @@ LOCAL void serverCommand_maintenanceList(ClientInfo *clientInfo, IndexHandle *in
                           endTime
                          );
     }
+    String_delete(endTime);
+    String_delete(beginTime);
+    String_delete(weekDays);
+    String_delete(date);
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-
-  // free resources
-  String_delete(endTime);
-  String_delete(beginTime);
-  String_delete(weekDays);
-  String_delete(date);
 }
 
 /***********************************************************************\
@@ -8505,26 +8373,20 @@ LOCAL void serverCommand_maintenanceList(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_maintenanceListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String          date;
-  String          weekDays;
-  String          beginTime,endTime;
-  MaintenanceNode *maintenanceNode;
-  Errors          error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get date, weekday, begin time, end time
-  date = String_new();
+  String date = String_new();
   if (!StringMap_getString(argumentMap,"date",date,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"date=<date>|*");
     String_delete(date);
     return;
   }
-  weekDays = String_new();
+  String weekDays = String_new();
   if (!StringMap_getString(argumentMap,"weekDays",weekDays,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"weekDays=<names>|*");
@@ -8532,7 +8394,7 @@ LOCAL void serverCommand_maintenanceListAdd(ClientInfo *clientInfo, IndexHandle 
     String_delete(date);
     return;
   }
-  beginTime = String_new();
+  String beginTime = String_new();
   if (!StringMap_getString(argumentMap,"beginTime",beginTime,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"beginTime=<time>|*");
@@ -8541,7 +8403,7 @@ LOCAL void serverCommand_maintenanceListAdd(ClientInfo *clientInfo, IndexHandle 
     String_delete(date);
     return;
   }
-  endTime = String_new();
+  String endTime = String_new();
   if (!StringMap_getString(argumentMap,"endTime",endTime,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"endTime=<time>|*");
@@ -8553,8 +8415,10 @@ LOCAL void serverCommand_maintenanceListAdd(ClientInfo *clientInfo, IndexHandle 
   }
 
   // create new mainteance
-  maintenanceNode = Configuration_newMaintenanceNode();
+  MaintenanceNode *maintenanceNode = Configuration_newMaintenanceNode();
   assert(maintenanceNode != NULL);
+
+  Errors error;
 
   // parse maintenance
   error = parseMaintenanceDateTime(maintenanceNode,
@@ -8629,32 +8493,26 @@ LOCAL void serverCommand_maintenanceListAdd(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint            maintenanceId;
-  String          date;
-  String          weekDays;
-  String          beginTime,endTime;
-  MaintenanceNode *maintenanceNode;
-  Errors          error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get maintenance id, date, weekday, begin time, end time
+  uint maintenanceId;
   if (!StringMap_getUInt(argumentMap,"id",&maintenanceId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
-  date = String_new();
+  String date = String_new();
   if (!StringMap_getString(argumentMap,"date",date,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"date=<date>|*");
     String_delete(date);
     return;
   }
-  weekDays = String_new();
+  String weekDays = String_new();
   if (!StringMap_getString(argumentMap,"weekDays",weekDays,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"weekDays=<names>|*");
@@ -8662,7 +8520,7 @@ LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHand
     String_delete(date);
     return;
   }
-  beginTime = String_new();
+  String beginTime = String_new();
   if (!StringMap_getString(argumentMap,"beginTime",beginTime,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"beginTime=<time>|*");
@@ -8671,7 +8529,7 @@ LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHand
     String_delete(date);
     return;
   }
-  endTime = String_new();
+  String endTime = String_new();
   if (!StringMap_getString(argumentMap,"endTime",endTime,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"endTime=<time>|*");
@@ -8685,7 +8543,7 @@ LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHand
   SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find maintenance
-    maintenanceNode = LIST_FIND(&globalOptions.maintenanceList,maintenanceNode,maintenanceNode->id == maintenanceId);
+    MaintenanceNode *maintenanceNode = LIST_FIND(&globalOptions.maintenanceList,maintenanceNode,maintenanceNode->id == maintenanceId);
     if (maintenanceNode == NULL)
     {
       Semaphore_unlock(&globalOptions.maintenanceList.lock);
@@ -8698,12 +8556,12 @@ LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHand
     }
 
     // parse maintenance
-    error = parseMaintenanceDateTime(maintenanceNode,
-                                     date,
-                                     weekDays,
-                                     beginTime,
-                                     endTime
-                                    );
+    Errors error = parseMaintenanceDateTime(maintenanceNode,
+                                            date,
+                                            weekDays,
+                                            beginTime,
+                                            endTime
+                                           );
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,
@@ -8725,7 +8583,7 @@ LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHand
   }
 
   // update config file
-  error = Configuration_update();
+  Errors error = Configuration_update();
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
@@ -8761,16 +8619,13 @@ LOCAL void serverCommand_maintenanceListUpdate(ClientInfo *clientInfo, IndexHand
 
 LOCAL void serverCommand_maintenanceListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint            maintenanceId;
-  MaintenanceNode *maintenanceNode;
-  Errors          error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get maintenance id
+  uint maintenanceId;
   if (!StringMap_getUInt(argumentMap,"id",&maintenanceId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
@@ -8780,7 +8635,7 @@ LOCAL void serverCommand_maintenanceListRemove(ClientInfo *clientInfo, IndexHand
   SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find maintenance
-    maintenanceNode = LIST_FIND(&globalOptions.maintenanceList,maintenanceNode,maintenanceNode->id == maintenanceId);
+    MaintenanceNode *maintenanceNode = LIST_FIND(&globalOptions.maintenanceList,maintenanceNode,maintenanceNode->id == maintenanceId);
     if (maintenanceNode == NULL)
     {
       Semaphore_unlock(&globalOptions.maintenanceList.lock);
@@ -8794,7 +8649,7 @@ LOCAL void serverCommand_maintenanceListRemove(ClientInfo *clientInfo, IndexHand
   }
 
   // update config file
-  error = Configuration_update();
+  Errors error = Configuration_update();
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
@@ -8830,8 +8685,6 @@ LOCAL void serverCommand_maintenanceListRemove(ClientInfo *clientInfo, IndexHand
 
 LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  ServerNode *serverNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -8840,6 +8693,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
 
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
+    const ServerNode *serverNode;
     LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
       switch (serverNode->server.type)
@@ -8952,48 +8806,34 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
 
 LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String      name;
-  ServerTypes serverType;
-  uint        port;
-  String      userName;
-  String      password;
-// TODO:
-  String      share;
-  String      publicKey;
-  String      privateKey;
-  uint        maxConnectionCount;
-  uint64      maxStorageSize;
-  ServerNode  *serverNode;
-  Errors      error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
-// TODO: use share
-UNUSED_VARIABLE(share);
 
   // get name, server type, login name, port, password, public/private key, max. connections, max. storage size
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
+  ServerTypes serverType;
   if (!StringMap_getEnum(argumentMap,"serverType",&serverType,CALLBACK_((StringMapParseEnumFunction)parseServerType,NULL),SERVER_TYPE_FILE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"serverType=<FILE|FTP|SSH|WEBDAV>");
     String_delete(name);
     return;
   }
+  uint port;
   if (!StringMap_getUInt(argumentMap,"port",&port,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"loginName=<name>");
     String_delete(name);
     return;
   }
-  userName = String_new();
+  String userName = String_new();
   if (!StringMap_getString(argumentMap,"loginName",userName,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"loginName=<name>");
@@ -9001,17 +8841,19 @@ UNUSED_VARIABLE(share);
     String_delete(name);
     return;
   }
-  password = String_new();
+  String password = String_new();
   StringMap_getString(argumentMap,"password",password,NULL);
-  publicKey = String_new();
+  String publicKey = String_new();
   StringMap_getString(argumentMap,"publicKey",publicKey,NULL);
-  privateKey = String_new();
+  String privateKey = String_new();
   StringMap_getString(argumentMap,"privateKey",privateKey,NULL);
+  uint maxConnectionCount;
   StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,MAX_UINT);
+  uint64 maxStorageSize;
   StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,MAX_UINT64);
 
   // allocate storage server node
-  serverNode = Configuration_newServerNode(name,serverType);
+  ServerNode  *serverNode = Configuration_newServerNode(name,serverType);
   assert(serverNode != NULL);
 
   // init storage server settings
@@ -9067,7 +8909,7 @@ UNUSED_VARIABLE(share);
   }
 
   // update config file
-  error = Configuration_update();
+  Errors error = Configuration_update();
   if (error != ERROR_NONE)
   {
     Semaphore_unlock(&globalOptions.serverList.lock);
@@ -9115,50 +8957,40 @@ UNUSED_VARIABLE(share);
 
 LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint        serverId;
-  String      name;
-  ServerTypes serverType;
-  uint        port;
-  String      userName;
-  String      password;
-  String      publicKey;
-  String      privateKey;
-  uint        maxConnectionCount;
-  uint64      maxStorageSize;
-  ServerNode  *serverNode;
-  Errors      error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get id, name, server type, login name, port, password, public/private key, max. connections, max. storage size
+  uint        serverId;
   if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
+  ServerTypes serverType;
   if (!StringMap_getEnum(argumentMap,"serverType",&serverType,CALLBACK_((StringMapParseEnumFunction)parseServerType,NULL),SERVER_TYPE_FILE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"serverType=<FILE|FTP|SSH|WEBDAV>");
     String_delete(name);
     return;
   }
+  uint port;
   if (!StringMap_getUInt(argumentMap,"port",&port,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"loginName=<name>");
     String_delete(name);
     return;
   }
-  userName = String_new();
+  String userName = String_new();
   if (!StringMap_getString(argumentMap,"loginName",userName,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"loginName=<name>");
@@ -9166,19 +8998,21 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     String_delete(name);
     return;
   }
-  password = String_new();
+  String password = String_new();
   StringMap_getString(argumentMap,"password",password,NULL);
-  publicKey = String_new();
+  String publicKey = String_new();
   StringMap_getString(argumentMap,"publicKey",publicKey,NULL);
-  privateKey = String_new();
+  String privateKey = String_new();
   StringMap_getString(argumentMap,"privateKey",privateKey,NULL);
+  uint maxConnectionCount;
   StringMap_getUInt(argumentMap,"maxConnectionCount",&maxConnectionCount,MAX_UINT);
+  uint64 maxStorageSize;
   StringMap_getUInt64(argumentMap,"maxStorageSize",&maxStorageSize,MAX_UINT64);
 
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find storage server
-    serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
+    ServerNode *serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
@@ -9240,7 +9074,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     serverNode->server.maxStorageSize     = maxStorageSize;
 
     // update config file
-    error = Configuration_update();
+    Errors error = Configuration_update();
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
@@ -9280,16 +9114,13 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint       serverId;
-  ServerNode *serverNode;
-  Errors     error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get storage server id
+  uint       serverId;
   if (!StringMap_getUInt(argumentMap,"id",&serverId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
@@ -9299,7 +9130,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find storage server
-    serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
+    ServerNode *serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->server.id == serverId);
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
@@ -9312,7 +9143,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
     Configuration_deleteServerNode(serverNode);
 
     // update config file
-    error = Configuration_update();
+    Errors error = Configuration_update();
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
@@ -9342,15 +9173,13 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint            commandId;
-  CommandInfoNode *commandInfoNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get command id
+  uint commandId;
   if (!StringMap_getUInt(argumentMap,"commandId",&commandId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"commandId=<command id>");
@@ -9360,7 +9189,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
   // abort command
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    commandInfoNode = LIST_FIND(&clientInfo->commandInfoList,commandInfoNode,commandInfoNode->id == commandId);
+    CommandInfoNode *commandInfoNode = LIST_FIND(&clientInfo->commandInfoList,commandInfoNode,commandInfoNode->id == commandId);
     if ((commandInfoNode != NULL) && (commandInfoNode->indexHandle != NULL))
     {
       Index_interrupt(commandInfoNode->indexHandle);
@@ -9399,8 +9228,6 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
 
 LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint64 now;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -9416,8 +9243,10 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=RUNNING");
         break;
       case SERVER_STATE_PAUSE:
-        now = Misc_getCurrentDateTime();
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=PAUSED time=%"PRIu64,(pauseEndDateTime > now) ? pauseEndDateTime-now : 0LL);
+        {
+          uint64 now = Misc_getCurrentDateTime();
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=PAUSED time=%"PRIu64,(pauseEndDateTime > now) ? pauseEndDateTime-now : 0LL);
+        }
         break;
       case SERVER_STATE_SUSPENDED:
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=SUSPENDED");
@@ -9444,26 +9273,19 @@ LOCAL void serverCommand_status(ClientInfo *clientInfo, IndexHandle *indexHandle
 
 LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint            pauseTime;
-  String          modeMask;
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  SlaveNode       *slaveNode;
-  Errors          error;
-  char            s[256];
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get pause time, mode mask
+  uint            pauseTime;
   if (!StringMap_getUInt(argumentMap,"time",&pauseTime,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"time=<time>");
     return;
   }
-  modeMask = String_new();
+  String modeMask = String_new();
   StringMap_getString(argumentMap,"modeMask",modeMask,NULL);
 
   // set pause time
@@ -9480,7 +9302,9 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     }
     else
     {
+      StringTokenizer stringTokenizer;
       String_initTokenizer(&stringTokenizer,modeMask,STRING_BEGIN,",",NULL,TRUE);
+      ConstString token;
       while (String_getNextToken(&stringTokenizer,&token,NULL))
       {
         if (String_equalsIgnoreCaseCString(token,"CREATE"))
@@ -9521,9 +9345,10 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     // suspend all slaves
     if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
-      error = ERROR_NONE;
+      Errors error = ERROR_NONE;
       JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
+        SlaveNode *slaveNode;
         JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
         {
           if (Connector_isAuthorized(&slaveNode->connectorInfo))
@@ -9556,6 +9381,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     if (pauseFlags.restore         ) String_joinCString(modeMask,"restore",          ',');
     if (pauseFlags.indexUpdate     ) String_joinCString(modeMask,"index update",     ',');
     if (pauseFlags.indexMaintenance) String_joinCString(modeMask,"index maintenance",',');
+    char s[256];
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Pause by %s for %dmin: %s",
@@ -9587,13 +9413,6 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
 
 LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String          modeMask;
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  SlaveNode       *slaveNode;
-  Errors          error;
-  char            s[256];
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -9601,7 +9420,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
   UNUSED_VARIABLE(argumentMap);
 
   // get mode
-  modeMask = String_new();
+  String modeMask = String_new();
   StringMap_getString(argumentMap,"modeMask",modeMask,NULL);
 
   // set suspend
@@ -9618,7 +9437,9 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     }
     else
     {
+      StringTokenizer stringTokenizer;
       String_initTokenizer(&stringTokenizer,modeMask,STRING_BEGIN,",",NULL,TRUE);
+      ConstString token;
       while (String_getNextToken(&stringTokenizer,&token,NULL))
       {
         if (String_equalsIgnoreCaseCString(token,"CREATE"))
@@ -9648,9 +9469,10 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     // suspend all slaves
     if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
-      error = ERROR_NONE;
+      Errors error = ERROR_NONE;
       JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
+        SlaveNode *slaveNode;
         JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
         {
           if (Connector_isAuthorized(&slaveNode->connectorInfo))
@@ -9677,6 +9499,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     serverState = SERVER_STATE_SUSPENDED;
 
     // log info
+    char s[256];
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Suspended by %s",
@@ -9705,10 +9528,6 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
 
 LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  SlaveNode *slaveNode;
-  Errors    error;
-  char      s[256];
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -9728,9 +9547,10 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     // set running state on slaves
     if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
-      error = ERROR_NONE;
+      Errors error = ERROR_NONE;
       JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
+        SlaveNode *slaveNode;
         JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
         {
           if (Connector_isAuthorized(&slaveNode->connectorInfo))
@@ -9756,6 +9576,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     serverState = SERVER_STATE_RUNNING;
 
     // log info
+    char s[256];
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Continued by %s",
@@ -9782,15 +9603,13 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_maintenance(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint maintenanceTime;
-  char s[256];
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get pause time
+  uint maintenanceTime;
   if (!StringMap_getUInt(argumentMap,"time",&maintenanceTime,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"time=<time>");
@@ -9803,6 +9622,7 @@ LOCAL void serverCommand_maintenance(ClientInfo *clientInfo, IndexHandle *indexH
     intermediateMaintenanceDateTime = Misc_getCurrentDateTime()+maintenanceTime;
 
     // log info
+    char s[256];
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Set intermediate maintenance time by %s for %dmin",
@@ -9833,13 +9653,6 @@ LOCAL void serverCommand_maintenance(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode    *jobNode;
-  Errors           error;
-  DeviceListHandle deviceListHandle;
-  String           deviceName;
-  DeviceInfo       deviceInfo;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -9847,11 +9660,13 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
   UNUSED_VARIABLE(argumentMap);
 
   // get job UUID
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -9866,6 +9681,8 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
     {
       jobNode = NULL;
     }
+
+    Errors error;
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
@@ -9908,6 +9725,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
       // local device list
 
       // open device list
+      DeviceListHandle deviceListHandle;
       error = Device_openDeviceList(&deviceListHandle);
       if (error != ERROR_NONE)
       {
@@ -9917,7 +9735,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
       }
 
       // read device list entries
-      deviceName = String_new();
+      String deviceName = String_new();
       while (!Device_endOfDeviceList(&deviceListHandle))
       {
         // read device list entry
@@ -9932,6 +9750,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
         }
 
         // try get device info
+        DeviceInfo deviceInfo;
         error = Device_getInfo(&deviceInfo,deviceName,FALSE);
         if (error != ERROR_NONE)
         {
@@ -9981,22 +9800,15 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
 
 LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
-  bool           allMountsFlag;
-  const JobNode  *jobNode;
-  Errors         error;
-  RootListHandle rootListHandle;
-  String         name;
-  DeviceInfo     deviceInfo;
-  uint64         size;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, mounts flag
+  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+  bool allMountsFlag;
   if (!StringMap_getBool(argumentMap,"allMounts",&allMountsFlag,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"allMounts=yes|no");
@@ -10007,6 +9819,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -10021,6 +9834,8 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
     {
       jobNode = NULL;
     }
+
+    Errors error;
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
@@ -10064,6 +9879,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
       // local root list
 
       // open root list
+      RootListHandle rootListHandle;
       error = File_openRootList(&rootListHandle,allMountsFlag);
       if (error != ERROR_NONE)
       {
@@ -10073,12 +9889,14 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
       }
 
       // read root list entries
-      name = String_new();
+      String name = String_new();
       while (!File_endOfRootList(&rootListHandle) && (error == ERROR_NONE))
       {
         error = File_readRootList(&rootListHandle,name);
         if (error == ERROR_NONE)
         {
+          DeviceInfo deviceInfo;
+          uint64     size;
           if (Device_getInfo(&deviceInfo,name,FALSE) == ERROR_NONE)
           {
             size = deviceInfo.size;
@@ -10140,21 +9958,14 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        name;
-  const JobNode *jobNode;
-  Errors        error;
-  FileInfo      fileInfo;
-  bool          noBackupExists;
-  FileTypes     destinationFileType;
-
   assert(clientInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
@@ -10166,6 +9977,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -10181,6 +9993,8 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
     {
       jobNode = NULL;
     }
+
+    Errors error;
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
@@ -10225,6 +10039,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
       // local file info
 
       // read file info
+      FileInfo fileInfo;
       error = File_getInfo(&fileInfo,name);
       if (error == ERROR_NONE)
       {
@@ -10241,27 +10056,31 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                );
             break;
           case FILE_TYPE_DIRECTORY:
-            // check if .nobackup exists
-            noBackupExists = hasNoBackup(name);
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" hidden=%y noBackup=%y noDump=%y",
-                                name,
-                                fileInfo.timeModified,
-                                File_isHidden(name),
-                                noBackupExists,
-                                File_hasAttributeNoDump(&fileInfo)
-                               );
+            {
+              // check if .nobackup exists
+              bool noBackupExists = hasNoBackup(name);
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                  "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" hidden=%y noBackup=%y noDump=%y",
+                                  name,
+                                  fileInfo.timeModified,
+                                  File_isHidden(name),
+                                  noBackupExists,
+                                  File_hasAttributeNoDump(&fileInfo)
+                                 );
+            }
             break;
           case FILE_TYPE_LINK:
-            destinationFileType = File_getRealType(name);
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=LINK destinationFileType=%s name=%'S dateTime=%"PRIu64" hidden=%y noDump=%y",
-                                File_fileTypeToString(destinationFileType,NULL),
-                                name,
-                                fileInfo.timeModified,
-                                File_isHidden(name),
-                                File_hasAttributeNoDump(&fileInfo)
-                               );
+            {
+              FileTypes destinationFileType = File_getRealType(name);
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                  "fileType=LINK destinationFileType=%s name=%'S dateTime=%"PRIu64" hidden=%y noDump=%y",
+                                  File_fileTypeToString(destinationFileType,NULL),
+                                  name,
+                                  fileInfo.timeModified,
+                                  File_isHidden(name),
+                                  File_hasAttributeNoDump(&fileInfo)
+                                 );
+            }
             break;
           case FILE_TYPE_HARDLINK:
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
@@ -10366,22 +10185,15 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString        (jobUUID,MISC_UUID_STRING_LENGTH);
-  String              directory;
-  const JobNode       *jobNode;
-  Errors              error;
-  DirectoryListHandle directoryListHandle;
-  String              name;
-  FileInfo            fileInfo;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, directoy
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  directory = String_new();
+  String directory = String_new();
   if (!StringMap_getString(argumentMap,"directory",directory,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"directory=<name>");
@@ -10393,6 +10205,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -10408,6 +10221,8 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
     {
       jobNode = NULL;
     }
+
+    Errors error;
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
@@ -10452,6 +10267,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
       // local file list
 
       // open directory
+      DirectoryListHandle directoryListHandle;
       error = File_openDirectoryList(&directoryListHandle,
                                      directory
                                     );
@@ -10464,12 +10280,13 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
       }
 
       // read directory entries
-      name = String_new();
+      String name = String_new();
       while (!File_endOfDirectoryList(&directoryListHandle) && (error == ERROR_NONE))
       {
         error = File_readDirectoryList(&directoryListHandle,name);
         if (error == ERROR_NONE)
         {
+          FileInfo fileInfo;
           if (File_getInfo(&fileInfo,name) == ERROR_NONE)
           {
             switch (fileInfo.type)
@@ -10619,27 +10436,22 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
-  String         name;
-  String         attribute;
-  const JobNode  *jobNode;
-  Errors         error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name, attribute
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
-  attribute = String_new();
+  String attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"attribute=<name>");
@@ -10651,6 +10463,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode  *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -10667,6 +10480,8 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
     {
       jobNode = NULL;
     }
+
+    Errors error;
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
@@ -10752,37 +10567,29 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
-  String         name;
-  String         attribute;
-  String         value;
-  const JobNode  *jobNode;
-  Errors         error;
-  String         noBackupFileName;
-  FileAttributes fileAttributes;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name, value
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
-  attribute = String_new();
+  String attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"attribute=<name>");
     String_delete(name);
     return;
   }
-  value = String_new();
+  String value = String_new();
   StringMap_getString(argumentMap,"value",value,NULL);
 //TODO: value still not used
 UNUSED_VARIABLE(value);
@@ -10791,6 +10598,7 @@ UNUSED_VARIABLE(value);
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -10809,6 +10617,7 @@ UNUSED_VARIABLE(value);
       jobNode = NULL;
     }
 
+    Errors error;
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
       // remote file list
@@ -10858,7 +10667,7 @@ UNUSED_VARIABLE(value);
       {
         if (!hasNoBackup(name))
         {
-          noBackupFileName = File_appendFileNameCString(File_setFileName(String_new(),name),".nobackup");
+          String noBackupFileName = File_appendFileNameCString(File_setFileName(String_new(),name),".nobackup");
           error = File_touch(noBackupFileName);
           if (error != ERROR_NONE)
           {
@@ -10877,6 +10686,7 @@ UNUSED_VARIABLE(value);
       }
       else if (String_equalsCString(attribute,"NODUMP"))
       {
+        FileAttributes fileAttributes;
         error = File_getAttributes(&fileAttributes,name);
         if (error != ERROR_NONE)
         {
@@ -10933,29 +10743,22 @@ UNUSED_VARIABLE(value);
 
 LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
-  String         name;
-  String         attribute;
-  const JobNode  *jobNode;
-  Errors         error;
-  String         noBackupFileName1,noBackupFileName2;
-  FileAttributes fileAttributes;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name, attribute
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
-  attribute = String_new();
+  String attribute = String_new();
   if (!StringMap_getString(argumentMap,"attribute",attribute,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"attribute=<name>");
@@ -10967,6 +10770,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -10983,6 +10787,8 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
     {
       jobNode = NULL;
     }
+
+    Errors error;
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
@@ -11031,8 +10837,8 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
       {
         if (hasNoBackup(name))
         {
-          noBackupFileName1 = File_appendFileNameCString(File_setFileName(String_new(),name),".nobackup");
-          noBackupFileName2 = File_appendFileNameCString(File_setFileName(String_new(),name),".NOBACKUP");
+          String noBackupFileName1 = File_appendFileNameCString(File_setFileName(String_new(),name),".nobackup");
+          String noBackupFileName2 = File_appendFileNameCString(File_setFileName(String_new(),name),".NOBACKUP");
 
           error = ERROR_NONE;
           if (error == ERROR_NONE)
@@ -11068,6 +10874,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
       }
       else if (String_equalsCString(attribute,"NODUMP"))
       {
+        FileAttributes fileAttributes;
         error = File_getAttributes(&fileAttributes,name);
         if (error == ERROR_NONE)
         {
@@ -11117,19 +10924,15 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        name;
-  const JobNode *jobNode;
-  Errors        error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
@@ -11141,6 +10944,7 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -11156,6 +10960,8 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
     {
       jobNode = NULL;
     }
+
+    Errors error;
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
@@ -11236,19 +11042,15 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_fileDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        name;
-  const JobNode *jobNode;
-  Errors        error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
@@ -11260,6 +11062,7 @@ LOCAL void serverCommand_fileDelete(ClientInfo *clientInfo, IndexHandle *indexHa
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -11275,6 +11078,8 @@ LOCAL void serverCommand_fileDelete(ClientInfo *clientInfo, IndexHandle *indexHa
     {
       jobNode = NULL;
     }
+
+    Errors error;
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
@@ -11343,40 +11148,29 @@ LOCAL void serverCommand_fileDelete(ClientInfo *clientInfo, IndexHandle *indexHa
 
 LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
-  String            name;
-  int64             timeout;
-  const JobNode     *jobNode;
-  Errors            error;
-  DirectoryInfoNode *directoryInfoNode;
-  uint64            fileCount;
-  uint64            fileSize;
-  bool              timedOut;
-  FileInfo          fileInfo;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, path/file name, timeout
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
+  int64 timeout;
   StringMap_getInt64(argumentMap,"timeout",&timeout,0LL);
 
 //TODO: avoid long running lock
-  fileCount = 0LL;
-  fileSize  = 0LL;
-  timedOut  = FALSE;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -11392,6 +11186,8 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
     {
       jobNode = NULL;
     }
+
+    Errors error;
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
@@ -11434,13 +11230,16 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
     }
     else
     {
+      ulong  fileCount = 0LL;
+      uint64 fileSize  = 0LL;
+      bool   timedOut  = FALSE;
       if (File_isDirectory(name))
       {
     //TODO: avoid lock with getDirectoryInfo inside
         SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
         {
           // find/create directory info
-          directoryInfoNode = findDirectoryInfo(&clientInfo->directoryInfoList,name);
+          DirectoryInfoNode *directoryInfoNode = findDirectoryInfo(&clientInfo->directoryInfoList,name);
           if (directoryInfoNode == NULL)
           {
             directoryInfoNode = newDirectoryInfo(name);
@@ -11459,6 +11258,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
       else
       {
         // get file size
+        FileInfo fileInfo;
         if (File_getInfo(&fileInfo,name) == ERROR_NONE)
         {
           fileCount = 1LL;
@@ -11484,6 +11284,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            jobUUID=<uuid>|""
 *            name=<name>
 *            script=<script>
 *          Result:
@@ -11492,26 +11293,22 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        name;
-  String        script;
-  const JobNode *jobNode;
-  Errors        error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get name, script
-  name = String_new();
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
-  script = String_new();
+  String script = String_new();
   if (!StringMap_getString(argumentMap,"script",script,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"script=<script>");
@@ -11521,10 +11318,11 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
   }
 
 //TODO: avoid long running lock
-  error = ERROR_UNKNOWN;
+  Errors error = ERROR_UNKNOWN;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+    const JobNode *jobNode;
     if (!String_isEmpty(jobUUID))
     {
       jobNode = Job_findByUUID(jobUUID);
@@ -11643,25 +11441,19 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
 
 LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
-  String            name;
-  const JobNode     *jobNode;
-  uint              i;
-  String            s;
-  ConfigValueFormat configValueFormat;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
@@ -11672,7 +11464,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -11682,7 +11474,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
     }
 
     // find config value
-    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
+    uint i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
     if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
@@ -11695,7 +11487,8 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
     if (BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
     {
       // send value
-      s = String_new();
+      String            s = String_new();
+      ConfigValueFormat configValueFormat;
       ConfigValue_formatInit(&configValueFormat,
                              &JOB_CONFIG_VALUES[i],
                              CONFIG_VALUE_FORMAT_MODE_VALUE,
@@ -11734,30 +11527,26 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  String       name,value;
-  JobNode      *jobNode;
-  uint         i;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name, value
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
-  value = String_new();
+  String value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"value=<value>");
@@ -11769,7 +11558,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -11780,11 +11569,11 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     }
 
     // parse
-    i = ConfigValue_find(JOB_CONFIG_VALUES,
-                         CONFIG_VALUE_INDEX_NONE,
-                         CONFIG_VALUE_INDEX_NONE,
-                         String_cString(name)
-                        );
+    uint i = ConfigValue_find(JOB_CONFIG_VALUES,
+                              CONFIG_VALUE_INDEX_NONE,
+                              CONFIG_VALUE_INDEX_NONE,
+                              String_cString(name)
+                             );
     if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_VALUE,"invalid job config '%S' value: '%S'",name,value);
@@ -11846,23 +11635,19 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  String       name;
-  JobNode      *jobNode;
-  uint         i;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, name
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
@@ -11873,7 +11658,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -11883,7 +11668,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // find config value
-    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
+    uint i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,NULL,String_cString(name));
     if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown job config '%S'",name);
@@ -11936,8 +11721,6 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  const JobNode *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -11946,6 +11729,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
+    const JobNode *jobNode;
     JOB_LIST_ITERATEX(jobNode,!isQuit() && !isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
@@ -12027,16 +11811,13 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode *jobNode;
-  Errors        error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -12046,7 +11827,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -12057,7 +11838,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     if (Job_isRemote(jobNode) && Job_isRunning(jobNode->jobState))
     {
       // remote job state
-      error = ERROR_UNKNOWN;
+      Errors error = ERROR_UNKNOWN;
       ConnectorInfo *connectorInfo;
       JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
@@ -12141,44 +11922,40 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 
 LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String       customText;
-  ArchiveTypes archiveType;
-  bool         testCreatedArchives;
-  bool         noStorage;
-  bool         dryRun;
-  JobNode      *jobNode;
-  char         s[256];
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID, schedule custom text, no-storage, archive type, dry-run
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
-  customText = String_new();
+  String customText = String_new();
   StringMap_getString(argumentMap,"customText",customText,NULL);
+  ArchiveTypes archiveType;
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     String_delete(customText);
     return;
   }
+  bool testCreatedArchives;
   StringMap_getBool(argumentMap,"testCreatedArchives",&testCreatedArchives,FALSE);
+  bool noStorage;
   StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE);
+  bool dryRun;
   StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -12191,6 +11968,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     if  (!Job_isActive(jobNode->jobState))
     {
       // trigger job
+      char s[256];
       Job_trigger(jobNode,
                   scheduleUUID,
                   archiveType,
@@ -12226,16 +12004,13 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-  char         s[64];
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -12245,7 +12020,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -12256,6 +12031,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     // abort job
     if (Job_isActive(jobNode->jobState))
     {
+      char s[64];
       Job_abort(jobNode,getClientInfoString(clientInfo,s,sizeof(s)));
     }
   }
@@ -12279,15 +12055,13 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -12297,7 +12071,7 @@ LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHand
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -12334,34 +12108,27 @@ LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String       name;
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  String       master;
-  String       fileName;
-  FileHandle   fileHandle;
-  Errors       error;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get name, job UUID, master
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  master = String_new();
+  String master = String_new();
   StringMap_getString(argumentMap,"master",master,NULL);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    jobNode = NULL;
+    JobNode *jobNode = NULL;
 
     if (globalOptions.serverMode == SERVER_MODE_MASTER)
     {
@@ -12377,8 +12144,11 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
         return;
       }
 
+      Errors error;
+
       // create empty job file
-      fileName = File_appendFileName(File_setFileName(String_new(),globalOptions.jobsDirectory),name);
+      String     fileName = File_appendFileName(File_setFileName(String_new(),globalOptions.jobsDirectory),name);
+      FileHandle fileHandle;
       error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
       if (error != ERROR_NONE)
       {
@@ -12463,26 +12233,19 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 
 LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        name;
-  const JobNode *jobNode;
-  String        fileName;
-  FileHandle    fileHandle;
-  Errors        error;
-  JobNode       *newJobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
@@ -12502,7 +12265,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -12511,8 +12274,11 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
       return;
     }
 
+    Errors error;
+
     // create empty job file
-    fileName = File_appendFileName(File_setFileName(String_new(),globalOptions.jobsDirectory),name);
+    String     fileName = File_appendFileName(File_setFileName(String_new(),globalOptions.jobsDirectory),name);
+    FileHandle fileHandle;
     error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
@@ -12526,7 +12292,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     (void)File_setPermission(fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
 
     // copy job
-    newJobNode = Job_copy(jobNode,fileName);
+    JobNode *newJobNode = Job_copy(jobNode,fileName);
     assert(newJobNode != NULL);
 
     // get new UUID
@@ -12572,24 +12338,19 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  String       newName;
-  JobNode      *jobNode;
-  String       fileName;
-  Errors       error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  newName = String_new();
+  String newName = String_new();
   if (!StringMap_getString(argumentMap,"newName",newName,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"newName=<name>");
@@ -12608,8 +12369,10 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
       return;
     }
 
+    Errors error;
+
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -12619,7 +12382,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // rename job
-    fileName = File_appendFileName(File_setFileName(String_new(),globalOptions.jobsDirectory),newName);
+    String fileName = File_appendFileName(File_setFileName(String_new(),globalOptions.jobsDirectory),newName);
     error = File_rename(jobNode->fileName,fileName,NULL);
     if (error != ERROR_NONE)
     {
@@ -12659,17 +12422,13 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-  Errors       error;
-  String       fileName,baseName;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -12679,13 +12438,15 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
+
+    Errors error;
 
     // remove job in list if not running, has not requested a password and has not requested a new volume
     if (Job_isRunning(jobNode->jobState))
@@ -12707,8 +12468,8 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
       }
 
       // delete job schedule state file
-      fileName = String_new();
-      baseName = String_new();
+      String fileName = String_new();
+      String baseName = String_new();
       File_splitFileName(jobNode->fileName,fileName,baseName,NULL);
       File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
       (void)File_delete(fileName,FALSE);
@@ -12740,8 +12501,6 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -12749,18 +12508,17 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(argumentMap);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
 
   if (!String_isEmpty(jobUUID))
   {
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      JobNode *jobNode;
-
       // find job
       if (!String_isEmpty(jobUUID))
       {
-        jobNode = Job_findByUUID(jobUUID);
+        JobNode *jobNode = Job_findByUUID(jobUUID);
         if (jobNode == NULL)
         {
           ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -12827,15 +12585,13 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -12845,7 +12601,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -12912,16 +12668,13 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode *jobNode;
-  EntryNode     *entryNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -12931,7 +12684,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -12940,6 +12693,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
     }
 
     // send include list
+    EntryNode *entryNode;
     LIST_ITERATE(&jobNode->job.includeEntryList,entryNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
@@ -12971,15 +12725,13 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -12989,7 +12741,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13027,42 +12779,39 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  EntryTypes   entryType;
-  String       patternString;
-  PatternTypes patternType;
-  JobNode      *jobNode;
-  uint         entryId;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, entry type, pattern, pattern type
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  EntryTypes   entryType;
   if (!StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)EntryList_parseEntryType,NULL),ENTRY_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=FILE|IMAGE");
     return;
   }
-  patternString = String_new();
+  String patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
+  PatternTypes patternType;
   StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
+  uint entryId = 0;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13104,47 +12853,44 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         entryId;
-  EntryTypes   entryType;
-  PatternTypes patternType;
-  String       patternString;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id, entry type, pattern type, pattern
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint entryId;
   if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
+  EntryTypes entryType;
   if (!StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)EntryList_parseEntryType,NULL),ENTRY_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=FILE|IMAGE");
     return;
   }
-  patternString = String_new();
+  String patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
+  PatternTypes patternType;
   StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13183,21 +12929,19 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         entryId;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint entryId;
   if (!StringMap_getUInt(argumentMap,"id",&entryId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
@@ -13207,7 +12951,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13248,16 +12992,13 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode *jobNode;
-  PatternNode   *patternNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -13267,7 +13008,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13276,6 +13017,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
     }
 
     // send exclude list
+    const PatternNode *patternNode;
     LIST_ITERATE(&jobNode->job.excludePatternList,patternNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
@@ -13306,15 +13048,13 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -13324,7 +13064,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13361,36 +13101,33 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  PatternTypes patternType;
-  String       patternString;
-  JobNode      *jobNode;
-  uint         patternId;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, pattern type, pattern
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  patternString = String_new();
+  String patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
+  PatternTypes patternType;
   StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
+  uint patternId = 0;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13436,41 +13173,38 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         patternId;
-  PatternTypes patternType;
-  String       patternString;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, pattern id, pattern type, pattern
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint patternId;
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
-  patternString = String_new();
+  String patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
+  PatternTypes patternType;
   StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13509,21 +13243,19 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         patternId;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint patternId;
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
@@ -13533,7 +13265,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13578,16 +13310,13 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode *jobNode;
-  MountNode     *mountNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -13597,7 +13326,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13606,6 +13335,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // send mount list
+    const MountNode *mountNode;
     LIST_ITERATE(&jobNode->job.options.mountList,mountNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
@@ -13636,15 +13366,13 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -13654,7 +13382,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13691,32 +13419,26 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  String       name;
-  String       device;
-  JobNode      *jobNode;
-  MountNode    *mountNode;
-  uint         mountId;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get jobUUID, name, device
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
-  device = String_new();
+  String device = String_new();
   if (!StringMap_getString(argumentMap,"device",device,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"device=<name>");
@@ -13725,11 +13447,11 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  mountId = 0;
+  uint mountId = 0;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13740,7 +13462,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     }
 
     // add to mount list
-    mountNode = Configuration_newMountNode(name,device);
+    MountNode *mountNode = Configuration_newMountNode(name,device);
     if (mountNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,
@@ -13789,37 +13511,32 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         mountId;
-  String       name;
-  String       device;
-  JobNode      *jobNode;
-  MountNode    *mountNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get jobUUID, mount id, name
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint mountId;
   if (!StringMap_getUInt(argumentMap,"id",&mountId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
-  device = String_new();
+  String device = String_new();
   if (!StringMap_getString(argumentMap,"device",device,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"device=<name>");
@@ -13831,7 +13548,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13842,7 +13559,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // get mount
-    mountNode = LIST_FIND(&jobNode->job.options.mountList,mountNode,mountNode->id == mountId);
+    MountNode *mountNode = LIST_FIND(&jobNode->job.options.mountList,mountNode,mountNode->id == mountId);
     if (mountNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_MOUNT_ID_NOT_FOUND,"%u",mountId);
@@ -13884,22 +13601,19 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         mountId;
-  JobNode      *jobNode;
-  MountNode    *mountNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, mount id
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint mountId;
   if (!StringMap_getUInt(argumentMap,"id",&mountId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
@@ -13909,7 +13623,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13918,7 +13632,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // get mount
-    mountNode = LIST_FIND(&jobNode->job.options.mountList,mountNode,mountNode->id == mountId);
+    MountNode *mountNode = LIST_FIND(&jobNode->job.options.mountList,mountNode,mountNode->id == mountId);
     if (mountNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_MOUNT_ID_NOT_FOUND,"%u",mountId);
@@ -13955,16 +13669,13 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode   *jobNode;
-  DeltaSourceNode *deltaSourceNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -13974,7 +13685,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -13983,6 +13694,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
     }
 
     // send delta source list
+    DeltaSourceNode *deltaSourceNode;
     LIST_ITERATE(&jobNode->job.options.deltaSourceList,deltaSourceNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
@@ -14014,15 +13726,13 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
 
 LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -14032,7 +13742,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -14069,36 +13779,33 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  PatternTypes patternType;
-  String       patternString;
-  JobNode      *jobNode;
-  uint         deltaSourceId;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, type, pattern type, pattern
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  patternString = String_new();
+  String patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
+  PatternTypes patternType;
   StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
+  uint deltaSourceId = 0;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -14139,41 +13846,38 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         deltaSourceId;
-  String       patternString;
-  PatternTypes patternType;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id, type, pattern type, pattern
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint deltaSourceId;
   if (!StringMap_getUInt(argumentMap,"id",&deltaSourceId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
-  patternString = String_new();
+  String patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
+  PatternTypes patternType;
   StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -14212,21 +13916,19 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         deltaSourceId;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint deltaSourceId;
   if (!StringMap_getUInt(argumentMap,"id",&deltaSourceId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
@@ -14236,7 +13938,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -14279,16 +13981,13 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode *jobNode;
-  PatternNode   *patternNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -14298,7 +13997,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -14307,6 +14006,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
     }
 
     // send exclude list
+    const PatternNode *patternNode;
     LIST_ITERATE(&jobNode->job.options.compressExcludePatternList,patternNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
@@ -14336,15 +14036,13 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
 
 LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -14354,7 +14052,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -14391,36 +14089,33 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
 
 LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  String       patternString;
-  PatternTypes patternType;
-  JobNode      *jobNode;
-  uint         patternId;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, type, pattern type, pattern
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  patternString = String_new();
+  String patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
+  PatternTypes patternType;
   StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
+  uint patternId = 0;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -14466,41 +14161,38 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
 
 LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         patternId;
-  String       patternString;
-  PatternTypes patternType;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id, type, pattern type, pattern
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint patternId;
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
-  patternString = String_new();
+  String patternString = String_new();
   if (!StringMap_getString(argumentMap,"pattern",patternString,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pattern=<text>");
     String_delete(patternString);
     return;
   }
+  PatternTypes patternType;
   StringMap_getEnum(argumentMap,"patternType",&patternType,CALLBACK_((StringMapParseEnumFunction)Pattern_parsePatternType,NULL),PATTERN_TYPE_GLOB);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -14539,21 +14231,19 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
 
 LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         patternId;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, id
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint patternId;
   if (!StringMap_getUInt(argumentMap,"id",&patternId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
@@ -14563,7 +14253,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -14625,24 +14315,18 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 
 LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes          archiveType;
-  JobScheduleList       jobScheduleList;
-  const JobScheduleNode *jobScheduleNode;
-  String                date,weekDays,time;
-  String                beginTime,endTime;
-  uint64                now;
-  uint64                nextScheduleDateTime;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, archive type
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+  ArchiveTypes archiveType;
   StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_NONE);
 
+  JobScheduleList jobScheduleList;
   List_init(&jobScheduleList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeJobScheduleNode,NULL));
 
   // get job schedule list (Note: avoid long locking of job list)
@@ -14684,12 +14368,13 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
   }
 
   // send schedule info
-  date      = String_new();
-  weekDays  = String_new();
-  time      = String_new();
-  beginTime = String_new();
-  endTime   = String_new();
-  now       = Misc_getCurrentDateTime();
+  String date      = String_new();
+  String weekDays  = String_new();
+  String time      = String_new();
+  String beginTime = String_new();
+  String endTime   = String_new();
+  uint64 now       = Misc_getCurrentDateTime();
+  const JobScheduleNode *jobScheduleNode;
   LIST_ITERATE(&jobScheduleList,jobScheduleNode)
   {
     if ((archiveType == ARCHIVE_TYPE_NONE) || (jobScheduleNode->archiveType == archiveType))
@@ -14798,7 +14483,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
       {
         String_appendCString(endTime,"*");
       }
-      nextScheduleDateTime = getNextJobSchedule(jobScheduleNode, now);
+      uint64 nextScheduleDateTime = getNextJobSchedule(jobScheduleNode, now);
 
       // send schedule info
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
@@ -14854,15 +14539,13 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -14872,7 +14555,7 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, IndexHandle *
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -14921,38 +14604,23 @@ LOCAL void serverCommand_scheduleListClear(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String       title;
-  String       date;
-  String       weekDays;
-  String       time;
-  ArchiveTypes archiveType;
-  uint         interval;
-  String       customText;
-  String       beginTime,endTime;
-  bool         testCreatedArchives;
-  bool         noStorage;
-  bool         enabled;
-  ScheduleNode *scheduleNode;
-  Errors       error;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, date, weekday, time, archive type, custome text, min./max keep, max. age, enabled
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
-  title = String_new();
+  String title = String_new();
   StringMap_getString(argumentMap,"title",title,NULL);
-  date = String_new();
+  String date = String_new();
   if (!StringMap_getString(argumentMap,"date",date,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"date=<date>|*");
@@ -14960,7 +14628,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
-  weekDays = String_new();
+  String weekDays = String_new();
   if (!StringMap_getString(argumentMap,"weekDays",weekDays,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"weekDays=<names>|*");
@@ -14969,7 +14637,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
-  time = String_new();
+  String time = String_new();
   if (!StringMap_getString(argumentMap,"time",time,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"time=<time>|*");
@@ -14979,6 +14647,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
+  ArchiveTypes archiveType;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"archiveType",NULL),"*"))
   {
     archiveType = ARCHIVE_TYPE_NORMAL;
@@ -14992,10 +14661,11 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
+  uint interval;
   StringMap_getUInt(argumentMap,"interval",&interval,0);
-  customText = String_new();
+  String customText = String_new();
   StringMap_getString(argumentMap,"customText",customText,NULL);
-  beginTime = String_new();
+  String beginTime = String_new();
   if (!StringMap_getString(argumentMap,"beginTime",beginTime,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"beginTime=<time>|*");
@@ -15007,7 +14677,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
-  endTime = String_new();
+  String endTime = String_new();
   if (!StringMap_getString(argumentMap,"endTime",endTime,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"endTime=<time>|*");
@@ -15020,6 +14690,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
+  bool testCreatedArchives;
   if (!StringMap_getBool(argumentMap,"testCreatedArchives",&testCreatedArchives,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"testCreatedArchives=yes|no");
@@ -15032,6 +14703,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
+  bool noStorage;
   if (!StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"noStorage=yes|no");
@@ -15044,6 +14716,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
+  bool enabled;
   if (!StringMap_getBool(argumentMap,"enabled",&enabled,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"enabled=yes|no");
@@ -15058,8 +14731,10 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // create new schedule
-  scheduleNode = Job_newScheduleNode(scheduleUUID);
+  ScheduleNode *scheduleNode = Job_newScheduleNode(scheduleUUID);
   assert(scheduleNode != NULL);
+
+  Errors error;
 
   // parse schedule
   error = parseScheduleDateTime(&scheduleNode->date,
@@ -15147,7 +14822,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -15201,22 +14876,19 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-  ScheduleNode *scheduleNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
@@ -15226,7 +14898,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -15235,7 +14907,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     }
 
     // find schedule
-    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+    ScheduleNode *scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
@@ -15274,32 +14946,25 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String             name;
-  const JobNode      *jobNode;
-  const ScheduleNode *scheduleNode;
-  uint               i;
-  String             s;
-  ConfigValueFormat  configValueFormat;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID, name
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
     return;
   }
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
@@ -15310,7 +14975,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -15319,7 +14984,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // find schedule
-    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+    const ScheduleNode *scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
@@ -15332,7 +14997,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
 #ifndef WERROR
 #warning todo
 #endif
-    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
+    uint i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"XXXunknown schedule config '%S'",name);
@@ -15345,7 +15010,8 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     if (BAR_CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
     {
       // send value
-      s = String_new();
+      String             s = String_new();
+      ConfigValueFormat  configValueFormat;
       ConfigValue_formatInit(&configValueFormat,
                              &JOB_CONFIG_VALUES[i],
                              CONFIG_VALUE_FORMAT_MODE_VALUE,
@@ -15385,37 +15051,32 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String       name,value;
-  JobNode      *jobNode;
-  ScheduleNode *scheduleNode;
-  uint         i;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID, name, value
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
     return;
   }
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
-  value = String_new();
+  String value = String_new();
   if (!StringMap_getString(argumentMap,"value",value,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"value=<value>");
@@ -15427,7 +15088,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -15438,7 +15099,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // find schedule
-    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+    ScheduleNode *scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
@@ -15449,7 +15110,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     }
 
     // parse
-    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
+    uint i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     if (i == CONFIG_VALUE_INDEX_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown schedule config '%S'",name);
@@ -15510,30 +15171,25 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String       name;
-  JobNode      *jobNode;
-  ScheduleNode *scheduleNode;
-  uint         i;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID, name
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
     return;
   }
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
@@ -15544,7 +15200,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -15553,7 +15209,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     }
 
     // find schedule
-    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+    ScheduleNode *scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
@@ -15566,7 +15222,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
 #ifndef WERROR
 #warning todo
 #endif
-    i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
+    uint i = ConfigValue_valueIndex(JOB_CONFIG_VALUES,"schedule",String_cString(name));
     if (i == CONFIG_VALUE_INDEX_NONE)
     {
 // TODO:
@@ -15607,27 +15263,19 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
 
 LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-  ScheduleNode *scheduleNode;
-  uint64       executeScheduleDateTime;
-  uint64       dateTime;
-  uint         year,month,day,hour,minute;
-  WeekDays     weekDay;
-  char         s[256];
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, schedule UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<uuid>");
@@ -15637,7 +15285,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -15646,7 +15294,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // find schedule
-    scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+    ScheduleNode *scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
@@ -15655,13 +15303,15 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // get matching time for schedule
-    executeScheduleDateTime = 0LL;
-    dateTime                = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
+    uint64 executeScheduleDateTime = 0LL;
+    uint64 dateTime                = (Misc_getCurrentDateTime()/S_PER_MINUTE)*S_PER_MINUTE;  // round to full minutes
     while (   (executeScheduleDateTime == 0LL)
            && (dateTime >= 60LL)
           )
     {
       // get date/time values
+      uint     year,month,day,hour,minute;
+      WeekDays weekDay;
       Misc_splitDateTime(dateTime,
                          TIME_TYPE_LOCAL,
                          &year,
@@ -15697,6 +15347,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     // trigger job
     if (!Job_isActive(jobNode->jobState))
     {
+      char s[256];
       Job_trigger(jobNode,
                   scheduleNode->uuid,
                   scheduleNode->archiveType,
@@ -15744,19 +15395,11 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
-  const JobNode         *jobNode;
-  const PersistenceNode *persistenceNode;
-  char                  s1[16],s2[16],s3[16];
-  EntityList            entityList;
-  EntityList            jobEntityList;
-  const EntityNode      *jobEntityNode;
-  bool                  inTransit;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get job UUID, archive type
+  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -15764,6 +15407,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // get expiration entity list
+  EntityList entityList;
   getEntityList(&entityList,
                 indexHandle
                );
@@ -15771,7 +15415,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    const JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -15780,6 +15424,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // get expiration entity list of job
+    EntityList jobEntityList;
     getJobEntityList(&jobEntityList,
                      &entityList,
                      jobNode->job.uuid,
@@ -15787,9 +15432,11 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
                     );
 
 //TODO: totalStorageCount, totalStorageSize
+    const PersistenceNode *persistenceNode;
     LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
     {
       // send persistence info
+      char s1[16],s2[16],s3[16];
       if (persistenceNode->minKeep != KEEP_ALL   ) stringFormat(s1,sizeof(s1),"%d",persistenceNode->minKeep); else stringSet(s1,sizeof(s1),"*");
       if (persistenceNode->maxKeep != KEEP_ALL   ) stringFormat(s2,sizeof(s2),"%d",persistenceNode->maxKeep); else stringSet(s2,sizeof(s2),"*");
       if (persistenceNode->maxAge  != AGE_FOREVER) stringFormat(s3,sizeof(s3),"%d",persistenceNode->maxAge ); else stringSet(s3,sizeof(s3),"*");
@@ -15804,11 +15451,12 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
 //TODO
 0LL//                            persistenceNode->totalEntitySize
                          );
+      const EntityNode *jobEntityNode;
       LIST_ITERATE(&jobEntityList,jobEntityNode)
       {
         if (jobEntityNode->persistenceNode == persistenceNode)
         {
-          inTransit = isInTransit(jobEntityNode);
+          bool inTransit = isInTransit(jobEntityNode);
 
           // send entity info
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
@@ -15851,15 +15499,13 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -15869,7 +15515,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -15912,31 +15558,25 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
 
 LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes    archiveType;
-  int             minKeep,maxKeep;
-  int             maxAge;
-  String          moveTo;
-  JobNode         *jobNode;
-  PersistenceNode *persistenceNode;
-  uint            persistenceId;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get jobUUID, archive type, min./max keep, max. age
+  StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  ArchiveTypes    archiveType;
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
+  int minKeep;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"minKeep",NULL),"*"))
   {
     minKeep = KEEP_ALL;
@@ -15946,6 +15586,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minKeep=<n>|*");
     return;
   }
+  int maxKeep;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"maxKeep",NULL),"*"))
   {
     maxKeep = KEEP_ALL;
@@ -15955,6 +15596,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxKeep=<n>|*");
     return;
   }
+  int maxAge;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"maxAge",NULL),"*"))
   {
     maxAge = AGE_FOREVER;
@@ -15964,14 +15606,14 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>|*");
     return;
   }
-  moveTo = String_new();
+  String moveTo = String_new();
   StringMap_getString(argumentMap,"moveTo",moveTo,"");
 
-  persistenceId = ID_NONE;
+  uint persistenceId = ID_NONE;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -15980,6 +15622,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       return;
     }
 
+    PersistenceNode *persistenceNode;
     if (!LIST_CONTAINS(&jobNode->job.options.persistenceList,
                        persistenceNode,
                           (persistenceNode->archiveType == archiveType)
@@ -16035,37 +15678,31 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint                  persistenceId;
-  ArchiveTypes          archiveType;
-  int                   minKeep,maxKeep;
-  int                   maxAge;
-  String                moveTo;
-  JobNode               *jobNode;
-  PersistenceNode       *persistenceNode;
-  const PersistenceNode *existingPersistenceNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get jobUUID, persistence id, archive type, min./max keep, max. age
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint persistenceId;
   if (!StringMap_getUInt(argumentMap,"id",&persistenceId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
+  ArchiveTypes archiveType;
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
+  int minKeep;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"minKeep",NULL),"*"))
   {
     minKeep = KEEP_ALL;
@@ -16075,6 +15712,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minKeep=<n>|*");
     return;
   }
+  int maxKeep;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"maxKeep",NULL),"*"))
   {
     maxKeep = KEEP_ALL;
@@ -16084,6 +15722,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxKeep=<n>|*");
     return;
   }
+  int maxAge;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"maxAge",NULL),"*"))
   {
     maxAge = AGE_FOREVER;
@@ -16093,13 +15732,13 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>|*");
     return;
   }
-  moveTo = String_new();
+  String moveTo = String_new();
   StringMap_getString(argumentMap,"moveTo",moveTo,"");
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -16109,7 +15748,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     }
 
     // find persistence node
-    persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
+    PersistenceNode *persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
     if (persistenceNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PERSISTENCE_ID_NOT_FOUND,"%u",persistenceId);
@@ -16135,6 +15774,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
       persistenceNode->moveTo = String_duplicate(moveTo);
     }
 
+    const PersistenceNode *existingPersistenceNode;
     if (!LIST_CONTAINS(&jobNode->job.options.persistenceList,
                        existingPersistenceNode,
                           (existingPersistenceNode->archiveType == persistenceNode->archiveType)
@@ -16190,22 +15830,19 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
 
 LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint            persistenceId;
-  JobNode         *jobNode;
-  PersistenceNode *persistenceNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, persistence id
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint persistenceId;
   if (!StringMap_getUInt(argumentMap,"id",&persistenceId,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
@@ -16215,7 +15852,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -16224,7 +15861,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     }
 
     // find persistence
-    persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
+    PersistenceNode *persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
     if (persistenceNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PERSISTENCE_ID_NOT_FOUND,"%u",persistenceId);
@@ -16268,11 +15905,6 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
 
 LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  ServerIOEncryptTypes encryptType;
-  String               encryptedPassword;
-  Errors               error;
-  Password             password;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -16280,12 +15912,13 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
   UNUSED_VARIABLE(argumentMap);
 
   // get encrypt type, encrypted password
+  ServerIOEncryptTypes encryptType;
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
-  encryptedPassword = String_new();
+  String encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password>");
@@ -16294,12 +15927,13 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
   }
 
   // decrypt password and add to list
+  Password password;
   Password_init(&password);
-  error = ServerIO_decryptPassword(&clientInfo->io,
-                                   &password,
-                                   encryptType,
-                                   encryptedPassword
-                                  );
+  Errors error = ServerIO_decryptPassword(&clientInfo->io,
+                                          &password,
+                                          encryptType,
+                                          encryptedPassword
+                                         );
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
@@ -16335,22 +15969,19 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  ServerIOEncryptTypes encryptType;
-  String               encryptedPassword;
-  Errors               error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password
+  ServerIOEncryptTypes encryptType;
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
-  encryptedPassword = String_new();
+  String encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password>");
@@ -16361,11 +15992,11 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   // decrypt password
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    error = ServerIO_decryptPassword(&clientInfo->io,
-                                     &clientInfo->jobOptions.ftpServer.password,
-                                     encryptType,
-                                     encryptedPassword
-                                    );
+    Errors error = ServerIO_decryptPassword(&clientInfo->io,
+                                            &clientInfo->jobOptions.ftpServer.password,
+                                            encryptType,
+                                            encryptedPassword
+                                           );
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&clientInfo->lock);
@@ -16398,22 +16029,19 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  ServerIOEncryptTypes encryptType;
-  String               encryptedPassword;
-  Errors               error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password
+  ServerIOEncryptTypes encryptType;
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
-  encryptedPassword = String_new();
+  String encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password>");
@@ -16424,11 +16052,11 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   // decrypt password
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    error = ServerIO_decryptPassword(&clientInfo->io,
-                                     &clientInfo->jobOptions.sshServer.password,
-                                     encryptType,
-                                     encryptedPassword
-                                    );
+    Errors error = ServerIO_decryptPassword(&clientInfo->io,
+                                            &clientInfo->jobOptions.sshServer.password,
+                                            encryptType,
+                                            encryptedPassword
+                                           );
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&clientInfo->lock);
@@ -16461,22 +16089,19 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  ServerIOEncryptTypes encryptType;
-  String               encryptedPassword;
-  Errors               error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get encrypt type, encrypted password
+  ServerIOEncryptTypes encryptType;
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
-  encryptedPassword = String_new();
+  String encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password>");
@@ -16487,11 +16112,11 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   // decrypt password
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    error = ServerIO_decryptPassword(&clientInfo->io,
-                                     &clientInfo->jobOptions.webDAVServer.password,
-                                     encryptType,
-                                     encryptedPassword
-                                    );
+    Errors error = ServerIO_decryptPassword(&clientInfo->io,
+                                            &clientInfo->jobOptions.webDAVServer.password,
+                                            encryptType,
+                                            encryptedPassword
+                                           );
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&clientInfo->lock);
@@ -16525,29 +16150,25 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString         (jobUUID,MISC_UUID_STRING_LENGTH);
-  ServerIOEncryptTypes encryptType;
-  String               encryptedPassword;
-  JobNode              *jobNode;
-  Errors               error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, get encrypt type, encrypted password
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  ServerIOEncryptTypes encryptType;
   if (!StringMap_getEnum(argumentMap,"encryptType",&encryptType,CALLBACK_((StringMapParseEnumFunction)ServerIO_parseEncryptType,NULL),SERVER_IO_ENCRYPT_TYPE_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptType=NONE|RSA");
     return;
   }
-  encryptedPassword = String_new();
+  String encryptedPassword = String_new();
   if (!StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password>");
@@ -16560,7 +16181,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // find job
-      jobNode = Job_findByUUID(jobUUID);
+      JobNode *jobNode = Job_findByUUID(jobUUID);
       if (jobNode == NULL)
       {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -16572,11 +16193,11 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
       // decrypt password
 //TODO: remove
 //      if (jobNode->job.options.cryptPassword == NULL) jobNode->job.options.cryptPassword = Password_new();
-      error = ServerIO_decryptPassword(&clientInfo->io,
-                                       &jobNode->job.options.cryptPassword,
-                                       encryptType,
-                                       encryptedPassword
-                                      );
+      Errors error = ServerIO_decryptPassword(&clientInfo->io,
+                                              &jobNode->job.options.cryptPassword,
+                                              encryptType,
+                                              encryptedPassword
+                                             );
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
@@ -16591,11 +16212,11 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
     // decrypt password
     SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      error = ServerIO_decryptPassword(&clientInfo->io,
-                                       &clientInfo->jobOptions.cryptPassword,
-                                       encryptType,
-                                       encryptedPassword
-                                      );
+      Errors error = ServerIO_decryptPassword(&clientInfo->io,
+                                              &clientInfo->jobOptions.cryptPassword,
+                                              encryptType,
+                                              encryptedPassword
+                                             );
       if (error != ERROR_NONE)
       {
         Semaphore_unlock(&clientInfo->lock);
@@ -16664,21 +16285,19 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint         volumeNumber;
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID, volume number
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  uint volumeNumber;
   if (!StringMap_getUInt(argumentMap,"volumeNumber",&volumeNumber,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"volumeNumber=<n>");
@@ -16688,7 +16307,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -16720,15 +16339,13 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
 
 LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -16738,7 +16355,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-    jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
@@ -16788,21 +16405,13 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String            storageName;
-  StorageSpecifier  storageSpecifier;
-  StorageInfo       storageInfo;
-  Errors            error;
-  ArchiveHandle     archiveHandle;
-  ArchiveEntryInfo  archiveEntryInfo;
-  ArchiveEntryTypes archiveEntryType;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
   // get storage name, pattern
-  storageName = String_new();
+  String storageName = String_new();
   if (!StringMap_getString(argumentMap,"name",storageName,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<storage name>");
@@ -16810,7 +16419,10 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
 
+  Errors error;
+
   // parse storage name
+  StorageSpecifier  storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
@@ -16822,6 +16434,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   }
 
   // init storage
+  StorageInfo storageInfo;
   error = Storage_init(&storageInfo,
                        NULL,  // masterIO
                        &storageSpecifier,
@@ -16844,6 +16457,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   }
 
   // open archive
+  ArchiveHandle archiveHandle;
   error = Archive_open(&archiveHandle,
                        &storageInfo,
                        NULL,  // archive name
@@ -16869,6 +16483,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
         )
   {
     // get next file type
+    ArchiveEntryTypes archiveEntryType;
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         NULL,  // archiveCryptInfo
@@ -16887,19 +16502,17 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
           break; /* not reached */
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
+            // open archive file
+            ArchiveEntryInfo   archiveEntryInfo;
             CompressAlgorithms deltaCompressAlgorithm;
             CompressAlgorithms byteCompressAlgorithm;
             CryptAlgorithms    cryptAlgorithm;
             CryptTypes         cryptType;
-            String             fileName;
+            String             fileName = String_new();
             FileInfo           fileInfo;
-            String             deltaSourceName;
+            String             deltaSourceName = String_new();
             uint64             deltaSourceSize;
             uint64             fragmentOffset,fragmentSize;
-
-            // open archive file
-            fileName        = String_new();
-            deltaSourceName = String_new();
             error = Archive_readFileEntry(&archiveEntryInfo,
                                           &archiveHandle,
                                           &deltaCompressAlgorithm,
@@ -16954,20 +16567,18 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
+            // open archive file
+            ArchiveEntryInfo   archiveEntryInfo;
             CompressAlgorithms deltaCompressAlgorithm;
             CompressAlgorithms byteCompressAlgorithm;
             CryptAlgorithms    cryptAlgorithm;
             CryptTypes         cryptType;
-            String             imageName;
+            String             imageName = String_new();;
             DeviceInfo         deviceInfo;
             FileSystemTypes    fileSystemType;
-            String             deltaSourceName;
+            String             deltaSourceName = String_new();;
             uint64             deltaSourceSize;
             uint64             fragmentOffset,fragmentSize;
-
-            // open archive file
-            imageName       = String_new();
-            deltaSourceName = String_new();
             error = Archive_readImageEntry(&archiveEntryInfo,
                                            &archiveHandle,
                                            &deltaCompressAlgorithm,
@@ -17023,13 +16634,12 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
-            CryptAlgorithms cryptAlgorithm;
-            CryptTypes      cryptType;
-            String          directoryName;
-            FileInfo        fileInfo;
-
             // open archive directory
-            directoryName = String_new();
+            ArchiveEntryInfo archiveEntryInfo;
+            CryptAlgorithms  cryptAlgorithm;
+            CryptTypes       cryptType;
+            String           directoryName = String_new();;
+            FileInfo         fileInfo;
             error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                                &archiveHandle,
                                                &cryptType,
@@ -17068,14 +16678,12 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            CryptAlgorithms cryptAlgorithm;
-            CryptTypes      cryptType;
-            String          linkName;
-            String          name;
-
             // open archive link
-            linkName = String_new();
-            name     = String_new();
+            ArchiveEntryInfo archiveEntryInfo;
+            CryptAlgorithms  cryptAlgorithm;
+            CryptTypes       cryptType;
+            String           linkName = String_new();;
+            String           name = String_new();;
             error = Archive_readLinkEntry(&archiveEntryInfo,
                                           &archiveHandle,
                                           &cryptType,
@@ -17117,19 +16725,18 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
           {
+            // open archive hardlink
+            ArchiveEntryInfo   archiveEntryInfo;
             CompressAlgorithms deltaCompressAlgorithm;
             CompressAlgorithms byteCompressAlgorithm;
             CryptAlgorithms    cryptAlgorithm;
             CryptTypes         cryptType;
             StringList         fileNameList;
+            StringList_init(&fileNameList);
             FileInfo           fileInfo;
-            String             deltaSourceName;
+            String             deltaSourceName = String_new();;
             uint64             deltaSourceSize;
             uint64             fragmentOffset,fragmentSize;
-
-            // open archive hardlink
-            StringList_init(&fileNameList);
-            deltaSourceName = String_new();
             error = Archive_readHardLinkEntry(&archiveEntryInfo,
                                               &archiveHandle,
                                               &deltaCompressAlgorithm,
@@ -17184,13 +16791,12 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            String          name;
-            CryptAlgorithms cryptAlgorithm;
-            CryptTypes      cryptType;
-            FileInfo        fileInfo;
-
             // open archive link
-            name = String_new();
+            ArchiveEntryInfo archiveEntryInfo;
+            String           name = String_new();;
+            CryptAlgorithms  cryptAlgorithm;
+            CryptTypes       cryptType;
+            FileInfo         fileInfo;
             error = Archive_readSpecialEntry(&archiveEntryInfo,
                                              &archiveHandle,
                                              &cryptType,
@@ -17285,22 +16891,17 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId          entityId;
-  String           moveTo;
-  Errors           error;
-  JobOptions       jobOptions;
-  StorageSpecifier storageSpecifier;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get entityId, moveTo
+  IndexId entityId;
   if (!StringMap_getIndexId(argumentMap,"entityId",&entityId,INDEX_TYPE_ENTITY,INDEX_ID_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<id>");
     return;
   }
-  moveTo = String_new();
+  String moveTo = String_new();
   if (!StringMap_getString(argumentMap,"moveTo",moveTo,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"moveTo=<path>");
@@ -17315,19 +16916,18 @@ LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  // init variables
-  Job_initOptions(&jobOptions);
-  Storage_initSpecifier(&storageSpecifier);
-// TODO: init specifier, support other types
-  storageSpecifier.type = STORAGE_TYPE_FILESYSTEM;
-
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
 
   // lock entity
   error = IndexEntity_lock(indexHandle,entityId);
   if (error == ERROR_NONE)
   {
     // move storages of entity to new path
+    JobOptions jobOptions;
+    Job_initOptions(&jobOptions);
+    StorageSpecifier storageSpecifier;
+    Storage_initSpecifier(&storageSpecifier);
+    storageSpecifier.type = STORAGE_TYPE_FILESYSTEM;
     error = moveEntity(indexHandle,
                        &jobOptions,
                        entityId,
@@ -17372,11 +16972,12 @@ LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *index
 
     // unlock entity
     (void)IndexEntity_unlock(indexHandle,entityId);
+
+    Storage_doneSpecifier(&storageSpecifier);
+    Job_doneOptions(&jobOptions);
   }
   if (error != ERROR_NONE)
   {
-    Storage_doneSpecifier(&storageSpecifier);
-    Job_doneOptions(&jobOptions);
     String_delete(moveTo);
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
     return;
@@ -17385,8 +16986,6 @@ LOCAL void serverCommand_entityMoveTo(ClientInfo *clientInfo, IndexHandle *index
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  Storage_doneSpecifier(&storageSpecifier);
-  Job_doneOptions(&jobOptions);
   String_delete(moveTo);
 }
 
@@ -17457,20 +17056,14 @@ LOCAL void serverCommand_storageTest(ClientInfo *clientInfo, IndexHandle *indexH
                        );
   }
 
-  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
-  IndexId      entityId;
-  IndexId      storageId;
-  Errors       error;
-  StaticString (uuid,MISC_UUID_STRING_LENGTH);
-  JobNode      *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get job uuid, entity id, and/or storage id
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   String_clear(jobUUID);
-  entityId  = INDEX_ID_NONE;
-  storageId = INDEX_ID_NONE;
+  IndexId entityId  = INDEX_ID_NONE;
+  IndexId storageId = INDEX_ID_NONE;
   if (   !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
       && !StringMap_getIndexId(argumentMap,"entityId",&entityId,INDEX_TYPE_ENTITY,INDEX_ID_NONE)
       && !StringMap_getIndexId(argumentMap,"storageId",&storageId,INDEX_TYPE_STORAGE,INDEX_ID_NONE)
@@ -17488,7 +17081,8 @@ LOCAL void serverCommand_storageTest(ClientInfo *clientInfo, IndexHandle *indexH
   }
 
   // mount devices
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
+  StaticString (uuid,MISC_UUID_STRING_LENGTH);
   String_clear(uuid);
   if      (!String_isEmpty(jobUUID))
   {
@@ -17546,7 +17140,7 @@ LOCAL void serverCommand_storageTest(ClientInfo *clientInfo, IndexHandle *indexH
   {
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      jobNode = Job_findByUUID(uuid);
+      JobNode *jobNode = Job_findByUUID(uuid);
       if (jobNode != NULL)
       {
         error = mountAll(&jobNode->job.options.mountList);
@@ -17613,7 +17207,7 @@ LOCAL void serverCommand_storageTest(ClientInfo *clientInfo, IndexHandle *indexH
   // unmount devices
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
-    jobNode = Job_findByUUID(uuid);
+    JobNode *jobNode = Job_findByUUID(uuid);
     if (jobNode != NULL)
     {
       error = unmountAll(&jobNode->job.options.mountList);
@@ -17641,8 +17235,6 @@ LOCAL void serverCommand_storageTest(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  Errors error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -17669,7 +17261,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
   }
 
   // mount devices
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
   StaticString (uuid,MISC_UUID_STRING_LENGTH);
   String_clear(uuid);
   if      (!String_isEmpty(jobUUID))
@@ -17844,7 +17436,21 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  Errors error;
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(argumentMap);
+
+  // check if index database is available
+  if (indexHandle == NULL)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    return;
+  }
+
+  // init variables
+
+  // get infos
   uint   totalNormalEntityCount;
   uint   totalFullEntityCount;
   uint   totalIncrementalEntityCount;
@@ -17885,64 +17491,48 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
   uint   totalUpdateRequestedStorageCount;
   uint   totalErrorStorageCount;
   uint   totalDeletedStorageCount;
+  Errors error = Index_getInfos(indexHandle,
+                                &totalNormalEntityCount,
+                                &totalFullEntityCount,
+                                &totalIncrementalEntityCount,
+                                &totalDifferentialEntityCount,
+                                &totalContinuousEntityCount,
+                                &totalLockedEntityCount,
+                                &totalDeletedEntityCount,
 
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
+                                &totalEntryCount,
+                                &totalEntrySize,
+                                &totalFileCount,
+                                &totalFileSize,
+                                &totalImageCount,
+                                &totalImageSize,
+                                &totalDirectoryCount,
+                                &totalLinkCount,
+                                &totalHardlinkCount,
+                                &totalHardlinkSize,
+                                &totalSpecialCount,
 
-  UNUSED_VARIABLE(argumentMap);
+                                &totalEntryCountNewest,
+                                &totalEntrySizeNewest,
+                                &totalFileCountNewest,
+                                &totalFileSizeNewest,
+                                &totalImageCountNewest,
+                                &totalImageSizeNewest,
+                                &totalDirectoryCountNewest,
+                                &totalLinkCountNewest,
+                                &totalHardlinkCountNewest,
+                                &totalHardlinkSizeNewest,
+                                &totalSpecialCountNewest,
 
-  // check if index database is available
-  if (indexHandle == NULL)
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    return;
-  }
+                                &totalSkippedEntryCount,
 
-  // init variables
-
-  // get infos
-  error = Index_getInfos(indexHandle,
-                         &totalNormalEntityCount,
-                         &totalFullEntityCount,
-                         &totalIncrementalEntityCount,
-                         &totalDifferentialEntityCount,
-                         &totalContinuousEntityCount,
-                         &totalLockedEntityCount,
-                         &totalDeletedEntityCount,
-
-                         &totalEntryCount,
-                         &totalEntrySize,
-                         &totalFileCount,
-                         &totalFileSize,
-                         &totalImageCount,
-                         &totalImageSize,
-                         &totalDirectoryCount,
-                         &totalLinkCount,
-                         &totalHardlinkCount,
-                         &totalHardlinkSize,
-                         &totalSpecialCount,
-
-                         &totalEntryCountNewest,
-                         &totalEntrySizeNewest,
-                         &totalFileCountNewest,
-                         &totalFileSizeNewest,
-                         &totalImageCountNewest,
-                         &totalImageSizeNewest,
-                         &totalDirectoryCountNewest,
-                         &totalLinkCountNewest,
-                         &totalHardlinkCountNewest,
-                         &totalHardlinkSizeNewest,
-                         &totalSpecialCountNewest,
-
-                         &totalSkippedEntryCount,
-
-                         &totalStorageCount,
-                         &totalStorageSize,
-                         &totalOKStorageCount,
-                         &totalUpdateRequestedStorageCount,
-                         &totalErrorStorageCount,
-                         &totalDeletedStorageCount
-                        );
+                                &totalStorageCount,
+                                &totalStorageSize,
+                                &totalOKStorageCount,
+                                &totalUpdateRequestedStorageCount,
+                                &totalErrorStorageCount,
+                                &totalDeletedStorageCount
+                               );
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get index infos fail");
@@ -18107,30 +17697,12 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     String_delete(uuidNode->jobUUID);
   }
 
-  bool             indexStateAny;
-  IndexStateSet    indexStateSet;
-  bool             indexModeAny;
-  IndexModeSet     indexModeSet;
-  String           name;
-  UUIDList         uuidList;
-  uint             lastErrorCode;
-  String           lastErrorData;
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          uuidId;
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint64           lastExecutedDateTime;
-  uint64           totalSize;
-  uint             totalEntryCount;
-  uint64           totalEntrySize;
-  UUIDNode         *uuidNode;
-  const JobNode    *jobNode;
-  bool             exitsFlag;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // filter index state set, index mode set, name
+  bool           indexStateAny;
+  IndexStateSet indexStateSet;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet",NULL),"*"))
   {
     indexStateAny = TRUE;
@@ -18143,6 +17715,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   {
     indexStateAny = TRUE;
   }
+  bool         indexModeAny;
+  IndexModeSet indexModeSet;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet",NULL),"*"))
   {
     indexModeAny = TRUE;
@@ -18155,7 +17729,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   {
     indexModeAny = TRUE;
   }
-  name = String_new();
+  String name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
 
   // check if index database is available
@@ -18166,11 +17740,12 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     return;
   }
 
-  // init variables
-  List_init(&uuidList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeUUIDNode,NULL));
-  lastErrorData = String_new();
+  Errors error;
 
   // get UUIDs from database (Note: store into list to avoid dead-lock in job list)
+  UUIDList uuidList;
+  List_init(&uuidList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeUUIDNode,NULL));
+  IndexQueryHandle indexQueryHandle;
   error = IndexUUID_initList(&indexQueryHandle,
                               indexHandle,
                               indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
@@ -18181,7 +17756,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
                              );
   if (error != ERROR_NONE)
   {
-    String_delete(lastErrorData);
     List_done(&uuidList);
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init uuid list fail");
@@ -18189,6 +17763,14 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     String_delete(name);
     return;
   }
+  IndexId      uuidId;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint64       lastExecutedDateTime;
+  uint         lastErrorCode;
+  String       lastErrorData = String_new();
+  uint64       totalSize;
+  uint         totalEntryCount;
+  uint64       totalEntrySize;
   while (   !isCommandAborted(clientInfo,id)
          && !isQuit()
          && IndexUUID_getNext(&indexQueryHandle,
@@ -18203,7 +17785,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
                              )
         )
   {
-    uuidNode = LIST_NEW_NODE(UUIDNode);
+    UUIDNode *uuidNode = LIST_NEW_NODE(UUIDNode);
     if (uuidNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
@@ -18224,10 +17806,11 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   // get job names and send list
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
+    UUIDNode *uuidNode;
     LIST_ITERATE(&uuidList,uuidNode)
     {
       // get job name
-      jobNode = Job_findByUUID(uuidNode->jobUUID);
+      JobNode *jobNode = Job_findByUUID(uuidNode->jobUUID);
       if (jobNode != NULL)
       {
         String_set(name,jobNode->name);
@@ -18256,10 +17839,12 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   // send job UUIDs without database entry
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
+    const JobNode *jobNode;
     JOB_LIST_ITERATE(jobNode)
     {
       // check if exists in database
-      exitsFlag = FALSE;
+      bool           exitsFlag = FALSE;
+      const UUIDNode *uuidNode;
       LIST_ITERATEX(&uuidList,uuidNode,!exitsFlag)
       {
         exitsFlag = String_equals(jobNode->job.uuid,uuidNode->jobUUID);
@@ -18315,37 +17900,14 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString         (jobUUID,MISC_UUID_STRING_LENGTH);
-  bool                 indexStateAny;
-  IndexStateSet        indexStateSet;
-  bool                 indexModeAny;
-  IndexModeSet         indexModeSet;
-  String               name;
-  IndexEntitySortModes sortMode;
-  DatabaseOrdering     ordering;
-  Errors               error;
-  IndexQueryHandle     indexQueryHandle;
-  IndexId              uuidId;
-  String               jobName;
-  IndexId              entityId;
-  StaticString         (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  uint64               createdDateTime;
-  ArchiveTypes         archiveType;
-  uint                 lastErrorCode;
-  String               lastErrorData;
-  uint64               totalSize;
-  uint                 totalEntryCount;
-  uint64               totalEntrySize;
-  int                  maxAge;
-  const JobNode        *jobNode;
-  const ScheduleNode   *scheduleNode;
-  uint64               expireDateTime;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get uuid, index state set, index mode set, name, name
+  StaticString         (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+  bool          indexStateAny;
+  IndexStateSet indexStateSet;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet",NULL),"*"))
   {
     indexStateAny = TRUE;
@@ -18358,6 +17920,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   {
     indexStateAny = TRUE;
   }
+  bool         indexModeAny;
+  IndexModeSet indexModeSet;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet",NULL),"*"))
   {
     indexModeAny = TRUE;
@@ -18370,9 +17934,11 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   {
     indexModeAny = TRUE;
   }
-  name = String_new();
+  String name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
+  IndexEntitySortModes sortMode;
   StringMap_getEnum(argumentMap,"sortMode",&sortMode,CALLBACK_((StringMapParseEnumFunction)Index_parseEntitySortMode,NULL),INDEX_ENTITY_SORT_MODE_JOB_UUID);
+  DatabaseOrdering ordering;
   StringMap_getEnum(argumentMap,"ordering",&ordering,CALLBACK_((StringMapParseEnumFunction)Index_parseOrdering,NULL),DATABASE_ORDERING_NONE);
 
   // check if index database is available
@@ -18383,11 +17949,10 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  // initialize variables
-  jobName       = String_new();
-  lastErrorData = String_new();
+  Errors error;
 
   // get entities
+  IndexQueryHandle indexQueryHandle;
   error = IndexEntity_initList(&indexQueryHandle,
                                indexHandle,
                                INDEX_ID_ANY,  // uuidId
@@ -18405,11 +17970,19 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init entity list fail");
-    String_delete(lastErrorData);
-    String_delete(jobName);
-    String_delete(name);
     return;
   }
+  IndexId      uuidId;
+  String       jobName = String_new();;
+  IndexId      entityId;
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  uint64       createdDateTime;
+  ArchiveTypes archiveType;
+  uint         lastErrorCode;
+  String       lastErrorData = String_new();;
+  uint64       totalSize;
+  uint         totalEntryCount;
+  uint64       totalEntrySize;
   while (   !isCommandAborted(clientInfo,id)
          && !isQuit()
          && IndexEntity_getNext(&indexQueryHandle,
@@ -18430,16 +18003,16 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   {
     // get job name, expire date/time
     String_clear(jobName);
-    maxAge = AGE_FOREVER;
+    int maxAge = AGE_FOREVER;
     if (!String_isEmpty(jobUUID))
     {
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        jobNode = Job_findByUUID(jobUUID);
+        const JobNode *jobNode = Job_findByUUID(jobUUID);
         if (jobNode != NULL)
         {
           String_set(jobName,jobNode->name);
-          scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
+          const ScheduleNode *scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
           if (scheduleNode != NULL)
           {
             maxAge = scheduleNode->maxAge;
@@ -18447,6 +18020,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
         }
       }
     }
+    uint64 expireDateTime;
     if (maxAge != AGE_FOREVER)
     {
       expireDateTime = createdDateTime+maxAge*S_PER_DAY;
@@ -18528,46 +18102,11 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId               entityId;
-  StaticString          (jobUUID,MISC_UUID_STRING_LENGTH);
-  bool                  jobUUIDAny;
-  StaticString          (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  bool                  scheduleUUIDAny;
-  bool                  indexTypeAny;
-  IndexTypeSet          indexTypeSet;
-  bool                  indexStateAny;
-  IndexStateSet         indexStateSet;
-  bool                  indexModeAny;
-  IndexModeSet          indexModeSet;
-  String                name;
-  uint64                offset;
-  uint64                limit;
-  IndexStorageSortModes sortMode;
-  DatabaseOrdering      ordering;
-  Errors                error;
-  IndexQueryHandle      indexQueryHandle;
-  StorageSpecifier      storageSpecifier;
-  String                jobName;
-  String                hostName;
-  String                storageName;
-  String                printableStorageName;
-  String                errorMessage;
-  IndexId               uuidId,storageId;
-  uint64                createdDateTime;
-  ArchiveTypes          archiveType;
-  uint64                dateTime;
-  uint64                size;
-  IndexStates           indexState;
-  IndexModes            indexMode;
-  uint64                lastCheckedDateTime;
-  uint                  totalEntryCount;
-  uint64                totalEntrySize;
-  const JobNode         *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get entity id, jobUUID, scheduleUUID, index type set, index state set, index mode set, name, offset, limit
+  IndexId entityId;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entityId",NULL),"*"))
   {
     entityId = INDEX_ID_ANY;
@@ -18583,6 +18122,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     entityId = INDEX_ID_ANY;
   }
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  bool         jobUUIDAny;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"jobUUID",NULL),"*"))
   {
     jobUUIDAny = TRUE;
@@ -18595,6 +18136,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     jobUUIDAny = TRUE;
   }
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  bool         scheduleUUIDAny;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"scheduleUUID",NULL),"*"))
   {
     scheduleUUIDAny = TRUE;
@@ -18607,6 +18150,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     scheduleUUIDAny = TRUE;
   }
+  bool         indexTypeAny;
+  IndexTypeSet indexTypeSet;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexTypeSet",NULL),"*"))
   {
     indexTypeAny = TRUE;
@@ -18619,6 +18164,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     indexTypeAny = TRUE;
   }
+  bool          indexStateAny;
+  IndexStateSet indexStateSet;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet",NULL),"*"))
   {
     indexStateAny = TRUE;
@@ -18631,6 +18178,8 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     indexStateAny = TRUE;
   }
+  bool         indexModeAny;
+  IndexModeSet indexModeSet;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet",NULL),"*"))
   {
     indexModeAny = TRUE;
@@ -18643,11 +18192,15 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     indexModeAny = TRUE;
   }
-  name = String_new();
+  String name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
+  uint64 offset;
   StringMap_getUInt64(argumentMap,"offset",&offset,0);
+  uint64 limit;
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
+  IndexStorageSortModes sortMode;
   StringMap_getEnum(argumentMap,"sortMode",&sortMode,CALLBACK_((StringMapParseEnumFunction)Index_parseStorageSortMode,NULL),INDEX_STORAGE_SORT_MODE_NAME);
+  DatabaseOrdering ordering;
   StringMap_getEnum(argumentMap,"ordering",&ordering,CALLBACK_((StringMapParseEnumFunction)Index_parseOrdering,NULL),DATABASE_ORDERING_NONE);
 
   // check if index database is available
@@ -18658,15 +18211,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  // initialize variables
-  Storage_initSpecifier(&storageSpecifier);
-  jobName              = String_new();
-  hostName             = String_new();
-  storageName          = String_new();
-  errorMessage         = String_new();
-  printableStorageName = String_new();
+  Errors error;
 
   // list index
+  IndexQueryHandle indexQueryHandle;
   error = IndexStorage_initList(&indexQueryHandle,
                                 indexHandle,
                                 INDEX_ID_ANY,  // uuidId
@@ -18689,15 +18237,27 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init storage list fail");
-    String_delete(printableStorageName);
-    String_delete(errorMessage);
-    String_delete(storageName);
-    String_delete(hostName);
-    String_delete(jobName);
-    Storage_doneSpecifier(&storageSpecifier);
     String_delete(name);
     return;
   }
+  IndexId          uuidId;
+  String           hostName = String_new();
+  String           errorMessage = String_new();
+  uint64           createdDateTime;
+  ArchiveTypes     archiveType;
+  IndexId          storageId;
+  String           storageName = String_new();
+  uint64           dateTime;
+  uint64           size;
+  IndexStates      indexState;
+  IndexModes       indexMode;
+  uint64           lastCheckedDateTime;
+  uint             totalEntryCount;
+  uint64           totalEntrySize;
+  String           printableStorageName = String_new();
+  StorageSpecifier storageSpecifier;
+  Storage_initSpecifier(&storageSpecifier);
+  String           jobName = String_new();
   while (   !isCommandAborted(clientInfo,id)
          && !isQuit()
          && IndexStorage_getNext(&indexQueryHandle,
@@ -18727,7 +18287,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
     String_set(jobName,jobUUID);
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
-      jobNode = Job_findByUUID(jobUUID);
+      const JobNode *jobNode = Job_findByUUID(jobUUID);
       if (jobNode != NULL)
       {
         String_set(jobName,jobNode->name);
@@ -18767,17 +18327,17 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                         totalEntrySize
                        );
   }
-  Index_doneList(&indexQueryHandle);
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-
-  // free resources
   String_delete(printableStorageName);
   String_delete(errorMessage);
   String_delete(storageName);
   String_delete(hostName);
   String_delete(jobName);
   Storage_doneSpecifier(&storageSpecifier);
+  Index_doneList(&indexQueryHandle);
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
   String_delete(name);
 }
 
@@ -18827,17 +18387,11 @@ LOCAL void serverCommand_indexStorageListClear(ClientInfo *clientInfo, IndexHand
 
 LOCAL void serverCommand_indexStorageListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String          storageIds;
-  IndexId         storageId;
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  long            nextIndex;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get index ids
-  storageIds = String_new();
+  String storageIds = String_new();
   if (!StringMap_getString(argumentMap,"storageIds",storageIds,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageIds=<id>,...");
@@ -18854,12 +18408,16 @@ LOCAL void serverCommand_indexStorageListAdd(ClientInfo *clientInfo, IndexHandle
   }
 
   // add to id array
+  StringTokenizer stringTokenizer;
+  ConstString     token;
   String_initTokenizer(&stringTokenizer,storageIds,STRING_BEGIN,",",NULL,TRUE);
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       // get id
+      IndexId storageId;
+      long    nextIndex;
       storageId.data = String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
       if (nextIndex != STRING_END)
       {
@@ -18898,17 +18456,11 @@ LOCAL void serverCommand_indexStorageListAdd(ClientInfo *clientInfo, IndexHandle
 
 LOCAL void serverCommand_indexStorageListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String          storageIds;
-  IndexId         storageId;
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  long            nextIndex;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get index ids
-  storageIds = String_new();
+  String storageIds = String_new();
   if (!StringMap_getString(argumentMap,"storageIds",storageIds,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageIds=<id>,...");
@@ -18925,12 +18477,16 @@ LOCAL void serverCommand_indexStorageListRemove(ClientInfo *clientInfo, IndexHan
   }
 
   // remove from id array
+  StringTokenizer stringTokenizer;
+  ConstString     token;
   String_initTokenizer(&stringTokenizer,storageIds,STRING_BEGIN,",",NULL,TRUE);
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       // get id
+      IndexId storageId;
+      long    nextIndex;
       storageId.data = String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
       if (nextIndex != STRING_END)
       {
@@ -18979,28 +18535,13 @@ LOCAL void serverCommand_indexStorageListRemove(ClientInfo *clientInfo, IndexHan
 
 LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId       entityId;
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  bool          jobUUIDAny;
-  StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  bool          scheduleUUIDAny;
-  bool          indexTypeAny;
-  IndexTypeSet  indexTypeSet;
-  bool          indexStateAny;
-  IndexStateSet indexStateSet;
-  bool          indexModeAny;
-  IndexModeSet  indexModeSet;
-  String        name;
-  Errors        error;
-  uint          totalStorageCount,totalEntryCount;
-  uint64        totalStorageSize,totalEntrySize;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(argumentMap);
 
   // get entityId, jobUUID, scheduleUUID, index type set, index state set, index mode set, name
+  IndexId entityId;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entityId",NULL),"*"))
   {
     entityId = INDEX_ID_ANY;
@@ -19016,6 +18557,8 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     entityId = INDEX_ID_ANY;
   }
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  bool         jobUUIDAny;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"jobUUID",NULL),"*"))
   {
     jobUUIDAny = TRUE;
@@ -19028,6 +18571,8 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     jobUUIDAny = TRUE;
   }
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  bool         scheduleUUIDAny;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"scheduleUUID",NULL),"*"))
   {
     scheduleUUIDAny = TRUE;
@@ -19040,6 +18585,8 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     scheduleUUIDAny = TRUE;
   }
+  bool         indexTypeAny;
+  IndexTypeSet indexTypeSet;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexTypeSet",NULL),"*"))
   {
     indexTypeAny = TRUE;
@@ -19052,6 +18599,8 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     indexTypeAny = TRUE;
   }
+  bool          indexStateAny;
+  IndexStateSet indexStateSet;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet",NULL),"*"))
   {
     indexStateAny = TRUE;
@@ -19064,6 +18613,8 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     indexStateAny = TRUE;
   }
+  bool         indexModeAny;
+  IndexModeSet indexModeSet;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet",NULL),"*"))
   {
     indexModeAny = TRUE;
@@ -19076,7 +18627,7 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   {
     indexModeAny = TRUE;
   }
-  name = String_new();
+  String name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
 
   // check if index database is available
@@ -19088,22 +18639,24 @@ LOCAL void serverCommand_indexStorageListInfo(ClientInfo *clientInfo, IndexHandl
   }
 
   // get index info
-  error = IndexStorage_getsInfos(indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 entityId,
-                                 !jobUUIDAny ? jobUUID : NULL,
-                                 !scheduleUUIDAny ? scheduleUUID : NULL,
-                                 Array_cArray(&clientInfo->indexIdArray),
-                                 Array_length(&clientInfo->indexIdArray),
-                                 indexTypeAny ? INDEX_TYPESET_ALL : indexTypeSet,
-                                 indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
-                                 indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
-                                 name,
-                                 &totalStorageCount,
-                                 &totalStorageSize,
-                                 &totalEntryCount,
-                                 &totalEntrySize
-                                );
+  uint   totalStorageCount,totalEntryCount;
+  uint64 totalStorageSize,totalEntrySize;
+  Errors error = IndexStorage_getsInfos(indexHandle,
+                                        INDEX_ID_ANY,  // uuidId
+                                        entityId,
+                                        !jobUUIDAny ? jobUUID : NULL,
+                                        !scheduleUUIDAny ? scheduleUUID : NULL,
+                                        Array_cArray(&clientInfo->indexIdArray),
+                                        Array_length(&clientInfo->indexIdArray),
+                                        indexTypeAny ? INDEX_TYPESET_ALL : indexTypeSet,
+                                        indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
+                                        indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
+                                        name,
+                                        &totalStorageCount,
+                                        &totalStorageSize,
+                                        &totalEntryCount,
+                                        &totalEntrySize
+                                       );
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get storages info from index database fail");
@@ -19298,40 +18851,13 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     } \
     while (0)
 
-  String              name;
-  IndexTypes          entryType;
-  bool                newestOnly;
-  bool                selectedOnly;
-  bool                fragmentsCount;
-  uint64              offset;
-  uint64              limit;
-  IndexEntrySortModes sortMode;
-  DatabaseOrdering    ordering;
-  IndexId             prevUUIDId;
-  String              jobName;
-  String              hostName;
-  String              storageName;
-  String              entryName;
-  FileSystemTypes     fileSystemType;
-  String              destinationName;
-  Errors              error;
-  IndexQueryHandle    indexQueryHandle;
-  IndexId             uuidId,entityId,entryId;
-  StaticString        (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes        archiveType;
-  uint64              size;
-  uint64              timeModified;
-  uint32              userId,groupId;
-  uint32              permission;
-  uint                fragmentCount;
-  const JobNode       *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // filter name, entry type, new entries only, fragments, offset, limit
-  name = String_new();
+  String name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
+  IndexTypes entryType;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType",NULL),"*"))
   {
     entryType = INDEX_TYPE_ANY;
@@ -19344,12 +18870,19 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   {
     entryType = INDEX_TYPE_ANY;
   }
+  bool newestOnly;
   StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE);
+  bool selectedOnly;
   StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE);
+  bool fragmentsCount;
   StringMap_getBool(argumentMap,"fragmentsCount",&fragmentsCount,FALSE);
+  uint64 offset;
   StringMap_getUInt64(argumentMap,"offset",&offset,0);
+  uint64 limit;
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
+  IndexEntrySortModes sortMode;
   StringMap_getEnum(argumentMap,"sortMode",&sortMode,CALLBACK_((StringMapParseEnumFunction)Index_parseEntrySortMode,NULL),INDEX_ENTRY_SORT_MODE_NAME);
+  DatabaseOrdering ordering;
   StringMap_getEnum(argumentMap,"ordering",&ordering,CALLBACK_((StringMapParseEnumFunction)Index_parseOrdering,NULL),DATABASE_ORDERING_NONE);
 
   // check if index database is available+ready
@@ -19361,38 +18894,43 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   }
 
   // initialize variables
-  prevUUIDId      = INDEX_ID_NONE;
-  jobName         = String_new();
-  hostName        = String_new();
-  storageName     = String_new();
-  entryName       = String_new();
-  destinationName = String_new();
-  error = IndexEntry_initList(&indexQueryHandle,
-                              indexHandle,
-                              !selectedOnly ? Array_cArray(&clientInfo->indexIdArray) : NULL,
-                              !selectedOnly ? Array_length(&clientInfo->indexIdArray) : 0,
-                              selectedOnly ? Array_cArray(&clientInfo->entryIdArray) : NULL,
-                              selectedOnly ? Array_length(&clientInfo->entryIdArray) : 0L,
-                              entryType,
-                              name,
-                              newestOnly,
-                              fragmentsCount,
-                              sortMode,
-                              ordering,
-                              offset,
-                              limit
-                             );
+  IndexQueryHandle indexQueryHandle;
+  Errors error = IndexEntry_initList(&indexQueryHandle,
+                                     indexHandle,
+                                     !selectedOnly ? Array_cArray(&clientInfo->indexIdArray) : NULL,
+                                     !selectedOnly ? Array_length(&clientInfo->indexIdArray) : 0,
+                                     selectedOnly ? Array_cArray(&clientInfo->entryIdArray) : NULL,
+                                     selectedOnly ? Array_length(&clientInfo->entryIdArray) : 0L,
+                                     entryType,
+                                     name,
+                                     newestOnly,
+                                     fragmentsCount,
+                                     sortMode,
+                                     ordering,
+                                     offset,
+                                     limit
+                                    );
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init list entries fail");
-    String_delete(destinationName);
-    String_delete(entryName);
-    String_delete(storageName);
-    String_delete(hostName);
-    String_delete(jobName);
     String_delete(name);
     return;
   }
+  IndexId         prevUUIDId = INDEX_ID_NONE;
+  String          jobName = String_new();
+  String          hostName = String_new();
+  String          storageName = String_new();
+  String          entryName = String_new();
+  IndexId         uuidId,entityId,entryId;
+  StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes    archiveType;
+  uint64          size;
+  uint64          timeModified;
+  uint32          userId,groupId;
+  uint32          permission;
+  uint            fragmentCount;
+  String          destinationName = String_new();
+  FileSystemTypes fileSystemType;
   while (   !isCommandAborted(clientInfo,id)
          && !isQuit()
          && IndexEntry_getNext(&indexQueryHandle,
@@ -19424,7 +18962,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     {
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-        jobNode = Job_findByUUID(jobUUID);
+        const JobNode *jobNode = Job_findByUUID(jobUUID);
         if (jobNode != NULL)
         {
           String_set(jobName,jobNode->name);
@@ -19464,15 +19002,16 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         break;
     }
   }
-  Index_doneList(&indexQueryHandle);
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-
-  // free resources
   String_delete(destinationName);
   String_delete(entryName);
   String_delete(storageName);
   String_delete(hostName);
   String_delete(jobName);
+  Index_doneList(&indexQueryHandle);
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+
+  // free resources
   String_delete(name);
 
   #undef SEND_SPECIAL_ENTRY
@@ -19528,17 +19067,11 @@ LOCAL void serverCommand_indexEntryListClear(ClientInfo *clientInfo, IndexHandle
 
 LOCAL void serverCommand_indexEntryListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String           entryIds;
-  IndexId          entryId;
-  StringTokenizer  stringTokenizer;
-  ConstString      token;
-  long             nextIndex;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get entry ids
-  entryIds = String_new();
+  String entryIds = String_new();
   if (!StringMap_getString(argumentMap,"entryIds",entryIds,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryIds=<id>,...");
@@ -19555,12 +19088,16 @@ LOCAL void serverCommand_indexEntryListAdd(ClientInfo *clientInfo, IndexHandle *
   }
 
   // add to ids and all ids of fragments to array
+  StringTokenizer stringTokenizer;
+  ConstString     token;
   String_initTokenizer(&stringTokenizer,entryIds,STRING_BEGIN,",",NULL,TRUE);
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       // get id
+      IndexId entryId;
+      long    nextIndex;
       entryId.data = String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
       if (nextIndex != STRING_END)
       {
@@ -19598,17 +19135,12 @@ LOCAL void serverCommand_indexEntryListAdd(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String          entryIds;
-  IndexId         entryId;
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  long            nextIndex;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get entry ids
-  entryIds = String_new();
+  String entryIds = String_new();
   if (!StringMap_getString(argumentMap,"entryIds",entryIds,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryIds=<id>,...");
@@ -19625,12 +19157,16 @@ LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandl
   }
 
   // remove from id array
+  StringTokenizer stringTokenizer;
+  ConstString     token;
   String_initTokenizer(&stringTokenizer,entryIds,STRING_BEGIN,",",NULL,TRUE);
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
       // get id
+      IndexId entryId;
+      long    nextIndex;
       entryId.data = String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
       if (nextIndex != STRING_END)
       {
@@ -19677,25 +19213,18 @@ LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandl
 
 LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String     name;
-  IndexTypes entryType;
-  bool       newestOnly;
-  bool       selectedOnly;
-  Errors     error;
-  uint       totalStorageCount,totalEntryCount;
-  uint64     totalStorageSize,totalEntrySize;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get entry pattern, index type, new entries only
-  name = String_new();
+  String name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<text>");
     String_delete(name);
     return;
   }
+  IndexTypes entryType;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType",NULL),"*"))
   {
     entryType = INDEX_TYPE_ANY;
@@ -19708,7 +19237,9 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   {
     entryType = INDEX_TYPE_ANY;
   }
+  bool newestOnly;
   StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE);
+  bool selectedOnly;
   StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE);
 
   // check if index database is available+ready
@@ -19720,19 +19251,21 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   }
 
   // get index info
-  error = IndexEntry_getInfo(indexHandle,
-                             !selectedOnly ? Array_cArray(&clientInfo->indexIdArray) : NULL,
-                             !selectedOnly ? Array_length(&clientInfo->indexIdArray) : 0L,
-                             selectedOnly ? Array_cArray(&clientInfo->entryIdArray) : NULL,
-                             selectedOnly ? Array_length(&clientInfo->entryIdArray) : 0L,
-                             entryType,
-                             name,
-                             newestOnly,
-                             &totalStorageCount,
-                             &totalStorageSize,
-                             &totalEntryCount,
-                             &totalEntrySize
-                            );
+  uint   totalStorageCount,totalEntryCount;
+  uint64 totalStorageSize,totalEntrySize;
+  Errors error = IndexEntry_getInfo(indexHandle,
+                                    !selectedOnly ? Array_cArray(&clientInfo->indexIdArray) : NULL,
+                                    !selectedOnly ? Array_length(&clientInfo->indexIdArray) : 0L,
+                                    selectedOnly ? Array_cArray(&clientInfo->entryIdArray) : NULL,
+                                    selectedOnly ? Array_length(&clientInfo->entryIdArray) : 0L,
+                                    entryType,
+                                    name,
+                                    newestOnly,
+                                    &totalStorageCount,
+                                    &totalStorageSize,
+                                    &totalEntryCount,
+                                    &totalEntrySize
+                                   );
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get entries info index database fail");
@@ -19772,20 +19305,11 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
 
 LOCAL void serverCommand_indexEntryFragmentList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId entryId;
-  uint64  offset;
-  uint64  limit;
-  Errors  error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId storageId;
-  String  storageName;
-  uint64  storageDateTime;
-  uint64  fragmentOffset,fragmentSize;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get entity id, offset, limit
+  IndexId entryId;
   if (!StringMap_getUInt64(argumentMap,"entryId",&entryId.data,0))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryId=<id>");
@@ -19799,7 +19323,9 @@ LOCAL void serverCommand_indexEntryFragmentList(ClientInfo *clientInfo, IndexHan
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected entry id for file, image or hardlink");
     return;
   }
+  uint64 offset;
   StringMap_getUInt64(argumentMap,"offset",&offset,0);
+  uint64 limit;
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
 
   // check if index database is available+ready
@@ -19809,22 +19335,23 @@ LOCAL void serverCommand_indexEntryFragmentList(ClientInfo *clientInfo, IndexHan
     return;
   }
 
-  // initialize variables
-  storageName = String_new();
-
   // list entry fragments
-  error = IndexEntry_initListFragments(&indexQueryHandle,
-                                       indexHandle,
-                                       entryId,
-                                       offset,
-                                       limit
-                                      );
+  IndexQueryHandle indexQueryHandle;
+  Errors error = IndexEntry_initListFragments(&indexQueryHandle,
+                                              indexHandle,
+                                              entryId,
+                                              offset,
+                                              limit
+                                             );
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init list entries fail");
-    String_delete(storageName);
     return;
   }
+  IndexId storageId;
+  String  storageName = String_new();
+  uint64  storageDateTime;
+  uint64  fragmentOffset,fragmentSize;
   while (   !isCommandAborted(clientInfo,id)
          && !isQuit()
          && IndexEntry_getNextFragment(&indexQueryHandle,
@@ -19879,29 +19406,11 @@ LOCAL void serverCommand_indexEntryFragmentList(ClientInfo *clientInfo, IndexHan
 
 LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          uuidId;
-  String           jobName;
-  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String           hostName;
-  uint64           createdDateTime;
-  ArchiveTypes     archiveType;
-  String           errorMessage;
-  uint64           duration;
-  uint             totalEntryCount;
-  uint64           totalEntrySize;
-  uint             skippedEntryCount;
-  uint64           skippedEntrySize;
-  uint             errorEntryCount;
-  uint64           errorEntrySize;
-  const JobNode    *jobNode;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get job UUID
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
 
   // check if index database is available
@@ -19911,12 +19420,10 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  // initialize variables
-  jobName      = String_new();
-  hostName     = String_new();
-  errorMessage = String_new();
+  Errors error;
 
   // get entities
+  IndexQueryHandle indexQueryHandle;
   error = IndexHistory_initList(&indexQueryHandle,
                                  indexHandle,
                                  INDEX_ID_ANY,  // uuidId
@@ -19928,12 +19435,22 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init history list fail");
-    String_delete(errorMessage);
-    String_delete(hostName);
-    String_delete(jobName);
     return;
   }
-
+  IndexId      uuidId;
+  String       jobName = String_new();
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String       hostName = String_new();
+  uint64       createdDateTime;
+  ArchiveTypes archiveType;
+  String       errorMessage = String_new();
+  uint64       duration;
+  uint         totalEntryCount;
+  uint64       totalEntrySize;
+  uint         skippedEntryCount;
+  uint64       skippedEntrySize;
+  uint         errorEntryCount;
+  uint64       errorEntrySize;
   while (   !isCommandAborted(clientInfo,id)
          && !isQuit()
          && IndexHistory_getNext(&indexQueryHandle,
@@ -19962,7 +19479,7 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
     {
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
-        jobNode = Job_findByUUID(jobUUID);
+        const JobNode *jobNode = Job_findByUUID(jobUUID);
         if (jobNode != NULL)
         {
           String_set(jobName,jobNode->name);
@@ -19990,14 +19507,14 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
                         errorEntrySize
                        );
   }
+  String_delete(errorMessage);
+  String_delete(hostName);
+  String_delete(jobName);
   Index_doneList(&indexQueryHandle);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(errorMessage);
-  String_delete(hostName);
-  String_delete(jobName);
 }
 
 /***********************************************************************\
@@ -20022,8 +19539,6 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  Errors error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -20062,16 +19577,16 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
 
   // create new entity
   IndexId entityId;
-  error = IndexEntity_new(indexHandle,
-                          String_cString(jobUUID),
-                          String_cString(scheduleUUID),
-                          String_cString(hostName),
-                          String_cString(userName),
-                          archiveType,
-                          createdDateTime,
-                          FALSE,  // not locked
-                          &entityId
-                         );
+  Errors error = IndexEntity_new(indexHandle,
+                                 String_cString(jobUUID),
+                                 String_cString(scheduleUUID),
+                                 String_cString(hostName),
+                                 String_cString(userName),
+                                 archiveType,
+                                 createdDateTime,
+                                 FALSE,  // not locked
+                                 &entityId
+                                );
   if (error != ERROR_NONE)
   {
     String_delete(userName);
@@ -20107,8 +19622,6 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  Errors error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -20135,18 +19648,15 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  // init variables
-  StorageSpecifier nameStorageSpecifier;
-  Storage_initSpecifier(&nameStorageSpecifier);
-  JobOptions jobOptions;
-  Job_initOptions(&jobOptions);
+  Errors error;
 
   // parse storage specifier
+  StorageSpecifier nameStorageSpecifier;
+  Storage_initSpecifier(&nameStorageSpecifier);
   error = Storage_parseName(&nameStorageSpecifier,name);
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"invalid storage specifier");
-    Job_doneOptions(&jobOptions);
     Storage_doneSpecifier(&nameStorageSpecifier);
     String_delete(name);
     return;
@@ -20160,6 +19670,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   {
     if (!Storage_isPatternSpecifier(&nameStorageSpecifier))
     {
+      JobOptions jobOptions;
+      Job_initOptions(&jobOptions);
       StorageInfo storageInfo;
       if (Storage_init(&storageInfo,
                        NULL, // masterIO
@@ -20254,11 +19766,11 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
 
         Storage_done(&storageInfo);
       }
+      Job_doneOptions(&jobOptions);
     }
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-      Job_doneOptions(&jobOptions);
       Storage_doneSpecifier(&nameStorageSpecifier);
       String_delete(name);
       return;
@@ -20268,6 +19780,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   // try to open as directory: add all matching entries
   if (!foundFlag)
   {
+    JobOptions jobOptions;
+    Job_initOptions(&jobOptions);
     error = Storage_forAll(&nameStorageSpecifier,
                            NULL,  // directory
                            "*" FILE_NAME_EXTENSION_ARCHIVE_FILE,
@@ -20410,6 +19924,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
       String_delete(name);
       return;
     }
+    Job_doneOptions(&jobOptions);
   }
 
   // trigger index thread
@@ -20428,7 +19943,6 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // free resources
-  Job_doneOptions(&jobOptions);
   Storage_doneSpecifier(&nameStorageSpecifier);
   String_delete(name);
 }
@@ -20461,8 +19975,6 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  Errors error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -20506,6 +20018,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
     return;
   }
+
+  Errors error;
 
   if (!String_isEmpty(jobUUID))
   {
@@ -20721,8 +20235,6 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  Errors error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -20766,6 +20278,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     String_delete(name);
     return;
   }
+
+  Errors error;
 
   // init variables
   Array storageIdArray;
@@ -21150,8 +20664,6 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  Errors error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -21190,6 +20702,8 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     String_delete(name);
     return;
   }
+
+  Errors error;
 
   if      (   (INDEX_ID_IS_NONE(uuidId))
            && (INDEX_ID_IS_NONE(storageId))
@@ -21867,33 +21381,30 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     LIST_DELETE_NODE(restoreNode);
   }
 
-  Types              type;
-  String             destination;
-  bool               directoryContentFlag;
-  bool               sparseFilesFlag;
-  bool               skipVerifySignaturesFlag;
-  RestoreEntryModes  restoreEntryMode;
-  Errors             error;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   // get type, destination, directory content flag, overwrite flag
+  Types type;
   if (!StringMap_getEnum(argumentMap,"type",&type,CALLBACK_((StringMapParseEnumFunction)parseRestoreType,NULL),UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"type=ARCHIVES|ENTRIES");
     return;
   }
-  destination = String_new();
+  String destination = String_new();
   if (!StringMap_getString(argumentMap,"destination",destination,NULL))
   {
     String_delete(destination);
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"destination=<name>");
     return;
   }
+  bool directoryContentFlag;
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
+  bool sparseFilesFlag;
   StringMap_getBool(argumentMap,"sparse",&sparseFilesFlag,FALSE);
+  bool skipVerifySignaturesFlag;
   StringMap_getBool(argumentMap,"skipVerifySignatures",&skipVerifySignaturesFlag,FALSE);
+  RestoreEntryModes restoreEntryMode;
   if (!StringMap_getEnum(argumentMap,"restoreEntryMode",&restoreEntryMode,CALLBACK_((StringMapParseEnumFunction)parseRestoreEntryMode,NULL),RESTORE_ENTRY_MODE_STOP))
   {
     String_delete(destination);
@@ -21901,16 +21412,16 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     return;
   }
 
+  Errors error = ERROR_NONE;
+
   // get storage/entry list
   RestoreList restoreList;
-
   List_init(&restoreList,
             CALLBACK_(NULL,NULL),
             CALLBACK_((ListNodeFreeFunction)freeRestoreNode,NULL)
            );
 
 
-  error = ERROR_NONE;
   switch (type)
   {
     case ARCHIVES:
@@ -22406,14 +21917,12 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
 
 LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  FILE *handle;
-
   assert(clientInfo != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  handle = fopen("bar-memory.dump","w");
+  FILE *handle = fopen("bar-memory.dump","w");
   if (handle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_CREATE_FILE,"Cannot create 'bar-memory.dump'");
@@ -22492,9 +22001,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
 void serverDumpMemoryInfo(void);
 void serverDumpMemoryInfo(void)
 {
-  FILE *handle;
-
-  handle = fopen("bar-memory.dump","w");
+  FILE *handle = fopen("bar-memory.dump","w");
   if (handle == NULL)
   {
     fprintf(stderr,"%s, %d: Cannot open file (error: %s)\n",__FILE__,__LINE__,strerror(errno));
@@ -22741,14 +22248,12 @@ LOCAL bool findCommand(ConstString           name,
                        AuthorizationStateSet *authorizationStateSet
                       )
 {
-  uint i;
-
   assert(name != NULL);
   assert(serverCommandFunction != NULL);
   assert(authorizationStateSet != NULL);
 
   // find command by name
-  i = 0;
+  uint i = 0;
   while ((i < SIZE_OF_ARRAY(SERVER_COMMANDS)) && !String_equalsCString(name,SERVER_COMMANDS[i].name))
   {
     i++;
@@ -22783,12 +22288,11 @@ LOCAL void putCommand(ClientInfo            *clientInfo,
                       const StringMap       argumentMap
                      )
 {
-  Command command;
-
   assert(clientInfo != NULL);
   assert(serverCommandFunction != NULL);
   assert(argumentMap != NULL);
 
+  Command command;
   command.serverCommandFunction = serverCommandFunction;
   command.authorizationStateSet = authorizationStateSet;
   command.id                    = id;
@@ -22817,13 +22321,12 @@ LOCAL bool getCommand(ClientInfo            *clientInfo,
                       StringMap             argumentMap
                      )
 {
-  Command command;
-
   assert(clientInfo != NULL);
   assert(serverCommandFunction != NULL);
   assert(id != NULL);
   assert(argumentMap != NULL);
 
+  Command command;
   if (MsgQueue_get(&clientInfo->commandQueue,&command,NULL,sizeof(command),WAIT_FOREVER))
   {
     (*serverCommandFunction) = command.serverCommandFunction;
@@ -22852,21 +22355,12 @@ LOCAL bool getCommand(ClientInfo            *clientInfo,
 
 LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 {
-  IndexHandle     indexHandle;
-  bool            isIndexOpen;
-  CommandInfoNode *commandInfoNode;
-  String          result;
-  Command         command;
-  #ifndef NDEBUG
-    uint64 t0,t1;
-  #endif /* not NDEBUG */
 
   assert(clientInfo != NULL);
 
-  // init variables
-  result = String_new();
-
   // try to open index
+  IndexHandle indexHandle;
+  bool        isIndexOpen;
   if (Index_isAvailable())
   {
     isIndexOpen = (Index_open(&indexHandle,NULL,CLIENT_TIMEOUT) == ERROR_NONE);
@@ -22877,6 +22371,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   }
 
   // run client thread
+  Command command;
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->commandQueue,&command,NULL,sizeof(command),WAIT_FOREVER)
         )
@@ -22895,7 +22390,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       }
 
       // add command info
-      commandInfoNode = NULL;
+      CommandInfoNode *commandInfoNode = NULL;
       SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
@@ -22910,7 +22405,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 
       // execute command
       #ifndef NDEBUG
-        t0 = 0LL;
+        uint64 t0 = 0LL;
         if (globalOptions.debug.serverLevel >= 1)
         {
           t0 = Misc_getTimestamp();
@@ -22922,6 +22417,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
                                     command.argumentMap
                                    );
       #ifndef NDEBUG
+        uint64 t1;
         if (globalOptions.debug.serverLevel >= 2)
         {
           t1 = Misc_getTimestamp();
@@ -22951,9 +22447,6 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   {
     Index_close(&indexHandle);
   }
-
-  // free resources
-  String_delete(result);
 }
 
 // ----------------------------------------------------------------------
@@ -22972,17 +22465,14 @@ LOCAL Errors initNetworkClient(ClientInfo               *clientInfo,
                                const ServerSocketHandle *serverSocketHandle
                               )
 {
-  Errors error;
-  uint   i;
-
   assert(clientInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
   assert(serverSocketHandle != NULL);
 
   // connect network server i/o
-  error = ServerIO_acceptNetwork(&clientInfo->io,
-                                 serverSocketHandle
-                                );
+  Errors error = ServerIO_acceptNetwork(&clientInfo->io,
+                                        serverSocketHandle
+                                       );
   if (error != ERROR_NONE)
   {
     return error;
@@ -22997,7 +22487,7 @@ LOCAL Errors initNetworkClient(ClientInfo               *clientInfo,
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
   }
-  for (i = 0; i < MAX_NETWORK_CLIENT_THREADS; i++)
+  for (size_t i = 0; i < MAX_NETWORK_CLIENT_THREADS; i++)
   {
     clientInfo->threads[i] = ThreadPool_run(&clientThreadPool,networkClientThreadCode,clientInfo);
     if (clientInfo->threads[i] == NULL)
@@ -23020,8 +22510,6 @@ LOCAL Errors initNetworkClient(ClientInfo               *clientInfo,
 
 LOCAL void doneNetworkClient(ClientInfo *clientInfo)
 {
-  int i;
-
   assert(clientInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
 
@@ -23030,7 +22518,7 @@ LOCAL void doneNetworkClient(ClientInfo *clientInfo)
 
   // stop client command threads
   MsgQueue_setEndOfMsg(&clientInfo->commandQueue);
-  for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
+  for (ssize_t i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
   {
     if (!ThreadPool_join(&clientThreadPool,clientInfo->threads[i]))
     {
@@ -23061,16 +22549,14 @@ LOCAL Errors initBatchClient(ClientInfo *clientInfo,
                              int        outputDescriptor
                             )
 {
-  Errors error;
-
   assert(clientInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
 
   // connect batch server i/o
-  error = ServerIO_connectBatch(&clientInfo->io,
-                                inputDescriptor,
-                                outputDescriptor
-                               );
+  Errors error = ServerIO_connectBatch(&clientInfo->io,
+                                       inputDescriptor,
+                                       outputDescriptor
+                                      );
   if (error != ERROR_NONE)
   {
     return error;
@@ -23149,9 +22635,6 @@ LOCAL void initClient(ClientInfo *clientInfo)
 
 LOCAL void doneClient(ClientInfo *clientInfo)
 {
-  JobNode         *jobNode;
-  CommandInfoNode *commandInfoNode;
-
   assert(clientInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
 
@@ -23161,6 +22644,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // abort all index commands
+    CommandInfoNode *commandInfoNode;
     LIST_ITERATE(&clientInfo->commandInfoList,commandInfoNode)
     {
       if (commandInfoNode->indexHandle != NULL)
@@ -23179,6 +22663,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   // abort all running master jobs
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+    JobNode *jobNode;
     JOB_LIST_ITERATE(jobNode)
     {
       if (jobNode->masterIO == &clientInfo->io)
@@ -23251,10 +22736,8 @@ LOCAL void freeClientNode(ClientNode *clientNode, void *userData)
 
 LOCAL ClientNode *newClient(void)
 {
-  ClientNode *clientNode;
-
   // create new client node
-  clientNode = LIST_NEW_NODE(ClientNode);
+  ClientNode *clientNode = LIST_NEW_NODE(ClientNode);
   if (clientNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -23297,8 +22780,6 @@ LOCAL Errors newNetworkClient(ClientNode               **clientNode,
                               const ServerSocketHandle *serverSocketHandle
                              )
 {
-  Errors error;
-
   assert(clientNode != NULL);
   assert(serverSocketHandle != NULL);
 
@@ -23310,7 +22791,7 @@ LOCAL Errors newNetworkClient(ClientNode               **clientNode,
   initClient(&(*clientNode)->clientInfo);
 
   // init network client
-  error = initNetworkClient(&(*clientNode)->clientInfo,serverSocketHandle);
+  Errors error = initNetworkClient(&(*clientNode)->clientInfo,serverSocketHandle);
   if (error != ERROR_NONE)
   {
     deleteClient(*clientNode);
@@ -23346,17 +22827,16 @@ LOCAL void rejectNetworkClient(const ServerSocketHandle *serverSocketHandle)
 
 LOCAL ClientInfo *findClient(const SlaveHost *slaveHost)
 {
-  ClientNode *clientNode;
 
   assert(slaveHost != NULL);
   assert(Semaphore_isLocked(&clientList.lock));
 
-  clientNode = LIST_FIND(&clientList,
-                         clientNode,
-                            (clientNode->clientInfo.type == SERVER_IO_TYPE_NETWORK)
-                         && (clientNode->clientInfo.io.network.port == slaveHost->port)
-                         && String_equals(clientNode->clientInfo.io.network.name,slaveHost->name)
-                        );
+  ClientNode *clientNode = LIST_FIND(&clientList,
+                                     clientNode,
+                                        (clientNode->clientInfo.type == SERVER_IO_TYPE_NETWORK)
+                                     && (clientNode->clientInfo.io.network.port == slaveHost->port)
+                                     && String_equals(clientNode->clientInfo.io.network.name,slaveHost->name)
+                                    );
 
   return (clientNode != NULL) ? &clientNode->clientInfo : NULL;
 }
@@ -23373,23 +22853,21 @@ LOCAL ClientInfo *findClient(const SlaveHost *slaveHost)
 
 LOCAL void purgeNetworkClient(ClientList *clientList)
 {
-  ClientNode *clientNode;
-  char       s[256];
-
   assert(clientList != NULL);
 
   SEMAPHORE_LOCKED_DO(&clientList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find incomplete connected client with connection older than 60s
-    clientNode = LIST_FIND(clientList,
-                           clientNode,
-                              (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_WAITING)
-                           && (Misc_getTimestamp() > (clientNode->clientInfo.connectTimestamp+60LL*US_PER_SECOND))
-                          );
+    ClientNode *clientNode = LIST_FIND(clientList,
+                                       clientNode,
+                                          (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_WAITING)
+                                       && (Misc_getTimestamp() > (clientNode->clientInfo.connectTimestamp+60LL*US_PER_SECOND))
+                                      );
     if (clientNode != NULL)
     {
       // remove and disconnect client
       List_remove(clientList,clientNode);
+      char s[256];
       getClientInfoString(&clientNode->clientInfo,s,sizeof(s));
       deleteClient(clientNode);
 
@@ -23430,9 +22908,7 @@ LOCAL void freeAuthorizationFailNode(AuthorizationFailNode *authorizationFailNod
 
 LOCAL AuthorizationFailNode *newAuthorizationFailNode(ConstString clientName)
 {
-  AuthorizationFailNode *authorizationFailNode;
-
-  authorizationFailNode = LIST_NEW_NODE(AuthorizationFailNode);
+  AuthorizationFailNode *authorizationFailNode = LIST_NEW_NODE(AuthorizationFailNode);
   if (authorizationFailNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -23539,14 +23015,12 @@ LOCAL uint64 getAuthorizationFailTimestamp(const AuthorizationFailNode *authoriz
 
 LOCAL uint getAuthorizationWaitRestTime(const AuthorizationFailNode *authorizationFailNode)
 {
-  uint   restTime;
-  uint64 authorizationFailTimestamp;
-  uint64 nowTimestamp;
 
+  uint restTime;
   if (authorizationFailNode != NULL)
   {
-    authorizationFailTimestamp = getAuthorizationFailTimestamp(authorizationFailNode);
-    nowTimestamp               = Misc_getTimestamp();
+    uint64 authorizationFailTimestamp = getAuthorizationFailTimestamp(authorizationFailNode);
+    uint64 nowTimestamp               = Misc_getTimestamp();
     restTime = (nowTimestamp < authorizationFailTimestamp)
                  ? (uint)((authorizationFailTimestamp-nowTimestamp)/US_PER_SECOND)
                  : 0;
@@ -23575,12 +23049,11 @@ LOCAL uint getAuthorizationWaitRestTime(const AuthorizationFailNode *authorizati
 
 LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, const StringMap argumentMap)
 {
-  ServerCommandFunction serverCommandFunction;
-  AuthorizationStateSet authorizationStateSet;
-
   assert(clientInfo != NULL);
 
   // find command
+  ServerCommandFunction serverCommandFunction;
+  AuthorizationStateSet authorizationStateSet;
   if (!findCommand(name,&serverCommandFunction,&authorizationStateSet))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
@@ -23693,13 +23166,11 @@ LOCAL_INLINE bool isServerTLSHandle(bool serverTLSFlag, const ServerSocketHandle
 
 Errors Server_initAll(void)
 {
-  Errors error;
-
   #ifdef SIMULATE_PURGE
     Array_init(&simulatedPurgeEntityIdArray,sizeof(IndexId),128,NULL,NULL,NULL,NULL);
   #endif /* SIMULATE_PURGE */
 
-  error = Connector_initAll();
+  Errors error = Connector_initAll();
   if (error != ERROR_NONE)
   {
     return error;
@@ -23719,29 +23190,8 @@ void Server_doneAll(void)
 
 Errors Server_socket(void)
 {
-  AutoFreeList          autoFreeList;
-  Errors                error;
-  bool                  serverFlag,serverTLSFlag;
-  ServerSocketHandle    serverSocketHandle,serverTLSSocketHandle;
-  SignalMask            signalMask;
-  WaitHandle            waitHandle;
-  int                   handle;
-  uint                  events;
-  uint64                nowTimestamp,waitTimeout,nextTimestamp;  // [ms]
-  bool                  clientDelayFlag;
-  AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
-  uint                  clientWaitRestTime;
-  ClientNode            *clientNode;
-  char                  s[256];
-  String                name;
-  uint                  id;
-  AggregateInfo         jobAggregateInfo,scheduleAggregateInfo;
-  JobNode               *jobNode;
-  ScheduleNode          *scheduleNode;
-  StringMap             argumentMap;
-  ClientNode            *disconnectClientNode;
-
   // initialize variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
   hostName                       = Network_getHostName(String_new());
 //TODO: remove
@@ -23790,6 +23240,8 @@ Errors Server_socket(void)
             String_cString(hostName),
             (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()
            );
+
+  Errors error;
 
   // create jobs directory if necessary
   if (globalOptions.serverMode == SERVER_MODE_MASTER)
@@ -23869,8 +23321,9 @@ Errors Server_socket(void)
   }
 
   // init server sockets
-  serverFlag    = FALSE;
-  serverTLSFlag = FALSE;
+  bool               serverFlag    = FALSE;
+  bool               serverTLSFlag = FALSE;
+  ServerSocketHandle serverSocketHandle;
   if (globalOptions.serverPort != 0)
   {
     error = Network_initServer(&serverSocketHandle,
@@ -23899,6 +23352,7 @@ Errors Server_socket(void)
       return error;
     }
   }
+  ServerSocketHandle serverTLSSocketHandle;
   if (globalOptions.serverTLSPort != 0)
   {
     if (   Configuration_isCertificateAvailable(&globalOptions.serverCert)
@@ -23960,10 +23414,13 @@ Errors Server_socket(void)
   }
 
   // initial update statics data
+  AggregateInfo jobAggregateInfo;
   initAggregateInfo(&jobAggregateInfo);
+  AggregateInfo scheduleAggregateInfo;
   initAggregateInfo(&scheduleAggregateInfo);
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+    JobNode *jobNode;
     JOB_LIST_ITERATE(jobNode)
     {
       getAggregateInfo(&jobAggregateInfo,
@@ -23986,6 +23443,7 @@ Errors Server_socket(void)
       jobNode->totalEntryCount                  = jobAggregateInfo.totalEntryCount;
       jobNode->totalEntrySize                   = jobAggregateInfo.totalEntrySize;
 
+      ScheduleNode *scheduleNode;
       LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
       {
         getAggregateInfo(&scheduleAggregateInfo,
@@ -24088,20 +23546,22 @@ Errors Server_socket(void)
              "Ready"
             );
   printInfo(1,"Ready\n");
+  SignalMask signalMask;
   MISC_SIGNAL_MASK_CLEAR(signalMask);
   #ifdef HAVE_SIGALRM
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
   #endif /* HAVE_SIGALRM */
 
   // process client requests
+  WaitHandle waitHandle;
   Misc_initWait(&waitHandle,64);
-  name                     = String_new();
-  argumentMap              = StringMap_new();
+  String    name        = String_new();
+  StringMap argumentMap = StringMap_new();
   while (!isQuit())
   {
     // get active sockets to wait for
     Misc_waitReset(&waitHandle);
-    waitTimeout = 0LL;
+    uint64 waitTimeout = 0LL;
     SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       // get standard port connection requests
@@ -24120,16 +23580,17 @@ Errors Server_socket(void)
       }
 
       // get client connections, calculate min. wait timeout
-      nowTimestamp = Misc_getTimestamp();
+      uint64     nowTimestamp = Misc_getTimestamp();
       waitTimeout  = 60LL*MS_PER_SECOND; // wait for network connection max. 1min [ms]
+      ClientNode *clientNode;
       LIST_ITERATE(&clientList,clientNode)
       {
-        clientDelayFlag = FALSE;
+        bool clientDelayFlag = FALSE;
 
         // check if client should be served now, calculate min. wait timeout
         if (clientNode->clientInfo.authorizationFailNode != NULL)
         {
-          nextTimestamp = getAuthorizationFailTimestamp(clientNode->clientInfo.authorizationFailNode);
+          uint64 nextTimestamp = getAuthorizationFailTimestamp(clientNode->clientInfo.authorizationFailNode);
           if (nowTimestamp <= nextTimestamp)
           {
             clientDelayFlag = TRUE;
@@ -24153,6 +23614,8 @@ Errors Server_socket(void)
     // wait for connect, disconnect, command, or result
     (void)Misc_waitHandles(&waitHandle,&signalMask,waitTimeout);
 
+    int  handle;
+    uint events;
     MISC_HANDLES_ITERATE(&waitHandle,handle,events)
     {
       // connect new clients via plain/standard port
@@ -24169,6 +23632,7 @@ Errors Server_socket(void)
           // connect new client
           if ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
           {
+            ClientNode *clientNode;
             error = newNetworkClient(&clientNode,&serverSocketHandle);
             if (error == ERROR_NONE)
             {
@@ -24178,6 +23642,7 @@ Errors Server_socket(void)
                 List_append(&clientList,clientNode);
 
                 // find authorization fail node, get client wait rest time
+                AuthorizationFailNode *authorizationFailNode;
                 clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
                                                                          authorizationFailNode,
                                                                          String_equals(authorizationFailNode->clientName,
@@ -24185,11 +23650,12 @@ Errors Server_socket(void)
                                                                                       )
                                                                         );
 
-                clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
+                uint clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
                 if (globalOptions.serverMode == SERVER_MODE_MASTER)
                 {
                   if (clientWaitRestTime > 0)
                   {
+                    char s[256];
                     printInfo(1,
                               "Connected %s (delayed %us)\n",
                               getClientInfoString(&clientNode->clientInfo,s,sizeof(s)),
@@ -24198,6 +23664,7 @@ Errors Server_socket(void)
                   }
                   else
                   {
+                    char s[256];
                     printInfo(1,
                               "Connected %s\n",
                               getClientInfoString(&clientNode->clientInfo,s,sizeof(s))
@@ -24233,6 +23700,7 @@ Errors Server_socket(void)
           // connect new clients via TLS port
           if ((globalOptions.serverMaxConnections == 0) || (List_count(&clientList) < globalOptions.serverMaxConnections))
           {
+            ClientNode *clientNode;
             error = newNetworkClient(&clientNode,&serverTLSSocketHandle);
             if (error == ERROR_NONE)
             {
@@ -24242,6 +23710,7 @@ Errors Server_socket(void)
                 List_append(&clientList,clientNode);
 
                 // find authorization fail node
+                AuthorizationFailNode *authorizationFailNode;
                 clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
                                                                          authorizationFailNode,
                                                                          String_equals(authorizationFailNode->clientName,
@@ -24249,9 +23718,10 @@ Errors Server_socket(void)
                                                                                       )
                                                                         );
 
-                clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
+                uint clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
                 if (clientWaitRestTime > 0)
                 {
+                  char s[256];
                   printInfo(1,
                             "Connected %s (TLS/SSL, delayed %us)\n",
                             getClientInfoString(&clientNode->clientInfo,s,sizeof(s)),
@@ -24260,6 +23730,7 @@ Errors Server_socket(void)
                 }
                 else
                 {
+                  char s[256];
                   printInfo(1,
                             "Connected %s (TLS/SSL)\n",
                             getClientInfoString(&clientNode->clientInfo,s,sizeof(s))
@@ -24292,10 +23763,10 @@ Errors Server_socket(void)
           if (Misc_isAnyEvent(events))
           {
             // find client node
-            clientNode = LIST_FIND(&clientList,
-                                   clientNode,
-                                   handle == Network_getSocket(&clientNode->clientInfo.io.network.socketHandle)
-                                  );
+            ClientNode *clientNode = LIST_FIND(&clientList,
+                                               clientNode,
+                                               handle == Network_getSocket(&clientNode->clientInfo.io.network.socketHandle)
+                                              );
             if (clientNode != NULL)
             {
               if (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
@@ -24303,6 +23774,7 @@ Errors Server_socket(void)
                 if (ServerIO_receiveData(&clientNode->clientInfo.io))
                 {
                   // process all commands
+                  uint id;
                   while (ServerIO_getCommand(&clientNode->clientInfo.io,
                                              &id,
                                              name,
@@ -24326,7 +23798,7 @@ Errors Server_socket(void)
                 else
                 {
                   // disconnect -> remove from client list
-                  disconnectClientNode = clientNode;
+                  ClientNode *disconnectClientNode = clientNode;
                   List_remove(&clientList,disconnectClientNode);
 
                   // update authorization fail info
@@ -24344,6 +23816,7 @@ Errors Server_socket(void)
                       incrementAuthorizationFail(disconnectClientNode);
                       break;
                   }
+                  char s[256];
                   getClientInfoString(&disconnectClientNode->clientInfo,s,sizeof(s));
 
                   // done client and free resources
@@ -24358,7 +23831,7 @@ Errors Server_socket(void)
               else if (Misc_isHandleEvent(events,HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID))
               {
                 // error/disconnect -> remove from client list
-                disconnectClientNode = clientNode;
+                ClientNode *disconnectClientNode = clientNode;
                 clientNode = List_remove(&clientList,disconnectClientNode);
 
                 // update authorization fail info
@@ -24376,6 +23849,7 @@ Errors Server_socket(void)
                     incrementAuthorizationFail(disconnectClientNode);
                     break;
                 }
+                char s[256];
                 getClientInfoString(&disconnectClientNode->clientInfo,s,sizeof(s));
 
                 // done client and free resources
@@ -24406,18 +23880,19 @@ Errors Server_socket(void)
           }
 
           // disconnect clients because of authorization failure
-          clientNode = clientList.head;
+          ClientNode *clientNode = clientList.head;
           while (clientNode != NULL)
           {
             if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
             {
               // remove from connected list
-              disconnectClientNode = clientNode;
+              ClientNode *disconnectClientNode = clientNode;
               clientNode = List_remove(&clientList,disconnectClientNode);
 
               // increment authorization failure
               incrementAuthorizationFail(disconnectClientNode);
 
+              char s[256];
               getClientInfoString(&disconnectClientNode->clientInfo,s,sizeof(s));
 
               // done client and free resources
@@ -24436,8 +23911,8 @@ Errors Server_socket(void)
           }
 
           // clean-up authorization failure list
-          nowTimestamp          = Misc_getTimestamp();
-          authorizationFailNode = authorizationFailList.head;
+          uint64                nowTimestamp           = Misc_getTimestamp();
+          AuthorizationFailNode *authorizationFailNode = authorizationFailList.head;
           while (authorizationFailNode != NULL)
           {
             // find client
@@ -24463,7 +23938,7 @@ Errors Server_socket(void)
           while (List_count(&authorizationFailList) > MAX_AUTHORIZATION_FAIL_HISTORY)
           {
             // find oldest authorization failure
-            oldestAuthorizationFailNode = authorizationFailList.head;
+            AuthorizationFailNode *oldestAuthorizationFailNode = authorizationFailList.head;
             LIST_ITERATE(&authorizationFailList,authorizationFailNode)
             {
               // find client
@@ -24516,7 +23991,7 @@ Errors Server_socket(void)
   // delete all clients
   while (!List_isEmpty(&clientList))
   {
-    clientNode = (ClientNode*)List_removeFirst(&clientList);
+    ClientNode *clientNode = (ClientNode*)List_removeFirst(&clientList);
     deleteClient(clientNode);
   }
 
@@ -24612,19 +24087,13 @@ Errors Server_batch(int inputDescriptor,
                     int outputDescriptor
                    )
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
-  ClientInfo   clientInfo;
-  String       name;
-  uint         id;
-  StringMap    argumentMap;
-
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
              "Started BAR batch"
             );
 
   // initialize variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&clientList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
@@ -24653,6 +24122,8 @@ Errors Server_batch(int inputDescriptor,
   AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
   AUTOFREE_ADD(&autoFreeList,newMaster.name,{ String_delete(newMaster.name); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.uuidHash,{ Crypt_doneHash(&newMaster.uuidHash); });
+
+  Errors error;
 
   // init index database
   if (!String_isEmpty(globalOptions.indexDatabaseURI))
@@ -24751,6 +24222,7 @@ Errors Server_batch(int inputDescriptor,
   #endif
 
   // initialize client
+  ClientInfo clientInfo;
   initClient(&clientInfo);
 
   // init client
@@ -24777,11 +24249,12 @@ Errors Server_batch(int inputDescriptor,
 
   // process client requests
 #if 1
-  name        = String_new();
-  argumentMap = StringMap_new();
+  String    name        = String_new();
+  StringMap argumentMap = StringMap_new();
 #if 1
   while (!isQuit())
   {
+    uint id;
     if      (ServerIO_getCommand(&clientInfo.io,
                                  &id,
                                  name,

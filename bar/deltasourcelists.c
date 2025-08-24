@@ -65,14 +65,12 @@ LOCAL DeltaSourceNode *duplicateDeltaSourceNode(const DeltaSourceNode *deltaSour
                                                 void                  *userData
                                                )
 {
-  DeltaSourceNode *newDeltaSourceNode;
-
   assert(deltaSourceNode != NULL);
 
   UNUSED_VARIABLE(userData);
 
   // allocate pattern node
-  newDeltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
+  DeltaSourceNode *newDeltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
   if (newDeltaSourceNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -218,25 +216,13 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
                               uint            *id
                              )
 {
-  String                     printableStorageName;
-  StorageSpecifier           storageSpecifier;
-  Errors                     error;
-  DeltaSourceNode            *deltaSourceNode;
-  JobOptions                 jobOptions;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  Pattern                    pattern;
-  String                     fileName;
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
+  Errors error;
 
   assert(deltaSourceList != NULL);
   assert(storageName != NULL);
 
-  // init variables
-  printableStorageName = String_new();
-
   // parse storage name
+  StorageSpecifier           storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
@@ -246,10 +232,9 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
   }
 
   // get printable storage name
-  Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+  String printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,NULL);
 
-  deltaSourceNode = NULL;
-
+  DeltaSourceNode *deltaSourceNode = NULL;
   if (String_isEmpty(storageSpecifier.archivePatternString))
   {
     // add file entry
@@ -273,9 +258,11 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
   else
   {
     // add matching files
+    JobOptions jobOptions;
     Job_initOptions(&jobOptions);
 
     //open directory list
+    StorageDirectoryListHandle storageDirectoryListHandle;
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageSpecifier,
                                       NULL,  // archiveName
@@ -284,6 +271,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
                                      );
     if (error == ERROR_NONE)
     {
+      Pattern pattern;
       error = Pattern_init(&pattern,
                            storageSpecifier.archivePatternString,
                            patternType,
@@ -291,7 +279,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
                           );
       if (error == ERROR_NONE)
       {
-        fileName = String_new();
+        String fileName = String_new();
         while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
         {
           // read next directory entry
@@ -371,17 +359,7 @@ Errors DeltaSourceList_update(DeltaSourceList *deltaSourceList,
                               PatternTypes    patternType
                              )
 {
-  String                     printableStorageName;
-  StorageSpecifier           storageSpecifier;
-  Errors                     error;
-  DeltaSourceNode            *deltaSourceNode;
-  JobOptions                 jobOptions;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  Pattern                    pattern;
-  String                     fileName;
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
+  Errors error;
 
   assert(deltaSourceList != NULL);
   assert(storageName != NULL);
@@ -389,10 +367,8 @@ Errors DeltaSourceList_update(DeltaSourceList *deltaSourceList,
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 UNUSED_VARIABLE(id);
 
-  // init variables
-  printableStorageName = String_new();
-
   // parse storage name
+  StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
@@ -402,9 +378,9 @@ UNUSED_VARIABLE(id);
   }
 
   // get printable storage name
-  Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+  String printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,NULL);
 
-  deltaSourceNode = NULL;
+  DeltaSourceNode *deltaSourceNode = NULL;
 
   if (String_isEmpty(storageSpecifier.archivePatternString))
   {
@@ -429,9 +405,11 @@ UNUSED_VARIABLE(id);
   else
   {
     // add matching files
+    JobOptions jobOptions;
     Job_initOptions(&jobOptions);
 
     //open directory list
+    StorageDirectoryListHandle storageDirectoryListHandle;
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageSpecifier,
                                       NULL,  // archiveName
@@ -440,6 +418,7 @@ UNUSED_VARIABLE(id);
                                      );
     if (error == ERROR_NONE)
     {
+      Pattern pattern;
       error = Pattern_init(&pattern,
                            storageSpecifier.archivePatternString,
                            patternType,
@@ -447,7 +426,7 @@ UNUSED_VARIABLE(id);
                           );
       if (error == ERROR_NONE)
       {
-        fileName = String_new();
+        String fileName = String_new();
         while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
         {
           // read next directory entry
@@ -523,11 +502,9 @@ bool DeltaSourceList_remove(DeltaSourceList *deltaSourceList,
                             uint            id
                            )
 {
-  DeltaSourceNode *deltaSourceNode;
-
   assert(deltaSourceList != NULL);
 
-  deltaSourceNode = (DeltaSourceNode*)LIST_FIND(deltaSourceList,deltaSourceNode,deltaSourceNode->id == id);
+  DeltaSourceNode *deltaSourceNode = (DeltaSourceNode*)LIST_FIND(deltaSourceList,deltaSourceNode,deltaSourceNode->id == id);
   if (deltaSourceNode != NULL)
   {
     List_removeAndFree(deltaSourceList,deltaSourceNode);

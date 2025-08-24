@@ -52,8 +52,6 @@ void ProgressInfo_init(ProgressInfo         *progressInfo,
                        ...
                       )
 {
-  va_list arguments;
-
   assert(progressInfo != NULL);
 
   progressInfo->parent           = parentProgressInfo;
@@ -82,6 +80,7 @@ void ProgressInfo_init(ProgressInfo         *progressInfo,
 
   if (format != NULL)
   {
+    va_list arguments;
     va_start(arguments,format);
     progressInfo->text = String_vformat(String_new(),format,arguments);
     va_end(arguments);
@@ -149,14 +148,6 @@ void ProgressInfo_reset(ProgressInfo *progressInfo, uint64 stepCount)
 void ProgressInfo_step(void *userData)
 {
   ProgressInfo *progressInfo = (ProgressInfo*)userData;
-  uint64       now;
-  uint64       stepTime;
-  uint         progress;
-  uint         lastProgress;
-  uint64       elapsedTime;  // [us]
-  uint64       estimatedTotalTime;  // [us]
-  uint64       estimatedRestTime;  // [us]
-
   if (progressInfo != NULL)
   {
     DEBUG_CHECK_RESOURCE_TRACE(progressInfo);
@@ -165,13 +156,13 @@ void ProgressInfo_step(void *userData)
 
     if (progressInfo->stepCount > 0)
     {
-      now         = Misc_getTimestamp();
-      elapsedTime = now-progressInfo->startTimestamp;
+      uint64 now         = Misc_getTimestamp();
+      uint64 elapsedTime = now-progressInfo->startTimestamp;
 
-      stepTime = elapsedTime/progressInfo->step;
+      uint64 stepTime = elapsedTime/progressInfo->step;
       progressInfo->lastTimestamp = now;
 
-      estimatedTotalTime = stepTime*progressInfo->stepCount;
+      uint64 estimatedTotalTime = stepTime*progressInfo->stepCount;
 
       if (progressInfo->filterWindowSize > 0)
       {
@@ -193,10 +184,10 @@ void ProgressInfo_step(void *userData)
         progressInfo->filterTimeSum += estimatedTotalTime;
       }
 
-      progress     = (progressInfo->step*1000)/progressInfo->stepCount;
-      lastProgress = (progressInfo->lastProgressCount > 0)
-                       ? (uint)(progressInfo->lastProgressSum/(ulong)progressInfo->lastProgressCount)
-                       : 0;
+      uint progress     = (progressInfo->step*1000)/progressInfo->stepCount;
+      uint lastProgress = (progressInfo->lastProgressCount > 0)
+                            ? (uint)(progressInfo->lastProgressSum/(ulong)progressInfo->lastProgressCount)
+                            : 0;
       if (progress >= (lastProgress+1))
       {
         progressInfo->lastProgressSum   += progress;
@@ -219,7 +210,7 @@ void ProgressInfo_step(void *userData)
         {
           estimatedTotalTime = progressInfo->filterTimeSum/progressInfo->step;
         }
-        estimatedRestTime = (elapsedTime < estimatedTotalTime) ? (ulong)(estimatedTotalTime-elapsedTime) : 0LL;
+        uint64 estimatedRestTime = (elapsedTime < estimatedTotalTime) ? (ulong)(estimatedTotalTime-elapsedTime) : 0LL;
 
         progressInfo->infoFunction(progress,
                                    (ulong)(estimatedTotalTime/US_PER_SECOND),

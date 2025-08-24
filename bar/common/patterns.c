@@ -76,8 +76,6 @@ LOCAL void getRegularExpression(String       regexString,
                                 uint         patternFlags
                                )
 {
-  ulong i;
-
   assert(regexString != NULL);
   assert(regexFlags != NULL);
   assert(string != NULL);
@@ -87,45 +85,47 @@ LOCAL void getRegularExpression(String       regexString,
   switch (patternType)
   {
     case PATTERN_TYPE_GLOB:
-      i = 0;
-      while (string[i] != NUL)
       {
-        switch (string[i])
+        ulong i = 0;
+        while (string[i] != NUL)
         {
-          case '*':
-            String_appendCString(regexString,".*");
-            i++;
-            break;
-          case '?':
-            String_appendChar(regexString,'.');
-            i++;
-            break;
-          case '.':
-            String_appendCString(regexString,"\\.");
-            i++;
-            break;
-          case '\\':
-            String_appendCString(regexString,"\\\\");
-            i++;
-            break;
-          case '[':
-          case ']':
-          case '^':
-          case '$':
-          case '(':
-          case ')':
-          case '{':
-          case '}':
-          case '+':
-          case '|':
-            String_appendChar(regexString,'\\');
-            String_appendChar(regexString,string[i]);
-            i++;
-            break;
-          default:
-            String_appendChar(regexString,string[i]);
-            i++;
-            break;
+          switch (string[i])
+          {
+            case '*':
+              String_appendCString(regexString,".*");
+              i++;
+              break;
+            case '?':
+              String_appendChar(regexString,'.');
+              i++;
+              break;
+            case '.':
+              String_appendCString(regexString,"\\.");
+              i++;
+              break;
+            case '\\':
+              String_appendCString(regexString,"\\\\");
+              i++;
+              break;
+            case '[':
+            case ']':
+            case '^':
+            case '$':
+            case '(':
+            case ')':
+            case '{':
+            case '}':
+            case '+':
+            case '|':
+              String_appendChar(regexString,'\\');
+              String_appendChar(regexString,string[i]);
+              i++;
+              break;
+            default:
+              String_appendChar(regexString,string[i]);
+              i++;
+              break;
+          }
         }
       }
       break;
@@ -166,10 +166,6 @@ LOCAL Errors compilePattern(ConstString regexString,
                             regex_t     *regexAny
                            )
 {
-  String string;
-  int    error;
-  char   buffer[256];
-
   assert(regexString != NULL);
   assert(regexBegin != NULL);
   assert(regexEnd != NULL);
@@ -177,14 +173,15 @@ LOCAL Errors compilePattern(ConstString regexString,
   assert(regexAny != NULL);
 
   // init variables
-  string = String_new();
+  String string = String_new();
 
   // compile regular expression
   String_set(string,regexString);
   if (String_index(string,STRING_BEGIN) != '^') String_insertChar(string,STRING_BEGIN,'^');
-  error = regcomp(regexBegin,String_cString(string),regexFlags);
+  int error = regcomp(regexBegin,String_cString(string),regexFlags);
   if (error != 0)
   {
+    char buffer[256];
     regerror(error,regexBegin,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = NUL;
     String_delete(string);
     return ERRORX_(INVALID_PATTERN,0,"%s",buffer);
@@ -194,6 +191,7 @@ LOCAL Errors compilePattern(ConstString regexString,
   if (String_index(string,STRING_END) != '$') String_insertChar(string,STRING_BEGIN,'$');
   if (regcomp(regexEnd,String_cString(string),regexFlags) != 0)
   {
+    char buffer[256];
     regerror(error,regexEnd,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = NUL;
     regfree(regexBegin);
     String_delete(string);
@@ -205,6 +203,7 @@ LOCAL Errors compilePattern(ConstString regexString,
   if (String_index(string,STRING_END) != '$') String_insertChar(string,STRING_END,'$');
   if (regcomp(regexExact,String_cString(string),regexFlags) != 0)
   {
+    char buffer[256];
     regerror(error,regexExact,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = NUL;
     regfree(regexEnd);
     regfree(regexBegin);
@@ -215,6 +214,7 @@ LOCAL Errors compilePattern(ConstString regexString,
   String_set(string,regexString);
   if (regcomp(regexAny,String_cString(string),regexFlags) != 0)
   {
+    char buffer[256];
     regerror(error,regexAny,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = NUL;
     regfree(regexExact);
     regfree(regexEnd);
@@ -242,16 +242,14 @@ void Pattern_doneAll(void)
 
 const char *Pattern_patternTypeToString(PatternTypes patternType, const char *defaultValue)
 {
-  uint       i;
-  const char *name;
-
-  i = 0;
+  size_t i = 0;
   while (   (i < SIZE_OF_ARRAY(PATTERN_TYPES))
          && (PATTERN_TYPES[i].patternType != patternType)
         )
   {
     i++;
   }
+  const char *name;
   if (i < SIZE_OF_ARRAY(PATTERN_TYPES))
   {
     name = PATTERN_TYPES[i].name;
@@ -266,14 +264,12 @@ const char *Pattern_patternTypeToString(PatternTypes patternType, const char *de
 
 bool Pattern_parsePatternType(const char *name, PatternTypes *patternType, void *userData)
 {
-  uint i;
-
   assert(name != NULL);
   assert(patternType != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  i = 0;
+  size_t i = 0;
   while (   (i < SIZE_OF_ARRAY(PATTERN_TYPES))
          && !stringEqualsIgnoreCase(PATTERN_TYPES[i].name,name)
         )
@@ -396,12 +392,11 @@ bool Pattern_parsePatternType(const char *name, PatternTypes *patternType, void 
 
 Pattern *Pattern_new(ConstString string, PatternTypes patternType, uint patternFlags)
 {
-  Pattern *pattern;
   Errors  error;
 
   assert(string != NULL);
 
-  pattern = (Pattern*)malloc(sizeof(Pattern));
+  Pattern *pattern = (Pattern*)malloc(sizeof(Pattern));
   if (pattern == NULL)
   {
     return NULL;
@@ -428,13 +423,11 @@ void Pattern_delete(Pattern *pattern)
 
 Pattern *Pattern_duplicate(const Pattern *fromPattern)
 {
-  Pattern *pattern;
-
   assert(fromPattern != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(fromPattern);
 
   // allocate pattern
-  pattern = (Pattern*)malloc(sizeof(Pattern));
+  Pattern *pattern = (Pattern*)malloc(sizeof(Pattern));
   if (pattern == NULL)
   {
     return NULL;
@@ -511,14 +504,12 @@ bool Pattern_match(const Pattern     *pattern,
                    ulong             *matchLength
                   )
 {
-  bool       matchFlag;
-  regmatch_t matches[1];
-
   assert(pattern != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(pattern);
   assert(string != NULL);
 
-  matchFlag = FALSE;
+  bool       matchFlag = FALSE;
+  regmatch_t matches[1];
   switch (patternMatchMode)
   {
     case PATTERN_MATCH_MODE_BEGIN:
@@ -559,13 +550,10 @@ bool Pattern_checkIsPattern(const ConstString string)
 {
   const char *PATTERNS_CHARS = "*?[{";
 
-  ulong i;
-  bool  patternFlag;
-
   assert(string != NULL);
 
-  i = 0L;
-  patternFlag = FALSE;
+  ulong i           = 0L;
+  bool  patternFlag = FALSE;
   while ((i < String_length(string)) && !patternFlag)
   {
     if (String_index(string,i) != '\\')

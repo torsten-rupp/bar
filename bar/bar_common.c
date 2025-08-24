@@ -426,14 +426,11 @@ void templateMacros(TemplateHandle   *templateHandle,
                     uint             textMacroCount
                    )
 {
-  TextMacro *newTextMacros;
-  uint      newTextMacroCount;
-
   assert(templateHandle != NULL);
 
   // add macros
-  newTextMacroCount = templateHandle->textMacroCount+textMacroCount;
-  newTextMacros = (TextMacro*)realloc((void*)templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
+  uint      newTextMacroCount = templateHandle->textMacroCount+textMacroCount;
+  TextMacro *newTextMacros    = (TextMacro*)realloc((void*)templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
   if (newTextMacros == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -447,19 +444,6 @@ String templateDone(TemplateHandle *templateHandle,
                     String         string
                    )
 {
-  TextMacro *newTextMacros;
-  uint      newTextMacroCount;
-  #ifdef HAVE_LOCALTIME_R
-    struct tm tmBuffer;
-  #endif /* HAVE_LOCALTIME_R */
-  struct tm *tm;
-  char      buffer[256];
-  uint      weekNumberU,weekNumberW;
-  ulong     i;
-  char      format[4];
-  size_t    length;
-  uint      z;
-
   assert(templateHandle != NULL);
 
   // init variables
@@ -467,21 +451,25 @@ String templateDone(TemplateHandle *templateHandle,
 
   // get local time
   #ifdef HAVE_LOCALTIME_R
+    struct tm tmBuffer;
+    struct tm *tm;
     tm = localtime_r((const time_t*)&templateHandle->dateTime,&tmBuffer);
   #else /* not HAVE_LOCALTIME_R */
+    struct tm *tm;
     tm = localtime((const time_t*)&templateHandle->dateTime);
   #endif /* HAVE_LOCALTIME_R */
   assert(tm != NULL);
 
   // get week numbers
+  char buffer[256];
   strftime(buffer,sizeof(buffer)-1,"%U",tm); buffer[sizeof(buffer)-1] = '\0';
-  weekNumberU = (uint)atoi(buffer);
+  uint weekNumberU = (uint)atoi(buffer);
   strftime(buffer,sizeof(buffer)-1,"%W",tm); buffer[sizeof(buffer)-1] = '\0';
-  weekNumberW = (uint)atoi(buffer);
+  uint weekNumberW = (uint)atoi(buffer);
 
   // add week macros
-  newTextMacroCount = templateHandle->textMacroCount+4;
-  newTextMacros = (TextMacro*)realloc((void*)templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
+  uint      newTextMacroCount = templateHandle->textMacroCount+4;
+  TextMacro *newTextMacros    = (TextMacro*)realloc((void*)templateHandle->textMacros,newTextMacroCount*sizeof(TextMacro));
   if (newTextMacros == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -503,7 +491,8 @@ String templateDone(TemplateHandle *templateHandle,
                    );
 
   // expand date/time macros, replace %% -> %
-  i = 0L;
+  size_t i = 0L;
+  char   format[4];
   while (i < String_length(string))
   {
     switch (String_index(string,i))
@@ -583,7 +572,7 @@ String templateDone(TemplateHandle *templateHandle,
                   String_remove(string,i,2);
                   break;
               }
-              length = strftime(buffer,sizeof(buffer)-1,format,tm); buffer[sizeof(buffer)-1] = '\0';
+              size_t length = strftime(buffer,sizeof(buffer)-1,format,tm); buffer[sizeof(buffer)-1] = '\0';
 
               // insert into string
               switch (templateHandle->expandMacroMode)
@@ -593,7 +582,7 @@ String templateDone(TemplateHandle *templateHandle,
                   i += length;
                   break;
                 case EXPAND_MACRO_MODE_PATTERN:
-                  for (z = 0 ; z < length; z++)
+                  for (size_t z = 0 ; z < length; z++)
                   {
                     if (strchr("*+?{}():[].^$|",buffer[z]) != NULL)
                     {
@@ -643,7 +632,6 @@ String expandTemplate(const char       *templateString,
                      )
 {
   TemplateHandle templateHandle;
-
   templateInit(&templateHandle,
                templateString,
                expandMacroMode,
@@ -668,17 +656,16 @@ Errors executeTemplate(const char        *templateString,
                        uint              timeout
                       )
 {
-  String script;
   Errors error;
 
   if (!stringIsEmpty(templateString))
   {
-    script = expandTemplate(templateString,
-                            EXPAND_MACRO_MODE_STRING,
-                            timestamp,
-                            textMacros,
-                            textMacroCount
-                           );
+    String script = expandTemplate(templateString,
+                                   EXPAND_MACRO_MODE_STRING,
+                                   timestamp,
+                                   textMacros,
+                                   textMacroCount
+                                  );
     if (!String_isEmpty(script))
     {
       // execute script
@@ -725,27 +712,15 @@ bool parseBandWidthNumber(ConstString s, ulong *n)
 
 ulong getBandWidth(BandWidthList *bandWidthList)
 {
-  uint64        currentDateTime;
+  assert(bandWidthList != NULL);
+
+  ulong n = 0L;
+
+  // get current date/time values
+  uint64        currentDateTime = Misc_getCurrentDateTime();
   uint          currentYear,currentMonth,currentDay;
   WeekDays      currentWeekDay;
   uint          currentHour,currentMinute;
-  uint          matchingDateTime;
-  BandWidthNode *matchingBandWidthNode;
-  BandWidthNode *bandWidthNode;
-  int           year,month,day;
-  uint          hour,minute;
-  uint64        dateTime;
-  ulong         n;
-  uint64        timestamp;
-  FileHandle    fileHandle;
-  String        line;
-
-  assert(bandWidthList != NULL);
-
-  n = 0L;
-
-  // get current date/time values
-  currentDateTime = Misc_getCurrentDateTime();
   Misc_splitDateTime(currentDateTime,
                      TIME_TYPE_LOCAL,
                      &currentYear,
@@ -759,17 +734,18 @@ ulong getBandWidth(BandWidthList *bandWidthList)
                     );
 
   // find best matching band width node
-  matchingDateTime      = 0LL;
-  matchingBandWidthNode = NULL;
+  uint          matchingDateTime       = 0LL;
+  BandWidthNode *matchingBandWidthNode = NULL;
+  BandWidthNode *bandWidthNode;
   LIST_ITERATE(bandWidthList,bandWidthNode)
   {
-    year   = (bandWidthNode->year   != DATE_ANY) ? (uint)bandWidthNode->year   : currentYear;
-    month  = (bandWidthNode->month  != DATE_ANY) ? (uint)bandWidthNode->month  : currentMonth;
-    day    = (bandWidthNode->day    != DATE_ANY) ? (uint)bandWidthNode->day    : currentDay;
-    hour   = (bandWidthNode->hour   != TIME_ANY) ? (uint)bandWidthNode->hour   : currentHour;
-    minute = (bandWidthNode->minute != TIME_ANY) ? (uint)bandWidthNode->minute : currentMinute;
+    int year    = (bandWidthNode->year   != DATE_ANY) ? (uint)bandWidthNode->year   : currentYear;
+    int month   = (bandWidthNode->month  != DATE_ANY) ? (uint)bandWidthNode->month  : currentMonth;
+    int day     = (bandWidthNode->day    != DATE_ANY) ? (uint)bandWidthNode->day    : currentDay;
+    uint hour   = (bandWidthNode->hour   != TIME_ANY) ? (uint)bandWidthNode->hour   : currentHour;
+    uint minute = (bandWidthNode->minute != TIME_ANY) ? (uint)bandWidthNode->minute : currentMinute;
 
-    dateTime = Misc_makeDateTime(TIME_TYPE_LOCAL,year,month,day,hour,minute,0,DAY_LIGHT_SAVING_MODE_AUTO);
+    uint64 dateTime = Misc_makeDateTime(TIME_TYPE_LOCAL,year,month,day,hour,minute,0,DAY_LIGHT_SAVING_MODE_AUTO);
 
     if (   (currentDateTime >= dateTime)
         && (   (matchingBandWidthNode == NULL)
@@ -788,15 +764,16 @@ ulong getBandWidth(BandWidthList *bandWidthList)
     if (matchingBandWidthNode->fileName != NULL)
     {
       // read from external file
-      timestamp = Misc_getTimestamp();
+      uint64 timestamp = Misc_getTimestamp();
       if (timestamp > (bandWidthList->lastReadTimestamp+5*US_PER_SECOND))
       {
         bandWidthList->n = 0LL;
 
         // open file
+        FileHandle fileHandle;
         if (File_open(&fileHandle,matchingBandWidthNode->fileName,FILE_OPEN_READ) == ERROR_NONE)
         {
-          line = String_new();
+          String line = String_new();
           while (File_getLine(&fileHandle,line,NULL,"#;"))
           {
             // parse band width
@@ -843,10 +820,6 @@ bool isInTimeRange(uint hour, uint minute, int beginHour, int beginMinute, int e
 
 Errors initEncodingConverter(const char *systemEncoding, const char *consoleEncoding)
 {
-  #ifdef HAVE_ICU
-    UErrorCode errorCode = U_ZERO_ERROR;
-  #endif // HAVE_ICU
-
   encodingConverter.isInitialized = FALSE;
 
   #ifdef HAVE_ICU
@@ -871,6 +844,7 @@ Errors initEncodingConverter(const char *systemEncoding, const char *consoleEnco
         }
       #endif
 
+      UErrorCode errorCode = U_ZERO_ERROR;
       encodingConverter.systemConverter = ucnv_open(systemEncoding, &errorCode);
       if (encodingConverter.systemConverter == NULL)
       {

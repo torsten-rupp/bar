@@ -287,18 +287,13 @@ typedef struct
 
 LOCAL FileSystemTypes EXT_init(DeviceHandle *deviceHandle, EXTHandle *extHandle)
 {
-  EXTSuperBlock        extSuperBlock;
-  EXT23GroupDescriptor ext23GroupDescriptor;
-  EXT4GroupDescriptor  ext4GroupDescriptor;
-  uint32               z;
 
   assert(deviceHandle != NULL);
   assert(extHandle != NULL);
-  assert(sizeof(extSuperBlock) == 1024);
-  assert(sizeof(ext23GroupDescriptor) == 32);
-  assert(sizeof(ext4GroupDescriptor) == 64);
 
   // read first super-block
+  EXTSuperBlock extSuperBlock;
+  assert(sizeof(extSuperBlock) == 1024);
   if (Device_seek(deviceHandle,EXT2_FIRST_SUPER_BLOCK_OFFSET) != ERROR_NONE)
   {
     return FILE_SYSTEM_TYPE_UNKNOWN;
@@ -418,9 +413,9 @@ fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x
   {
     return FILE_SYSTEM_TYPE_UNKNOWN;
   }
-  for (z = 0; z < extHandle->bitmapBlocksCount; z++)
+  for (size_t i = 0; i < extHandle->bitmapBlocksCount; i++)
   {
-    if (Device_seek(deviceHandle,EXT_BLOCK_TO_OFFSET(extHandle,extHandle->firstDataBlock+1)+(uint64)z*(uint64)extHandle->groupDescriptorSize) != ERROR_NONE)
+    if (Device_seek(deviceHandle,EXT_BLOCK_TO_OFFSET(extHandle,extHandle->firstDataBlock+1)+(uint64)i*(uint64)extHandle->groupDescriptorSize) != ERROR_NONE)
     {
       free(extHandle->bitmapBlocks);
       return FILE_SYSTEM_TYPE_UNKNOWN;
@@ -429,22 +424,30 @@ fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x
     {
       case FILE_SYSTEM_TYPE_EXT2:
       case FILE_SYSTEM_TYPE_EXT3:
-        if (Device_read(deviceHandle,&ext23GroupDescriptor,sizeof(ext23GroupDescriptor),NULL) != ERROR_NONE)
         {
-          free(extHandle->bitmapBlocks);
-          return FILE_SYSTEM_TYPE_UNKNOWN;
+          EXT23GroupDescriptor ext23GroupDescriptor;
+          assert(sizeof(ext23GroupDescriptor) == 32);
+          if (Device_read(deviceHandle,&ext23GroupDescriptor,sizeof(ext23GroupDescriptor),NULL) != ERROR_NONE)
+          {
+            free(extHandle->bitmapBlocks);
+            return FILE_SYSTEM_TYPE_UNKNOWN;
+          }
+          extHandle->bitmapBlocks[i] = (uint64)LE32_TO_HOST(ext23GroupDescriptor.blockBitmap);
         }
-        extHandle->bitmapBlocks[z] = (uint64)LE32_TO_HOST(ext23GroupDescriptor.blockBitmap);
         break;
       case FILE_SYSTEM_TYPE_EXT4:
-        if (Device_read(deviceHandle,&ext4GroupDescriptor,sizeof(ext4GroupDescriptor),NULL) != ERROR_NONE)
         {
-          free(extHandle->bitmapBlocks);
-          return FILE_SYSTEM_TYPE_UNKNOWN;
+          EXT4GroupDescriptor  ext4GroupDescriptor;
+          assert(sizeof(ext4GroupDescriptor) == 64);
+          if (Device_read(deviceHandle,&ext4GroupDescriptor,sizeof(ext4GroupDescriptor),NULL) != ERROR_NONE)
+          {
+            free(extHandle->bitmapBlocks);
+            return FILE_SYSTEM_TYPE_UNKNOWN;
+          }
+          extHandle->bitmapBlocks[i] = LOW_HIGH_TO_UINT64(LE32_TO_HOST(ext4GroupDescriptor.blockBitmap),
+                                                          LE32_TO_HOST(ext4GroupDescriptor.blockBitmapHigh)
+                                                         );
         }
-        extHandle->bitmapBlocks[z] = LOW_HIGH_TO_UINT64(LE32_TO_HOST(ext4GroupDescriptor.blockBitmap),
-                                                        LE32_TO_HOST(ext4GroupDescriptor.blockBitmapHigh)
-                                                       );
         break;
       default:
         #ifndef NDEBUG
@@ -457,9 +460,9 @@ fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x
 #if 0
 #warning debug only
 fprintf(stderr,"\n");
-for (z = 0; z < extHandle->bitmapBlocksCount; z++)
+for (size_t i = 0; i < extHandle->bitmapBlocksCount; i++)
 {
-fprintf(stderr,"%s,%d: z=%d block=%ld used=%d\n",__FILE__,__LINE__,z,extHandle->bitmapBlocks[z],EXT_blockIsUsed(deviceHandle,extHandle,extHandle->bitmapBlocks[z]));
+fprintf(stderr,"%s,%d: z=%d block=%ld used=%d\n",__FILE__,__LINE__,z,extHandle->bitmapBlocks[i],EXT_blockIsUsed(deviceHandle,extHandle,extHandle->bitmapBlocks[z]));
 }
 #endif /* 0 */
 
@@ -499,28 +502,23 @@ LOCAL void EXT_done(DeviceHandle *deviceHandle, EXTHandle *extHandle)
 
 LOCAL bool EXT_blockIsUsed(DeviceHandle *deviceHandle, EXTHandle *extHandle, uint64 offset)
 {
-  uint64 block;
-  uint64 blockOffset;
-  uint   bitmapIndex;
-  uint   index;
-
   assert(deviceHandle != NULL);
   assert(extHandle != NULL);
   assert(extHandle->bitmapBlocks != NULL);
 
   // calculate block
-  block = offset/extHandle->blockSize;
+  uint64 block = offset/extHandle->blockSize;
 
   if (block >= 1)
   {
 //fprintf(stderr,"%s, %d: extHandle->firstDataBlock=%d extHandle->blockSize=%d\n",__FILE__,__LINE__,extHandle->firstDataBlock,extHandle->blockSize);
 assert((extHandle->firstDataBlock ==1) || (extHandle->blockSize > 1024));
 assert((extHandle->firstDataBlock ==0) || (extHandle->blockSize <= 1024));
-    blockOffset = block-extHandle->firstDataBlock;
+    uint64 blockOffset = block-extHandle->firstDataBlock;
 
     // calculate used block bitmap index
     assert(extHandle->blocksPerGroup != 0);
-    bitmapIndex = blockOffset/extHandle->blocksPerGroup;
+    uint bitmapIndex = blockOffset/extHandle->blocksPerGroup;
     assert(bitmapIndex < extHandle->bitmapBlocksCount);
 
     // read correct used block bitmap if not already read
@@ -567,7 +565,7 @@ fprintf(stderr,"%s, %d: bitmapIndex=%d\n",__FILE__,__LINE__,bitmapIndex);
 
     // check if block is used
     assert(blockOffset >= bitmapIndex*extHandle->blocksPerGroup);
-    index = blockOffset-bitmapIndex*extHandle->blocksPerGroup;
+    uint index = blockOffset-bitmapIndex*extHandle->blocksPerGroup;
 #if 0
 #warning debug only
 if ((extHandle->bitmapData[index/8] & (1 << index%8)) == 0)

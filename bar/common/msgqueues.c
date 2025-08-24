@@ -98,13 +98,11 @@ LOCAL void freeMsgNode(MsgNode *msgNode, void *userData)
 
 LOCAL void clear(MsgQueue *msgQueue)
 {
-  MsgNode *msgNode;
-
   assert(msgQueue != NULL);
 
   while (!List_isEmpty(&msgQueue->list))
   {
-    msgNode = (MsgNode*)List_removeFirst(&msgQueue->list);
+    MsgNode *msgNode = (MsgNode*)List_removeFirst(&msgQueue->list);
 
     if (msgQueue->msgQueueMsgFreeFunction != NULL)
     {
@@ -201,29 +199,25 @@ LOCAL void initTimespec(struct timespec *timespec, ulong timeout)
 
 LOCAL bool waitModified(MsgQueue *msgQueue, ulong timeout)
 {
-  uint            lockCount;
-  uint            i;
-  struct timespec timespec;
-  int             result;
-
   assert(msgQueue != NULL);
   assert(msgQueue->lockCount > 0);
 
   // temporary revert lock count > 1
-  lockCount = msgQueue->lockCount;
-  for (i = 1; i < lockCount; i++)
+  uint lockCount = msgQueue->lockCount;
+  for (uint i = 1; i < lockCount; i++)
   {
     pthread_mutex_unlock(&msgQueue->lock);
   }
 
   // wait modified or timeout
   msgQueue->lockCount  = 0;
+  struct timespec timespec;
   initTimespec(&timespec,timeout);
-  result = pthread_cond_timedwait(&msgQueue->modified,&msgQueue->lock,&timespec);
+  int result = pthread_cond_timedwait(&msgQueue->modified,&msgQueue->lock,&timespec);
 
   // restore lock count > 1
   msgQueue->lockCount  = lockCount;
-  for (i = 1; i < lockCount; i++)
+  for (uint i = 1; i < lockCount; i++)
   {
     pthread_mutex_lock(&msgQueue->lock);
   }
@@ -276,8 +270,6 @@ xxx
 
 void MsgQueue_done(MsgQueue *msgQueue)
 {
-  MsgNode *msgNode;
-
   assert(msgQueue != NULL);
 
   // lock
@@ -286,7 +278,7 @@ void MsgQueue_done(MsgQueue *msgQueue)
   // discard all remaining messages
   while (!List_isEmpty(&msgQueue->list))
   {
-    msgNode = (MsgNode*)List_removeFirst(&msgQueue->list);
+    MsgNode *msgNode = (MsgNode*)List_removeFirst(&msgQueue->list);
 
     if (msgQueue->msgQueueMsgFreeFunction != NULL)
     {
@@ -311,9 +303,7 @@ MsgQueue *MsgQueue_new(ulong                   maxMsgs,
                        void                    *msgQueueMsgFreeUserData
                       )
 {
-  MsgQueue *msgQueue;
-
-  msgQueue = (MsgQueue*)malloc(sizeof(MsgQueue));
+  MsgQueue *msgQueue = (MsgQueue*)malloc(sizeof(MsgQueue));
   if (msgQueue != NULL)
   {
     if (!MsgQueue_init(msgQueue,maxMsgs,CALLBACK_(msgQueueMsgFreeFunction,msgQueueMsgFreeUserData)))
@@ -426,12 +416,10 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
 
 bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
 {
-  MsgNode *msgNode;
-
   assert(msgQueue != NULL);
 
   // allocate message
-  msgNode = (MsgNode*)malloc(sizeof(MsgNode)+size);
+  MsgNode *msgNode = (MsgNode*)malloc(sizeof(MsgNode)+size);
   if (msgNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();

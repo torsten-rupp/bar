@@ -74,7 +74,6 @@ typedef struct
     const char *name;
   } StackTraceThreadInfo;
 
-
   #if defined(ENABLE_DEBUG_THREAD_CRASH_HANDLERS)&& defined(HAVE_SIGACTION)
     LOCAL struct sigaction   debugThreadSignalSegVPrevHandler;
     LOCAL struct sigaction   debugThreadSignalAbortPrevHandler;
@@ -146,13 +145,11 @@ LOCAL void debugThreadStackTraceAddThread(ThreadId threadId)
 
 LOCAL void debugThreadStackTraceRemoveThread(ThreadId threadId)
 {
-  uint i;
-
   pthread_mutex_lock(&debugThreadStackTraceThreadLock);
   {
     assert(debugThreadStackTraceThreadCount > 0);
 
-    i = 0;
+    size_t i = 0;
     while ((i < debugThreadStackTraceThreadCount) && pthread_equal(debugThreadStackTraceThreads[i].id,threadId) == 0)
     {
       i++;
@@ -181,11 +178,9 @@ LOCAL void debugThreadStackTraceRemoveThread(ThreadId threadId)
 
 LOCAL void debugThreadStackTraceSetThreadName(ThreadId threadId, const char *name)
 {
-  uint i;
-
   pthread_mutex_lock(&debugThreadStackTraceThreadLock);
   {
-    i = 0;
+    size_t i = 0;
     while ((i < debugThreadStackTraceThreadCount) && pthread_equal(debugThreadStackTraceThreads[i].id,threadId) == 0)
     {
       i++;
@@ -209,14 +204,13 @@ LOCAL void debugThreadStackTraceSetThreadName(ThreadId threadId, const char *nam
 
 LOCAL const char *debugThreadStackTraceGetThreadName(ThreadId threadId)
 {
-  uint       i;
-  const char *name;
 
-  i = 0;
+  size_t i = 0;
   while ((i < debugThreadStackTraceThreadCount) && pthread_equal(debugThreadStackTraceThreads[i].id,threadId) == 0)
   {
     i++;
   }
+  const char *name;
   if (i < debugThreadStackTraceThreadCount)
   {
     name = debugThreadStackTraceThreads[i].name;
@@ -241,18 +235,13 @@ LOCAL const char *debugThreadStackTraceGetThreadName(ThreadId threadId)
 LOCAL void *debugThreadStackTraceWrapStartCode(void *userData)
 {
   StackTraceStartInfo *stackTraceStartInfo = (StackTraceStartInfo*)userData;
-  void                *(*startCode)(void*);
-  void                *argument;
-  ThreadId            threadId;
-  void                *result;
-
   assert(stackTraceStartInfo != NULL);
   assert(stackTraceStartInfo->startCode != NULL);
 
   // get copy of start data, pthread id
-  startCode = stackTraceStartInfo->startCode;
-  argument  = stackTraceStartInfo->argument;
-  threadId  = Thread_getCurrentId();
+  void     *(*startCode)(void*) = stackTraceStartInfo->startCode;
+  void     *argument  = stackTraceStartInfo->argument;
+  ThreadId threadId  = Thread_getCurrentId();
 
   // add thread
   debugThreadStackTraceAddThread(threadId);
@@ -261,7 +250,7 @@ LOCAL void *debugThreadStackTraceWrapStartCode(void *userData)
   sem_post(&stackTraceStartInfo->lock);
 
   // run thread code
-  result = startCode(argument);
+  void *result = startCode(argument);
 
   // remove thread
   debugThreadStackTraceRemoveThread(threadId);
@@ -298,18 +287,17 @@ int __wrap_pthread_create(pthread_t *thread,
                                    void      *(*startCode)(void*),
                                    void      *argument
                                   ) __attribute((weak));
-  StackTraceStartInfo stackTraceStartInfo;
-  int                       result;
 
   assert(__real_pthread_create != NULL);
   assert(thread != NULL);
   assert(startCode != NULL);
 
   // init thread
+  StackTraceStartInfo stackTraceStartInfo;
   sem_init(&stackTraceStartInfo.lock,0,0);
   stackTraceStartInfo.startCode = startCode;
   stackTraceStartInfo.argument  = argument;
-  result = __real_pthread_create(thread,attr,debugThreadStackTraceWrapStartCode,&stackTraceStartInfo);
+  int result = __real_pthread_create(thread,attr,debugThreadStackTraceWrapStartCode,&stackTraceStartInfo);
   if (result == 0)
   {
     // wait until thread started
@@ -341,9 +329,7 @@ LOCAL void debugThreadDumpStackTrace(ThreadId                       threadId,
                                      const char                     *reason
                                     )
 {
-  const char *name;
-
-  name = debugThreadStackTraceGetThreadName(threadId);
+  const char *name = debugThreadStackTraceGetThreadName(threadId);
 
   pthread_mutex_lock(&debugConsoleLock);
   {
@@ -382,14 +368,11 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                                          const char                     *reason
                                         )
 {
-  const char      *name;
-  struct timespec timeout;
-
   pthread_mutex_lock(&debugThreadStackTraceLock);
   {
     if (debugThreadStackTraceRun)
     {
-      name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
+      const char *name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
 
       pthread_mutex_lock(&debugConsoleLock);
       {
@@ -432,6 +415,7 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
               {
                 // wait for done signal
 //fprintf(stderr,"%s, %d: wait %p: %s %p \n",__FILE__,__LINE__,pthread_self(),debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id),debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
+                struct timespec timeout;
                 clock_gettime(CLOCK_REALTIME,&timeout);
                 timeout.tv_sec += 30;
                 if (pthread_cond_timedwait(&debugThreadStackTraceDone,&debugThreadStackTraceLock,&timeout) == 0)
@@ -704,9 +688,7 @@ LOCAL void debugThreadInit(void)
 LOCAL void threadTerminated(void *userData)
 {
   Thread *thread = (Thread*)userData;
-
   assert(thread != NULL);
-
   thread->terminatedFlag = TRUE;
 }
 
@@ -722,11 +704,7 @@ LOCAL void threadTerminated(void *userData)
 LOCAL void *threadStartCode(void *userData)
 {
   StartInfo *startInfo = (StartInfo*)userData;
-  void      (*entryFunction)(void*);
-  void      *argument;
-
   assert(startInfo != NULL);
-
   pthread_cleanup_push(threadTerminated,startInfo->thread);
   {
     // try to set thread name
@@ -750,8 +728,8 @@ LOCAL void *threadStartCode(void *userData)
     #endif /* PLATFORM_... */
 
     // get local copy of start data
-    entryFunction = startInfo->entryFunction;
-    argument      = startInfo->argument;
+    void (*entryFunction)(void*) = startInfo->entryFunction;
+    void *argument               = startInfo->argument;
 
     // signal thread started
     sem_post(&startInfo->started);
@@ -783,17 +761,13 @@ void Thread_doneAll(void)
 uint Thread_getNumberOfCores(void)
 {
   #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    SYSTEM_INFO info;
-  #endif /* PLATFORM_... */
-
-  #if   defined(PLATFORM_LINUX)
     #if defined(HAVE_SYSCONF) && defined(HAVE__SC_NPROCESSORS_CONF)
       return (uint)sysconf(_SC_NPROCESSORS_CONF);
     #else
       return 1;
     #endif
   #elif defined(PLATFORM_WINDOWS)
+    SYSTEM_INFO info;
     GetSystemInfo(&info);
     return (uint)info.dwNumberOfProcessors;
   #endif /* PLATFORM_... */
@@ -817,10 +791,6 @@ bool __Thread_init(const char *__fileName__,
                   )
 #endif /* NDEBUG */
 {
-  StartInfo      startInfo;
-  pthread_attr_t threadAttributes;
-  int            result;
-
   assert(thread != NULL);
   assert(name != NULL);
   assert(entryFunction != NULL);
@@ -830,18 +800,20 @@ bool __Thread_init(const char *__fileName__,
   #endif /* NDEBUG */
 
   // init thread info
+  StartInfo startInfo;
   startInfo.thread        = thread;
   startInfo.name          = name;
   startInfo.niceLevel     = niceLevel;
   startInfo.entryFunction = entryFunction;
   startInfo.argument      = argument;
-  result = sem_init(&startInfo.started,0,0);
+  int result = sem_init(&startInfo.started,0,0);
   if (result != 0)
   {
     HALT_INTERNAL_ERROR("cannot initialize thread start lock (error: %s)", strerror(errno));
   }
 
   // init thread attributes
+  pthread_attr_t threadAttributes;
   pthread_attr_init(&threadAttributes);
   #ifdef HAVE_PTHREAD_ATTR_SETNAME
     if (name != NULL)
@@ -918,12 +890,11 @@ void __Thread_done(const char *__fileName__,
 
 int Thread_getPriority(Thread *thread)
 {
-  int                policy;
-  struct sched_param scheduleParameter;
-
   assert(thread != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(thread);
 
+  int                policy;
+  struct sched_param scheduleParameter;
   pthread_getschedparam(thread->handle,&policy,&scheduleParameter);
 
   return scheduleParameter.sched_priority;
@@ -964,12 +935,9 @@ bool Thread_join(Thread *thread)
 
 void Thread_delay(uint time)
 {
-  #ifdef HAVE_NANOSLEEP
-    struct timespec ts;
-  #endif /* HAVE_NANOSLEEP */
-
   #if defined(PLATFORM_LINUX)
     #if   defined(HAVE_NANOSLEEP)
+      struct timespec ts;
       ts.tv_sec  = (ulong)(time/1000LL);
       ts.tv_nsec = (ulong)((time%1000LL)*1000000);
       while (   (nanosleep(&ts,&ts) == -1)
@@ -1008,18 +976,14 @@ const char *Thread_getIdString(const ThreadId threadId)
   static char idStrings[16][64+1];
   static uint idStringIndex = 0;
 
-  uint  i;
-  int   j;
-  uint8 *p;
-
   assert((2+sizeof(ThreadId)*2) < (sizeof(idStrings[0])-1));
 
-  i = ATOMIC_INCREMENT(idStringIndex);
+  uint i = ATOMIC_INCREMENT(idStringIndex);
 
   // Note: reverse to be compatible with gdb output
-  p = (uint8*)(void*)(&threadId);
+  uint8 *p = (uint8*)(void*)(&threadId);
   stringSet(idStrings[i%16],sizeof(idStrings[i%16]),"0x");
-  for (j = (int)sizeof(ThreadId)-1; j >= 0; j--)
+  for (ssize_t j = (ssize_t)sizeof(ThreadId)-1; j >= 0; j--)
   {
     stringAppendFormat(idStrings[i%16],sizeof(idStrings[i%16]),"%02x",p[j]);
   }
@@ -1044,15 +1008,13 @@ void Thread_initLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLoca
 
 void Thread_doneLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLocalStorageFreeFunction threadLocalStorageFreeFunction, void *threadLocalStorageFreeUserData)
 {
-  ThreadLocalStorageInstanceNode *threadLocalStorageInstanceNode;
-
   assert(threadLocalStorage != NULL);
 
   pthread_mutex_lock(&threadLocalStorage->lock);
   {
     while (!List_isEmpty(&threadLocalStorage->instanceList))
     {
-      threadLocalStorageInstanceNode = (ThreadLocalStorageInstanceNode*)List_removeFirst(&threadLocalStorage->instanceList);
+      ThreadLocalStorageInstanceNode *threadLocalStorageInstanceNode = (ThreadLocalStorageInstanceNode*)List_removeFirst(&threadLocalStorage->instanceList);
       if (threadLocalStorageFreeFunction != NULL) threadLocalStorageFreeFunction(threadLocalStorageInstanceNode->p,threadLocalStorageFreeUserData);
       LIST_DELETE_NODE(threadLocalStorageInstanceNode);
     }
@@ -1062,17 +1024,14 @@ void Thread_doneLocalVariable(ThreadLocalStorage *threadLocalStorage, ThreadLoca
 
 void *Thread_getLocalVariable(ThreadLocalStorage *threadLocalStorage)
 {
-  ThreadId                       currentThreadId;
-  void                           *p;
-  ThreadLocalStorageInstanceNode *threadLocalStorageInstanceNode;
-
   assert(threadLocalStorage != NULL);
 
+  void *p = NULL;
   pthread_mutex_lock(&threadLocalStorage->lock);
   {
     // find instance
-    threadLocalStorageInstanceNode = (ThreadLocalStorageInstanceNode*)List_first(&threadLocalStorage->instanceList);
-    currentThreadId = Thread_getCurrentId();
+    ThreadLocalStorageInstanceNode *threadLocalStorageInstanceNode = (ThreadLocalStorageInstanceNode*)List_first(&threadLocalStorage->instanceList);
+    ThreadId                       currentThreadId                 = Thread_getCurrentId();
     while (   (threadLocalStorageInstanceNode != NULL)
            && (pthread_equal(threadLocalStorageInstanceNode->threadId,currentThreadId) == 0)
           )

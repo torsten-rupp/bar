@@ -91,20 +91,20 @@ LOCAL Errors cleanUpNoUUID(IndexHandle *indexHandle)
   // init variables
 
   // clean-up
-  long n = 0L;
+  ulong n = 0L;
   INDEX_DOX(error,
             indexHandle,
   {
     return Database_delete(&indexHandle->databaseHandle,
-                            &n,
-                            "uuids",
-                            DATABASE_FLAG_NONE,
-                            "uuids.jobUUID=''",
-                            DATABASE_FILTERS
-                            (
-                            ),
-                            DATABASE_UNLIMITED
-                           );
+                           &n,
+                           "uuids",
+                           DATABASE_FLAG_NONE,
+                           "uuids.jobUUID=''",
+                           DATABASE_FILTERS
+                           (
+                           ),
+                           DATABASE_UNLIMITED
+                          );
   });
 
   // free resource

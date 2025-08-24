@@ -65,10 +65,6 @@
 Errors Password_initAll(void)
 {
   #ifndef HAVE_GCRYPT
-    int z;
-  #endif /* not HAVE_GCRYPT */
-
-  #ifndef HAVE_GCRYPT
     /* if libgrypt is not available a simple obfuscator is used here to
        avoid plain text passwords in memory as much as possible
     */
@@ -77,12 +73,12 @@ Errors Password_initAll(void)
     #elif defined(PLATFORM_WINDOWS)
       srand((unsigned int)time(NULL));
     #endif /* PLATFORM_... */
-    for (z = 0; z < MAX_PASSWORD_LENGTH; z++)
+    for (size_t i = 0; i < MAX_PASSWORD_LENGTH; i++)
     {
       #if   defined(PLATFORM_LINUX)
-        obfuscator[z] = (char)(random()%256);
+        obfuscator[i] = (char)(random()%256);
       #elif defined(PLATFORM_WINDOWS)
-        obfuscator[z] = (char)(rand()%256);
+        obfuscator[i] = (char)(rand()%256);
       #endif /* PLATFORM_... */
     }
   #endif /* not HAVE_GCRYPT */
@@ -171,9 +167,7 @@ void Password_doneAll(void)
                           )
 #endif /* NDEBUG */
 {
-  Password *password;
-
-  password = (Password*)malloc(sizeof(Password));
+  Password *password = (Password*)malloc(sizeof(Password));
   if (password == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -221,7 +215,6 @@ void Password_doneAll(void)
 #endif /* NDEBUG */
 {
   Password *password;
-
   #ifndef NDEBUG
     password = __Password_new(__fileName__,__lineNb__);
   #else /* not NDEBUG */
@@ -245,7 +238,6 @@ void Password_doneAll(void)
 #endif /* NDEBUG */
 {
   Password *password;
-
   if (fromPassword != NULL)
   {
     #ifndef NDEBUG
@@ -309,19 +301,13 @@ void Password_set(Password *password, const Password *fromPassword)
 
 void Password_setString(Password *password, const String string)
 {
-  uint length;
-  #ifdef HAVE_GCRYPT
-  #else /* not HAVE_GCRYPT */
-    uint i;
-  #endif /* HAVE_GCRYPT */
-
   assert(password != NULL);
 
-  length = MIN(String_length(string),MAX_PASSWORD_LENGTH);
+  uint length = MIN(String_length(string),MAX_PASSWORD_LENGTH);
   #ifdef HAVE_GCRYPT
     memcpy(password->data,String_cString(string),length);
   #else /* not HAVE_GCRYPT */
-    for (i = 0; i < length; i++)
+    for (uint i = 0; i < length; i++)
     {
       password->data[i] = String_index(string,i)^obfuscator[i];
     }
@@ -332,19 +318,13 @@ void Password_setString(Password *password, const String string)
 
 void Password_setCString(Password *password, const char *s)
 {
-  uint length;
-  #ifdef HAVE_GCRYPT
-  #else /* not HAVE_GCRYPT */
-    uint i;
-  #endif /* HAVE_GCRYPT */
-
   assert(password != NULL);
 
-  length = MIN(strlen(s),MAX_PASSWORD_LENGTH);
+  uint length = MIN(strlen(s),MAX_PASSWORD_LENGTH);
   #ifdef HAVE_GCRYPT
     memcpy(password->data,s,length);
   #else /* not HAVE_GCRYPT */
-    for (i = 0; i < length; i++)
+    for (uint i = 0; i < length; i++)
     {
       password->data[i] = s[i]^obfuscator[i];
     }
@@ -355,20 +335,14 @@ void Password_setCString(Password *password, const char *s)
 
 void Password_setBuffer(Password *password, const void *buffer, uint length)
 {
-  #ifdef HAVE_GCRYPT
-  #else /* not HAVE_GCRYPT */
-    char *p;
-    uint i;
-  #endif /* HAVE_GCRYPT */
-
   assert(password != NULL);
 
   length = MIN(length,MAX_PASSWORD_LENGTH);
   #ifdef HAVE_GCRYPT
     memmove(password->data,buffer,length);
   #else /* not HAVE_GCRYPT */
-    p = (char*)buffer;
-    for (i = 0; i < length; i++)
+    char * p = (char*)buffer;
+    for (uint i = 0; i < length; i++)
     {
       password->data[i] = p[i]^obfuscator[i];
     }
@@ -395,11 +369,6 @@ void Password_appendChar(Password *password, char ch)
 
 void Password_random(Password *password, uint length)
 {
-  #ifdef HAVE_GCRYPT
-  #else /* not HAVE_GCRYPT */
-    uint i;
-  #endif /* HAVE_GCRYPT */
-
   assert(password != NULL);
 
   password->dataLength = MIN(length,MAX_PASSWORD_LENGTH);
@@ -411,7 +380,7 @@ void Password_random(Password *password, uint length)
     #elif defined(PLATFORM_WINDOWS)
       srand((unsigned int)time(NULL));
     #endif /* PLATFORM_... */
-    for (i = 0; i < password->dataLength; i++)
+    for (uint i = 0; i < password->dataLength; i++)
     {
       #if   defined(PLATFORM_LINUX)
         password->data[i] = (char)(random()%256)^obfuscator[i];
@@ -456,21 +425,19 @@ double Password_getQualityLevel(const Password *password)
       maxBrowniePoints++; \
     } while (0)
 
-  uint browniePoints,maxBrowniePoints;
-  bool flag0,flag1;
-  uint i;
-
   assert(password != NULL);
 
-  browniePoints    = 0;
-  maxBrowniePoints = 0;
+  uint browniePoints    = 0;
+  uint maxBrowniePoints = 0;
 
   // length >= 8
   CHECK(password->dataLength >= 8);
 
+  bool flag0,flag1;
+
   // contain numbers
   flag0 = FALSE;
-  for (i = 0; i < password->dataLength; i++)
+  for (uint i = 0; i < password->dataLength; i++)
   {
     flag0 |= isdigit(password->data[i]);
   }
@@ -478,7 +445,7 @@ double Password_getQualityLevel(const Password *password)
 
   // contain special characters
   flag0 = FALSE;
-  for (i = 0; i < password->dataLength; i++)
+  for (uint i = 0; i < password->dataLength; i++)
   {
     flag0 |= (strchr(" !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",password->data[i]) != NULL);
   }
@@ -487,7 +454,7 @@ double Password_getQualityLevel(const Password *password)
   // capital/non-capital letters
   flag0 = FALSE;
   flag1 = FALSE;
-  for (i = 0; i < password->dataLength; i++)
+  for (uint i = 0; i < password->dataLength; i++)
   {
     flag0 |= (toupper(password->data[i]) != password->data[i]);
     flag1 |= (tolower(password->data[i]) != password->data[i]);
@@ -504,12 +471,6 @@ double Password_getQualityLevel(const Password *password)
 
 const char *Password_deploy(const Password *password)
 {
-  #ifdef HAVE_GCRYPT
-  #else /* not HAVE_GCRYPT */
-    char *plain;
-    uint i;
-  #endif /* HAVE_GCRYPT */
-
   if (password != NULL)
   {
     assert(password->dataLength <= MAX_PASSWORD_LENGTH);
@@ -517,12 +478,12 @@ const char *Password_deploy(const Password *password)
     #ifdef HAVE_GCRYPT
       return password->data;
     #else /* not HAVE_GCRYPT */
-      plain = allocSecure(password->dataLength+1);
+      char *plain = allocSecure(password->dataLength+1);
       if (plain == NULL)
       {
         return NULL;
       }
-      for (i = 0; i < password->dataLength; i++)
+      for (uint i = 0; i < password->dataLength; i++)
       {
         plain[i] = password->data[i]^obfuscator[i];
       }
@@ -552,11 +513,6 @@ void Password_undeploy(const Password *password, const char *plainPassword)
 
 bool Password_equals(const Password *password0, const Password *password1)
 {
-  #ifdef HAVE_GCRYPT
-  #else /* not HAVE_GCRYPT */
-    uint i;
-  #endif /* HAVE_GCRYPT */
-
   if (   (password0 != NULL)
       && (password1 != NULL)
       && (password0->dataLength == password1->dataLength)
@@ -565,7 +521,7 @@ bool Password_equals(const Password *password0, const Password *password1)
     #ifdef HAVE_GCRYPT
       return memcmp(password0->data,password1->data,password0->dataLength) == 0;
     #else /* not HAVE_GCRYPT */
-      for (i = 0; i < password0->dataLength; i++)
+      for (uint i = 0; i < password0->dataLength; i++)
       {
         if ((password0->data[i]^obfuscator[i]) != (password1->data[i]^obfuscator[i])) return FALSE;
       }
@@ -588,33 +544,25 @@ bool Password_input(Password   *password,
                     uint       modes
                    )
 {
-  bool okFlag;
-
   assert(password != NULL);
 
   Password_clear(password);
 
-  okFlag = FALSE;
+  bool okFlag = FALSE;
 
   // input via SSH_ASKPASS program
   if (((modes & PASSWORD_INPUT_MODE_GUI) != 0) && !okFlag)
   {
-    const char *sshAskPassword;
-    String     command;
-    FILE       *file;
-    bool       eolFlag;
-    int        ch;
-
-    sshAskPassword = getenv("SSH_ASKPASS");
+    const char * sshAskPassword = getenv("SSH_ASKPASS");
     if (!stringIsEmpty(sshAskPassword))
     {
       // open pipe to external password program
-      command = String_newCString(sshAskPassword);
+      String command = String_newCString(sshAskPassword);
       if (message != NULL)
       {
         String_appendFormat(command," %\"s:",message);
       }
-      file = popen(String_cString(command),"r");
+      FILE *file = popen(String_cString(command),"r");
       if (file == NULL)
       {
         String_delete(command);
@@ -623,10 +571,10 @@ bool Password_input(Password   *password,
       String_delete(command);
 
       // read password, discard last LF
-      eolFlag = FALSE;
+      bool eolFlag = FALSE;
       do
       {
-        ch = getc(file);
+        char ch = getc(file);
         if (ch != EOF)
         {
           switch ((char)ch)
@@ -658,31 +606,26 @@ bool Password_input(Password   *password,
   #if   defined(PLATFORM_LINUX)
     if (((modes & PASSWORD_INPUT_MODE_CONSOLE) != 0) && !okFlag)
     {
-      ssize_t        writtenBytes;
-      int            n;
-      struct termios oldTermioSettings;
-      struct termios termioSettings;
-      bool           eolFlag,eofFlag;
-      char           ch;
-
       if (isatty(STDIN_FILENO) == 1)
       {
         // read data from interactive input
         if (message != NULL)
         {
-          writtenBytes = write(STDOUT_FILENO,message,strlen(message));
+          ssize_t writtenBytes = write(STDOUT_FILENO,message,strlen(message));
           (void)writtenBytes;
           writtenBytes = write(STDOUT_FILENO,": ",2);
           (void)writtenBytes;
         }
 
         // save current console settings
+        struct termios oldTermioSettings;
         if (tcgetattr(STDIN_FILENO,&oldTermioSettings) != 0)
         {
           return FALSE;
         }
 
         // disable echo
+        struct termios termioSettings;
         memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
         termioSettings.c_lflag &= ~ECHO;
         if (tcsetattr(STDIN_FILENO,TCSANOW,&termioSettings) != 0)
@@ -691,10 +634,11 @@ bool Password_input(Password   *password,
         }
 
         // input password
-        eolFlag = FALSE;
-        eofFlag = FALSE;
+        bool eolFlag = FALSE;
+        bool eofFlag = FALSE;
         do
         {
+          char ch;
           if (read(STDIN_FILENO,&ch,1) == 1)
           {
             switch (ch)
@@ -721,21 +665,21 @@ bool Password_input(Password   *password,
 
         if (message != NULL)
         {
-          writtenBytes = write(STDOUT_FILENO,"\n",1);
+          size_t writtenBytes = write(STDOUT_FILENO,"\n",1);
           (void)writtenBytes;
         }
       }
       else
       {
         // read data from non-interactive input
-        eolFlag = FALSE;
-        eofFlag = FALSE;
+        bool eolFlag = FALSE;
+        bool eofFlag = FALSE;
         do
         {
           /* Note: sometimes FIONREAD does not return available characters
                    immediately. Thus delay program execution and try again.
           */
-          n = 0;
+          int n = 0;
           ioctl(STDIN_FILENO,FIONREAD,(char*)&n);
           if (n <= 0)
           {
@@ -744,6 +688,7 @@ bool Password_input(Password   *password,
           }
           if (n > 0)
           {
+            char ch;
             if (read(STDIN_FILENO,&ch,1) == 1)
             {
               switch (ch)
@@ -790,10 +735,8 @@ bool Password_inputVerify(const Password *password,
                           uint           modes
                          )
 {
-  Password verifyPassword;
-  bool     equalFlag;
-
   // read passsword again
+  Password verifyPassword;
   Password_init(&verifyPassword);
   if (!Password_input(&verifyPassword,message,modes))
   {
@@ -802,7 +745,7 @@ bool Password_inputVerify(const Password *password,
   }
 
   // verify password
-  equalFlag = TRUE;
+  bool equalFlag = TRUE;
   if (password->dataLength != verifyPassword.dataLength) equalFlag = FALSE;
   if (memcmp(password->data,verifyPassword.data,password->dataLength) != 0) equalFlag = FALSE;
 
@@ -815,12 +758,10 @@ bool Password_inputVerify(const Password *password,
 #ifndef NDEBUG
 void Password_dump(const Password *password)
 {
-  uint i;
-
   assert(password != NULL);
 
   fprintf(stderr,"Password:\n");
-  for (i = 0; i < password->dataLength; i++)
+  for (uint i = 0; i < password->dataLength; i++)
   {
     #ifdef HAVE_GCRYPT
       fprintf(stderr,"%02x",(byte)password->data[i]);
@@ -829,7 +770,7 @@ void Password_dump(const Password *password)
     #endif /* HAVE_GCRYPT */
   }
   fputs("\n",stderr);
-  for (i = 0; i < password->dataLength; i++)
+  for (uint i = 0; i < password->dataLength; i++)
   {
     #ifdef HAVE_GCRYPT
       fprintf(stderr,"%c ",isprint(password->data[i]) ? password->data[i] : '.');

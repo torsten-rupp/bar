@@ -61,16 +61,14 @@ LOCAL bool vscanString(const char *string,
                        va_list    variables
                       )
 {
-  int        variableCount;
-  va_list    arguments;
-  const void *variable;
-
   assert(string != NULL);
   assert(format != NULL);
 
   // count variables
+  va_list arguments;
   va_copy(arguments,variables);
-  variableCount = 0;
+  int variableCount = 0;
+  const void *variable;
   do
   {
     variable = va_arg(arguments,void*);
@@ -106,37 +104,32 @@ LOCAL bool vmatchString(const char *string,
                         va_list    matchedSubStrings
                        )
 {
-  bool       matchFlag;
-  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
-    regex_t    regex;
-    va_list    arguments;
-    const char **matchedSubString;
-    size_t     *matchedSubStringSize;
-    regmatch_t *subMatches;
-    uint       subMatchCount;
-    uint       i;
-  #endif /* HAVE_PCRE || HAVE_REGEX_H */
-
   assert(string != NULL);
   assert(pattern != NULL);
 
+  bool matchFlag;
+
   #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
     // compile pattern
+    regex_t regex;
     if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
     {
       return FALSE;
     }
 
     // count sub-patterns (=1 for total matched string + number of matched-sub-strings)
+    va_list    arguments;
     va_copy(arguments,matchedSubStrings);
-    subMatchCount = 1;
+    uint       subMatchCount = 1;
+    const char **matchedSubString;
     do
     {
       matchedSubString = va_arg(arguments,const char**);
       if (matchedSubString != NULL)
       {
-        matchedSubStringSize = va_arg(arguments,size_t*);
+        size_t *matchedSubStringSize = va_arg(arguments,size_t*);
         assert(matchedSubStringSize != NULL);
+        UNUSED_VARIABLE(matchedSubStringSize);
         subMatchCount++;
       }
     }
@@ -144,7 +137,7 @@ LOCAL bool vmatchString(const char *string,
     va_end(arguments);
 
     // allocate sub-patterns array
-    subMatches = (regmatch_t*)malloc(subMatchCount*sizeof(regmatch_t));
+    regmatch_t *subMatches = (regmatch_t*)malloc(subMatchCount*sizeof(regmatch_t));
     if (subMatches == NULL)
     {
       regfree(&regex);
@@ -167,10 +160,10 @@ LOCAL bool vmatchString(const char *string,
       if ((matchedStringSize != STRING_NO_ASSIGN) && (matchedStringSize != NULL)) (*matchedStringSize) = subMatches[0].rm_eo-subMatches[0].rm_so;
 
       va_copy(arguments,matchedSubStrings);
-      for (i = 1; i < subMatchCount; i++)
+      for (uint i = 1; i < subMatchCount; i++)
       {
-        matchedSubString     = va_arg(arguments,const char**);
-        matchedSubStringSize = va_arg(arguments,size_t*);
+        const char **matchedSubString    = va_arg(arguments,const char**);
+        size_t     *matchedSubStringSize = va_arg(arguments,size_t*);
         if (subMatches[i].rm_so != -1)
         {
           assert(subMatches[i].rm_eo >= subMatches[i].rm_so);
@@ -247,11 +240,9 @@ char* stringReplace(char *string, size_t stringSize, size_t index, size_t replac
 
 bool stringVScan(const char *string, const char *format, va_list arguments)
 {
-  bool scannedFlag;
-
   assert(format != NULL);
 
-  scannedFlag = FALSE;
+  bool scannedFlag = FALSE;
 
   if (string != NULL)
   {
@@ -263,11 +254,9 @@ bool stringVScan(const char *string, const char *format, va_list arguments)
 
 bool stringVMatch(const char *string, const char *pattern, const char **matchedString, size_t *matchedStringSize, va_list arguments)
 {
-  bool matchFlag;
-
   assert(pattern != NULL);
 
-  matchFlag = FALSE;
+  bool matchFlag = FALSE;
 
   if (string != NULL)
   {
@@ -279,13 +268,13 @@ bool stringVMatch(const char *string, const char *pattern, const char **matchedS
 
 uint32 stringSimpleHash(const char *string)
 {
-  uint32          hash;
-  CStringIterator cstringIterator;
-  char            ch;
 
+  uint32          hash;
   initSimpleHash(&hash);
   if (string != NULL)
   {
+    CStringIterator cstringIterator;
+    char            ch;
     CSTRING_CHAR_ITERATE(string,cstringIterator,ch)
     {
       updateSimpleHash(&hash,ch);

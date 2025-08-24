@@ -108,25 +108,20 @@ Errors PAR2_create(ConstString      dataFileName,
     return ERRORX_(PAR2_BLOCK_SIZE_TOO_SMALL,0,"%" PRIu64,ALIGN(dataFileSize/MAX_PAR2_BLOCKS,4));
   }
 
-  String dataDirectoryName = File_getDirectoryName(String_new(),dataFileName);
-  String sourceLinkName    = File_getBaseName(String_new(),sourceFileName,TRUE);
-  String sourceBaseName    = File_getBaseName(String_new(),sourceFileName,FALSE);
-  String sourceExtension   = File_getExtension(String_new(),sourceFileName);
-
   // check/delete existing PAR2 files
   DirectoryListHandle directoryListHandle;
   error = File_openDirectoryListCString(&directoryListHandle,checkSumFilesDirectory);
   if (error != ERROR_NONE)
   {
-    String_delete(sourceLinkName);
-    String_delete(sourceExtension);
-    String_delete(sourceBaseName);
-    String_delete(dataDirectoryName);
     return error;
   }
-  bool   par2ExistsFlag = FALSE;
-  String fileName       = String_new();
-  String baseName       = String_new();
+  bool   par2ExistsFlag    = FALSE;
+  String fileName          = String_new();
+  String baseName          = String_new();
+  String dataDirectoryName = File_getDirectoryName(String_new(),dataFileName);
+  String sourceLinkName    = File_getBaseName(String_new(),sourceFileName,TRUE);
+  String sourceBaseName    = File_getBaseName(String_new(),sourceFileName,FALSE);
+  String sourceExtension   = File_getExtension(String_new(),sourceFileName);
   while (   (File_readDirectoryList(&directoryListHandle,fileName) == ERROR_NONE)
          && !par2ExistsFlag
         )

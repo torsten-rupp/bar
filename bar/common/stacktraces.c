@@ -122,9 +122,6 @@ LOCAL bool readSymbolTable(bfd           *abfd,
                            uint          errorMessageSize
                           )
 {
-  uint size;
-  long n;
-
   assert(symbols != NULL);
   assert(symbolCount != NULL);
 
@@ -137,11 +134,12 @@ LOCAL bool readSymbolTable(bfd           *abfd,
 
   // read mini-symbols
   (*symbols) = NULL;
-  n = bfd_read_minisymbols(abfd,
-                           FALSE,  // not dynamic
-                           (void**)symbols,
-                           &size
-                          );
+  uint size;
+  long n = bfd_read_minisymbols(abfd,
+                                FALSE,  // not dynamic
+                                (void**)symbols,
+                                &size
+                               );
   if (n == 0)
   {
     if ((*symbols) != NULL) free(*symbols);
@@ -205,15 +203,11 @@ LOCAL bool demangleSymbolName(char       *demangledSymbolName,
                               const char *symbolName
                              )
 {
-#if defined(HAVE_LIBIBERTY_DEMANGLE_H)
-  char *s;
-#endif
-
   assert(symbolName != NULL);
   assert(demangledSymbolName != NULL);
 
 #if defined(HAVE_LIBIBERTY_DEMANGLE_H)
-  s = bfd_demangle(NULL,symbolName,DMGL_ANSI|DMGL_PARAMS);
+  char *s = bfd_demangle(NULL,symbolName,DMGL_ANSI|DMGL_PARAMS);
   if (s != NULL)
   {
     stringSet(demangledSymbolName,demangledSymbolNameSize,s);
@@ -247,13 +241,9 @@ LOCAL bool demangleSymbolName(char       *demangledSymbolName,
 
 LOCAL void findAddressInSection(bfd *abfd, asection *section, void *data)
 {
-  AddressInfo   *addressInfo = (AddressInfo*)data;
-  bfd_vma       vma;
-  bfd_size_type size;
-
-  assert(addressInfo != NULL);
-
   // check if already found
+  AddressInfo *addressInfo = (AddressInfo*)data;
+  assert(addressInfo != NULL);
   if (addressInfo->symbolFound)
   {
     return;
@@ -272,14 +262,14 @@ LOCAL void findAddressInSection(bfd *abfd, asection *section, void *data)
     }
   #endif
   #if (BFD_SECTION_SIZE_ARGUMENTS_COUNT == 2)
-    vma  = bfd_section_vma(abfd,section);
+    bfd_vma vma = bfd_section_vma(abfd,section);
   #else
-    vma  = bfd_section_vma(section);
+    bfd_vma vma = bfd_section_vma(section);
   #endif
   #if (BFD_SECTION_VMA_ARGUMENTS_COUNT == 2)
-    size = bfd_section_size(abfd,section);
+    bfd_size_type size = bfd_section_size(abfd,section);
   #else
-    size = bfd_section_size(section);
+    bfd_size_type size = bfd_section_size(section);
   #endif
   if (   (addressInfo->address < vma)
       || (addressInfo->address >= vma + size)
@@ -326,10 +316,6 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
                                uint                  errorMessageSize
                               )
 {
-  AddressInfo addressInfo;
-
-  assert(symbolFunction != NULL);
-
   // initialize variables
   if (errorMessage != NULL)
   {
@@ -337,6 +323,7 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
   }
 
   // find symbol
+  AddressInfo addressInfo;
   addressInfo.symbols      = symbols;
   addressInfo.symbolCount  = symbolCount;
   addressInfo.address      = address;
@@ -396,6 +383,7 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
     }
 
     // handle found symbol
+    assert(symbolFunction != NULL);
     symbolFunction((void*)address,fileName,symbolName,addressInfo.lineNb,symbolUserData);
 
     // get next information
@@ -429,14 +417,11 @@ LOCAL bfd* openBFD(const char    *fileName,
                    uint          errorMessageSize
                   )
 {
-  bfd  *abfd;
-  char **matching;
-
   assert(fileName != NULL);
   assert(symbols != NULL);
   assert(symbolCount != NULL);
 
-  abfd = bfd_openr(fileName,NULL);
+  bfd *abfd = bfd_openr(fileName,NULL);
   if (abfd == NULL)
   {
     return NULL;
@@ -449,6 +434,7 @@ LOCAL bfd* openBFD(const char    *fileName,
     return NULL;
   }
 
+  char **matching;
   if (!bfd_check_format_matches(abfd,bfd_object,&matching))
   {
     if (bfd_get_error() == bfd_error_file_ambiguously_recognized)
@@ -511,22 +497,18 @@ LOCAL bool getSymbolInfoFromFile(const char     *fileName,
                                  uint           errorMessageSize
                                 )
 {
-  char          debugSymbolFileName[PATH_MAX];
-  ssize_t       n;
-  bfd*          abfd;
-  const asymbol **symbols;
-  ulong         symbolCount;
-  bool          result;
-
   assert(fileName != NULL);
 //TODO: open once
 //fprintf(stderr,"%s, %d: %s %p\n",__FILE__,__LINE__,fileName,address);
 
   // open file.<debug symbol extension> or file
-  abfd = NULL;
+  const asymbol **symbols;
+  ulong symbolCount;
+  bfd *abfd = NULL;
   if (abfd == NULL)
   {
-    n = readlink(fileName,debugSymbolFileName,sizeof(debugSymbolFileName));
+    char debugSymbolFileName[PATH_MAX];
+    ssize_t n = readlink(fileName,debugSymbolFileName,sizeof(debugSymbolFileName));
     if (n > 0)
     {
       debugSymbolFileName[n] = '\0';
@@ -544,15 +526,15 @@ LOCAL bool getSymbolInfoFromFile(const char     *fileName,
   }
 
   // get symbol info
-  result = addressToSymbolInfo(abfd,
-                               symbols,
-                               symbolCount,
-                               address,
-                               symbolFunction,
-                               symbolUserData,
-                               errorMessage,
-                               errorMessageSize
-                              );
+  bool result = addressToSymbolInfo(abfd,
+                                    symbols,
+                                    symbolCount,
+                                    address,
+                                    symbolFunction,
+                                    symbolUserData,
+                                    errorMessage,
+                                    errorMessageSize
+                                   );
 
   // close file
   closeBFD(abfd,symbols,symbolCount);
@@ -576,26 +558,19 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
                            void                *userData
                           )
 {
-  FileMatchInfo *fileMatchInfo = (FileMatchInfo*)userData;
-
-  ElfW(Half) i;
-  ElfW(Addr) vaddr;
-  #ifdef HAVE_DL_H
-    Dl_info    dlInfo;
-  #endif
-
   assert(info != NULL);
+  FileMatchInfo *fileMatchInfo = (FileMatchInfo*)userData;
   assert(fileMatchInfo != NULL);
 
   // unused
   (void)infoSize;
 
   // find in shared objects
-  for (i = 0; i < info->dlpi_phnum; i++)
+  for (ElfW(Half) i = 0; i < info->dlpi_phnum; i++)
   {
     if (info->dlpi_phdr[i].p_type == PT_LOAD)
     {
-      vaddr = info->dlpi_addr + info->dlpi_phdr[i].p_vaddr;
+      ElfW(Addr) vaddr = info->dlpi_addr + info->dlpi_phdr[i].p_vaddr;
       if (   ((uintptr_t)fileMatchInfo->address >= vaddr)
           && ((uintptr_t)fileMatchInfo->address < vaddr + info->dlpi_phdr[i].p_memsz)
           && (info->dlpi_name != NULL)
@@ -613,6 +588,7 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
     // find via loader
     if (!fileMatchInfo->found)
     {
+      Dl_info dlInfo;
       if (   (dladdr(fileMatchInfo->address, &dlInfo) != 0)
           && (dlInfo.dli_fname != NULL)
           && (dlInfo.dli_fname[0] != '\0')
@@ -631,10 +607,6 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
 
 LOCAL void sigActionHandler(int signalNumber, siginfo_t *sigInfo, void *context)
 {
-   int        stackTraceSize;
-   uint       i;
-   const char *signalName;
-
    assert(NULL != signalHandlerFunction);
 
    (void)sigInfo;
@@ -644,11 +616,11 @@ LOCAL void sigActionHandler(int signalNumber, siginfo_t *sigInfo, void *context)
    Stacktrace_done();
 
    // get stacktrace
-   stackTraceSize = getStackTrace(stackTrace, MAX_STACKTRACE_SIZE);
+   int stackTraceSize = getStackTrace(stackTrace, MAX_STACKTRACE_SIZE);
 
    // get signal name
-   signalName = NULL;
-   i          = 0;
+   const char *signalName = NULL;
+   uint       i           = 0;
    while ((i < signalHandlerInfoCount) && (NULL == signalName))
    {
       if (signalHandlerInfo[i].signalNumber == signalNumber)
@@ -684,18 +656,12 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
                      void                    *signalHandlerUserData
                     )
 {
-  #if   defined(PLATFORM_LINUX)
-    static uint8_t signalHandlerStack[64*1024];
-
-    stack_t          stackInfo;
-    struct sigaction signalActionInfo;
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
   assert(signalHandlerInfo != NULL);
 
   #if   defined(PLATFORM_LINUX)
     // initialize signal handler stack
+    static uint8_t signalHandlerStack[64*1024];
+    stack_t        stackInfo;
     stackInfo.ss_sp    = (void*)signalHandlerStack;
     stackInfo.ss_size  = sizeof(signalHandlerStack)/sizeof(signalHandlerStack[0]);
     stackInfo.ss_flags = 0;
@@ -712,6 +678,7 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
     signalHandlerUserData  = signalHandlerUserData;
     for (uint i = 0; i < signalHandlerInfoCount; i++)
     {
+       struct sigaction signalActionInfo;
        signalActionInfo.sa_handler   = NULL;
        signalActionInfo.sa_sigaction = sigActionHandler;
        sigfillset(&signalActionInfo.sa_mask);
@@ -730,13 +697,9 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
 void Stacktrace_done(void)
 {
   #if   defined(PLATFORM_LINUX)
-    struct sigaction signalActionInfo;
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
-  #if   defined(PLATFORM_LINUX)
     for (uint i = 0; i < signalHandlerInfoCount; i++)
     {
+       struct sigaction signalActionInfo;
        signalActionInfo.sa_handler   = SIG_DFL;
        signalActionInfo.sa_sigaction = NULL;
        sigfillset(&signalActionInfo.sa_mask);
@@ -755,29 +718,23 @@ void Stacktrace_getSymbols(const char         *executableFileName,
                            SymbolInfo         *symbolInfo
                           )
 {
-  #if   defined(PLATFORM_LINUX)
-    #if defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
-      uint          i;
-      FileMatchInfo fileMatchInfo;
-      char          errorMessage[128];
-      bool          symbolFound;
-    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
   assert(executableFileName != NULL);
   assert(addresses != NULL);
   assert(symbolInfo != NULL);
 
   #if   defined(PLATFORM_LINUX)
     #if defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
-      for (i = 0; i < addressCount; i++)
+      for (uint i = 0; i < addressCount; i++)
       {
+        bool symbolFound;
+
+        FileMatchInfo fileMatchInfo;
         fileMatchInfo.found   = FALSE;
         fileMatchInfo.address = addresses[i];
         dl_iterate_phdr(findMatchingFile,&fileMatchInfo);
         if (fileMatchInfo.found)
         {
+          char errorMessage[128];
           symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
                                               (bfd_vma)((uintptr_t)addresses[i]-(uintptr_t)fileMatchInfo.base),
                                               CALLBACK_INLINE(void,(const void *address,
@@ -825,6 +782,7 @@ void Stacktrace_getSymbols(const char         *executableFileName,
         }
         else
         {
+          char errorMessage[128];
           symbolFound = getSymbolInfoFromFile(executableFileName,
                                               (bfd_vma)addresses[i],
                                               CALLBACK_INLINE(void,(const void *address,
@@ -851,11 +809,11 @@ void Stacktrace_getSymbols(const char         *executableFileName,
         if (!symbolFound)
         {
           // use dladdr() as fallback
-          Dl_info    info;
-          char       buffer[256];
           const char *symbolName;
+          char       buffer[256];
           const char *fileName;
 
+          Dl_info info;
           if (dladdr(addresses[i],&info))
           {
             if ((info.dli_sname != NULL) && ((*info.dli_sname) != '\0'))
@@ -908,11 +866,9 @@ void Stacktrace_freeSymbols(SymbolInfo *symbolInfo,
                             uint       symbolInfoCount
                            )
 {
-  uint i;
-
   assert(symbolInfo != NULL);
 
-  for (i = 0; i < symbolInfoCount; i++)
+  for (size_t i = 0; i < symbolInfoCount; i++)
   {
     stringDelete((char*)symbolInfo[i].fileName);
     stringDelete((char*)symbolInfo[i].symbolName);
@@ -927,27 +883,21 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
                               bool               printErrorMessagesFlag
                              )
 {
-  #if   defined(PLATFORM_LINUX)
-    #if defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
-      uint          i;
-      FileMatchInfo fileMatchInfo;
-      char          errorMessage[128];
-      bool          symbolFound;
-    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
   assert(executableFileName != NULL);
   assert(addresses != NULL);
   assert(symbolFunction != NULL);
 
   #if   defined(PLATFORM_LINUX)
     #if defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
-      for (i = 0; i < addressCount; i++)
+      for (size_t i = 0; i < addressCount; i++)
       {
+        FileMatchInfo fileMatchInfo;
         fileMatchInfo.found   = FALSE;
         fileMatchInfo.address = addresses[i];
         dl_iterate_phdr(findMatchingFile,&fileMatchInfo);
+
+        bool symbolFound;
+        char errorMessage[128];
         if (fileMatchInfo.found)
         {
           symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
@@ -984,11 +934,11 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
         if (!symbolFound)
         {
           // use dladdr() as fallback
-          Dl_info    info;
           char       buffer[256];
           const char *symbolName;
           const char *fileName;
 
+          Dl_info info;
           if (dladdr(addresses[i],&info))
           {
             if ((info.dli_sname != NULL) && ((*info.dli_sname) != '\0'))

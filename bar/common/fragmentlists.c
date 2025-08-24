@@ -75,13 +75,11 @@
 
 LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
 {
-  uint64                  size;
-  const FragmentRangeNode *fragmentRangeNode;
-
   assert(fragmentNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(fragmentNode);
 
-  size = 0LL;
+  uint64                  size = 0LL;
+  const FragmentRangeNode *fragmentRangeNode;
   LIST_ITERATE(&fragmentNode->rangeList,fragmentRangeNode)
   {
     size += fragmentRangeNode->length;
@@ -132,24 +130,21 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 {
   const char *SPACES8 = "        ";
 
-  uint   z;
-  size_t bytesWritten;
-
   assert(outputHandle != NULL);
 
-  z = 0;
-  while ((z+8) < n)
+  size_t i = 0;
+  while ((i+8) < n)
   {
+    size_t bytesWritten;
     bytesWritten = fwrite(SPACES8,1,8,outputHandle);
-    z += 8;
+    UNUSED_VARIABLE(bytesWritten);
+    i += 8;
   }
-  while (z < n)
+  while (i < n)
   {
     (void)fputc(' ',outputHandle);
-    z++;
+    i++;
   }
-
-  UNUSED_VARIABLE(bytesWritten);
 }
 
 /*---------------------------------------------------------------------*/
@@ -334,9 +329,6 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
                            uint64       length
                           )
 {
-  FragmentRangeNode *fragmentRangeNode,*deleteFragmentRangeNode;
-  FragmentRangeNode *prevFragmentRangeNode,*nextFragmentRangeNode;
-
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
 
@@ -346,13 +338,15 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
       FragmentList_debugPrintInfo(fragmentNode,"before");
     #endif /* FRAGMENTLISTS_DEBUG */
 
+    FragmentRangeNode *fragmentRangeNode;
+
     // remove all fragments which are completely covered by new fragment
     fragmentRangeNode = fragmentNode->rangeList.head;
     while (fragmentRangeNode != NULL)
     {
       if ((F0(fragmentRangeNode) >= I0(offset,length)) && (F1(fragmentRangeNode) <= I1(offset,length)))
       {
-        deleteFragmentRangeNode = fragmentRangeNode;
+        FragmentRangeNode *deleteFragmentRangeNode = fragmentRangeNode;
         fragmentRangeNode = fragmentRangeNode->next;
         List_remove(&fragmentNode->rangeList,deleteFragmentRangeNode);
         assert(fragmentNode->rangeListSum >= deleteFragmentRangeNode->length);
@@ -369,14 +363,14 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
     }
 
     // find prev/next fragment
-    prevFragmentRangeNode = NULL;
+    FragmentRangeNode *prevFragmentRangeNode = NULL;
     fragmentRangeNode = fragmentNode->rangeList.head;
     while ((fragmentRangeNode != NULL) && (F1(fragmentRangeNode) <= I1(offset,length)))
     {
       prevFragmentRangeNode = fragmentRangeNode;
       fragmentRangeNode = fragmentRangeNode->next;
     }
-    nextFragmentRangeNode = NULL;
+    FragmentRangeNode *nextFragmentRangeNode = NULL;
     fragmentRangeNode = fragmentNode->rangeList.tail;
     while ((fragmentRangeNode != NULL) && (F0(fragmentRangeNode) >= I0(offset,length)))
     {
@@ -496,18 +490,14 @@ bool FragmentList_rangeExists(const FragmentNode *fragmentNode,
                               uint64             length
                              )
 {
-  bool              existsFlag;
-  uint64            i0,i1;
-  FragmentRangeNode *fragmentRangeNode;
-
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
 
-  i0 = I0(offset,length);
-  i1 = I1(offset,length);
+  uint64 i0 = I0(offset,length);
+  uint64 i1 = I1(offset,length);
 
-  existsFlag = FALSE;
-  for (fragmentRangeNode = fragmentNode->rangeList.head; (fragmentRangeNode != NULL) && !existsFlag; fragmentRangeNode = fragmentRangeNode->next)
+  bool existsFlag = FALSE;
+  for (FragmentRangeNode *fragmentRangeNode = fragmentNode->rangeList.head; (fragmentRangeNode != NULL) && !existsFlag; fragmentRangeNode = fragmentRangeNode->next)
   {
     if (   ((F0(fragmentRangeNode) <= i0) && (i0 <= F1(fragmentRangeNode)) )
         || ((F0(fragmentRangeNode) <= i1) && (i1 <= F1(fragmentRangeNode)))
@@ -540,18 +530,15 @@ void FragmentList_print(FILE               *outputHandle,
                         bool               printMissingFlag
                        )
 {
-  FragmentRangeNode *fragmentRangeNode;
-  uint64            offset0,offset1;
-  uint64            lastOffset;
-
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
 
-  lastOffset = 0LL;
+  uint64 lastOffset = 0LL;
+  FragmentRangeNode *fragmentRangeNode;
   LIST_ITERATE(&fragmentNode->rangeList,fragmentRangeNode)
   {
-    offset0 = F0(fragmentRangeNode);
-    offset1 = F1(fragmentRangeNode);
+    uint64 offset0 = F0(fragmentRangeNode);
+    uint64 offset1 = F1(fragmentRangeNode);
     if (printMissingFlag)
     {
       if ((lastOffset+1) < offset0)
@@ -594,10 +581,10 @@ void FragmentList_debugPrintInfo(const FragmentNode *fragmentNode, const char *n
 void FragmentList_unitTests()
 {
   StaticString (s,32);
+  String_setCString(s,"test");
+
   FragmentList f;
   FragmentNode *n;
-
-  String_setCString(s,"test");
 
 #if 1
   /*  ##____

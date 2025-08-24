@@ -191,16 +191,13 @@ LOCAL void freeUUIDNode(UUIDNode *uuidNode, void *userData)
 #pragma GCC diagnostic ignored "-Wunused-function"
 LOCAL void printNotifies(void)
 {
-  DictionaryIterator dictionaryIterator;
-  void               *data;
-  ulong              length;
-  const NotifyInfo   *notifyInfo;
-  const UUIDNode     *uuidNode;
-
   printf("Notifies:\n");
   SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+    DictionaryIterator dictionaryIterator;
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+    void  *data;
+    ulong length;
     while (Dictionary_getNext(&dictionaryIterator,
                               NULL,  // keyData,
                               NULL,  // keyLength,
@@ -212,12 +209,13 @@ LOCAL void printNotifies(void)
       assert(data != NULL);
       assert(length == sizeof(NotifyInfo*));
 
-      notifyInfo = (NotifyInfo*)data;
+      const NotifyInfo *notifyInfo = (NotifyInfo*)data;
 
       printf("%3d: %s\n",
              notifyInfo->watchHandle,
              String_cString(notifyInfo->name)
             );
+      const UUIDNode *uuidNode;
       LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
       {
         printf("     %s %s, %2d:%2d-%2d:%2d\n",
@@ -259,15 +257,14 @@ LOCAL void printNotifies(void)
                                )
 #endif /* NDEBUG */
 {
-  DatabaseOpenModes databaseOpenMode;
-  Errors            error;
+  Errors error;
 
   assert(databaseHandle != NULL);
   assert(databaseSpecifier != NULL);
   assert(databaseSpecifier->type == DATABASE_TYPE_SQLITE3);
 
   // open continuous database
-  databaseOpenMode = 0;
+  DatabaseOpenModes databaseOpenMode = 0;
   if (String_isEmpty(databaseSpecifier->sqlite.fileName))
   {
     databaseOpenMode |= DATABASE_OPEN_MODE_MEMORY|DATABASE_OPEN_MODE_SHARED;
@@ -339,8 +336,7 @@ LOCAL void printNotifies(void)
                                  )
 #endif /* NDEBUG */
 {
-  DatabaseOpenModes databaseOpenMode;
-  Errors            error;
+  Errors error;
 
   assert(databaseHandle != NULL);
   assert(databaseSpecifier != NULL);
@@ -349,7 +345,7 @@ LOCAL void printNotifies(void)
   (void)Database_drop(databaseSpecifier,NULL);
 
   // create continuous database
-  databaseOpenMode = 0;
+  DatabaseOpenModes databaseOpenMode = 0;
   if (String_isEmpty(databaseSpecifier->sqlite.fileName))
   {
     databaseOpenMode |= DATABASE_OPEN_MODE_MEMORY|DATABASE_OPEN_MODE_SHARED;
@@ -439,8 +435,7 @@ LOCAL Errors getContinuousVersion(uint                    *continuousVersion,
                                   const DatabaseSpecifier *databaseSpecifier
                                  )
 {
-  Errors         error;
-  DatabaseHandle databaseHandle;
+  Errors error;
 
   assert(continuousVersion != NULL);
   assert(databaseSpecifier != NULL);
@@ -449,6 +444,7 @@ LOCAL Errors getContinuousVersion(uint                    *continuousVersion,
   (*continuousVersion) = 0;
 
   // open continuous database
+  DatabaseHandle databaseHandle;
   error = openContinuous(&databaseHandle,databaseSpecifier);
   if (error != ERROR_NONE)
   {
@@ -494,15 +490,12 @@ LOCAL Errors getContinuousVersion(uint                    *continuousVersion,
 
 LOCAL ulong getMaxNotifyWatches(void)
 {
-  ulong maxNotifies;
-  FILE  *handle;
-  char  line[256];
+  ulong maxNotifies = 0;
 
-  maxNotifies = 0;
-
-  handle = fopen(PROC_MAX_NOTIFY_WATCHES_FILENAME,"r");
+  FILE *handle = fopen(PROC_MAX_NOTIFY_WATCHES_FILENAME,"r");
   if (handle != NULL)
   {
+    char line[256];
     if (fgets(line,sizeof(line),handle) != NULL)
     {
       maxNotifies = (ulong)atol(line);
@@ -524,15 +517,12 @@ LOCAL ulong getMaxNotifyWatches(void)
 
 LOCAL ulong getMaxNotifyInstances(void)
 {
-  ulong maxNotifies;
-  FILE  *handle;
-  char  line[256];
+  ulong maxNotifies = 0;
 
-  maxNotifies = 0;
-
-  handle = fopen(PROC_MAX_NOTIFY_INSTANCES_FILENAME,"r");
+  FILE *handle = fopen(PROC_MAX_NOTIFY_INSTANCES_FILENAME,"r");
   if (handle != NULL)
   {
+    char line[256];
     if (fgets(line,sizeof(line),handle) != NULL)
     {
       maxNotifies = (ulong)atol(line);
@@ -574,10 +564,9 @@ LOCAL void freeNotifyInfo(NotifyInfo *notifyInfo, void *userData)
 
 LOCAL NotifyInfo *getNotifyInfo(int watchHandle)
 {
-  NotifyInfo *notifyInfo;
-
   assert(Semaphore_isLocked(&notifyLock));
 
+  NotifyInfo *notifyInfo;
   if (!Dictionary_find(&notifyHandles,
                        &watchHandle,
                        sizeof(watchHandle),
@@ -603,10 +592,10 @@ LOCAL NotifyInfo *getNotifyInfo(int watchHandle)
 
 LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 {
-  NotifyInfo *notifyInfo;
 
   assert(Semaphore_isLocked(&notifyLock));
 
+  NotifyInfo *notifyInfo;
   if (!Dictionary_find(&notifyNames,
                        String_cString(directory),
                        String_length(directory),
@@ -632,18 +621,15 @@ LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 
 LOCAL NotifyInfo *addNotify(ConstString name)
 {
-  int        watchHandle;
-  NotifyInfo *notifyInfo;
-
   assert(name != NULL);
   assert(Semaphore_isLocked(&notifyLock));
 
-  notifyInfo = getNotifyInfoByDirectory(name);
+  NotifyInfo *notifyInfo = getNotifyInfoByDirectory(name);
   if (notifyInfo == NULL)
   {
     // create notify
     #if   defined(PLATFORM_LINUX)
-      watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_FLAGS|NOTIFY_EVENTS);
+      int watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_FLAGS|NOTIFY_EVENTS);
       if (watchHandle == -1)
       {
         plogMessage(NULL,  // logHandle
@@ -742,20 +728,13 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
                                    ConstString  baseName
                                   )
 {
-  StringList          directoryList;
-  String              name;
-  Errors              error;
-  FileInfo            fileInfo;
-  DirectoryListHandle directoryListHandle;
-  NotifyInfo          *notifyInfo;
-  UUIDNode            *uuidNode;
-
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));
 
   // init variables
+  StringList directoryList;
   StringList_init(&directoryList);
-  name = String_new();
+  String     name = String_new();
 
   StringList_append(&directoryList,baseName);
   while (   !StringList_isEmpty(&directoryList)
@@ -769,7 +748,8 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
     {
 //fprintf(stderr,"%s, %d: name=%s %d\n",__FILE__,__LINE__,String_cString(name),StringList_count(&directoryList));
       // read file info
-      error = File_getInfo(&fileInfo,name);
+      FileInfo fileInfo;
+      Errors error = File_getInfo(&fileInfo,name);
       if (error != ERROR_NONE)
       {
 //TODO: log?
@@ -777,6 +757,7 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
       }
 
       // update/add notify
+      NotifyInfo *notifyInfo;
       SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get/add notify
@@ -788,6 +769,7 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
         }
 
         // update/add uuid
+        UUIDNode *uuidNode;
         uuidNode = LIST_FIND(&notifyInfo->uuidList,
                              uuidNode,
                                 stringEquals(uuidNode->jobUUID,jobUUID)
@@ -820,6 +802,7 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
       {
         // open directory content
 
+        DirectoryListHandle directoryListHandle;
         error = File_openDirectoryList(&directoryListHandle,name);
         if (error == ERROR_NONE)
         {
@@ -882,15 +865,13 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
 
 LOCAL void deleteNotifySubDirectories(ConstString name)
 {
-  DictionaryIterator dictionaryIterator;
-  void               *data;
-  ulong              length;
-  NotifyInfo         *notifyInfo;
-
   assert(name != NULL);
   assert(Semaphore_isLocked(&notifyLock));
 
+  DictionaryIterator dictionaryIterator;
   Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+  void  *data;
+  ulong length;
   while (Dictionary_getNext(&dictionaryIterator,
                             NULL,  // keyData,
                             NULL,  // keyLength,
@@ -902,7 +883,7 @@ LOCAL void deleteNotifySubDirectories(ConstString name)
     assert(data != NULL);
     assert(length == sizeof(NotifyInfo*));
 
-    notifyInfo = (NotifyInfo*)data;
+    NotifyInfo *notifyInfo = (NotifyInfo*)data;
 
     if (   String_length(notifyInfo->name) >= String_length(name)
         && String_startsWith(notifyInfo->name,name)
@@ -926,18 +907,15 @@ LOCAL void deleteNotifySubDirectories(ConstString name)
 
 LOCAL void markNotifies(const char *jobUUID, const char *scheduleUUID)
 {
-  DictionaryIterator dictionaryIterator;
-  void               *data;
-  ulong              length;
-  NotifyInfo         *notifyInfo;
-  UUIDNode           *uuidNode;
-
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));
 
   SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+    DictionaryIterator dictionaryIterator;
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+    void  *data;
+    ulong length;
     while (Dictionary_getNext(&dictionaryIterator,
                               NULL,  // keyData,
                               NULL,  // keyLength,
@@ -949,8 +927,9 @@ LOCAL void markNotifies(const char *jobUUID, const char *scheduleUUID)
       assert(data != NULL);
       assert(length == sizeof(NotifyInfo*));
 
-      notifyInfo = (NotifyInfo*)data;
+      NotifyInfo *notifyInfo = (NotifyInfo*)data;
 
+      UUIDNode *uuidNode;
       LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
       {
         if (   stringEquals(uuidNode->jobUUID,jobUUID)
@@ -978,20 +957,17 @@ LOCAL void markNotifies(const char *jobUUID, const char *scheduleUUID)
 
 LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
 {
-  DictionaryIterator dictionaryIterator;
-  NotifyInfo         *notifyInfo;
-  const void         *keyData;
-  ulong              keyLength;
-  void               *data;
-  ulong              length;
-  UUIDNode           *uuidNode;
-
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));
 
   SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+    DictionaryIterator dictionaryIterator;
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+    const void *keyData;
+    ulong      keyLength;
+    void       *data;
+    ulong      length;
     while (Dictionary_getNext(&dictionaryIterator,
                               &keyData,
                               &keyLength,
@@ -1003,10 +979,10 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
       assert(data != NULL);
       assert(length == sizeof(NotifyInfo*));
 
-      notifyInfo = (NotifyInfo*)data;
+      NotifyInfo *notifyInfo = (NotifyInfo*)data;
 
       // remove uuids
-      uuidNode = notifyInfo->uuidList.head;
+      UUIDNode *uuidNode = notifyInfo->uuidList.head;
       while (uuidNode != NULL)
       {
         if (   uuidNode->cleanFlag
@@ -1046,23 +1022,17 @@ LOCAL void initNotifies(ConstString     name,
                         const EntryList *entryList
                        )
 {
-  StringList      nameList;
-  String          baseName;
-  ulong           maxWatches;//,maxInstances;
-  EntryNode       *includeEntryNode;
-  StringTokenizer fileNameTokenizer;
-  ConstString     token;
-
   assert(name != NULL);
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));
   assert(entryList != NULL);
 
   // init variables
+  StringList nameList;
   StringList_init(&nameList);
-  baseName = String_new();
+  String     baseName = String_new();
 
-  maxWatches = getMaxNotifyWatches();
+  ulong maxWatches = getMaxNotifyWatches();
 
 //fprintf(stderr,"%s, %d: INIT job=%s schedule=%s time=%02d:%02d..%02d:%02d\n",__FILE__,__LINE__,jobUUID,scheduleUUID,beginTime.hour,beginTime.minute,endTime.hour,endTime.minute);
   plogMessage(NULL,  // logHandle
@@ -1075,10 +1045,13 @@ LOCAL void initNotifies(ConstString     name,
   markNotifies(jobUUID,scheduleUUID);
 
   // add notify for include directories
+  EntryNode *includeEntryNode;
   LIST_ITERATEX(entryList,includeEntryNode,!quitFlag)
   {
     // find base path
+    StringTokenizer fileNameTokenizer;
     File_initSplitFileName(&fileNameTokenizer,includeEntryNode->string);
+    ConstString token;
     if (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
     {
       if (!String_isEmpty(token))
@@ -1135,20 +1108,17 @@ LOCAL void initNotifies(ConstString     name,
 
 LOCAL void purgeNotifies(const char *jobUUID, const char *scheduleUUID)
 {
-  DictionaryIterator dictionaryIterator;
-  NotifyInfo         *notifyInfo;
-  const void         *keyData;
-  ulong              keyLength;
-  void               *data;
-  ulong              length;
-  UUIDNode           *uuidNode;
-
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));
 
   SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
+    DictionaryIterator dictionaryIterator;
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
+    const void *keyData;
+    ulong      keyLength;
+    void       *data;
+    ulong      length;
     while (Dictionary_getNext(&dictionaryIterator,
                               &keyData,
                               &keyLength,
@@ -1160,10 +1130,10 @@ LOCAL void purgeNotifies(const char *jobUUID, const char *scheduleUUID)
       assert(data != NULL);
       assert(length == sizeof(NotifyInfo*));
 
-      notifyInfo = (NotifyInfo*)data;
+      NotifyInfo *notifyInfo = (NotifyInfo*)data;
 
       // remove uuids
-      uuidNode = notifyInfo->uuidList.head;
+      UUIDNode *uuidNode = notifyInfo->uuidList.head;
       while (uuidNode != NULL)
       {
         if (   stringEquals(uuidNode->jobUUID,jobUUID)
@@ -1229,9 +1199,6 @@ LOCAL void freeInitNotifyMsg(InitNotifyMsg *initNotifyMsg, void *userData)
 LOCAL void continuousInitDoneThreadCode(void)
 {
   InitNotifyMsg initNotifyMsg;
-
-  // init variables
-
   while (   !quitFlag
          && MsgQueue_get(&initDoneNotifyMsgQueue,&initNotifyMsg,NULL,sizeof(initNotifyMsg),WAIT_FOREVER)
         )
@@ -1437,28 +1404,17 @@ LOCAL void continuousThreadCode(void)
   #define MAX_ENTRIES 128
   #define BUFFER_SIZE (MAX_ENTRIES*(sizeof(struct inotify_event)+NAME_MAX+1))
 
-  void                       *buffer;
-  String                     absoluteName;
-  Errors                     error;
-  DatabaseHandle             databaseHandle;
-  SignalMask                 signalMask;
-  ssize_t                    n;
-  uint                       year,month,day,weekDay;
-  uint                       currentHour,currentMinute;
-  const struct inotify_event *inotifyEvent;
-  const NotifyInfo           *notifyInfo;
-  const UUIDNode             *uuidNode;
-
   // init variables
-  buffer = malloc(BUFFER_SIZE);
+  void *buffer = malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  absoluteName = String_new();
+  String absoluteName = String_new();
 
   // open continuous database
-  error = Continuous_open(&databaseHandle);
+  DatabaseHandle databaseHandle;
+  Errors error = Continuous_open(&databaseHandle);
   if (error != ERROR_NONE)
   {
     printError(_("cannot initialize continuous database (error: %s)!"),
@@ -1470,6 +1426,7 @@ LOCAL void continuousThreadCode(void)
   }
 
   // Note: ignore SIGALRM in poll()/pselect()
+  SignalMask signalMask;
   MISC_SIGNAL_MASK_CLEAR(signalMask);
   #ifdef HAVE_SIGALRM
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
@@ -1478,7 +1435,7 @@ LOCAL void continuousThreadCode(void)
   while (!quitFlag)
   {
     // read inotify events
-    n = 0;
+    ssize_t n = 0;
     do
     {
       // wait for event or timeout
@@ -1491,6 +1448,8 @@ LOCAL void continuousThreadCode(void)
     if (quitFlag) break;
 
     // process inotify events
+    uint year,month,day,weekDay;
+    uint currentHour,currentMinute;
     Misc_splitDateTime(Misc_getCurrentDateTime(),
                        TIME_TYPE_LOCAL,
                        &year,
@@ -1502,7 +1461,7 @@ LOCAL void continuousThreadCode(void)
                        &weekDay,
                        NULL  // isDayLightSaving
                       );
-    inotifyEvent = (const struct inotify_event*)buffer;
+    const struct inotify_event *inotifyEvent = (const struct inotify_event*)buffer;
     while ((n > 0) && !quitFlag)
     {
 #if 0
@@ -1527,7 +1486,7 @@ fprintf(stderr,"\n");
 #endif
       SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        notifyInfo = getNotifyInfo(inotifyEvent->wd);
+        const NotifyInfo *notifyInfo = getNotifyInfo(inotifyEvent->wd);
         if (notifyInfo != NULL)
         {
           // get absolute name
@@ -1541,6 +1500,7 @@ fprintf(stderr,"\n");
             if      (IS_INOTIFY(inotifyEvent->mask,IN_CREATE))
             {
               // add directory and sub-directories to notify
+              const UUIDNode *uuidNode;
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 if (   ((uuidNode->date.year  == DATE_ANY       ) || (uuidNode->date.year  == (int)year) )
@@ -1602,6 +1562,7 @@ fprintf(stderr,"\n");
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_TO))
             {
+              const UUIDNode *uuidNode;
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
@@ -1653,6 +1614,7 @@ fprintf(stderr,"\n");
             }
             else
             {
+              const UUIDNode *uuidNode;
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 // store into notify database
@@ -1706,6 +1668,7 @@ fprintf(stderr,"\n");
             }
             else
             {
+              const UUIDNode *uuidNode;
               LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
               {
                 if (   ((uuidNode->date.year  == DATE_ANY       ) || (uuidNode->date.year  == (int)year) )
@@ -1790,10 +1753,7 @@ bool Continuous_isAvailable(void)
 
 Errors Continuous_init(const char *databaseURI)
 {
-  bool           createFlag;
-  Errors         error;
-  DatabaseHandle databaseHandle;
-  uint           continuousVersion;
+  Errors error;
 
   // init variables
   quitFlag = FALSE;
@@ -1869,10 +1829,11 @@ Errors Continuous_init(const char *databaseURI)
   }
   assert(continuousDatabaseSpecifier != NULL);
 
-  createFlag = FALSE;
+  bool createFlag = FALSE;
   if (Database_exists(continuousDatabaseSpecifier,NULL))
   {
     // check if continuous database exists in expected version, create database
+    uint continuousVersion;
     error = getContinuousVersion(&continuousVersion,continuousDatabaseSpecifier);
     if (error == ERROR_NONE)
     {
@@ -1896,6 +1857,7 @@ Errors Continuous_init(const char *databaseURI)
   if (createFlag)
   {
     // create new database
+    DatabaseHandle databaseHandle;
     error = createContinuous(&databaseHandle,continuousDatabaseSpecifier);
     if (error == ERROR_NONE)
     {
@@ -1930,11 +1892,6 @@ Errors Continuous_init(const char *databaseURI)
 
 void Continuous_done(void)
 {
-  DictionaryIterator dictionaryIterator;
-  void               *data;
-  ulong              length;
-  NotifyInfo         *notifyInfo;
-
   if (initFlag)
   {
     quitFlag = TRUE;
@@ -1968,7 +1925,10 @@ void Continuous_done(void)
     #endif /* PLATFORM_... */
 
     // remove inotifies
+    DictionaryIterator dictionaryIterator;
     Dictionary_initIterator(&dictionaryIterator,&notifyNames);
+    void  *data;
+    ulong length;
     while (Dictionary_getNext(&dictionaryIterator,
                               NULL,  // keyData,
                               NULL,  // keyLength,
@@ -1980,7 +1940,7 @@ void Continuous_done(void)
       assert(data != NULL);
       assert(length == sizeof(NotifyInfo*));
 
-      notifyInfo = (NotifyInfo*)data;
+      NotifyInfo *notifyInfo = (NotifyInfo*)data;
 
       DEBUG_REMOVE_RESOURCE_TRACE(notifyInfo,NotifyInfo);
 
@@ -2014,14 +1974,13 @@ Errors Continuous_initNotify(ConstString     name,
                              const EntryList *entryList
                             )
 {
-  InitNotifyMsg initNotifyMsg;
-
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));
   assert(entryList != NULL);
 
   if (initFlag)
   {
+    InitNotifyMsg initNotifyMsg;
     initNotifyMsg.type       = INIT;
     initNotifyMsg.name       = String_duplicate(name);
     stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),jobUUID);
@@ -2047,13 +2006,12 @@ Errors Continuous_doneNotify(ConstString name,
                              const char  *scheduleUUID
                             )
 {
-  InitNotifyMsg initNotifyMsg;
-
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));
 
   if (initFlag)
   {
+    InitNotifyMsg initNotifyMsg;
     initNotifyMsg.type = DONE;
     initNotifyMsg.name = String_duplicate(name);
     stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),jobUUID);
@@ -2118,7 +2076,6 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
                            ConstString    name
                           )
 {
-  uint   currentHour,currentMinute;
   Errors error;
 
   assert(initFlag);
@@ -2127,6 +2084,7 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
   assert(!stringIsEmpty(scheduleUUID));
   assert(!String_isEmpty(name));
 
+  uint currentHour,currentMinute;
   Misc_splitDateTime(Misc_getCurrentDateTime(),
                      TIME_TYPE_LOCAL,
                      NULL,  // year
@@ -2293,16 +2251,11 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                             const char     *scheduleUUID
                            )
 {
-  DatabaseId databaseId;
-  String     name;
-  uint64     storedDateTime;
-  uint       storedFlag;
-
   assert(databaseHandle != NULL);
   assert(!stringIsEmpty(jobUUID));
   assert(!stringIsEmpty(scheduleUUID));
 
-  name = String_new();
+  String name = String_new();
 
   (void)Database_get(databaseHandle,
                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -2313,10 +2266,10 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                        UNUSED_VARIABLE(userData);
                        UNUSED_VARIABLE(valueCount);
 
-                       databaseId     = values[0].id;
+                       DatabaseId databaseId     = values[0].id;
                        String_set(name,values[1].string);
-                       storedDateTime = values[2].dateTime;
-                       storedFlag     = values[3].b;
+                       uint64     storedDateTime = values[2].dateTime;
+                       uint       storedFlag     = values[3].b;
 
                        printf("#%ld: %lu %s %d\n",databaseId,storedDateTime,String_cString(name),storedFlag);
 

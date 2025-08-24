@@ -412,11 +412,9 @@ const ConfigValueSelect CONFIG_VALUE_SERVER_MODES[] = CONFIG_VALUE_SELECT_ARRAY
 
 LOCAL ConfigFileNode* newConfigFileNode(ConfigFileTypes configFileType, const char *fileName)
 {
-  ConfigFileNode *configFileNode;
-
   assert(fileName != NULL);
 
-  configFileNode = LIST_NEW_NODE(ConfigFileNode);
+  ConfigFileNode *configFileNode = LIST_NEW_NODE(ConfigFileNode);
   if (configFileNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -577,13 +575,11 @@ LOCAL void freeMaintenanceNode(MaintenanceNode *maintenanceNode, void *userData)
 
 LOCAL MountNode *newMountNodeCString(const char *mountName, const char *deviceName)
 {
-  MountNode *mountNode;
-
   assert(mountName != NULL);
   assert(!stringIsEmpty(mountName));
 
   // allocate mount node
-  mountNode = LIST_NEW_NODE(MountNode);
+  MountNode *mountNode = LIST_NEW_NODE(MountNode);
   if (mountNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -763,10 +759,6 @@ LOCAL bool cmdOptionParseConfigFile(void *variable, const char *name, const char
 
 LOCAL bool cmdOptionParseEntryPattern(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  EntryTypes   entryType;
-  PatternTypes patternType;
-  Errors       error;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -775,7 +767,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *variable, const char *name, const ch
   UNUSED_VARIABLE(userData);
 
   // get entry type
-  entryType = ENTRY_TYPE_FILE;
+  EntryTypes entryType = ENTRY_TYPE_FILE;
   switch (globalOptions.command)
   {
     case COMMAND_NONE:
@@ -799,6 +791,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *variable, const char *name, const ch
   }
 
   // detect pattern type, get pattern
+  PatternTypes patternType;
   if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
   else if (stringStartsWith(value,"x:"       )) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
   else if (stringStartsWith(value,"regex:"   )) { patternType = PATTERN_TYPE_REGEX;          value += 6; }
@@ -808,7 +801,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *variable, const char *name, const ch
   else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
-  error = EntryList_appendCString((EntryList*)variable,entryType,value,patternType,NULL);
+  Errors error = EntryList_appendCString((EntryList*)variable,entryType,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -834,9 +827,6 @@ LOCAL bool cmdOptionParseEntryPattern(void *variable, const char *name, const ch
 
 LOCAL bool cmdOptionParsePattern(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  PatternTypes patternType;
-  Errors       error;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -845,6 +835,7 @@ LOCAL bool cmdOptionParsePattern(void *variable, const char *name, const char *v
   UNUSED_VARIABLE(userData);
 
   // detect pattern type, get pattern
+  PatternTypes patternType;
   if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
   else if (stringStartsWith(value,"x:"       )) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
   else if (stringStartsWith(value,"regex:"   )) { patternType = PATTERN_TYPE_REGEX;          value += 6; }
@@ -854,7 +845,7 @@ LOCAL bool cmdOptionParsePattern(void *variable, const char *name, const char *v
   else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
-  error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
+  Errors error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -880,10 +871,6 @@ LOCAL bool cmdOptionParsePattern(void *variable, const char *name, const char *v
 
 LOCAL bool cmdOptionParseMount(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  String    mountName;
-  String    deviceName;
-  MountNode *mountNode;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -894,8 +881,8 @@ LOCAL bool cmdOptionParseMount(void *variable, const char *name, const char *val
   UNUSED_VARIABLE(userData);
 
   // init variables
-  mountName  = String_new();
-  deviceName = String_new();
+  String mountName  = String_new();
+  String deviceName = String_new();
 
   // get name
   if      (String_parseCString(value,"%S,%S,%y",NULL,mountName,deviceName,NULL))
@@ -924,9 +911,9 @@ LOCAL bool cmdOptionParseMount(void *variable, const char *name, const char *val
   if (!String_isEmpty(mountName))
   {
     // add to mount list
-    mountNode = Configuration_newMountNode(mountName,
-                                           deviceName
-                                          );
+    MountNode *mountNode = Configuration_newMountNode(mountName,
+                                                      deviceName
+                                                     );
     assert(mountNode != NULL);
     List_append((MountList*)variable,mountNode);
   }
@@ -954,9 +941,6 @@ LOCAL bool cmdOptionParseMount(void *variable, const char *name, const char *val
 
 LOCAL bool cmdOptionParseDeltaSource(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  String       storageName;
-  PatternTypes patternType;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -967,9 +951,10 @@ LOCAL bool cmdOptionParseDeltaSource(void *variable, const char *name, const cha
   UNUSED_VARIABLE(userData);
 
   // init variables
-  storageName = String_new();
+  String storageName = String_new();
 
   // detect pattern type, get pattern
+  PatternTypes patternType;
   if      (stringStartsWith(value,"extended:")) { String_setCString(storageName,value+9); patternType = PATTERN_TYPE_EXTENDED_REGEX; }
   else if (stringStartsWith(value,"x:"       )) { String_setCString(storageName,value+2); patternType = PATTERN_TYPE_EXTENDED_REGEX; }
   else if (stringStartsWith(value,"regex:"   )) { String_setCString(storageName,value+6); patternType = PATTERN_TYPE_REGEX;          }
@@ -1003,10 +988,6 @@ LOCAL bool cmdOptionParseDeltaSource(void *variable, const char *name, const cha
 
 LOCAL bool cmdOptionParseCompressAlgorithms(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  char               algorithm1[256],algorithm2[256];
-  CompressAlgorithms compressAlgorithm;
-  CompressAlgorithms compressAlgorithmDelta,compressAlgorithmByte;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -1014,14 +995,16 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *variable, const char *name, co
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(userData);
 
-  compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
-  compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
+  CompressAlgorithms compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
+  CompressAlgorithms compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
 
   // parse
+  char algorithm1[256],algorithm2[256];
   if (   String_scanCString(value,"%256s+%256s",algorithm1,algorithm2)
       || String_scanCString(value,"%256s,%256s",algorithm1,algorithm2)
      )
   {
+    CompressAlgorithms compressAlgorithm;
     if (!Compress_parseAlgorithm(algorithm1,&compressAlgorithm))
     {
       stringFormat(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",algorithm1);
@@ -1040,6 +1023,7 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *variable, const char *name, co
   }
   else
   {
+    CompressAlgorithms compressAlgorithm;
     if (!Compress_parseAlgorithm(value,&compressAlgorithm))
     {
       stringFormat(errorMessage,errorMessageSize,"Unknown compress algorithm value '%s'",value);
@@ -1072,15 +1056,6 @@ LOCAL bool cmdOptionParseCompressAlgorithms(void *variable, const char *name, co
 
 LOCAL bool cmdOptionParseCryptAlgorithms(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-#ifdef MULTI_CRYPT
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-//  CryptAlgorithms cryptAlgorithms[4];
-  uint            cryptAlgorithmCount;
-#else /* not MULTI_CRYPT */
-  CryptAlgorithms cryptAlgorithm;
-#endif /* MULTI_CRYPT */
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -1089,13 +1064,16 @@ LOCAL bool cmdOptionParseCryptAlgorithms(void *variable, const char *name, const
   UNUSED_VARIABLE(userData);
 
 #ifdef MULTI_CRYPT
-  cryptAlgorithmCount = 0;
+//  CryptAlgorithms cryptAlgorithms[4];
+  uint cryptAlgorithmCount = 0;
   String_initTokenizerCString(&stringTokenizer,
                               value,
                               "+,",
                               STRING_QUOTES,
                               TRUE
                              );
+  StringTokenizer stringTokenizer;
+  ConstString     token;
   while (String_getNextToken(&stringTokenizer,&token,NULL))
   {
     if (cryptAlgorithmCount >= 4)
@@ -1125,6 +1103,7 @@ LOCAL bool cmdOptionParseCryptAlgorithms(void *variable, const char *name, const
   }
 #else /* not MULTI_CRYPT */
   // parse
+  CryptAlgorithms cryptAlgorithm;
   if (!Crypt_parseAlgorithm(value,&cryptAlgorithm))
   {
     stringFormat(errorMessage,errorMessageSize,"Unknown crypt algorithm '%s'",value);
@@ -1149,9 +1128,7 @@ LOCAL bool cmdOptionParseCryptAlgorithms(void *variable, const char *name, const
 
 LOCAL BandWidthNode *newBandWidthNode(void)
 {
-  BandWidthNode *bandWidthNode;
-
-  bandWidthNode = LIST_NEW_NODE(BandWidthNode);
+  BandWidthNode *bandWidthNode = LIST_NEW_NODE(BandWidthNode);
   if (bandWidthNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -1220,12 +1197,10 @@ LOCAL void initCertificate(Certificate *certificate)
 #ifndef WERROR
 LOCAL bool duplicateCertificate(Certificate *toCertificate, const Certificate *fromCertificate)
 {
-  void *data;
-
   assert(toCertificate != NULL);
   assert(fromCertificate != NULL);
 
-  data = malloc(fromCertificate->length);
+  void *data = malloc(fromCertificate->length);
   if (data == NULL)
   {
     return FALSE;
@@ -1298,11 +1273,9 @@ LOCAL void clearCertificate(Certificate *certificate)
 #ifndef WERROR
 LOCAL bool setCertificate(Certificate *certificate, const void *certificateData, uint certificateLength)
 {
-  void *data;
-
   assert(certificate != NULL);
 
-  data = malloc(certificateLength);
+  void *data = malloc(certificateLength);
   if (data == NULL)
   {
     return FALSE;
@@ -1389,22 +1362,17 @@ LOCAL void doneHash(Hash *hash)
 
 LOCAL BandWidthNode *parseBandWidth(ConstString s, char errorMessage[], uint errorMessageSize)
 {
-  BandWidthNode *bandWidthNode;
-  bool          errorFlag;
-  String        s0,s1,s2;
-  long          nextIndex;
-
   assert(s != NULL);
 
   // allocate new bandwidth node
-  bandWidthNode = newBandWidthNode();
+  BandWidthNode *bandWidthNode = newBandWidthNode();
 
   // parse bandwidth. Format: (<band width>[K|M])|<file name> <date> [<weekday>] <time>
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
-  nextIndex = STRING_BEGIN;
+  bool   errorFlag = FALSE;
+  String s0        = String_new();
+  String s1        = String_new();
+  String s2        = String_new();
+  long nextIndex   = STRING_BEGIN;
   if      (   String_matchCString(s,nextIndex,"^\\s*[[:digit:]]+\\s*$",&nextIndex,s0,NULL)
            || String_matchCString(s,nextIndex,"^\\s*[[:digit:]]+\\S+",&nextIndex,s0,NULL)
           )
@@ -1518,15 +1486,13 @@ LOCAL BandWidthNode *parseBandWidth(ConstString s, char errorMessage[], uint err
 
 LOCAL Errors readCertificateFileCString(Certificate *certificate, const char *fileName)
 {
-  Errors     error;
-  FileHandle fileHandle;
-  uint64     dataLength;
-  void       *data;
+  Errors  error;
 
   assert(certificate != NULL);
   assert(fileName != NULL);
 
   // open file
+  FileHandle fileHandle;
   error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -1534,7 +1500,7 @@ LOCAL Errors readCertificateFileCString(Certificate *certificate, const char *fi
   }
 
   // get file size
-  dataLength = File_getSize(&fileHandle);
+  uint64 dataLength = File_getSize(&fileHandle);
   if (dataLength == 0LL)
   {
     (void)File_close(&fileHandle);
@@ -1542,7 +1508,7 @@ LOCAL Errors readCertificateFileCString(Certificate *certificate, const char *fi
   }
 
   // allocate memory
-  data = malloc((size_t)dataLength);
+  void *data = malloc((size_t)dataLength);
   if (data == NULL)
   {
     (void)File_close(&fileHandle);
@@ -1604,17 +1570,13 @@ LOCAL Errors readCertificateFile(Certificate *certificate, ConstString fileName)
 
 LOCAL Errors readBase64KeyFileCString(Key *key, const char *fileName)
 {
-  Errors     error;
-  FileHandle fileHandle;
-  uint       dataLength;
-  char       *data;
-  uint       keyDataLength;
-  char       *keyData;
+  Errors error;
 
   assert(key != NULL);
   assert(fileName != NULL);
 
   // open file
+  FileHandle fileHandle;
   error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -1622,7 +1584,7 @@ LOCAL Errors readBase64KeyFileCString(Key *key, const char *fileName)
   }
 
   // get data size
-  dataLength = File_getSize(&fileHandle);
+  uint dataLength = File_getSize(&fileHandle);
   if (dataLength == 0LL)
   {
     (void)File_close(&fileHandle);
@@ -1630,7 +1592,7 @@ LOCAL Errors readBase64KeyFileCString(Key *key, const char *fileName)
   }
 
   // allocate secure memory
-  data = (char*)allocSecure((size_t)dataLength);
+  char *data = (char*)allocSecure((size_t)dataLength);
   if (data == NULL)
   {
     (void)File_close(&fileHandle);
@@ -1650,13 +1612,13 @@ LOCAL Errors readBase64KeyFileCString(Key *key, const char *fileName)
   (void)File_close(&fileHandle);
 
   // decode base64
-  keyDataLength = Misc_base64DecodeLengthBuffer(data,dataLength);
+  uint keyDataLength = Misc_base64DecodeLengthBuffer(data,dataLength);
   if (keyDataLength <= 0)
   {
     freeSecure(data);
     return ERROR_INVALID_KEY;
   }
-  keyData = allocSecure(keyDataLength);
+  char *keyData = allocSecure(keyDataLength);
   if (keyData == NULL)
   {
     freeSecure(data);
@@ -1706,15 +1668,13 @@ LOCAL Errors readBase64KeyFile(Key *key, ConstString fileName)
 
 LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
 {
-  Errors     error;
-  FileHandle fileHandle;
-  uint       keyDataLength;
-  char       *keyData;
+  Errors error;
 
   assert(key != NULL);
   assert(fileName != NULL);
 
   // open file
+  FileHandle fileHandle;
   error = File_openCString(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -1722,7 +1682,7 @@ LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
   }
 
   // get data size
-  keyDataLength = File_getSize(&fileHandle);
+  uint keyDataLength = File_getSize(&fileHandle);
   if (keyDataLength == 0LL)
   {
     (void)File_close(&fileHandle);
@@ -1730,7 +1690,7 @@ LOCAL Errors readKeyFileCString(Key *key, const char *fileName)
   }
 
   // allocate secure memory
-  keyData = (char*)allocSecure((size_t)keyDataLength);
+  char *keyData = (char*)allocSecure((size_t)keyDataLength);
   if (keyData == NULL)
   {
     (void)File_close(&fileHandle);
@@ -1786,9 +1746,6 @@ LOCAL Errors readKeyFile(Key *key, ConstString fileName)
 
 LOCAL void initGlobalOptions(void)
 {
-  String path;
-  uint   i;
-
   memClear(&globalOptions,sizeof(GlobalOptions));
 
   // --- program options
@@ -1814,10 +1771,10 @@ LOCAL void initGlobalOptions(void)
   Semaphore_init(&globalOptions.deviceList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&globalOptions.deviceList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
 
-  path = File_getSystemDirectoryCString(String_new(),
-                                        FILE_SYSTEM_PATH_RUNTIME,
-                                        DEFAULT_INDEX_DATABASE_URI_NAME
-                                       );
+  String path = File_getSystemDirectoryCString(String_new(),
+                                               FILE_SYSTEM_PATH_RUNTIME,
+                                               DEFAULT_INDEX_DATABASE_URI_NAME
+                                              );
   globalOptions.indexDatabaseURI                                = String_format(String_new(),
                                                                                 "%s%s",
                                                                                 DEFAULT_INDEX_DATABASE_URI_TYPE,
@@ -1964,7 +1921,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.compressAlgorithms.byte                         = COMPRESS_ALGORITHM_NONE;
 
   globalOptions.cryptType                                       = CRYPT_TYPE_SYMMETRIC;
-  for (i = 0; i < 4; i++)
+  for (size_t i = 0; i < 4; i++)
   {
     globalOptions.cryptAlgorithms[i] = CRYPT_ALGORITHM_NONE;
   }
@@ -2274,8 +2231,6 @@ LOCAL void doneGlobalOptions(void)
 
 LOCAL bool cmdOptionParseBandWidth(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  BandWidthNode *bandWidthNode;
-  String        s;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2285,8 +2240,8 @@ LOCAL bool cmdOptionParseBandWidth(void *variable, const char *name, const char 
   UNUSED_VARIABLE(userData);
 
   // parse band width node
-  s = String_newCString(value);
-  bandWidthNode = parseBandWidth(s,errorMessage,errorMessageSize);
+  String        s              = String_newCString(value);
+  BandWidthNode *bandWidthNode = parseBandWidth(s,errorMessage,errorMessageSize);
   if (bandWidthNode == NULL)
   {
     String_delete(s);
@@ -2316,9 +2271,6 @@ LOCAL bool cmdOptionParseBandWidth(void *variable, const char *name, const char 
 
 LOCAL bool cmdOptionParseTransform(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  PatternTypes patternType;
-  String       patternString,replace;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -2327,10 +2279,11 @@ LOCAL bool cmdOptionParseTransform(void *variable, const char *name, const char 
   UNUSED_VARIABLE(userData);
 
   // init variables
-  patternString = String_new();
-  replace       = String_new();
+  String patternString = String_new();
+  String replace       = String_new();
 
   // parse
+  PatternTypes patternType;
   if      (   String_scanCString(value,"extended:%S,%S",patternString,replace)
            || String_scanCString(value,"x:%S,%S",patternString,replace)
           )
@@ -2396,9 +2349,6 @@ LOCAL bool cmdOptionParseTransform(void *variable, const char *name, const char 
 
 LOCAL bool cmdOptionParseOwner(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  char   userName[256],groupName[256];
-  uint32 userId,groupId;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -2407,6 +2357,8 @@ LOCAL bool cmdOptionParseOwner(void *variable, const char *name, const char *val
   UNUSED_VARIABLE(userData);
 
   // parse
+  char   userName[256],groupName[256];
+  uint32 userId,groupId;
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
   {
     userId  = Misc_userNameToUserId(userName);
@@ -2456,9 +2408,6 @@ LOCAL bool cmdOptionParseOwner(void *variable, const char *name, const char *val
 
 LOCAL bool cmdOptionParsePermissions(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  char            user[3+1],group[3+1],other[3+1];
-  FilePermissions permission;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -2467,7 +2416,8 @@ LOCAL bool cmdOptionParsePermissions(void *variable, const char *name, const cha
   UNUSED_VARIABLE(userData);
 
   // parse
-  permission = FILE_PERMISSION_NONE;
+  FilePermissions permission = FILE_PERMISSION_NONE;
+  char            user[3+1],group[3+1],other[3+1];
   if      (String_scanCString(value,"%o",permission))
   {
     permission = (FilePermissions)atol(value);
@@ -2543,8 +2493,6 @@ LOCAL bool cmdOptionParsePassword(void *variable, const char *name, const char *
 
 LOCAL bool cmdOptionParseHashData(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  CryptHash cryptHash;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -2556,6 +2504,7 @@ LOCAL bool cmdOptionParseHashData(void *variable, const char *name, const char *
 
 // TODO: parse algorithmus+salt
   // calculate hash
+  CryptHash cryptHash;
   Crypt_initHash(&cryptHash,PASSWORD_HASH_ALGORITHM);
   Crypt_updateHash(&cryptHash,value,stringLength(value));
 
@@ -2584,11 +2533,7 @@ LOCAL bool cmdOptionParseHashData(void *variable, const char *name, const char *
 
 LOCAL bool cmdOptionReadCertificateFile(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  Certificate *certificate = (Certificate*)variable;
-  Errors      error;
-  FileHandle  fileHandle;
-  uint        dataLength;
-  void        *data;
+  Errors error;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2597,6 +2542,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *variable, const char *name, const 
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(userData);
 
+  FileHandle fileHandle;
   error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -2605,7 +2551,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *variable, const char *name, const 
   }
 
   // get file size
-  dataLength = File_getSize(&fileHandle);
+  uint dataLength = File_getSize(&fileHandle);
   if (dataLength == 0LL)
   {
     (void)File_close(&fileHandle);
@@ -2614,7 +2560,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *variable, const char *name, const 
   }
 
   // allocate memory
-  data = malloc((size_t)dataLength);
+  void *data = malloc((size_t)dataLength);
   if (data == NULL)
   {
     (void)File_close(&fileHandle);
@@ -2640,6 +2586,8 @@ LOCAL bool cmdOptionReadCertificateFile(void *variable, const char *name, const 
   (void)File_close(&fileHandle);
 
   // set certificate data
+  Certificate *certificate = (Certificate*)variable;
+  assert(certificate != NULL);
   if (certificate->data != NULL) free(certificate->data);
   certificate->type   = CERTIFICATE_TYPE_FILE;
   String_setCString(certificate->fileName,value);
@@ -2665,11 +2613,7 @@ LOCAL bool cmdOptionReadCertificateFile(void *variable, const char *name, const 
 
 LOCAL bool cmdOptionReadKeyFile(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  Key        *key = (Key*)variable;
-  Errors     error;
-  FileHandle fileHandle;
-  uint       dataLength;
-  void       *data;
+  Errors error;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2679,6 +2623,7 @@ LOCAL bool cmdOptionReadKeyFile(void *variable, const char *name, const char *va
   UNUSED_VARIABLE(userData);
 
   // open file
+  FileHandle fileHandle;
   error = File_openCString(&fileHandle,value,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -2687,7 +2632,7 @@ LOCAL bool cmdOptionReadKeyFile(void *variable, const char *name, const char *va
   }
 
   // get data size
-  dataLength = File_getSize(&fileHandle);
+  uint dataLength = File_getSize(&fileHandle);
   if (dataLength == 0LL)
   {
     (void)File_close(&fileHandle);
@@ -2696,7 +2641,7 @@ LOCAL bool cmdOptionReadKeyFile(void *variable, const char *name, const char *va
   }
 
   // allocate secure memory
-  data = (char*)allocSecure((size_t)dataLength);
+  void *data = (char*)allocSecure((size_t)dataLength);
   if (data == NULL)
   {
     (void)File_close(&fileHandle);
@@ -2718,6 +2663,8 @@ LOCAL bool cmdOptionReadKeyFile(void *variable, const char *name, const char *va
   (void)File_close(&fileHandle);
 
   // set key data
+  Key *key = (Key*)variable;
+  assert(key != NULL);
   Configuration_setKey(key,value,data,dataLength);
 
   // free resources
@@ -2742,10 +2689,7 @@ LOCAL bool cmdOptionReadKeyFile(void *variable, const char *name, const char *va
 
 LOCAL bool cmdOptionParseKey(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  Key    *key = (Key*)variable;
   Errors error;
-  uint   dataLength;
-  void   *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2757,6 +2701,8 @@ LOCAL bool cmdOptionParseKey(void *variable, const char *name, const char *value
   if (File_existsCString(value))
   {
     // read key data from file
+    Key *key = (Key*)variable;
+    assert(key != NULL);
     error = readBase64KeyFileCString(key,value);
     if (error != ERROR_NONE)
     {
@@ -2769,7 +2715,7 @@ LOCAL bool cmdOptionParseKey(void *variable, const char *name, const char *value
     // decode base64 encoded key data
 
     // get key data length
-    dataLength = Misc_base64DecodeLengthCString(&value[7]);
+    uint dataLength = Misc_base64DecodeLengthCString(&value[7]);
     if (dataLength == 0)
     {
       stringSet(errorMessage,errorMessageSize,"decode base64 fail");
@@ -2777,7 +2723,7 @@ LOCAL bool cmdOptionParseKey(void *variable, const char *name, const char *value
     }
 
     // allocate key memory
-    data = allocSecure(dataLength);
+    void *data = allocSecure(dataLength);
     if (data == NULL)
     {
       stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
@@ -2793,6 +2739,8 @@ LOCAL bool cmdOptionParseKey(void *variable, const char *name, const char *value
     }
 
     // set key data
+    Key *key = (Key*)variable;
+    assert(key != NULL);
     Configuration_setKey(key,NULL,data,dataLength);
 
     // free resources
@@ -2804,11 +2752,11 @@ LOCAL bool cmdOptionParseKey(void *variable, const char *name, const char *value
 // TODO: output a warnign?
 
     // get key data length
-    dataLength = stringLength(value);
+    uint dataLength = stringLength(value);
     if (dataLength > 0)
     {
       // allocate key memory
-      data = allocSecure(dataLength);
+      void *data = allocSecure(dataLength);
       if (data == NULL)
       {
         stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
@@ -2819,6 +2767,8 @@ LOCAL bool cmdOptionParseKey(void *variable, const char *name, const char *value
       memCopyFast(data,dataLength,value,dataLength);
 
       // set key data
+      Key *key = (Key*)variable;
+      assert(key != NULL);
       Configuration_setKey(key,NULL,data,dataLength);
 
       // free resources
@@ -2845,10 +2795,7 @@ LOCAL bool cmdOptionParseKey(void *variable, const char *name, const char *value
 
 LOCAL bool cmdOptionParseSSHKey(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  Key    *key = (Key*)variable;
   Errors error;
-  uint   dataLength;
-  void   *data;
 
   assert(variable != NULL);
   assert(value != NULL);
@@ -2860,6 +2807,8 @@ LOCAL bool cmdOptionParseSSHKey(void *variable, const char *name, const char *va
   if (File_existsCString(value))
   {
     // read key data from file
+    Key *key = (Key*)variable;
+    assert(key != NULL);
     error = readKeyFileCString(key,value);
     if (error != ERROR_NONE)
     {
@@ -2872,7 +2821,7 @@ LOCAL bool cmdOptionParseSSHKey(void *variable, const char *name, const char *va
     // decode base64 encoded key data
 
     // get key data length
-    dataLength = Misc_base64DecodeLengthCString(&value[7]);
+    uint dataLength = Misc_base64DecodeLengthCString(&value[7]);
     if (dataLength == 0)
     {
       stringSet(errorMessage,errorMessageSize,"decode base64 fail");
@@ -2880,7 +2829,7 @@ LOCAL bool cmdOptionParseSSHKey(void *variable, const char *name, const char *va
     }
 
     // allocate key memory
-    data = allocSecure(dataLength);
+    void *data = allocSecure(dataLength);
     if (data == NULL)
     {
       stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
@@ -2896,6 +2845,8 @@ LOCAL bool cmdOptionParseSSHKey(void *variable, const char *name, const char *va
     }
 
     // set key data
+    Key *key = (Key*)variable;
+    assert(key != NULL);
     Configuration_setKey(key,NULL,data,dataLength);
 
     // free resources
@@ -2907,11 +2858,11 @@ LOCAL bool cmdOptionParseSSHKey(void *variable, const char *name, const char *va
 // TODO: output a warnign?
 
     // get key data length
-    dataLength = stringLength(value);
+    uint dataLength = stringLength(value);
     if (dataLength > 0)
     {
       // allocate key memory
-      data = allocSecure(dataLength);
+      void *data = allocSecure(dataLength);
       if (data == NULL)
       {
         stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
@@ -2922,6 +2873,8 @@ LOCAL bool cmdOptionParseSSHKey(void *variable, const char *name, const char *va
       memCopyFast(data,dataLength,value,dataLength);
 
       // set key data
+      Key *key = (Key*)variable;
+      assert(key != NULL);
       Configuration_setKey(key,NULL,data,dataLength);
 
       // free resources
@@ -3031,8 +2984,6 @@ LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *variable, const char *n
 
 LOCAL bool cmdOptionParseDeprecatedMountDevice(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  MountNode *mountNode;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -3045,9 +2996,9 @@ LOCAL bool cmdOptionParseDeprecatedMountDevice(void *variable, const char *name,
   if (!stringIsEmpty(value))
   {
     // add to mount list
-    mountNode = newMountNodeCString(value,
-                                    NULL  // deviceName
-                                   );
+    MountNode *mountNode = newMountNodeCString(value,
+                                               NULL  // deviceName
+                                              );
     assert(mountNode != NULL);
     List_append((MountList*)variable,mountNode);
   }
@@ -3112,8 +3063,6 @@ LOCAL bool cmdOptionParseDeprecatedStopOnError(void *variable, const char *name,
 
 LOCAL bool configValueConfigFileParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  String string;
-
   assert(value != NULL);
 
   UNUSED_VARIABLE(variable);
@@ -3124,7 +3073,7 @@ LOCAL bool configValueConfigFileParse(void *variable, const char *name, const ch
 
 //TODO: required?
   // unquote/unescape
-  string = String_newCString(value);
+  String string = String_newCString(value);
   String_unquote(string,STRING_QUOTES);
   String_unescape(string,
                   STRING_ESCAPE_CHARACTER,
@@ -3223,11 +3172,6 @@ LOCAL bool configValueConfigFileFormat(void **formatUserData, ConfigValueOperati
 
 LOCAL bool configValueMaintenanceDateParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  bool         errorFlag;
-  String       s0,s1,s2;
-//TODO
-  ScheduleDate date;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -3235,10 +3179,11 @@ LOCAL bool configValueMaintenanceDateParse(void *variable, const char *name, con
   UNUSED_VARIABLE(userData);
 
   // parse
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
+  bool         errorFlag = FALSE;
+  String       s0        = String_new();
+  String       s1        = String_new();
+  String       s2        = String_new();
+  ScheduleDate date;
   if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
   {
     if (!Configuration_parseDateNumber(s0,&date.year )) errorFlag = TRUE;
@@ -3376,8 +3321,6 @@ LOCAL bool configValueMaintenanceDateFormat(void **formatUserData, ConfigValueOp
 
 LOCAL bool configValueMaintenanceWeekDaySetParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  WeekDaySet weekDaySet;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -3385,6 +3328,7 @@ LOCAL bool configValueMaintenanceWeekDaySetParse(void *variable, const char *nam
   UNUSED_VARIABLE(userData);
 
   // parse
+  WeekDaySet weekDaySet;
   if (!Configuration_parseWeekDaySet(value,&weekDaySet))
   {
     stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance weekday '%s'",value);
@@ -3492,10 +3436,6 @@ LOCAL bool configValueMaintenanceWeekDaySetFormat(void **formatUserData, ConfigV
 
 LOCAL bool configValueMaintenanceTimeParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  bool         errorFlag;
-  String       s0,s1;
-  ScheduleTime time;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -3503,9 +3443,10 @@ LOCAL bool configValueMaintenanceTimeParse(void *variable, const char *name, con
   UNUSED_VARIABLE(userData);
 
   // parse
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
+  bool         errorFlag = FALSE;
+  String       s0 = String_new();
+  String       s1 = String_new();
+  ScheduleTime time;
   if (String_parseCString(value,"%S:%S",NULL,s0,s1))
   {
     if (   !Configuration_parseTimeNumber(s0,&time.hour  )
@@ -3626,13 +3567,12 @@ LOCAL bool configValueMaintenanceTimeFormat(void **formatUserData, ConfigValueOp
 
 LOCAL void *configValueServerSectionIterator(ConfigValueSectionDataIterator *sectionDataIterator, ServerTypes serverType, ConfigValueOperations operation, void *data, void *userData)
 {
-  void *result;
 
   assert(sectionDataIterator != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  result = NULL;
+  void *result = NULL;
 
   switch (operation)
   {
@@ -3820,13 +3760,11 @@ LOCAL void *configValueServerSMBSectionDataIterator(ConfigValueSectionDataIterat
 
 LOCAL void *configValueDeviceSectionDataIterator(ConfigValueSectionDataIterator *sectionDataIterator, ConfigValueOperations operation, void *data, void *userData)
 {
-  void *result;
-
   assert(sectionDataIterator != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  result = NULL;
+  void *result = NULL;
 
   switch (operation)
   {
@@ -3891,9 +3829,6 @@ LOCAL void *configValueDeviceSectionDataIterator(ConfigValueSectionDataIterator 
 
 LOCAL bool configValueDeprecatedMountDeviceParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  String    string;
-  MountNode *mountNode;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -3903,7 +3838,7 @@ LOCAL bool configValueDeprecatedMountDeviceParse(void *variable, const char *nam
   UNUSED_VARIABLE(userData);
 
   // unquote/unescape
-  string = String_newCString(value);
+  String string = String_newCString(value);
   String_unquote(string,STRING_QUOTES);
   String_unescape(string,
                   STRING_ESCAPE_CHARACTER,
@@ -3915,9 +3850,9 @@ LOCAL bool configValueDeprecatedMountDeviceParse(void *variable, const char *nam
   if (!stringIsEmpty(value))
   {
     // add to mount list
-    mountNode = newMountNodeCString(value,
-                                    NULL  // deviceName
-                                   );
+    MountNode *mountNode = newMountNodeCString(value,
+                                               NULL  // deviceName
+                                              );
     if (mountNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
@@ -4085,10 +4020,6 @@ LOCAL bool configValueDeprecatedRestoreEntryModeOverwriteParse(void *variable, c
 
 LOCAL bool configValueScheduleDateParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  bool         errorFlag;
-  String       s0,s1,s2;
-  ScheduleDate date;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -4096,10 +4027,11 @@ LOCAL bool configValueScheduleDateParse(void *variable, const char *name, const 
   UNUSED_VARIABLE(userData);
 
   // parse
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
+  bool         errorFlag = FALSE;
+  String       s0 = String_new();
+  String       s1 = String_new();
+  String       s2 = String_new();
+  ScheduleDate date;
   if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
   {
     if (!Configuration_parseDateNumber(s0,&date.year )) errorFlag = TRUE;
@@ -4225,8 +4157,6 @@ LOCAL bool configValueScheduleDateFormat(void **formatUserData, ConfigValueOpera
 
 LOCAL bool configValueScheduleWeekDaySetParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  WeekDaySet weekDaySet;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -4234,6 +4164,7 @@ LOCAL bool configValueScheduleWeekDaySetParse(void *variable, const char *name, 
   UNUSED_VARIABLE(userData);
 
   // parse
+  WeekDaySet weekDaySet;
   if (!Configuration_parseWeekDaySet(value,&weekDaySet))
   {
     stringFormat(errorMessage,errorMessageSize,"Cannot parse schedule weekday '%s'",value);
@@ -4341,10 +4272,6 @@ LOCAL bool configValueScheduleWeekDaySetFormat(void **formatUserData, ConfigValu
 
 LOCAL bool configValueScheduleTimeParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  bool         errorFlag;
-  String       s0,s1;
-  ScheduleTime time;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -4352,9 +4279,10 @@ LOCAL bool configValueScheduleTimeParse(void *variable, const char *name, const 
   UNUSED_VARIABLE(userData);
 
   // parse
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
+  bool         errorFlag = FALSE;
+  String       s0 = String_new();
+  String       s1 = String_new();
+  ScheduleTime time;
   if (String_parseCString(value,"%S:%S",NULL,s0,s1))
   {
     if (!Configuration_parseTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
@@ -4467,13 +4395,11 @@ LOCAL void *configValuePersistenceSectionDataIterator(ConfigValueSectionDataIter
                                                       void                           *userData
                                                      )
 {
-  void *result;
-
   assert(sectionDataIterator != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  result = NULL;
+  void *result = NULL;
 
   switch (operation)
   {
@@ -4525,8 +4451,6 @@ LOCAL void *configValuePersistenceSectionDataIterator(ConfigValueSectionDataIter
 
 LOCAL bool configValuePersistenceMinKeepParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  int minKeep;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -4534,6 +4458,7 @@ LOCAL bool configValuePersistenceMinKeepParse(void *variable, const char *name, 
   UNUSED_VARIABLE(userData);
 
   // parse
+  int minKeep;
   if (!stringEquals(value,"*"))
   {
     if (!String_parseCString(value,"%d",NULL,&minKeep))
@@ -4629,8 +4554,6 @@ LOCAL bool configValuePersistenceMinKeepFormat(void **formatUserData, ConfigValu
 
 LOCAL bool configValuePersistenceMaxKeepParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  int maxKeep;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -4638,6 +4561,7 @@ LOCAL bool configValuePersistenceMaxKeepParse(void *variable, const char *name, 
   UNUSED_VARIABLE(userData);
 
   // parse
+  int maxKeep;
   if (!stringEquals(value,"*"))
   {
     if (!String_parseCString(value,"%d",NULL,&maxKeep))
@@ -4733,8 +4657,6 @@ LOCAL bool configValuePersistenceMaxKeepFormat(void **formatUserData, ConfigValu
 
 LOCAL bool configValuePersistenceMaxAgeParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  int maxAge;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -4742,6 +4664,7 @@ LOCAL bool configValuePersistenceMaxAgeParse(void *variable, const char *name, c
   UNUSED_VARIABLE(userData);
 
   // parse
+  int maxAge;
   if (!stringEquals(value,"*"))
   {
     if (!String_parseCString(value,"%d",NULL,&maxAge))
@@ -4865,14 +4788,13 @@ LOCAL bool configValueDeprecatedRemoteHostParse(void *variable, const char *name
 
 LOCAL bool configValueDeprecatedRemotePortParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  uint n;
-
   assert(variable != NULL);
   assert(value != NULL);
 
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(userData);
 
+  uint n;
   if (!stringToUInt(value,&n,NULL))
   {
     stringFormat(errorMessage,errorMessageSize,"expected port number: 0..%u",MAX_PORT_NUMBER);
@@ -4999,13 +4921,11 @@ LOCAL bool configValueDeprecatedScheduleMaxAgeParse(void *variable, const char *
 
 String getConfigFileName(String fileName)
 {
-  const ConfigFileNode *configFileNode;
-
   assert(fileName != NULL);
 
   String_clear(fileName);
 
-  configFileNode = LIST_FIND_LAST(&configFileList,configFileNode,File_isWritable(configFileNode->fileName));
+  const ConfigFileNode *configFileNode = LIST_FIND_LAST(&configFileList,configFileNode,File_isWritable(configFileNode->fileName));
   if (configFileNode != NULL)
   {
     String_set(fileName,configFileNode->fileName);
@@ -5032,8 +4952,6 @@ String getConfigFileName(String fileName)
 
 LOCAL bool configValuePasswordParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  String string;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -5043,7 +4961,7 @@ LOCAL bool configValuePasswordParse(void *variable, const char *name, const char
   UNUSED_VARIABLE(userData);
 
   // unquote/unescape
-  string = String_newCString(value);
+  String string = String_newCString(value);
   String_unquote(string,STRING_QUOTES);
   String_unescape(string,
                   STRING_ESCAPE_CHARACTER,
@@ -5138,15 +5056,6 @@ LOCAL bool configValuePasswordFormat(void **formatUserData, ConfigValueOperation
 
 LOCAL bool configValueCryptAlgorithmsParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-#ifdef MULTI_CRYPT
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  CryptAlgorithms cryptAlgorithms[4];
-  uint            i;
-#else /* not MULTI_CRYPT */
-  CryptAlgorithms cryptAlgorithm;
-#endif /* MULTI_CRYPT */
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -5156,13 +5065,15 @@ LOCAL bool configValueCryptAlgorithmsParse(void *variable, const char *name, con
   UNUSED_VARIABLE(userData);
 
 #ifdef MULTI_CRYPT
-  i = 0;
   String_initTokenizerCString(&stringTokenizer,
                               value,
                               "+,",
                               STRING_QUOTES,
                               TRUE
                              );
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  size_t          i = 0;
   while (String_getNextToken(&stringTokenizer,&token,NULL))
   {
     if (i >= 4)
@@ -5172,6 +5083,7 @@ LOCAL bool configValueCryptAlgorithmsParse(void *variable, const char *name, con
       return FALSE;
     }
 
+    CryptAlgorithms cryptAlgorithms[4];
     if (!Crypt_parseAlgorithm(String_cString(token),&((JobOptionsCompressAlgorithm*)variable)[i]->cryptAlgorithm))
     {
       stringFormat(errorMessage,errorMessageSize,"Unknown crypt algorithm '%s'",String_cString(token));
@@ -5192,6 +5104,7 @@ LOCAL bool configValueCryptAlgorithmsParse(void *variable, const char *name, con
     i++;
   }
 #else /* not MULTI_CRYPT */
+  CryptAlgorithms cryptAlgorithm;
   if (!Crypt_parseAlgorithm(value,&cryptAlgorithm))
   {
     stringFormat(errorMessage,errorMessageSize,"Unknown crypt algorithm '%s'",value);
@@ -5219,10 +5132,6 @@ LOCAL bool configValueCryptAlgorithmsParse(void *variable, const char *name, con
 
 LOCAL bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueOperations operation, void *data, void *userData)
 {
-#ifdef MULTI_CRYPT
-  uint            i;
-#endif /* MULTI_CRYPT */
-
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
@@ -5250,7 +5159,7 @@ LOCAL bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueOp
         if (cryptAlgorithms != NULL)
         {
 #ifdef MULTI_CRYPT
-          i = 0;
+          size_t i = 0;
           while ((i < 4) && (cryptAlgorithms[i] != CRYPT_ALGORITHM_NONE))
           {
             if (i > 0) String_appendChar(line,'+');
@@ -5293,9 +5202,6 @@ LOCAL bool configValueCryptAlgorithmsFormat(void **formatUserData, ConfigValueOp
 
 LOCAL bool configValueBandWidthParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  BandWidthNode *bandWidthNode;
-  String        s;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -5303,8 +5209,8 @@ LOCAL bool configValueBandWidthParse(void *variable, const char *name, const cha
   UNUSED_VARIABLE(userData);
 
   // parse band width node
-  s = String_newCString(value);
-  bandWidthNode = parseBandWidth(s,errorMessage,errorMessageSize);
+  String        s              = String_newCString(value);
+  BandWidthNode *bandWidthNode = parseBandWidth(s,errorMessage,errorMessageSize);
   if (bandWidthNode == NULL)
   {
     String_delete(s);
@@ -5461,9 +5367,6 @@ LOCAL bool configValueBandWidthFormat(void **formatUserData, ConfigValueOperatio
 
 LOCAL bool configValueOwnerParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  char   userName[256],groupName[256];
-  uint32 userId,groupId;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -5471,6 +5374,8 @@ LOCAL bool configValueOwnerParse(void *variable, const char *name, const char *v
   UNUSED_VARIABLE(userData);
 
   // parse
+  char   userName[256],groupName[256];
+  uint32 userId,groupId;
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
   {
     userId  = Misc_userNameToUserId(userName);
@@ -5584,9 +5489,6 @@ LOCAL bool configValueOwnerFormat(void **formatUserData, ConfigValueOperations o
 
 LOCAL bool configValuePermissionsParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  char            user[3+1],group[3+1],other[3+1];
-  FilePermissions permission;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -5594,7 +5496,8 @@ LOCAL bool configValuePermissionsParse(void *variable, const char *name, const c
   UNUSED_VARIABLE(userData);
 
   // parse
-  permission = FILE_PERMISSION_NONE;
+  char            user[3+1],group[3+1],other[3+1];
+  FilePermissions permission = FILE_PERMISSION_NONE;
   if      (String_scanCString(value,"%o",permission))
   {
     permission = (FilePermissions)atol(value);
@@ -5713,16 +5616,13 @@ LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *variable, co
   const char* FILENAME_MAP_FROM[] = {"\\n","\\r","\\\\"};
   const char* FILENAME_MAP_TO[]   = {"\n","\r","\\"};
 
-  PatternTypes patternType;
-  String       string;
-  Errors       error;
-
   assert(variable != NULL);
   assert(value != NULL);
 
   UNUSED_VARIABLE(name);
 
   // detect pattern type, get pattern
+  PatternTypes patternType;
   if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
   else if (stringStartsWith(value,"x:"       )) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
   else if (stringStartsWith(value,"regex:"   )) { patternType = PATTERN_TYPE_REGEX;          value += 6; }
@@ -5733,7 +5633,7 @@ LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *variable, co
   else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // unquote/unescape
-  string = String_newCString(value);
+  String string = String_newCString(value);
   String_unquote(string,STRING_QUOTES);
   String_unescape(string,
                   STRING_ESCAPE_CHARACTER,
@@ -5744,7 +5644,7 @@ LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *variable, co
 
   // append to list
   String_mapCString(string,STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM),NULL);
-  error = EntryList_append((EntryList*)variable,entryType,string,patternType,NULL);
+  Errors error = EntryList_append((EntryList*)variable,entryType,string,patternType,NULL);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -5949,10 +5849,6 @@ LOCAL bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValue
 
 LOCAL bool configValuePatternParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  PatternTypes patternType;
-  String       string;
-  Errors       error;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -5960,6 +5856,7 @@ LOCAL bool configValuePatternParse(void *variable, const char *name, const char 
   UNUSED_VARIABLE(userData);
 
   // detect pattern type, get pattern
+  PatternTypes patternType;
   if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
   else if (stringStartsWith(value,"x:"       )) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
   else if (stringStartsWith(value,"regex:"   )) { patternType = PATTERN_TYPE_REGEX;          value += 6; }
@@ -5969,7 +5866,7 @@ LOCAL bool configValuePatternParse(void *variable, const char *name, const char 
   else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // unquote/unescape
-  string = String_newCString(value);
+  String string = String_newCString(value);
   String_unquote(string,STRING_QUOTES);
   String_unescape(string,
                   STRING_ESCAPE_CHARACTER,
@@ -5979,7 +5876,7 @@ LOCAL bool configValuePatternParse(void *variable, const char *name, const char 
                 );
 
   // append to pattern list
-  error = PatternList_append((PatternList*)variable,string,patternType,NULL);
+  Errors error = PatternList_append((PatternList*)variable,string,patternType,NULL);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -6082,10 +5979,6 @@ LOCAL bool configValuePatternFormat(void **formatUserData, ConfigValueOperations
 
 LOCAL bool configValueMountParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  String    mountName;
-  String    deviceName;
-  MountNode *mountNode;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -6095,8 +5988,8 @@ LOCAL bool configValueMountParse(void *variable, const char *name, const char *v
   UNUSED_VARIABLE(userData);
 
   // init variables
-  mountName  = String_new();
-  deviceName = String_new();
+  String mountName  = String_new();
+  String deviceName = String_new();
 
   // get name, device
   if      (String_parseCString(value,"%S,%S,%y",NULL,mountName,deviceName,NULL))
@@ -6131,9 +6024,9 @@ LOCAL bool configValueMountParse(void *variable, const char *name, const char *v
   if (!String_isEmpty(mountName))
   {
     // add to mount list
-    mountNode = Configuration_newMountNode(mountName,
-                                           deviceName
-                                          );
+    MountNode *mountNode = Configuration_newMountNode(mountName,
+                                                      deviceName
+                                                     );
     if (mountNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
@@ -6223,10 +6116,6 @@ LOCAL bool configValueMountFormat(void **formatUserData, ConfigValueOperations o
 
 LOCAL bool configValueDeltaSourceParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  PatternTypes    patternType;
-  String          string;
-  DeltaSourceNode *deltaSourceNode;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -6236,6 +6125,7 @@ LOCAL bool configValueDeltaSourceParse(void *variable, const char *name, const c
   UNUSED_VARIABLE(userData);
 
   // detect pattern type, get pattern
+  PatternTypes patternType;
   if      (stringStartsWith(value,"extended:")) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 9; }
   else if (stringStartsWith(value,"x:"       )) { patternType = PATTERN_TYPE_EXTENDED_REGEX; value += 2; }
   else if (stringStartsWith(value,"regex:"   )) { patternType = PATTERN_TYPE_REGEX;          value += 6; }
@@ -6245,7 +6135,7 @@ LOCAL bool configValueDeltaSourceParse(void *variable, const char *name, const c
   else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // unquote/unescape
-  string = String_newCString(value);
+  String string = String_newCString(value);
   String_unquote(string,STRING_QUOTES);
   String_unescape(string,
                   STRING_ESCAPE_CHARACTER,
@@ -6255,7 +6145,7 @@ LOCAL bool configValueDeltaSourceParse(void *variable, const char *name, const c
                 );
 
   // append to delta source list
-  deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
+  DeltaSourceNode *deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
   if (deltaSourceNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -6358,27 +6248,23 @@ LOCAL bool configValueDeltaSourceFormat(void **formatUserData, ConfigValueOperat
 
 LOCAL bool configValueCompressAlgorithmsParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  char                          algorithm1[256],algorithm2[256];
-  CompressAlgorithms            compressAlgorithmDelta,compressAlgorithmByte;
-  bool                          foundFlag;
-  const CommandLineOptionSelect *select;
-
   assert(variable != NULL);
   assert(value != NULL);
 
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(userData);
 
-  compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
-  compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
+  CompressAlgorithms compressAlgorithmDelta = COMPRESS_ALGORITHM_NONE;
+  CompressAlgorithms compressAlgorithmByte  = COMPRESS_ALGORITHM_NONE;
 
   // parse
+  char algorithm1[256],algorithm2[256];
   if (   String_scanCString(value,"%256s+%256s",algorithm1,algorithm2)
       || String_scanCString(value,"%256s,%256s",algorithm1,algorithm2)
      )
   {
-    foundFlag = FALSE;
-    for (select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
+    bool foundFlag = FALSE;
+    for (const CommandLineOptionSelect *select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
     {
       if (stringEqualsIgnoreCase(algorithm1,select->name))
       {
@@ -6390,7 +6276,7 @@ LOCAL bool configValueCompressAlgorithmsParse(void *variable, const char *name, 
         break;
       }
     }
-    for (select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
+    for (const CommandLineOptionSelect *select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
     {
       if (stringEqualsIgnoreCase(algorithm1,select->name))
       {
@@ -6409,7 +6295,7 @@ LOCAL bool configValueCompressAlgorithmsParse(void *variable, const char *name, 
     }
 
     foundFlag = FALSE;
-    for (select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
+    for (const CommandLineOptionSelect *select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
     {
       if (stringEqualsIgnoreCase(algorithm2,select->name))
       {
@@ -6421,7 +6307,7 @@ LOCAL bool configValueCompressAlgorithmsParse(void *variable, const char *name, 
         break;
       }
     }
-    for (select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
+    for (const CommandLineOptionSelect *select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
     {
       if (stringEqualsIgnoreCase(algorithm2,select->name))
       {
@@ -6441,8 +6327,8 @@ LOCAL bool configValueCompressAlgorithmsParse(void *variable, const char *name, 
   }
   else
   {
-    foundFlag = FALSE;
-    for (select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
+    bool foundFlag = FALSE;
+    for (const CommandLineOptionSelect *select = COMPRESS_ALGORITHMS_DELTA; select->name != NULL; select++)
     {
       if (stringEqualsIgnoreCase(value,select->name))
       {
@@ -6454,7 +6340,7 @@ LOCAL bool configValueCompressAlgorithmsParse(void *variable, const char *name, 
         break;
       }
     }
-    for (select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
+    for (const CommandLineOptionSelect *select = COMPRESS_ALGORITHMS_BYTE; select->name != NULL; select++)
     {
       if (stringEqualsIgnoreCase(value,select->name))
       {
@@ -6557,11 +6443,6 @@ LOCAL bool configValueCompressAlgorithmsFormat(void **formatUserData, ConfigValu
 
 LOCAL bool configValueCertificateParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  Certificate *certificate = (Certificate*)variable;
-  Errors      error;
-  uint        dataLength;
-  void        *data;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -6573,7 +6454,9 @@ LOCAL bool configValueCertificateParse(void *variable, const char *name, const c
   if      (File_existsCString(value))
   {
     // read certificate from file
-    error = readCertificateFileCString(certificate,value);
+    Certificate *certificate = (Certificate*)variable;
+    assert(certificate != NULL);
+    Errors error = readCertificateFileCString(certificate,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -6585,8 +6468,9 @@ LOCAL bool configValueCertificateParse(void *variable, const char *name, const c
     // get certificate from inline base64 data
 
     // get certificate data length
-    dataLength = Misc_base64DecodeLengthCString(&value[7]);
+    uint dataLength = Misc_base64DecodeLengthCString(&value[7]);
 
+    void *data;
     if (dataLength > 0)
     {
       // allocate certificate memory
@@ -6609,6 +6493,8 @@ LOCAL bool configValueCertificateParse(void *variable, const char *name, const c
     }
 
     // set certificate data
+    Certificate *certificate = (Certificate*)variable;
+    assert(certificate != NULL);
     if (certificate->data != NULL) free(certificate->data);
     certificate->type   = CERTIFICATE_TYPE_CONFIG;
     String_clear(certificate->fileName);
@@ -6620,8 +6506,9 @@ LOCAL bool configValueCertificateParse(void *variable, const char *name, const c
     // get certificate from inline data
 
     // get certificate data length
-    dataLength = stringLength(value);
+    uint dataLength = stringLength(value);
 
+    void *data;
     if (dataLength > 0)
     {
       // allocate certificate memory
@@ -6640,6 +6527,8 @@ LOCAL bool configValueCertificateParse(void *variable, const char *name, const c
     }
 
     // set certificate data
+    Certificate *certificate = (Certificate*)variable;
+    assert(certificate != NULL);
     if (certificate->data != NULL) free(certificate->data);
     certificate->type   = CERTIFICATE_TYPE_CONFIG;
     String_clear(certificate->fileName);
@@ -6737,11 +6626,6 @@ LOCAL bool configValueCertificateFormat(void **formatUserData, ConfigValueOperat
 
 LOCAL bool configValueKeyParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  Key    *key = (Key*)variable;
-  Errors error;
-  uint   dataLength;
-  void   *data;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -6754,7 +6638,9 @@ LOCAL bool configValueKeyParse(void *variable, const char *name, const char *val
   {
     // read key data from file
 
-    error = readBase64KeyFileCString(key,value);
+    Key *key = (Key*)variable;
+    assert(key != NULL);
+    Errors error = readBase64KeyFileCString(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -6766,11 +6652,11 @@ LOCAL bool configValueKeyParse(void *variable, const char *name, const char *val
     // decode base64 encoded key data
 
     // get key data length
-    dataLength = Misc_base64DecodeLengthCString(&value[7]);
+    uint dataLength = Misc_base64DecodeLengthCString(&value[7]);
     if (dataLength > 0)
     {
       // allocate key memory
-      data = allocSecure(dataLength);
+      void *data = allocSecure(dataLength);
       if (data == NULL)
       {
         stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
@@ -6786,6 +6672,8 @@ LOCAL bool configValueKeyParse(void *variable, const char *name, const char *val
       }
 
       // set key data
+      Key *key = (Key*)variable;
+      assert(key != NULL);
       Configuration_setKey(key,NULL,data,dataLength);
 
       // free resources
@@ -6797,11 +6685,11 @@ LOCAL bool configValueKeyParse(void *variable, const char *name, const char *val
     // get plain key data
 
     // get key data length
-    dataLength = stringLength(value);
+    uint dataLength = stringLength(value);
     if (dataLength > 0)
     {
       // allocate key memory
-      data = allocSecure(dataLength);
+      void *data = allocSecure(dataLength);
       if (data == NULL)
       {
         stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
@@ -6812,6 +6700,8 @@ LOCAL bool configValueKeyParse(void *variable, const char *name, const char *val
       memCopyFast(data,dataLength,value,dataLength);
 
       // set key data
+      Key *key = (Key*)variable;
+      assert(key != NULL);
       Configuration_setKey(key,NULL,data,dataLength);
 
       // free resources
@@ -6837,11 +6727,6 @@ LOCAL bool configValueKeyParse(void *variable, const char *name, const char *val
 
 LOCAL bool configValueSSHKeyParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  Key    *key = (Key*)variable;
-  Errors error;
-  uint   dataLength;
-  void   *data;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -6854,7 +6739,9 @@ LOCAL bool configValueSSHKeyParse(void *variable, const char *name, const char *
   {
     // read key data from file
 
-    error = readKeyFileCString(key,value);
+    Key *key = (Key*)variable;
+    assert(key != NULL);
+    Errors error = readKeyFileCString(key,value);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -6866,11 +6753,11 @@ LOCAL bool configValueSSHKeyParse(void *variable, const char *name, const char *
     // decode base64 encoded key data
 
     // get key data length
-    dataLength = Misc_base64DecodeLengthCString(&value[7]);
+    uint dataLength = Misc_base64DecodeLengthCString(&value[7]);
     if (dataLength > 0)
     {
       // allocate key memory
-      data = allocSecure(dataLength);
+      void *data = allocSecure(dataLength);
       if (data == NULL)
       {
         stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
@@ -6886,6 +6773,8 @@ LOCAL bool configValueSSHKeyParse(void *variable, const char *name, const char *
       }
 
       // set key data
+      Key *key = (Key*)variable;
+      assert(key != NULL);
       Configuration_setKey(key,NULL,data,dataLength);
 
       // free resources
@@ -6897,11 +6786,11 @@ LOCAL bool configValueSSHKeyParse(void *variable, const char *name, const char *
     // get plain key data
 
     // get key data length
-    dataLength = stringLength(value);
+    uint dataLength = stringLength(value);
     if (dataLength > 0)
     {
       // allocate key memory
-      data = allocSecure(dataLength);
+      void *data = allocSecure(dataLength);
       if (data == NULL)
       {
         stringSet(errorMessage,errorMessageSize,"insufficient secure memory");
@@ -6912,6 +6801,8 @@ LOCAL bool configValueSSHKeyParse(void *variable, const char *name, const char *
       memCopyFast(data,dataLength,value,dataLength);
 
       // set key data
+      Key *key = (Key*)variable;
+      assert(key != NULL);
       Configuration_setKey(key,NULL,data,dataLength);
 
       // free resources
@@ -6998,9 +6889,6 @@ LOCAL bool configValueKeyFormat(void **formatUserData, ConfigValueOperations ope
 #ifndef WERROR
 LOCAL bool configValuePublicPrivateKeyParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  CryptKey *cryptKey = (CryptKey*)variable;
-  Errors   error;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -7014,13 +6902,15 @@ LOCAL bool configValuePublicPrivateKeyParse(void *variable, const char *name, co
     // read key data from file
 
     // read key file
-    error = Crypt_readPublicPrivateKeyFile(cryptKey,
-                                           value,
-                                           CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
-                                           CRYPT_KEY_DERIVE_NONE,
-                                           NULL,  // cryptSalt
-                                           NULL  // password
-                                          );
+    CryptKey *cryptKey = (CryptKey*)variable;
+    assert(cryptKey != NULL);
+    Errors error = Crypt_readPublicPrivateKeyFile(cryptKey,
+                                                  value,
+                                                  CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
+                                                  CRYPT_KEY_DERIVE_NONE,
+                                                  NULL,  // cryptSalt
+                                                  NULL  // password
+                                                 );
 
     if (error != ERROR_NONE)
     {
@@ -7033,14 +6923,16 @@ LOCAL bool configValuePublicPrivateKeyParse(void *variable, const char *name, co
     // base64-prefixed key string
 
     // set crypt key data
-    error = Crypt_setPublicPrivateKeyData(cryptKey,
-                                          &value[7],
-                                          stringLength(value)-7,
-                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
-                                          CRYPT_KEY_DERIVE_NONE,
-                                          NULL,  // cryptSalt
-                                          NULL  // password
-                                         );
+    CryptKey *cryptKey = (CryptKey*)variable;
+    assert(cryptKey != NULL);
+    Errors error = Crypt_setPublicPrivateKeyData(cryptKey,
+                                                 &value[7],
+                                                 stringLength(value)-7,
+                                                 CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
+                                                 CRYPT_KEY_DERIVE_NONE,
+                                                 NULL,  // cryptSalt
+                                                 NULL  // password
+                                                );
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -7052,14 +6944,16 @@ LOCAL bool configValuePublicPrivateKeyParse(void *variable, const char *name, co
     // get plain key data
 
     // set crypt key data
-    error = Crypt_setPublicPrivateKeyData(cryptKey,
-                                          value,
-                                          stringLength(value),
-                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
-                                          CRYPT_KEY_DERIVE_NONE,
-                                          NULL,  // cryptSalt
-                                          NULL  // password
-                                         );
+    CryptKey *cryptKey = (CryptKey*)variable;
+    assert(cryptKey != NULL);
+    Errors error = Crypt_setPublicPrivateKeyData(cryptKey,
+                                                 value,
+                                                 stringLength(value),
+                                                 CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
+                                                 CRYPT_KEY_DERIVE_NONE,
+                                                 NULL,  // cryptSalt
+                                                 NULL  // password
+                                                );
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -7086,16 +6980,6 @@ LOCAL bool configValuePublicPrivateKeyParse(void *variable, const char *name, co
 
 LOCAL bool configValueHashDataParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  Hash                *hash = (Hash*)variable;
-  char                cryptHashAlgorithmName[64];
-  char                salt[32];
-  CryptHash           cryptHash;
-  CryptHashAlgorithms cryptHashAlgorithm;
-  long                nextIndex;
-  String              string;
-  uint                dataLength;
-  void                *data;
-
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -7104,6 +6988,12 @@ LOCAL bool configValueHashDataParse(void *variable, const char *name, const char
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
+  long                nextIndex;
+  char                cryptHashAlgorithmName[64];
+  char                salt[32];
+  CryptHashAlgorithms cryptHashAlgorithm;
+  uint                dataLength;
+  void                *data;
   if      (String_parseCString(value,"%64s:%32s:",&nextIndex,cryptHashAlgorithmName,salt))
   {
     // <hash algorithm>:<salt>:<hash> -> get hash
@@ -7174,7 +7064,7 @@ LOCAL bool configValueHashDataParse(void *variable, const char *name, const char
     // <plain data> -> calculate hash
 
     // unquote/unescape
-    string = String_newCString(value);
+    String string = String_newCString(value);
     String_unquote(string,STRING_QUOTES);
     String_unescape(string,
                     STRING_ESCAPE_CHARACTER,
@@ -7187,6 +7077,7 @@ LOCAL bool configValueHashDataParse(void *variable, const char *name, const char
     cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
 
     // calculate hash
+    CryptHash cryptHash;
     Crypt_initHash(&cryptHash,cryptHashAlgorithm);
     Crypt_updateHash(&cryptHash,String_cString(string),String_length(string));
 //fprintf(stderr,"%s, %d: value='%s'\n",__FILE__,__LINE__,value); Crypt_dumpHash(&cryptHash);
@@ -7227,6 +7118,8 @@ LOCAL bool configValueHashDataParse(void *variable, const char *name, const char
   }
 
   // set hash data
+  Hash *hash = (Hash*)variable;
+  assert(hash != NULL);
   if (hash->data != NULL) freeSecure(hash->data);
   hash->cryptHashAlgorithm = cryptHashAlgorithm;
   hash->data               = data;
@@ -7320,23 +7213,21 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
                                    void        *variable
                                   )
 {
-  Errors     error;
-  String     line;
-  String     name,value;
-  StringList commentList;
-  long       nextIndex;
+  Errors error;
 
   // parse section
-  error      = ERROR_NONE;
-  line       = String_new();
-  name       = String_new();
-  value      = String_new();
+  error            = ERROR_NONE;
+  String     line  = String_new();
+  String     name  = String_new();
+  String     value = String_new();
+  StringList commentList;
   StringList_init(&commentList);
   while (   (error == ERROR_NONE)
          && File_getLine(fileHandle,line,lineNb,NULL)
          && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[.*",NULL,NULL,NULL)
         )
   {
+    long nextIndex;
     if      (String_isEmpty(line) || String_startsWithCString(line,"# ---"))
     {
       // discard separator or empty line
@@ -7460,19 +7351,12 @@ LOCAL Errors readConfigFileSection(ConstString fileName,
 
 LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
 {
-  Errors     error;
-  FileInfo   fileInfo;
-  FileHandle fileHandle;
-  uint       lineNb;
-  String     line;
-  String     name,value;
-  bool       headerLineFlag;
-  StringList commentList;
-  long       nextIndex;
+  Errors error;
 
   assert(fileName != NULL);
 
   // check file permissions
+  FileInfo  fileInfo;
   error = File_getInfo(&fileInfo,fileName);
   if (error == ERROR_NONE)
   {
@@ -7492,6 +7376,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
   }
 
   // open file
+  FileHandle fileHandle;
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -7503,17 +7388,18 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
   }
 
   // parse file
-  error      = ERROR_NONE;
-  line       = String_new();
-  lineNb     = 0;
-  name       = String_new();
-  value      = String_new();
+  error             = ERROR_NONE;
+  String     line   = String_new();
+  uint       lineNb = 0;
+  String     name   = String_new();
+  String     value  = String_new();
+  StringList commentList;
   StringList_init(&commentList);
   if (printInfoFlag) { printConsole(stdout,0,"Reading configuration file '%s'...",String_cString(fileName)); }
 
 // TODO:
   // skip header
-  headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
+  bool headerLineFlag = File_getLine(&fileHandle,line,&lineNb,NULL);
   if (headerLineFlag)
   {
     if (String_startsWithCString(line,"# ----"))
@@ -7557,6 +7443,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
     // parse line
     String_trim(line,STRING_WHITE_SPACES);
 
+    long nextIndex;
     if      (String_isEmpty(line))
     {
       // discard empty lines
@@ -9330,14 +9217,13 @@ bool __Configuration_duplicateKey(const char *__fileName__,
                                  )
 #endif /* NDEBUG */
 {
-  uint length;
-  void *data;
-
   assert(key != NULL);
   assert(fromKey != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(fromKey);
   assert((fromKey->type != KEY_TYPE_FILE) || (fromKey->fileName != NULL));
 
+  uint length;
+  void *data;
   if ((fromKey != NULL) && (fromKey->data != NULL) && (fromKey->length > 0))
   {
     length = fromKey->length;
@@ -9395,13 +9281,11 @@ void __Configuration_doneKey(const char *__fileName__,
 
 bool Configuration_setKey(Key *key, const char *fileName, const void *data, uint length)
 {
-  void *newData;
-
   assert(key != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(key);
   assert((key->type != KEY_TYPE_FILE) || (key->fileName != NULL));
 
-  newData = allocSecure(length);
+  void *newData = allocSecure(length);
   if (newData == NULL)
   {
     return FALSE;
@@ -9446,9 +9330,6 @@ void Configuration_clearKey(Key *key)
 
 bool Configuration_copyKey(Key *key, const Key *fromKey)
 {
-  uint length;
-  void *data;
-
   assert(key != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(key);
   assert((key->type != KEY_TYPE_FILE) || (key->fileName != NULL));
@@ -9456,6 +9337,8 @@ bool Configuration_copyKey(Key *key, const Key *fromKey)
   DEBUG_CHECK_RESOURCE_TRACE(fromKey);
   assert((fromKey->type != KEY_TYPE_FILE) || (fromKey->fileName != NULL));
 
+  uint length;
+  void *data;
   if ((fromKey != NULL) && (fromKey->data != NULL) && (fromKey->length > 0))
   {
     length = fromKey->length;
@@ -9488,14 +9371,11 @@ bool Configuration_copyKey(Key *key, const Key *fromKey)
 
 bool Configuration_setHash(Hash *hash, const CryptHash *cryptHash)
 {
-  uint length;
-  void *data;
-
   assert(hash != NULL);
   assert(cryptHash != NULL);
 
-  length = Crypt_getHashLength(cryptHash);
-  data   = allocSecure(length);
+  uint length = Crypt_getHashLength(cryptHash);
+  void *data  = allocSecure(length);
   if (data == NULL)
   {
     return FALSE;
@@ -9533,9 +9413,6 @@ bool Configuration_equalsHash(Hash *hash, const CryptHash *cryptHash)
 
 bool Configuration_parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
 {
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-
   assert(names != NULL);
   assert(weekDaySet != NULL);
 
@@ -9547,6 +9424,8 @@ bool Configuration_parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
   {
     SET_CLEAR(*weekDaySet);
 
+    StringTokenizer stringTokenizer;
+    ConstString     token;
     String_initTokenizerCString(&stringTokenizer,
                                 names,
                                 ",",
@@ -9576,9 +9455,6 @@ bool Configuration_parseWeekDaySet(const char *names, WeekDaySet *weekDaySet)
 
 bool Configuration_parseDateNumber(ConstString s, int *n)
 {
-  ulong i;
-  long  nextIndex;
-
   assert(s != NULL);
   assert(n != NULL);
 
@@ -9589,7 +9465,7 @@ bool Configuration_parseDateNumber(ConstString s, int *n)
   }
   else
   {
-    i = STRING_BEGIN;
+    ulong i = STRING_BEGIN;
     if (String_length(s) > 0)
     {
       while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
@@ -9597,6 +9473,7 @@ bool Configuration_parseDateNumber(ConstString s, int *n)
         i++;
       }
     }
+    long nextIndex;
     (*n) = (int)String_toInteger(s,i,&nextIndex,NULL,0);
     if (nextIndex != STRING_END) return FALSE;
   }
@@ -9606,14 +9483,11 @@ bool Configuration_parseDateNumber(ConstString s, int *n)
 
 bool Configuration_parseDateMonth(ConstString s, int *month)
 {
-  String name;
-  ulong i;
-  long   nextIndex;
 
   assert(s != NULL);
   assert(month != NULL);
 
-  name = String_toLower(String_duplicate(s));
+  String name = String_toLower(String_duplicate(s));
   if      (String_equalsCString(s,"*"))
   {
     (*month) = DATE_ANY;
@@ -9632,7 +9506,7 @@ bool Configuration_parseDateMonth(ConstString s, int *month)
   else if (String_equalsIgnoreCaseCString(name,"dec")) (*month) = MONTH_DEC;
   else
   {
-    i = STRING_BEGIN;
+    ulong i = STRING_BEGIN;
     if (String_length(s) > 0)
     {
       while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
@@ -9640,6 +9514,7 @@ bool Configuration_parseDateMonth(ConstString s, int *month)
         i++;
       }
     }
+    long nextIndex;
     (*month) = (uint)String_toInteger(s,i,&nextIndex,NULL,0);
     if ((nextIndex != STRING_END) || ((*month) < 1) || ((*month) > 12))
     {
@@ -9654,8 +9529,6 @@ bool Configuration_parseDateMonth(ConstString s, int *month)
 
 bool Configuration_parseTimeNumber(ConstString s, int *n)
 {
-  ulong i;
-  long  nextIndex;
 
   assert(s != NULL);
   assert(n != NULL);
@@ -9667,7 +9540,7 @@ bool Configuration_parseTimeNumber(ConstString s, int *n)
   }
   else
   {
-    i = STRING_BEGIN;
+    ulong i = STRING_BEGIN;
     if (String_length(s) > 0)
     {
       while ((i < String_length(s)-1) && (String_index(s,i) == '0'))
@@ -9675,6 +9548,7 @@ bool Configuration_parseTimeNumber(ConstString s, int *n)
         i++;
       }
     }
+    long nextIndex;
     (*n) = (int)String_toInteger(s,i,&nextIndex,NULL,0);
     if (nextIndex != STRING_END) return FALSE;
   }
@@ -9686,9 +9560,7 @@ bool Configuration_parseTimeNumber(ConstString s, int *n)
 
 MaintenanceNode *Configuration_newMaintenanceNode(void)
 {
-  MaintenanceNode *maintenanceNode;
-
-  maintenanceNode = LIST_NEW_NODE(MaintenanceNode);
+  MaintenanceNode *maintenanceNode = LIST_NEW_NODE(MaintenanceNode);
   if (maintenanceNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -9826,15 +9698,13 @@ uint Configuration_initFileServerSettings(FileServer       *fileServer,
                                           const JobOptions *jobOptions
                                          )
 {
-  const ServerNode *serverNode;
-
   assert(fileServer != NULL);
   assert(directory != NULL);
 
   UNUSED_VARIABLE(jobOptions);
   UNUSED_VARIABLE(fileServer);
 
-  serverNode = NULL;
+  const ServerNode *serverNode = NULL;
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find file server
@@ -9862,15 +9732,13 @@ uint Configuration_initFTPServerSettings(FTPServer        *ftpServer,
                                          const JobOptions *jobOptions
                                         )
 {
-  const ServerNode *serverNode;
-
   assert(ftpServer != NULL);
   assert(hostName != NULL);
 
   ftpServer->userName = String_new();
   Password_init(&ftpServer->password);
 
-  serverNode = NULL;
+  const ServerNode *serverNode = NULL;
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find FTP server
@@ -9915,15 +9783,13 @@ uint Configuration_initSSHServerSettings(SSHServer        *sshServer,
                                          const JobOptions *jobOptions
                                         )
 {
-  const ServerNode *serverNode;
-
   assert(sshServer != NULL);
   assert(hostName != NULL);
 
   sshServer->userName = String_new();
   Password_init(&sshServer->password);
 
-  serverNode = NULL;
+  const ServerNode *serverNode = NULL;
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find SSH server
@@ -9992,15 +9858,13 @@ uint Configuration_initWebDAVServerSettings(WebDAVServer     *webDAVServer,
                                             const JobOptions *jobOptions
                                            )
 {
-  const ServerNode *serverNode;
-
   assert(hostName != NULL);
   assert(webDAVServer != NULL);
 
   webDAVServer->userName = String_new();
   Password_init(&webDAVServer->password);
 
-  serverNode = NULL;
+  const ServerNode *serverNode = NULL;
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find WebDAV server
@@ -10069,15 +9933,13 @@ uint Configuration_initWebDAVSServerSettings(WebDAVServer     *webDAVServer,
                                              const JobOptions *jobOptions
                                             )
 {
-  const ServerNode *serverNode;
-
   assert(hostName != NULL);
   assert(webDAVServer != NULL);
 
   webDAVServer->userName = String_new();
   Password_init(&webDAVServer->password);
 
-  serverNode = NULL;
+  const ServerNode *serverNode = NULL;
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find WebDAV server
@@ -10146,8 +10008,6 @@ uint Configuration_initSMBServerSettings(SMBServer        *smbServer,
                                          const JobOptions *jobOptions
                                         )
 {
-  const ServerNode *serverNode;
-
   assert(smbServer != NULL);
   assert(hostName != NULL);
 
@@ -10155,7 +10015,7 @@ uint Configuration_initSMBServerSettings(SMBServer        *smbServer,
   Password_init(&smbServer->password);
   smbServer->shareName = String_new();
 
-  serverNode = NULL;
+  const ServerNode *serverNode = NULL;
   SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find SMB server
@@ -10206,12 +10066,10 @@ void Configuration_doneSMBServerSettings(SMBServer *smbServer)
 
 ServerNode *Configuration_newServerNode(ConstString name, ServerTypes serverType)
 {
-  ServerNode *serverNode;
-
   assert(name != NULL);
 
   // allocate server node
-  serverNode = LIST_NEW_NODE(ServerNode);
+  ServerNode *serverNode = LIST_NEW_NODE(ServerNode);
   if (serverNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -10330,18 +10188,16 @@ void Configuration_initDeviceSettings(Device           *device,
                                       const JobOptions *jobOptions
                                      )
 {
-  const DeviceNode *deviceNode;
-
   assert(device != NULL);
   assert(name != NULL);
 
   SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     // find device
-    deviceNode = LIST_FIND(&globalOptions.deviceList,
-                           deviceNode,
-                           String_equals(deviceNode->name,name)
-                          );
+    const DeviceNode *deviceNode = LIST_FIND(&globalOptions.deviceList,
+                                             deviceNode,
+                                             String_equals(deviceNode->name,name)
+                                            );
 
     // get device settings
     device->name                    = ((jobOptions != NULL) && (jobOptions->device.name                    != NULL)) ? jobOptions->device.name                    : ((deviceNode != NULL) ? deviceNode->name                    : globalOptions.defaultDevice.name                   );
@@ -10373,10 +10229,8 @@ void Configuration_doneDeviceSettings(Device *device)
 
 DeviceNode *Configuration_newDeviceNode(ConstString name)
 {
-  DeviceNode *deviceNode;
-
   // allocate new device node
-  deviceNode = LIST_NEW_NODE(DeviceNode);
+  DeviceNode *deviceNode = LIST_NEW_NODE(DeviceNode);
   if (deviceNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -10412,15 +10266,13 @@ MountNode *Configuration_duplicateMountNode(MountNode *fromMountNode,
                                             void      *userData
                                            )
 {
-  MountNode *mountNode;
-
   assert(fromMountNode != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  mountNode = Configuration_newMountNode(fromMountNode->name,
-                                         fromMountNode->device
-                                        );
+  MountNode *mountNode = Configuration_newMountNode(fromMountNode->name,
+                                                    fromMountNode->device
+                                                   );
   assert(mountNode != NULL);
 
   return mountNode;
@@ -10455,21 +10307,17 @@ void Configuration_freeBandWidthNode(BandWidthNode *bandWidthNode, void *userDat
 
 void Configuration_add(ConfigFileTypes configFileType, const char *fileName)
 {
-  ConfigFileNode *configFileNode;
-
-  configFileNode = newConfigFileNode(configFileType,
-                                     fileName
-                                    );
+  ConfigFileNode *configFileNode = newConfigFileNode(configFileType,
+                                                     fileName
+                                                    );
   assert(configFileNode != NULL);
   List_append(&configFileList,configFileNode);
 }
 
 Errors Configuration_readAll(bool printInfoFlag)
 {
-  Errors               error;
+  Errors error = ERROR_NONE;
   const ConfigFileNode *configFileNode;
-
-  error = ERROR_NONE;
   LIST_ITERATEX(&configFileList,configFileNode,error == ERROR_NONE)
   {
     error = readConfigFile(configFileNode->fileName,printInfoFlag);
@@ -10480,13 +10328,12 @@ Errors Configuration_readAll(bool printInfoFlag)
 
 Errors Configuration_readAllServerKeysCertificates(void)
 {
-  String fileName;
-  Key    key;
 
   // init variables
-  fileName = String_new();
+  String fileName = String_new();
 
   // init default servers
+  Key key;
   Configuration_initKey(&key);
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
   if (File_exists(fileName) && (readKeyFile(&key,fileName) == ERROR_NONE))
@@ -10548,11 +10395,10 @@ bool Configuration_validate(void)
 
 Errors Configuration_update(void)
 {
-  String configFileName;
   Errors error;
 
   // init variables
-  configFileName = String_new();
+  String configFileName = String_new();
 
   // get config file name
   if (String_isEmpty(getConfigFileName(configFileName)))

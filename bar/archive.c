@@ -394,7 +394,6 @@ LOCAL Errors getCryptPassword(Password                *password,
                               void                    *getNamePasswordUserData
                              )
 {
-  String printableStorageName;
   Errors error;
 
   assert(password != NULL);
@@ -403,7 +402,7 @@ LOCAL Errors getCryptPassword(Password                *password,
   assert(jobOptions != NULL);
 
   // init variables
-  printableStorageName = String_new();
+  String printableStorageName = String_new();
 
   error = ERROR_UNKNOWN;
 
@@ -541,16 +540,13 @@ LOCAL Errors getCryptPassword(Password                *password,
 
 LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 {
-  const Password *password;
-  String         printableStorageName;
-  Password       newPassword;
-  Errors         error;
+  Errors error;
 
   assert(passwordHandle != NULL);
   assert(passwordHandle->archiveHandle != NULL);
   assert(passwordHandle->archiveHandle->storageInfo != NULL);
 
-  password = NULL;
+  const Password *password = NULL;
   SEMAPHORE_LOCKED_DO(&passwordHandle->archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     while ((password == NULL) && (passwordHandle->passwordMode != PASSWORD_MODE_NONE))
@@ -583,7 +579,8 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
              if (passwordHandle->getNamePasswordFunction != NULL)
              {
                // input password
-               printableStorageName = Storage_getPrintableName(String_new(),&passwordHandle->archiveHandle->storageInfo->storageSpecifier,NULL);
+               String printableStorageName = Storage_getPrintableName(String_new(),&passwordHandle->archiveHandle->storageInfo->storageSpecifier,NULL);
+               Password newPassword;
                Password_init(&newPassword);
                error = passwordHandle->getNamePasswordFunction(NULL,  // loginName
                                                                &newPassword,
@@ -724,18 +721,17 @@ LOCAL CryptKey *findDecryptKey(ConstString         storageName,
                                uint                keyLength
                               )
 {
-  DecryptKeyNode *decryptKeyNode;
-  Errors         error;
+  Errors error;
 
   assert(storageName != NULL);
   assert(Semaphore_isLocked(&decryptKeyList.lock));
 
   // find decrypt key
-  decryptKeyNode = LIST_FIND(&decryptKeyList,
-                             decryptKeyNode,
-                                (decryptKeyNode->askedFlag == askedFlag)
-                             && String_equals(decryptKeyNode->storageName,storageName)
-                            );
+  DecryptKeyNode *decryptKeyNode = LIST_FIND(&decryptKeyList,
+                                             decryptKeyNode,
+                                                (decryptKeyNode->askedFlag == askedFlag)
+                                             && String_equals(decryptKeyNode->storageName,storageName)
+                                            );
   if (decryptKeyNode != NULL)
   {
     // check if salt/key length changed => calculate new key derivation
@@ -784,18 +780,17 @@ LOCAL CryptKey *updateDecryptKey(ConstString         storageName,
                                  uint                keyLength
                                 )
 {
-  DecryptKeyNode *decryptKeyNode;
-  Errors         error;
+  Errors error;
 
   assert(storageName != NULL);
   assert(Semaphore_isLocked(&decryptKeyList.lock));
 
   // find decrypt key
-  decryptKeyNode = LIST_FIND(&decryptKeyList,
-                             decryptKeyNode,
-                                String_equals(decryptKeyNode->storageName,storageName)
-                             && Password_equals(decryptKeyNode->password,password)
-                            );
+  DecryptKeyNode *decryptKeyNode = LIST_FIND(&decryptKeyList,
+                                             decryptKeyNode,
+                                                String_equals(decryptKeyNode->storageName,storageName)
+                                             && Password_equals(decryptKeyNode->password,password)
+                                            );
 
   // create new decrypt key node if required
   if (decryptKeyNode == NULL)
@@ -861,17 +856,14 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                         uint                keyLength
                                        )
 {
-  DecryptKeyNode *decryptKeyNode;
-  const CryptKey *decryptKey;
-  Password       newPassword;
-  Errors         error;
+  Errors error;
 
   assert(decryptKeyIterator != NULL);
   assert(decryptKeyIterator->archiveHandle != NULL);
   assert(decryptKeyIterator->archiveHandle->storageInfo != NULL);
   assert(cryptSalt != NULL);
 
-  decryptKey = NULL;
+  const CryptKey *decryptKey = NULL;
   SEMAPHORE_LOCKED_DO(&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     while ((decryptKey == NULL) && (decryptKeyIterator->passwordMode != PASSWORD_MODE_NONE))
@@ -879,7 +871,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
       if      (decryptKeyIterator->nextDecryptKeyNode != NULL)
       {
         // get next crypt info from list
-        decryptKeyNode = decryptKeyIterator->nextDecryptKeyNode;
+        DecryptKeyNode *decryptKeyNode = decryptKeyIterator->nextDecryptKeyNode;
         assert(decryptKeyNode != NULL);
         decryptKeyIterator->nextDecryptKeyNode = decryptKeyNode->next;
 
@@ -955,6 +947,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                // input password and derive decrypt key
                if (decryptKeyIterator->getNamePasswordFunction != NULL)
                {
+                 Password newPassword;
                  Password_init(&newPassword);
 
                  // input password
@@ -1030,14 +1023,12 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator      *decryptKeyIter
                                          uint                    keyLength
                                         )
 {
-  const CryptKey *decryptKey;
-
   assert(decryptKeyIterator != NULL);
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(cryptSalt != NULL);
 
-  decryptKey = NULL;
+  const CryptKey *decryptKey = NULL;
   SEMAPHORE_LOCKED_DO(&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     decryptKeyIterator->archiveHandle           = archiveHandle;
@@ -1076,12 +1067,10 @@ LOCAL Errors initArchiveCryptInfo(ArchiveHandle       *archiveHandle,
                                   CryptKeyDeriveTypes cryptKeyDeriveType
                                  )
 {
-  ArchiveCryptInfoNode *archiveCryptInfoNode;
-
   assert(archiveHandle != NULL);
 
   // init node
-  archiveCryptInfoNode = LIST_NEW_NODE(ArchiveCryptInfoNode);
+  ArchiveCryptInfoNode *archiveCryptInfoNode = LIST_NEW_NODE(ArchiveCryptInfoNode);
   if (archiveCryptInfoNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -1115,8 +1104,7 @@ LOCAL Errors initCryptPassword(ArchiveHandle         *archiveHandle,
                                const Password        *password
                               )
 {
-  Password *cryptPassword;
-  Errors   error;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -1130,7 +1118,7 @@ LOCAL Errors initCryptPassword(ArchiveHandle         *archiveHandle,
        )
     {
       // allocate crypt password
-      cryptPassword = Password_new();
+      Password *cryptPassword = Password_new();
       if (cryptPassword == NULL)
       {
         Semaphore_unlock(&archiveHandle->passwordLock);
@@ -1198,12 +1186,11 @@ LOCAL Errors multiCryptInit(CryptInfo       *cryptInfo,
                             Password        *cryptPassword
                            )
 {
-  int    i;
   Errors error;
 
 HALT_NOT_YET_IMPLEMENTED();
 
-  for (i = 0; i < (int)count; i++)
+  for (size_t i = 0; i < (size_t)count; i++)
   {
     error = Crypt_init(cryptInfo,
                        cryptAlgorithms[i],
@@ -1255,18 +1242,15 @@ LOCAL uint getCryptBlockLengthLCM(CryptAlgorithms cryptAlgorithms[],
                                   uint            cryptAlgorithmCount,
                                  )
 {
-  uint   blockLength;
-  uint   i;
   Errors error;
-  uint   n;
 
   assert(cryptAlgorithms != NULL);
   assert(blockLength != NULL);
 
-  blockLength = 1;
-  for (i = 0; i < cryptAlgorithmCount; i++)
+  uint blockLength = 1;
+  for (size_t i = 0; i < cryptAlgorithmCount; i++)
   {
-    n = Crypt_getBlockLength(cryptAlgorithms[0]);
+    uint n = Crypt_getBlockLength(cryptAlgorithms[0]);
     blockLength = lcm(blockLength,n);
   }
 
@@ -1386,8 +1370,6 @@ LOCAL bool isNewPartNeeded(const ArchiveHandle *archiveHandle,
                            ulong               minBytes
                           )
 {
-  bool   newPartFlag;
-  uint64 archiveFileSize;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -1398,10 +1380,11 @@ LOCAL bool isNewPartNeeded(const ArchiveHandle *archiveHandle,
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(Semaphore_isOwned(&archiveHandle->lock));
 
-  newPartFlag = FALSE;
+  bool newPartFlag = FALSE;
   if (isSplittedArchive(archiveHandle))
   {
     // get current archive size
+    uint64 archiveFileSize;
     if (archiveHandle->create.openFlag)
     {
       archiveFileSize = archiveHandle->chunkIO->getSize(archiveHandle->chunkIOUserData);
@@ -1432,7 +1415,6 @@ LOCAL bool isNewPartNeeded(const ArchiveHandle *archiveHandle,
 
 LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle)
 {
-  uint64 storageSize;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -1444,6 +1426,7 @@ LOCAL void findNextArchivePart(ArchiveHandle *archiveHandle)
       && (archiveHandle->storageInfo->jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
      )
   {
+    uint64 storageSize;
     do
     {
       storageSize = archiveHandle->archiveGetSizeFunction(archiveHandle->storageInfo,
@@ -1485,11 +1468,7 @@ LOCAL Errors calculateHash(const ChunkIO *chunkIO,
 {
   #define BUFFER_SIZE (1024*1024)
 
-  void   *buffer;
   Errors error;
-  uint64 index;
-  uint64 offset;
-  ulong  n;
 
   assert(chunkIO != NULL);
   assert(chunkIO->tell != NULL);
@@ -1499,13 +1478,14 @@ LOCAL Errors calculateHash(const ChunkIO *chunkIO,
   assert(end >= start);
 
   // init variables
-  buffer = malloc(BUFFER_SIZE);
+  void *buffer = malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
 
   // save current index
+  uint64 index;
   error = chunkIO->tell(chunkIOUserData,&index);
   if (error != ERROR_NONE)
   {
@@ -1523,12 +1503,12 @@ LOCAL Errors calculateHash(const ChunkIO *chunkIO,
   }
 
   // calculate hash
-  offset = start;
+  uint64 offset = start;
   while (   (offset < end)
          && (error == ERROR_NONE)
         )
   {
-    n = (ulong)MIN(end-offset,BUFFER_SIZE);
+    ulong  n = (ulong)MIN(end-offset,BUFFER_SIZE);
 
     error = chunkIO->read(chunkIOUserData,buffer,n,NULL);
     if (error == ERROR_NONE)
@@ -1652,9 +1632,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
                                    uint          maxIndexEntries
                                   )
 {
-  ArchiveIndexList archiveIndexList;
   Errors           error;
-  ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
   assertx(INDEX_TYPE(storageId) == INDEX_TYPE_STORAGE,"storageId=%"PRIi64"",storageId.data);
@@ -1664,6 +1642,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
   if (Index_isAvailable())
   {
     // init variables
+    ArchiveIndexList archiveIndexList;
     List_init(&archiveIndexList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeArchiveIndexNode,NULL));
 
     // get list to flush
@@ -1696,7 +1675,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
             // add to index
             while (!List_isEmpty(&archiveIndexList) && (error == ERROR_NONE))
             {
-              archiveIndexNode = (ArchiveIndexNode*)List_removeFirst(&archiveIndexList);
+              ArchiveIndexNode *archiveIndexNode = (ArchiveIndexNode*)List_removeFirst(&archiveIndexList);
 
               switch (archiveIndexNode->type)
               {
@@ -1900,12 +1879,10 @@ LOCAL Errors indexAddFile(ArchiveHandle *archiveHandle,
                           uint64        fragmentSize
                          )
 {
-  ArchiveIndexNode *archiveIndexNode;
-
   assert(archiveHandle != NULL);
   assert(name != NULL);
 
-  archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  ArchiveIndexNode *archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -1950,12 +1927,10 @@ LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
                            uint64          blockCount
                           )
 {
-  ArchiveIndexNode *archiveIndexNode;
-
   assert(archiveHandle != NULL);
   assert(name != NULL);
 
-  archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  ArchiveIndexNode *archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -1998,12 +1973,10 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
                                uint32        permission
                               )
 {
-  ArchiveIndexNode *archiveIndexNode;
-
   assert(archiveHandle != NULL);
   assert(name != NULL);
 
-  archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  ArchiveIndexNode *archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -2049,13 +2022,11 @@ LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
                           uint32        permission
                          )
 {
-  ArchiveIndexNode *archiveIndexNode;
-
   assert(archiveHandle != NULL);
   assert(name != NULL);
   assert(destinationName != NULL);
 
-  archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  ArchiveIndexNode *archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -2106,12 +2077,10 @@ LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
                               uint64        fragmentSize
                              )
 {
-  ArchiveIndexNode *archiveIndexNode;
-
   assert(archiveHandle != NULL);
   assert(name != NULL);
 
-  archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  ArchiveIndexNode *archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -2163,12 +2132,10 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
                              uint32           minor
                             )
 {
-  ArchiveIndexNode *archiveIndexNode;
-
   assert(archiveHandle != NULL);
   assert(name != NULL);
 
-  archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
+  ArchiveIndexNode *archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -2205,8 +2172,7 @@ LOCAL Errors readHeader(ArchiveHandle     *archiveHandle,
                         const ChunkHeader *chunkHeader
                        )
 {
-  Errors   error;
-  ChunkBAR chunkBAR;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2214,6 +2180,7 @@ LOCAL Errors readHeader(ArchiveHandle     *archiveHandle,
   assert(chunkHeader->id == CHUNK_ID_BAR);
 
   // init BAR chunk
+  ChunkBAR chunkBAR;
   error = Chunk_init(&chunkBAR.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
@@ -2280,8 +2247,7 @@ LOCAL Errors readSalt(ArchiveHandle     *archiveHandle,
                       const ChunkHeader *chunkHeader
                      )
 {
-  Errors    error;
-  ChunkSalt chunkSalt;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2295,6 +2261,7 @@ LOCAL Errors readSalt(ArchiveHandle     *archiveHandle,
   }
 
   // init salt chunk
+  ChunkSalt chunkSalt;
   error = Chunk_init(&chunkSalt.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
@@ -2380,11 +2347,7 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
                                const CryptKey    *privateCryptKey
                               )
 {
-  Errors               error;
-  ChunkKey             chunkKey;
-  uint                 encryptedKeyDataLength;
-  void                 *encryptedKeyData;
-  ArchiveCryptInfoNode *archiveCryptInfoNode;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2399,10 +2362,11 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   }
 
   // get last archive crypt info
-  archiveCryptInfoNode = LIST_TAIL(&archiveHandle->archiveCryptInfoList);
+  ArchiveCryptInfoNode *archiveCryptInfoNode = LIST_TAIL(&archiveHandle->archiveCryptInfoList);
   assert(archiveCryptInfoNode != NULL);
 
   // init key chunk
+  ChunkKey chunkKey;
   error = Chunk_init(&chunkKey.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
@@ -2432,8 +2396,8 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
   }
 
   // read key chunk
-  encryptedKeyDataLength = chunkHeader->size-CHUNK_FIXED_SIZE_KEY;
-  encryptedKeyData       = malloc(encryptedKeyDataLength);
+  uint encryptedKeyDataLength = chunkHeader->size-CHUNK_FIXED_SIZE_KEY;
+  void *encryptedKeyData      = malloc(encryptedKeyDataLength);
   if (encryptedKeyData == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -2508,8 +2472,7 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
 
 LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 {
-  Errors   error;
-  ChunkBAR chunkBAR;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2517,6 +2480,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
   // init BAR chunk
+  ChunkBAR chunkBAR;
   error = Chunk_init(&chunkBAR.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
@@ -2567,8 +2531,7 @@ LOCAL Errors writeSalt(ArchiveHandle   *archiveHandle,
                        const CryptSalt *cryptSalt
                       )
 {
-  Errors    error;
-  ChunkSalt chunkSalt;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2577,6 +2540,7 @@ LOCAL Errors writeSalt(ArchiveHandle   *archiveHandle,
   assert(cryptSalt != NULL);
 
   // init key chunk
+  ChunkSalt chunkSalt;
   error = Chunk_init(&chunkSalt.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
@@ -2630,14 +2594,14 @@ LOCAL Errors writeSalt(ArchiveHandle   *archiveHandle,
 
 LOCAL Errors writeEncryptionKey(ArchiveHandle *archiveHandle)
 {
-  Errors   error;
-  ChunkKey chunkKey;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(Semaphore_isOwned(&archiveHandle->lock));
 
   // init key chunk
+  ChunkKey chunkKey;
   error = Chunk_init(&chunkKey.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
@@ -2700,11 +2664,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
                        CryptAlgorithms cryptAlgorithm
                       )
 {
-  Errors         error;
-  ChunkMeta      chunkMeta;
-  uint           blockLength;
-  ChunkMetaEntry chunkMetaEntry;
-  CryptInfo      cryptInfo;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2713,9 +2673,10 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
   assert(archiveHandle->archiveCryptInfo != NULL);
 
   // get crypt block length
-  blockLength = Crypt_getBlockLength(cryptAlgorithm);
+  uint blockLength = Crypt_getBlockLength(cryptAlgorithm);
 
   // init meta chunk
+  ChunkMeta chunkMeta;
   error = Chunk_init(&chunkMeta.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
@@ -2743,6 +2704,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
 #endif
 
   // init crypt
+  CryptInfo cryptInfo;
   error = Crypt_init(&cryptInfo,
 //TODO: MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
@@ -2758,6 +2720,7 @@ LOCAL Errors writeMeta(ArchiveHandle   *archiveHandle,
   DEBUG_TESTCODE() { Crypt_done(&cryptInfo); return DEBUG_TESTCODE_ERROR(); }
 
   // init meta entry chunk
+  ChunkMetaEntry chunkMetaEntry;
   error = Chunk_init(&chunkMetaEntry.info,
                      &chunkMeta.info,
                      CHUNK_USE_PARENT,
@@ -2839,16 +2802,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle,
                             const Key     *signaturePrivateKey
                            )
 {
-  AutoFreeList   autoFreeList;
-  CryptHash      signatureHash;
-  uint64         index;
-  Errors         error;
-  byte           hash[MAX_HASH_SIZE];
-  uint           hashLength;
-  byte           signature[MAX_HASH_SIZE];
-  uint           signatureLength;
-  CryptKey       privateSignatureKey;
-  ChunkSignature chunkSignature;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->chunkIO != NULL);
@@ -2858,9 +2812,11 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle,
   if (Configuration_isKeyAvailable(signaturePrivateKey))
   {
     // init variables
+    AutoFreeList autoFreeList;
     AutoFree_init(&autoFreeList);
 
     // init signature hash
+    CryptHash signatureHash;
     error = Crypt_initHash(&signatureHash,SIGNATURE_HASH_ALGORITHM);
     if (error != ERROR_NONE)
     {
@@ -2870,6 +2826,7 @@ LOCAL Errors writeSignature(ArchiveHandle *archiveHandle,
     AUTOFREE_ADD(&autoFreeList,&signatureHash,{ Crypt_doneHash(&signatureHash); });
 
     // get signature hash (Note: signature is also calculate from begin of archive)
+    uint64 index;
     error = archiveHandle->chunkIO->tell(archiveHandle->chunkIOUserData,&index);
     if (error != ERROR_NONE)
     {
@@ -2898,10 +2855,15 @@ TODO: support dynamic hash length?
     }
     AUTOFREE_ADD(&autoFreeList,hash,{ free(hash); });
 */
+    byte hash[MAX_HASH_SIZE];
+    uint hashLength;
     Crypt_getHash(&signatureHash,hash,sizeof(hash),&hashLength);
 //fprintf(stderr,"%s, %d: write signature\n",__FILE__,__LINE__); debugDumpMemory(hash,hashLength,0);
 
     // get signature
+    CryptKey privateSignatureKey;
+    byte     signature[MAX_HASH_SIZE];
+    uint     signatureLength;
     Crypt_initKey(&privateSignatureKey,CRYPT_PADDING_TYPE_NONE);
     error = Crypt_setPublicPrivateKeyData(&privateSignatureKey,
                                           signaturePrivateKey->data,
@@ -2930,6 +2892,7 @@ TODO: support dynamic hash length?
     assert(signatureLength <= sizeof(signature));
 
     // init signature chunk
+    ChunkSignature chunkSignature;
     error = Chunk_init(&chunkSignature.info,
                        NULL,  // parentChunkInfo
                        archiveHandle->chunkIO,
@@ -2984,8 +2947,7 @@ TODO: support dynamic hash length?
 
 LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2998,6 +2960,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
   if (!archiveHandle->create.openFlag)
   {
     // init variables
+    AutoFreeList autoFreeList;
     AutoFree_init(&autoFreeList);
 
     SEMAPHORE_LOCKED_DO(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -3355,11 +3318,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
                                 ulong         minBytes
                                )
 {
-  Errors  error;
-  IndexId storageId;
-  String  intermediateFileName;
-  int     partNumber;
-  uint64  archiveSize;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -3376,9 +3335,12 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
     if (archiveHandle->create.openFlag)
     {
       // init variables
-      intermediateFileName = String_new();
+      String intermediateFileName = String_new();
 
       // close archive file
+      IndexId storageId;
+      int     partNumber;
+      uint64  archiveSize;
       error = closeArchiveFile(archiveHandle,
                                &storageId,
                                intermediateFileName,
@@ -3446,10 +3408,7 @@ LOCAL Errors transferToArchive(const ArchiveHandle *archiveHandle,
 {
   #define TRANSFER_BUFFER_SIZE (1024*1024)
 
-  void    *buffer;
-  Errors  error;
-  uint64  length;
-  ulong   n;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -3459,7 +3418,7 @@ LOCAL Errors transferToArchive(const ArchiveHandle *archiveHandle,
   assert(Semaphore_isOwned(&archiveHandle->lock));
 
   // init variables
-  buffer = malloc(TRANSFER_BUFFER_SIZE);
+  void *buffer = malloc(TRANSFER_BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -3474,12 +3433,12 @@ LOCAL Errors transferToArchive(const ArchiveHandle *archiveHandle,
   }
 
   // get length
-  length = File_getSize(fileHandle);
+  uint64 length = File_getSize(fileHandle);
 
   // transfer data
   while (length > 0LL)
   {
-    n = MIN(length,TRANSFER_BUFFER_SIZE);
+    ulong n = MIN(length,TRANSFER_BUFFER_SIZE);
 
     // read data
     error = File_read(fileHandle,buffer,n,NULL);
@@ -3522,8 +3481,7 @@ LOCAL Errors transferToArchive(const ArchiveHandle *archiveHandle,
 
 LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
 {
-  Errors                    error;
-  FileExtendedAttributeNode *fileExtendedAttributeNode;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
@@ -3545,6 +3503,7 @@ LOCAL Errors writeFileChunks(ArchiveEntryInfo *archiveEntryInfo)
   }
 
   // create extended attribute chunks
+  FileExtendedAttributeNode *fileExtendedAttributeNode;
   LIST_ITERATE(archiveEntryInfo->file.fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->file.chunkFileExtendedAttribute.name,fileExtendedAttributeNode->name);
@@ -3612,15 +3571,13 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                                 )
 {
   Errors error;
-  uint   blockCount;
-  ulong  maxBlockCount;
-  ulong  byteLength;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->file.byteCompressInfo.blockLength != 0);
 
+  uint blockCount;
   do
   {
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.byteCompressInfo,
@@ -3646,11 +3603,12 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
       assert(archiveEntryInfo->file.headerWrittenFlag);
 
       // get max. number of byte-compressed data blocks to write
-      maxBlockCount = MIN(archiveEntryInfo->file.byteBufferSize/archiveEntryInfo->file.byteCompressInfo.blockLength,
-                          blockCount
-                         );
+      ulong maxBlockCount = MIN(archiveEntryInfo->file.byteBufferSize/archiveEntryInfo->file.byteCompressInfo.blockLength,
+                                blockCount
+                               );
 
       // get byte-compressed data blocks
+      ulong byteLength;
       Compress_getCompressedData(&archiveEntryInfo->file.byteCompressInfo,
                                  archiveEntryInfo->file.byteBuffer,
                                  maxBlockCount*archiveEntryInfo->file.byteCompressInfo.blockLength,
@@ -3708,17 +3666,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                  bool             allowNewPartFlag
                                 )
 {
-  uint    blockCount;
-  ulong   byteLength;
-  ulong   minBytes;
-  bool    newPartFlag;
-  Errors  error;
-  bool    eofDelta;
-  ulong   deltaLength;
-  IndexId storageId;
-  String  intermediateFileName;
-  int     partNumber;
-  uint64  archiveSize;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
@@ -3726,6 +3674,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(archiveEntryInfo->file.byteCompressInfo.blockLength != 0);
 
+  uint blockCount;
   do
   {
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->file.byteCompressInfo,
@@ -3741,6 +3690,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
     {
       // get byte-compressed data blocks
       assert(archiveEntryInfo->file.byteBufferSize >= (blockCount*archiveEntryInfo->file.byteCompressInfo.blockLength));
+      ulong byteLength;
       Compress_getCompressedData(&archiveEntryInfo->file.byteCompressInfo,
                                  archiveEntryInfo->file.byteBuffer,
                                  blockCount*archiveEntryInfo->file.byteCompressInfo.blockLength,
@@ -3750,14 +3700,14 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       assert((byteLength%archiveEntryInfo->file.byteCompressInfo.blockLength) == 0);
 
       // calculate min. bytes to tramsfer to archive
-      minBytes = (ulong)File_getSize(&archiveEntryInfo->file.intermediateFileHandle)+byteLength;
+      ulong minBytes = (ulong)File_getSize(&archiveEntryInfo->file.intermediateFileHandle)+byteLength;
 
       // lock
       Semaphore_lock(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
       // check if split is allowed and necessary
-      newPartFlag =    allowNewPartFlag
-                    && isNewPartNeeded(archiveEntryInfo->archiveHandle,
+      bool newPartFlag =    allowNewPartFlag
+                         && isNewPartNeeded(archiveEntryInfo->archiveHandle,
                                        (!archiveEntryInfo->file.headerWrittenFlag ? archiveEntryInfo->file.headerLength : 0) + minBytes
                                       );
 
@@ -3765,7 +3715,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       if (newPartFlag)
       {
         // init variables
-        intermediateFileName = String_new();
+        String intermediateFileName = String_new();
 
         // write file header (if not already written)
         if (!archiveEntryInfo->file.headerWrittenFlag)
@@ -3825,7 +3775,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
-        eofDelta = FALSE;
+        bool eofDelta = FALSE;
         do
         {
           // flush compressed full data blocks
@@ -3838,6 +3788,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           }
 
           // get next delta-compressed data
+          ulong deltaLength;
           Compress_getCompressedData(&archiveEntryInfo->file.deltaCompressInfo,
                                      archiveEntryInfo->file.deltaBuffer,
                                      archiveEntryInfo->file.deltaBufferSize,
@@ -3962,6 +3913,9 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // close archive
+        IndexId storageId;
+        int     partNumber;
+        uint64  archiveSize;
         error = closeArchiveFile(archiveEntryInfo->archiveHandle,
                                  &storageId,
                                  intermediateFileName,
@@ -4092,9 +4046,6 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 {
   Errors error;
-  ulong  maxBytes;
-  ulong  bytesRead;
-  ulong  n;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->file.byteCompressInfo.blockLength != 0);
@@ -4102,14 +4053,15 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   if      (!Chunk_eofSub(&archiveEntryInfo->file.chunkFileData.info))
   {
     // get max. bytes to read (always multiple of block length)
-    maxBytes = FLOOR(MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.byteCompressInfo),
-                         archiveEntryInfo->file.byteBufferSize
-                        ),
-                     archiveEntryInfo->file.byteCompressInfo.blockLength
-                    );
+    ulong maxBytes = FLOOR(MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.byteCompressInfo),
+                               archiveEntryInfo->file.byteBufferSize
+                              ),
+                           archiveEntryInfo->file.byteCompressInfo.blockLength
+                          );
     assert((maxBytes%archiveEntryInfo->file.byteCompressInfo.blockLength) == 0);
 
     // read data from archive
+    ulong bytesRead;
     error = Chunk_readData(&archiveEntryInfo->file.chunkFileData.info,
                            archiveEntryInfo->file.byteBuffer,
                            maxBytes,
@@ -4123,7 +4075,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
     {
       return ERROR_READ_FILE;
     }
-    if ((bytesRead%archiveEntryInfo->file.byteCompressInfo.blockLength) != 0)
+    if ((bytesRead % archiveEntryInfo->file.byteCompressInfo.blockLength) != 0)
     {
       return ERROR_INCOMPLETE_ARCHIVE;
     }
@@ -4157,6 +4109,7 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   else
   {
     // check for end-of-compressed byte-data
+    ulong n;
     error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->file.byteCompressInfo,
                                                    &n
                                                   );
@@ -4250,15 +4203,13 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                                 )
 {
   Errors error;
-  uint   blockCount;
-  ulong  maxBlockCount;
-  ulong  byteLength;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->image.byteCompressInfo.blockLength > 0);
 
+  uint blockCount;
   do
   {
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.byteCompressInfo,
@@ -4283,11 +4234,12 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
       }
 
       // get max. number of byte-compressed data blocks to write
-      maxBlockCount = MIN(archiveEntryInfo->image.byteBufferSize/archiveEntryInfo->image.byteCompressInfo.blockLength,
-                          blockCount
-                         );
+      ulong maxBlockCount = MIN(archiveEntryInfo->image.byteBufferSize/archiveEntryInfo->image.byteCompressInfo.blockLength,
+                                blockCount
+                               );
 
       // get byte-compressed data
+      ulong byteLength;
       Compress_getCompressedData(&archiveEntryInfo->image.byteCompressInfo,
                                  archiveEntryInfo->image.byteBuffer,
                                  maxBlockCount*archiveEntryInfo->image.byteCompressInfo.blockLength,
@@ -4344,17 +4296,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                   bool             allowNewPartFlag
                                  )
 {
-  uint    blockCount;
-  ulong   byteLength;
-  ulong   minBytes;
-  bool    newPartFlag;
-  Errors  error;
-  bool    eofDelta;
-  ulong   deltaLength;
-  IndexId storageId;
-  String  intermediateFileName;
-  int     partNumber;
-  uint64  archiveSize;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
@@ -4362,6 +4304,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(archiveEntryInfo->image.byteCompressInfo.blockLength > 0);
 
+  uint blockCount;
   do
   {
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->image.byteCompressInfo,
@@ -4377,6 +4320,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
     {
       // get next byte-compressed data block (only 1 block, because of splitting)
       assert(archiveEntryInfo->image.byteBufferSize >= (blockCount*archiveEntryInfo->image.byteCompressInfo.blockLength));
+      ulong byteLength;
       Compress_getCompressedData(&archiveEntryInfo->image.byteCompressInfo,
                                  archiveEntryInfo->image.byteBuffer,
                                  blockCount*archiveEntryInfo->image.byteCompressInfo.blockLength,
@@ -4386,22 +4330,22 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       assert((byteLength%archiveEntryInfo->image.byteCompressInfo.blockLength) == 0);
 
       // calculate min. bytes to tramsfer to archive
-      minBytes = (ulong)File_getSize(&archiveEntryInfo->image.intermediateFileHandle)+byteLength;
+      ulong minBytes = (ulong)File_getSize(&archiveEntryInfo->image.intermediateFileHandle)+byteLength;
 
       // lock
       Semaphore_lock(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
       // check if split is allowed and necessary
-      newPartFlag =    allowNewPartFlag
-                    && isNewPartNeeded(archiveEntryInfo->archiveHandle,
-                                       (!archiveEntryInfo->image.headerWrittenFlag ? archiveEntryInfo->image.headerLength : 0) + minBytes
-                                      );
+      bool newPartFlag =    allowNewPartFlag
+                         && isNewPartNeeded(archiveEntryInfo->archiveHandle,
+                                            (!archiveEntryInfo->image.headerWrittenFlag ? archiveEntryInfo->image.headerLength : 0) + minBytes
+                                           );
 
       // split
       if (newPartFlag)
       {
         // init variables
-        intermediateFileName = String_new();
+        String intermediateFileName = String_new();
 
         // write image header (if not already written)
         if (!archiveEntryInfo->image.headerWrittenFlag)
@@ -4460,7 +4404,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
-        eofDelta = FALSE;
+        bool eofDelta = FALSE;
         do
         {
           // flush compressed full data blocks
@@ -4473,6 +4417,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           }
 
           // get next delta-compressed data
+          ulong deltaLength;
           Compress_getCompressedData(&archiveEntryInfo->image.deltaCompressInfo,
                                      archiveEntryInfo->image.deltaBuffer,
                                      archiveEntryInfo->image.deltaBufferSize,
@@ -4594,6 +4539,9 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // close archive
+        IndexId storageId;
+        int     partNumber;
+        uint64  archiveSize;
         error = closeArchiveFile(archiveEntryInfo->archiveHandle,
                                  &storageId,
                                  intermediateFileName,
@@ -4724,9 +4672,6 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 {
   Errors error;
-  ulong  maxBytes;
-  ulong  bytesRead;
-  ulong  n;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->image.byteCompressInfo.blockLength > 0);
@@ -4734,14 +4679,15 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   if (!Chunk_eofSub(&archiveEntryInfo->image.chunkImageData.info))
   {
     // get max. bytes to read (always multiple of block length)
-    maxBytes = FLOOR(MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->image.byteCompressInfo),
-                         archiveEntryInfo->image.byteBufferSize
-                        ),
-                     archiveEntryInfo->image.byteCompressInfo.blockLength
-                    );
+    ulong maxBytes = FLOOR(MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->image.byteCompressInfo),
+                               archiveEntryInfo->image.byteBufferSize
+                              ),
+                           archiveEntryInfo->image.byteCompressInfo.blockLength
+                          );
     assert((maxBytes%archiveEntryInfo->image.byteCompressInfo.blockLength) == 0);
 
     // read data from archive
+    ulong bytesRead;
     error = Chunk_readData(&archiveEntryInfo->image.chunkImageData.info,
                            archiveEntryInfo->image.byteBuffer,
                            maxBytes,
@@ -4788,6 +4734,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   else
   {
     // check for end-of-compressed byte-data
+    ulong n;
     error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->image.byteCompressInfo,
                                                    &n
                                                   );
@@ -4815,10 +4762,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 
 LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
 {
-  Errors                    error;
-  StringNode                *stringNode;
-  String                    fileName;
-  FileExtendedAttributeNode *fileExtendedAttributeNode;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
@@ -4841,6 +4785,8 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
   }
 
   // create hard link name chunks
+  StringNode *stringNode;
+  String     fileName;
   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
   {
     convertSystemToUTF8Encoding(archiveEntryInfo->hardLink.chunkHardLinkName.name,fileName);
@@ -4858,6 +4804,7 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
   }
 
   // create extended attribute chunks
+  FileExtendedAttributeNode *fileExtendedAttributeNode;
   LIST_ITERATE(archiveEntryInfo->hardLink.fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.name,fileExtendedAttributeNode->name);
@@ -4921,9 +4868,6 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                                     )
 {
   Errors error;
-  uint   blockCount;
-  ulong  maxBlockCount;
-  ulong  byteLength;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
@@ -4931,6 +4875,7 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   assert(archiveEntryInfo->hardLink.byteCompressInfo.blockLength != 0);
 
   // flush data
+  uint blockCount;
   do
   {
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
@@ -4956,11 +4901,12 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
       assert(archiveEntryInfo->hardLink.headerWrittenFlag);
 
       // get max. number of byte-compressed data blocks to write
-      maxBlockCount = MIN(archiveEntryInfo->hardLink.byteBufferSize/archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
-                          blockCount
-                         );
+      ulong maxBlockCount = MIN(archiveEntryInfo->hardLink.byteBufferSize/archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
+                                blockCount
+                               );
 
       // get next byte-compressed data
+      ulong byteLength;
       Compress_getCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
                                  archiveEntryInfo->hardLink.byteBuffer,
                                  maxBlockCount*archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
@@ -5017,19 +4963,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
                                      bool             allowNewPartFlag
                                     )
 {
-  uint             blockCount;
-  ulong            byteLength;
-  ulong            minBytes;
-  bool             newPartFlag;
-  Errors           error;
-  bool             eofDelta;
-  ulong            deltaLength;
-  const StringNode *stringNode;
-  String           fileName;
-  IndexId          storageId;
-  String           intermediateFileName;
-  int              partNumber;
-  uint64           archiveSize;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
@@ -5037,6 +4971,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(archiveEntryInfo->hardLink.byteCompressInfo.blockLength != 0);
 
+  uint blockCount;
   do
   {
     error = Compress_getAvailableCompressedBlocks(&archiveEntryInfo->hardLink.byteCompressInfo,
@@ -5052,6 +4987,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
     {
       // get byte-compressed data blocks
       assert(archiveEntryInfo->hardLink.byteBufferSize >= (blockCount*archiveEntryInfo->hardLink.byteCompressInfo.blockLength));
+      ulong byteLength;
       Compress_getCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
                                  archiveEntryInfo->hardLink.byteBuffer,
                                  blockCount*archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
@@ -5061,25 +4997,25 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       assert((byteLength%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) == 0);
 
       // calculate min. bytes to tramsfer to archive
-      minBytes = (ulong)File_getSize(&archiveEntryInfo->hardLink.intermediateFileHandle)+byteLength;
+      ulong minBytes = (ulong)File_getSize(&archiveEntryInfo->hardLink.intermediateFileHandle)+byteLength;
 
       // lock
       Semaphore_lock(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
       // check if split is allowed and necessary
-      newPartFlag =    allowNewPartFlag
-                    && isNewPartNeeded(archiveEntryInfo->archiveHandle,
-                                       (!archiveEntryInfo->hardLink.headerWrittenFlag
-                                          ? archiveEntryInfo->hardLink.headerLength
-                                          : 0
-                                       ) + minBytes
-                                      );
+      bool newPartFlag =    allowNewPartFlag
+                         && isNewPartNeeded(archiveEntryInfo->archiveHandle,
+                                            (!archiveEntryInfo->hardLink.headerWrittenFlag
+                                               ? archiveEntryInfo->hardLink.headerLength
+                                               : 0
+                                            ) + minBytes
+                                           );
 
       // split
       if (newPartFlag)
       {
         // init variables
-        intermediateFileName = String_new();
+        String intermediateFileName = String_new();
 
         // write hardlink header (if not already written)
         if (!archiveEntryInfo->hardLink.headerWrittenFlag)
@@ -5138,7 +5074,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
           return error;
         }
-        eofDelta = FALSE;
+        bool eofDelta = FALSE;
         do
         {
           // flush compressed full data blocks
@@ -5151,6 +5087,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           }
 
           // get next delta-compressed byte
+          ulong deltaLength;
           Compress_getCompressedData(&archiveEntryInfo->hardLink.deltaCompressInfo,
                                      archiveEntryInfo->hardLink.deltaBuffer,
                                      archiveEntryInfo->hardLink.deltaBufferSize,
@@ -5254,6 +5191,8 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         if (Index_isAvailable())
         {
           // add hardlink entry
+          const StringNode *stringNode;
+          String           fileName;
           STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
           {
             error = indexAddHardlink(archiveEntryInfo->archiveHandle,
@@ -5279,6 +5218,9 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // close archive
+        IndexId storageId;
+        int     partNumber;
+        uint64  archiveSize;
         error = closeArchiveFile(archiveEntryInfo->archiveHandle,
                                  &storageId,
                                  intermediateFileName,
@@ -5408,9 +5350,6 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 {
   Errors error;
-  ulong  maxBytes;
-  ulong  bytesRead;
-  ulong  n;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->hardLink.byteCompressInfo.blockLength != 0);
@@ -5418,14 +5357,15 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   if (!Chunk_eofSub(&archiveEntryInfo->hardLink.chunkHardLinkData.info))
   {
     // get max. bytes to read (always multiple of block length)
-    maxBytes = FLOOR(MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->hardLink.byteCompressInfo),
-                         archiveEntryInfo->hardLink.byteBufferSize
-                        ),
-                     archiveEntryInfo->hardLink.byteCompressInfo.blockLength
-                    );
+    ulong maxBytes = FLOOR(MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->hardLink.byteCompressInfo),
+                               archiveEntryInfo->hardLink.byteBufferSize
+                              ),
+                           archiveEntryInfo->hardLink.byteCompressInfo.blockLength
+                          );
     assert((maxBytes%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) == 0);
 
     // read data from archive
+    ulong bytesRead;
     error = Chunk_readData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
                            archiveEntryInfo->hardLink.byteBuffer,
                            maxBytes,
@@ -5472,6 +5412,7 @@ LOCAL Errors readHardLinkDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   else
   {
     // check for end-of-compressed byte-data
+    ulong n;
     error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->hardLink.byteCompressInfo,
                                                    &n
                                                   );
@@ -5515,14 +5456,12 @@ void Archive_doneAll(void)
 
 bool Archive_parseType(const char *name, ArchiveTypes *archiveType, void *userData)
 {
-  uint i;
-
   assert(name != NULL);
   assert(archiveType != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  i = 0;
+  size_t i = 0;
   while (   (i < SIZE_OF_ARRAY(ARCHIVE_TYPES))
          && !stringEqualsIgnoreCase(ARCHIVE_TYPES[i].name,name)
         )
@@ -5563,12 +5502,10 @@ const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType)
 
 bool Archive_parseArchiveEntryType(const char *name, ArchiveEntryTypes *archiveEntryType)
 {
-  uint i;
-
   assert(name != NULL);
   assert(archiveEntryType != NULL);
 
-  i = 0;
+  size_t i = 0;
   while (   (i < SIZE_OF_ARRAY(ARCHIVE_ENTRY_TYPES))
          && !stringEqualsIgnoreCase(ARCHIVE_ENTRY_TYPES[i].name,name)
         )
@@ -5596,24 +5533,15 @@ Errors Archive_formatName(String           fileName,
                           int              partNumber
                          )
 {
-  StaticString   (uuid,MISC_UUID_STRING_LENGTH);
-  bool           partNumberFlag;
-  TemplateHandle templateHandle;
-  TextMacros     (textMacros,5);
-  ulong          i,j;
-  char           buffer[256];
-  ulong          divisor;
-  ulong          n;
-  uint           z;
-  int            d;
-
   assert(fileName != NULL);
   assert(templateFileName != NULL);
 
   // init variables
+  StaticString   (uuid,MISC_UUID_STRING_LENGTH);
   Misc_getUUID(uuid);
 
   // init template
+  TemplateHandle templateHandle;
   templateInit(&templateHandle,
                String_cString(templateFileName),
                expandMacroMode,
@@ -5621,6 +5549,7 @@ Errors Archive_formatName(String           fileName,
               );
 
   // expand template
+  TextMacros (textMacros,5);
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_CSTRING("%type", Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_CSTRING);
@@ -5641,8 +5570,8 @@ Errors Archive_formatName(String           fileName,
   }
 
   // expand part number
-  partNumberFlag = FALSE;
-  i = 0L;
+  bool partNumberFlag = FALSE;
+  size_t i = 0L;
   while (i < String_length(fileName))
   {
     switch (String_index(fileName,i))
@@ -5681,8 +5610,8 @@ Errors Archive_formatName(String           fileName,
             if (partNumber != NAME_PART_NUMBER_NONE)
             {
               // find #...# and get max. divisor for part number
-              divisor = 1L;
-              j = i+1L;
+              ulong  divisor = 1L;
+              size_t j       = i+1L;
               while ((j < String_length(fileName) && String_index(fileName,j) == '#'))
               {
                 j++;
@@ -5694,11 +5623,12 @@ Errors Archive_formatName(String           fileName,
               }
 
               // replace #...# by part number
-              n = partNumber;
-              z = 0;
+              ulong  n = partNumber;
+              char   buffer[256];
+              size_t z = 0;
               while (divisor > 0L)
               {
-                d = n/divisor; n = n%divisor; divisor = divisor/10;
+                int d = n/divisor; n = n%divisor; divisor = divisor/10;
                 if (z < sizeof(buffer)-1)
                 {
                   buffer[z] = '0'+d; z++;
@@ -5759,10 +5689,9 @@ Errors Archive_formatName(String           fileName,
 
 bool Archive_isArchiveFile(ConstString fileName)
 {
-  FileHandle  fileHandle;
-  Errors      error;
-  ChunkHeader chunkHeader;
+  Errors error;
 
+  FileHandle fileHandle;
   error = File_open(&fileHandle,
                     fileName,
                     FILE_OPEN_READ
@@ -5772,6 +5701,7 @@ bool Archive_isArchiveFile(ConstString fileName)
     return false;
   }
 
+  ChunkHeader chunkHeader;
   error = Chunk_next(&CHUNK_IO_FILE,&fileHandle,&chunkHeader);
   if (error != ERROR_NONE)
   {
@@ -5801,11 +5731,9 @@ void Archive_clearDecryptPasswords(void)
 
 const Password *Archive_appendDecryptPassword(const Password *password)
 {
-  PasswordNode *passwordNode;
-
   assert(password != NULL);
 
-  passwordNode = NULL;
+  PasswordNode *passwordNode = NULL;
   SEMAPHORE_LOCKED_DO(&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find password
@@ -5839,11 +5767,9 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 #if 0
 const CryptKey *Archive_appendCryptInfo(const Password *password)
 {
-  DecryptKeyNode *decryptKeyNode;
-
   assert(password != NULL);
 
-  decryptKeyNode = NULL;
+  DecryptKeyNode *decryptKeyNode = NULL;
   SEMAPHORE_LOCKED_DO(&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
 //TODO:
@@ -5900,11 +5826,9 @@ const CryptKey *Archive_appendCryptInfo(const Password *password)
 
 bool Archive_waitDecryptPassword(Password *password, long timeout)
 {
-  bool modified;
-
   Password_clear(password);
 
-  modified = FALSE;
+  bool modified = FALSE;
   SEMAPHORE_LOCKED_DO(&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     modified = Semaphore_waitModified(&decryptPasswordList.lock,timeout);
@@ -5981,12 +5905,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                          )
 #endif /* NDEBUG */
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
-  uint         keyLength;
-  CryptKey     publicCryptKey;
-  bool         okFlag;
-  ulong        maxEncryptedKeyDataLength;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(storageInfo != NULL);
@@ -5998,6 +5917,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
 UNUSED_VARIABLE(storageInfo);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // init archive info
@@ -6106,7 +6026,7 @@ UNUSED_VARIABLE(storageInfo);
   Crypt_randomSalt(&archiveHandle->archiveCryptInfo->cryptSalt);
 
   // get required crypt key length for algorithm
-  keyLength = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0]);
+  uint keyLength = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0]);
   assert(!Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0]) || (keyLength > 0));
 
   // init encryption key
@@ -6140,9 +6060,8 @@ UNUSED_VARIABLE(storageInfo);
       break;
     case CRYPT_TYPE_ASYMMETRIC:
       {
-        const Key *cryptPublicKey;
-
         // check if public key available
+        const Key *cryptPublicKey;
         if      (Configuration_isKeyAvailable(&storageInfo->jobOptions->cryptPublicKey))
         {
           cryptPublicKey = &storageInfo->jobOptions->cryptPublicKey;
@@ -6158,6 +6077,7 @@ UNUSED_VARIABLE(storageInfo);
         }
 
         // init public key
+        CryptKey publicCryptKey;
         Crypt_initKey(&publicCryptKey,CRYPT_PADDING_TYPE_NONE);
         error = Crypt_setPublicPrivateKeyData(&publicCryptKey,
                                               cryptPublicKey->data,
@@ -6176,8 +6096,8 @@ UNUSED_VARIABLE(storageInfo);
         AUTOFREE_ADD(&autoFreeList,&publicCryptKey,{ Crypt_doneKey(&publicCryptKey); });
 
         // create new random key for encryption
-        maxEncryptedKeyDataLength = 2*MAX_PASSWORD_LENGTH;
-        okFlag = FALSE;
+        ulong maxEncryptedKeyDataLength = 2*MAX_PASSWORD_LENGTH;
+        bool  okFlag                    = FALSE;
         do
         {
           archiveHandle->encryptedKeyData = malloc(maxEncryptedKeyDataLength);
@@ -6262,15 +6182,14 @@ UNUSED_VARIABLE(storageInfo);
                        )
 #endif /* NDEBUG */
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
-  ChunkHeader  chunkHeader;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(storageInfo != NULL);
   assert(storageInfo->jobOptions != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   archiveHandle->hostName                = NULL;
@@ -6368,6 +6287,7 @@ UNUSED_VARIABLE(storageInfo);
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
   // check if BAR archive file
+  ChunkHeader chunkHeader;
   error = getNextChunkHeader(archiveHandle,&chunkHeader);
   if (error != ERROR_NONE)
   {
@@ -6414,8 +6334,7 @@ UNUSED_VARIABLE(storageInfo);
                              )
 #endif /* NDEBUG */
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(fromArchiveHandle != NULL);
@@ -6423,6 +6342,7 @@ UNUSED_VARIABLE(storageInfo);
   assert(fromArchiveHandle->storageInfo != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   archiveHandle->hostName                = NULL;
@@ -6540,10 +6460,7 @@ UNUSED_VARIABLE(storageInfo);
                         )
 #endif /* NDEBUG */
 {
-  Errors  error;
-  IndexId storageId;
-  int     partNumber;
-  uint64  archiveSize;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -6561,6 +6478,9 @@ UNUSED_VARIABLE(storageInfo);
           intermediateFileName = String_new();
 
           // close archive
+          IndexId storageId;
+          int     partNumber;
+          uint64  archiveSize;
           error = closeArchiveFile(archiveHandle,
                                    &storageId,
                                    intermediateFileName,
@@ -6785,13 +6705,6 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
 
 bool Archive_eof(ArchiveHandle *archiveHandle)
 {
-  bool           chunkHeaderFoundFlag;
-  bool           scanFlag;
-  ChunkHeader    chunkHeader;
-  CryptKey       privateCryptKey;
-  bool           decryptedFlag;
-  PasswordHandle passwordHandle;
-  const Password *password;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -6807,8 +6720,9 @@ bool Archive_eof(ArchiveHandle *archiveHandle)
   }
 
   // find next file/image/directory/link/hard link/special/meta/signature chunk
-  chunkHeaderFoundFlag = FALSE;
-  scanFlag             = FALSE;
+  bool        chunkHeaderFoundFlag = FALSE;
+  bool        scanFlag             = FALSE;
+  ChunkHeader chunkHeader;
   while (   !chunkHeaderFoundFlag
          && !chunkHeaderEOF(archiveHandle)
         )
@@ -6851,9 +6765,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle)
         {
           if (!IS_SET(archiveHandle->archiveFlags,ARCHIVE_FLAG_RETURN_KEY_CHUNKS))
           {
-            const Key *cryptPrivateKey;
-
             // check if private key available
+            const Key *cryptPrivateKey;
             if      (Configuration_isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
             {
               cryptPrivateKey = &archiveHandle->storageInfo->jobOptions->cryptPrivateKey;
@@ -6872,8 +6785,8 @@ bool Archive_eof(ArchiveHandle *archiveHandle)
 
 //fprintf(stderr,"%s, %d: private key1 \n",__FILE__,__LINE__); debugDumpMemory(cryptPrivateKey->data,cryptPrivateKey->length,0);
             // init private key: try with no password/salt, then all passwords
+            CryptKey privateCryptKey;
             Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
-            decryptedFlag = FALSE;
 //fprintf(stderr,"%s, %d: %p: %p %d\n",__FILE__,__LINE__,cryptPrivateKey,cryptPrivateKey->data,cryptPrivateKey->length);
 //debugDumpMemory(cryptPrivateKey->data,cryptPrivateKey->length,0);
             archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
@@ -6886,18 +6799,20 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                                                         NULL,  // salt
                                                                         NULL  // password
                                                                        );
+            bool decryptedFlag = FALSE;
             if (archiveHandle->pendingError == ERROR_NONE)
             {
               decryptedFlag = TRUE;
             }
             else
             {
-              password = getFirstDecryptPassword(&passwordHandle,
-                                                 archiveHandle,
-                                                 archiveHandle->storageInfo->jobOptions,
-                                                 archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                                 CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
-                                                );
+              PasswordHandle passwordHandle;
+              const Password *password = getFirstDecryptPassword(&passwordHandle,
+                                                                 archiveHandle,
+                                                                 archiveHandle->storageInfo->jobOptions,
+                                                                 archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
+                                                                 CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
+                                                                );
               while (   !decryptedFlag
                      && (password != NULL)
                     )
@@ -7041,9 +6956,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                )
 #endif /* NDEBUG */
 {
-  AutoFreeList                    autoFreeList;
-  Errors                          error;
-  const FileExtendedAttributeNode *fileExtendedAttributeNode;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -7055,6 +6968,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(fileInfo != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // init archive entry info
@@ -7380,6 +7294,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->file.headerLength = Chunk_getSize(&archiveEntryInfo->file.chunkFile.info,     &archiveEntryInfo->file.chunkFile,     0)+
                                         Chunk_getSize(&archiveEntryInfo->file.chunkFileEntry.info,&archiveEntryInfo->file.chunkFileEntry,0)+
                                         Chunk_getSize(&archiveEntryInfo->file.chunkFileData.info, &archiveEntryInfo->file.chunkFileData, 0);
+  const FileExtendedAttributeNode *fileExtendedAttributeNode;
   LIST_ITERATE(archiveEntryInfo->file.fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->file.chunkFileExtendedAttribute.name,fileExtendedAttributeNode->name);
@@ -7460,8 +7375,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                 )
 #endif /* NDEBUG */
 {
-  AutoFreeList  autoFreeList;
-  Errors        error;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -7474,6 +7388,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(deviceInfo->blockSize > 0);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // init archive entry info
@@ -7822,10 +7737,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                     )
 #endif /* NDEBUG */
 {
-  AutoFreeList                    autoFreeList;
-  Errors                          error;
-  ulong                           headerLength;
-  const FileExtendedAttributeNode *fileExtendedAttributeNode;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -7837,6 +7749,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(fileInfo != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // init archive entry info
@@ -7955,8 +7868,9 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info,{ Chunk_done(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.info); });
 
   // calculate header size
-  headerLength = Chunk_getSize(&archiveEntryInfo->directory.chunkDirectory.info,     &archiveEntryInfo->directory.chunkDirectory,     0)+
-                 Chunk_getSize(&archiveEntryInfo->directory.chunkDirectoryEntry.info,&archiveEntryInfo->directory.chunkDirectoryEntry,0);
+  ulong headerLength = Chunk_getSize(&archiveEntryInfo->directory.chunkDirectory.info,     &archiveEntryInfo->directory.chunkDirectory,     0)+
+                       Chunk_getSize(&archiveEntryInfo->directory.chunkDirectoryEntry.info,&archiveEntryInfo->directory.chunkDirectoryEntry,0);
+  const FileExtendedAttributeNode *fileExtendedAttributeNode;
   LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.name,fileExtendedAttributeNode->name);
@@ -8077,10 +7991,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                )
 #endif /* NDEBUG */
 {
-  AutoFreeList                    autoFreeList;
-  Errors                          error;
-  ulong                           headerLength;
-  const FileExtendedAttributeNode *fileExtendedAttributeNode;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -8092,6 +8003,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(fileInfo != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // init archive entry info
@@ -8209,8 +8121,9 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLinkExtendedAttribute.info,{ Chunk_done(&archiveEntryInfo->link.chunkLinkExtendedAttribute.info); });
 
   // calculate header length
-  headerLength = Chunk_getSize(&archiveEntryInfo->link.chunkLink.info,     &archiveEntryInfo->link.chunkLink,     0)+
-                 Chunk_getSize(&archiveEntryInfo->link.chunkLinkEntry.info,&archiveEntryInfo->link.chunkLinkEntry,0);
+  ulong headerLength = Chunk_getSize(&archiveEntryInfo->link.chunkLink.info,     &archiveEntryInfo->link.chunkLink,     0)+
+                       Chunk_getSize(&archiveEntryInfo->link.chunkLinkEntry.info,&archiveEntryInfo->link.chunkLinkEntry,0);
+  const FileExtendedAttributeNode *fileExtendedAttributeNode;
   LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->link.chunkLinkExtendedAttribute.name,fileExtendedAttributeNode->name);
@@ -8337,11 +8250,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                    )
 #endif /* NDEBUG */
 {
-  AutoFreeList                    autoFreeList;
-  Errors                          error;
-  const FileExtendedAttributeNode *fileExtendedAttributeNode;
-  const StringNode                *stringNode;
-  String                          fileName;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -8354,6 +8263,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(fileInfo != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // init archive entry info
@@ -8417,6 +8327,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   if ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(deltaCompressAlgorithm))
   {
     error = ERROR_NONE;
+    const StringNode *stringNode;
+    String           fileName;
     STRINGLIST_ITERATE(fileNameList,stringNode,fileName)
     {
       error = DeltaSource_openEntry(&archiveEntryInfo->hardLink.deltaSourceHandle,
@@ -8704,6 +8616,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->hardLink.headerLength = Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLink.info,     &archiveEntryInfo->hardLink.chunkHardLink,     0)+
                                             Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,&archiveEntryInfo->hardLink.chunkHardLinkEntry,0)+
                                             Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkData.info, &archiveEntryInfo->hardLink.chunkHardLinkData, 0);
+  StringNode *stringNode;
+  String     fileName;
   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
   {
     convertSystemToUTF8Encoding(archiveEntryInfo->hardLink.chunkHardLinkName.name,fileName);
@@ -8713,6 +8627,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                                              0
                                                             );
   }
+  const FileExtendedAttributeNode *fileExtendedAttributeNode;
   LIST_ITERATE(archiveEntryInfo->hardLink.fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.name,fileExtendedAttributeNode->name);
@@ -8783,10 +8698,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                   )
 #endif /* NDEBUG */
 {
-  AutoFreeList                    autoFreeList;
-  Errors                          error;
-  ulong                           headerLength;
-  const FileExtendedAttributeNode *fileExtendedAttributeNode;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -8798,6 +8710,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(fileInfo != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // init archive entry info
@@ -8917,8 +8830,9 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info,{ Chunk_done(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.info); });
 
   // calculate header length
-  headerLength = Chunk_getSize(&archiveEntryInfo->special.chunkSpecial.info,     &archiveEntryInfo->special.chunkSpecial,     0)+
-                 Chunk_getSize(&archiveEntryInfo->special.chunkSpecialEntry.info,&archiveEntryInfo->special.chunkSpecialEntry,0);
+  ulong headerLength = Chunk_getSize(&archiveEntryInfo->special.chunkSpecial.info,     &archiveEntryInfo->special.chunkSpecial,     0)+
+                       Chunk_getSize(&archiveEntryInfo->special.chunkSpecialEntry.info,&archiveEntryInfo->special.chunkSpecialEntry,0);
+  const FileExtendedAttributeNode *fileExtendedAttributeNode;
   LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
   {
     String_set(archiveEntryInfo->special.chunkSpecialExtendedAttribute.name,fileExtendedAttributeNode->name);
@@ -9045,9 +8959,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                )
 #endif /* NDEBUG */
 {
-  AutoFreeList autoFreeList;
-  Errors       error;
-  ulong        headerLength;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -9058,6 +8970,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // init archive entry info
@@ -9146,8 +9059,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->meta.chunkMetaEntry.info,{ Chunk_done(&archiveEntryInfo->meta.chunkMetaEntry.info); });
 
   // calculate header size
-  headerLength = Chunk_getSize(&archiveEntryInfo->meta.chunkMeta.info,     &archiveEntryInfo->meta.chunkMeta,     0)+
-                 Chunk_getSize(&archiveEntryInfo->meta.chunkMetaEntry.info,&archiveEntryInfo->meta.chunkMetaEntry,0);
+  ulong headerLength = Chunk_getSize(&archiveEntryInfo->meta.chunkMeta.info,     &archiveEntryInfo->meta.chunkMeta,     0)+
+                       Chunk_getSize(&archiveEntryInfo->meta.chunkMetaEntry.info,&archiveEntryInfo->meta.chunkMetaEntry,0);
 
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
@@ -9218,9 +9131,9 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                               )
 #endif /* NDEBUG */
 {
-  Errors      error;
-  ChunkHeader chunkHeader;
+  Errors error;
 
+  ChunkHeader chunkHeader;
   error = getNextChunkHeader(sourceArchiveHandle,&chunkHeader);
   if (error != ERROR_NONE)
   {
@@ -9278,13 +9191,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                    uint64            *size
                                   )
 {
-  Errors         error;
-  bool           scanMode;
-  ChunkHeader    chunkHeader;
-  CryptKey       privateCryptKey;
-  bool           decryptedFlag;
-  PasswordHandle passwordHandle;
-  const Password *password;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -9301,7 +9208,8 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
   }
 
   // find next file/image/directory/link/hard link/special/meta/signature chunk
-  scanMode = FALSE;
+  bool        scanMode = FALSE;
+  ChunkHeader chunkHeader;
   do
   {
     // get next chunk
@@ -9345,9 +9253,8 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
         break;
       case CHUNK_ID_KEY:
         {
-          const Key *cryptPrivateKey;
-
           // check if private key available
+          const Key *cryptPrivateKey;
           if      (Configuration_isKeyAvailable(&archiveHandle->storageInfo->jobOptions->cryptPrivateKey))
           {
             cryptPrivateKey = &archiveHandle->storageInfo->jobOptions->cryptPrivateKey;
@@ -9363,8 +9270,8 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
           assert(Configuration_isKeyAvailable(cryptPrivateKey));
 
           // init private key: try with no password/salt, then all passwords
+          CryptKey       privateCryptKey;
           Crypt_initKey(&privateCryptKey,CRYPT_PADDING_TYPE_NONE);
-          decryptedFlag = FALSE;
           error = Crypt_setPublicPrivateKeyData(&privateCryptKey,
                                                 cryptPrivateKey->data,
                                                 cryptPrivateKey->length,
@@ -9373,16 +9280,18 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
                                                 NULL,  // cryptSalt
                                                 NULL  // password
                                                );
+          bool decryptedFlag = FALSE;
           if (error == ERROR_NONE)
           {
             decryptedFlag = TRUE;
           }
-          password = getFirstDecryptPassword(&passwordHandle,
-                                             archiveHandle,
-                                             archiveHandle->storageInfo->jobOptions,
-                                             archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                             CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
-                                            );
+          PasswordHandle passwordHandle;
+          const Password *password = getFirstDecryptPassword(&passwordHandle,
+                                                             archiveHandle,
+                                                             archiveHandle->storageInfo->jobOptions,
+                                                             archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
+                                                             CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
+                                                            );
           while (   !decryptedFlag
                  && (password != NULL)
                 )
@@ -9533,8 +9442,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle     *archiveHandle,
 
 Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
 {
-  Errors      error;
-  ChunkHeader chunkHeader;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -9548,6 +9456,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   }
 
   // read next chunk
+  ChunkHeader chunkHeader;
   error = getNextChunkHeader(archiveHandle,&chunkHeader);
   if (error != ERROR_NONE)
   {
@@ -9598,22 +9507,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                 )
 #endif /* NDEBUG */
 {
-  AutoFreeList       autoFreeList1,autoFreeList2;
-  Errors             error;
-//  ChunkMeta          chunkMeta;
-  ChunkHeader        chunkHeader;
-//  CryptAlgorithms    cryptAlgorithm;
-//  uint               blockLength;
-  uint               keyLength;
-  DecryptKeyIterator decryptKeyIterator;
-  const CryptKey     *decryptKey;
-  bool               passwordFlag;
-//  CryptInfo          cryptInfo;
-//  ChunkMetaEntry     chunkMetaEntry;
-  uint64             index;
-  bool               decryptedFlag;
-  ChunkHeader        subChunkHeader;
-  bool               foundMetaEntryFlag;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -9632,6 +9526,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   }
 
   // init variables
+  AutoFreeList autoFreeList1;
   AutoFree_init(&autoFreeList1);
 
   archiveEntryInfo->archiveHandle    = archiveHandle;
@@ -9656,6 +9551,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->meta.chunkMeta.info,{ Chunk_done(&archiveEntryInfo->meta.chunkMeta.info); });
 
   // find next meta chunk
+  ChunkHeader chunkHeader;
   do
   {
     error = getNextChunkHeader(archiveHandle,&chunkHeader);
@@ -9708,12 +9604,18 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   assert(archiveEntryInfo->blockLength > 0);
 
   // get required crypt key length for algorithm
-  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  uint keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read meta entry with all decrypt keys
+  AutoFreeList autoFreeList2;
   AutoFree_init(&autoFreeList2);
+  uint64 index;
   Chunk_tell(&archiveEntryInfo->meta.chunkMeta.info,&index);
+  const CryptKey     *decryptKey;
+  DecryptKeyIterator decryptKeyIterator;
+  bool               passwordFlag;
+  bool               decryptedFlag;
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -9740,7 +9642,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
-  foundMetaEntryFlag = FALSE;
+  bool foundMetaEntryFlag = FALSE;
   do
   {
     // reset
@@ -9798,6 +9700,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
              && (error == ERROR_NONE)
             )
       {
+        ChunkHeader subChunkHeader;
         error = Chunk_nextSub(&archiveEntryInfo->meta.chunkMeta.info,&subChunkHeader);
         if (error != ERROR_NONE)
         {
@@ -9948,17 +9851,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                 )
 #endif /* NDEBUG */
 {
-  AutoFreeList       autoFreeList1,autoFreeList2;
-  Errors             error;
-  ChunkHeader        chunkHeader;
-  uint64             index;
-  uint               keyLength;
-  DecryptKeyIterator decryptKeyIterator;
-  const CryptKey     *decryptKey;
-  bool               passwordFlag;
-  bool               decryptedFlag;
-  ChunkHeader        subChunkHeader;
-  bool               foundFileEntryFlag,foundFileDataFlag;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -9978,6 +9871,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   }
 
   // init variables
+  AutoFreeList autoFreeList1;
   AutoFree_init(&autoFreeList1);
 
   if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
@@ -10014,6 +9908,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->file.chunkFile.info,{ Chunk_done(&archiveEntryInfo->file.chunkFile.info); });
 
   // find next file chunk
+  ChunkHeader chunkHeader;
   do
   {
     error = getNextChunkHeader(archiveHandle,&chunkHeader);
@@ -10089,7 +9984,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
 
   // get required crypt key length for algorithm
   assert(archiveEntryInfo->blockLength > 0);
-  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  uint keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
 
   // allocate buffers
   archiveEntryInfo->file.byteBufferSize = FLOOR(MAX_BUFFER_SIZE,archiveEntryInfo->blockLength);
@@ -10108,8 +10003,14 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->file.deltaBuffer,{ free(archiveEntryInfo->file.deltaBuffer); });
 
   // try to read file entry with all decrypt keys
+  AutoFreeList autoFreeList2;
   AutoFree_init(&autoFreeList2);
+  uint64 index;
   Chunk_tell(&archiveEntryInfo->file.chunkFile.info,&index);
+  const CryptKey     *decryptKey;
+  DecryptKeyIterator decryptKeyIterator;
+  bool               passwordFlag;
+  bool               decryptedFlag;
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -10136,8 +10037,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
-  foundFileEntryFlag = FALSE;
-  foundFileDataFlag  = FALSE;
+  bool foundFileEntryFlag = FALSE;
+  bool foundFileDataFlag  = FALSE;
   do
   {
 //fprintf(stderr,"%s, %d: decrpyt key \n",__FILE__,__LINE__); debugDumpMemory(decryptKey->data,decryptKey->dataLength,0);
@@ -10310,6 +10211,7 @@ NULL//                             password
              && (error == ERROR_NONE)
             )
       {
+        ChunkHeader subChunkHeader;
         error = Chunk_nextSub(&archiveEntryInfo->file.chunkFile.info,&subChunkHeader);
         if (error != ERROR_NONE)
         {
@@ -10595,17 +10497,7 @@ NULL//                             password
                                  )
 #endif /* NDEBUG */
 {
-  AutoFreeList       autoFreeList1,autoFreeList2;
-  Errors             error;
-  ChunkHeader        chunkHeader;
-  uint64             index;
-  uint               keyLength;
-  DecryptKeyIterator decryptKeyIterator;
-  const CryptKey     *decryptKey;
-  bool               passwordFlag;
-  bool               decryptedFlag;
-  ChunkHeader        subChunkHeader;
-  bool               foundImageEntryFlag,foundImageDataFlag;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -10624,6 +10516,7 @@ NULL//                             password
   }
 
   // init variables
+  AutoFreeList autoFreeList1;
   AutoFree_init(&autoFreeList1);
 
   if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
@@ -10658,6 +10551,7 @@ NULL//                             password
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->image.chunkImage.info,{ Chunk_done(&archiveEntryInfo->image.chunkImage.info); });
 
   // find next image chunk
+  ChunkHeader chunkHeader;
   do
   {
     error = getNextChunkHeader(archiveHandle,&chunkHeader);
@@ -10729,7 +10623,7 @@ NULL//                             password
   assert(archiveEntryInfo->blockLength > 0);
 
   // get required crypt key length for algorithm
-  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  uint keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // allocate buffers
@@ -10749,8 +10643,14 @@ NULL//                             password
   AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->image.deltaBuffer,{ free(archiveEntryInfo->image.deltaBuffer); });
 
   // try to read image entry with all decrypt keys
+  AutoFreeList autoFreeList2;
   AutoFree_init(&autoFreeList2);
+  uint64 index;
   Chunk_tell(&archiveEntryInfo->image.chunkImage.info,&index);
+  const CryptKey     *decryptKey;
+  DecryptKeyIterator decryptKeyIterator;
+  bool               passwordFlag;
+  bool               decryptedFlag;
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -10777,8 +10677,8 @@ NULL//                             password
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
-  foundImageEntryFlag = FALSE;
-  foundImageDataFlag  = FALSE;
+  bool foundImageEntryFlag = FALSE;
+  bool foundImageDataFlag  = FALSE;
   do
   {
     // reset
@@ -10909,6 +10809,7 @@ NULL//                             password
              && (error == ERROR_NONE)
             )
       {
+        ChunkHeader subChunkHeader;
         error = Chunk_nextSub(&archiveEntryInfo->image.chunkImage.info,&subChunkHeader);
         if (error != ERROR_NONE)
         {
@@ -11138,17 +11039,7 @@ NULL//                             password
                                      )
 #endif /* NDEBUG */
 {
-  AutoFreeList       autoFreeList1,autoFreeList2;
-  Errors             error;
-  ChunkHeader        chunkHeader;
-  uint64             index;
-  uint               keyLength;
-  DecryptKeyIterator decryptKeyIterator;
-  const CryptKey     *decryptKey;
-  bool               passwordFlag;
-  bool               decryptedFlag;
-  bool               foundDirectoryEntryFlag;
-  ChunkHeader        subChunkHeader;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -11167,6 +11058,7 @@ NULL//                             password
   }
 
   // init variables
+  AutoFreeList autoFreeList1;
   AutoFree_init(&autoFreeList1);
 
   archiveEntryInfo->archiveHandle                       = archiveHandle;
@@ -11194,6 +11086,7 @@ NULL//                             password
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->directory.chunkDirectory.info,{ Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info); });
 
   // find next directory chunk
+  ChunkHeader chunkHeader;
   do
   {
     error = getNextChunkHeader(archiveHandle,&chunkHeader);
@@ -11255,12 +11148,18 @@ NULL//                             password
   assert(archiveEntryInfo->blockLength > 0);
 
   // get required crypt key length for algorithm
-  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  uint keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read directory entry with all decrypt keys
+  AutoFreeList autoFreeList2;
   AutoFree_init(&autoFreeList2);
+  uint64 index;
   Chunk_tell(&archiveEntryInfo->directory.chunkDirectory.info,&index);
+  const CryptKey     *decryptKey;
+  DecryptKeyIterator decryptKeyIterator;
+  bool               passwordFlag;
+  bool               decryptedFlag;
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -11287,8 +11186,8 @@ NULL//                             password
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
-  foundDirectoryEntryFlag = FALSE;
-  error                   = ERROR_NONE;
+  bool foundDirectoryEntryFlag = FALSE;
+  error                        = ERROR_NONE;
   do
   {
 //fprintf(stderr,"%s, %d: decrpyt key \n",__FILE__,__LINE__); debugDumpMemory(decryptKey->data,decryptKey->dataLength,0);
@@ -11376,6 +11275,7 @@ NULL//                             password
              && (error == ERROR_NONE)
             )
       {
+        ChunkHeader subChunkHeader;
         error = Chunk_nextSub(&archiveEntryInfo->directory.chunkDirectory.info,&subChunkHeader);
         if (error != ERROR_NONE)
         {
@@ -11560,17 +11460,7 @@ NULL//                             password
                                 )
 #endif /* NDEBUG */
 {
-  AutoFreeList       autoFreeList1,autoFreeList2;
-  Errors             error;
-  ChunkHeader        chunkHeader;
-  uint64             index;
-  uint               keyLength;
-  DecryptKeyIterator decryptKeyIterator;
-  const CryptKey     *decryptKey;
-  bool               passwordFlag;
-  bool               decryptedFlag;
-  bool               foundLinkEntryFlag;
-  ChunkHeader        subChunkHeader;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -11589,6 +11479,7 @@ NULL//                             password
   }
 
   // init variables
+  AutoFreeList autoFreeList1;
   AutoFree_init(&autoFreeList1);
 
   archiveEntryInfo->archiveHandle                  = archiveHandle;
@@ -11616,6 +11507,7 @@ NULL//                             password
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->link.chunkLink.info,{ Chunk_done(&archiveEntryInfo->link.chunkLink.info); });
 
   // find next soft link chunk
+  ChunkHeader chunkHeader;
   do
   {
     error = getNextChunkHeader(archiveHandle,&chunkHeader);
@@ -11678,12 +11570,18 @@ NULL//                             password
   assert(archiveEntryInfo->blockLength > 0);
 
   // get required crypt key length for algorithm
-  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  uint keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read link entry with all decrypt keys
+  AutoFreeList autoFreeList2;
   AutoFree_init(&autoFreeList2);
+  uint64 index;
   Chunk_tell(&archiveEntryInfo->link.chunkLink.info,&index);
+  const CryptKey     *decryptKey;
+  DecryptKeyIterator decryptKeyIterator;
+  bool               passwordFlag;
+  bool               decryptedFlag;
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -11710,7 +11608,7 @@ NULL//                             password
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
-  foundLinkEntryFlag = FALSE;
+  bool foundLinkEntryFlag = FALSE;
   do
   {
     // reset
@@ -11797,6 +11695,7 @@ NULL//                             password
              && (error == ERROR_NONE)
             )
       {
+        ChunkHeader subChunkHeader;
         error = Chunk_nextSub(&archiveEntryInfo->link.chunkLink.info,&subChunkHeader);
         if (error != ERROR_NONE)
         {
@@ -11996,17 +11895,7 @@ NULL//                             password
                                     )
 #endif /* NDEBUG */
 {
-  AutoFreeList       autoFreeList1,autoFreeList2;
-  Errors             error;
-  ChunkHeader        chunkHeader;
-  uint64             index;
-  uint               keyLength;
-  DecryptKeyIterator decryptKeyIterator;
-  const CryptKey     *decryptKey;
-  bool               passwordFlag;
-  bool               decryptedFlag;
-  ChunkHeader        subChunkHeader;
-  bool               foundHardLinkEntryFlag,foundHardLinkDataFlag;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -12025,6 +11914,7 @@ NULL//                             password
   }
 
   // init variables
+  AutoFreeList autoFreeList1;
   AutoFree_init(&autoFreeList1);
 
   if (deltaSourceSize != NULL) (*deltaSourceSize) = 0LL;
@@ -12062,6 +11952,7 @@ NULL//                             password
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->hardLink.chunkHardLink.info,{ Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info); });
 
   // find next hard link chunk
+  ChunkHeader chunkHeader;
   do
   {
     error = getNextChunkHeader(archiveHandle,&chunkHeader);
@@ -12133,7 +12024,7 @@ NULL//                             password
   assert(archiveEntryInfo->blockLength > 0);
 
   // get required crypt key length for algorithm
-  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  uint keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // allocate buffers
@@ -12153,8 +12044,14 @@ NULL//                             password
   AUTOFREE_ADD(&autoFreeList1,archiveEntryInfo->hardLink.deltaBuffer,{ free(archiveEntryInfo->hardLink.deltaBuffer); });
 
   // try to read hard link entry with all decrypt keys
+  AutoFreeList autoFreeList2;
   AutoFree_init(&autoFreeList2);
+  uint64 index;
   Chunk_tell(&archiveEntryInfo->hardLink.chunkHardLink.info,&index);
+  const CryptKey     *decryptKey;
+  DecryptKeyIterator decryptKeyIterator;
+  bool               passwordFlag;
+  bool               decryptedFlag;
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -12181,8 +12078,8 @@ NULL//                             password
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
-  foundHardLinkEntryFlag = FALSE;
-  foundHardLinkDataFlag  = FALSE;
+  bool foundHardLinkEntryFlag = FALSE;
+  bool foundHardLinkDataFlag  = FALSE;
   if (fileNameList != NULL)
   {
     StringList_clear(fileNameList);
@@ -12377,6 +12274,7 @@ NULL//                             password
              && (error == ERROR_NONE)
             )
       {
+        ChunkHeader subChunkHeader;
         error = Chunk_nextSub(&archiveEntryInfo->hardLink.chunkHardLink.info,&subChunkHeader);
         if (error != ERROR_NONE)
         {
@@ -12669,17 +12567,7 @@ NULL//                             password
                                    )
 #endif /* NDEBUG */
 {
-  AutoFreeList       autoFreeList1,autoFreeList2;
-  Errors             error;
-  ChunkHeader        chunkHeader;
-  uint64             index;
-  uint               keyLength;
-  DecryptKeyIterator decryptKeyIterator;
-  const CryptKey     *decryptKey;
-  bool               passwordFlag;
-  bool               decryptedFlag;
-  bool               foundSpecialEntryFlag;
-  ChunkHeader        subChunkHeader;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveHandle != NULL);
@@ -12698,6 +12586,7 @@ NULL//                             password
   }
 
   // init variables
+  AutoFreeList autoFreeList1;
   AutoFree_init(&autoFreeList1);
 
   archiveEntryInfo->archiveHandle                     = archiveHandle;
@@ -12725,6 +12614,7 @@ NULL//                             password
   AUTOFREE_ADD(&autoFreeList1,&archiveEntryInfo->special.chunkSpecial.info,{ Chunk_done(&archiveEntryInfo->special.chunkSpecial.info); });
 
   // find next special chunk
+  ChunkHeader chunkHeader;
   do
   {
     error = getNextChunkHeader(archiveHandle,&chunkHeader);
@@ -12787,12 +12677,18 @@ NULL//                             password
   assert(archiveEntryInfo->blockLength > 0);
 
   // get required crypt key length for algorithm
-  keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
+  uint keyLength = Crypt_getKeyLength(archiveEntryInfo->cryptAlgorithms[0]);
   assert(!Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]) || (keyLength > 0));
 
   // try to read special entry with all decrypt keys
+  AutoFreeList autoFreeList2;
   AutoFree_init(&autoFreeList2);
+  uint64 index;
   Chunk_tell(&archiveEntryInfo->special.chunkSpecial.info,&index);
+  const CryptKey     *decryptKey;
+  DecryptKeyIterator decryptKeyIterator;
+  bool               passwordFlag;
+  bool               decryptedFlag;
   if (Crypt_isEncrypted(archiveEntryInfo->cryptAlgorithms[0]))
   {
     if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
@@ -12819,7 +12715,7 @@ NULL//                             password
     passwordFlag  = FALSE;
     decryptedFlag = TRUE;
   }
-  foundSpecialEntryFlag = FALSE;
+  bool foundSpecialEntryFlag = FALSE;
   do
   {
     // reset
@@ -12906,6 +12802,7 @@ NULL//                             password
              && (error == ERROR_NONE)
             )
       {
+        ChunkHeader subChunkHeader;
         error = Chunk_nextSub(&archiveEntryInfo->special.chunkSpecial.info,&subChunkHeader);
         if (error != ERROR_NONE)
         {
@@ -13071,15 +12968,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                                     CryptSignatureStates *cryptSignatureState
                                    )
 {
-  AutoFreeList        autoFreeList;
-  Errors              error;
-  ChunkHeader         chunkHeader;
-  ChunkSignature      chunkSignature;
-  CryptHashAlgorithms cryptHashAlgorithm;
-  byte                hash[MAX_HASH_SIZE];
-  uint                hashLength;
-  CryptHash           signatureHash;
-  CryptKey            publicSignatureKey;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -13096,9 +12985,11 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
   }
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // find next signature chunk
+  ChunkHeader chunkHeader;
   do
   {
     error = getNextChunkHeader(archiveHandle,&chunkHeader);
@@ -13122,6 +13013,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
   while (chunkHeader.id != CHUNK_ID_SIGNATURE);
 
   // init signature chunk
+  ChunkSignature chunkSignature;
   error = Chunk_init(&chunkSignature.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
@@ -13160,7 +13052,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_HASH_ALGORITHM;
   }
-  cryptHashAlgorithm = CRYPT_CONSTANT_TO_HASH_ALGORITHM(chunkSignature.hashAlgorithm);
+  CryptHashAlgorithms cryptHashAlgorithm = CRYPT_CONSTANT_TO_HASH_ALGORITHM(chunkSignature.hashAlgorithm);
   if (cryptHashAlgorithm != SIGNATURE_HASH_ALGORITHM)
   {
     archiveHandle->pendingError = Chunk_skip(archiveHandle->chunkIO,archiveHandle->chunkIOUserData,&chunkHeader);
@@ -13170,6 +13062,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
   }
 
   // init signature hash
+  CryptHash signatureHash;
   error = Crypt_initHash(&signatureHash,SIGNATURE_HASH_ALGORITHM);
   if (error != ERROR_NONE)
   {
@@ -13195,6 +13088,8 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
+  byte hash[MAX_HASH_SIZE];
+  uint hashLength;
   (void)Crypt_getHash(&signatureHash,hash,sizeof(hash),&hashLength);
 
   // done signature hash
@@ -13202,8 +13097,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
   Crypt_doneHash(&signatureHash);
 
   // verify signature
-//fprintf(stderr,"%s, %d: hash %d\n",__FILE__,__LINE__,hashLength); debugDumpMemory(hash,hashLength,0);
-//fprintf(stderr,"%s, %d: signature %d\n",__FILE__,__LINE__,chunkSignature.value.length); debugDumpMemory(chunkSignature.value.data,chunkSignature.value.length,0);
+  CryptKey publicSignatureKey;
   Crypt_initKey(&publicSignatureKey,CRYPT_PADDING_TYPE_NONE);
   error = Crypt_setPublicPrivateKeyData(&publicSignatureKey,
                                         globalOptions.signaturePublicKey.data,
@@ -13251,9 +13145,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                              )
 #endif /* NDEBUG */
 {
-  Errors error,tmpError;
-  bool   eofDelta;
-  ulong  deltaLength;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
@@ -13281,7 +13173,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               error = Compress_flush(&archiveEntryInfo->file.deltaCompressInfo);
               if (error == ERROR_NONE)
               {
-                eofDelta = FALSE;
+                bool eofDelta = FALSE;
                 do
                 {
                   // flush compressed full data blocks
@@ -13289,6 +13181,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                   if (error == ERROR_NONE)
                   {
                     // get next delta-compressed data
+                    ulong deltaLength;
                     Compress_getCompressedData(&archiveEntryInfo->file.deltaCompressInfo,
                                                archiveEntryInfo->file.deltaBuffer,
                                                archiveEntryInfo->file.deltaBufferSize,
@@ -13330,7 +13223,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 // update fragment size
                 archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.deltaCompressInfo);
-                tmpError = Chunk_update(&archiveEntryInfo->file.chunkFileData.info);
+                Errors tmpError = Chunk_update(&archiveEntryInfo->file.chunkFileData.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
                 // close chunks
@@ -13346,7 +13239,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file (if not already created)
-                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
+                Errors tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
@@ -13426,7 +13319,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               error = Compress_flush(&archiveEntryInfo->image.deltaCompressInfo);
               if (error == ERROR_NONE)
               {
-                eofDelta = FALSE;
+                bool eofDelta = FALSE;
                 do
                 {
                   // flush compressed full data blocks
@@ -13434,6 +13327,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                   if (error == ERROR_NONE)
                   {
                     // get next delta-compressed data
+                    ulong deltaLength;
                     Compress_getCompressedData(&archiveEntryInfo->image.deltaCompressInfo,
                                                archiveEntryInfo->image.deltaBuffer,
                                                archiveEntryInfo->image.deltaBufferSize,
@@ -13477,7 +13371,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 assert(archiveEntryInfo->image.blockSize > 0);
                 assert((Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo) % archiveEntryInfo->image.blockSize) == 0);
                 archiveEntryInfo->image.chunkImageData.blockCount = Compress_getInputLength(&archiveEntryInfo->image.deltaCompressInfo)/archiveEntryInfo->image.blockSize;
-                tmpError = Chunk_update(&archiveEntryInfo->image.chunkImageData.info);
+                Errors tmpError = Chunk_update(&archiveEntryInfo->image.chunkImageData.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
                 // close chunks
@@ -13493,7 +13387,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file (if not already created)
-                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle
+                Errors tmpError = createArchiveFile(archiveEntryInfo->archiveHandle
                 );
                 if (tmpError != ERROR_NONE)
                 {
@@ -13569,7 +13463,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
-              tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
+              Errors tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectory.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -13611,7 +13505,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
-              tmpError = Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info);
+              Errors tmpError = Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               tmpError = Chunk_close(&archiveEntryInfo->link.chunkLink.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -13650,16 +13544,13 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
           {
-            StringNode *stringNode;
-            String     fileName;
-
             if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->hardLink.deltaCompressInfo);
               if (error == ERROR_NONE)
               {
-                eofDelta = FALSE;
+                bool eofDelta = FALSE;
                 do
                 {
                   // flush compressed full data blocks
@@ -13667,6 +13558,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                   if (error == ERROR_NONE)
                   {
                     // get next delta-compressed data
+                    ulong deltaLength;
                     Compress_getCompressedData(&archiveEntryInfo->hardLink.deltaCompressInfo,
                                                archiveEntryInfo->hardLink.deltaBuffer,
                                                archiveEntryInfo->hardLink.deltaBufferSize,
@@ -13708,7 +13600,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 // update fragment size
                 archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->hardLink.deltaCompressInfo);
-                tmpError = Chunk_update(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
+                Errors tmpError = Chunk_update(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
                 // close chunks
@@ -13724,7 +13616,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file (if not already created)
-                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
+                Errors tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
@@ -13749,6 +13641,8 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 if (Index_isAvailable())
                 {
+                  StringNode *stringNode;
+                  String     fileName;
                   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
                   {
                     error = indexAddHardlink(archiveEntryInfo->archiveHandle,
@@ -13805,7 +13699,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
-              tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info);
+              Errors tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecial.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -13849,7 +13743,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             if (!archiveEntryInfo->archiveHandle->dryRun)
             {
               // close chunks
-              tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info);
+              Errors tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
               tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMeta.info);
               if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -13895,7 +13789,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
             // close chunks
-            tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileData.info);
+            Errors tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileData.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->file.chunkFileEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -13933,7 +13827,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
             // close chunks
-            tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageData.info);
+            Errors tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageData.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->image.chunkImageEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -13969,7 +13863,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
             // close chunks
-            tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
+            Errors tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectory.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -13987,7 +13881,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
             // close chunks
-            tmpError = Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info);
+            Errors tmpError = Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->link.chunkLink.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -14005,7 +13899,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
         case ARCHIVE_ENTRY_TYPE_HARDLINK:
           {
             // close chunks
-            tmpError = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
+            Errors tmpError = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkData.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -14045,7 +13939,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
             // close chunks
-            tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info);
+            Errors tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecial.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -14063,7 +13957,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
         case ARCHIVE_ENTRY_TYPE_META:
           {
             // close chunks
-            tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info);
+            Errors tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
             tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMeta.info);
             if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
@@ -14101,15 +13995,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
                          uint             elementSize
                         )
 {
-  const byte *p;
-  ulong      writtenLength;
-  Errors     error;
-  ulong      dataBlockLength;
-  ulong      writtenDataBlockLength;
-  ulong      freeSpace;
-  ulong      deflatedBytes;
-  ulong      deltaLength;
-  bool       allowNewPartFlag;
+  Errors error;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
@@ -14121,19 +14007,19 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
 
   if (!archiveEntryInfo->archiveHandle->dryRun)
   {
-    p            = (const byte*)buffer;
-    writtenLength = 0L;
+    const byte *p            = (const byte*)buffer;
+    ulong      writtenLength = 0L;
     while (writtenLength < length)
     {
       /* get size of data block which must be written without splitting
          (make sure written data size is aligned at element size boundaries)
       */
-      dataBlockLength = ALIGN(MIN(length-writtenLength,DATA_BLOCK_SIZE-(elementSize-1)),elementSize);
+      ulong dataBlockLength = ALIGN(MIN(length-writtenLength,DATA_BLOCK_SIZE-(elementSize-1)),elementSize);
       assert(dataBlockLength > 0L);
       assert(dataBlockLength < MAX_BUFFER_SIZE);
 
       // write data block
-      writtenDataBlockLength = 0L;
+      ulong writtenDataBlockLength = 0L;
       switch (archiveEntryInfo->archiveEntryType)
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
@@ -14142,12 +14028,14 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
           while (writtenDataBlockLength < dataBlockLength)
           {
             // do compress (delta+byte)
+            ulong freeSpace;
             do
             {
               // check if there is space for delta-compressed data
               if (Compress_isFreeDataSpace(&archiveEntryInfo->file.deltaCompressInfo))
               {
                 // do delta-compress data
+                ulong deflatedBytes;
                 error = Compress_deflate(&archiveEntryInfo->file.deltaCompressInfo,
                                          p+writtenDataBlockLength,
                                          dataBlockLength-writtenDataBlockLength,
@@ -14165,6 +14053,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
               if (freeSpace > 0L)
               {
                 // get delta-compressed data
+                ulong deltaLength;
                 Compress_getCompressedData(&archiveEntryInfo->file.deltaCompressInfo,
                                            archiveEntryInfo->file.deltaBuffer,
                                            MIN(freeSpace,archiveEntryInfo->file.deltaBufferSize),
@@ -14188,7 +14077,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
                   );
 
             // check if new part is allowed: only when data block is completed
-            allowNewPartFlag = (writtenDataBlockLength >= dataBlockLength);
+            bool allowNewPartFlag = (writtenDataBlockLength >= dataBlockLength);
 
             // write compressed data
             error = writeFileDataBlocks(archiveEntryInfo,allowNewPartFlag);
@@ -14204,12 +14093,14 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
           while (writtenDataBlockLength < dataBlockLength)
           {
             // do compress (delta+byte)
+            ulong freeSpace;
             do
             {
               // check if there is space for delta-compressed data
               if (Compress_isFreeDataSpace(&archiveEntryInfo->image.deltaCompressInfo))
               {
                 // do delta-compress data
+                ulong deflatedBytes;
                 error = Compress_deflate(&archiveEntryInfo->image.deltaCompressInfo,
                                          p+writtenDataBlockLength,
                                          dataBlockLength-writtenDataBlockLength,
@@ -14227,6 +14118,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
               if (freeSpace > 0L)
               {
                 // get delta-compressed data
+                ulong deltaLength;
                 Compress_getCompressedData(&archiveEntryInfo->image.deltaCompressInfo,
                                            archiveEntryInfo->image.deltaBuffer,
                                            MIN(freeSpace,archiveEntryInfo->image.deltaBufferSize),
@@ -14250,7 +14142,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
                   );
 
             // check if compressed data blocks are available and can be encrypted and written to file
-            allowNewPartFlag = ((elementSize <= 1) || (writtenDataBlockLength >= dataBlockLength));
+            bool allowNewPartFlag = ((elementSize <= 1) || (writtenDataBlockLength >= dataBlockLength));
 
             // write compressed data
             error = writeImageDataBlocks(archiveEntryInfo,allowNewPartFlag);
@@ -14266,12 +14158,14 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
           while (writtenDataBlockLength < dataBlockLength)
           {
             // do compress (delta+byte)
+            ulong freeSpace;
             do
             {
               // check if there is space for delta-compressed data
               if (Compress_isFreeDataSpace(&archiveEntryInfo->hardLink.deltaCompressInfo))
               {
                 // do delta-compress data
+                ulong deflatedBytes;
                 error = Compress_deflate(&archiveEntryInfo->hardLink.deltaCompressInfo,
                                          p+writtenDataBlockLength,
                                          dataBlockLength-writtenDataBlockLength,
@@ -14289,6 +14183,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
               if (freeSpace > 0L)
               {
                 // get delta-compressed data
+                ulong deltaLength;
                 Compress_getCompressedData(&archiveEntryInfo->hardLink.deltaCompressInfo,
                                            archiveEntryInfo->hardLink.deltaBuffer,
                                            MIN(freeSpace,archiveEntryInfo->hardLink.deltaBufferSize),
@@ -14312,7 +14207,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
                   );
 
             // check if compressed data blocks are available and can be encrypted and written to file
-            allowNewPartFlag = ((elementSize <= 1) || (writtenDataBlockLength >= dataBlockLength));
+            bool allowNewPartFlag = ((elementSize <= 1) || (writtenDataBlockLength >= dataBlockLength));
 
             // write compressed data
             error = writeHardLinkDataBlocks(archiveEntryInfo,allowNewPartFlag);
@@ -14341,12 +14236,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
                         ulong            length
                        )
 {
-  byte   *p;
   Errors error;
-  ulong  availableBytes;
-  bool   deltaDecompressEmptyFlag,byteDecompressEmptyFlag;
-  ulong  maxInflateBytes;
-  ulong  inflatedBytes;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle->storageInfo != NULL);
@@ -14381,10 +14271,11 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       }
 
       // read data: decrypt+decompress (delta+byte)
-      p = (byte*)buffer;
+      byte *p = (byte*)buffer;
       while (length > 0L)
       {
         // check if delta-decompressor is empty
+        ulong availableBytes;
         error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->file.deltaCompressInfo,
                                                        &availableBytes
                                                       );
@@ -14392,7 +14283,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         {
           return error;
         }
-        deltaDecompressEmptyFlag = (availableBytes <= 0L);
+        bool deltaDecompressEmptyFlag = (availableBytes <= 0L);
 
         if (deltaDecompressEmptyFlag)
         {
@@ -14407,7 +14298,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             {
               return error;
             }
-            byteDecompressEmptyFlag = (availableBytes <= 0L);
+            bool byteDecompressEmptyFlag = (availableBytes <= 0L);
 
             if (byteDecompressEmptyFlag)
             {
@@ -14439,9 +14330,10 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             if (!byteDecompressEmptyFlag)
             {
               // decompress next byte-data into delta-buffer
-              maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
-                                    archiveEntryInfo->file.deltaBufferSize
-                                   );
+              ulong maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->file.deltaCompressInfo),
+                                          archiveEntryInfo->file.deltaBufferSize
+                                         );
+              ulong inflatedBytes;
               error = Compress_inflate(&archiveEntryInfo->file.byteCompressInfo,
                                        archiveEntryInfo->file.deltaBuffer,
                                        maxInflateBytes,
@@ -14484,6 +14376,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // decompress next delta-data into buffer
+        ulong inflatedBytes;
         error = Compress_inflate(&archiveEntryInfo->file.deltaCompressInfo,
                                  p,
                                  length,
@@ -14532,6 +14425,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       while (length > 0L)
       {
         // check if delta-decompressor is empty
+        ulong availableBytes;
         error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->image.deltaCompressInfo,
                                                        &availableBytes
                                                       );
@@ -14539,7 +14433,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         {
           return error;
         }
-        deltaDecompressEmptyFlag = (availableBytes <= 0L);
+        bool deltaDecompressEmptyFlag = (availableBytes <= 0L);
 
         if (deltaDecompressEmptyFlag)
         {
@@ -14554,7 +14448,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             {
               return error;
             }
-            byteDecompressEmptyFlag = (availableBytes <= 0L);
+            bool byteDecompressEmptyFlag = (availableBytes <= 0L);
 
             if (byteDecompressEmptyFlag)
             {
@@ -14586,9 +14480,10 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             if (!byteDecompressEmptyFlag)
             {
               // decompress next byte-data into delta buffer
-              maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->image.deltaCompressInfo),
-                                    archiveEntryInfo->image.deltaBufferSize
-                                   );
+              ulong maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->image.deltaCompressInfo),
+                                          archiveEntryInfo->image.deltaBufferSize
+                                         );
+              ulong inflatedBytes;
               error = Compress_inflate(&archiveEntryInfo->image.byteCompressInfo,
                                        archiveEntryInfo->image.deltaBuffer,
                                        maxInflateBytes,
@@ -14630,6 +14525,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // decompress next delta-data into buffer
+        ulong inflatedBytes;
         error = Compress_inflate(&archiveEntryInfo->image.deltaCompressInfo,
                                  p,
                                  length,
@@ -14681,6 +14577,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       while (length > 0L)
       {
         // check if delta-decompressor is empty
+        ulong availableBytes;
         error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->hardLink.deltaCompressInfo,
                                                        &availableBytes
                                                       );
@@ -14688,7 +14585,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         {
           return error;
         }
-        deltaDecompressEmptyFlag = (availableBytes <= 0L);
+        bool deltaDecompressEmptyFlag = (availableBytes <= 0L);
 
         if (deltaDecompressEmptyFlag)
         {
@@ -14703,7 +14600,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             {
               return error;
             }
-            byteDecompressEmptyFlag = (availableBytes <= 0L);
+            bool byteDecompressEmptyFlag = (availableBytes <= 0L);
 
             if (byteDecompressEmptyFlag)
             {
@@ -14735,9 +14632,10 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
             if (!byteDecompressEmptyFlag)
             {
               // decompress next byte-data into delta buffer
-              maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->hardLink.deltaCompressInfo),
-                                    archiveEntryInfo->hardLink.deltaBufferSize
-                                   );
+              ulong maxInflateBytes = MIN(Compress_getFreeCompressSpace(&archiveEntryInfo->hardLink.deltaCompressInfo),
+                                          archiveEntryInfo->hardLink.deltaBufferSize
+                                         );
+              ulong inflatedBytes;
               error = Compress_inflate(&archiveEntryInfo->hardLink.byteCompressInfo,
                                        archiveEntryInfo->hardLink.deltaBuffer,
                                        maxInflateBytes,
@@ -14779,6 +14677,7 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // decompress next delta-data into buffer
+        ulong inflatedBytes;
         error = Compress_inflate(&archiveEntryInfo->hardLink.deltaCompressInfo,
                                  p,
                                  length,
@@ -14806,13 +14705,11 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
 
 bool Archive_eofData(ArchiveEntryInfo *archiveEntryInfo)
 {
-  bool eofFlag;
-
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
 
-  eofFlag = FALSE;
+  bool eofFlag = FALSE;
   switch (archiveEntryInfo->archiveHandle->mode)
   {
     case ARCHIVE_MODE_CREATE:
@@ -14861,8 +14758,6 @@ bool Archive_eofData(ArchiveEntryInfo *archiveEntryInfo)
 
 uint64 Archive_tell(ArchiveHandle *archiveHandle)
 {
-  uint64 offset;
-
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
@@ -14870,7 +14765,7 @@ uint64 Archive_tell(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO != NULL);
   assert(archiveHandle->chunkIO->tell != NULL);
 
-  offset = 0LL;
+  uint64 offset = 0LL;
   switch (archiveHandle->mode)
   {
     case ARCHIVE_MODE_CREATE:
@@ -14949,8 +14844,6 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
 
 uint64 Archive_getSize(ArchiveHandle *archiveHandle)
 {
-  uint64 size;
-
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
@@ -14958,7 +14851,7 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO != NULL);
   assert(archiveHandle->chunkIO->getSize != NULL);
 
-  size = 0LL;
+  uint64 size = 0LL;
   if (!archiveHandle->dryRun)
   {
     switch (archiveHandle->mode)
@@ -14990,18 +14883,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
                                 CryptSignatureStates *allCryptSignaturesState
                                )
 {
-  AutoFreeList         autoFreeList;
-  Errors               error;
-  uint64               offset;
-  ChunkSignature       chunkSignature;
-  ChunkHeader          chunkHeader;
-  uint64               lastSignatureOffset;
-  CryptHashAlgorithms  cryptHashAlgorithm;
-  CryptHash            signatureHash;
-  byte                 hash[MAX_HASH_SIZE];
-  uint                 hashLength;
-  CryptKey             publicSignatureKey;
-  CryptSignatureStates cryptSignatureState;
+  Errors error;
 
   assert(archiveHandle != NULL);
 
@@ -15014,10 +14896,12 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
   }
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
   if (allCryptSignaturesState != NULL) (*allCryptSignaturesState) = CRYPT_SIGNATURE_STATE_NONE;
 
   // init signature chunk
+  ChunkSignature chunkSignature;
   error = Chunk_init(&chunkSignature.info,
                      NULL,  // parentChunkInfo
                      archiveHandle->chunkIO,
@@ -15036,8 +14920,8 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
   AUTOFREE_ADD(&autoFreeList,&chunkSignature.info,{ Chunk_done(&chunkSignature.info); });
 
   // check all signatures
-  offset              = Archive_tell(archiveHandle);
-  lastSignatureOffset = 0LL;
+  uint64 offset              = Archive_tell(archiveHandle);
+  uint64 lastSignatureOffset = 0LL;
   while (   (error == ERROR_NONE)
          && (   (allCryptSignaturesState == NULL)
              || ((*allCryptSignaturesState) == CRYPT_SIGNATURE_STATE_NONE)
@@ -15047,6 +14931,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
         )
   {
     // get next chunk
+    ChunkHeader chunkHeader;
     error = getNextChunkHeader(archiveHandle,&chunkHeader);
     if (error != ERROR_NONE)
     {
@@ -15082,7 +14967,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
         AutoFree_cleanup(&autoFreeList);
         return ERROR_INVALID_HASH_ALGORITHM;
       }
-      cryptHashAlgorithm = CRYPT_CONSTANT_TO_HASH_ALGORITHM(chunkSignature.hashAlgorithm);
+      CryptHashAlgorithms cryptHashAlgorithm = CRYPT_CONSTANT_TO_HASH_ALGORITHM(chunkSignature.hashAlgorithm);
       if (cryptHashAlgorithm != SIGNATURE_HASH_ALGORITHM)
       {
         Chunk_close(&chunkSignature.info);
@@ -15091,6 +14976,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
       }
 
       // init signature hash
+      CryptHash signatureHash;
       error = Crypt_initHash(&signatureHash,SIGNATURE_HASH_ALGORITHM);
       if (error != ERROR_NONE)
       {
@@ -15113,6 +14999,8 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
+      byte hash[MAX_HASH_SIZE];
+      uint hashLength;
       (void)Crypt_getHash(&signatureHash,hash,sizeof(hash),&hashLength);
 
       // done signature hash
@@ -15121,6 +15009,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
       // compare signatures
 //fprintf(stderr,"%s, %d: hash %d\n",__FILE__,__LINE__,hashLength); debugDumpMemory(hash,hashLength,0);
 //fprintf(stderr,"%s, %d: signature %d\n",__FILE__,__LINE__,chunkSignature.value.length); debugDumpMemory(chunkSignature.value.data,chunkSignature.value.length,0);
+      CryptKey publicSignatureKey;
       Crypt_initKey(&publicSignatureKey,CRYPT_PADDING_TYPE_NONE);
       error = Crypt_setPublicPrivateKeyData(&publicSignatureKey,
                                             globalOptions.signaturePublicKey.data,
@@ -15130,6 +15019,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
                                             NULL,  // salt
                                             NULL  // password
                                            );
+      CryptSignatureStates cryptSignatureState;
       if (error == ERROR_NONE)
       {
         error = Crypt_verifySignature(chunkSignature.value.data,
@@ -15218,9 +15108,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
                           LogHandle   *logHandle
                          )
 {
-  String  printableStorageName;
-  Errors  error;
-  IndexId storageId;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
@@ -15233,7 +15121,8 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   }
 
   // create new storage index
-  printableStorageName = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,NULL);
+  String  printableStorageName = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,NULL);
+  IndexId storageId;
   error = IndexStorage_new(indexHandle,
                            uuidId,
                            entityId,
@@ -15333,21 +15222,13 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 {
   const uint MAX_INDEX_LIST = 1024;
 
-  uint64             updateStartTimestamp;
-  uint64             updateSize;
-  uint               importLastProgress;
-  uint64             updateLastProgressTimestamp;
+  Errors error;
 
-  String             printableStorageName;
-  Errors             error;
-  uint64             size;
-  ArchiveHandle      archiveHandle;
-  ArchiveEntryInfo   archiveEntryInfo;
-  ArchiveEntryTypes  archiveEntryType;
-  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString       (entityUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes       archiveType;
-  uint64             createdDateTime;
+  uint64 updateStartTimestamp;
+  uint64 updateSize;
+  uint   importLastProgress;
+  uint64 updateLastProgressTimestamp;
+  String printableStorageName;
 
   /***********************************************************************\
   * Name   : initUpdateProgress
@@ -15429,22 +15310,12 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   // init variables
   StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
-  printableStorageName = String_new();
-  String fileName             = String_new();
-  String imageName            = String_new();
-  String directoryName        = String_new();
-  String linkName             = String_new();
-  String destinationName      = String_new();
-  StringList fileNameList;
-  StringList_init(&fileNameList);
-  String hostName             = String_new();
-  String userName             = String_new();
-  String comment              = String_new();
 
   // get printable name
-  Storage_getPrintableName(printableStorageName,&storageInfo->storageSpecifier,NULL);
+  printableStorageName = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,NULL);
 
   // open archive
+  ArchiveHandle archiveHandle;
   error = Archive_open(&archiveHandle,
                        storageInfo,
                        NULL,  // archive name
@@ -15455,15 +15326,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                       );
   if (error != ERROR_NONE)
   {
-    String_delete(comment);
-    String_delete(userName);
-    String_delete(hostName);
-    StringList_done(&fileNameList);
-    String_delete(destinationName);
-    String_delete(linkName);
-    String_delete(directoryName);
-    String_delete(imageName);
-    String_delete(fileName);
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
@@ -15476,33 +15338,28 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   if (error != ERROR_NONE)
   {
     (void)Archive_close(&archiveHandle,FALSE);
-    String_delete(comment);
-    String_delete(userName);
-    String_delete(hostName);
-    StringList_done(&fileNameList);
-    String_delete(destinationName);
-    String_delete(linkName);
-    String_delete(directoryName);
-    String_delete(imageName);
-    String_delete(fileName);
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
 
   // get size
-  size = Archive_getSize(&archiveHandle);
+  uint64 size = Archive_getSize(&archiveHandle);
 
   // init progress info
   initUpdateIndexProgress(size);
 
   // read archive content
-  ulong entryCount              = 0L;
-  bool  deletedStorage          = FALSE;
-  bool  aborted                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
-  bool  serverAllocationPending = Storage_isServerAllocationPending(storageInfo);
-  bool  newEntityCreated        = FALSE;
+  ulong  entryCount              = 0L;
+  bool   deletedStorage          = FALSE;
+  bool   aborted                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
+  bool   serverAllocationPending = Storage_isServerAllocationPending(storageInfo);
+  bool   newEntityCreated        = FALSE;
 //uint64 t0,t1; t0 = Misc_getTimestamp();
+  String hostName                = String_new();
+  String userName                = String_new();
+  uint64 createdDateTime         = 0L;
+  String comment                 = String_new();
   while (   !Archive_eof(&archiveHandle)
          && (error == ERROR_NONE)
          && !deletedStorage
@@ -15511,6 +15368,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
         )
   {
     // get next file type
+    ArchiveEntryTypes archiveEntryType;
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         NULL,  // archiveCryptInfo
@@ -15529,6 +15387,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
         {
           // read file entry
           ArchiveEntryInfo archiveEntryInfo;
+          String           fileName = String_new();
           FileInfo         fileInfo;
           uint64           fragmentOffset,fragmentSize;
           error = Archive_readFileEntry(&archiveEntryInfo,
@@ -15549,6 +15408,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                        );
           if (error != ERROR_NONE)
           {
+            String_delete(fileName);
             break;
           }
 
@@ -15570,6 +15430,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
+          String_delete(fileName);
 
           entryCount++;
         }
@@ -15578,6 +15439,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
         {
           // read image entry
           ArchiveEntryInfo archiveEntryInfo;
+          String           imageName = String_new();
           DeviceInfo       deviceInfo;
           FileSystemTypes  fileSystemType;
           uint64           blockOffset,blockCount;
@@ -15599,6 +15461,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                         );
           if (error != ERROR_NONE)
           {
+            String_delete(imageName);
             break;
           }
 
@@ -15615,6 +15478,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
+          String_delete(imageName);
 
           entryCount++;
         }
@@ -15622,7 +15486,9 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
       case ARCHIVE_ENTRY_TYPE_DIRECTORY:
         {
           // read directory entry
-          FileInfo fileInfo;
+          ArchiveEntryInfo archiveEntryInfo;
+          String           directoryName = String_new();
+          FileInfo         fileInfo;
           error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                              &archiveHandle,
                                              NULL,  // cryptType
@@ -15635,6 +15501,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                             );
           if (error != ERROR_NONE)
           {
+            String_delete(directoryName);
             break;
           }
 
@@ -15653,6 +15520,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
+          String_delete(directoryName);
 
           entryCount++;
         }
@@ -15660,7 +15528,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
       case ARCHIVE_ENTRY_TYPE_LINK:
         {
           // read link entry
-          FileInfo fileInfo;
+          ArchiveEntryInfo archiveEntryInfo;
+          String           linkName = String_new();
+          String           destinationName = String_new();
+          FileInfo         fileInfo;
           error = Archive_readLinkEntry(&archiveEntryInfo,
                                         &archiveHandle,
                                         NULL,  // cryptType
@@ -15674,6 +15545,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                        );
           if (error != ERROR_NONE)
           {
+            String_delete(destinationName);
+            String_delete(linkName);
             break;
           }
 
@@ -15693,6 +15566,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
+          String_delete(destinationName);
+          String_delete(linkName);
 
           entryCount++;
         }
@@ -15701,6 +15576,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
         {
           // read hard link entry
           ArchiveEntryInfo archiveEntryInfo;
+          StringList       fileNameList;
+          StringList_init(&fileNameList);
           FileInfo         fileInfo;
           uint64           fragmentOffset,fragmentSize;
           error = Archive_readHardLinkEntry(&archiveEntryInfo,
@@ -15721,6 +15598,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                            );
           if (error != ERROR_NONE)
           {
+            StringList_done(&fileNameList);
             break;
           }
 
@@ -15747,6 +15625,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
+          StringList_done(&fileNameList);
 
           entryCount++;
         }
@@ -15754,7 +15633,9 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
         {
           // read special entry
-          FileInfo fileInfo;
+          ArchiveEntryInfo archiveEntryInfo;
+          String           fileName = String_new();
+          FileInfo         fileInfo;
           error = Archive_readSpecialEntry(&archiveEntryInfo,
                                            &archiveHandle,
                                            NULL,  // cryptType
@@ -15767,6 +15648,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                           );
           if (error != ERROR_NONE)
           {
+            String_delete(fileName);
             break;
           }
 
@@ -15788,6 +15670,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
+          String_delete(fileName);
 
           entryCount++;
         }
@@ -15795,6 +15678,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
       case ARCHIVE_ENTRY_TYPE_META:
         {
           // read meta entry
+          ArchiveEntryInfo archiveEntryInfo;
+          StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+          StaticString     (entityUUID,MISC_UUID_STRING_LENGTH);
+          ArchiveTypes     archiveType;
           error = Archive_readMetaEntry(&archiveEntryInfo,
                                         &archiveHandle,
                                         NULL,  // cryptType
@@ -16060,12 +15947,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String_delete(comment);
   String_delete(userName);
   String_delete(hostName);
-  StringList_done(&fileNameList);
-  String_delete(destinationName);
-  String_delete(linkName);
-  String_delete(directoryName);
-  String_delete(imageName);
-  String_delete(fileName);
   String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
 

@@ -84,11 +84,10 @@ LOCAL String StorageFile_getName(String                 string,
                                  ConstString            archiveName
                                 )
 {
-  ConstString storageFileName;
-
   assert(storageSpecifier != NULL);
 
   // get file to use
+  ConstString storageFileName;
   if      (archiveName != NULL)
   {
     storageFileName = archiveName;
@@ -126,13 +125,12 @@ LOCAL void StorageFile_getPrintableName(String                 string,
                                         ConstString            archiveName
                                        )
 {
-  ConstString storageFileName;
-
   assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FILESYSTEM);
 
   // get file to use
+  ConstString storageFileName;
   if      (!String_isEmpty(archiveName))
   {
     storageFileName = archiveName;
@@ -203,8 +201,7 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
                                     bool              initialFlag
                                    )
 {
-  TextMacros (textMacros,3);
-  Errors     error;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
@@ -217,6 +214,7 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
     String directory = String_new();
 
     // init macros
+    TextMacros (textMacros,3);
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
@@ -250,8 +248,7 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
                                      bool              finalFlag
                                     )
 {
-  TextMacros (textMacros,3);
-  Errors     error;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
@@ -264,6 +261,7 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
     String directory = String_new();
 
     // init macros
+    TextMacros (textMacros,3);
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
@@ -343,8 +341,7 @@ LOCAL bool StorageFile_isWritable(const StorageInfo *storageInfo, ConstString ar
 
 LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
-  String directoryPath,baseName;
-  Errors result;
+  Errors error;
 
   assert(archiveName != NULL);
   assert(!String_isEmpty(archiveName));
@@ -352,17 +349,17 @@ LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *stora
 
   UNUSED_VARIABLE(storageInfo);
 
-  directoryPath = String_new();
-  baseName      = String_new();
+  String directoryPath = String_new();
+  String baseName      = String_new();
   File_splitFileName(archiveName,directoryPath,baseName,NULL);
-  result = File_getTmpFileName(archiveName,
-                               String_cString(baseName),
-                               !String_isEmpty(directoryPath) ? directoryPath : tmpDirectory
-                              );
+  error = File_getTmpFileName(archiveName,
+                              String_cString(baseName),
+                              !String_isEmpty(directoryPath) ? directoryPath : tmpDirectory
+                             );
   String_delete(baseName);
   String_delete(directoryPath);
 
-  return result;
+  return error;
 }
 
 LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
@@ -372,7 +369,6 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
                                )
 {
   Errors error;
-  String directoryName;
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
@@ -393,7 +389,7 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
   }
 
   // create directory if not existing
-  directoryName = File_getDirectoryName(String_new(),fileName);
+  String directoryName = File_getDirectoryName(String_new(),fileName);
   if (!String_isEmpty(directoryName))
   {
     if (File_exists(directoryName))

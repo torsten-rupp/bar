@@ -74,10 +74,7 @@
 
 LOCAL Errors loadDeviceVolume(const StorageInfo *storageInfo)
 {
-  TextMacros (textMacros,2);
-  StringList stderrList;
-  String     commandLine;
-  Errors     error;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -93,21 +90,21 @@ LOCAL Errors loadDeviceVolume(const StorageInfo *storageInfo)
   }
 #endif
 
-  // init variables
-  StringList_init(&stderrList);
-  commandLine = String_new();
-
+  TextMacros (textMacros,2);
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_CSTRING("%device",deviceName,                      NULL);
     TEXT_MACRO_X_INT    ("%number",storageInfo->volumeRequestNumber,NULL);
   }
+  String     commandLine = String_new();
+  StringList stderrList;
+  StringList_init(&stderrList);
   error = Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
                               textMacros.data,
                               textMacros.count,
                               commandLine,
-                              CALLBACK_(executeIOOutput,NULL),
-                              CALLBACK_(executeIOOutput,NULL),
+                              CALLBACK_(executeIOOutput,&stderrList),
+                              CALLBACK_(executeIOOutput,&stderrList),
                               WAIT_FOREVER
                              );
   if (error == ERROR_NONE)
@@ -134,8 +131,6 @@ LOCAL Errors loadDeviceVolume(const StorageInfo *storageInfo)
              &stderrList
             );
   }
-
-  // free resources
   String_delete(commandLine);
   StringList_done(&stderrList);
 
@@ -153,15 +148,10 @@ LOCAL Errors loadDeviceVolume(const StorageInfo *storageInfo)
 
 LOCAL Errors unloadDeviceVolume(const StorageInfo *storageInfo)
 {
-  TextMacros (textMacros,2);
-  StringList stderrList;
-  String     commandLine;
-  Errors     error;
-
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
 
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
 
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
 #ifndef NDEBUG
@@ -172,23 +162,23 @@ LOCAL Errors unloadDeviceVolume(const StorageInfo *storageInfo)
   }
 #endif
 
-  // init variables
-  StringList_init(&stderrList);
-  commandLine = String_new();
-
   Misc_mdelay(DEVICE_UNLOAD_VOLUME_DELAY_TIME);
 
+  TextMacros (textMacros,2);
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_CSTRING("%device",deviceName,                      NULL);
     TEXT_MACRO_X_INT    ("%number",storageInfo->volumeRequestNumber,NULL);
   }
+  String     commandLine = String_new();
+  StringList stderrList;
+  StringList_init(&stderrList);
   error = Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
                               textMacros.data,
                               textMacros.count,
                               commandLine,
-                              CALLBACK_(executeIOOutput,NULL),
-                              CALLBACK_(executeIOOutput,NULL),
+                              CALLBACK_(executeIOOutput,&stderrList),
+                              CALLBACK_(executeIOOutput,&stderrList),
                               WAIT_FOREVER
                              );
   if (error == ERROR_NONE)
@@ -391,11 +381,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
 
 LOCAL Errors StorageDevice_initAll(void)
 {
-  Errors error;
-
-  error = ERROR_NONE;
-
-  return error;
+  return ERROR_NONE;
 }
 
 LOCAL void StorageDevice_doneAll(void)
@@ -407,13 +393,12 @@ LOCAL bool StorageDevice_parseSpecifier(ConstString deviceSpecifier,
                                         String      deviceName
                                        )
 {
-  bool result;
-
   assert(deviceSpecifier != NULL);
   assert(deviceName != NULL);
 
   String_clear(deviceName);
 
+  bool result;
   if (String_matchCString(deviceSpecifier,STRING_BEGIN,"^([^:]*):$",NULL,STRING_NO_ASSIGN,deviceName,NULL))
   {
     // <device name>
@@ -453,11 +438,10 @@ LOCAL String StorageDevice_getName(String                 string,
                                    ConstString            archiveName
                                   )
 {
-  ConstString storageFileName;
-
   assert(storageSpecifier != NULL);
 
   // get file to use
+  ConstString storageFileName;
   if      (archiveName != NULL)
   {
     storageFileName = archiveName;
@@ -502,13 +486,12 @@ LOCAL void StorageDevice_getPrintableName(String                 string,
                                           ConstString            archiveName
                                          )
 {
-  ConstString storageFileName;
-
   assert(string != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_DEVICE);
 
   // get file to use
+  ConstString storageFileName;
   if      (!String_isEmpty(archiveName))
   {
     storageFileName = archiveName;
@@ -552,9 +535,7 @@ LOCAL Errors StorageDevice_init(StorageInfo      *storageInfo,
                                 const JobOptions *jobOptions
                                )
 {
-  Errors         error;
-  Device         device;
-  FileSystemInfo fileSystemInfo;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
@@ -567,6 +548,7 @@ LOCAL Errors StorageDevice_init(StorageInfo      *storageInfo,
   }
 
   // get device settings
+  Device device;
   Configuration_initDeviceSettings(&device,storageInfo->storageSpecifier.deviceName,jobOptions);
 
   // init variables
@@ -598,6 +580,7 @@ LOCAL Errors StorageDevice_init(StorageInfo      *storageInfo,
   storageInfo->device.write.totalSize              = 0LL;
 
   // check space in temporary directory: 2x volumeSize
+  FileSystemInfo fileSystemInfo;
   error = File_getFileSystemInfo(&fileSystemInfo,tmpDirectory);
   if (error != ERROR_NONE)
   {
@@ -636,21 +619,17 @@ LOCAL Errors StorageDevice_init(StorageInfo      *storageInfo,
 
 LOCAL Errors StorageDevice_done(StorageInfo *storageInfo)
 {
-  Errors error;
-  String fileName;
-  Errors tmpError;
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
 
   // delete files
-  fileName = String_new();
+  String fileName = String_new();
   while (!StringList_isEmpty(&storageInfo->device.write.fileNameList))
   {
     StringList_removeFirst(&storageInfo->device.write.fileNameList,fileName);
-    tmpError = File_delete(fileName,FALSE);
+    Errors tmpError = File_delete(fileName,FALSE);
     if (tmpError != ERROR_NONE)
     {
       if (error == ERROR_NONE) error = tmpError;
@@ -674,9 +653,7 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
                                       bool        initialFlag
                                      )
 {
-  Errors     error;
-  uint       j;
-  TextMacros (textMacros,5);
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
@@ -702,7 +679,8 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
   }
 
   // init macros
-  j = Thread_getNumberOfCores();
+  uint j = Thread_getNumberOfCores();
+  TextMacros (textMacros,5);
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING("%device",storageInfo->storageSpecifier.deviceName,NULL);
@@ -735,28 +713,16 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                        bool        finalFlag
                                       )
 {
-  Errors        error;
-  ExecuteIOInfo executeIOInfo;
-  String        imageFileName;
-  uint          j;
-  TextMacros    (textMacros,7);
-  String        fileName;
-  FileInfo      fileInfo;
-  uint          retryCount;
-  bool          retryFlag;
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(globalOptions.device != NULL);
 
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
 
   if (storageInfo->device.write.volumeSize == 0LL)
   {
     printWarning(_("device volume size is 0 bytes!"));
   }
-
-  error = ERROR_NONE;
 
   if (   (storageInfo->device.write.totalSize > storageInfo->device.write.volumeSize)
       || (finalFlag && storageInfo->device.write.totalSize > 0LL)
@@ -767,6 +733,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     // init variables
 // TODO:
 //    storageInfo->device.write.step = 0;
+    ExecuteIOInfo executeIOInfo;
     executeIOInfo.storageInfo      = storageInfo;
     StringList_init(&executeIOInfo.stderrList);
 
@@ -789,7 +756,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     }
 
     // get temporary image file name
-    imageFileName = String_new();
+    String imageFileName = String_new();
     error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
     if (error != ERROR_NONE)
     {
@@ -797,7 +764,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     }
 
     // init macros
-    j = Thread_getNumberOfCores();
+    uint j = Thread_getNumberOfCores();
+    TextMacros (textMacros,7);
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_STRING ("%device",   storageInfo->storageSpecifier.deviceName,NULL);
@@ -855,7 +823,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       {
         printInfo(1,"Create image volume #%u...",storageInfo->volumeNumber);
 
-        String commandLine = String_new();
+        String   commandLine = String_new();
+        FileInfo fileInfo;
         error = Misc_executeCommand(String_cString(storageInfo->device.write.imageCommand),
                                     textMacros.data,
                                     textMacros.count,
@@ -1112,8 +1081,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     if (error == ERROR_NONE)
     {
       String commandLine = String_new();
-      retryCount = 3;
-      retryFlag  = TRUE;
+      uint   retryCount  = 3;
+      bool   retryFlag   = TRUE;
       do
       {
         retryFlag = FALSE;
@@ -1163,6 +1132,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         }
       }
       while ((error != ERROR_NONE) && (retryCount > 0) && retryFlag);
+      String_delete(commandLine);
       if (error == ERROR_NONE)
       {
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written image volume #%u",storageInfo->volumeNumber);
@@ -1170,7 +1140,6 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         updateVolumeDone(storageInfo,1,0);
         updateStorageRunningInfo(storageInfo);
       }
-      String_delete(commandLine);
     }
 
     // delete image
@@ -1182,7 +1151,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     updateStorageRunningInfo(storageInfo);
 
     // delete stored files
-    fileName = String_new();
+    String fileName = String_new();
     while (!StringList_isEmpty(&storageInfo->device.write.fileNameList))
     {
       StringList_removeFirst(&storageInfo->device.write.fileNameList,fileName);
@@ -1310,7 +1279,6 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
                                  )
 {
   Errors error;
-  String directoryName;
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
@@ -1318,7 +1286,6 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
-
 
   // check if file exists
   if (   !forceFlag
@@ -1339,7 +1306,7 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
   File_appendFileName(storageHandle->device.write.fileName,fileName);
 
   // create directory if not existing
-  directoryName = File_getDirectoryName(String_new(),storageHandle->device.write.fileName);
+  String directoryName = File_getDirectoryName(String_new(),storageHandle->device.write.fileName);
   if (!String_isEmpty(directoryName) && !File_exists(directoryName))
   {
     error = File_makeDirectory(directoryName,

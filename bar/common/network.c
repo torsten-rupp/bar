@@ -174,16 +174,10 @@ LOCAL void disconnect(SocketHandle *socketHandle)
 
 LOCAL Errors setNonBlocking(int socketDescriptor, bool enabled)
 {
-  #if   defined(PLATFORM_LINUX)
-    long   flags;
-  #elif defined(PLATFORM_WINDOWS)
-    u_long n;
-  #endif /* define(PLATFORM_...) */
-
   assert(socketDescriptor != -1);
 
   #if  defined(PLATFORM_LINUX)
-    flags = fcntl(socketDescriptor,F_GETFL,0);
+    long flags = fcntl(socketDescriptor,F_GETFL,0);
     if (flags == -1)
     {
       return ERROR_(IO,errno);
@@ -201,7 +195,7 @@ LOCAL Errors setNonBlocking(int socketDescriptor, bool enabled)
       return ERROR_(IO,errno);
     }
   #elif defined(PLATFORM_WINDOWS)
-    n = enabled ? 1 : 0;
+    u_long n = enabled ? 1 : 0;
     (void)ioctlsocket(socketDescriptor,FIONBIO,&n);
   #endif /* PLATFORM_... */
 
@@ -351,16 +345,13 @@ LOCAL Errors validateCertificate(const void *certData,
                                  uint       certLength
                                 )
 {
-  gnutls_x509_crt_t cert;
-  gnutls_datum_t    datum;
-  time_t            certActivationTime,certExpireTime;
-  char              buffer[64];
-
   // check if certificate is valid
+  gnutls_x509_crt_t cert;
   if (gnutls_x509_crt_init(&cert) != GNUTLS_E_SUCCESS)
   {
     return ERROR_INVALID_TLS_CERTIFICATE;
   }
+  gnutls_datum_t datum;
   datum.data = (void*)certData;
   datum.size = certLength;
   if (gnutls_x509_crt_import(cert,&datum,GNUTLS_X509_FMT_PEM) != GNUTLS_E_SUCCESS)
@@ -368,21 +359,23 @@ LOCAL Errors validateCertificate(const void *certData,
     gnutls_x509_crt_deinit(cert);
     return ERROR_INVALID_TLS_CERTIFICATE;
   }
-  certActivationTime = gnutls_x509_crt_get_activation_time(cert);
+  time_t certActivationTime = gnutls_x509_crt_get_activation_time(cert);
   if (certActivationTime != (time_t)(-1))
   {
     if (time(NULL) < certActivationTime)
     {
       gnutls_x509_crt_deinit(cert);
+      char buffer[64];
       return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,TIME_TYPE_LOCAL,DATE_TIME_FORMAT_LOCALE));
     }
   }
-  certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
+  time_t certExpireTime = gnutls_x509_crt_get_expiration_time(cert);
   if (certExpireTime != (time_t)(-1))
   {
     if (time(NULL) > certExpireTime)
     {
       gnutls_x509_crt_deinit(cert);
+      char buffer[64];
       return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,TIME_TYPE_LOCAL,DATE_TIME_FORMAT_LOCALE));
     }
   }
@@ -417,14 +410,12 @@ or
 #if 0
 LOCAL int verifyCertificate(gnutls_session_t session)
 {
-  int  result;
-  uint status;
-
 fprintf(stderr,"%s:%d: verify cert ------------------\n",__FILE__,__LINE__);
-  result = gnutls_certificate_verify_peers3(session,
-                                            NULL,  // hostname
-                                            &status
-                                           );
+  uint status;
+  int result = gnutls_certificate_verify_peers3(session,
+                                                NULL,  // hostname
+                                                &status
+                                               );
 fprintf(stderr,"%s:%d: result=%d\n",__FILE__,__LINE__,result);
   gnuTLSPrintCertificateStatus("Certificate verify",status);
 
@@ -466,15 +457,6 @@ LOCAL Errors initTLS(SocketHandle    *socketHandle,
                      long            timeout
                     )
 {
-  #ifdef HAVE_GNU_TLS
-//    gnutls_datum_t caDatum;
-    byte           *certChainData;
-    uint           certChainLength;
-    gnutls_datum_t certChainDatum,keyDatum;
-    int            result;
-    uint           status;
-  #endif /* HAVE_GNU_TLS */
-
   assert(socketHandle != NULL);
   assert(certData != NULL);
   assert(certLength > 0);
@@ -489,7 +471,7 @@ LOCAL Errors initTLS(SocketHandle    *socketHandle,
 
   #ifdef HAVE_GNU_TLS
     // init credentials for certificates and key
-    result = gnutls_certificate_allocate_credentials(&socketHandle->gnuTLS.credentials);
+    int result = gnutls_certificate_allocate_credentials(&socketHandle->gnuTLS.credentials);
     if (result != GNUTLS_E_SUCCESS)
     {
       return ERROR_INIT_TLS;
@@ -520,12 +502,13 @@ LOCAL Errors initTLS(SocketHandle    *socketHandle,
 #endif
 
     // init certificate chain: certificate+certificate authority (CA)
-    certChainLength = certLength;
+//    gnutls_datum_t caDatum;
+    uint certChainLength = certLength;
     if ((caData != NULL) && (caLength > 0))
     {
       certChainLength += caLength;
     }
-    certChainData = (byte*)malloc(certChainLength+1);
+    byte *certChainData = (byte*)malloc(certChainLength+1);
     if (certChainData == NULL)
     {
       gnutls_certificate_free_credentials(socketHandle->gnuTLS.credentials);
@@ -538,8 +521,10 @@ LOCAL Errors initTLS(SocketHandle    *socketHandle,
     }
     certChainData[certChainLength] = NUL;
 
+    gnutls_datum_t certChainDatum;
     certChainDatum.data = (void*)certChainData;
     certChainDatum.size = certChainLength;
+    gnutls_datum_t keyDatum;
     keyDatum.data = (void*)keyData;
     keyDatum.size = keyLength;
     result = gnutls_certificate_set_x509_key_mem(socketHandle->gnuTLS.credentials,
@@ -652,6 +637,7 @@ NYI: how to do certificate verification?
     // verify certificate
     if (tlsType == NETWORK_TLS_TYPE_CLIENT)
     {
+      uint status;
       result = gnutls_certificate_verify_peers2(socketHandle->gnuTLS.session,&status);
       if (result != GNUTLS_E_SUCCESS)
       {
@@ -1054,12 +1040,6 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
 Errors Network_initAll(void)
 {
   #ifdef HAVE_SSH2
-    uint i;
-  #endif /* HAVE_SSH2 */
-  #ifdef HAVE_GNU_TLS
-  #endif /* HAVE_GNU_TLS */
-
-  #ifdef HAVE_SSH2
     // initialize crypto multi-thread support
     cryptoMaxLocks = (uint)CRYPTO_num_locks();
     cryptoLocks = (pthread_mutex_t*)OPENSSL_malloc(cryptoMaxLocks*sizeof(pthread_mutex_t));
@@ -1072,7 +1052,7 @@ Errors Network_initAll(void)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    for (i = 0; i < cryptoMaxLocks; i++)
+    for (uint i = 0; i < cryptoMaxLocks; i++)
     {
       if (pthread_mutex_init(&cryptoLocks[i],NULL) != 0)
       {
@@ -1113,17 +1093,13 @@ Errors Network_initAll(void)
 
 void Network_doneAll(void)
 {
-  #ifdef HAVE_SSH2
-    uint i;
-  #endif /* HAVE_SSH2 */
-
   #ifdef HAVE_GNU_TLS
     gnutls_global_deinit();
   #endif /* HAVE_GNU_TLS */
   #ifdef HAVE_SSH2
     CRYPTO_set_locking_callback(NULL);
     CRYPTO_set_id_callback(NULL);
-    for (i = 0; i < cryptoMaxLocks; i++)
+    for (uint i = 0; i < cryptoMaxLocks; i++)
     {
       pthread_mutex_destroy(&cryptoLocks[i]);
     }
@@ -1161,9 +1137,6 @@ bool Network_hostExistsCString(const char *hostName)
     struct hostent bufferAddressEntry;
     struct hostent *hostAddressEntry;
     int            getHostByNameError;
-  #endif /* HAVE_GETHOSTBYNAME_R */
-
-  #if   defined(HAVE_GETHOSTBYNAME_R)
     return    (gethostbyname_r(hostName,
                                &bufferAddressEntry,
                                buffer,
@@ -1197,32 +1170,20 @@ Errors Network_connect(SocketHandle *socketHandle,
                        long         timeout
                       )
 {
-  #if   defined(HAVE_GETHOSTBYNAME_R)
-    char           buffer[512];
-    struct hostent bufferAddressEntry;
-    int            getHostByNameError;
-  #elif defined(HAVE_GETHOSTBYNAME)
-  #endif /* HAVE_GETHOSTBYNAME* */
-  struct hostent     *hostAddressEntry;
-  #if   defined(PLATFORM_LINUX)
-    in_addr_t     ipAddress;
-  #elif defined(PLATFORM_WINDOWS)
-    unsigned long ipAddress;
-  #endif /* define(PLATFORM_...) */
-  struct sockaddr_in socketAddress;
-  int                socketDescriptor;
-  SignalMask         signalMask;
-  uint               events;
-  Errors             error;
+  Errors error;
 
   assert(socketHandle != NULL);
   assert(hostName != NULL);
 
   // init variables
-  socketDescriptor = -1;
+  int socketDescriptor = -1;
 
   // get host IP address
+  struct hostent *hostAddressEntry;
   #if   defined(HAVE_GETHOSTBYNAME_R)
+    char           buffer[512];
+    struct hostent bufferAddressEntry;
+    int            getHostByNameError;
     if (gethostbyname_r(String_cString(hostName),
                         &bufferAddressEntry,
                         buffer,
@@ -1239,6 +1200,11 @@ Errors Network_connect(SocketHandle *socketHandle,
   #else /* not HAVE_GETHOSTBYNAME_R */
     hostAddressEntry = NULL;
   #endif /* HAVE_GETHOSTBYNAME_R */
+  #if   defined(PLATFORM_LINUX)
+    in_addr_t      ipAddress;
+  #elif defined(PLATFORM_WINDOWS)
+    unsigned long ipAddress;
+  #endif /* define(PLATFORM_...) */
   if (hostAddressEntry != NULL)
   {
     assert(hostAddressEntry->h_length > 0);
@@ -1277,6 +1243,7 @@ Errors Network_connect(SocketHandle *socketHandle,
           return error;
         }
 
+        struct sockaddr_in socketAddress;
         socketAddress.sin_family      = AF_INET;
         socketAddress.sin_port        = htons(hostPort);
         socketAddress.sin_addr.s_addr = ipAddress;
@@ -1293,11 +1260,12 @@ Errors Network_connect(SocketHandle *socketHandle,
           return error;
         }
 
+        SignalMask signalMask;
         MISC_SIGNAL_MASK_CLEAR(signalMask);
         #ifdef HAVE_SIGALRM
           MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
         #endif /* HAVE_SIGALRM */
-        events = Misc_waitHandle(socketDescriptor,&signalMask,HANDLE_EVENT_OUTPUT,timeout);
+        uint events = Misc_waitHandle(socketDescriptor,&signalMask,HANDLE_EVENT_OUTPUT,timeout);
         if ((events & HANDLE_EVENT_OUTPUT) == 0)
         {
           error = ERROR_CONNECT_TIMEOUT;
@@ -1321,6 +1289,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         assert(loginName != NULL);
 
         // connect
+        struct sockaddr_in socketAddress;
         socketAddress.sin_family      = AF_INET;
         socketAddress.sin_port        = htons(hostPort);
         socketAddress.sin_addr.s_addr = ipAddress;
@@ -1436,11 +1405,9 @@ void Network_disconnectDescriptor(int socketDescriptor)
 
 bool Network_eof(SocketHandle *socketHandle)
 {
-  bool eofFlag;
-
   assert(socketHandle != NULL);
 
-  eofFlag = TRUE;
+  bool eofFlag = TRUE;
   switch (socketHandle->type)
   {
     case SOCKET_TYPE_PLAIN:
@@ -1482,11 +1449,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
 ulong Network_getAvaibleBytes(SocketHandle *socketHandle)
 {
-  ulong bytesAvailable;
-
   assert(socketHandle != NULL);
 
-  bytesAvailable = 0L;
+  ulong bytesAvailable = 0L;
   switch (socketHandle->type)
   {
     case SOCKET_TYPE_PLAIN:
@@ -1539,16 +1504,12 @@ Errors Network_receive(SocketHandle *socketHandle,
                        ulong        *bytesReceived
                       )
 {
-  SignalMask signalMask;
-  uint       events;
-  long       n;
-
   assert(socketHandle != NULL);
   assert(buffer != NULL);
   assert(maxLength > 0);
   assert(bytesReceived != NULL);
 
-  n = -1L;
+  long n = -1L;
   switch (socketHandle->type)
   {
     case SOCKET_TYPE_PLAIN:
@@ -1562,12 +1523,13 @@ Errors Network_receive(SocketHandle *socketHandle,
         // Note: ignore SIGALRM in Misc_wait()
         #ifdef HAVE_SIGALRM
           // Note: ignore SIGALRM in poll()/pselect()
+          SignalMask signalMask;
           MISC_SIGNAL_MASK_CLEAR(signalMask);
           MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
         #endif /* HAVE_SIGALRM */
 
         // wait for data
-        events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_INPUT,timeout);
+        uint events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_INPUT,timeout);
         if      (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
         {
           n = recv(socketHandle->handle,buffer,maxLength,0);
@@ -1586,12 +1548,13 @@ Errors Network_receive(SocketHandle *socketHandle,
           // Note: ignore SIGALRM in Misc_wait()
           #ifdef HAVE_SIGALRM
             // Note: ignore SIGALRM in poll()/pselect()
+            SignalMask signalMask;
             MISC_SIGNAL_MASK_CLEAR(signalMask);
             MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
           #endif /* HAVE_SIGALRM */
 
           // wait for data
-          events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_INPUT,timeout);
+          uint events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_INPUT,timeout);
           if (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
           {
             n = gnutls_record_recv(socketHandle->gnuTLS.session,buffer,maxLength);
@@ -1623,15 +1586,10 @@ Errors Network_send(SocketHandle *socketHandle,
                     ulong        length
                    )
 {
-  ulong      sentBytes;
-  SignalMask signalMask;
-  uint       events;
-  long       n;
-
   assert(socketHandle != NULL);
   assert(buffer != NULL);
 
-  sentBytes = 0L;
+  ulong sentBytes = 0L;
   if (length > 0)
   {
     switch (socketHandle->type)
@@ -1642,12 +1600,13 @@ Errors Network_send(SocketHandle *socketHandle,
           // Note: ignore SIGALRM in Misc_wait()
           #ifdef HAVE_SIGALRM
             // Note: ignore SIGALRM in poll()/pselect()
+            SignalMask signalMask;
             MISC_SIGNAL_MASK_CLEAR(signalMask);
             MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
           #endif /* HAVE_SIGALRM */
 
           // wait until space in buffer is available
-          events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_OUTPUT,SEND_TIMEOUT);
+          uint events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_OUTPUT,SEND_TIMEOUT);
           if ((events & HANDLE_EVENT_OUTPUT) != 0)
           {
             // send data
@@ -1656,7 +1615,7 @@ Errors Network_send(SocketHandle *socketHandle,
             #else
               #define FLAGS 0
             #endif
-            n = send(socketHandle->handle,(const char*)(((byte*)buffer)+sentBytes),length-sentBytes,FLAGS);
+            long n = send(socketHandle->handle,(const char*)(((byte*)buffer)+sentBytes),length-sentBytes,FLAGS);
             #undef FLAGS
             if      (n > 0) sentBytes += (ulong)n;
             else if ((n == -1) && (errno != EAGAIN)) break;
@@ -1675,16 +1634,17 @@ Errors Network_send(SocketHandle *socketHandle,
             // Note: ignore SIGALRM in Misc_wait()
             #ifdef HAVE_SIGALRM
               // Note: ignore SIGALRM in poll()/pselect()
+              SignalMask signalMask;
               MISC_SIGNAL_MASK_CLEAR(signalMask);
               MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
             #endif /* HAVE_SIGALRM */
 
             // wait until space in buffer is available
-            events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_OUTPUT,SEND_TIMEOUT);
+            uint events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_OUTPUT,SEND_TIMEOUT);
             if ((events & HANDLE_EVENT_OUTPUT) != 0)
             {
               // send data
-              n = gnutls_record_send(socketHandle->gnuTLS.session,((byte*)buffer)+sentBytes,length-sentBytes);
+              long n = gnutls_record_send(socketHandle->gnuTLS.session,((byte*)buffer)+sentBytes,length-sentBytes);
               if      (n > 0) sentBytes += n;
               else if ((n < 0) && (errno != GNUTLS_E_AGAIN)) break;
             }
@@ -1722,17 +1682,16 @@ Errors Network_readLine(SocketHandle *socketHandle,
                         long         timeout
                        )
 {
-  bool   endOfLineFlag;
   Errors error;
-  char   ch;
-  ulong  bytesReceived;
 
   String_clear(line);
-  endOfLineFlag = FALSE;
+  bool endOfLineFlag = FALSE;
   while (!endOfLineFlag)
   {
 // ??? optimize?
     // read character
+    char  ch;
+    ulong bytesReceived;
     error = Network_receive(socketHandle,&ch,1,timeout,&bytesReceived);
     if (error != ERROR_NONE)
     {
@@ -1796,9 +1755,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
                           uint               keyLength
                          )
 {
-  int                n;
-  struct sockaddr_in socketAddress;
-  Errors             error;
+  Errors error;
 
   assert(serverSocketHandle != NULL);
 
@@ -1813,7 +1770,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   }
 
   // reuse address
-  n = 1;
+  int n = 1;
   if (setsockopt(serverSocketHandle->handle,SOL_SOCKET,SO_REUSEADDR,(void*)&n,sizeof(int)) != 0)
   {
     error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
@@ -1822,6 +1779,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   }
 
   // bind and listen socket
+  struct sockaddr_in socketAddress;
   socketAddress.sin_family      = AF_INET;
   socketAddress.sin_port        = htons(serverPort);
   socketAddress.sin_addr.s_addr = INADDR_ANY;
@@ -1924,9 +1882,7 @@ Errors Network_startTLS(SocketHandle    *socketHandle,
                         long            timeout
                        )
 {
-  #ifdef HAVE_GNU_TLS
-    Errors error;
-  #endif /* HAVE_GNU_TLS */
+  Errors error;
 
   assert(socketHandle->type == SOCKET_TYPE_PLAIN);
 
@@ -1993,8 +1949,6 @@ Errors Network_startTLS(SocketHandle    *socketHandle,
     }
 
     socketHandle->type = SOCKET_TYPE_TLS;
-
-    return ERROR_NONE;
   #else /* not HAVE_GNU_TLS */
     UNUSED_VARIABLE(socketHandle);
     UNUSED_VARIABLE(tlsType);
@@ -2006,8 +1960,10 @@ Errors Network_startTLS(SocketHandle    *socketHandle,
     UNUSED_VARIABLE(keyLength);
     UNUSED_VARIABLE(timeout);
 
-    return ERROR_FUNCTION_NOT_SUPPORTED;
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_GNU_TLS */
+
+  return error;
 }
 
 int Network_getServerSocket(const ServerSocketHandle *serverSocketHandle)
@@ -2023,13 +1979,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
                       long                     timeout
                      )
 {
-  struct sockaddr_in socketAddress;
-  #if   defined(PLATFORM_LINUX)
-    socklen_t          socketAddressLength;
-  #elif defined(PLATFORM_WINDOWS)
-    int                socketAddressLength;
-  #endif /* PLATFORM_... */
-  Errors             error;
+  Errors error;
 
 //unsigned int status;
 
@@ -2040,7 +1990,12 @@ Errors Network_accept(SocketHandle             *socketHandle,
   socketHandle->flags = socketFlags;
 
   // accept
-  socketAddressLength = sizeof(socketAddress);
+  struct sockaddr_in socketAddress;
+  #if   defined(PLATFORM_LINUX)
+    socklen_t socketAddressLength = sizeof(socketAddress);
+  #elif defined(PLATFORM_WINDOWS)
+    int       socketAddressLength = sizeof(socketAddress);
+  #endif /* PLATFORM_... */
   socketHandle->handle = accept(serverSocketHandle->handle,
                                 (struct sockaddr*)&socketAddress,
                                 &socketAddressLength
@@ -2111,20 +2066,17 @@ Errors Network_accept(SocketHandle             *socketHandle,
 
 Errors Network_reject(const ServerSocketHandle *serverSocketHandle)
 {
+  // accept
   struct sockaddr_in socketAddress;
   #if   defined(PLATFORM_LINUX)
-    socklen_t          socketAddressLength;
+    socklen_t socketAddressLength = sizeof(socketAddress);
   #elif defined(PLATFORM_WINDOWS)
-    int                socketAddressLength;
+    int       socketAddressLength = sizeof(socketAddress);
   #endif /* PLATFORM_... */
-  int handle;
-
-  // accept
-  socketAddressLength = sizeof(socketAddress);
-  handle = accept(serverSocketHandle->handle,
-                  (struct sockaddr*)&socketAddress,
-                  &socketAddressLength
-                 );
+  int handle = accept(serverSocketHandle->handle,
+                      (struct sockaddr*)&socketAddress,
+                      &socketAddressLength
+                     );
   if (handle == -1)
   {
     return ERRORX_(CONNECT_FAIL,errno,"%E",errno);
@@ -2142,26 +2094,16 @@ void Network_getLocalInfo(SocketHandle  *socketHandle,
                           SocketAddress *socketAddress
                          )
 {
-  struct sockaddr_in   sockAddrIn;
-  #if   defined(PLATFORM_LINUX)
-    socklen_t            sockAddrInLength;
-  #elif defined(PLATFORM_WINDOWS)
-    int                  sockAddrInLength;
-  #endif /* PLATFORM_... */
-  #if   defined(HAVE_GETHOSTBYADDR_R)
-    char           buffer[512];
-    struct hostent bufferAddressEntry;
-    struct hostent *hostAddressEntry;
-    int            getHostByAddrError;
-  #elif defined(HAVE_GETHOSTBYADDR)
-    const struct hostent *hostEntry;
-  #endif /* HAVE_GETHOSTBYNAME* */
-
   assert(socketHandle != NULL);
   assert(name != NULL);
   assert(port != NULL);
 
-  sockAddrInLength = sizeof(sockAddrIn);
+  struct sockaddr_in sockAddrIn;
+  #if   defined(PLATFORM_LINUX)
+    socklen_t sockAddrInLength = sizeof(sockAddrIn);
+  #elif defined(PLATFORM_WINDOWS)
+    int       sockAddrInLength = sizeof(sockAddrIn);
+  #endif /* PLATFORM_... */
   if (getsockname(socketHandle->handle,
                   (struct sockaddr*)&sockAddrIn,
                   &sockAddrInLength
@@ -2171,6 +2113,10 @@ void Network_getLocalInfo(SocketHandle  *socketHandle,
     if (name != NULL)
     {
       #if   defined(HAVE_GETHOSTBYADDR_R)
+        struct hostent bufferAddressEntry;
+        char           buffer[512];
+        struct hostent *hostAddressEntry;
+        int            getHostByAddrError;
         if (   (gethostbyaddr_r(&sockAddrIn.sin_addr,
                                 sizeof(sockAddrIn.sin_addr),
                                 AF_INET,
@@ -2191,10 +2137,10 @@ void Network_getLocalInfo(SocketHandle  *socketHandle,
           String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
         }
       #elif defined(HAVE_GETHOSTBYADDR)
-        hostEntry = gethostbyaddr((const char*)&sockAddrIn.sin_addr,
-                                  sizeof(sockAddrIn.sin_addr),
-                                  AF_INET
-                                 );
+        const struct hostent *hostEntry = gethostbyaddr((const char*)&sockAddrIn.sin_addr,
+                                                        sizeof(sockAddrIn.sin_addr),
+                                                        AF_INET
+                                                       );
         if (hostEntry != NULL)
         {
           String_setCString(name,hostEntry->h_name);
@@ -2240,26 +2186,17 @@ void Network_getRemoteInfo(SocketHandle  *socketHandle,
                            SocketAddress *socketAddress
                           )
 {
-  struct sockaddr_in   sockAddrIn;
-  #if   defined(PLATFORM_LINUX)
-    socklen_t            sockAddrInLength;
-  #elif defined(PLATFORM_WINDOWS)
-    int                  sockAddrInLength;
-  #endif /* PLATFORM_... */
-  #if   defined(HAVE_GETHOSTBYADDR_R)
-    char           buffer[512];
-    struct hostent bufferAddressEntry;
-    struct hostent *hostAddressEntry;
-    int            getHostByAddrError;
-  #elif defined(HAVE_GETHOSTBYADDR)
-    const struct hostent *hostEntry;
-  #endif /* HAVE_GETHOSTBYNAME* */
-
   assert(socketHandle != NULL);
   assert(name != NULL);
   assert(port != NULL);
 
-  sockAddrInLength = sizeof(sockAddrIn);
+  struct sockaddr_in sockAddrIn;
+  #if   defined(PLATFORM_LINUX)
+    socklen_t sockAddrInLength = sizeof(sockAddrIn);
+  #elif defined(PLATFORM_WINDOWS)
+    int       sockAddrInLength = sizeof(sockAddrIn);
+  #endif /* PLATFORM_... */
+
   if (getpeername(socketHandle->handle,
                   (struct sockaddr*)&sockAddrIn,
                   &sockAddrInLength
@@ -2269,6 +2206,10 @@ void Network_getRemoteInfo(SocketHandle  *socketHandle,
     if (name != NULL)
     {
       #if   defined(HAVE_GETHOSTBYADDR_R)
+        struct hostent bufferAddressEntry;
+        char           buffer[512];
+        struct hostent *hostAddressEntry;
+        int            getHostByAddrError;
         if (   (gethostbyaddr_r(&sockAddrIn.sin_addr,
                                 sizeof(sockAddrIn.sin_addr),
                                 AF_INET,
@@ -2289,10 +2230,10 @@ void Network_getRemoteInfo(SocketHandle  *socketHandle,
           String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
         }
       #elif defined(HAVE_GETHOSTBYADDR)
-        hostEntry = gethostbyaddr((const void*)&sockAddrIn.sin_addr,
-                                  sizeof(sockAddrIn.sin_addr),
-                                  AF_INET
-                                 );
+        const struct hostent *hostEntry = gethostbyaddr((const void*)&sockAddrIn.sin_addr,
+                                                        sizeof(sockAddrIn.sin_addr),
+                                                        AF_INET
+                                                       );
         if (hostEntry != NULL)
         {
           String_setCString(name,hostEntry->h_name);
@@ -2334,45 +2275,48 @@ void Network_getRemoteInfo(SocketHandle  *socketHandle,
 
 bool Network_isLocalHost(const SocketAddress *socketAddress)
 {
-  bool isLocalHost;
-  union
-  {
-    struct in_addr v4;
-    struct in6_addr v6;
-  } address;
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    int addressSize;
-  #endif /* PLATFORM_... */
-
   assert(socketAddress != NULL);
 
-  isLocalHost = FALSE;
+  bool isLocalHost = FALSE;
   switch (socketAddress->type)
   {
     case SOCKET_ADDRESS_TYPE_NONE:
       break;
     case SOCKET_ADDRESS_TYPE_V4:
-      #if   defined(PLATFORM_LINUX)
-        inet_pton(AF_INET,"127.0.0.1",&address.v4);
-        isLocalHost = (memcmp(&socketAddress->address.v4,&address.v4,sizeof(socketAddress->address.v4)) == 0);
-      #elif defined(PLATFORM_WINDOWS)
-        addressSize = sizeof(socketAddress->address.v4);
-        isLocalHost =    (WSAStringToAddressA("127.0.0.1",AF_INET,NULL,(LPSOCKADDR)&address.v4,&addressSize) == 0)
-                      && (addressSize == sizeof(socketAddress->address.v4))
-                      && (memcmp(&socketAddress->address.v4,&address.v4,sizeof(socketAddress->address.v4)) == 0);
-      #endif /* PLATFORM_... */
+      {
+        #if   defined(PLATFORM_LINUX)
+          union
+          {
+            struct in_addr v4;
+            struct in6_addr v6;
+          } address;
+          inet_pton(AF_INET,"127.0.0.1",&address.v4);
+          isLocalHost = (memcmp(&socketAddress->address.v4,&address.v4,sizeof(socketAddress->address.v4)) == 0);
+        #elif defined(PLATFORM_WINDOWS)
+          int addressSize = sizeof(socketAddress->address.v4);
+          isLocalHost =    (WSAStringToAddressA("127.0.0.1",AF_INET,NULL,(LPSOCKADDR)&address.v4,&addressSize) == 0)
+                        && (addressSize == sizeof(socketAddress->address.v4))
+                        && (memcmp(&socketAddress->address.v4,&address.v4,sizeof(socketAddress->address.v4)) == 0);
+        #endif /* PLATFORM_... */
+      }
       break;
     case SOCKET_ADDRESS_TYPE_V6:
-      #if   defined(PLATFORM_LINUX)
-        inet_pton(AF_INET,"::1",&address.v6);
-        isLocalHost = (memcmp(&socketAddress->address.v6,&address.v6,sizeof(socketAddress->address.v6)) == 0);
-      #elif defined(PLATFORM_WINDOWS)
-        addressSize = sizeof(socketAddress->address.v6);
-        isLocalHost =    (WSAStringToAddressA("::1",AF_INET6,NULL,(LPSOCKADDR)&address.v6,&addressSize) == 0)
-                      && (addressSize == sizeof(socketAddress->address.v6))
-                      && (memcmp(&socketAddress->address.v6,&address.v6,sizeof(socketAddress->address.v6)) == 0);
-      #endif /* PLATFORM_... */
+      {
+        #if   defined(PLATFORM_LINUX)
+          union
+          {
+            struct in_addr v4;
+            struct in6_addr v6;
+          } address;
+          inet_pton(AF_INET,"::1",&address.v6);
+          isLocalHost = (memcmp(&socketAddress->address.v6,&address.v6,sizeof(socketAddress->address.v6)) == 0);
+        #elif defined(PLATFORM_WINDOWS)
+          int addressSize = sizeof(socketAddress->address.v6);
+          isLocalHost =    (WSAStringToAddressA("::1",AF_INET6,NULL,(LPSOCKADDR)&address.v6,&addressSize) == 0)
+                        && (addressSize == sizeof(socketAddress->address.v6))
+                        && (memcmp(&socketAddress->address.v6,&address.v6,sizeof(socketAddress->address.v6)) == 0);
+        #endif /* PLATFORM_... */
+      }
       break;
   }
 
@@ -2387,9 +2331,7 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
                        const char           *command
                       )
 {
-  #ifdef HAVE_SSH2
-    Errors error;
-  #endif /* HAVE_SSH2 */
+  Errors error;
 
   assert(networkExecuteHandle != NULL);
   assert(socketHandle != NULL);
@@ -2441,16 +2383,17 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
     UNUSED_VARIABLE(ioMask);
     UNUSED_VARIABLE(command);
 
-    return ERROR_FUNCTION_NOT_SUPPORTED;
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
+
+  return error;
 }
 
 int Network_terminate(NetworkExecuteHandle *networkExecuteHandle)
 {
-  int exitcode;
-
   assert(networkExecuteHandle != NULL);
 
+  int exitcode;
   #ifdef HAVE_SSH2
     libssh2_channel_close(networkExecuteHandle->channel);
     libssh2_channel_wait_closed(networkExecuteHandle->channel);
@@ -2470,13 +2413,11 @@ bool Network_executeEOF(NetworkExecuteHandle  *networkExecuteHandle,
                        )
 {
   Errors error;
-  ulong  bytesRead;
-  bool   eofFlag;
 
   assert(networkExecuteHandle != NULL);
 
-  eofFlag   = TRUE;
-  bytesRead = 0;
+  bool  eofFlag   = TRUE;
+  ulong bytesRead = 0;
   switch (ioType)
   {
     case NETWORK_EXECUTE_IO_TYPE_STDOUT:
@@ -2545,10 +2486,9 @@ Errors Network_executeWrite(NetworkExecuteHandle *networkExecuteHandle,
                             ulong                length
                            )
 {
-  long sentBytes;
-
   assert(networkExecuteHandle != NULL);
 
+  long sentBytes;
   #ifdef HAVE_SSH2
     sentBytes = libssh2_channel_write(networkExecuteHandle->channel,buffer,length);
   #else /* not HAVE_SSH2 */
@@ -2569,11 +2509,9 @@ Errors Network_executeRead(NetworkExecuteHandle  *networkExecuteHandle,
                            ulong                 *bytesRead
                           )
 {
-  long n;
-
   assert(networkExecuteHandle != NULL);
 
-  n = -1L;
+  long n = -1L;
   #ifdef HAVE_SSH2
     if (timeout == WAIT_FOREVER)
     {
@@ -2675,15 +2613,13 @@ Errors Network_executeReadLine(NetworkExecuteHandle  *networkExecuteHandle,
                                long                  timeout
                               )
 {
-  bool   endOfLineFlag;
   Errors error;
-  ulong  bytesRead;
 
   assert(networkExecuteHandle != NULL);
 
   String_clear(line);
-  endOfLineFlag = FALSE;
-  bytesRead     = 0;
+  bool  endOfLineFlag = FALSE;
+  ulong bytesRead     = 0;
   while (!endOfLineFlag)
   {
     switch (ioType)

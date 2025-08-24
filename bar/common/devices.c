@@ -128,20 +128,17 @@ LOCAL_INLINE char *debugGetEmulateBlockDevice(void)
 
 LOCAL bool findCommandInPath(String command, const char *name)
 {
-  bool            foundFlag;
-  const char      *path;
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-
   assert(command != NULL);
   assert(name != NULL);
 
-  foundFlag = FALSE;
+  bool foundFlag = FALSE;
 
-  path = getenv("PATH");
+  const char *path = getenv("PATH");
   if (path != NULL)
   {
+    StringTokenizer stringTokenizer;
     String_initTokenizerCString(&stringTokenizer,path,":","",FALSE);
+    ConstString token;
     while (String_getNextToken(&stringTokenizer,&token,NULL) && !foundFlag)
     {
       File_setFileName(command,token);
@@ -179,18 +176,16 @@ LOCAL Errors execute(const char *command, const char *arguments[])
   Errors getError(int errorCode)
   {
     Errors error;
-    String s;
-    uint   i;
 
     assert(arguments != NULL);
     assert(arguments[0] != NULL);
 
     // init variables
-    s = String_new();
+    String s = String_new();
 
     // format command
     String_joinCString(s,command,' ');
-    i = 1;
+    uint i = 1;
     while (arguments[i] != NULL)
     {
       String_joinCString(s,arguments[i],' ');
@@ -206,28 +201,24 @@ LOCAL Errors execute(const char *command, const char *arguments[])
     return error;
   }
 
-  String text;
-  uint   i;
-  pid_t  pid;
   Errors error;
-  int    status;
 
   assert(arguments != NULL);
   assert(arguments[0] != NULL);
 
   // init variables
-  text = String_new();
+  String text = String_new();
 
   // format command
   String_joinCString(text,command,' ');
-  i = 1;
+  uint i = 1;
   while (arguments[i] != NULL)
   {
     String_joinCString(text,arguments[i],' ');
     i++;
   }
 
-  pid = fork();
+  pid_t pid = fork();
   if      (pid == 0)
   {
     // suppress output/input on stdout/stderr/stdin
@@ -248,6 +239,7 @@ LOCAL Errors execute(const char *command, const char *arguments[])
     return error;
   }
 
+  int status;
   if (waitpid(pid,&status,0) == -1)
   {
     error = ERRORX_(EXEC_FAIL,0,"'%s', error %d",String_cString(text),errno);
@@ -288,13 +280,7 @@ Errors Device_open(DeviceHandle *deviceHandle,
                    DeviceModes  deviceMode
                   )
 {
-  off_t  n;
   Errors error;
-  #ifndef NDEBUG
-    const char       *debugEmulateBlockDevice;
-    CStringTokenizer stringTokenizer;
-    const char       *emulateDeviceName,*emulateFileName;
-  #endif /* not NDEBUG */
 
   assert(deviceHandle != NULL);
   assert(deviceName != NULL);
@@ -308,83 +294,91 @@ Errors Device_open(DeviceHandle *deviceHandle,
   switch (deviceMode)
   {
     case DEVICE_OPEN_READ:
-      #ifndef NDEBUG
-        debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-        if (debugEmulateBlockDevice != NULL)
-        {
-          stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-          if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-              && String_equalsCString(deviceName,emulateDeviceName)
-             )
+      {
+        #ifndef NDEBUG
+          const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+          if (debugEmulateBlockDevice != NULL)
           {
-            // emulate block device
-            if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+            CStringTokenizer stringTokenizer;
+            stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+            const char *emulateDeviceName,*emulateFileName;
+            if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+                && String_equalsCString(deviceName,emulateDeviceName)
+               )
             {
-              deviceHandle->handle = open(emulateFileName,FLAGS|O_RDONLY);
+              // emulate block device
+              if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+              {
+                deviceHandle->handle = open(emulateFileName,FLAGS|O_RDONLY);
+              }
+              else
+              {
+                deviceHandle->handle = open(emulateDeviceName,FLAGS|O_RDONLY);
+              }
             }
             else
             {
-              deviceHandle->handle = open(emulateDeviceName,FLAGS|O_RDONLY);
+              // use block device
+              deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDONLY);
             }
+            stringTokenizerDone(&stringTokenizer);
           }
           else
           {
             // use block device
             deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDONLY);
           }
-          stringTokenizerDone(&stringTokenizer);
-        }
-        else
-        {
-          // use block device
+        #else /* NDEBUG */
           deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDONLY);
+        #endif /* not NDEBUG */
+        if (deviceHandle->handle == -1)
+        {
+          return ERRORX_(OPEN_DEVICE,errno,"%s",String_cString(deviceName));
         }
-      #else /* NDEBUG */
-        deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDONLY);
-      #endif /* not NDEBUG */
-      if (deviceHandle->handle == -1)
-      {
-        return ERRORX_(OPEN_DEVICE,errno,"%s",String_cString(deviceName));
       }
       break;
     case DEVICE_OPEN_WRITE:
+      {
 // TODO:
-      #ifndef NDEBUG
-        debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-        if (debugEmulateBlockDevice != NULL)
-        {
-          stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-          if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-              && String_equalsCString(deviceName,emulateDeviceName)
-             )
+        #ifndef NDEBUG
+          const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+          if (debugEmulateBlockDevice != NULL)
           {
-            // emulate block device
-            if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+            CStringTokenizer stringTokenizer;
+            stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+            const char *emulateDeviceName,*emulateFileName;
+            if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+                && String_equalsCString(deviceName,emulateDeviceName)
+               )
             {
-              deviceHandle->handle = open(emulateFileName,FLAGS|O_RDWR);
+              // emulate block device
+              if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+              {
+                deviceHandle->handle = open(emulateFileName,FLAGS|O_RDWR);
+              }
+              else
+              {
+                deviceHandle->handle = open(emulateDeviceName,FLAGS|O_RDWR);
+              }
             }
             else
             {
-              deviceHandle->handle = open(emulateDeviceName,FLAGS|O_RDWR);
+              // use block device
+              deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDWR);
             }
+            stringTokenizerDone(&stringTokenizer);
           }
           else
           {
-            // use block device
             deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDWR);
           }
-          stringTokenizerDone(&stringTokenizer);
-        }
-        else
-        {
+        #else /* NDEBUG */
           deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDWR);
+        #endif /* not NDEBUG */
+        if (deviceHandle->handle == -1)
+        {
+          return ERRORX_(OPEN_DEVICE,errno,"%s",String_cString(deviceName));
         }
-      #else /* NDEBUG */
-        deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDWR);
-      #endif /* not NDEBUG */
-      if (deviceHandle->handle == -1)
-      {
-        return ERRORX_(OPEN_DEVICE,errno,"%s",String_cString(deviceName));
       }
       break;
     #ifndef NDEBUG
@@ -396,7 +390,7 @@ Errors Device_open(DeviceHandle *deviceHandle,
   #undef FLAGS
 
   // get device size
-  n = LSEEK(deviceHandle->handle,(off_t)0,SEEK_END);
+  off_t n = LSEEK(deviceHandle->handle,(off_t)0,SEEK_END);
   if (n == (off_t)(-1))
   {
     error = ERRORX_(IO,errno,"%s",String_cString(deviceName));
@@ -437,14 +431,12 @@ Errors Device_read(DeviceHandle *deviceHandle,
                    ulong        *bytesRead
                   )
 {
-  ssize_t n;
-
   assert(deviceHandle != NULL);
   assert(deviceHandle->handle != -1);
   assert(deviceHandle->index <= deviceHandle->size);
   assert(buffer != NULL);
 
-  n = read(deviceHandle->handle,buffer,bufferLength);
+  ssize_t n = read(deviceHandle->handle,buffer,bufferLength);
   if (   (n == (off_t)(-1))
       || ((n < (ssize_t)bufferLength) && (bytesRead == NULL))
      )
@@ -463,14 +455,12 @@ Errors Device_write(DeviceHandle *deviceHandle,
                     ulong        bufferLength
                    )
 {
-  ssize_t n;
-
   assert(deviceHandle != NULL);
   assert(deviceHandle->handle != -1);
   assert(deviceHandle->index <= deviceHandle->size);
   assert(buffer != NULL);
 
-  n = write(deviceHandle->handle,buffer,bufferLength);
+  ssize_t n = write(deviceHandle->handle,buffer,bufferLength);
   if (n > 0) deviceHandle->index += n;
   if (deviceHandle->index > deviceHandle->size) deviceHandle->size = deviceHandle->index;
   if (n != (ssize_t)bufferLength)
@@ -490,14 +480,12 @@ uint64 Device_getSize(DeviceHandle *deviceHandle)
 
 Errors Device_tell(DeviceHandle *deviceHandle, uint64 *offset)
 {
-  off_t n;
-
   assert(deviceHandle != NULL);
   assert(deviceHandle->handle != -1);
   assert(deviceHandle->index <= deviceHandle->size);
   assert(offset != NULL);
 
-  n = LSEEK(deviceHandle->handle,(off_t)0,SEEK_CUR);
+  off_t n = LSEEK(deviceHandle->handle,(off_t)0,SEEK_CUR);
   if (n == (off_t)(-1))
   {
     return ERRORX_(IO,errno,"%s",String_cString(deviceHandle->name));
@@ -635,11 +623,11 @@ Errors Device_umount(ConstString umountCommand,
                      ConstString mountPointName
                     )
 {
-  TextMacros (textMacros,1);
-  Errors     error;
+  Errors error;
 
   assert(mountPointName != NULL);
 
+  TextMacros (textMacros,1);
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING ("%directory",mountPointName,NULL);
@@ -684,31 +672,22 @@ Errors Device_umount(ConstString umountCommand,
 
 bool Device_isMounted(ConstString mountPointName)
 {
-  bool          mounted;
-  String        absoluteName;
-  #if   defined(PLATFORM_LINUX)
-    FILE          *mtab;
-    char          buffer[4096];
-    struct mntent mountEntry;
-    char          *s;
-  #elif defined(PLATFORM_WINDOWS)
-    char *s;
-  #endif /* PLATFORM_... */
-
   assert(mountPointName != NULL);
 
-  mounted = FALSE;
+  bool mounted = FALSE;
 
   // get absolute name
-  absoluteName = String_new();
+  String absoluteName = String_new();
   #if   defined(PLATFORM_LINUX)
-    s = realpath(String_cString(mountPointName),NULL);
+    char *s = realpath(String_cString(mountPointName),NULL);
     String_setCString(absoluteName,s);
     free(s);
 
-    mtab = setmntent("/etc/mtab","r");
+    FILE *mtab = setmntent("/etc/mtab","r");
     if (mtab != NULL)
     {
+      struct mntent mountEntry;
+      char          buffer[4096];
       while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
       {
         if (   String_equalsCString(mountPointName,mountEntry.mnt_fsname)
@@ -724,7 +703,7 @@ bool Device_isMounted(ConstString mountPointName)
       endmntent(mtab);
     }
   #elif defined(PLATFORM_WINDOWS)
-    s = _fullpath(NULL,String_cString(mountPointName),0);
+    char *s = _fullpath(NULL,String_cString(mountPointName),0);
     String_setCString(absoluteName,s);
     free(s);
 // TODO: NYI
@@ -785,19 +764,12 @@ void Device_closeDeviceList(DeviceListHandle *deviceListHandle)
 
 bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
 {
+  assert(deviceListHandle != NULL);
+
   #if   defined(PLATFORM_LINUX)
     #define PREFIX "/dev/"
     #define BUFFER_SIZE 256-strlen(PREFIX)
 
-    uint        i,j;
-    struct stat fileStat;
-    char        buffer[BUFFER_SIZE];
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
-  assert(deviceListHandle != NULL);
-
-  #if   defined(PLATFORM_LINUX)
     assert(deviceListHandle->file != NULL);
 
     // read entry iff not read
@@ -806,14 +778,14 @@ bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
           )
     {
       // skip leading spaces
-      i = 0;
+      uint i = 0;
       while ((deviceListHandle->line[i] != '\0') && isspace(deviceListHandle->line[i]))
       {
         i++;
       }
 
       // skip trailing spaces
-      j = i;
+      uint j = i;
       while (deviceListHandle->line[j] != '\0')
       {
         j++;
@@ -827,10 +799,12 @@ bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
       if (j > i)
       {
         // parse and get device name
+        char buffer[BUFFER_SIZE];
         if (String_scanCString(&deviceListHandle->line[i],"%* %* %* %" STRINGIFY(BUFFER_SIZE) "s %*",buffer))
         {
           stringSet(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),PREFIX);
           stringAppend(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),buffer);
+          struct stat fileStat;
           if (stat(deviceListHandle->deviceName,&fileStat) == 0)
           {
             // mark entry available
@@ -852,13 +826,6 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
 {
   #define DEVICE_PREFIX "/dev/"
 
-  #if   defined(PLATFORM_LINUX)
-    uint        i,j;
-    struct stat fileStat;
-    char        buffer[256-stringLength(DEVICE_PREFIX)];
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
   assert(deviceListHandle != NULL);
   assert(deviceName != NULL);
 
@@ -873,14 +840,14 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
           )
     {
       // skip leading spaces
-      i = 0;
+      uint i = 0;
       while ((deviceListHandle->line[i] != '\0') && isspace(deviceListHandle->line[i]))
       {
         i++;
       }
 
       // skip trailing spaces
-      j = i;
+      uint j = i;
       while (deviceListHandle->line[j] != '\0')
       {
         j++;
@@ -895,10 +862,12 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
       if (j > i)
       {
         // parse and get device name
+        char buffer[256-stringLength(DEVICE_PREFIX)];
         if (String_scanCString(&deviceListHandle->line[i],"%* %* %* %256s %*",buffer))
         {
           stringSet(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),"/dev/");
           stringAppend(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),buffer);
+          struct stat fileStat;
           if (stat(deviceListHandle->deviceName,&fileStat) == 0)
           {
             // mark entry available
@@ -944,19 +913,16 @@ bool Device_exists(ConstString deviceName)
 bool Device_existsCString(const char *deviceName)
 {
   bool existsFlag;
-  #ifndef NDEBUG
-    const char       *debugEmulateBlockDevice;
-    CStringTokenizer stringTokenizer;
-    const char       *emulateDeviceName,*emulateFileName;
-  #endif /* not NDEBUG */
 
   assert(deviceName != NULL);
 
   #ifndef NDEBUG
-    debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
     if (debugEmulateBlockDevice != NULL)
     {
+      CStringTokenizer stringTokenizer;
       stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+      const char *emulateDeviceName,*emulateFileName;
       if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
           && stringEquals(deviceName,emulateDeviceName)
          )
@@ -1005,27 +971,6 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
                              bool        sizesFlag
                             )
 {
-  #if   defined(PLATFORM_LINUX)
-    FileStat      fileStat;
-    int      handle;
-    #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
-      int           i;
-    #endif
-    #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
-      long          l;
-    #endif
-    struct mntent mountEntry;
-    char          buffer[4096];
-    FILE          *mtab;
-  #elif defined(PLATFORM_WINDOWS)
-    ULARGE_INTEGER freeSpace,totalSpace,totalFreeSpace;
-  #endif /* PLATFORM_... */
-  #ifndef NDEBUG
-    const char       *debugEmulateBlockDevice;
-    CStringTokenizer stringTokenizer;
-    const char       *emulateDeviceName,*emulateFileName;
-  #endif /* not NDEBUG */
-
   assert(deviceInfo != NULL);
   assert(deviceName != NULL);
 
@@ -1040,11 +985,17 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
 
   #if   defined(PLATFORM_LINUX)
     // check if character or block device
+    FileStat fileStat;
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    #endif
     #ifndef NDEBUG
       debugEmulateBlockDevice = debugGetEmulateBlockDevice();
       if (debugEmulateBlockDevice != NULL)
       {
+        CStringTokenizer stringTokenizer;
         stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+        const char *emulateDeviceName,*emulateFileName;
         if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
             && stringEquals(deviceName,emulateDeviceName))
         {
@@ -1124,7 +1075,9 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
       debugEmulateBlockDevice = debugGetEmulateBlockDevice();
       if (debugEmulateBlockDevice != NULL)
       {
+        CStringTokenizer stringTokenizer;
         stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+        const char *emulateDeviceName;
         if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
             && stringEquals(deviceName,emulateDeviceName)
            )
@@ -1154,10 +1107,12 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
     {
       // get block size, total size
       #ifndef NDEBUG
-        debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+        const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
         if (debugEmulateBlockDevice != NULL)
         {
+          CStringTokenizer stringTokenizer;
           stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+          const char *emulateDeviceName,*emulateFileName;
           if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
               && stringEquals(deviceName,emulateDeviceName)
              )
@@ -1201,13 +1156,15 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
           else
           {
             // use block device
-            handle = open(deviceName,O_RDONLY);
+            int handle = open(deviceName,O_RDONLY);
             if      (handle != -1)
             {
               #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+                int i;
                 if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
               #endif
               #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+                long l;
                 if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
               #endif
               close(handle);
@@ -1226,13 +1183,15 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
         }
         else
         {
-          handle = open(deviceName,O_RDONLY);
+          int handle = open(deviceName,O_RDONLY);
           if      (handle != -1)
           {
             #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+              int i;
               if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
             #endif
             #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+              long l;
               if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
             #endif
             close(handle);
@@ -1248,13 +1207,15 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
           }
         }
       #else /* NDEBUG */
-        handle = open(deviceName,O_RDONLY);
+        int handle = open(deviceName,O_RDONLY);
         if      (handle != -1)
         {
           #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+            int i;
             if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
           #endif
           #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+            long l;
             if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
           #endif
           close(handle);
@@ -1283,6 +1244,7 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
     deviceInfo->minor           = 0;
     deviceInfo->id              = 0;
 
+    ULARGE_INTEGER freeSpace,totalSpace,totalFreeSpace;
     if      (GetDiskFreeSpaceEx(deviceName,&freeSpace,&totalSpace,&totalFreeSpace))
     {
       deviceInfo->blockSize = 0;
@@ -1301,9 +1263,11 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
 
   // check if mounted
   #if   defined(PLATFORM_LINUX)
-    mtab = setmntent("/etc/mtab","r");
+    FILE *mtab = setmntent("/etc/mtab","r");
     if (mtab != NULL)
     {
+      struct mntent mountEntry;
+      char          buffer[4096];
       while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
       {
         if (stringEquals(deviceName,mountEntry.mnt_fsname))

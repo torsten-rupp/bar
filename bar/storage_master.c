@@ -98,8 +98,7 @@ LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
                                       bool              initialFlag
                                      )
 {
-  TextMacros (textMacros,2);
-  Errors     error;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->jobOptions->storageOnMasterFlag);
@@ -109,6 +108,7 @@ LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
   if (!initialFlag)
   {
     // init macros
+    TextMacros (textMacros,2);
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_STRING("%file",  archiveName,              NULL);
@@ -139,8 +139,7 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
                                        bool              finalFlag
                                       )
 {
-  TextMacros (textMacros,2);
-  Errors     error;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->jobOptions->storageOnMasterFlag);
@@ -150,6 +149,7 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
   if (!finalFlag)
   {
     // init macros
+    TextMacros (textMacros,2);
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_STRING ("%file",  archiveName,              NULL);
@@ -175,30 +175,27 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
 
 LOCAL bool StorageMaster_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
-  Errors error;
-  bool   existsFlag;
-
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
-  existsFlag = FALSE;
+  bool existsFlag = FALSE;
 
-  error = ServerIO_executeCommand(storageInfo->masterIO,
-                                  MASTER_DEBUG_LEVEL,
-                                  MASTER_COMMAND_TIMEOUT,
-                                  CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
-                                  {
-                                    assert(resultMap != NULL);
+  Errors error = ServerIO_executeCommand(storageInfo->masterIO,
+                                         MASTER_DEBUG_LEVEL,
+                                         MASTER_COMMAND_TIMEOUT,
+                                         CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                         {
+                                           assert(resultMap != NULL);
 
-                                    UNUSED_VARIABLE(userData);
+                                           UNUSED_VARIABLE(userData);
 
-                                    StringMap_getBool(resultMap,"existsFlag",&existsFlag,FALSE);
+                                           StringMap_getBool(resultMap,"existsFlag",&existsFlag,FALSE);
 
-                                    return ERROR_NONE;
-                                  },NULL),
-                                  "STORAGE_EXISTS archiveName=%'S",
-                                  archiveName
-                                 );
+                                           return ERROR_NONE;
+                                         },NULL),
+                                         "STORAGE_EXISTS archiveName=%'S",
+                                         archiveName
+                                        );
   if (error != ERROR_NONE)
   {
     existsFlag = FALSE;
@@ -330,30 +327,22 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   const uint MAX_BLOCK_SIZE = 32*1024;
   const uint MAX_BLOCKS     = 16;  // max. number of pending transfer blocks
 
-  String     encodedData;
-  const byte *p;
-  uint       ids[MAX_BLOCKS];
-  uint       idCount;
-  ulong      writtenBytes;
-  ulong      length;
-  Errors     error;
-  uint       i;
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
   assert(buffer != NULL);
 
-  // init variables
-  encodedData = String_new();
+  Errors error = ERROR_NONE;
 
-  p            = (const byte*)buffer;
-  writtenBytes = 0L;
-  idCount      = 0;
+  String     encodedData  = String_new();
+  const byte *p           = (const byte*)buffer;
+  ulong      writtenBytes = 0L;
+  uint       ids[MAX_BLOCKS];
+  uint       idCount      = 0;
   while (writtenBytes < bufferLength)
   {
-    length = MIN(bufferLength-writtenBytes,MAX_BLOCK_SIZE);
+    ulong length = MIN(bufferLength-writtenBytes,MAX_BLOCK_SIZE);
 
     // encode data
     Misc_base64Encode(String_clear(encodedData),p+writtenBytes,length);
@@ -379,6 +368,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
     // wait for result
     if (idCount >= MAX_BLOCKS)
     {
+      uint i;
       error = ServerIO_waitResults(storageHandle->storageInfo->masterIO,
                                    MASTER_COMMAND_TIMEOUT,
                                    ids,
@@ -400,9 +390,9 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
     writtenBytes += length;
     storageHandle->master.index += (uint64)length;
   }
-  error = ERROR_NONE;
   while (idCount > 0)
   {
+    uint i;
     error = ServerIO_waitResults(storageHandle->storageInfo->masterIO,
                                  MASTER_COMMAND_TIMEOUT,
                                  ids,
@@ -438,45 +428,35 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
   const uint MAX_BLOCK_SIZE = 32*1024;
   const uint MAX_BLOCKS     = 16;  // max. number of pending transfer blocks
 
-  void   *buffer;
-  String encodedData;
-  uint64 size;
-  ulong  transferedBytes;
-  uint   ids[MAX_BLOCKS];
-  uint   idCount;
-  ulong  length;
-  Errors error;
-  uint   i;
-
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(storageHandle->storageInfo->jobOptions->storageOnMasterFlag);
 
-  // init variables
-  buffer = malloc(MAX_BLOCK_SIZE);
-  if (buffer == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  encodedData = String_new();
+  Errors error;
 
   // seek to begin of file
   error = File_seek(fileHandle,0LL);
   if (error != ERROR_NONE)
   {
-    free(buffer);
     return error;
   }
 
   // get total size
-  size = File_getSize(fileHandle);
+  uint64 size = File_getSize(fileHandle);
 
-  transferedBytes = 0L;
-  idCount         = 0;
+  void   *buffer         = malloc(MAX_BLOCK_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  String encodedData     = String_new();
+  ulong  transferedBytes = 0L;
+  uint   ids[MAX_BLOCKS];
+  uint   idCount         = 0;
   while (transferedBytes < size)
   {
-    length = (ulong)MIN(size-transferedBytes,MAX_BLOCK_SIZE);
+    ulong length = (ulong)MIN(size-transferedBytes,MAX_BLOCK_SIZE);
 
     // read data
     error = File_read(fileHandle,buffer,length,NULL);
@@ -512,6 +492,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
     // wait for result
     if (idCount >= MAX_BLOCKS)
     {
+      uint i;
       error = ServerIO_waitResults(storageHandle->storageInfo->masterIO,
                                    MASTER_COMMAND_TIMEOUT,
                                    ids,
@@ -546,6 +527,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
   }
   while (idCount > 0)
   {
+    uint i;
     error = ServerIO_waitResults(storageHandle->storageInfo->masterIO,
                                  MASTER_COMMAND_TIMEOUT,
                                  ids,

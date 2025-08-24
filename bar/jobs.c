@@ -168,7 +168,6 @@ LOCAL bool equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleN
 LOCAL bool debugIsPersistenceListSorted(const PersistenceList *persistenceList)
 {
   const PersistenceNode *persistenceNode;
-
   LIST_ITERATE(persistenceList,persistenceNode)
   {
     if (   (persistenceNode->next != NULL)
@@ -242,13 +241,11 @@ ScheduleNode *Job_duplicateScheduleNode(ScheduleNode *fromScheduleNode,
                                         void         *userData
                                        )
 {
-  ScheduleNode *scheduleNode;
-
   assert(fromScheduleNode != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  scheduleNode = LIST_NEW_NODE(ScheduleNode);
+  ScheduleNode *scheduleNode = LIST_NEW_NODE(ScheduleNode);
   if (scheduleNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -317,9 +314,7 @@ PersistenceNode *Job_newPersistenceNode(ArchiveTypes archiveType,
                                         ConstString  moveTo
                                        )
 {
-  PersistenceNode *persistenceNode;
-
-  persistenceNode = LIST_NEW_NODE(PersistenceNode);
+  PersistenceNode *persistenceNode = LIST_NEW_NODE(PersistenceNode);
   if (persistenceNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -342,13 +337,11 @@ PersistenceNode *Job_duplicatePersistenceNode(PersistenceNode *fromPersistenceNo
                                               void            *userData
                                              )
 {
-  PersistenceNode *persistenceNode;
-
   assert(fromPersistenceNode != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  persistenceNode = LIST_NEW_NODE(PersistenceNode);
+  PersistenceNode *persistenceNode = LIST_NEW_NODE(PersistenceNode);
   if (persistenceNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -371,19 +364,17 @@ void Job_insertPersistenceNode(PersistenceList *persistenceList,
                                PersistenceNode *persistenceNode
                               )
 {
-  PersistenceNode *nextPersistenceNode;
-
   assert(persistenceList != NULL);
   assert(persistenceNode != NULL);
 
   // find position in persistence list
-  nextPersistenceNode = LIST_FIND_FIRST(persistenceList,
-                                        nextPersistenceNode,
-                                           (persistenceNode->maxAge != AGE_FOREVER)
-                                        && (   (nextPersistenceNode->maxAge == AGE_FOREVER)
-                                            || (nextPersistenceNode->maxAge > persistenceNode->maxAge)
-                                           )
-                                       );
+  PersistenceNode *nextPersistenceNode = LIST_FIND_FIRST(persistenceList,
+                                                         nextPersistenceNode,
+                                                            (persistenceNode->maxAge != AGE_FOREVER)
+                                                         && (   (nextPersistenceNode->maxAge == AGE_FOREVER)
+                                                             || (nextPersistenceNode->maxAge > persistenceNode->maxAge)
+                                                            )
+                                                        );
 
   // insert into persistence list
   List_insert(persistenceList,persistenceNode,nextPersistenceNode);
@@ -1033,8 +1024,6 @@ LOCAL void doneOptionsDevice(Device *device)
 
 LOCAL void clearOptions(JobOptions *jobOptions)
 {
-  uint i;
-
   assert(jobOptions != NULL);
 
   String_clear(jobOptions->uuid);
@@ -1071,7 +1060,7 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   #else /* not HAVE_GCRYPT */
     jobOptions->cryptType                = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
-  for (i = 0; i < 4; i++)
+  for (size_t i = 0; i < 4; i++)
   {
     jobOptions->cryptAlgorithms[i] = CRYPT_ALGORITHM_NONE;
   }
@@ -1280,12 +1269,10 @@ JobNode *Job_new(JobTypes    jobType,
                  ConstString fileName
                 )
 {
-  JobNode *jobNode;
-
   assert(name != NULL);
 
   // allocate job node
-  jobNode = LIST_NEW_NODE(JobNode);
+  JobNode *jobNode = LIST_NEW_NODE(JobNode);
   if (jobNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -1362,10 +1349,8 @@ JobNode *Job_copy(const JobNode *jobNode,
                   ConstString   fileName
                  )
 {
-  JobNode *newJobNode;
-
   // allocate job node
-  newJobNode = LIST_NEW_NODE(JobNode);
+  JobNode *newJobNode = LIST_NEW_NODE(JobNode);
   if (newJobNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -1442,12 +1427,10 @@ void Job_setListModified(void)
 
 bool Job_isSomeRunning(void)
 {
-  const JobNode *jobNode;
-  bool          runningFlag;
-
-  runningFlag = FALSE;
+  bool runningFlag = FALSE;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
+    const JobNode *jobNode;
     JOB_LIST_ITERATE(jobNode)
     {
       if (Job_isRunning(jobNode->jobState))
@@ -1567,11 +1550,10 @@ const char *Job_getStateText(JobStates jobState, bool noStorage, bool dryRun)
 
 ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID)
 {
-  ScheduleNode *scheduleNode;
-
   assert(scheduleUUID != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
+  ScheduleNode *scheduleNode;
   if (jobNode != NULL)
   {
     scheduleNode = LIST_FIND(&jobNode->job.options.scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
@@ -1619,14 +1601,12 @@ void Job_setScheduleModified(JobNode *jobNode)
 
 void Job_flush(JobNode *jobNode)
 {
-  const ScheduleNode *scheduleNode;
-  Errors             error;
-
   assert(Semaphore_isLocked(&jobList.lock));
 
   if (jobNode->scheduleModifiedFlag)
   {
     // update continuous notifies
+    const ScheduleNode *scheduleNode;
     LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
     {
       if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
@@ -1661,7 +1641,7 @@ void Job_flush(JobNode *jobNode)
       || (jobNode->persistenceModifiedFlag)
      )
   {
-    error = Job_write(jobNode);
+    Errors error = Job_write(jobNode);
     if (error != ERROR_NONE)
     {
       printWarning(_("cannot update job '%s' (error: %s)"),String_cString(jobNode->fileName),Error_getText(error));
@@ -1671,10 +1651,9 @@ void Job_flush(JobNode *jobNode)
 
 void Job_flushAll()
 {
-  JobNode *jobNode;
-
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
+    JobNode *jobNode;
     JOB_LIST_ITERATE(jobNode)
     {
       Job_flush(jobNode);
@@ -1684,24 +1663,13 @@ void Job_flushAll()
 
 Errors Job_readScheduleInfo(JobNode *jobNode)
 {
-  String          fileName,baseName;
-  FileHandle      fileHandle;
-  Errors          error;
-  String          line;
-  uint64          n1;
-  uint            n2;
-  char            s1[64],s2[32],s3[256];
-  ArchiveTypes    archiveType;
-  JobStates       jobState;
-  ScheduleNode    *scheduleNode;
-  int             minKeep,maxKeep;
-  int             maxAge;
-  PersistenceNode *persistenceNode;
+  Errors error;
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
   // init variables
+  ScheduleNode *scheduleNode;
   LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
   {
     scheduleNode->lastExecutedDateTime = 0LL;
@@ -1709,8 +1677,8 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
   jobNode->runningInfo.lastExecutedDateTime = 0LL;
 
   // get filename
-  fileName = String_new();
-  baseName = String_new();
+  String fileName = String_new();
+  String baseName = String_new();
   File_splitFileName(jobNode->fileName,fileName,baseName,NULL);
   File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
   String_delete(baseName);
@@ -1718,6 +1686,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
   if (File_exists(fileName))
   {
     // open file .name
+    FileHandle fileHandle;
     error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
     if (error != ERROR_NONE)
     {
@@ -1725,9 +1694,8 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
       return error;
     }
 
-    line = String_new();
-
     // read file
+    String line = String_new();
     if (File_getLine(&fileHandle,line,NULL,NULL))
     {
       /* first line: <last execution time stamp> <type> <state> <error code> <error data>
@@ -1735,11 +1703,17 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
                      <last execution time stamp>
 
       */
+      uint64       n1;
+      uint         n2;
+      char         s1[64],s2[32],s3[256];
+      ArchiveTypes archiveType;
+      JobStates    jobState;
       if      (   String_parse(line,STRING_BEGIN,"%"PRIu64" %64s %32s %u % 256s",NULL,&n1,s1,s2,&n2,s3)
                && Archive_parseType(s1,&archiveType,NULL)
                && Job_parseState(s2,&jobState,NULL,NULL)
               )
       {
+        ScheduleNode *scheduleNode;
         LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
         {
           scheduleNode->lastExecutedDateTime = n1;
@@ -1817,18 +1791,18 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
     if (scheduleNode->deprecatedPersistenceFlag)
     {
       // map 0 -> all/forever
-      minKeep = scheduleNode->minKeep;
-      maxKeep = (scheduleNode->maxKeep != 0) ? scheduleNode->maxKeep : KEEP_ALL;
-      maxAge  = (scheduleNode->maxAge  != 0) ? scheduleNode->maxAge  : AGE_FOREVER;
+      int minKeep = scheduleNode->minKeep;
+      int maxKeep = (scheduleNode->maxKeep != 0) ? scheduleNode->maxKeep : KEEP_ALL;
+      int maxAge  = (scheduleNode->maxAge  != 0) ? scheduleNode->maxAge  : AGE_FOREVER;
 
       // find existing persistence node
-      persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,
-                                  persistenceNode,
-                                     (persistenceNode->archiveType == scheduleNode->archiveType)
-                                  && (persistenceNode->minKeep     == minKeep                  )
-                                  && (persistenceNode->maxKeep     == maxKeep                  )
-                                  && (persistenceNode->maxAge      == maxAge                   )
-                                 );
+      PersistenceNode *persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,
+                                                   persistenceNode,
+                                                      (persistenceNode->archiveType == scheduleNode->archiveType)
+                                                   && (persistenceNode->minKeep     == minKeep                  )
+                                                   && (persistenceNode->maxKeep     == maxKeep                  )
+                                                   && (persistenceNode->maxAge      == maxAge                   )
+                                                  );
       if (persistenceNode == NULL)
       {
         // create new persistence node
@@ -1854,13 +1828,13 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
 
 Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 executeEndDateTime)
 {
-  ScheduleNode *scheduleNode;
-  Errors       error;
+  Errors error;
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
   // set last executed
+  ScheduleNode *scheduleNode;
   LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
   {
     if (scheduleNode->archiveType == archiveType)
@@ -1947,6 +1921,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
 bool Job_read(JobNode *jobNode)
 {
   Errors error;
+
   assert(jobNode != NULL);
   assert(jobNode->fileName != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -2024,9 +1999,6 @@ bool Job_read(JobNode *jobNode)
     }
     else if (String_parse(line,STRING_BEGIN,"[schedule %S]",NULL,s))
     {
-      ScheduleNode       *scheduleNode;
-      const ScheduleNode *existingScheduleNode;
-
       // find section
       uint firstValueIndex,lastValueIndex;
       uint i = ConfigValue_findSection(JOB_CONFIG_VALUES,
@@ -2038,7 +2010,7 @@ bool Job_read(JobNode *jobNode)
       UNUSED_VARIABLE(i);
 
       // new schedule
-      scheduleNode = Job_newScheduleNode(NULL);
+      ScheduleNode *scheduleNode = Job_newScheduleNode(NULL);
       assert(scheduleNode != NULL);
       while (   File_getLine(&fileHandle,line,&lineNb,"#")
              && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
@@ -2106,6 +2078,7 @@ bool Job_read(JobNode *jobNode)
       scheduleNode->totalEntrySize       = 0LL;
 
       // append to list (if not a duplicate)
+      const ScheduleNode *existingScheduleNode;
       if (!LIST_CONTAINS(&jobNode->job.options.scheduleList,
                          existingScheduleNode,
                             (existingScheduleNode->date.year   == scheduleNode->date.year            )
@@ -2135,10 +2108,6 @@ bool Job_read(JobNode *jobNode)
     }
     else if (String_parse(line,STRING_BEGIN,"[persistence %S]",NULL,s))
     {
-      ArchiveTypes          archiveType;
-      PersistenceNode       *persistenceNode;
-      const PersistenceNode *existingPersistenceNode;
-
       // find section
       uint firstValueIndex,lastValueIndex;
       uint i = ConfigValue_findSection(JOB_CONFIG_VALUES,
@@ -2149,10 +2118,11 @@ bool Job_read(JobNode *jobNode)
       assertx(i != CONFIG_VALUE_INDEX_NONE,"unknown section 'persistence'");
       UNUSED_VARIABLE(i);
 
+      ArchiveTypes archiveType;
       if (Archive_parseType(String_cString(s),&archiveType,NULL))
       {
         // new persistence
-        persistenceNode = Job_newPersistenceNode(archiveType,0,0,0,NULL);
+        PersistenceNode *persistenceNode = Job_newPersistenceNode(archiveType,0,0,0,NULL);
         assert(persistenceNode != NULL);
         while (   File_getLine(&fileHandle,line,&lineNb,"#")
                && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
@@ -2206,6 +2176,7 @@ bool Job_read(JobNode *jobNode)
         File_ungetLine(&fileHandle,line,&lineNb);
 
         // insert into persistence list (if not a duplicate)
+        const PersistenceNode *existingPersistenceNode;
         if (!LIST_CONTAINS(&jobNode->job.options.persistenceList,
                            existingPersistenceNode,
                               (existingPersistenceNode->archiveType == persistenceNode->archiveType)
@@ -2382,27 +2353,21 @@ bool Job_read(JobNode *jobNode)
 
 Errors Job_rereadAll(ConstString jobsDirectory)
 {
-  Errors              error;
-  DirectoryListHandle directoryListHandle;
-  String              fileName;
-  String              baseName;
-  JobNode             *jobNode;
-  const JobNode       *jobNode1,*jobNode2;
+  Errors error;
 
   assert(jobsDirectory != NULL);
 
-  // init variables
-  fileName = String_new();
-
   // add new/update jobs
+  String fileName = String_new();
   File_setFileName(fileName,jobsDirectory);
+  DirectoryListHandle directoryListHandle;
   error = File_openDirectoryList(&directoryListHandle,fileName);
   if (error != ERROR_NONE)
   {
     String_delete(fileName);
     return error;
   }
-  baseName = String_new();
+  String baseName = String_new();
   while (!File_endOfDirectoryList(&directoryListHandle))
   {
     // read directory entry
@@ -2419,6 +2384,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
     {
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
+        JobNode *jobNode;
         jobNode = Job_find(baseName);
         if (jobNode == NULL)
         {
@@ -2474,7 +2440,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
   // remove not existing jobs
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    jobNode = jobList.head;
+    JobNode *jobNode = jobList.head;
     while (jobNode != NULL)
     {
       if (jobNode->jobState == JOB_STATE_NONE)
@@ -2505,6 +2471,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
   // create UUIDs if empty
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
+    JobNode *jobNode;
     JOB_LIST_ITERATE(jobNode)
     {
       if (String_isEmpty(jobNode->job.uuid))
@@ -2518,10 +2485,11 @@ Errors Job_rereadAll(ConstString jobsDirectory)
   // check for duplicate UUIDs
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
+    const JobNode *jobNode1;
     jobNode1 = jobList.head;
     while (jobNode1 != NULL)
     {
-      jobNode2 = jobNode1->next;
+      const JobNode *jobNode2 = jobNode1->next;
       while (jobNode2 != NULL)
       {
         if (String_equals(jobNode1->job.uuid,jobNode2->job.uuid))
@@ -2745,8 +2713,6 @@ void Job_reset(JobNode *jobNode)
 
 void Job_initOptions(JobOptions *jobOptions)
 {
-  uint i;
-
   assert(jobOptions != NULL);
 
   memClear(jobOptions,sizeof(JobOptions));
@@ -2794,7 +2760,7 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->compressAlgorithms.delta                  = globalOptions.compressAlgorithms.delta;
   jobOptions->compressAlgorithms.byte                   = globalOptions.compressAlgorithms.byte;
 
-  for (i = 0; i < 4; i++)
+  for (size_t i = 0; i < 4; i++)
   {
     jobOptions->cryptAlgorithms[i] = globalOptions.cryptAlgorithms[i];
   }
@@ -2865,8 +2831,6 @@ void Job_initOptions(JobOptions *jobOptions)
 
 void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
 {
-  uint i;
-
   assert(jobOptions != NULL);
   assert(fromJobOptions != NULL);
 
@@ -2929,7 +2893,7 @@ void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   jobOptions->compressAlgorithms.delta                  = fromJobOptions->compressAlgorithms.delta;
   jobOptions->compressAlgorithms.byte                   = fromJobOptions->compressAlgorithms.byte;
 
-  for (i = 0; i < 4; i++)
+  for (size_t i = 0; i < 4; i++)
   {
     jobOptions->cryptAlgorithms[i] = fromJobOptions->cryptAlgorithms[i];
   }
@@ -3095,12 +3059,10 @@ void Job_donePersistenceList(PersistenceList *persistenceList)
 
 SlaveNode *Job_addSlave(ConstString name, uint port, TLSModes tlsMode)
 {
-  SlaveNode *slaveNode;
-
   assert(name != NULL);
   assert(Semaphore_isLocked(&slaveList.lock));
 
-  slaveNode = LIST_NEW_NODE(SlaveNode);
+  SlaveNode *slaveNode = LIST_NEW_NODE(SlaveNode);
   if (slaveNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -3134,19 +3096,16 @@ SlaveNode *Job_removeSlave(SlaveNode *slaveNode)
 
 ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout)
 {
-  ConnectorInfo *connectorInfo;
-  SlaveNode     *slaveNode;
-
   assert(jobNode != NULL);
 
-  connectorInfo = NULL;
+  ConnectorInfo *connectorInfo = NULL;
   JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,timeout)
   {
-    slaveNode = LIST_FIND(&slaveList,
-                          slaveNode,
-                             (slaveNode->port == jobNode->job.slaveHost.port)
-                          && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
-                         );
+    SlaveNode *slaveNode = LIST_FIND(&slaveList,
+                                     slaveNode,
+                                        (slaveNode->port == jobNode->job.slaveHost.port)
+                                     && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
+                                    );
     if (slaveNode != NULL)
     {
       connectorInfo = &slaveNode->connectorInfo;
@@ -3159,16 +3118,14 @@ ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout)
 
 void Job_connectorUnlock(ConnectorInfo *connectorInfo, long timeout)
 {
-  SlaveNode *slaveNode;
-
   if (connectorInfo != NULL)
   {
     JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,timeout)
     {
-      slaveNode = LIST_FIND(&slaveList,
-                            slaveNode,
-                            &slaveNode->connectorInfo == connectorInfo
-                           );
+      SlaveNode *slaveNode = LIST_FIND(&slaveList,
+                                       slaveNode,
+                                       &slaveNode->connectorInfo == connectorInfo
+                                      );
       if (slaveNode != NULL)
       {
         assert(slaveNode->lockCount > 0);
@@ -3180,10 +3137,9 @@ void Job_connectorUnlock(ConnectorInfo *connectorInfo, long timeout)
 
 void Job_updateNotifies(const JobNode *jobNode)
 {
-  const ScheduleNode *scheduleNode;
-
   assert(jobNode != NULL);
 
+  const ScheduleNode *scheduleNode;
   LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
   {
     if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)

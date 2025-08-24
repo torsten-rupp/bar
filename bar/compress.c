@@ -219,8 +219,6 @@ LOCAL_INLINE uint32 getUINT32(byte *buffer)
 LOCAL Errors compressData(CompressInfo *compressInfo)
 {
   Errors error;
-  ulong  maxCompressBytes,maxDataBytes;
-  ulong  compressBytes;
 
   assert(compressInfo != NULL);
 
@@ -238,11 +236,11 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
           if (!RingBuffer_isEmpty(&compressInfo->dataRingBuffer))                     // data available
           {
             // get max. number of data and max. number of "compressed" bytes
-            maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
-            maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
+            ulong maxDataBytes     = RingBuffer_getAvailable(&compressInfo->dataRingBuffer);
+            ulong maxCompressBytes = RingBuffer_getFree(&compressInfo->compressRingBuffer);
 
             // copy from data buffer -> compress buffer
-            compressBytes = MIN(maxDataBytes,maxCompressBytes);
+            ulong compressBytes = MIN(maxDataBytes,maxCompressBytes);
             RingBuffer_move(&compressInfo->dataRingBuffer,
                             &compressInfo->compressRingBuffer,
                             compressBytes
@@ -422,8 +420,6 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
 LOCAL Errors decompressData(CompressInfo *compressInfo)
 {
   Errors error;
-  ulong maxCompressBytes,maxDataBytes;
-  ulong dataBytes;
 
   assert(compressInfo != NULL);
 
@@ -442,11 +438,11 @@ LOCAL Errors decompressData(CompressInfo *compressInfo)
           if (!RingBuffer_isEmpty(&compressInfo->compressRingBuffer))                 // unprocessed "compressed" data available
           {
             // get max. number of "compressed" bytes and max. number of data bytes
-            maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
-            maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
+            ulong maxCompressBytes = RingBuffer_getAvailable(&compressInfo->compressRingBuffer);
+            ulong maxDataBytes     = RingBuffer_getFree(&compressInfo->dataRingBuffer);
 
             // copy from compress buffer -> data buffer
-            dataBytes = MIN(maxCompressBytes,maxDataBytes);
+            ulong dataBytes = MIN(maxCompressBytes,maxDataBytes);
             RingBuffer_move(&compressInfo->compressRingBuffer,
                             &compressInfo->dataRingBuffer,
                             dataBytes
@@ -626,16 +622,14 @@ void Compress_doneAll(void)
 
 const char *Compress_algorithmToString(CompressAlgorithms compressAlgorithm, const char *defaultValue)
 {
-  uint       i;
-  const char *s;
-
-  i = 0;
+  size_t i = 0;
   while (   (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
          && (COMPRESS_ALGORITHMS[i].compressAlgorithm != compressAlgorithm)
         )
   {
     i++;
   }
+  const char *s;
   if (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
   {
     s = COMPRESS_ALGORITHMS[i].name;
@@ -650,12 +644,10 @@ const char *Compress_algorithmToString(CompressAlgorithms compressAlgorithm, con
 
 bool Compress_parseAlgorithm(const char *name, CompressAlgorithms *compressAlgorithm)
 {
-  uint i;
-
   assert(name != NULL);
   assert(compressAlgorithm != NULL);
 
-  i = 0;
+  size_t i = 0;
   while (   (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
          && !stringEqualsIgnoreCase(COMPRESS_ALGORITHMS[i].name,name)
         )
@@ -675,9 +667,7 @@ bool Compress_parseAlgorithm(const char *name, CompressAlgorithms *compressAlgor
 
 bool Compress_isValidAlgorithm(uint16 n)
 {
-  uint i;
-
-  i = 0;
+  size_t i = 0;
   while (   (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
          && (COMPRESS_ALGORITHMS[i].compressAlgorithm != COMPRESS_CONSTANT_TO_ALGORITHM(n))
         )
@@ -1192,13 +1182,13 @@ Errors Compress_deflate(CompressInfo *compressInfo,
                        )
 {
   Errors error;
-  ulong  n;
 
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
   assert(buffer != NULL);
 
   if (deflatedBytes != NULL) (*deflatedBytes) = 0L;
+  ulong n;
   do
   {
     // check if data buffer is full, compress data buffer
@@ -1236,7 +1226,6 @@ Errors Compress_inflate(CompressInfo *compressInfo,
                        )
 {
   Errors error;
-  ulong  n;
 
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_INFLATE);
@@ -1244,6 +1233,7 @@ Errors Compress_inflate(CompressInfo *compressInfo,
   assert(inflatedBytes != NULL);
 
   (*inflatedBytes) = 0L;
+  ulong n;
   do
   {
     // check if data buffer is empty, decompress and fill data buffer
@@ -1295,11 +1285,9 @@ bool Compress_isEndOfData(CompressInfo *compressInfo)
 
 uint64 Compress_getInputLength(CompressInfo *compressInfo)
 {
-  uint64 length;
-
   assert(compressInfo != NULL);
 
-  length = 0LL;
+  uint64 length = 0LL;
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
@@ -1438,11 +1426,9 @@ uint64 Compress_getInputLength(CompressInfo *compressInfo)
 
 uint64 Compress_getOutputLength(CompressInfo *compressInfo)
 {
-  uint64 length;
-
   assert(compressInfo != NULL);
 
-  length = 0LL;
+  uint64 length = 0LL;
   switch (compressInfo->compressAlgorithm)
   {
     case COMPRESS_ALGORITHM_NONE:
@@ -1650,8 +1636,6 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
                                 ulong        *bufferLength
                                )
 {
-  ulong n;
-
   assert(compressInfo != NULL);
   assert(compressInfo->compressMode == COMPRESS_MODE_DEFLATE);
   assert(buffer != NULL);
@@ -1662,7 +1646,7 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
   (void)compressData(compressInfo);
 
   // copy compressed data into buffer
-  n = MIN(RingBuffer_getAvailable(&compressInfo->compressRingBuffer),FLOOR(bufferSize,compressInfo->blockLength));
+  ulong n = MIN(RingBuffer_getAvailable(&compressInfo->compressRingBuffer),FLOOR(bufferSize,compressInfo->blockLength));
   RingBuffer_get(&compressInfo->compressRingBuffer,buffer,n);
 
   // set rest in last block to 0
