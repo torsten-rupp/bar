@@ -88,7 +88,6 @@ ToDo
 - barcontrol: improve busy animation
 - database entity: store host, run time
 - clean-up: storageName/archiveName, file path/directory/name
-- FQA: open("/share/backup/temp/lanzarote/xxx/svndmz/svndmz.vmxf",
 - test with archive with unknown/invalid compression algorithm
 - ERROR: Cannot create process id file 'test/barserver.pid' (error: No such file or directory)
 - support partclone
@@ -102,7 +101,6 @@ ToDo
 - multi-encryption
 - set job to error if not enough inotify watches
 - server settings: set max. number of inotify watches
-- restore: skip leading directories
 - Restore: filter storage by "no expiration date/time"
 - use kwalletcli to store/retrieve passwords
 - use GNOME secret-tool
