@@ -188,11 +188,11 @@ int Thread_getPriority(Thread *thread);
 * Input  : thread   - thread
 *          priority - priority
 * Output : -
-* Return : -
+* Return : TRUE iff priority set
 * Notes  : -
 \***********************************************************************/
 
-void Thread_setPriority(Thread *thread, int priority);
+bool Thread_setPriority(Thread *thread, int priority);
 
 /***********************************************************************\
 * Name   : Thread_quit
@@ -291,7 +291,7 @@ INLINE void Thread_yield(void)
 * Notes  : -
 \***********************************************************************/
 
-void Thread_delay(uint time);
+void Thread_delay(size_t time);
 
 /***********************************************************************\
 * Name   : Thread_getId

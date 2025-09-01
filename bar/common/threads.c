@@ -421,7 +421,7 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                 if (pthread_cond_timedwait(&debugThreadStackTraceDone,&debugThreadStackTraceLock,&timeout) == 0)
                 {
                   // wait for done fail
-                  name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
+                  const char *name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
 
                   pthread_mutex_lock(&debugConsoleLock);
                   {
@@ -451,7 +451,7 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
               else
               {
                 // send SIQQUIT fail
-                name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
+                const char *name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
 
                 pthread_mutex_lock(&debugConsoleLock);
                 {
@@ -475,7 +475,7 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
           else
           {
             // print stack trace of this thread (probably crashed thread)
-            name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
+            const char *name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
 
             pthread_mutex_lock(&debugConsoleLock);
             {
@@ -705,13 +705,14 @@ LOCAL void *threadStartCode(void *userData)
 {
   StartInfo *startInfo = (StartInfo*)userData;
   assert(startInfo != NULL);
+  assert(startInfo->thread != NULL);
   pthread_cleanup_push(threadTerminated,startInfo->thread);
   {
     // try to set thread name
     #ifdef HAVE_PTHREAD_SETNAME_NP
       if (startInfo->name != NULL)
       {
-        (void)pthread_setname_np(pthread_self(),startInfo->name);
+        (void)pthread_setname_np(startInfo->thread->handle,startInfo->name);
       }
     #endif /* HAVE_PTHREAD_SETNAME_NP */
 
@@ -829,8 +830,9 @@ bool __Thread_init(const char *__fileName__,
   #endif /* not NDEBUG */
 
   // start thread
-  thread->quitFlag   = FALSE;
-  thread->joinedFlag = FALSE;
+  thread->quitFlag       = FALSE;
+  thread->terminatedFlag = FALSE;
+  thread->joinedFlag     = FALSE;
   if (pthread_create(&thread->handle,
                      &threadAttributes,
                      threadStartCode,
@@ -900,17 +902,22 @@ int Thread_getPriority(Thread *thread)
   return scheduleParameter.sched_priority;
 }
 
-void Thread_setPriority(Thread *thread, int priority)
+bool Thread_setPriority(Thread *thread, int priority)
 {
   assert(thread != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(thread);
 
+  bool result;
   #ifdef HAVE_PTHREAD_SETSCHEDPRIO
-    pthread_setschedprio(thread->handle,priority);
+    result = (pthread_setschedprio(thread->handle,priority) == 0);
   #else
     UNUSED_VARIABLE(thread);
     UNUSED_VARIABLE(priority);
+
+    result = FALSE;
   #endif /* HAVE_PTHREAD_SETSCHEDPRIO */
+
+  return result;
 }
 
 bool Thread_join(Thread *thread)
@@ -933,7 +940,7 @@ bool Thread_join(Thread *thread)
   return TRUE;
 }
 
-void Thread_delay(uint time)
+void Thread_delay(size_t time)
 {
   #if defined(PLATFORM_LINUX)
     #if   defined(HAVE_NANOSLEEP)
@@ -956,13 +963,14 @@ void Thread_delay(uint time)
 
 const char *Thread_getName(const ThreadId threadId)
 {
-  #ifndef NDEBUG
-    return debugThreadStackTraceGetThreadName(threadId);
-  #else /* NDEBUG */
-    UNUSED_VARIABLE(threadId);
+  static char name[64];
 
+  #ifdef HAVE_PTHREAD_SETNAME_NP
+    (void)pthread_getname_np(threadId,name,sizeof(name));
+    return name;
+  #else
     return NULL;
-  #endif /* not NDEBUG */
+  #endif
 }
 
 const char *Thread_getCurrentName(void)
