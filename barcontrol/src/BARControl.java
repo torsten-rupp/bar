@@ -6444,23 +6444,22 @@ if (false) {
               }
             });
 
-            System.out.println(String.format("%-32s %-18s %-20s %-12s %-14s %-25s %-15s %-10s %-8s %-19s %-13s",
-                                             BARControl.tr("Name"),
-                                             BARControl.tr("State"),
-                                             BARControl.tr("Host name"),
-                                             BARControl.tr("Type"),
-                                             BARControl.tr("Part size"),
-                                             BARControl.tr("Compress"),
-                                             BARControl.tr("Crypt"),
-                                             BARControl.tr("Crypt type"),
-                                             BARControl.tr("Mode"),
-                                             BARControl.tr("Last executed"),
-                                             BARControl.tr("Estimated [s]")
-                                            )
-                              );
-
             if (!Settings.noHeaderFooterFlag)
             {
+              System.out.println(String.format("%-32s %-18s %-20s %-12s %-14s %-25s %-15s %-10s %-8s %-19s %-13s",
+                                               BARControl.tr("Name"),
+                                               BARControl.tr("State"),
+                                               BARControl.tr("Host name"),
+                                               BARControl.tr("Type"),
+                                               BARControl.tr("Part size"),
+                                               BARControl.tr("Compress"),
+                                               BARControl.tr("Crypt"),
+                                               BARControl.tr("Crypt type"),
+                                               BARControl.tr("Mode"),
+                                               BARControl.tr("Last executed"),
+                                               BARControl.tr("Estimated [s]")
+                                              )
+                                );
               System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             }
             for (JobInfo jobInfo : jobInfoList)
@@ -6587,27 +6586,26 @@ if (false) {
               }
             });
 
-            System.out.println(String.format("%-20s %-36s %-10s %-23s %-5s %-11s %-8s %-15s %-5s %-5s %-3s %-3s %-3s %-19s %-19s",
-                                             BARControl.tr("Job"),
-                                             BARControl.tr("UUID"),
-                                             BARControl.tr("Date"),
-                                             BARControl.tr("Week days"),
-                                             BARControl.tr("Time"),
-                                             BARControl.tr("Type"),
-                                             BARControl.tr("Interval"),
-                                             BARControl.tr("Text"),
-                                             BARControl.tr("Begin"),
-                                             BARControl.tr("End"),
-                                             BARControl.tr("T"),
-                                             BARControl.tr("S"),
-                                             BARControl.tr("E"),
-                                             BARControl.tr("Last"),
-                                             BARControl.tr("Next")
-                                            )
-                              );
-
             if (!Settings.noHeaderFooterFlag)
             {
+              System.out.println(String.format("%-20s %-36s %-10s %-23s %-5s %-11s %-8s %-15s %-5s %-5s %-3s %-3s %-3s %-19s %-19s",
+                                               BARControl.tr("Job"),
+                                               BARControl.tr("UUID"),
+                                               BARControl.tr("Date"),
+                                               BARControl.tr("Week days"),
+                                               BARControl.tr("Time"),
+                                               BARControl.tr("Type"),
+                                               BARControl.tr("Interval"),
+                                               BARControl.tr("Text"),
+                                               BARControl.tr("Begin"),
+                                               BARControl.tr("End"),
+                                               BARControl.tr("T"),
+                                               BARControl.tr("S"),
+                                               BARControl.tr("E"),
+                                               BARControl.tr("Last"),
+                                               BARControl.tr("Next")
+                                              )
+                                );
               System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             }
             for (ScheduleInfo scheduleInfo : nextScheduleList)
@@ -6878,19 +6876,19 @@ if (false) {
           {
             final int n[] = new int[]{0};
 
-            System.out.println(String.format("%-8s %-8s %-12s %-14s %-14s %-14s %-19s %s",
-                                             BARControl.tr("Entity id"),
-                                             BARControl.tr("Job id"),
-                                             BARControl.tr("Type"),
-                                             BARControl.tr("Size"),
-                                             BARControl.tr("Entry count"),
-                                             BARControl.tr("Entry size"),
-                                             BARControl.tr("Date/Time"),
-                                             BARControl.tr("Job")
-                                            )
-                              );
             if (!Settings.noHeaderFooterFlag)
             {
+              System.out.println(String.format("%-8s %-8s %-12s %-14s %-14s %-14s %-19s %s",
+                                               BARControl.tr("Entity id"),
+                                               BARControl.tr("Job id"),
+                                               BARControl.tr("Type"),
+                                               BARControl.tr("Size"),
+                                               BARControl.tr("Entry count"),
+                                               BARControl.tr("Entry size"),
+                                               BARControl.tr("Date/Time"),
+                                               BARControl.tr("Job")
+                                              )
+                                );
               System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             }
             BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S sortMode=JOB_UUID ordering=ASCENDING",
@@ -6952,18 +6950,18 @@ if (false) {
           {
             final int n[] = new int[]{0};
 
-            System.out.println(String.format("%-8s %-8s %-14s %-19s %-16s %-6s %s",
-                                             BARControl.tr("Storage id"),
-                                             BARControl.tr("Entity"),
-                                             BARControl.tr("Size"),
-                                             BARControl.tr("Date/Time"),
-                                             BARControl.tr("State"),
-                                             BARControl.tr("Mode"),
-                                             BARControl.tr("Name")
-                                            )
-                              );
             if (!Settings.noHeaderFooterFlag)
             {
+              System.out.println(String.format("%-8s %-8s %-14s %-19s %-16s %-6s %s",
+                                               BARControl.tr("Storage id"),
+                                               BARControl.tr("Entity"),
+                                               BARControl.tr("Size"),
+                                               BARControl.tr("Date/Time"),
+                                               BARControl.tr("State"),
+                                               BARControl.tr("Mode"),
+                                               BARControl.tr("Name")
+                                              )
+                                );
               System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             }
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S sortMode=NAME ordering=ASCENDING",
@@ -7363,21 +7361,21 @@ if (false) {
           {
             final int n[] = new int[]{0};
 
-            System.out.println(String.format("%-32s %-20s %-12s %-19s %-8s %-23s %-23s %-23s %s",
-                                             BARControl.tr("Job"),
-                                             BARControl.tr("Hostname"),
-                                             BARControl.tr("Type"),
-                                             BARControl.tr("Date/Time"),
-                                             BARControl.tr("Duration"),
-// TODO: [bytes]
-                                             BARControl.tr("Total           [bytes]"),
-                                             BARControl.tr("Skipped         [bytes]"),
-                                             BARControl.tr("With errors     [bytes]"),
-                                             BARControl.tr("Message")
-                                            )
-                              );
             if (!Settings.noHeaderFooterFlag)
             {
+              System.out.println(String.format("%-32s %-20s %-12s %-19s %-8s %-23s %-23s %-23s %s",
+                                               BARControl.tr("Job"),
+                                               BARControl.tr("Hostname"),
+                                               BARControl.tr("Type"),
+                                               BARControl.tr("Date/Time"),
+                                               BARControl.tr("Duration"),
+// TODO: [bytes]
+                                               BARControl.tr("Total           [bytes]"),
+                                               BARControl.tr("Skipped         [bytes]"),
+                                               BARControl.tr("With errors     [bytes]"),
+                                               BARControl.tr("Message")
+                                              )
+                                );
               System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             }
             BARServer.executeCommand(StringParser.format("INDEX_HISTORY_LIST"

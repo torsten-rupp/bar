@@ -1,4 +1,4 @@
-2025-09-01 27
+2025-09-31 27
   * added option --commmand-timeout
   * fixed command timeout (bug #31)
 

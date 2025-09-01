@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-08-23 09:03+0200\n"
+"POT-Creation-Date: 2025-09-02 00:22+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -526,7 +526,7 @@ msgstr ""
 msgid "force"
 msgstr ""
 
-#: src/BARControl.java:5185 src/BARControl.java:7537 src/BARControl.java:7561
+#: src/BARControl.java:5185 src/BARControl.java:7535 src/BARControl.java:7559
 #: src/BARServer.java:1395 src/BARServer.java:1417 src/BARWidgets.java:2292
 #: src/BARWidgets.java:2794 src/BARWidgets.java:3523 src/BARWidgets.java:4035
 #: src/ServerSettings.java:1420 src/ServerSettings.java:1763
@@ -641,7 +641,7 @@ msgstr ""
 msgid "cannot set new master ({0})"
 msgstr ""
 
-#: src/BARControl.java:6236 src/BARControl.java:6343 src/BARControl.java:6654
+#: src/BARControl.java:6236 src/BARControl.java:6343 src/BARControl.java:6652
 #, java-format
 msgid "job ''{0}'' not found"
 msgstr ""
@@ -676,8 +676,8 @@ msgstr ""
 msgid "cannot get state (error: {0})"
 msgstr ""
 
-#: src/BARControl.java:6448 src/BARControl.java:6962 src/BARControl.java:7167
-#: src/BARControl.java:7178 src/BARControl.java:7536
+#: src/BARControl.java:6450 src/BARControl.java:6962 src/BARControl.java:7165
+#: src/BARControl.java:7176 src/BARControl.java:7534
 #: src/ServerSettings.java:1781 src/ServerSettings.java:4048
 #: src/TabJobs.java:2737 src/TabJobs.java:4549 src/TabJobs.java:9602
 #: src/TabJobs.java:9743 src/TabJobs.java:12238 src/TabRestore.java:4282
@@ -687,18 +687,18 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: src/BARControl.java:6449 src/BARControl.java:6960 src/TabRestore.java:4665
+#: src/BARControl.java:6451 src/BARControl.java:6960 src/TabRestore.java:4665
 #: src/TabRestore.java:5218 src/TabRestore.java:5701 src/TabRestore.java:6410
 #: src/TabStatus.java:1103 src/TabStatus.java:1172
 msgid "State"
 msgstr ""
 
-#: src/BARControl.java:6450
+#: src/BARControl.java:6452
 msgid "Host name"
 msgstr ""
 
-#: src/BARControl.java:6451 src/BARControl.java:6596 src/BARControl.java:6884
-#: src/BARControl.java:7163 src/BARControl.java:7175 src/BARControl.java:7369
+#: src/BARControl.java:6453 src/BARControl.java:6597 src/BARControl.java:6884
+#: src/BARControl.java:7161 src/BARControl.java:7173 src/BARControl.java:7369
 #: src/ServerSettings.java:1778 src/TabJobs.java:11357 src/TabJobs.java:14664
 #: src/TabJobs.java:15450 src/TabRestore.java:4851 src/TabRestore.java:4916
 #: src/TabRestore.java:6573 src/TabRestore.java:9972 src/TabStatus.java:1115
@@ -706,154 +706,153 @@ msgstr ""
 msgid "Type"
 msgstr ""
 
-#: src/BARControl.java:6452 src/TabJobs.java:4859 src/TabStatus.java:1121
+#: src/BARControl.java:6454 src/TabJobs.java:4859 src/TabStatus.java:1121
 #: src/TabStatus.java:1220
 msgid "Part size"
 msgstr ""
 
-#: src/BARControl.java:6453 src/TabJobs.java:5095 src/TabStatus.java:1127
+#: src/BARControl.java:6455 src/TabJobs.java:5095 src/TabStatus.java:1127
 #: src/TabStatus.java:1236
 msgid "Compress"
 msgstr ""
 
-#: src/BARControl.java:6454 src/TabJobs.java:5718 src/TabStatus.java:1133
+#: src/BARControl.java:6456 src/TabJobs.java:5718 src/TabStatus.java:1133
 #: src/TabStatus.java:1252
 msgid "Crypt"
 msgstr ""
 
-#: src/BARControl.java:6455
+#: src/BARControl.java:6457
 msgid "Crypt type"
 msgstr ""
 
-#: src/BARControl.java:6456 src/BARControl.java:6961 src/TabJobs.java:6393
+#: src/BARControl.java:6458 src/BARControl.java:6961 src/TabJobs.java:6393
 msgid "Mode"
 msgstr ""
 
-#: src/BARControl.java:6457 src/TabRestore.java:4317 src/TabStatus.java:1139
+#: src/BARControl.java:6459 src/TabRestore.java:4317 src/TabStatus.java:1139
 #: src/TabStatus.java:1268 src/TabStatus.java:3767
 msgid "Last executed"
 msgstr ""
 
-#: src/BARControl.java:6458
+#: src/BARControl.java:6460
 msgid "Estimated [s]"
 msgstr ""
 
-#: src/BARControl.java:6484 src/BARServer.java:1576 src/TabStatus.java:2659
+#: src/BARControl.java:6483 src/BARServer.java:1576 src/TabStatus.java:2659
 #: src/TabStatus.java:2691
 msgid "suspended"
 msgstr ""
 
-#: src/BARControl.java:6500
+#: src/BARControl.java:6499
 #, java-format
 msgid "{0} {0,choice,0#jobs|1#job|1<jobs}"
 msgstr ""
 
-#: src/BARControl.java:6505
+#: src/BARControl.java:6504
 #, java-format
 msgid "cannot get job list (error: {0})"
 msgstr ""
 
-#: src/BARControl.java:6591 src/BARControl.java:6889 src/BARControl.java:7367
+#: src/BARControl.java:6592 src/BARControl.java:6889 src/BARControl.java:7367
 #: src/TabRestore.java:4548 src/TabRestore.java:4841 src/TabStatus.java:3715
 msgid "Job"
 msgstr ""
 
-#: src/BARControl.java:6592
+#: src/BARControl.java:6593
 msgid "UUID"
 msgstr ""
 
-#: src/BARControl.java:6593 src/ServerSettings.java:1507
+#: src/BARControl.java:6594 src/ServerSettings.java:1507
 #: src/ServerSettings.java:3823 src/TabJobs.java:8606 src/TabJobs.java:14696
 msgid "Date"
 msgstr ""
 
-#: src/BARControl.java:6594 src/ServerSettings.java:1510
+#: src/BARControl.java:6595 src/ServerSettings.java:1510
 #: src/ServerSettings.java:3849 src/TabJobs.java:8609 src/TabJobs.java:14722
 msgid "Week days"
 msgstr ""
 
-#: src/BARControl.java:6595 src/ServerSettings.java:3910 src/TabJobs.java:8613
+#: src/BARControl.java:6596 src/ServerSettings.java:3910 src/TabJobs.java:8613
 #: src/TabJobs.java:14783
 msgid "Time"
 msgstr ""
 
-#: src/BARControl.java:6597 src/TabJobs.java:14804
+#: src/BARControl.java:6598 src/TabJobs.java:14804
 msgid "Interval"
 msgstr ""
 
-#: src/BARControl.java:6598
+#: src/BARControl.java:6599
 msgid "Text"
 msgstr ""
 
-#: src/BARControl.java:6599 src/ServerSettings.java:1513 src/TabJobs.java:8619
+#: src/BARControl.java:6600 src/ServerSettings.java:1513 src/TabJobs.java:8619
 msgid "Begin"
 msgstr ""
 
-#: src/BARControl.java:6600 src/ServerSettings.java:1516 src/TabJobs.java:8622
+#: src/BARControl.java:6601 src/ServerSettings.java:1516 src/TabJobs.java:8622
 msgid "End"
 msgstr ""
 
-#: src/BARControl.java:6601
+#: src/BARControl.java:6602
 msgid "T"
 msgstr ""
 
-#: src/BARControl.java:6602
+#: src/BARControl.java:6603
 msgid "S"
 msgstr ""
 
-#: src/BARControl.java:6603
+#: src/BARControl.java:6604
 msgid "E"
 msgstr ""
 
-#: src/BARControl.java:6604
+#: src/BARControl.java:6605
 msgid "Last"
 msgstr ""
 
-#: src/BARControl.java:6605
+#: src/BARControl.java:6606
 msgid "Next"
 msgstr ""
 
-#: src/BARControl.java:6637
+#: src/BARControl.java:6635
 #, java-format
 msgid "{0} {0,choice,0#jobs|1#schedule|1<schedules}"
 msgstr ""
 
-#: src/BARControl.java:6642
+#: src/BARControl.java:6640
 #, java-format
 msgid "cannot get schedule list (error: {0})"
 msgstr ""
 
-#: src/BARControl.java:6693
+#: src/BARControl.java:6691
 #, java-format
 msgid "cannot get job info ''{0}'' (error: {1})"
 msgstr ""
 
-#: src/BARControl.java:6791
+#: src/BARControl.java:6789
 #, java-format
 msgid "cannot get index info (error: {0})"
 msgstr ""
 
-#: src/BARControl.java:6827
+#: src/BARControl.java:6825
 #, java-format
 msgid "cannot add ''{0}'' to index (error: {1})"
 msgstr ""
 
-#: src/BARControl.java:6865
+#: src/BARControl.java:6863
 #, java-format
 msgid "cannot remove index for storage ''{0}'' from index (error: {1})"
 msgstr ""
 
-#: src/BARControl.java:6882 src/TabJobs.java:16092 src/TabRestore.java:4400
-#: src/TabRestore.java:4578
-msgid "Entity id"
+#: src/BARControl.java:6882
+msgid "xxxEntity id"
 msgstr ""
 
 #: src/BARControl.java:6883
 msgid "Job id"
 msgstr ""
 
-#: src/BARControl.java:6885 src/BARControl.java:6958 src/BARControl.java:7164
-#: src/BARControl.java:7176 src/BARWidgets.java:4681 src/BARWidgets.java:5053
+#: src/BARControl.java:6885 src/BARControl.java:6958 src/BARControl.java:7162
+#: src/BARControl.java:7174 src/BARWidgets.java:4681 src/BARWidgets.java:5053
 #: src/ServerSettings.java:1787 src/TabRestore.java:4655
 #: src/TabRestore.java:4926 src/TabRestore.java:5214 src/TabRestore.java:5693
 #: src/TabRestore.java:6576 src/TabRestore.java:9968 src/TabRestore.java:9973
@@ -868,18 +867,18 @@ msgstr ""
 msgid "Entry size"
 msgstr ""
 
-#: src/BARControl.java:6888 src/BARControl.java:6959 src/BARControl.java:7165
-#: src/BARControl.java:7177 src/BARControl.java:7370 src/TabRestore.java:4936
+#: src/BARControl.java:6888 src/BARControl.java:6959 src/BARControl.java:7163
+#: src/BARControl.java:7175 src/BARControl.java:7370 src/TabRestore.java:4936
 #: src/TabRestore.java:6579 src/TabRestore.java:9974
 msgid "Date/Time"
 msgstr ""
 
-#: src/BARControl.java:6934
+#: src/BARControl.java:6932
 #, java-format
 msgid "{0} entities"
 msgstr ""
 
-#: src/BARControl.java:6939
+#: src/BARControl.java:6937
 #, java-format
 msgid "cannot list entities index (error: {0})"
 msgstr ""
@@ -892,31 +891,31 @@ msgstr ""
 msgid "Entity"
 msgstr ""
 
-#: src/BARControl.java:7004
+#: src/BARControl.java:7002
 #, java-format
 msgid "{0} {0,choice,0#storages|1#storage|1<storages}"
 msgstr ""
 
-#: src/BARControl.java:7009
+#: src/BARControl.java:7007
 #, java-format
 msgid "cannot list storages index (error: {0})"
 msgstr ""
 
-#: src/BARControl.java:7162 src/BARControl.java:7174 src/TabRestore.java:4830
+#: src/BARControl.java:7160 src/BARControl.java:7172 src/TabRestore.java:4830
 msgid "Entry id"
 msgstr ""
 
-#: src/BARControl.java:7166 src/TabJobs.java:6388 src/TabRestore.java:4599
+#: src/BARControl.java:7164 src/TabJobs.java:6388 src/TabRestore.java:4599
 #: src/TabStatus.java:2197
 msgid "Storage"
 msgstr ""
 
-#: src/BARControl.java:7348
+#: src/BARControl.java:7346
 #, java-format
 msgid "{0} entries (max. 1024 shown)"
 msgstr ""
 
-#: src/BARControl.java:7353
+#: src/BARControl.java:7351
 #, java-format
 msgid "cannot list entries index (error: {0})"
 msgstr ""
@@ -946,56 +945,56 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
-#: src/BARControl.java:7432
+#: src/BARControl.java:7430
 #, java-format
 msgid "{0} {0,choice,0#entries|1#entry|1<entries}"
 msgstr ""
 
-#: src/BARControl.java:7437
+#: src/BARControl.java:7435
 #, java-format
 msgid "cannot list history (error: {0})"
 msgstr ""
 
-#: src/BARControl.java:7492
+#: src/BARControl.java:7490
 #, java-format
 msgid "cannot set restore list (error: {0})"
 msgstr ""
 
-#: src/BARControl.java:7535
+#: src/BARControl.java:7533
 #, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr ""
 
-#: src/BARControl.java:7560 src/BARServer.java:1393 src/BARServer.java:1416
+#: src/BARControl.java:7558 src/BARServer.java:1393 src/BARServer.java:1416
 #, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr ""
 
-#: src/BARControl.java:7588
+#: src/BARControl.java:7586
 #, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr ""
 
-#: src/BARControl.java:7614
+#: src/BARControl.java:7612
 #, java-format
 msgid "Restored {0} entries, {1} bytes"
 msgstr ""
 
-#: src/BARControl.java:7617
+#: src/BARControl.java:7615
 #, java-format
 msgid "cannot restore storage ''{0}''"
 msgstr ""
 
-#: src/BARControl.java:7637
+#: src/BARControl.java:7635
 #, java-format
 msgid "cannot restore storages (error: {0})"
 msgstr ""
 
-#: src/BARControl.java:7648
+#: src/BARControl.java:7646
 msgid "cannot quit server"
 msgstr ""
 
-#: src/BARControl.java:7726
+#: src/BARControl.java:7724
 #, java-format
 msgid "communication: {0}"
 msgstr ""
@@ -5149,6 +5148,10 @@ msgstr ""
 #: src/TabJobs.java:16043
 #, java-format
 msgid "Remove {0} persistence {0,choice,0#entries|1#entry|1<entries}?"
+msgstr ""
+
+#: src/TabJobs.java:16092 src/TabRestore.java:4400 src/TabRestore.java:4578
+msgid "Entity id"
 msgstr ""
 
 #: src/TabJobs.java:16102 src/TabRestore.java:4420

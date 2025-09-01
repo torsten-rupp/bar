@@ -135,7 +135,6 @@ rest time
 - restore: pattern+verbose 4 output "skipped" - should not
 - option --no-auto-pairing
 - slave: send log file mail on master
-- BARControl: list index without header/footer lines
 - job option: do not schedule missed job executions
 - bar-index: verbose by default, option --quiet
 - check: schedule change work with new time?
@@ -173,7 +172,6 @@ rest time
 - verify signatures+list archive does not work with webdav
 - continous jobs for slaves
 - barcontrol: show installed slave versions
-- purge backup archives on exhausted free disk space
 - run pre/post command in standard mode (not only server)
 - BARControl: menu entries for Debian, XFCE
 
