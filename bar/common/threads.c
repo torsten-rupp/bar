@@ -202,6 +202,7 @@ LOCAL void debugThreadStackTraceSetThreadName(ThreadId threadId, const char *nam
 * Notes  : -
 \***********************************************************************/
 
+#ifdef STACKTRACE_ON_SIGNAL
 LOCAL const char *debugThreadStackTraceGetThreadName(ThreadId threadId)
 {
 
@@ -222,6 +223,7 @@ LOCAL const char *debugThreadStackTraceGetThreadName(ThreadId threadId)
 
   return name;
 }
+#endif // STACKTRACE_ON_SIGNAL
 
 /***********************************************************************\
 * Name   : debugThreadStackTraceWrapStartCode
