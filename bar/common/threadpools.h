@@ -271,7 +271,7 @@ bool ThreadPool_joinAll(ThreadPool *threadPool);
 
 #ifndef NDEBUG
 INLINE uint ThreadPool_idleCount(ThreadPool *threadPool);
-#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+#if defined(NDEBUG) || defined(__THREADPOOLS_IMPLEMENTATION__)
 INLINE uint ThreadPool_idleCount(ThreadPool *threadPool)
 {
   assert(threadPool != NULL);
@@ -293,7 +293,7 @@ INLINE uint ThreadPool_idleCount(ThreadPool *threadPool)
 
 #ifndef NDEBUG
 INLINE uint ThreadPool_runningCount(ThreadPool *threadPool);
-#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+#if defined(NDEBUG) || defined(__THREADPOOLS_IMPLEMENTATION__)
 INLINE uint ThreadPool_runningCount(ThreadPool *threadPool)
 {
   assert(threadPool != NULL);
