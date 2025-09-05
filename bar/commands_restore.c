@@ -276,17 +276,8 @@ LOCAL String getDestinationFileName(String      destinationFileName,
                                     int         directoryStripCount
                                    )
 {
-  String          directoryPath,baseName;
-  StringTokenizer fileNameTokenizer;
-  ConstString     token;
-  int             i;
-
   assert(destinationFileName != NULL);
   assert(fileName != NULL);
-
-  // init variables
-  directoryPath = String_new();
-  baseName      = String_new();
 
   // get destination base directory
   if (!String_isEmpty(destination))
@@ -299,13 +290,17 @@ LOCAL String getDestinationFileName(String      destinationFileName,
   }
 
   // get original name
+  String directoryPath = String_new();
+  String baseName      = String_new();
   File_splitFileName(fileName,directoryPath,baseName,NULL);
 
   // strip directory
   if (directoryStripCount != DIRECTORY_STRIP_NONE)
   {
+    StringTokenizer fileNameTokenizer;
     File_initSplitFileName(&fileNameTokenizer,directoryPath);
-    i = 0;
+    int             i = 0;
+    ConstString     token;
     while (   ((directoryStripCount == DIRECTORY_STRIP_ANY) || (i < directoryStripCount))
            && File_getNextSplitFileName(&fileNameTokenizer,&token)
           )
@@ -385,13 +380,12 @@ LOCAL String getDestinationDeviceName(String      destinationDeviceName,
 LOCAL void updateRunningInfo(RestoreInfo *restoreInfo, bool forceUpdate)
 {
   static uint64 lastTimestamp = 0LL;
-  uint64        timestamp;
 
   assert(restoreInfo != NULL);
 
   if (restoreInfo->restoreRunningInfoFunction != NULL)
   {
-    timestamp = Misc_getTimestamp();
+    uint64 timestamp = Misc_getTimestamp();
     if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
     {
       restoreInfo->restoreRunningInfoFunction(&restoreInfo->runningInfo,
@@ -446,8 +440,6 @@ LOCAL SemaphoreLock runningInfoUpdateLock(RestoreInfo *restoreInfo, ConstString 
 
 LOCAL void runningInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name, const FragmentNode *fragmentNode)
 {
-  const FragmentNode *fragmentNode;
-
   assert(restoreInfo != NULL);
 
   if (name != NULL)
@@ -522,13 +514,25 @@ LOCAL Errors handleError(const RestoreInfo *restoreInfo, ConstString storageName
 {
   assert(error != ERROR_NONE);
 
-  logMessage(restoreInfo->logHandle,
-             LOG_TYPE_ALWAYS,
-             "Restore '%s' from '%s' fail (error: %s)",
-             String_cString(entryName),
-             String_cString(storageName),
-             Error_getText(error)
-            );
+  if (entryName != NULL)
+  {
+    logMessage(restoreInfo->logHandle,
+               LOG_TYPE_ALWAYS,
+               "Restore '%s' from '%s' fail (error: %s)",
+               String_cString(entryName),
+               String_cString(storageName),
+               Error_getText(error)
+              );
+  }
+  else
+  {
+    logMessage(restoreInfo->logHandle,
+               LOG_TYPE_ALWAYS,
+               "Restore from '%s' fail (error: %s)",
+               String_cString(storageName),
+               Error_getText(error)
+              );
+  }
   if (restoreInfo->restoreErrorHandlerFunction != NULL)
   {
     error = restoreInfo->restoreErrorHandlerFunction(storageName,
@@ -558,19 +562,17 @@ LOCAL Errors createParentDirectories(RestoreInfo *restoreInfo,
                                      uint32      groupId
                                     )
 {
-  String parentDirectoryName;
-  String directoryName;
   Errors error;
 
   assert(fileName != NULL);
 
-  parentDirectoryName = File_getDirectoryName(String_new(),fileName);
+  String parentDirectoryName = File_getDirectoryName(String_new(),fileName);
   if (!String_isEmpty(parentDirectoryName))
   {
     SEMAPHORE_LOCKED_DO(&restoreInfo->namesDictionaryLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // add all directories to known names
-      directoryName = String_duplicate(parentDirectoryName);
+      String directoryName = String_duplicate(parentDirectoryName);
       while (!String_isEmpty(directoryName))
       {
         if (!Dictionary_contains(&restoreInfo->namesDictionary,
@@ -637,20 +639,14 @@ LOCAL Errors createParentDirectories(RestoreInfo *restoreInfo,
 
 LOCAL String getUniqName(String destinationFileName)
 {
-  String directoryPath,baseName;
-  String prefixFileName,postfixFileName;
-  long   index;
-  uint   n;
-
   assert(destinationFileName != NULL);
 
-  directoryPath = String_new();
-  baseName      = String_new();
-
+  String directoryPath = String_new();
+  String baseName      = String_new();
   File_splitFileName(destinationFileName,directoryPath,baseName,NULL);
-  prefixFileName  = String_new();
-  postfixFileName = String_new();
-  index = String_findLastChar(baseName,STRING_END,'.');
+  String prefixFileName  = String_new();
+  String postfixFileName = String_new();
+  long index = String_findLastChar(baseName,STRING_END,'.');
   if (index >= 0)
   {
     String_sub(prefixFileName,baseName,STRING_BEGIN,index);
@@ -665,7 +661,7 @@ LOCAL String getUniqName(String destinationFileName)
   String_append(destinationFileName,postfixFileName);
   if (File_exists(destinationFileName))
   {
-    n = 0;
+    uint n = 0;
     do
     {
       File_setFileName(destinationFileName,directoryPath);
@@ -702,35 +698,24 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                               uint          bufferSize
                              )
 {
-  AutoFreeList              autoFreeList;
-  String                    fileName;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  Errors                    error;
-  ArchiveEntryInfo          archiveEntryInfo;
-  FileInfo                  fileInfo;
-  uint64                    fragmentOffset,fragmentSize;
-  String                    destinationFileName;
-//            FileInfo                      localFileInfo;
-  FileModes                 fileMode;
-  FileHandle                fileHandle;
-  uint64                    length;
-  ulong                     bufferLength;
-  bool                      isComplete;
-  char                      sizeString[32];
-  char                      fragmentString[256];
-
+  Errors error;
   assert(restoreInfo != NULL);
   assert(restoreInfo->jobOptions != NULL);
   assert(archiveHandle != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
-  fileName = String_new();
+
+  // read file entry
+  ArchiveEntryInfo          archiveEntryInfo;
+  String                    fileName = String_new();
+  FileInfo                  fileInfo;
+  FileExtendedAttributeList fileExtendedAttributeList;
   File_initExtendedAttributes(&fileExtendedAttributeList);
   AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
   AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
-
-  // read file entry
+  uint64                    fragmentOffset,fragmentSize;
   error = Archive_readFileEntry(&archiveEntryInfo,
                                 archiveHandle,
                                 NULL,  // deltaCompressAlgorithm
@@ -764,11 +749,11 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
      )
   {
     // get destination filename
-    destinationFileName = getDestinationFileName(String_new(),
-                                                 fileName,
-                                                 restoreInfo->jobOptions->destination,
-                                                 restoreInfo->jobOptions->directoryStripCount
-                                                );
+    String destinationFileName = getDestinationFileName(String_new(),
+                                                        fileName,
+                                                        restoreInfo->jobOptions->destination,
+                                                        restoreInfo->jobOptions->directoryStripCount
+                                                       );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
     // update running info
@@ -813,6 +798,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
               // truncate to 0-file
+              FileHandle fileHandle;
               error = File_open(&fileHandle,destinationFileName,FILE_OPEN_CREATE);
               if (error != ERROR_NONE)
               {
@@ -935,6 +921,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
     }
 
+    FileModes  fileMode;
+    FileHandle fileHandle;
     if (!restoreInfo->jobOptions->dryRun)
     {
       // temporary change owner+permissions for writing (ignore errors)
@@ -992,7 +980,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
 
     // write file data
     error  = ERROR_NONE;
-    length = 0LL;
+    uint64 length = 0LL;
     while (   ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
            && (length < fragmentSize)
           )
@@ -1003,7 +991,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         Misc_udelay(500L*US_PER_MS);
       }
 
-      bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
+      ulong bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
 
       error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
       if (error != ERROR_NONE)
@@ -1015,6 +1003,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                   );
         break;
       }
+
       if (!restoreInfo->jobOptions->dryRun)
       {
         error = File_write(&fileHandle,buffer,bufferLength);
@@ -1071,7 +1060,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     }
 
     // add fragment to file fragment list
-    isComplete = FALSE;
+    bool isComplete = FALSE;
     SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       FragmentNode *fragmentNode;
@@ -1186,6 +1175,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     }
 
     // get size/fragment info
+    char sizeString[32];
+    char fragmentString[256];
     if (globalOptions.humanFormatFlag)
     {
       getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
@@ -1275,33 +1266,18 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                                uint          bufferSize
                               )
 {
-  AutoFreeList     autoFreeList;
-  String           deviceName;
-  Errors           error;
-  ArchiveEntryInfo archiveEntryInfo;
-  DeviceInfo       deviceInfo;
-  uint64           blockOffset,blockCount;
-  String           destinationDeviceName;
-  enum
-  {
-    DEVICE,
-    FILE,
-    UNKNOWN
-  }                type;
-  DeviceHandle     deviceHandle;
-  FileModes        fileMode;
-  FileHandle       fileHandle;
-  uint64           block;
-  ulong            bufferBlockCount;
-  char             sizeString[32];
-  char             fragmentString[256];
+  Errors error;
 
   // init variables
+  AutoFreeList     autoFreeList;
   AutoFree_init(&autoFreeList);
-  deviceName = String_new();
-  AUTOFREE_ADD(&autoFreeList,deviceName,{ String_delete(deviceName); });
 
   // read image entry
+  ArchiveEntryInfo archiveEntryInfo;
+  String           deviceName = String_new();
+  AUTOFREE_ADD(&autoFreeList,deviceName,{ String_delete(deviceName); });
+  DeviceInfo       deviceInfo;
+  uint64           blockOffset,blockCount;
   error = Archive_readImageEntry(&archiveEntryInfo,
                                  archiveHandle,
                                  NULL,  // deltaCompressAlgorithm
@@ -1346,10 +1322,10 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
      )
   {
     // get destination filename
-    destinationDeviceName = getDestinationDeviceName(String_new(),
-                                                     deviceName,
-                                                     restoreInfo->jobOptions->destination
-                                                    );
+    String destinationDeviceName = getDestinationDeviceName(String_new(),
+                                                            deviceName,
+                                                            restoreInfo->jobOptions->destination
+                                                           );
     AUTOFREE_ADD(&autoFreeList,destinationDeviceName,{ String_delete(destinationDeviceName); });
 
     // update running info
@@ -1402,6 +1378,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                 if (!File_isDevice(destinationDeviceName))
                 {
                   // truncate to 0-file
+                  FileHandle fileHandle;
                   error = File_open(&fileHandle,destinationDeviceName,FILE_OPEN_CREATE);
                   if (error != ERROR_NONE)
                   {
@@ -1469,7 +1446,17 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    type = UNKNOWN;
+//  String           destinationDeviceName;
+
+    enum
+    {
+      DEVICE,
+      FILE,
+      UNKNOWN
+    }            type = UNKNOWN;
+    DeviceHandle deviceHandle;
+    FileModes    fileMode;
+    FileHandle   fileHandle;
     if (!restoreInfo->jobOptions->dryRun)
     {
       if (File_isDevice(destinationDeviceName))
@@ -1578,7 +1565,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
 
     // write image data
     error = ERROR_NONE;
-    block = 0LL;
+    uint64 block = 0LL;
     while (   ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
            && (block < blockCount)
           )
@@ -1589,7 +1576,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         Misc_udelay(500L*1000L);
       }
 
-      bufferBlockCount = MIN(blockCount-block,bufferSize/deviceInfo.blockSize);
+      ulong bufferBlockCount = MIN(blockCount-block,bufferSize/deviceInfo.blockSize);
 
       // read data from archive
       error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
@@ -1708,6 +1695,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     }
 
     // get size/fragment info
+    char sizeString[32];
+    char fragmentString[256];
     if (globalOptions.humanFormatFlag)
     {
       getHumanSizeString(sizeString,sizeof(sizeString),blockCount*deviceInfo.blockSize);
@@ -1787,22 +1776,20 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                                    ArchiveHandle *archiveHandle
                                   )
 {
-  AutoFreeList              autoFreeList;
-  String                    directoryName;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  Errors                    error;
-  ArchiveEntryInfo          archiveEntryInfo;
-  FileInfo                  fileInfo;
-  String                    destinationFileName;
+  Errors error;
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
-  directoryName = String_new();
-  File_initExtendedAttributes(&fileExtendedAttributeList);
-  AUTOFREE_ADD(&autoFreeList,directoryName,{ String_delete(directoryName); });
-  AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
 
   // read directory entry
+  ArchiveEntryInfo          archiveEntryInfo;
+  String                    directoryName = String_new();
+  AUTOFREE_ADD(&autoFreeList,directoryName,{ String_delete(directoryName); });
+  FileInfo                  fileInfo;
+  FileExtendedAttributeList fileExtendedAttributeList;
+  File_initExtendedAttributes(&fileExtendedAttributeList);
+  AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
   error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                      archiveHandle,
                                      NULL,  // cryptType
@@ -1830,11 +1817,11 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
      )
   {
     // get destination filename
-    destinationFileName = getDestinationFileName(String_new(),
-                                                 directoryName,
-                                                 restoreInfo->jobOptions->destination,
-                                                 restoreInfo->jobOptions->directoryStripCount
-                                                );
+    String destinationFileName = getDestinationFileName(String_new(),
+                                                        directoryName,
+                                                        restoreInfo->jobOptions->destination,
+                                                        restoreInfo->jobOptions->directoryStripCount
+                                                       );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
     // update running info
@@ -2096,26 +2083,22 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                               ArchiveHandle *archiveHandle
                              )
 {
-  AutoFreeList              autoFreeList;
-  String                    linkName;
-  String                    fileName;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  Errors                    error;
-  ArchiveEntryInfo          archiveEntryInfo;
-  FileInfo                  fileInfo;
-  String                    destinationFileName;
-//            FileInfo localFileInfo;
+  Errors error;
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
-  linkName = String_new();
-  fileName = String_new();
-  File_initExtendedAttributes(&fileExtendedAttributeList);
-  AUTOFREE_ADD(&autoFreeList,linkName,{ String_delete(linkName); });
-  AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
-  AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
 
   // read link entry
+  ArchiveEntryInfo          archiveEntryInfo;
+  String                    linkName = String_new();
+  AUTOFREE_ADD(&autoFreeList,linkName,{ String_delete(linkName); });
+  String                    fileName = String_new();
+  FileInfo                  fileInfo;
+  AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
+  FileExtendedAttributeList fileExtendedAttributeList;
+  File_initExtendedAttributes(&fileExtendedAttributeList);
+  AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
   error = Archive_readLinkEntry(&archiveEntryInfo,
                                 archiveHandle,
                                 NULL,  // cryptType
@@ -2133,7 +2116,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
-    error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
+    error = handleError(restoreInfo,archiveHandle->printableStorageName,NULL,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -2144,11 +2127,11 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
      )
   {
     // get destination filename
-    destinationFileName = getDestinationFileName(String_new(),
-                                                 linkName,
-                                                 restoreInfo->jobOptions->destination,
-                                                 restoreInfo->jobOptions->directoryStripCount
-                                                );
+    String destinationFileName = getDestinationFileName(String_new(),
+                                                        linkName,
+                                                        restoreInfo->jobOptions->destination,
+                                                        restoreInfo->jobOptions->directoryStripCount
+                                                       );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
     // update running info
@@ -2386,35 +2369,22 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                                   uint          bufferSize
                                  )
 {
-  AutoFreeList              autoFreeList;
-  StringList                fileNameList;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  Errors                    error;
-  ArchiveEntryInfo          archiveEntryInfo;
-  FileInfo                  fileInfo;
-  uint64                    fragmentOffset,fragmentSize;
-  String                    hardLinkFileName;
-  String                    destinationFileName;
-  bool                      restoredDataFlag;
-  void                      *autoFreeSavePoint;
-  const StringNode          *stringNode;
-  String                    fileName;
-  FileModes                 fileMode;
-  FileHandle                fileHandle;
-  uint64                    length;
-  ulong                     bufferLength;
-  bool                      isComplete;
-  char                      sizeString[32];
-  char                      fragmentString[256];
+  Errors error;
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
-  StringList_init(&fileNameList);
-  File_initExtendedAttributes(&fileExtendedAttributeList);
-  AUTOFREE_ADD(&autoFreeList,&fileNameList,{ StringList_done(&fileNameList); });
-  AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
 
   // read hard link entry
+  ArchiveEntryInfo          archiveEntryInfo;
+  StringList                fileNameList;
+  StringList_init(&fileNameList);
+  AUTOFREE_ADD(&autoFreeList,&fileNameList,{ StringList_done(&fileNameList); });
+  FileInfo                  fileInfo;
+  FileExtendedAttributeList fileExtendedAttributeList;
+  File_initExtendedAttributes(&fileExtendedAttributeList);
+  AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
+  uint64                    fragmentOffset,fragmentSize;
   error = Archive_readHardLinkEntry(&archiveEntryInfo,
                                     archiveHandle,
                                     NULL,  // deltaCompressAlgorithm
@@ -2437,18 +2407,20 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
-    error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
+    error = handleError(restoreInfo,archiveHandle->printableStorageName,NULL,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ Archive_closeEntry(&archiveEntryInfo); });
 
-  hardLinkFileName    = String_new();
-  destinationFileName = String_new();
+  String           hardLinkFileName    = String_new();
   AUTOFREE_ADD(&autoFreeList,hardLinkFileName,{ String_delete(hardLinkFileName); });
+  String           destinationFileName = String_new();
   AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
-  restoredDataFlag    = FALSE;
-  autoFreeSavePoint   = AutoFree_save(&autoFreeList);
+  bool             restoredDataFlag    = FALSE;
+  void             *autoFreeSavePoint  = AutoFree_save(&autoFreeList);
+  const StringNode *stringNode;
+  String           fileName;
   STRINGLIST_ITERATEX(&fileNameList,stringNode,fileName,error == ERROR_NONE)
   {
     if (   (List_isEmpty(restoreInfo->includeEntryList) || EntryList_match(restoreInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -2505,6 +2477,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 break;
               case RESTORE_ENTRY_MODE_OVERWRITE:
                 // truncate to 0-file
+                FileHandle fileHandle;
                 error = File_open(&fileHandle,destinationFileName,FILE_OPEN_CREATE);
                 if (error != ERROR_NONE)
                 {
@@ -2630,6 +2603,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
       if (!restoredDataFlag)
       {
         // create file
+        FileModes  fileMode;
+        FileHandle fileHandle;
         if (!restoreInfo->jobOptions->dryRun)
         {
           // temporary change owner+permissions for writing (ignore errors)
@@ -2688,7 +2663,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
 
         // write file data
         error  = ERROR_NONE;
-        length = 0LL;
+        uint64 length = 0LL;
         while (   ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
                && (length < fragmentSize)
               )
@@ -2699,7 +2674,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             Misc_udelay(500L*US_PER_MS);
           }
 
-          bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
+          ulong bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
 
           error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
           if (error != ERROR_NONE)
@@ -2770,7 +2745,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // add fragment to hardlink fragment list
-        isComplete = FALSE;
+        bool isComplete = FALSE;
         SEMAPHORE_LOCKED_DO(&restoreInfo->fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           FragmentNode *fragmentNode;
@@ -2885,6 +2860,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         }
 
         // get size/fragment info
+        char sizeString[32];
+        char fragmentString[256];
         if (globalOptions.humanFormatFlag)
         {
           getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
@@ -3000,23 +2977,20 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                                  ArchiveHandle *archiveHandle
                                 )
 {
-  AutoFreeList              autoFreeList;
-  String                    fileName;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  Errors                    error;
-  ArchiveEntryInfo          archiveEntryInfo;
-  FileInfo                  fileInfo;
-  String                    destinationFileName;
-//            FileInfo localFileInfo;
+  Errors error;
 
   // init variables
+  AutoFreeList              autoFreeList;
   AutoFree_init(&autoFreeList);
-  fileName = String_new();
-  File_initExtendedAttributes(&fileExtendedAttributeList);
-  AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
-  AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
 
   // read special device entry
+  ArchiveEntryInfo          archiveEntryInfo;
+  String                    fileName = String_new();
+  AUTOFREE_ADD(&autoFreeList,fileName,{ String_delete(fileName); });
+  FileInfo                  fileInfo;
+  FileExtendedAttributeList fileExtendedAttributeList;
+  File_initExtendedAttributes(&fileExtendedAttributeList);
+  AUTOFREE_ADD(&autoFreeList,&fileExtendedAttributeList,{ File_doneExtendedAttributes(&fileExtendedAttributeList); });
   error = Archive_readSpecialEntry(&archiveEntryInfo,
                                    archiveHandle,
                                    NULL,  // cryptType
@@ -3033,7 +3007,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                String_cString(archiveHandle->printableStorageName),
                Error_getText(error)
               );
-    error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
+    error = handleError(restoreInfo,archiveHandle->printableStorageName,NULL,error);
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -3044,11 +3018,11 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
      )
   {
     // get destination filename
-    destinationFileName = getDestinationFileName(String_new(),
-                                                 fileName,
-                                                 restoreInfo->jobOptions->destination,
-                                                 restoreInfo->jobOptions->directoryStripCount
-                                                );
+    String destinationFileName = getDestinationFileName(String_new(),
+                                                        fileName,
+                                                        restoreInfo->jobOptions->destination,
+                                                        restoreInfo->jobOptions->directoryStripCount
+                                                       );
     AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
 
     // update running info
@@ -3364,28 +3338,24 @@ LOCAL Errors restoreEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
 {
-  byte          *buffer;
-  uint          archiveIndex;
-  ArchiveHandle archiveHandle;
-  EntryMsg      entryMsg;
-  Errors        error;
-
   assert(restoreInfo != NULL);
   assert(restoreInfo->jobOptions != NULL);
 
-  // init variables
-  buffer = (byte*)malloc(BUFFER_SIZE);
+  // restore entries
+  byte *buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  archiveIndex = 0;
-
-  // restore entries
+  uint          archiveIndex = 0;
+  ArchiveHandle archiveHandle;
+  EntryMsg      entryMsg;
   while (MsgQueue_get(&restoreInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
     assert(entryMsg.archiveHandle != NULL);
     assert(entryMsg.archiveCryptInfo != NULL);
+
+    Errors error;
 
     if (   ((restoreInfo->failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
 // TODO:
@@ -3461,6 +3431,8 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
     Archive_close(&archiveHandle,FALSE);
   }
 
+  free(buffer);
+
   // discard processing all other entries
   while (MsgQueue_get(&restoreInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
@@ -3471,7 +3443,6 @@ LOCAL void restoreThreadCode(RestoreInfo *restoreInfo)
   }
 
   // free resources
-  free(buffer);
 }
 
 /***********************************************************************\
@@ -3490,20 +3461,7 @@ LOCAL Errors restoreArchive(RestoreInfo      *restoreInfo,
                             ConstString       archiveName
                            )
 {
-  AutoFreeList           autoFreeList;
-  String                 printableStorageName;
-  Errors                 error;
-  StorageInfo            storageInfo;
-  uint                   restoreThreadCount;
-  byte                   *buffer;
-  uint                   i;
-  ArchiveHandle          archiveHandle;
-  CryptSignatureStates   allCryptSignatureState;
-  uint64                 lastSignatureOffset;
-  ArchiveEntryTypes      archiveEntryType;
-  ArchiveCryptInfo       *archiveCryptInfo;
-  uint64                 offset;
-  EntryMsg               entryMsg;
+  Errors error;
 
   assert(restoreInfo != NULL);
   assert(restoreInfo->includeEntryList != NULL);
@@ -3511,11 +3469,11 @@ LOCAL Errors restoreArchive(RestoreInfo      *restoreInfo,
   assert(storageSpecifier != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
 
   // get printable storage name
-  printableStorageName = String_new();
-  Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
+  String printableStorageName = Storage_getPrintableName(String_new(),storageSpecifier,archiveName);
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // init running info
@@ -3528,6 +3486,7 @@ LOCAL Errors restoreArchive(RestoreInfo      *restoreInfo,
   }
 
   // init storage
+  StorageInfo storageInfo;
   error = Storage_init(&storageInfo,
 NULL, // masterIO
                        storageSpecifier,
@@ -3566,6 +3525,7 @@ NULL, // masterIO
   }
 
   // open archive
+  ArchiveHandle archiveHandle;
   error = Archive_open(&archiveHandle,
                        &storageInfo,
                        archiveName,
@@ -3589,6 +3549,7 @@ NULL, // masterIO
   // check signatures
   if (!restoreInfo->jobOptions->skipVerifySignaturesFlag)
   {
+    CryptSignatureStates allCryptSignatureState;
     error = Archive_verifySignatures(&archiveHandle,
                                      &allCryptSignatureState
                                     );
@@ -3643,11 +3604,12 @@ NULL, // masterIO
            );
 
   // start restore threads/allocate uffer
-  restoreThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  byte *buffer;
+  uint restoreThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
   if (restoreThreadCount > 1)
   {
     MsgQueue_reset(&restoreInfo->entryMsgQueue);
-    for (i = 0; i < restoreThreadCount; i++)
+    for (uint i = 0; i < restoreThreadCount; i++)
     {
       ThreadPool_run(&workerThreadPool,restoreThreadCode,restoreInfo);
     }
@@ -3664,9 +3626,9 @@ NULL, // masterIO
   }
 
   // read archive entries
-  allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
   error                  = ERROR_NONE;
-  lastSignatureOffset    = Archive_tell(&archiveHandle);
+  CryptSignatureStates allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
+  uint64               lastSignatureOffset    = Archive_tell(&archiveHandle);
   while (   ((restoreInfo->failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
          && ((restoreInfo->isAbortedFunction == NULL) || !restoreInfo->isAbortedFunction(restoreInfo->isAbortedUserData))
          && (restoreInfo->jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
@@ -3680,6 +3642,9 @@ NULL, // masterIO
     }
 
     // get next archive entry type
+    ArchiveEntryTypes archiveEntryType;
+    ArchiveCryptInfo  *archiveCryptInfo;
+    uint64            offset;
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         &archiveCryptInfo,
@@ -3713,6 +3678,7 @@ NULL, // masterIO
       {
         // send entry to restore threads
 //TODO: increment on multiple archives and when threads are not restarted for each archive (multi-threaded restore over multiple archives)
+        EntryMsg entryMsg;
         entryMsg.archiveIndex     = 1;
         entryMsg.archiveHandle    = &archiveHandle;
         entryMsg.archiveEntryType = archiveEntryType;
@@ -3842,25 +3808,18 @@ Errors Command_restore(const StringList           *storageNameList,
                        LogHandle                  *logHandle
                       )
 {
-  StorageSpecifier           storageSpecifier;
-  RestoreInfo                restoreInfo;
-  StringNode                 *stringNode;
-  String                     storageName;
-  Errors                     error;
-  bool                       abortFlag;
-  bool                       someStorageFound;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  String                     fileName;
-  FragmentNode               *fragmentNode;
+  Errors error;
 
   assert(storageNameList != NULL);
   assert(includeEntryList != NULL);
   assert(jobOptions != NULL);
 
   // init variables
+  StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
 
   // init restore info
+  RestoreInfo restoreInfo;
   initRestoreInfo(&restoreInfo,
                   &storageSpecifier,
                   includeEntryList,
@@ -3882,8 +3841,10 @@ Errors Command_restore(const StringList           *storageNameList,
     updateRunningInfo(&restoreInfo,TRUE);
   }
   error                       = ERROR_NONE;
-  abortFlag                   = FALSE;
-  someStorageFound            = FALSE;
+  bool       abortFlag                   = FALSE;
+  bool       someStorageFound            = FALSE;
+  StringNode *stringNode;
+  String     storageName;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
     // pause
@@ -3928,6 +3889,7 @@ Errors Command_restore(const StringList           *storageNameList,
     if (error != ERROR_NONE)
     {
       // restore all matching archives content
+      StorageDirectoryListHandle storageDirectoryListHandle;
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
                                         NULL,  // archiveName
@@ -3936,7 +3898,7 @@ Errors Command_restore(const StringList           *storageNameList,
                                        );
       if (error == ERROR_NONE)
       {
-        fileName = String_new();
+        String fileName = String_new();
         while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
         {
           // read next directory entry
@@ -4005,6 +3967,7 @@ Errors Command_restore(const StringList           *storageNameList,
     // check fragment lists, set file info/owner/attributes also for incomplete entries
     if ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
     {
+      FragmentNode *fragmentNode;
       FRAGMENTLIST_ITERATE(&restoreInfo.fragmentList,fragmentNode)
       {
         if (!FragmentList_isComplete(fragmentNode))

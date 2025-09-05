@@ -357,12 +357,10 @@ LOCAL void CompressLZMA_done(CompressInfo *compressInfo)
 
 LOCAL Errors CompressLZMA_reset(CompressInfo *compressInfo)
 {
-  lzma_stream streamInit = LZMA_STREAM_INIT;
-  int         lzmalibResult;
-
   assert(compressInfo != NULL);
 
-  lzmalibResult = LZMA_PROG_ERROR;
+  lzma_stream streamInit    = LZMA_STREAM_INIT;
+  int         lzmalibResult = LZMA_PROG_ERROR;
   switch (compressInfo->compressMode)
   {
     case COMPRESS_MODE_DEFLATE:

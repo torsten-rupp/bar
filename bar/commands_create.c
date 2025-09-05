@@ -484,71 +484,61 @@ LOCAL Errors readIncrementalList(const CreateInfo *createInfo,
 {
   #define MAX_KEY_DATA (64*1024)
 
-  void                *keyData;
-  Errors              error;
-  FileHandle          fileHandle;
-  char                id[32];
-  uint16              version;
-  IncrementalListInfo incrementalListInfo;
-  uint16              keyLength;
+  Errors error;
 
   assert(createInfo != NULL);
   assert(fileName != NULL);
   assert(namesDictionary != NULL);
 
-  // initialize variables
-  keyData = malloc(MAX_KEY_DATA);
-  if (keyData == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-
-  // init variables
-  Dictionary_clear(namesDictionary);
-
   // open file
+  FileHandle fileHandle;
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    free(keyData);
     return error;
   }
 
   // read and check header
+  char id[32];
   error = File_read(&fileHandle,id,sizeof(id),NULL);
   if (error != ERROR_NONE)
   {
     File_close(&fileHandle);
-    free(keyData);
     return error;
   }
   if (!stringEquals(id,INCREMENTAL_LIST_FILE_ID))
   {
     File_close(&fileHandle);
-    free(keyData);
     return ERROR_NOT_AN_INCREMENTAL_FILE;
   }
+  uint16 version;
   error = File_read(&fileHandle,&version,sizeof(version),NULL);
   if (error != ERROR_NONE)
   {
     File_close(&fileHandle);
-    free(keyData);
     return error;
   }
   if (version != INCREMENTAL_LIST_FILE_VERSION)
   {
     File_close(&fileHandle);
-    free(keyData);
     return ERROR_WRONG_INCREMENTAL_FILE_VERSION;
   }
 
   // read entries
+  void *keyData = malloc(MAX_KEY_DATA);
+  if (keyData == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  Dictionary_clear(namesDictionary);
   while (!File_eof(&fileHandle) && !isAborted(createInfo))
   {
     // read entry
+    IncrementalListInfo incrementalListInfo;
     incrementalListInfo.state = INCREMENTAL_FILE_STATE_UNKNOWN;
     error = File_read(&fileHandle,&incrementalListInfo.cast,sizeof(incrementalListInfo.cast),NULL);
     if (error != ERROR_NONE) break;
+    uint16 keyLength;
     error = File_read(&fileHandle,&keyLength,sizeof(keyLength),NULL);
     if (error != ERROR_NONE) break;
     error = File_read(&fileHandle,keyData,keyLength,NULL);
@@ -562,12 +552,12 @@ LOCAL Errors readIncrementalList(const CreateInfo *createInfo,
                    sizeof(incrementalListInfo)
                   );
   }
+  free(keyData);
 
   // close file
   File_close(&fileHandle);
 
   // free resources
-  free(keyData);
 
   return error;
 }
@@ -589,26 +579,14 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
                                   Dictionary       *namesDictionary
                                  )
 {
-  String                    directoryName;
-  String                    tmpFileName;
-  Errors                    error;
-  FileHandle                fileHandle;
-  char                      id[32];
-  uint16                    version;
-  DictionaryIterator        dictionaryIterator;
-  const void                *keyData;
-  ulong                     keyLength;
-  void                      *data;
-  ulong                     length;
-  uint16                    n;
-  const IncrementalListInfo *incrementalListInfo;
+  Errors error;
 
   assert(createInfo != NULL);
   assert(fileName != NULL);
   assert(namesDictionary != NULL);
 
   // get directory of .bid file
-  directoryName = File_getDirectoryName(String_new(),fileName);
+  String directoryName = File_getDirectoryName(String_new(),fileName);
 
   // create directory if not existing
   if (!String_isEmpty(directoryName))
@@ -643,7 +621,7 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   }
 
   // get temporary name for new .bid file
-  tmpFileName = String_new();
+  String tmpFileName = String_new();
   error = File_getTmpFileName(tmpFileName,"bid",directoryName);
   if (error != ERROR_NONE)
   {
@@ -653,6 +631,7 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   }
 
   // open file new .bid file
+  FileHandle fileHandle;
   error = File_open(&fileHandle,tmpFileName,FILE_OPEN_CREATE);
   if (error != ERROR_NONE)
   {
@@ -663,6 +642,7 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   }
 
   // write header
+  char id[32];
   memClear(id,sizeof(id));
   strncpy(id,INCREMENTAL_LIST_FILE_ID,sizeof(id)-1);
   error = File_write(&fileHandle,id,sizeof(id));
@@ -674,7 +654,7 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
     String_delete(directoryName);
     return error;
   }
-  version = INCREMENTAL_LIST_FILE_VERSION;
+  uint16 version = INCREMENTAL_LIST_FILE_VERSION;
   error = File_write(&fileHandle,&version,sizeof(version));
   if (error != ERROR_NONE)
   {
@@ -686,7 +666,12 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   }
 
   // write entries
+  DictionaryIterator dictionaryIterator;
   Dictionary_initIterator(&dictionaryIterator,namesDictionary);
+  const void         *keyData;
+  ulong              keyLength;
+  void               *data;
+  ulong              length;
   while (   Dictionary_getNext(&dictionaryIterator,
                                &keyData,
                                &keyLength,
@@ -701,11 +686,10 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
     assert(data != NULL);
     assert(length == sizeof(IncrementalListInfo));
 
-    incrementalListInfo = (IncrementalListInfo*)data;
-
+    const IncrementalListInfo *incrementalListInfo = (IncrementalListInfo*)data;
     error = File_write(&fileHandle,&incrementalListInfo->cast,sizeof(incrementalListInfo->cast));
     if (error != ERROR_NONE) break;
-    n = (uint16)keyLength;
+    uint16 n = (uint16)keyLength;
     error = File_write(&fileHandle,&n,sizeof(n));
     if (error != ERROR_NONE) break;
     error = File_write(&fileHandle,keyData,n);
@@ -764,18 +748,17 @@ LOCAL bool isFileChanged(Dictionary     *namesDictionary,
                          const FileInfo *fileInfo
                         )
 {
+  assert(namesDictionary != NULL);
+  assert(fileName != NULL);
+  assert(fileInfo != NULL);
+
+  // check if exists
   union
   {
     void                *value;
     IncrementalListInfo *incrementalListInfo;
   } data;
   ulong length;
-
-  assert(namesDictionary != NULL);
-  assert(fileName != NULL);
-  assert(fileInfo != NULL);
-
-  // check if exists
   if (!Dictionary_find(namesDictionary,
                        String_cString(fileName),
                        String_length(fileName),
@@ -813,17 +796,15 @@ LOCAL void printIncrementalInfo(Dictionary     *dictionary,
                                 const FileCast *fileCast
                                )
 {
+  String s = String_new();
+  printInfo(2,"Include '%s':\n",String_cString(name));
+  printInfo(2,"  new: %s\n",String_cString(File_castToString(String_clear(s),fileCast)));
   union
   {
     void                *value;
     IncrementalListInfo *incrementalListInfo;
   } data;
   ulong length;
-
-  String s = String_new();
-
-  printInfo(2,"Include '%s':\n",String_cString(name));
-  printInfo(2,"  new: %s\n",String_cString(File_castToString(String_clear(s),fileCast)));
   if (Dictionary_find(dictionary,
                       String_cString(name),
                       String_length(name),
@@ -838,7 +819,6 @@ LOCAL void printIncrementalInfo(Dictionary     *dictionary,
   {
     printInfo(2,"  old: not exists\n");
   }
-
   String_delete(s);
 }
 
@@ -859,12 +839,11 @@ LOCAL void addIncrementalList(Dictionary     *namesDictionary,
                               const FileInfo *fileInfo
                              )
 {
-  IncrementalListInfo incrementalListInfo;
-
   assert(namesDictionary != NULL);
   assert(fileName != NULL);
   assert(fileInfo != NULL);
 
+  IncrementalListInfo incrementalListInfo;
   incrementalListInfo.state = INCREMENTAL_FILE_STATE_ADDED;
   memCopyFast(&incrementalListInfo.cast,sizeof(incrementalListInfo.cast),&fileInfo->cast,sizeof(FileCast));
 
@@ -889,14 +868,13 @@ LOCAL void addIncrementalList(Dictionary     *namesDictionary,
 LOCAL void updateRunningInfo(CreateInfo *createInfo, bool forceUpdate)
 {
   static uint64 lastTimestamp = 0LL;
-  uint64        timestamp;
 
   assert(createInfo != NULL);
   assert(Semaphore_isLocked(&createInfo->runningInfoLock));
 
   if (createInfo->runningInfoFunction != NULL)
   {
-    timestamp = Misc_getTimestamp();
+    uint64 timestamp = Misc_getTimestamp();
     if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
     {
       createInfo->runningInfoFunction(createInfo->failError,
@@ -946,8 +924,6 @@ LOCAL SemaphoreLock runningInfoUpdateLock(CreateInfo *createInfo, ConstString na
 
 LOCAL void runningInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
 {
-  const FragmentNode *fragmentNode;
-
   assert(createInfo != NULL);
 
   if (name != NULL)
@@ -958,7 +934,7 @@ LOCAL void runningInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
        )
     {
       // find fragment node
-      fragmentNode = FragmentList_find(&createInfo->runningInfoFragmentList,name);
+      const FragmentNode *fragmentNode = FragmentList_find(&createInfo->runningInfoFragmentList,name);
 
       // set new current running info
       String_set(createInfo->runningInfo.progress.entry.name,name);
@@ -1033,9 +1009,7 @@ LOCAL bool updateStorageProgress(uint64       doneSize,
                                 )
 {
   CreateInfo *createInfo = (CreateInfo*)userData;
-
   assert(createInfo != NULL);
-
   STATUS_INFO_UPDATE(createInfo,NULL,NULL)
   {
     createInfo->runningInfo.progress.storage.doneSize = doneSize;
@@ -1067,28 +1041,24 @@ LOCAL void appendFileToEntryList(MsgQueue       *entryMsgQueue,
                                  uint64         maxFragmentSize
                                 )
 {
-  uint     fragmentCount;
-  uint     fragmentNumber;
-  uint64   fragmentOffset,fragmentSize;
-  EntryMsg entryMsg;
-
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
   assert(fileInfo != NULL);
 
-  fragmentCount  = (maxFragmentSize > 0LL)
-                     ? (fileInfo->size+maxFragmentSize-1)/maxFragmentSize
-                     : 1;
-  fragmentNumber = 0;
-  fragmentOffset = 0LL;
+  uint   fragmentCount  = (maxFragmentSize > 0LL)
+                            ? (fileInfo->size+maxFragmentSize-1)/maxFragmentSize
+                            : 1;
+  uint   fragmentNumber = 0;
+  uint64 fragmentOffset = 0LL;
   do
   {
     // calculate fragment size
-    fragmentSize = ((maxFragmentSize > 0LL) && ((fileInfo->size-fragmentOffset) > maxFragmentSize))
-                     ? maxFragmentSize
-                     : fileInfo->size-fragmentOffset;
+    uint64 fragmentSize = ((maxFragmentSize > 0LL) && ((fileInfo->size-fragmentOffset) > maxFragmentSize))
+                            ? maxFragmentSize
+                            : fileInfo->size-fragmentOffset;
 
     // init
+    EntryMsg entryMsg;
     entryMsg.entryType         = entryType;
     entryMsg.fileType          = FILE_TYPE_FILE;
     entryMsg.name              = String_duplicate(name);
@@ -1132,28 +1102,25 @@ LOCAL void appendImageToEntryList(MsgQueue         *entryMsgQueue,
                                   uint64           maxFragmentSize
                                  )
 {
-  uint     fragmentCount;
-  uint     fragmentNumber;
-  uint64   fragmentOffset,fragmentSize;
-  EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
   assert(deviceInfo != NULL);
 
-  fragmentCount  = (maxFragmentSize > 0LL)
-                     ? (deviceInfo->size+maxFragmentSize-1)/maxFragmentSize
-                     : 1;
-  fragmentNumber = 0;
-  fragmentOffset = 0LL;
+  uint   fragmentCount  = (maxFragmentSize > 0LL)
+                            ? (deviceInfo->size+maxFragmentSize-1)/maxFragmentSize
+                            : 1;
+  uint   fragmentNumber = 0;
+  uint64 fragmentOffset = 0LL;
   do
   {
     // calculate fragment size
-    fragmentSize = ((maxFragmentSize > 0LL) && ((deviceInfo->size-fragmentOffset) > maxFragmentSize))
-                     ? maxFragmentSize
-                     : deviceInfo->size-fragmentOffset;
+    uint64 fragmentSize = ((maxFragmentSize > 0LL) && ((deviceInfo->size-fragmentOffset) > maxFragmentSize))
+                            ? maxFragmentSize
+                            : deviceInfo->size-fragmentOffset;
 
     // init
+    EntryMsg entryMsg;
     entryMsg.entryType         = entryType;
     entryMsg.fileType          = FILE_TYPE_SPECIAL;
     entryMsg.name              = String_duplicate(name);
@@ -1195,13 +1162,12 @@ LOCAL void appendDirectoryToEntryList(MsgQueue       *entryMsgQueue,
                                       const FileInfo *fileInfo
                                      )
 {
-  EntryMsg entryMsg;
-
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
   assert(fileInfo != NULL);
 
   // init
+  EntryMsg entryMsg;
   entryMsg.entryType      = entryType;
   entryMsg.fileType       = FILE_TYPE_DIRECTORY;
   entryMsg.name           = String_duplicate(name);
@@ -1237,13 +1203,12 @@ LOCAL void appendLinkToEntryList(MsgQueue       *entryMsgQueue,
                                  const FileInfo *fileInfo
                                 )
 {
-  EntryMsg entryMsg;
-
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
   assert(fileInfo != NULL);
 
   // init
+  EntryMsg entryMsg;
   entryMsg.entryType      = entryType;
   entryMsg.fileType       = FILE_TYPE_LINK;
   entryMsg.name           = String_duplicate(name);
@@ -1281,29 +1246,25 @@ LOCAL void appendHardLinkToEntryList(MsgQueue       *entryMsgQueue,
                                      uint64         maxFragmentSize
                                     )
 {
-  uint     fragmentCount;
-  uint     fragmentNumber;
-  uint64   fragmentOffset,fragmentSize;
-  EntryMsg entryMsg;
-
   assert(entryMsgQueue != NULL);
   assert(nameList != NULL);
   assert(!StringList_isEmpty(nameList));
   assert(fileInfo != NULL);
 
-  fragmentCount     = (maxFragmentSize > 0LL)
-                        ? (fileInfo->size+maxFragmentSize-1)/maxFragmentSize
-                        : 1;
-  fragmentNumber    = 0;
-  fragmentOffset    = 0LL;
+  uint   fragmentCount     = (maxFragmentSize > 0LL)
+                               ? (fileInfo->size+maxFragmentSize-1)/maxFragmentSize
+                               : 1;
+  uint   fragmentNumber    = 0;
+  uint64 fragmentOffset    = 0LL;
   do
   {
     // calculate fragment size
-    fragmentSize = ((maxFragmentSize > 0LL) && ((fileInfo->size-fragmentOffset) > maxFragmentSize))
-                     ? maxFragmentSize
-                     : fileInfo->size-fragmentOffset;
+    uint64 fragmentSize = ((maxFragmentSize > 0LL) && ((fileInfo->size-fragmentOffset) > maxFragmentSize))
+                            ? maxFragmentSize
+                            : fileInfo->size-fragmentOffset;
 
     // init
+    EntryMsg entryMsg;
     entryMsg.entryType      = entryType;
     entryMsg.fileType       = FILE_TYPE_HARDLINK;
     entryMsg.name           = NULL;
@@ -1348,13 +1309,12 @@ LOCAL void appendSpecialToEntryList(MsgQueue         *entryMsgQueue,
                                     const DeviceInfo *deviceInfo
                                    )
 {
-  EntryMsg entryMsg;
-
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
   assert((fileInfo != NULL) || (deviceInfo != NULL));
 
   // init
+  EntryMsg entryMsg;
   entryMsg.entryType      = entryType;
   entryMsg.fileType       = FILE_TYPE_SPECIAL;
   entryMsg.name           = String_duplicate(name);
@@ -1400,18 +1360,15 @@ LOCAL String getIncrementalFileNameFromStorage(String                 fileName,
 {
   #define SEPARATOR_CHARS "-_"
 
-  ulong i;
-  char  ch;
-
   assert(fileName != NULL);
   assert(storageSpecifier != NULL);
 
   // remove all macros and leading and trailing separator characters
   String_clear(fileName);
-  i = 0L;
+  ulong i = 0L;
   while (i < String_length(storageSpecifier->archiveName))
   {
-    ch = String_index(storageSpecifier->archiveName,i);
+    char ch = String_index(storageSpecifier->archiveName,i);
     switch (ch)
     {
       case '%':
@@ -1552,33 +1509,27 @@ LOCAL void collector(CreateInfo     *createInfo,
     StringList_done(&hardLinkInfo->nameList);
   }
 
-  Dictionary         duplicateNamesDictionary;
-  Dictionary         hardLinksDictionary;
-  Errors             error;
-  DictionaryIterator dictionaryIterator;
-//???
-union { const void *value; const uint64 *id; } keyData;
-union { void *value; HardLinkInfo *hardLinkInfo; } data;
-
   assert(createInfo != NULL);
   assert(createInfo->includeEntryList != NULL);
   assert(createInfo->excludePatternList != NULL);
   assert(createInfo->jobOptions != NULL);
 
   // initialize variables
+  Dictionary         duplicateNamesDictionary;
   if (!Dictionary_init(&duplicateNamesDictionary,DICTIONARY_BYTE_INIT_ENTRY,DICTIONARY_BYTE_DONE_ENTRY,DICTIONARY_BYTE_COMPARE_ENTRY))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  Dictionary         hardLinksDictionary;
   if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_INIT_ENTRY,CALLBACK_(freeHardlinkInfo,NULL),DICTIONARY_BYTE_COMPARE_ENTRY))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-
   if (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS)
   {
     if (Continuous_isAvailable())
     {
+      Errors error;
       // open continuous database
       DatabaseHandle continuousDatabaseHandle;
       error = Continuous_open(&continuousDatabaseHandle);
@@ -1820,13 +1771,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                       if (!isInExcludedList(createInfo->excludePatternList,name))
                       {
-                        union { void *value; HardLinkInfo *hardLinkInfo; } data;
-                        HardLinkInfo                                       hardLinkInfo;
-
                         if (collectorType == COLLECTOR_TYPE_ENTRIES)
                         {
                           if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                           {
+                            union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                            HardLinkInfo                                       hardLinkInfo;
                             if (Dictionary_find(&hardLinksDictionary,
                                                 &fileInfo.id,
                                                 sizeof(fileInfo.id),
@@ -2037,23 +1987,19 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   }
   else
   {
-    StringList nameList;
-    String     path;
-    String     fileName;
-
-    // initialize variables
-    StringList_init(&nameList);
-    path     = String_new();
-    fileName = String_new();
 
     // process include entries
+    StringList      nameList;
+    StringList_init(&nameList);
+    String path     = String_new();
+    String fileName = String_new();
     EntryNode *includeEntryNode = LIST_HEAD(createInfo->includeEntryList);
     while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
            && (includeEntryNode != NULL)
           )
     {
-      ulong n;
+      Errors error;
 
       // pause
       pauseCreate(createInfo);
@@ -2086,7 +2032,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       // find files starting from base path
       String name = String_new();
       StringList_append(&nameList,path);
-      n = 0;
+      ulong n = 0;
       while (   (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
              && !StringList_isEmpty(&nameList)
@@ -2442,65 +2388,62 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                     }
                                     break;
                                   case ENTRY_TYPE_IMAGE:
+                                    if (File_readLink(fileName,name,TRUE) == ERROR_NONE)
                                     {
+                                      // get device info
                                       DeviceInfo deviceInfo;
-
-                                      if (File_readLink(fileName,name,TRUE) == ERROR_NONE)
+                                      error = Device_getInfo(&deviceInfo,fileName,TRUE);
+                                      if (error != ERROR_NONE)
                                       {
-                                        // get device info
-                                        error = Device_getInfo(&deviceInfo,fileName,TRUE);
-                                        if (error != ERROR_NONE)
+                                        if (collectorType == COLLECTOR_TYPE_ENTRIES)
                                         {
-                                          if (collectorType == COLLECTOR_TYPE_ENTRIES)
+                                          if (createInfo->jobOptions->skipUnreadableFlag)
                                           {
-                                            if (createInfo->jobOptions->skipUnreadableFlag)
-                                            {
-                                              printWarning(_("cannot get info for '%s' (error: %s) - skipped"),String_cString(fileName),Error_getText(error));
-                                            }
-                                            else
-                                            {
-                                              printError(_("cannot get info for '%s' (error: %s)"),
-                                                         String_cString(fileName),
-                                                         Error_getText(error)
-                                                        );
-                                            }
-                                            logMessage(createInfo->logHandle,
-                                                       LOG_TYPE_ENTRY_ACCESS_DENIED,
-                                                       "Access denied '%s' (error: %s)",
+                                            printWarning(_("cannot get info for '%s' (error: %s) - skipped"),String_cString(fileName),Error_getText(error));
+                                          }
+                                          else
+                                          {
+                                            printError(_("cannot get info for '%s' (error: %s)"),
                                                        String_cString(fileName),
                                                        Error_getText(error)
                                                       );
+                                          }
+                                          logMessage(createInfo->logHandle,
+                                                     LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                                     "Access denied '%s' (error: %s)",
+                                                     String_cString(fileName),
+                                                     Error_getText(error)
+                                                    );
 
-                                            STATUS_INFO_UPDATE(createInfo,name,NULL)
+                                          STATUS_INFO_UPDATE(createInfo,name,NULL)
+                                          {
+                                            createInfo->runningInfo.progress.error.count++;
+                                          }
+                                        }
+                                        continue;
+                                      }
+
+                                      switch (collectorType)
+                                      {
+                                        case COLLECTOR_TYPE_ENTRIES:
+                                          // add to entry list
+                                          appendImageToEntryList(&createInfo->entryMsgQueue,
+                                                                 ENTRY_TYPE_IMAGE,
+                                                                 name,
+                                                                 &deviceInfo,
+                                                                 !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
+                                                                );
+                                          break;
+                                        case COLLECTOR_TYPE_SUM:
+                                          if (deviceInfo.type == DEVICE_TYPE_BLOCK)
+                                          {
+                                            STATUS_INFO_UPDATE(createInfo,NULL,NULL)
                                             {
-                                              createInfo->runningInfo.progress.error.count++;
+                                              createInfo->runningInfo.progress.total.count++;
+                                              createInfo->runningInfo.progress.total.size += deviceInfo.size;
                                             }
                                           }
-                                          continue;
-                                        }
-
-                                        switch (collectorType)
-                                        {
-                                          case COLLECTOR_TYPE_ENTRIES:
-                                            // add to entry list
-                                            appendImageToEntryList(&createInfo->entryMsgQueue,
-                                                                   ENTRY_TYPE_IMAGE,
-                                                                   name,
-                                                                   &deviceInfo,
-                                                                   !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
-                                                                  );
-                                            break;
-                                          case COLLECTOR_TYPE_SUM:
-                                            if (deviceInfo.type == DEVICE_TYPE_BLOCK)
-                                            {
-                                              STATUS_INFO_UPDATE(createInfo,NULL,NULL)
-                                              {
-                                                createInfo->runningInfo.progress.total.count++;
-                                                createInfo->runningInfo.progress.total.size += deviceInfo.size;
-                                              }
-                                            }
-                                            break;
-                                        }
+                                          break;
                                       }
                                     }
                                     break;
@@ -2516,13 +2459,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                 {
                                   case ENTRY_TYPE_FILE:
                                     {
-                                      union { void *value; HardLinkInfo *hardLinkInfo; } data;
-                                      HardLinkInfo                                       hardLinkInfo;
-
                                       if (   !createInfo->partialFlag
                                           || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                           )
                                       {
+                                        union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                                        HardLinkInfo                                       hardLinkInfo;
                                         if (Dictionary_find(&hardLinksDictionary,
                                                             &fileInfo.id,
                                                             sizeof(fileInfo.id),
@@ -2647,9 +2589,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                   case ENTRY_TYPE_IMAGE:
                                     if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                     {
-                                      DeviceInfo deviceInfo;
-
                                       // get device info
+                                      DeviceInfo deviceInfo;
                                       error = Device_getInfo(&deviceInfo,fileName,TRUE);
                                       if (error != ERROR_NONE)
                                       {
@@ -2933,7 +2874,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             )
                         {
                           union { void *value; HardLinkInfo *hardLinkInfo; } data;
-
                           if (Dictionary_find(&hardLinksDictionary,
                                               &fileInfo.id,
                                               sizeof(fileInfo.id),
@@ -3219,7 +3159,11 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   if (collectorType == COLLECTOR_TYPE_ENTRIES)
   {
     // add incomplete hard link entries (not all hard links found) to entry list
+    DictionaryIterator dictionaryIterator;
     Dictionary_initIterator(&dictionaryIterator,&hardLinksDictionary);
+//???
+union { const void *value; const uint64 *id; } keyData;
+union { void *value; HardLinkInfo *hardLinkInfo; } data;
     while (Dictionary_getNext(&dictionaryIterator,
                               &keyData.value,
                               NULL,
@@ -3395,21 +3339,18 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
                             void        *userData
                            )
 {
-  CreateInfo    *createInfo = (CreateInfo*)userData;
-  String        archiveName;
-  Errors        error;
-  StorageHandle storageHandle;
-  uint64        archiveSize;
-
   assert(storageInfo != NULL);
-  assert(createInfo != NULL);
 
   UNUSED_VARIABLE(storageId);
 
-  archiveSize = 0LL;
+  uint64 archiveSize = 0LL;
+
+  Errors error;
 
   // get archive file name (expand macros)
-  archiveName = String_new();
+  String     archiveName = String_new();
+  CreateInfo *createInfo = (CreateInfo*)userData;
+  assert(createInfo != NULL);
   error = Archive_formatName(archiveName,
                              storageInfo->storageSpecifier.archiveName,
                              EXPAND_MACRO_MODE_STRING,
@@ -3426,6 +3367,7 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
   }
 
   // get archive size
+  StorageHandle storageHandle;
   error = Storage_open(&storageHandle,storageInfo,archiveName);
   if (error != ERROR_NONE)
   {
@@ -3455,12 +3397,10 @@ LOCAL Errors simpleTestArchive(StorageInfo *storageInfo,
                                ConstString  archiveName
                               )
 {
-  Errors            error;
-  ArchiveHandle     archiveHandle;
-  ArchiveEntryTypes archiveEntryType;
-  ArchiveEntryInfo  archiveEntryInfo;
+  Errors error;
 
   // open archive
+  ArchiveHandle archiveHandle;
   error = Archive_open(&archiveHandle,
                        storageInfo,
                        archiveName,
@@ -3494,6 +3434,7 @@ Misc_udelay(1000*1000);
         )
   {
     // get next archive entry type
+    ArchiveEntryTypes archiveEntryType;
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         NULL,  // archiveCryptInfo,
@@ -3511,133 +3452,164 @@ Misc_udelay(1000*1000);
           #endif /* NDEBUG */
           break; /* not reached */
         case ARCHIVE_ENTRY_TYPE_FILE:
-          error = Archive_readFileEntry(&archiveEntryInfo,
-                                        &archiveHandle,
-                                        NULL,  // deltaCompressAlgorithm
-                                        NULL,  // byteCompressAlgorithm
-                                        NULL,  // cryptType
-                                        NULL,  // cryptAlgorithm
-                                        NULL,  // cryptSalt
-                                        NULL,  // cryptKey
-                                        NULL,  // fileName,
-                                        NULL,  // fileInfo,
-                                        NULL,  // fileExtendedAttributeList
-                                        NULL,  // deltaSourceName
-                                        NULL,  // deltaSourceSize
-                                        NULL,  // fragmentOffset,
-                                        NULL  // fragmentSize
-                                       );
-          if (error == ERROR_NONE)
           {
-            error = Archive_closeEntry(&archiveEntryInfo);
+            ArchiveEntryInfo archiveEntryInfo;
+            error = Archive_readFileEntry(&archiveEntryInfo,
+                                          &archiveHandle,
+                                          NULL,  // deltaCompressAlgorithm
+                                          NULL,  // byteCompressAlgorithm
+                                          NULL,  // cryptType
+                                          NULL,  // cryptAlgorithm
+                                          NULL,  // cryptSalt
+                                          NULL,  // cryptKey
+                                          NULL,  // fileName,
+                                          NULL,  // fileInfo,
+                                          NULL,  // fileExtendedAttributeList
+                                          NULL,  // deltaSourceName
+                                          NULL,  // deltaSourceSize
+                                          NULL,  // fragmentOffset,
+                                          NULL  // fragmentSize
+                                         );
+            if (error == ERROR_NONE)
+            {
+              error = Archive_closeEntry(&archiveEntryInfo);
+            }
           }
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
-          error = Archive_readImageEntry(&archiveEntryInfo,
-                                         &archiveHandle,
-                                         NULL,  // deltaCompressAlgorithm
-                                         NULL,  // byteCompressAlgorithm
-                                         NULL,  // cryptType
-                                         NULL,  // cryptAlgorithm
-                                         NULL,  // cryptSalt
-                                         NULL,  // cryptKey
-                                         NULL,  // deviceName,
-                                         NULL,  // deviceInfo,
-                                         NULL,  // fileSystemType
-                                         NULL,  // deltaSourceName
-                                         NULL,  // deltaSourceSize
-                                         NULL,  // blockOffset,
-                                         NULL  // blockCount
-                                        );
-          if (error == ERROR_NONE)
           {
-            error = Archive_closeEntry(&archiveEntryInfo);
+            ArchiveEntryInfo archiveEntryInfo;
+            error = Archive_readImageEntry(&archiveEntryInfo,
+                                           &archiveHandle,
+                                           NULL,  // deltaCompressAlgorithm
+                                           NULL,  // byteCompressAlgorithm
+                                           NULL,  // cryptType
+                                           NULL,  // cryptAlgorithm
+                                           NULL,  // cryptSalt
+                                           NULL,  // cryptKey
+                                           NULL,  // deviceName,
+                                           NULL,  // deviceInfo,
+                                           NULL,  // fileSystemType
+                                           NULL,  // deltaSourceName
+                                           NULL,  // deltaSourceSize
+                                           NULL,  // blockOffset,
+                                           NULL  // blockCount
+                                          );
+            if (error == ERROR_NONE)
+            {
+              error = Archive_closeEntry(&archiveEntryInfo);
+            }
           }
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-          error = Archive_readDirectoryEntry(&archiveEntryInfo,
+          {
+            ArchiveEntryInfo archiveEntryInfo;
+            error = Archive_readDirectoryEntry(&archiveEntryInfo,
+                                               &archiveHandle,
+                                               NULL,  // cryptType
+                                               NULL,  // cryptAlgorithm
+                                               NULL,  // cryptSalt
+                                               NULL,  // cryptKey
+                                               NULL,  // directoryName,
+                                               NULL,  // fileInfo,
+                                               NULL   // fileExtendedAttributeList
+                                              );
+            if (error == ERROR_NONE)
+            {
+              error = Archive_closeEntry(&archiveEntryInfo);
+            }
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_LINK:
+          {
+            ArchiveEntryInfo archiveEntryInfo;
+            error = Archive_readLinkEntry(&archiveEntryInfo,
+                                          &archiveHandle,
+                                          NULL,  // cryptType
+                                          NULL,  // cryptAlgorithm
+                                          NULL,  // cryptSalt
+                                          NULL,  // cryptKey
+                                          NULL,  // linkName,
+                                          NULL,  // fileName,
+                                          NULL,  // fileInfo,
+                                          NULL   // fileExtendedAttributeList
+                                         );
+            if (error == ERROR_NONE)
+            {
+              error = Archive_closeEntry(&archiveEntryInfo);
+            }
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_HARDLINK:
+          {
+            ArchiveEntryInfo archiveEntryInfo;
+            error = Archive_readHardLinkEntry(&archiveEntryInfo,
+                                              &archiveHandle,
+                                              NULL,  // deltaCompressAlgorithm
+                                              NULL,  // byteCompressAlgorithm
+                                              NULL,  // cryptType
+                                              NULL,  // cryptAlgorithm
+                                              NULL,  // cryptSalt
+                                              NULL,  // cryptKey
+                                              NULL,  // fileNameList,
+                                              NULL,  // fileInfo,
+                                              NULL,  // fileExtendedAttributeList
+                                              NULL,  // deltaSourceName
+                                              NULL,  // deltaSourceSize
+                                              NULL,  // fragmentOffset,
+                                              NULL  // fragmentSize
+                                             );
+            if (error == ERROR_NONE)
+            {
+              error = Archive_closeEntry(&archiveEntryInfo);
+            }
+          }
+          break;
+        case ARCHIVE_ENTRY_TYPE_SPECIAL:
+          {
+            ArchiveEntryInfo archiveEntryInfo;
+            error = Archive_readSpecialEntry(&archiveEntryInfo,
                                              &archiveHandle,
                                              NULL,  // cryptType
                                              NULL,  // cryptAlgorithm
                                              NULL,  // cryptSalt
                                              NULL,  // cryptKey
-                                             NULL,  // directoryName,
+                                             NULL,  // fileName,
                                              NULL,  // fileInfo,
                                              NULL   // fileExtendedAttributeList
                                             );
-          if (error == ERROR_NONE)
-          {
-            error = Archive_closeEntry(&archiveEntryInfo);
-          }
-          break;
-        case ARCHIVE_ENTRY_TYPE_LINK:
-          error = Archive_readLinkEntry(&archiveEntryInfo,
-                                        &archiveHandle,
-                                        NULL,  // cryptType
-                                        NULL,  // cryptAlgorithm
-                                        NULL,  // cryptSalt
-                                        NULL,  // cryptKey
-                                        NULL,  // linkName,
-                                        NULL,  // fileName,
-                                        NULL,  // fileInfo,
-                                        NULL   // fileExtendedAttributeList
-                                       );
-          if (error == ERROR_NONE)
-          {
-            error = Archive_closeEntry(&archiveEntryInfo);
-          }
-          break;
-        case ARCHIVE_ENTRY_TYPE_HARDLINK:
-          error = Archive_readHardLinkEntry(&archiveEntryInfo,
-                                            &archiveHandle,
-                                            NULL,  // deltaCompressAlgorithm
-                                            NULL,  // byteCompressAlgorithm
-                                            NULL,  // cryptType
-                                            NULL,  // cryptAlgorithm
-                                            NULL,  // cryptSalt
-                                            NULL,  // cryptKey
-                                            NULL,  // fileNameList,
-                                            NULL,  // fileInfo,
-                                            NULL,  // fileExtendedAttributeList
-                                            NULL,  // deltaSourceName
-                                            NULL,  // deltaSourceSize
-                                            NULL,  // fragmentOffset,
-                                            NULL  // fragmentSize
-                                           );
-          if (error == ERROR_NONE)
-          {
-            error = Archive_closeEntry(&archiveEntryInfo);
-          }
-          break;
-        case ARCHIVE_ENTRY_TYPE_SPECIAL:
-          error = Archive_readSpecialEntry(&archiveEntryInfo,
-                                           &archiveHandle,
-                                           NULL,  // cryptType
-                                           NULL,  // cryptAlgorithm
-                                           NULL,  // cryptSalt
-                                           NULL,  // cryptKey
-                                           NULL,  // fileName,
-                                           NULL,  // fileInfo,
-                                           NULL   // fileExtendedAttributeList
-                                          );
-          if (error == ERROR_NONE)
-          {
-            error = Archive_closeEntry(&archiveEntryInfo);
+            if (error == ERROR_NONE)
+            {
+              error = Archive_closeEntry(&archiveEntryInfo);
+            }
           }
           break;
         case ARCHIVE_ENTRY_TYPE_META:
-          error = Archive_skipNextEntry(&archiveHandle);
+          {
+// TODO: read meta
+            error = Archive_skipNextEntry(&archiveHandle);
+          }
           break;
         case ARCHIVE_ENTRY_TYPE_SALT:
+// TODO: read salt
+          {
+          }
+          break;
         case ARCHIVE_ENTRY_TYPE_KEY:
-          #ifndef NDEBUG
-            HALT_INTERNAL_ERROR_UNREACHABLE();
-          #else
-            error = Archive_skipNextEntry(&archiveHandle);
-          #endif /* NDEBUG */
+// TODO: read key
+          {
+            #ifndef NDEBUG
+              HALT_INTERNAL_ERROR_UNREACHABLE();
+            #else
+              error = Archive_skipNextEntry(&archiveHandle);
+            #endif /* NDEBUG */
+          }
           break;
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
-          error = Archive_skipNextEntry(&archiveHandle);
+// TODO: read signature
+          {
+            error = Archive_skipNextEntry(&archiveHandle);
+          }
           break;
         case ARCHIVE_ENTRY_TYPE_UNKNOWN:
           error = ERROR_UNKNOWN_CHUNK;
@@ -3683,20 +3655,18 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                           void         *userData
                          )
 {
-  CreateInfo *createInfo = (CreateInfo*)userData;
-  Errors     error;
-  String     archiveName;
-  StorageMsg storageMsg;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(intermediateFileName));
-  assert(createInfo != NULL);
 
   UNUSED_VARIABLE(jobUUID);
   UNUSED_VARIABLE(entityUUID);
 
   // get archive file name (expand macros)
-  archiveName = String_new();
+  String     archiveName = String_new();
+  CreateInfo *createInfo = (CreateInfo*)userData;
+  assert(createInfo != NULL);
   error = Archive_formatName(archiveName,
                              storageInfo->storageSpecifier.archiveName,
                              EXPAND_MACRO_MODE_STRING,
@@ -3715,6 +3685,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   DEBUG_TESTCODE() { String_delete(archiveName); return DEBUG_TESTCODE_ERROR(); }
 
   // send to storage thread
+  StorageMsg storageMsg;
   storageMsg.uuidId               = uuidId;
   storageMsg.entityId             = entityId;
   storageMsg.storageId            = storageId;
@@ -3759,46 +3730,29 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                  LogHandle   *logHandle
                                 )
 {
-  String           storageName;
-  StorageSpecifier storageSpecifier;
-  Errors           error;
-  uint64           totalStorageSize;
-  IndexId          oldestUUIDId;
-  IndexId          oldestEntityId;
-  IndexId          oldestStorageId;
-  String           oldestStorageName;
-  uint64           oldestCreatedDateTime;
-  uint64           oldestSize;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          uuidId;
-  IndexId          entityId;
-  IndexId          storageId;
-  uint64           createdDateTime;
-  uint64           size;
-  StorageInfo      storageInfo;
-  String           dateTime;
-
   assert(jobUUID != NULL);
   assert(maxStorageSize > 0LL);
 
-  // init variables
-  storageName       = String_new();
-  oldestStorageName = String_new();
-  Storage_initSpecifier(&storageSpecifier);
-  dateTime          = String_new();
-
   if (indexHandle != NULL)
   {
+    String           storageName       = String_new();
+    String           oldestStorageName = String_new();
+    StorageSpecifier storageSpecifier;
+    Storage_initSpecifier(&storageSpecifier);
+    String           dateTime          = String_new();
+    uint64           totalStorageSize  = 0LL;
+    IndexId          oldestStorageId   = INDEX_ID_NONE;
     do
     {
+      Errors error;
+
       // get total storage size, find oldest storage entry
-      totalStorageSize      = 0LL;
-      oldestUUIDId          = INDEX_ID_NONE;
-      oldestStorageId       = INDEX_ID_NONE;
-      oldestEntityId        = INDEX_ID_NONE;
+      IndexId          oldestUUIDId          = INDEX_ID_NONE;
+      IndexId          oldestEntityId        = INDEX_ID_NONE;
       String_clear(oldestStorageName);
-      oldestCreatedDateTime = MAX_UINT64;
-      oldestSize            = 0LL;
+      uint64           oldestCreatedDateTime = MAX_UINT64;
+      uint64           oldestSize            = 0LL;
+      IndexQueryHandle indexQueryHandle;
       error = IndexStorage_initList(&indexQueryHandle,
                                     indexHandle,
                                     INDEX_ID_ANY,  // uuidId
@@ -3830,6 +3784,11 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                   );
         break;
       }
+      IndexId uuidId;
+      IndexId entityId;
+      IndexId storageId;
+      uint64  createdDateTime;
+      uint64  size;
       while (IndexStorage_getNext(&indexQueryHandle,
                                   &uuidId,
                                   NULL,  // jobUUID
@@ -3874,6 +3833,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
         error = Storage_parseName(&storageSpecifier,oldestStorageName);
         if (error == ERROR_NONE)
         {
+          StorageInfo storageInfo;
           error = Storage_init(&storageInfo,
 //TODO
 NULL, // masterIO
@@ -3947,13 +3907,13 @@ NULL, // masterIO
     while (   (totalStorageSize > limit)
            && !INDEX_ID_IS_NONE(oldestStorageId)
           );
-  }
 
-  // free resources
-  String_delete(dateTime);
-  Storage_doneSpecifier(&storageSpecifier);
-  String_delete(oldestStorageName);
-  String_delete(storageName);
+    // free resources
+    String_delete(dateTime);
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(oldestStorageName);
+    String_delete(storageName);
+  }
 }
 
 /***********************************************************************\
@@ -3976,46 +3936,29 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                 LogHandle    *logHandle
                                )
 {
-  String           storageName;
-  StorageSpecifier storageSpecifier;
-  Errors           error;
-  uint64           totalStorageSize;
-  IndexId          oldestUUIDId;
-  IndexId          oldestStorageId;
-  IndexId          oldestEntityId;
-  String           oldestStorageName;
-  uint64           oldestCreatedDateTime;
-  uint64           oldestSize;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          uuidId;
-  IndexId          entityId;
-  IndexId          storageId;
-  uint64           createdDateTime;
-  uint64           size;
-  StorageInfo      storageInfo;
-  String           dateTime;
-
   assert(server != NULL);
   assert(maxStorageSize > 0LL);
 
-  // init variables
-  Storage_initSpecifier(&storageSpecifier);
-  storageName          = String_new();
-  oldestStorageName    = String_new();
-  dateTime             = String_new();
-
   if (indexHandle != NULL)
   {
+    StorageSpecifier storageSpecifier;
+    Storage_initSpecifier(&storageSpecifier);
+    String           storageName       = String_new();
+    String           oldestStorageName = String_new();
+    String           dateTime          = String_new();
+    uint64           totalStorageSize  = 0LL;
+    IndexId          oldestStorageId   = INDEX_ID_NONE;
     do
     {
+      Errors error;
+
       // get total storage size, find oldest storage entry
-      totalStorageSize      = 0LL;
-      oldestUUIDId          = INDEX_ID_NONE;
-      oldestStorageId       = INDEX_ID_NONE;
-      oldestEntityId        = INDEX_ID_NONE;
+      IndexId          oldestUUIDId          = INDEX_ID_NONE;
+      IndexId          oldestEntityId        = INDEX_ID_NONE;
       String_clear(oldestStorageName);
-      oldestCreatedDateTime = MAX_UINT64;
-      oldestSize            = 0LL;
+      uint64           oldestCreatedDateTime = MAX_UINT64;
+      uint64           oldestSize            = 0LL;
+      IndexQueryHandle indexQueryHandle;
       error = IndexStorage_initList(&indexQueryHandle,
                                     indexHandle,
                                     INDEX_ID_ANY,  // uuidId
@@ -4047,6 +3990,11 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                   );
         break;
       }
+      IndexId uuidId;
+      IndexId entityId;
+      IndexId storageId;
+      uint64  createdDateTime;
+      uint64  size;
       while (IndexStorage_getNext(&indexQueryHandle,
                                   &uuidId,
                                   NULL,  // jobUUID,
@@ -4096,6 +4044,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
         error = Storage_parseName(&storageSpecifier,oldestStorageName);
         if (error == ERROR_NONE)
         {
+          StorageInfo storageInfo;
           error = Storage_init(&storageInfo,
 //TODO
 NULL, // masterIO
@@ -4169,13 +4118,13 @@ NULL, // masterIO
     while (   (totalStorageSize > limit)
            && !INDEX_ID_IS_NONE(oldestStorageId)
           );
-  }
 
-  // free resources
-  String_delete(dateTime);
-  Storage_doneSpecifier(&storageSpecifier);
-  String_delete(oldestStorageName);
-  String_delete(storageName);
+    // free resources
+    String_delete(dateTime);
+    Storage_doneSpecifier(&storageSpecifier);
+    String_delete(oldestStorageName);
+    String_delete(storageName);
+  }
 }
 
 /***********************************************************************\
@@ -4191,50 +4140,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 {
   #define MAX_RETRIES 3
 
-  AutoFreeList     autoFreeList;
-  byte             *buffer;
-  void             *autoFreeSavePoint;
-  StorageMsg       storageMsg;
-  Errors           error;
-  String           printableStorageName;
-  String           directoryPath;
-  Server           server;
-  FileHandle       fileHandle;
-  uint             retryCount;
-  uint64           storageSize;
-  bool             appendFlag;
-  StorageHandle    storageHandle;
-  String           pattern;
-
-  IndexQueryHandle indexQueryHandle;
-  IndexId          storageId;
-  IndexId          existingEntityId;
-  IndexId          existingStorageId;
-  String           existingStorageName;
-  String           existingDirectoryName;
-  StorageSpecifier existingStorageSpecifier;
-
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
-  buffer = (byte*)malloc(BUFFER_SIZE);
-  if (buffer == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  printableStorageName  = String_new();
-  directoryPath         = String_new();
-  existingStorageName   = String_new();
-  existingDirectoryName = String_new();
-  Storage_initSpecifier(&existingStorageSpecifier);
-  AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,directoryPath,{ String_delete(directoryPath); });
-  AUTOFREE_ADD(&autoFreeList,existingStorageName,{ String_delete(existingStorageName); });
-  AUTOFREE_ADD(&autoFreeList,existingDirectoryName,{ String_delete(existingDirectoryName); });
-  AUTOFREE_ADD(&autoFreeList,&existingStorageSpecifier,{ Storage_doneSpecifier(&existingStorageSpecifier); });
 
   // initial storage pre-processing
   if (   (createInfo->failError == ERROR_NONE)
@@ -4247,7 +4158,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // pre-process
     if (!isAborted(createInfo))
     {
-      error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->createdDateTime,TRUE);
+      Errors error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->createdDateTime,TRUE);
       if (error != ERROR_NONE)
       {
         printError(_("cannot pre-process storage (error: %s)!"),
@@ -4261,11 +4172,28 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   }
 
   // store archives
+  String printableStorageName  = String_new();
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  String directoryPath         = String_new();
+  AUTOFREE_ADD(&autoFreeList,directoryPath,{ String_delete(directoryPath); });
+  String existingStorageName   = String_new();
+  AUTOFREE_ADD(&autoFreeList,existingStorageName,{ String_delete(existingStorageName); });
+  String existingDirectoryName = String_new();
+  AUTOFREE_ADD(&autoFreeList,existingDirectoryName,{ String_delete(existingDirectoryName); });
+  StorageSpecifier existingStorageSpecifier;
+  Storage_initSpecifier(&existingStorageSpecifier);
+  AUTOFREE_ADD(&autoFreeList,&existingStorageSpecifier,{ Storage_doneSpecifier(&existingStorageSpecifier); });
+  byte *buffer = (byte*)malloc(BUFFER_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
   while (   (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
         )
   {
-    autoFreeSavePoint = AutoFree_save(&autoFreeList);
+    void *autoFreeSavePoint = AutoFree_save(&autoFreeList);
 
     // pause, check abort
     Storage_pause(&createInfo->storageInfo);
@@ -4276,6 +4204,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     }
 
     // get next archive to store
+    StorageMsg storageMsg;
     if (!MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),WAIT_FOREVER))
     {
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
@@ -4296,6 +4225,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     if (!createInfo->jobOptions->dryRun)
     {
+      Errors error;
+
       // get file info
       FileInfo fileInfo;
       error = File_getInfo(&fileInfo,storageMsg.intermediateFileName);
@@ -4387,6 +4318,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                              );
 
         // purge archives by max. server storage size
+        Server server;
         Configuration_initServer(&server,NULL,SERVER_TYPE_NONE);
         Storage_getServerSettings(&server,&createInfo->storageInfo.storageSpecifier,createInfo->jobOptions);
         if (server.maxStorageSize > fileInfo.size)
@@ -4407,6 +4339,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       #else /* not NDEBUG */
         printInfo(1,"Store '%s'...",String_cString(printableStorageName));
       #endif /* NDEBUG */
+      FileHandle fileHandle;
       error = File_open(&fileHandle,storageMsg.intermediateFileName,FILE_OPEN_READ);
       if (error != ERROR_NONE)
       {
@@ -4425,9 +4358,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
       // create storage
-      retryCount  = 0;
-      appendFlag  = FALSE;
-      storageSize = 0LL;
+      uint   retryCount  = 0;
+      bool   appendFlag  = FALSE;
+      uint64 storageSize = 0LL;
       do
       {
         // next try
@@ -4446,6 +4379,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                      && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName);
 
         // create/append storage file
+        StorageHandle storageHandle;
         error = Storage_create(&storageHandle,
                                &createInfo->storageInfo,
                                storageMsg.archiveName,
@@ -4624,6 +4558,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         assert(!INDEX_ID_IS_NONE(storageMsg.entityId));
 
         // check if append and storage exists => assign to existing storage index
+        IndexId storageId;
         if (   appendFlag
             && (IndexStorage_findByName(createInfo->indexHandle,
                                         &createInfo->storageInfo.storageSpecifier,
@@ -4743,6 +4678,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
             // find matching entity and assign storage to entity
             File_getDirectoryName(directoryPath,storageMsg.archiveName);
+            IndexQueryHandle indexQueryHandle;
             error = IndexStorage_initList(&indexQueryHandle,
                                           createInfo->indexHandle,
                                           storageMsg.uuidId,
@@ -4769,6 +4705,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
               break;
             }
+            IndexId existingEntityId;
+            IndexId existingStorageId;
             while (IndexStorage_getNext(&indexQueryHandle,
                                         NULL,  // uuidId
                                         NULL,  // jobUUID
@@ -4932,6 +4870,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   }
 
   // discard unprocessed archives
+  StorageMsg storageMsg;
   while (MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),NO_WAIT))
   {
     // discard index
@@ -4944,7 +4883,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     }
 
     // delete temporary storage file
-    error = File_delete(storageMsg.intermediateFileName,FALSE);
+    Errors error = File_delete(storageMsg.intermediateFileName,FALSE);
     if (error != ERROR_NONE)
     {
       printWarning(_("cannot delete file '%s' (error: %s)!"),
@@ -4968,7 +4907,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // post-processing
     if (!isAborted(createInfo))
     {
-      error = Storage_postProcess(&createInfo->storageInfo,NULL,createInfo->createdDateTime,TRUE);
+      Errors error = Storage_postProcess(&createInfo->storageInfo,NULL,createInfo->createdDateTime,TRUE);
       if (error != ERROR_NONE)
       {
         printError(_("cannot post-process storage (error: %s)!"),
@@ -4989,16 +4928,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     if (globalOptions.deleteOldArchiveFilesFlag)
     {
       // get archive name pattern (expand macros)
-      pattern = String_new();
-      error = Archive_formatName(pattern,
-                                 createInfo->storageInfo.storageSpecifier.archiveName,
-                                 EXPAND_MACRO_MODE_PATTERN,
-                                 createInfo->archiveType,
-                                 createInfo->scheduleTitle,
-                                 createInfo->customText,
-                                 createInfo->createdDateTime,
-                                 ARCHIVE_PART_NUMBER_NONE
-                                );
+      String pattern = String_new();
+      Errors error = Archive_formatName(pattern,
+                                        createInfo->storageInfo.storageSpecifier.archiveName,
+                                        EXPAND_MACRO_MODE_PATTERN,
+                                        createInfo->archiveType,
+                                        createInfo->scheduleTitle,
+                                        createInfo->customText,
+                                        createInfo->createdDateTime,
+                                        ARCHIVE_PART_NUMBER_NONE
+                                       );
       if (error == ERROR_NONE)
       {
         // delete all matching storage files which are unknown
@@ -5008,16 +4947,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                              TRUE,  // skipUnreadableFlag
                              CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                              {
-                               StorageSpecifier storageSpecifier;
-                               Errors           error;
-
                                UNUSED_VARIABLE(fileInfo);
                                UNUSED_VARIABLE(userData);
 
                                // init variables
+                               StorageSpecifier storageSpecifier;
                                Storage_initSpecifier(&storageSpecifier);
 
-                               error = Storage_parseName(&storageSpecifier,storageName);
+                               Errors error = Storage_parseName(&storageSpecifier,storageName);
                                if (error == ERROR_NONE)
                                {
                                  // find in storage list
@@ -5065,15 +5002,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
 LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size, uint fragmentCount)
 {
-  FragmentNode *fragmentNode;
-
   assert(createInfo != NULL);
   assert(name != NULL);
 
   STATUS_INFO_UPDATE(createInfo,name,NULL)
   {
     // get/create fragment node
-    fragmentNode = FragmentList_find(&createInfo->runningInfoFragmentList,name);
+    FragmentNode *fragmentNode = FragmentList_find(&createInfo->runningInfoFragmentList,name);
     if (fragmentNode == NULL)
     {
       fragmentNode = FragmentList_add(&createInfo->runningInfoFragmentList,name,size,NULL,0,fragmentCount);
@@ -5112,15 +5047,13 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size, u
 
 LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 {
-  FragmentNode *fragmentNode;
-
   assert(createInfo != NULL);
   assert(name != NULL);
 
   SEMAPHORE_LOCKED_DO(&createInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // get fragment node
-    fragmentNode = FragmentList_find(&createInfo->runningInfoFragmentList,name);
+    FragmentNode *fragmentNode = FragmentList_find(&createInfo->runningInfoFragmentList,name);
     if (fragmentNode != NULL)
     {
       if (fragmentNode->size > 0LL)
@@ -5155,10 +5088,6 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 
 LOCAL String getArchiveEntryName(String archiveEntryName, ConstString name)
 {
-  Pattern pattern;
-  ulong   index;
-  ulong   matchIndex,matchLength;
-
   assert(archiveEntryName != NULL);
   assert(name != NULL);
 
@@ -5166,8 +5095,10 @@ LOCAL String getArchiveEntryName(String archiveEntryName, ConstString name)
   {
     // transform name with matching pattern
     String_clear(archiveEntryName);
+    Pattern pattern;
     Pattern_init(&pattern,globalOptions.transform.patternString,globalOptions.transform.patternType,PATTERN_FLAG_NONE);
-    index = STRING_BEGIN;
+    ulong   index = STRING_BEGIN;
+    ulong   matchIndex,matchLength;
     while (Pattern_match(&pattern,name,index,PATTERN_MATCH_MODE_ANY,&matchIndex,&matchLength))
     {
       String_appendBuffer(archiveEntryName,String_cString(name)+index,matchIndex-index);
@@ -5198,13 +5129,11 @@ LOCAL String getArchiveEntryName(String archiveEntryName, ConstString name)
 
 LOCAL void getArchiveEntryNameList(StringList *archiveEntryNameList, const StringList *nameList)
 {
-  String     archiveEntryName;
-  StringNode *iterator;
-  String     name;
-
   assert(archiveEntryNameList != NULL);
 
-  archiveEntryName = String_new();
+  String     archiveEntryName = String_new();
+  StringNode *iterator;
+  String     name;
   STRINGLIST_ITERATE(nameList,iterator,name)
   {
     StringList_append(archiveEntryNameList,getArchiveEntryName(archiveEntryName,name));
@@ -5240,21 +5169,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
                             uint           bufferSize
                            )
 {
-  Errors                    error;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  FileHandle                fileHandle;
-  ArchiveFlags              archiveFlags;
-  String                    archiveEntryName;
-  ArchiveEntryInfo          archiveEntryInfo;
-  uint64                    offset;
-  uint64                    size;
-  ulong                     bufferLength;
-  FragmentNode              *fragmentNode;
-  uint64                    archiveSize;
-  uint                      percentageDone;
-  double                    compressionRatio;
-  double                    d;
-  char                      fragmentInfoString[256],compressionRatioString[256];
+  Errors error;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -5266,6 +5181,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
   printInfo(1,"Add file      '%s'...",String_cString(fileName));
 
   // get file extended attributes
+  FileExtendedAttributeList fileExtendedAttributeList;
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = File_getExtendedAttributes(&fileExtendedAttributeList,fileName);
   if (error != ERROR_NONE)
@@ -5328,6 +5244,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
   }
 
   // open file
+  FileHandle fileHandle;
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
   if (error != ERROR_NONE)
   {
@@ -5380,9 +5297,9 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 
   if (!createInfo->jobOptions->noStorage)
   {
-    offset       = 0LL;
-    size         = 0LL;
-    archiveFlags = ARCHIVE_FLAG_NONE;
+    uint64       offset       = 0LL;
+    uint64       size         = 0LL;
+    ArchiveFlags archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
     if (   (fileInfo->size > globalOptions.compressMinFileSize)
@@ -5401,7 +5318,8 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     }
 
     // create new archive file entry
-    archiveEntryName = getArchiveEntryName(String_new(),fileName);
+    String           archiveEntryName = getArchiveEntryName(String_new(),fileName);
+    ArchiveEntryInfo archiveEntryInfo;
     error = Archive_newFileEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  createInfo->jobOptions->compressAlgorithms.delta,
@@ -5459,6 +5377,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
         Storage_pause(&createInfo->storageInfo);
 
         // read file data
+        ulong bufferLength;
         error = File_read(&fileHandle,buffer,MIN(size,bufferSize),&bufferLength);
         if (error == ERROR_NONE)
         {
@@ -5469,8 +5388,9 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
             if (error == ERROR_NONE)
             {
               // get current archive size
-              archiveSize = Archive_getSize(&createInfo->archiveHandle);
+              uint64 archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
+              FragmentNode *fragmentNode;
               STATUS_INFO_UPDATE(createInfo,fileName,&fragmentNode)
               {
                 if (fragmentNode != NULL)
@@ -5504,7 +5424,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
 
             if (isPrintInfo(2))
             {
-              percentageDone = 0;
+              uint percentageDone = 0;
               STATUS_INFO_GET(createInfo,fileName)
               {
                 percentageDone = (createInfo->runningInfo.progress.entry.totalSize > 0LL)
@@ -5617,6 +5537,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     }
 
     // get final compression ratio
+    double compressionRatio;
     if (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL)
     {
       compressionRatio = 100.0-archiveEntryInfo.file.chunkFileData.info.size*100.0/archiveEntryInfo.file.chunkFileData.fragmentSize;
@@ -5627,15 +5548,17 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
     }
 
     // get fragment info
+    char fragmentInfoString[256];
     stringClear(fragmentInfoString);
     if (fragmentSize < fileInfo->size)
     {
-      d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.00;
+      double d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.00;
       stringAppend(fragmentInfoString,sizeof(fragmentInfoString),", fragment #");
       stringAppendFormat(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
     }
 
     // ratio info
+    char compressionRatioString[256];
     stringClear(compressionRatioString);
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
@@ -5671,6 +5594,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
   }
   else
   {
+    FragmentNode *fragmentNode;
     STATUS_INFO_UPDATE(createInfo,fileName,&fragmentNode)
     {
       if (fragmentNode != NULL)
@@ -5686,6 +5610,7 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
   }
 
   // update running info
+  FragmentNode *fragmentNode;
   STATUS_INFO_UPDATE(createInfo,fileName,&fragmentNode)
   {
     if (fragmentNode != NULL)
@@ -5746,23 +5671,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                              uint             bufferSize
                             )
 {
-  Errors           error;
-  uint             maxBufferBlockCount;
-  DeviceHandle     deviceHandle;
-  bool             fileSystemFlag;
-  FileSystemHandle fileSystemHandle;
-  ArchiveFlags     archiveFlags;
-  String           archiveEntryName;
-  ArchiveEntryInfo archiveEntryInfo;
-  uint64           blockOffset;
-  uint64           blockCount;
-  uint             bufferBlockCount;
-  FragmentNode     *fragmentNode;
-  uint64           archiveSize;
-  uint             percentageDone;
-  double           compressionRatio;
-  double           d;
-  char             fragmentInfoString[256],compressionRatioString[256];
+  Errors error;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -5811,9 +5720,10 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     return ERROR_INVALID_DEVICE_BLOCK_SIZE;
   }
   assert(deviceInfo->blockSize > 0);
-  maxBufferBlockCount = bufferSize/deviceInfo->blockSize;
+  uint maxBufferBlockCount = bufferSize/deviceInfo->blockSize;
 
   // open device
+  DeviceHandle deviceHandle;
   error = Device_open(&deviceHandle,deviceName,DEVICE_OPEN_READ);
   if (error != ERROR_NONE)
   {
@@ -5858,7 +5768,9 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   }
 
   // check if device contain a known file system or a raw image should be stored
+  FileSystemHandle fileSystemHandle;
   memClear(&fileSystemHandle,sizeof(FileSystemHandle));
+  bool fileSystemFlag;
   if (!createInfo->jobOptions->rawImagesFlag)
   {
     fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
@@ -5874,9 +5786,9 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
 
   if (!createInfo->jobOptions->noStorage)
   {
-    blockOffset  = 0LL;
-    blockCount   = 0LL;
-    archiveFlags = ARCHIVE_FLAG_NONE;
+    uint64       blockOffset  = 0LL;
+    uint64       blockCount   = 0LL;
+    ArchiveFlags archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
     if (   (deviceInfo->size > globalOptions.compressMinFileSize)
@@ -5895,7 +5807,8 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
 
     // create new archive image entry
-    archiveEntryName = getArchiveEntryName(String_new(),deviceName);
+    String           archiveEntryName = getArchiveEntryName(String_new(),deviceName);
+    ArchiveEntryInfo archiveEntryInfo;
     error = Archive_newImageEntry(&archiveEntryInfo,
                                   &createInfo->archiveHandle,
                                   createInfo->jobOptions->compressAlgorithms.delta,
@@ -5949,7 +5862,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       Storage_pause(&createInfo->storageInfo);
 
       // read blocks from device
-      bufferBlockCount = 0;
+      uint bufferBlockCount = 0;
       while (   (blockCount > 0LL)
              && (bufferBlockCount < maxBufferBlockCount)
             )
@@ -5983,9 +5896,10 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
         if (error == ERROR_NONE)
         {
           // get current archive size
-          archiveSize = Archive_getSize(&createInfo->archiveHandle);
+          uint64 archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
           // update running info
+          FragmentNode *fragmentNode;
           STATUS_INFO_UPDATE(createInfo,deviceName,&fragmentNode)
           {
             if (fragmentNode != NULL)
@@ -6019,7 +5933,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
 
         if (isPrintInfo(2))
         {
-          percentageDone = 0;
+          uint percentageDone = 0;
           STATUS_INFO_GET(createInfo,deviceName)
           {
             percentageDone = (createInfo->runningInfo.progress.entry.totalSize > 0LL)
@@ -6128,6 +6042,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
 
     // get final compression ratio
+    double compressionRatio;
     if (archiveEntryInfo.image.chunkImageData.blockCount > 0)
     {
       compressionRatio = 100.0-archiveEntryInfo.image.chunkImageData.info.size*100.0/(archiveEntryInfo.image.chunkImageData.blockCount*(uint64)deviceInfo->blockSize);
@@ -6138,15 +6053,17 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
 
     // get fragment info
+    char fragmentInfoString[256];
     stringClear(fragmentInfoString);
     if (fragmentSize < deviceInfo->size)
     {
-      d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.0;
+      double d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.0;
       stringAppend(fragmentInfoString,sizeof(fragmentInfoString),", fragment #");
       stringAppendFormat(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
     }
 
     // get ratio info
+    char compressionRatioString[256];
     stringClear(compressionRatioString);
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
@@ -6186,6 +6103,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   }
   else
   {
+    FragmentNode *fragmentNode;
     STATUS_INFO_UPDATE(createInfo,deviceName,&fragmentNode)
     {
       if (fragmentNode != NULL)
@@ -6195,7 +6113,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       }
     }
 
-    d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
+    double d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
     printInfo(1,"OK (%s, %/"PRIu64" bytes, not stored)\n",
               fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
               (int)d,
@@ -6204,6 +6122,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   }
 
   // update running info
+  FragmentNode *fragmentNode;
   STATUS_INFO_UPDATE(createInfo,deviceName,&fragmentNode)
   {
     if (fragmentNode != NULL)
@@ -6246,10 +6165,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
                                  const FileInfo *fileInfo
                                 )
 {
-  Errors                    error;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  String                    archiveEntryName;
-  ArchiveEntryInfo          archiveEntryInfo;
+  Errors error;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -6259,6 +6175,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
   printInfo(1,"Add directory '%s'...",String_cString(directoryName));
 
   // get file extended attributes
+  FileExtendedAttributeList fileExtendedAttributeList;
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = File_getExtendedAttributes(&fileExtendedAttributeList,directoryName);
   if (error != ERROR_NONE)
@@ -6320,7 +6237,8 @@ LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
   if (!createInfo->jobOptions->noStorage)
   {
     // new directory
-    archiveEntryName = getArchiveEntryName(String_new(),directoryName);
+    String           archiveEntryName = getArchiveEntryName(String_new(),directoryName);
+    ArchiveEntryInfo archiveEntryInfo;
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveHandle,
                                       createInfo->jobOptions->cryptAlgorithms[0],
@@ -6431,11 +6349,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
                             const FileInfo *fileInfo
                            )
 {
-  Errors                    error;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  String                    fileName;
-  String                    archiveEntryName;
-  ArchiveEntryInfo          archiveEntryInfo;
+  Errors error;
 
   assert(createInfo != NULL);
   assert(linkName != NULL);
@@ -6444,6 +6358,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
   printInfo(1,"Add link      '%s'...",String_cString(linkName));
 
   // get file extended attributes
+  FileExtendedAttributeList fileExtendedAttributeList;
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = File_getExtendedAttributes(&fileExtendedAttributeList,linkName);
   if (error != ERROR_NONE)
@@ -6505,7 +6420,7 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
   if (!createInfo->jobOptions->noStorage)
   {
     // read link
-    fileName = String_new();
+    String fileName = String_new();
     error = File_readLink(fileName,linkName,FALSE);
     if (error != ERROR_NONE)
     {
@@ -6552,7 +6467,8 @@ LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
     }
 
     // new link
-    archiveEntryName = getArchiveEntryName(String_new(),linkName);
+    String            archiveEntryName = getArchiveEntryName(String_new(),linkName);
+    ArchiveEntryInfo  archiveEntryInfo;
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  createInfo->jobOptions->cryptAlgorithms[0],
@@ -6681,22 +6597,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                 uint             bufferSize
                                )
 {
-  Errors                    error;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  FileHandle                fileHandle;
-  ArchiveFlags              archiveFlags;
-  StringList                archiveEntryNameList;
-  ArchiveEntryInfo          archiveEntryInfo;
-  uint64                    offset;
-  uint64                    size;
-  ulong                     bufferLength;
-  FragmentNode              *fragmentNode;
-  uint64                    archiveSize;
-  uint                      percentageDone;
-  double                    compressionRatio;
-  double                    d;
-  char                      fragmentInfoString[256],compressionRatioString[256];
-  String                    fileName;
+  Errors error;
 
   assert(createInfo != NULL);
   assert(fileNameList != NULL);
@@ -6708,6 +6609,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   printInfo(1,"Add hardlink  '%s'...",String_cString(StringList_first(fileNameList,NULL)));
 
   // get file extended attributes
+  FileExtendedAttributeList fileExtendedAttributeList;
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = File_getExtendedAttributes(&fileExtendedAttributeList,StringList_first(fileNameList,NULL));
   if (error != ERROR_NONE)
@@ -6770,6 +6672,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // open file
+  FileHandle fileHandle;
   error = File_open(&fileHandle,StringList_first(fileNameList,NULL),FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
   if (error != ERROR_NONE)
   {
@@ -6822,7 +6725,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
   if (!createInfo->jobOptions->noStorage)
   {
-    archiveFlags = ARCHIVE_FLAG_NONE;
+    ArchiveFlags archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
     if (   (fileInfo->size > globalOptions.compressMinFileSize)
@@ -6841,8 +6744,10 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // create new archive hard link entry
+    StringList archiveEntryNameList;
     StringList_init(&archiveEntryNameList);
     getArchiveEntryNameList(&archiveEntryNameList,fileNameList);
+    ArchiveEntryInfo archiveEntryInfo;
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
                                      &createInfo->archiveHandle,
                                      createInfo->jobOptions->compressAlgorithms.delta,
@@ -6886,8 +6791,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (error == ERROR_NONE)
     {
       // write hard link content to archive
-      offset = fragmentOffset;
-      size   = fragmentSize;
+      uint64 offset = fragmentOffset;
+      uint64 size   = fragmentSize;
       error  = ERROR_NONE;
       while (   (createInfo->failError == ERROR_NONE)
              && !isAborted(createInfo)
@@ -6899,6 +6804,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         pauseCreate(createInfo);
 
         // read file data
+        ulong bufferLength;
         error = File_read(&fileHandle,buffer,MIN(size,bufferSize),&bufferLength);
         if (error == ERROR_NONE)
         {
@@ -6909,9 +6815,10 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
             if (error == ERROR_NONE)
             {
               // get current archive size
-              archiveSize = Archive_getSize(&createInfo->archiveHandle);
+              uint64 archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
               // update running info
+              FragmentNode *fragmentNode;
               STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),&fragmentNode)
               {
                 if (fragmentNode != NULL)
@@ -6945,7 +6852,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
             if (isPrintInfo(2))
             {
-              percentageDone = 0;
+              uint percentageDone = 0;
               STATUS_INFO_GET(createInfo,StringList_first(fileNameList,NULL))
               {
                 percentageDone = (createInfo->runningInfo.progress.entry.totalSize > 0LL)
@@ -7065,6 +6972,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     StringList_done(&archiveEntryNameList);
 
     // get final compression ratio
+    double compressionRatio;
     if (archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize > 0LL)
     {
       compressionRatio = 100.0-archiveEntryInfo.hardLink.chunkHardLinkData.info.size*100.0/archiveEntryInfo.hardLink.chunkHardLinkData.fragmentSize;
@@ -7075,15 +6983,17 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // get fragment info
+    char fragmentInfoString[256];
     stringClear(fragmentInfoString);
     if (fragmentSize < fileInfo->size)
     {
-      d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.0;
+      double d = (fragmentCount > 0) ? ceil(log10((double)fragmentCount)) : 1.0;
       stringAppend(fragmentInfoString,sizeof(fragmentInfoString),", fragment #");
       stringAppendFormat(fragmentInfoString,sizeof(fragmentInfoString),"%*u/%u",(int)d,1+fragmentNumber,fragmentCount);
     }
 
     // get ratio info
+    char compressionRatioString[256];
     stringClear(compressionRatioString);
     if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
         || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
@@ -7120,6 +7030,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
   else
   {
+    char compressionRatioString[256];
+    stringClear(compressionRatioString);
+    FragmentNode *fragmentNode;
     STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),&fragmentNode)
     {
       if (fragmentNode != NULL)
@@ -7135,6 +7048,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // update running info
+  FragmentNode *fragmentNode;
   STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),&fragmentNode)
   {
     if (fragmentNode != NULL)
@@ -7169,6 +7083,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
+    String fileName;
     STRINGLIST_ITERATE(fileNameList,stringNode,fileName)
     {
       addIncrementalList(&createInfo->namesDictionary,fileName,fileInfo);
@@ -7194,10 +7109,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
                                const FileInfo *fileInfo
                               )
 {
-  Errors                    error;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  String                    archiveEntryName;
-  ArchiveEntryInfo          archiveEntryInfo;
+  Errors error;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
@@ -7207,6 +7119,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
   printInfo(1,"Add special   '%s'...",String_cString(fileName));
 
   // get file extended attributes
+  FileExtendedAttributeList fileExtendedAttributeList;
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = File_getExtendedAttributes(&fileExtendedAttributeList,fileName);
   if (error != ERROR_NONE)
@@ -7267,7 +7180,8 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
   if (!createInfo->jobOptions->noStorage)
   {
     // new special
-    archiveEntryName = getArchiveEntryName(String_new(),fileName);
+    String           archiveEntryName = getArchiveEntryName(String_new(),fileName);
+    ArchiveEntryInfo archiveEntryInfo;
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveHandle,
                                     createInfo->jobOptions->cryptAlgorithms[0],
@@ -7367,33 +7281,28 @@ LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
 
 LOCAL void createThreadCode(CreateInfo *createInfo)
 {
-  byte             *buffer;
-  EntryMsg         entryMsg;
-  bool             ownFileFlag;
-  const StringNode *stringNode;
-  String           name;
-  Errors           error;
 
   assert(createInfo != NULL);
 
-  // allocate buffer
-  buffer = (byte*)malloc(BUFFER_SIZE);
+  // store entries
+  EntryMsg entryMsg;
+  byte *buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-
-  // store entries
   while (   (createInfo->failError == ERROR_NONE)
          && !isAborted(createInfo)
          && MsgQueue_get(&createInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
         )
   {
     // check if own file (in temporary directory or storage file)
-    ownFileFlag =    String_startsWith(entryMsg.name,tmpDirectory)
-                  || StringList_contains(&createInfo->storageFileList,entryMsg.name);
+    bool ownFileFlag =    String_startsWith(entryMsg.name,tmpDirectory)
+                       || StringList_contains(&createInfo->storageFileList,entryMsg.name);
     if (!ownFileFlag)
     {
+      const StringNode *stringNode;
+      String           name;
       STRINGLIST_ITERATE(&entryMsg.nameList,stringNode,name)
       {
         ownFileFlag =    String_startsWith(name,tmpDirectory)
@@ -7406,6 +7315,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     {
       // pause create
       pauseCreate(createInfo);
+
+      Errors error;
 
       switch (entryMsg.fileType)
       {
@@ -7606,39 +7517,14 @@ Errors Command_create(ServerIO                     *masterIO,
                       LogHandle                    *logHandle
                      )
 {
-  AutoFreeList     autoFreeList;
-  String           printableStorageName;
-  String           incrementalListFileName;
-  bool             useIncrementalFileInfoFlag;
-  bool             incrementalFileInfoExistFlag;
-  IndexHandle      indexHandle;
-  CreateInfo       createInfo;
-  Errors           error;
-  StorageSpecifier storageSpecifier;
-  IndexId          uuidId;
-  String           hostName,userName;
-  IndexId          entityId;
-  ThreadPoolNode   *collectorSumThreadNode,*collectorThreadNode,*collectorStorageThreadNode;
-  uint             createThreadCount;
-  ThreadPoolSet    createThreadSet;
-  uint             i;
-  String           fileName;
 
   assert(storageName != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
-  printableStorageName         = String_new();
-  incrementalListFileName      = NULL;
-  useIncrementalFileInfoFlag   = FALSE;
-  incrementalFileInfoExistFlag = FALSE;
-  hostName                     = String_new();
-  userName                     = String_new();
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
-  AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
-  AUTOFREE_ADD(&autoFreeList,userName,{ String_delete(userName); });
 
   // check if storage name given
   if (String_isEmpty(storageName))
@@ -7648,7 +7534,10 @@ Errors Command_create(ServerIO                     *masterIO,
     return ERROR_NO_STORAGE_NAME;
   }
 
+  Errors error;
+
   // parse storage name
+  StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
@@ -7666,6 +7555,7 @@ Errors Command_create(ServerIO                     *masterIO,
 
   // open index
 //TODO: each thread need his own handle!
+  IndexHandle indexHandle;
   if (Index_isAvailable())
   {
     error = Index_open(&indexHandle,masterIO,INDEX_TIMEOUT);
@@ -7681,6 +7571,7 @@ Errors Command_create(ServerIO                     *masterIO,
   }
 
   // init create info
+  CreateInfo createInfo;
   initCreateInfo(&createInfo,
                  Index_isAvailable() ? &indexHandle : NULL,
                  jobUUID,
@@ -7710,11 +7601,16 @@ Errors Command_create(ServerIO                     *masterIO,
   AUTOFREE_ADD(&autoFreeList,&jobOptions->mountList,{ unmountAll(&jobOptions->mountList); });
 
   // get printable storage name
-  Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+  String printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,NULL);
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // get hostname, username
+  String hostName = String_new();
   Network_getHostName(hostName);
+  AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
+  String userName = String_new();
   Misc_getCurrentUserName(userName);
+  AUTOFREE_ADD(&autoFreeList,userName,{ String_delete(userName); });
 
   // init storage
   error = Storage_init(&createInfo.storageInfo,
@@ -7759,6 +7655,8 @@ Errors Command_create(ServerIO                     *masterIO,
   String_delete(directoryName);
 #endif
 
+  String incrementalListFileName    = String_new();
+  bool   useIncrementalFileInfoFlag = FALSE;
   if (   (createInfo.archiveType == ARCHIVE_TYPE_FULL)
       || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL)
       || (createInfo.archiveType == ARCHIVE_TYPE_DIFFERENTIAL)
@@ -7766,7 +7664,7 @@ Errors Command_create(ServerIO                     *masterIO,
      )
   {
     // get increment list file name
-    incrementalListFileName = String_new();
+    bool   incrementalFileInfoExistFlag = FALSE;
     if (!String_isEmpty(jobOptions->incrementalListFileName))
     {
       String_set(incrementalListFileName,jobOptions->incrementalListFileName);
@@ -7827,10 +7725,11 @@ Errors Command_create(ServerIO                     *masterIO,
                                               || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL);
   }
 
-  entityId = INDEX_ID_NONE;
+  IndexId entityId = INDEX_ID_NONE;
   if (Index_isAvailable())
   {
     // get/create index job UUID
+    IndexId uuidId;
     if (!IndexUUID_find(&indexHandle,
                         jobUUID,
                         NULL,  // entityUUID
@@ -7891,6 +7790,7 @@ Errors Command_create(ServerIO                     *masterIO,
   }
 
   // create new archive
+  IndexId uuidId;
   error = Archive_create(&createInfo.archiveHandle,
                          String_cString(hostName),
                          String_cString(userName),
@@ -7929,20 +7829,21 @@ Errors Command_create(ServerIO                     *masterIO,
   AUTOFREE_ADD(&autoFreeList,&createInfo.archiveHandle,{ Archive_close(&createInfo.archiveHandle,FALSE); });
 
   // start collectors and storage thread
-  collectorSumThreadNode = ThreadPool_run(&workerThreadPool,collectorSumThreadCode,&createInfo);
+  ThreadPoolNode *collectorSumThreadNode = ThreadPool_run(&workerThreadPool,collectorSumThreadCode,&createInfo);
   assert(collectorSumThreadNode != NULL);
-  collectorThreadNode = ThreadPool_run(&workerThreadPool,collectorThreadCode,&createInfo);
+  ThreadPoolNode *collectorThreadNode = ThreadPool_run(&workerThreadPool,collectorThreadCode,&createInfo);
   assert(collectorThreadNode != NULL);
-  collectorStorageThreadNode = ThreadPool_run(&workerThreadPool,storageThreadCode,&createInfo);
+  ThreadPoolNode *collectorStorageThreadNode = ThreadPool_run(&workerThreadPool,storageThreadCode,&createInfo);
   assert(collectorStorageThreadNode != NULL);
   AUTOFREE_ADD(&autoFreeList,collectorSumThreadNode,{ ThreadPool_join(&workerThreadPool,collectorSumThreadNode); });
   AUTOFREE_ADD(&autoFreeList,collectorThreadNode,{ ThreadPool_join(&workerThreadPool,collectorThreadNode); });
   AUTOFREE_ADD(&autoFreeList,collectorStorageThreadNode,{ MsgQueue_setEndOfMsg(&createInfo.storageMsgQueue); ThreadPool_join(&workerThreadPool,collectorStorageThreadNode); });
 
   // start create threads
-  createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  uint createThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  ThreadPoolSet createThreadSet;
   ThreadPool_initSet(&createThreadSet,&workerThreadPool);
-  for (i = 0; i < createThreadCount; i++)
+  for (uint i = 0; i < createThreadCount; i++)
   {
     ThreadPool_setAdd(&createThreadSet,
                       ThreadPool_run(&workerThreadPool,createThreadCode,&createInfo)
@@ -8104,7 +8005,7 @@ Errors Command_create(ServerIO                     *masterIO,
     // get new increment list file name, delete old incremental list file
     if (String_isEmpty(jobOptions->incrementalListFileName))
     {
-      fileName = String_new();
+      String fileName = String_new();
 
       // get new name
       if (jobUUID != NULL)

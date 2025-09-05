@@ -138,6 +138,7 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
       #ifdef HAVE_SD_ID128_GET_MACHINE
         if (state == NONE)
         {
+          sd_id128_t sdId128;
           if (sd_id128_get_machine(&sdId128) == 0)
           {
             memCopyFast(machineId,MISC_MACHINE_ID_LENGTH,sdId128.bytes,sizeof(sd_id128_t));

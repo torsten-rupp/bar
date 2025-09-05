@@ -259,14 +259,10 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                           void         *userData
                          )
 {
-  ConvertInfo *convertInfo = (ConvertInfo*)userData;
-  Errors      error;
-  FileInfo    fileInfo;
-  StorageMsg  storageMsg;
+  Errors error;
 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(intermediateFileName));
-  assert(convertInfo != NULL);
 
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(uuidId);
@@ -278,6 +274,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
 
   // get file info
 // TODO replace by getFileSize()
+  FileInfo fileInfo;
   error = File_getInfo(&fileInfo,intermediateFileName);
   if (error != ERROR_NONE)
   {
@@ -285,9 +282,12 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   }
 
   // send to storage thread
+  StorageMsg storageMsg;
   storageMsg.intermediateFileName = String_duplicate(intermediateFileName);
   storageMsg.intermediateFileSize = intermediateFileSize;
   DEBUG_TESTCODE() { freeStorageMsg(&storageMsg,NULL); return DEBUG_TESTCODE_ERROR(); }
+  ConvertInfo *convertInfo = (ConvertInfo*)userData;
+  assert(convertInfo != NULL);
   if (!MsgQueue_put(&convertInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
   {
     freeStorageMsg(&storageMsg,NULL);
@@ -332,44 +332,32 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 {
   #define MAX_RETRIES 3
 
-  AutoFreeList     autoFreeList;
-  byte             *buffer;
-  String           printableStorageName;
-  String           tmpArchiveName;
-  void             *autoFreeSavePoint;
-  StorageMsg       storageMsg;
-  Errors           error;
-  FileInfo         fileInfo;
-  FileHandle       fileHandle;
-  uint             retryCount;
-  FileHandle       toFileHandle;
-  StorageHandle    storageHandle;
-  ulong            bufferLength;
-
   assert(convertInfo != NULL);
   assert(convertInfo->newJobOptions != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
-  buffer = (byte*)malloc(BUFFER_SIZE);
+
+  // store archives
+  byte   *buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  printableStorageName = String_new();
-  tmpArchiveName       = String_new();
   AUTOFREE_ADD(&autoFreeList,buffer,{ free(buffer); });
+  String printableStorageName = String_new();
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  String tmpArchiveName       = String_new();
   AUTOFREE_ADD(&autoFreeList,tmpArchiveName,{ String_delete(tmpArchiveName); });
-
-  // store archives
   while (   (convertInfo->failError == ERROR_NONE)
 //         && !isAborted(convertInfo)
         )
   {
-    autoFreeSavePoint = AutoFree_save(&autoFreeList);
+    void *autoFreeSavePoint = AutoFree_save(&autoFreeList);
 
     // get next archive to store
+    StorageMsg storageMsg;
     if (!MsgQueue_get(&convertInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),WAIT_FOREVER))
     {
       break;
@@ -381,7 +369,10 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
                  }
                 );
 
+    Errors error;
+
     // get file info
+    FileInfo fileInfo;
     error = File_getInfo(&fileInfo,storageMsg.intermediateFileName);
     if (error != ERROR_NONE)
     {
@@ -405,6 +396,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     #else /* not NDEBUG */
       printInfo(1,"Store '%s'...",String_cString(printableStorageName));
     #endif /* NDEBUG */
+    FileHandle fileHandle;
     error = File_open(&fileHandle,storageMsg.intermediateFileName,FILE_OPEN_READ);
     if (error != ERROR_NONE)
     {
@@ -453,6 +445,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       assert(convertInfo->destinationArchiveHandle.mode == ARCHIVE_MODE_CREATE);
 
       // create local file
+      FileHandle toFileHandle;
       error = File_open(&toFileHandle,convertInfo->archiveName,FILE_OPEN_CREATE);
       if (error != ERROR_NONE)
       {
@@ -463,7 +456,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
                   );
         break;
       }
-      DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
+      DEBUG_TESTCODE() { File_close(&toFileHandle); error = DEBUG_TESTCODE_ERROR(); break; }
       AUTOFREE_ADD(&autoFreeList,&toFileHandle,{ File_close(&toFileHandle); });
 
       // transfer data from temporary file to local file
@@ -471,6 +464,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       do
       {
         // read data from local intermediate file
+        ulong bufferLength;
         error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
         if (error != ERROR_NONE)
         {
@@ -507,7 +501,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     }
     else
     {
-      retryCount = 0;
+      uint retryCount = 0;
       do
       {
         // next try
@@ -518,6 +512,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         retryCount++;
 
         // create storage file
+        StorageHandle storageHandle;
         error = Storage_create(&storageHandle,
                                &convertInfo->destinationStorageInfo,
                                convertInfo->archiveName,
@@ -549,6 +544,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         do
         {
           // read data from local intermediate file
+          ulong bufferLength;
           error = File_read(&fileHandle,buffer,BUFFER_SIZE,&bufferLength);
           if (error != ERROR_NONE)
           {
@@ -657,12 +653,16 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 
     AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
   }
+  String_delete(tmpArchiveName);
+  String_delete(printableStorageName);
+  free(buffer);
 
   // discard unprocessed archives
+  StorageMsg storageMsg;
   while (MsgQueue_get(&convertInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),NO_WAIT))
   {
     // delete temporary storage file
-    error = File_delete(storageMsg.intermediateFileName,FALSE);
+    Errors error = File_delete(storageMsg.intermediateFileName,FALSE);
     if (error != ERROR_NONE)
     {
       printWarning(_("cannot delete file '%s' (error: %s)!"),
@@ -676,9 +676,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
   }
 
   // free resoures
-  String_delete(tmpArchiveName);
-  String_delete(printableStorageName);
-  free(buffer);
   AutoFree_done(&autoFreeList);
 
   convertInfo->storageThreadExitFlag = TRUE;
@@ -704,26 +701,19 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                               uint             bufferSize
                              )
 {
-  Errors                    error;
-  ArchiveFlags              archiveFlags;
+  Errors error;
+
+  // read source file entry
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptAlgorithms           cryptAlgorithm;
   const CryptSalt           *cryptSalt;
   const CryptKey            *cryptKey;
-  String                    fileName;
+  String                    fileName = String_new();
   FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
-  ArchiveEntryInfo          destinationArchiveEntryInfo;
-  uint64                    fragmentOffset,fragmentSize;
-  char                      sizeString[32];
-  char                      fragmentString[256];
-  uint64                    length;
-  ulong                     bufferLength;
-
-  // read source file entry
-  fileName = String_new();
   File_initExtendedAttributes(&fileExtendedAttributeList);
+  uint64                    fragmentOffset,fragmentSize;
   error = Archive_readFileEntry(&sourceArchiveEntryInfo,
                                 sourceArchiveHandle,
                                 &deltaCompressAlgorithm,
@@ -753,6 +743,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
 
   // get size/fragment info
+  char sizeString[32];
   if (globalOptions.humanFormatFlag)
   {
     getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
@@ -761,6 +752,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   {
     stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
   }
+  char fragmentString[256];
   stringClear(fragmentString);
   if (fragmentSize < fileInfo.size)
   {
@@ -781,9 +773,8 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
     cryptKey  = NULL;
   }
 
-  archiveFlags = ARCHIVE_FLAG_NONE;
-
   // check if file data should be byte compressed
+  ArchiveFlags archiveFlags = ARCHIVE_FLAG_NONE;
   if (   (fileInfo.size > globalOptions.compressMinFileSize)
 //TODO
 //      && !PatternList_match(newJobOptions->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
@@ -793,6 +784,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   }
 
   // create new file entry
+  ArchiveEntryInfo destinationArchiveEntryInfo;
   error = Archive_newFileEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
                                deltaCompressAlgorithm,
@@ -821,10 +813,10 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
 
   // convert archive and file content
-  length = 0LL;
+  uint64 length = 0LL;
   while (length < fragmentSize)
   {
-    bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
+    ulong bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
 
     // read source archive
     error = Archive_readData(&sourceArchiveEntryInfo,buffer,bufferLength);
@@ -932,24 +924,18 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                                uint             bufferSize
                               )
 {
-  Errors             error;
-  ArchiveFlags       archiveFlags;
+  Errors error;
+
+  // read source image entry
   ArchiveEntryInfo   sourceArchiveEntryInfo;
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptAlgorithms    cryptAlgorithm;
   const CryptSalt    *cryptSalt;
   const CryptKey     *cryptKey;
-  String             deviceName;
+  String             deviceName = String_new();
   DeviceInfo         deviceInfo;
-  ArchiveEntryInfo   destinationArchiveEntryInfo;
-  uint64             blockOffset,blockCount;
   FileSystemTypes    fileSystemType;
-  char               sizeString[32];
-  char               fragmentString[256];
-  uint64             block;
-
-  // read source image entry
-  deviceName = String_new();
+  uint64             blockOffset,blockCount;
   error = Archive_readImageEntry(&sourceArchiveEntryInfo,
                                  sourceArchiveHandle,
                                  &deltaCompressAlgorithm,
@@ -990,6 +976,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   assert(deviceInfo.blockSize > 0);
 
   // get size/fragment info
+  char sizeString[32];
   if (globalOptions.humanFormatFlag)
   {
     getHumanSizeString(sizeString,sizeof(sizeString),deviceInfo.size);
@@ -998,6 +985,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   {
     stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
   }
+  char fragmentString[256];
   stringClear(fragmentString);
   if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
   {
@@ -1018,9 +1006,8 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
     cryptKey  = NULL;
   }
 
-  archiveFlags = ARCHIVE_FLAG_NONE;
-
   // check if file data should be byte compressed
+  ArchiveFlags archiveFlags = ARCHIVE_FLAG_NONE;
   if (   (deviceInfo.size > globalOptions.compressMinFileSize)
 //TODO
 //      && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
@@ -1030,6 +1017,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   }
 
   // create new image entry
+  ArchiveEntryInfo destinationArchiveEntryInfo;
   error = Archive_newImageEntry(&destinationArchiveEntryInfo,
                                 destinationArchiveHandle,
                                 deltaCompressAlgorithm,
@@ -1057,7 +1045,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
 
   // convert archive and device/image content
-  block = 0LL;
+  uint64 block = 0LL;
   while (block < blockCount)
   {
     // read data from archive (only single block)
@@ -1159,18 +1147,16 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
                                    const JobOptions *newJobOptions
                                   )
 {
-  String                    directoryName;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  Errors                    error;
+  Errors error;
+
+  // read source directory entry
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CryptAlgorithms           cryptAlgorithm;
   const CryptSalt           *cryptSalt;
   const CryptKey            *cryptKey;
+  String                    directoryName = String_new();
   FileInfo                  fileInfo;
-  ArchiveEntryInfo          destinationArchiveEntryInfo;
-
-  // read source directory entry
-  directoryName = String_new();
+  FileExtendedAttributeList fileExtendedAttributeList;
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = Archive_readDirectoryEntry(&sourceArchiveEntryInfo,
                                      sourceArchiveHandle,
@@ -1205,6 +1191,7 @@ LOCAL Errors convertDirectoryEntry(ArchiveHandle    *sourceArchiveHandle,
   }
 
   // create new directory entry
+  ArchiveEntryInfo destinationArchiveEntryInfo;
   error = Archive_newDirectoryEntry(&destinationArchiveEntryInfo,
                                     destinationArchiveHandle,
                                     cryptAlgorithm,
@@ -1279,21 +1266,18 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                               const JobOptions *newJobOptions
                              )
 {
-  String                    linkName;
-  String                    fileName;
+  Errors error;
+
+  // read source link entry
+  ArchiveEntryInfo          sourceArchiveEntryInfo;
+  String                    linkName = String_new();
+  String                    fileName = String_new();
   CryptAlgorithms           cryptAlgorithm;
   const CryptSalt           *cryptSalt;
   const CryptKey            *cryptKey;
   FileExtendedAttributeList fileExtendedAttributeList;
-  Errors                    error;
-  ArchiveEntryInfo          sourceArchiveEntryInfo;
-  FileInfo                  fileInfo;
-  ArchiveEntryInfo          destinationArchiveEntryInfo;
-
-  // read source link entry
-  linkName = String_new();
-  fileName = String_new();
   File_initExtendedAttributes(&fileExtendedAttributeList);
+  FileInfo                  fileInfo;
   error = Archive_readLinkEntry(&sourceArchiveEntryInfo,
                                 sourceArchiveHandle,
                                 NULL,  // cryptType,
@@ -1329,6 +1313,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   }
 
   // create new link entry
+  ArchiveEntryInfo destinationArchiveEntryInfo;
   error = Archive_newLinkEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
                                cryptAlgorithm,
@@ -1412,26 +1397,21 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
                                   uint             bufferSize
                                  )
 {
-  StringList                fileNameList;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  Errors                    error;
+  Errors error;
+
+  // read source hard link entry
   ArchiveFlags              archiveFlags;
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CompressAlgorithms        deltaCompressAlgorithm,byteCompressAlgorithm;
   CryptAlgorithms           cryptAlgorithm;
   const CryptSalt           *cryptSalt;
   const CryptKey            *cryptKey;
-  FileInfo                  fileInfo;
-  ArchiveEntryInfo          destinationArchiveEntryInfo;
-  uint64                    fragmentOffset,fragmentSize;
-  char                      sizeString[32];
-  char                      fragmentString[256];
-  uint64                    length;
-  ulong                     bufferLength;
-
-  // read source hard link entry
+  StringList                fileNameList;
   StringList_init(&fileNameList);
+  FileInfo                  fileInfo;
+  FileExtendedAttributeList fileExtendedAttributeList;
   File_initExtendedAttributes(&fileExtendedAttributeList);
+  uint64                    fragmentOffset,fragmentSize;
   error = Archive_readHardLinkEntry(&sourceArchiveEntryInfo,
                                     sourceArchiveHandle,
                                     &deltaCompressAlgorithm,
@@ -1461,6 +1441,8 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); StringList_done(&fileNameList); return DEBUG_TESTCODE_ERROR(); }
 
   // get size/fragment info
+  char sizeString[32];
+  ArchiveEntryInfo destinationArchiveEntryInfo;
   if (globalOptions.humanFormatFlag)
   {
     getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
@@ -1469,6 +1451,7 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   {
     stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
   }
+  char fragmentString[256];
   stringClear(fragmentString);
   if (fragmentSize < fileInfo.size)
   {
@@ -1525,10 +1508,10 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); StringList_done(&fileNameList); return DEBUG_TESTCODE_ERROR(); }
 
   // convert archive and hard link content
-  length = 0LL;
+  uint64 length = 0LL;
   while (length < fragmentSize)
   {
-    bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
+    ulong bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
 
     // read source archive
     error = Archive_readData(&sourceArchiveEntryInfo,buffer,bufferLength);
@@ -1630,18 +1613,16 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
                                  const JobOptions *newJobOptions
                                 )
 {
-  String                    fileName;
-  FileExtendedAttributeList fileExtendedAttributeList;
-  Errors                    error;
+  Errors error;
+
+  // read source special entry
   ArchiveEntryInfo          sourceArchiveEntryInfo;
   CryptAlgorithms           cryptAlgorithm;
   const CryptSalt           *cryptSalt;
   const CryptKey            *cryptKey;
+  String                    fileName = String_new();
   FileInfo                  fileInfo;
-  ArchiveEntryInfo          destinationArchiveEntryInfo;
-
-  // read source special entry
-  fileName = String_new();
+  FileExtendedAttributeList fileExtendedAttributeList;
   File_initExtendedAttributes(&fileExtendedAttributeList);
   error = Archive_readSpecialEntry(&sourceArchiveEntryInfo,
                                    sourceArchiveHandle,
@@ -1676,6 +1657,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   }
 
   // create new special entry
+  ArchiveEntryInfo destinationArchiveEntryInfo;
   error = Archive_newSpecialEntry(&destinationArchiveEntryInfo,
                                   destinationArchiveHandle,
                                   cryptAlgorithm,
@@ -1757,24 +1739,20 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                               const JobOptions *newJobOptions
                              )
 {
+  Errors error;
+
+  // read source meta entry
+  ArchiveEntryInfo sourceArchiveEntryInfo;
   CryptAlgorithms  cryptAlgorithm;
   const CryptSalt  *cryptSalt;
   const CryptKey   *cryptKey;
-  String           hostName;
-  String           userName;
+  String           hostName = String_new();
+  String           userName = String_new();
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString     (entityUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveEntryInfo sourceArchiveEntryInfo;
   ArchiveTypes     archiveType;
   uint64           createdDateTime;
-  String           comment;
-  Errors           error;
-  ArchiveEntryInfo destinationArchiveEntryInfo;
-
-  // read source meta entry
-  hostName = String_new();
-  userName = String_new();
-  comment  = String_new();
+  String           comment  = String_new();
   error = Archive_readMetaEntry(&sourceArchiveEntryInfo,
                                 sourceArchiveHandle,
                                 NULL,  // cryptType,
@@ -1817,6 +1795,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   if (Configuration_isCommandLineOptionSet(&globalOptions.comment)) String_set(comment,newJobOptions->comment);
 
   // create new meta entry
+  ArchiveEntryInfo destinationArchiveEntryInfo;
   error = Archive_newMetaEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
                                cryptAlgorithm,
@@ -1999,23 +1978,17 @@ LOCAL Errors convertEntry(ArchiveHandle     *sourceArchiveHandle,
 
 LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 {
-  byte          *buffer;
-  uint          archiveIndex;
-  ArchiveHandle sourceArchiveHandle;
-  EntryMsg      entryMsg;
-  Errors        error;
-
   assert(convertInfo != NULL);
 
-  // init variables
-  buffer = (byte*)malloc(BUFFER_SIZE);
+  // convert entries
+  byte *buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  archiveIndex = 0;
-
-  // convert entries
+  ArchiveHandle sourceArchiveHandle;
+  uint          archiveIndex = 0;
+  EntryMsg      entryMsg;
   while (MsgQueue_get(&convertInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
     assert(entryMsg.archiveHandle != NULL);
@@ -2025,6 +1998,8 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 //         && !isAborted(convertInfo)
        )
     {
+      Errors error;
+
       if (archiveIndex < entryMsg.archiveIndex)
       {
         // open source archive
@@ -2090,6 +2065,8 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
     Archive_close(&sourceArchiveHandle,FALSE);
   }
 
+  free(buffer);
+
   // discard processing all other entries
   while (MsgQueue_get(&convertInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
@@ -2100,7 +2077,6 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
   }
 
   // free resources
-  free(buffer);
 }
 
 /***********************************************************************\
@@ -2119,32 +2095,15 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
                             ConstString      archiveName
                            )
 {
-  AutoFreeList         autoFreeList;
-  String               printableStorageName;
-  uint                 convertThreadCount;
-  byte                 *buffer;
-  Errors               error;
-  String               baseName;
-  Thread               storageThread;
-  uint                 i;
-  ArchiveHandle        sourceArchiveHandle;
-  CryptSignatureStates sourceAllCryptSignatureState;
-  uint64               sourceLastSignatureOffset;
-  ArchiveFlags         archiveFlags;
-  ArchiveEntryTypes    archiveEntryType;
-  ArchiveCryptInfo     *archiveCryptInfo;
-  uint64               offset;
-  uint64               size;
-  EntryMsg             entryMsg;
+  Errors error;
 
   assert(convertInfo != NULL);
   assert(convertInfo->newJobOptions != NULL);
   assert(storageSpecifier != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
-  printableStorageName = String_new();
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // Note: still not supported
   if (convertInfo->newJobOptions->archivePartSize > 0LL)
@@ -2155,7 +2114,8 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 //  convertInfo->newJobOptions->archivePartSize = 0LL;
 
   // set printable storage name
-  Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
+  String printableStorageName = Storage_getPrintableName(String_new(),storageSpecifier,archiveName);
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // init source storage
   error = Storage_init(&convertInfo->sourceStorageInfo,
@@ -2194,6 +2154,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   }
 
   // open source archive
+  ArchiveHandle sourceArchiveHandle;
   error = Archive_open(&sourceArchiveHandle,
                        &convertInfo->sourceStorageInfo,
                        archiveName,
@@ -2215,8 +2176,8 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   AUTOFREE_ADD(&autoFreeList,&sourceArchiveHandle,{ Archive_close(&sourceArchiveHandle,FALSE); });
 
   // check signatures
-  sourceAllCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
-  sourceLastSignatureOffset    = Archive_tell(&sourceArchiveHandle);
+  CryptSignatureStates sourceAllCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
+  uint64               sourceLastSignatureOffset    = Archive_tell(&sourceArchiveHandle);
   if (!convertInfo->newJobOptions->skipVerifySignaturesFlag)
   {
     error = Archive_verifySignatures(&sourceArchiveHandle,
@@ -2283,7 +2244,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   AUTOFREE_ADD(&autoFreeList,&convertInfo->destinationStorageInfo,{ (void)Storage_done(&convertInfo->destinationStorageInfo); });
 
   // create destination archive name
-  baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName,TRUE);
+  String baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName,TRUE);
   if (!String_isEmpty(convertInfo->newJobOptions->destination))
   {
     File_setFileName(convertInfo->archiveName,convertInfo->newJobOptions->destination);
@@ -2296,7 +2257,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   String_delete(baseName);
 
   // create new archive
-  archiveFlags = ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS;
+  ArchiveFlags archiveFlags = ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS;
   if (Configuration_isCommandLineOptionSet(globalOptions.cryptAlgorithms))
   {
     archiveFlags |= ARCHIVE_FLAG_CREATE_SALT|ARCHIVE_FLAG_CREATE_KEY;
@@ -2348,6 +2309,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
 //TODO: really required? If convert is done for each archive storage can be done as the final step without a separated thread
   // start storage thread
   MsgQueue_reset(&convertInfo->storageMsgQueue);
+  Thread storageThread;
   if (!Thread_init(&storageThread,"BAR storage",globalOptions.niceLevel,storageThreadCode,convertInfo))
   {
     HALT_FATAL_ERROR("Cannot initialize storage thread!");
@@ -2357,11 +2319,12 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   // start convert threads/allo0cate buffer
 // TODO: cannot be done multi-threaded because chunks-ordering is important and must not be changed! do multiple storages in parallel
 //  convertThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
-convertThreadCount = 1;
+  uint convertThreadCount = 1;
+  byte *buffer;
   if (convertThreadCount > 1)
   {
     MsgQueue_reset(&convertInfo->entryMsgQueue);
-    for (i = 0; i < convertThreadCount; i++)
+    for (uint i = 0; i < convertThreadCount; i++)
     {
       ThreadPool_run(&workerThreadPool,convertThreadCode,convertInfo);
     }
@@ -2395,6 +2358,10 @@ convertThreadCount = 1;
         )
   {
     // get next archive entry type
+    ArchiveEntryTypes archiveEntryType;
+    ArchiveCryptInfo  *archiveCryptInfo;
+    uint64            offset;
+    uint64            size;
     error = Archive_getNextArchiveEntry(&sourceArchiveHandle,
                                         &archiveEntryType,
                                         &archiveCryptInfo,
@@ -2420,6 +2387,7 @@ convertThreadCount = 1;
       {
         // send entry to convert threads
 //TODO: increment on multiple archives and when threads are not restarted each time
+        EntryMsg entryMsg;
         entryMsg.archiveIndex     = 1;
         entryMsg.archiveHandle    = &sourceArchiveHandle;
         entryMsg.archiveEntryType = archiveEntryType;
@@ -2559,23 +2527,11 @@ Errors Command_convert(const StringList        *storageNameList,
                        LogHandle               *logHandle
                       )
 {
-  StorageSpecifier           storageSpecifier;
-  ConvertInfo                convertInfo;
-  StringNode                 *stringNode;
-  String                     storageName;
-  bool                       someStorageFound;
-  Errors                     error;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  String                     fileName;
-  FileInfo                   fileInfo;
-
   assert(storageNameList != NULL);
   assert(newJobOptions != NULL);
 
-  // init variables
-  Storage_initSpecifier(&storageSpecifier);
-
   // init convert info
+  ConvertInfo                convertInfo;
   initConvertInfo(&convertInfo,
                   newJobUUID,
                   newEntityUUID,
@@ -2585,9 +2541,15 @@ Errors Command_convert(const StringList        *storageNameList,
                   logHandle
                  );
 
-  someStorageFound = FALSE;
+  bool             someStorageFound = FALSE;
+  StringNode       *stringNode;
+  String           storageName;
+  StorageSpecifier storageSpecifier;
+  Storage_initSpecifier(&storageSpecifier);
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
+    Errors error;
+
     // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
@@ -2627,6 +2589,7 @@ Errors Command_convert(const StringList        *storageNameList,
     // try convert directory content
     if (error != ERROR_NONE)
     {
+      StorageDirectoryListHandle storageDirectoryListHandle;
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
                                         NULL,  // pathName
@@ -2635,10 +2598,11 @@ Errors Command_convert(const StringList        *storageNameList,
                                        );
       if (error == ERROR_NONE)
       {
-        fileName = String_new();
+        String fileName = String_new();
         while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
         {
           // read next directory entry
+          FileInfo fileInfo;
           error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
           if (error != ERROR_NONE)
           {
@@ -2690,12 +2654,10 @@ Errors Command_convert(const StringList        *storageNameList,
     printError(_("no matching storage files found!"));
     convertInfo.failError = ERROR_FILE_NOT_FOUND_;
   }
+  Storage_doneSpecifier(&storageSpecifier);
 
   // done convert info
   doneConvertInfo(&convertInfo);
-
-  // free resources
-  Storage_doneSpecifier(&storageSpecifier);
 
   // output info
   if (convertInfo.failError != ERROR_NONE)

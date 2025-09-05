@@ -235,13 +235,12 @@ LOCAL void doneTestInfo(TestInfo *testInfo)
 LOCAL void updateRunningInfo(TestInfo *testInfo, bool forceUpdate)
 {
   static uint64 lastTimestamp = 0LL;
-  uint64        timestamp;
 
   assert(testInfo != NULL);
 
   if (testInfo->testRunningInfoFunction != NULL)
   {
-    timestamp = Misc_getTimestamp();
+    uint64 timestamp = Misc_getTimestamp();
     if (forceUpdate || (timestamp > (lastTimestamp+500LL*US_PER_MS)))
     {
       testInfo->testRunningInfoFunction(&testInfo->runningInfo,
@@ -278,16 +277,7 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
                            uint              bufferSize
                           )
 {
-  Errors           error;
-  String           fileName;
-  ArchiveEntryInfo archiveEntryInfo;
-  FileInfo         fileInfo;
-  uint64           fragmentOffset,fragmentSize;
-  uint64           length;
-  ulong            n;
-  FragmentNode     *fragmentNode;
-  char             sizeString[32];
-  char             fragmentString[256];
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -297,7 +287,10 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
   assert(buffer != NULL);
 
   // open archive entry
-  fileName = String_new();
+  ArchiveEntryInfo archiveEntryInfo;
+  String           fileName = String_new();
+  FileInfo         fileInfo;
+  uint64           fragmentOffset,fragmentSize;
   error = Archive_readFileEntry(&archiveEntryInfo,
                                 archiveHandle,
                                 NULL,  // deltaCompressAlgorithm
@@ -341,12 +334,12 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
     }
 
     // read file content
-    length = 0LL;
+    uint64 length = 0LL;
     while (   ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
            && (length < fragmentSize)
           )
     {
-      n = (ulong)MIN(fragmentSize-length,bufferSize);
+      ulong n = (ulong)MIN(fragmentSize-length,bufferSize);
 
       // read archive file
       error = Archive_readData(&archiveEntryInfo,buffer,n);
@@ -382,6 +375,7 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
     printInfo(2,"    \b\b\b\b");
 
     // get size/fragment info
+    char sizeString[32];
     if (globalOptions.humanFormatFlag)
     {
       getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
@@ -390,6 +384,7 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
     {
       stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
     }
+    char fragmentString[256];
     stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
     {
@@ -405,7 +400,7 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
       SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get file fragment node
-        fragmentNode = FragmentList_find(fragmentList,fileName);
+        FragmentNode *fragmentNode = FragmentList_find(fragmentList,fileName);
         if (fragmentNode == NULL)
         {
           fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
@@ -513,16 +508,7 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
                             uint              bufferSize
                            )
 {
-  Errors           error;
-  String           deviceName;
-  ArchiveEntryInfo archiveEntryInfo;
-  DeviceInfo       deviceInfo;
-  uint64           blockOffset,blockCount;
-  uint64           block;
-  ulong            bufferBlockCount;
-  FragmentNode     *fragmentNode;
-  char             sizeString[32];
-  char             fragmentString[256];
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -532,7 +518,10 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
   assert(buffer != NULL);
 
   // open archive entry
-  deviceName = String_new();
+  ArchiveEntryInfo archiveEntryInfo;
+  String           deviceName = String_new();
+  DeviceInfo       deviceInfo;
+  uint64           blockOffset,blockCount;
   error = Archive_readImageEntry(&archiveEntryInfo,
                                  archiveHandle,
                                  NULL,  // deltaCompressAlgorithm
@@ -588,12 +577,12 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
     printInfo(1,"  Test image     '%s'...",String_cString(deviceName));
 
     // read image content
-    block = 0LL;
+    uint64 block = 0LL;
     while (   ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
            && (block < blockCount)
           )
     {
-      bufferBlockCount = MIN(blockCount-block,bufferSize/deviceInfo.blockSize);
+      ulong bufferBlockCount = MIN(blockCount-block,bufferSize/deviceInfo.blockSize);
 
       // read archive file
       error = Archive_readData(&archiveEntryInfo,buffer,bufferBlockCount*deviceInfo.blockSize);
@@ -629,6 +618,7 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
     printInfo(2,"    \b\b\b\b");
 
     // get size/fragment info
+    char sizeString[32];
     if (globalOptions.humanFormatFlag)
     {
       getHumanSizeString(sizeString,sizeof(sizeString),blockCount*(uint64)deviceInfo.blockSize);
@@ -637,6 +627,7 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
     {
       stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
     }
+    char fragmentString[256];
     stringClear(fragmentString);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
@@ -652,7 +643,7 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
       SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get file fragment node
-        fragmentNode = FragmentList_find(fragmentList,deviceName);
+        FragmentNode *fragmentNode = FragmentList_find(fragmentList,deviceName);
         if (fragmentNode == NULL)
         {
           fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0,0);
@@ -752,17 +743,16 @@ LOCAL Errors testDirectoryEntry(TestInfo          *testInfo,
                                 const PatternList *excludePatternList
                                )
 {
-  Errors           error;
-  String           directoryName;
-  ArchiveEntryInfo archiveEntryInfo;
-  FileInfo         fileInfo;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
   // open archive entry
-  directoryName = String_new();
+  ArchiveEntryInfo archiveEntryInfo;
+  String           directoryName = String_new();
+  FileInfo         fileInfo;
   error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                      archiveHandle,
                                      NULL,  // cryptType
@@ -863,19 +853,17 @@ LOCAL Errors testLinkEntry(TestInfo          *testInfo,
                            const PatternList *excludePatternList
                           )
 {
-  Errors           error;
-  String           linkName;
-  String           fileName;
-  ArchiveEntryInfo archiveEntryInfo;
-  FileInfo         fileInfo;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
   // open archive entry
-  linkName = String_new();
-  fileName = String_new();
+  ArchiveEntryInfo archiveEntryInfo;
+  String           linkName = String_new();
+  String           fileName = String_new();
+  FileInfo         fileInfo;
   error = Archive_readLinkEntry(&archiveEntryInfo,
                                 archiveHandle,
                                 NULL,  // cryptType
@@ -990,19 +978,7 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
                                uint              bufferSize
                               )
 {
-  Errors           error;
-  StringList       fileNameList;
-  ArchiveEntryInfo archiveEntryInfo;
-  FileInfo         fileInfo;
-  uint64           fragmentOffset,fragmentSize;
-  bool             testedDataFlag;
-  const StringNode *stringNode;
-  String           fileName;
-  uint64           length;
-  ulong            n;
-  FragmentNode     *fragmentNode;
-  char             sizeString[32];
-  char             fragmentString[256];
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -1012,7 +988,11 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
   assert(buffer != NULL);
 
   // open archive entry
+  ArchiveEntryInfo archiveEntryInfo;
+  StringList       fileNameList;
   StringList_init(&fileNameList);
+  FileInfo         fileInfo;
+  uint64           fragmentOffset,fragmentSize;
   error = Archive_readHardLinkEntry(&archiveEntryInfo,
                                     archiveHandle,
                                     NULL,  // deltaCompressAlgorithm
@@ -1039,7 +1019,9 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
     return error;
   }
 
-  testedDataFlag = FALSE;
+  bool testedDataFlag = FALSE;
+  const StringNode *stringNode;
+  String           fileName;
   STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
   {
     if (   ((includeEntryList == NULL) || List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -1059,6 +1041,7 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
       }
 
       // get size/fragment info
+      char sizeString[32];
       if (globalOptions.humanFormatFlag)
       {
         getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
@@ -1067,6 +1050,7 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
       {
         stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
       }
+      char fragmentString[256];
       stringClear(fragmentString);
       if (fragmentSize < fileInfo.size)
       {
@@ -1080,12 +1064,12 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
       if (!testedDataFlag && (error == ERROR_NONE))
       {
         // read hard link content
-        length = 0LL;
+        uint64 length = 0LL;
         while (   ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
                && (length < fragmentSize)
               )
         {
-          n = (ulong)MIN(fragmentSize-length,bufferSize);
+          ulong n = (ulong)MIN(fragmentSize-length,bufferSize);
 
           // read archive file
           error = Archive_readData(&archiveEntryInfo,buffer,n);
@@ -1123,7 +1107,7 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
           SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
             // get file fragment node
-            fragmentNode = FragmentList_find(fragmentList,fileName);
+            FragmentNode * fragmentNode = FragmentList_find(fragmentList,fileName);
             if (fragmentNode == NULL)
             {
               fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
@@ -1234,17 +1218,16 @@ LOCAL Errors testSpecialEntry(TestInfo          *testInfo,
                               const PatternList *excludePatternList
                              )
 {
-  Errors           error;
-  String           fileName;
-  ArchiveEntryInfo archiveEntryInfo;
-  FileInfo         fileInfo;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
   // open archive entry
-  fileName = String_new();
+  ArchiveEntryInfo archiveEntryInfo;
+  String           fileName = String_new();
+  FileInfo         fileInfo;
   error = Archive_readSpecialEntry(&archiveEntryInfo,
                                    archiveHandle,
                                    NULL,  // cryptType
@@ -1448,24 +1431,18 @@ LOCAL Errors testEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL void testThreadCode(TestInfo *testInfo)
 {
-  byte          *buffer;
-  uint          archiveIndex;
-  ArchiveHandle archiveHandle;
-  EntryMsg      entryMsg;
-  Errors        error;
-
   assert(testInfo != NULL);
   assert(testInfo->jobOptions != NULL);
 
-  // init variables
-  buffer = (byte*)malloc(BUFFER_SIZE);
+  // test entries
+  byte          *buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  archiveIndex = 0;
-
-  // test entries
+  ArchiveHandle archiveHandle;
+  uint          archiveIndex = 0;
+  EntryMsg      entryMsg;
   while (   ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
          && (MsgQueue_get(&testInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
         )
@@ -1486,6 +1463,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
         {
           Archive_close(&archiveHandle,FALSE);
         }
+
+        Errors error;
 
         // open new archive
         error = Archive_openHandle(&archiveHandle,
@@ -1508,6 +1487,8 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 
       // set archive crypt info
       Archive_setCryptInfo(&archiveHandle,entryMsg.archiveCryptInfo);
+
+      Errors error;
 
       // seek to start of entry
       error = Archive_seek(&archiveHandle,entryMsg.offset);
@@ -1585,33 +1566,21 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
                          ConstString      archiveName
                         )
 {
-  AutoFreeList         autoFreeList;
-  String               printableStorageName;
-  StorageInfo          storageInfo;
-  Errors               error;
-  uint                 testThreadCount;
-  byte                 *buffer;
-  uint                 i;
-  ArchiveHandle        archiveHandle;
-  CryptSignatureStates allCryptSignatureState;
-  uint64               lastSignatureOffset;
-  ArchiveEntryTypes    archiveEntryType;
-  ArchiveCryptInfo     *archiveCryptInfo;
-  uint64               offset;
-  EntryMsg             entryMsg;
-
   assert(testInfo != NULL);
   assert(storageSpecifier != NULL);
 
   // init variables
+  AutoFreeList         autoFreeList;
   AutoFree_init(&autoFreeList);
-  printableStorageName = String_new();
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // get printable storage name
-  Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
+  String printableStorageName = Storage_getPrintableName(String_new(),storageSpecifier,archiveName);
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+
+  Errors error;
 
   // init storage
+  StorageInfo storageInfo;
   error = Storage_init(&storageInfo,
                        NULL, // masterSocketHandle
                        storageSpecifier,
@@ -1648,6 +1617,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
   }
 
   // open archive
+  ArchiveHandle archiveHandle;
   error = Archive_open(&archiveHandle,
                        &storageInfo,
                        archiveName,
@@ -1671,6 +1641,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
   // check signatures
   if (!testInfo->jobOptions->skipVerifySignaturesFlag)
   {
+    CryptSignatureStates allCryptSignatureState;
     error = Archive_verifySignatures(&archiveHandle,
                                      &allCryptSignatureState
                                     );
@@ -1729,11 +1700,12 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
            );
 
   // start test threads/allocate uffer
-  testThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  uint testThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  byte *buffer;
   if (testThreadCount > 1)
   {
     MsgQueue_reset(&testInfo->entryMsgQueue);
-    for (i = 0; i < testThreadCount; i++)
+    for (uint i = 0; i < testThreadCount; i++)
     {
       ThreadPool_run(&workerThreadPool,testThreadCode,testInfo);
     }
@@ -1750,9 +1722,9 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
   }
 
   // read archive entries
-  allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
-  error                  = ERROR_NONE;
-  lastSignatureOffset    = Archive_tell(&archiveHandle);
+  error = ERROR_NONE;
+  CryptSignatureStates allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
+  uint64               lastSignatureOffset    = Archive_tell(&archiveHandle);
   while (   ((testInfo->failError == ERROR_NONE) || !testInfo->jobOptions->noStopOnErrorFlag)
          && (testInfo->jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
          && !Archive_eof(&archiveHandle)
@@ -1760,6 +1732,9 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
         )
   {
     // get next archive entry type
+    ArchiveEntryTypes archiveEntryType;
+    ArchiveCryptInfo  *archiveCryptInfo;
+    uint64            offset;
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         &archiveCryptInfo,
@@ -1783,6 +1758,7 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
       {
         // send entry to test threads
 //TODO: increment on multiple archives and when threads are not restarted each time
+        EntryMsg entryMsg;
         entryMsg.archiveIndex     = 1;
         entryMsg.archiveHandle    = &archiveHandle;
         entryMsg.archiveEntryType = archiveEntryType;
@@ -1913,24 +1889,17 @@ Errors Command_test(const StringList        *storageNameList,
                     LogHandle               *logHandle
                    )
 {
-  StorageSpecifier           storageSpecifier;
-  TestInfo                   testInfo;
-  StringNode                 *stringNode;
-  String                     storageName;
-  bool                       someStorageFound;
-  Errors                     error;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  String                     fileName;
-  FileInfo                   fileInfo;
-  FragmentNode               *fragmentNode;
+  Errors error;
 
   assert(storageNameList != NULL);
   assert(jobOptions != NULL);
 
   // allocate resources
+  StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
 
   // init test info
+  TestInfo testInfo;
   initTestInfo(&testInfo,
                includeEntryList,
                excludePatternList,
@@ -1952,7 +1921,9 @@ NULL,  //               requestedAbortFlag,
     updateRunningInfo(&testInfo,FALSE);
   }
 
-  someStorageFound = FALSE;
+  bool       someStorageFound = FALSE;
+  StringNode *stringNode;
+  String     storageName;
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
     // parse storage name
@@ -1993,6 +1964,7 @@ NULL,  //               requestedAbortFlag,
     // try test directory content
     if (error != ERROR_NONE)
     {
+      StorageDirectoryListHandle storageDirectoryListHandle;
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
                                         NULL,  // fileName
@@ -2001,12 +1973,13 @@ NULL,  //               requestedAbortFlag,
                                        );
       if (error == ERROR_NONE)
       {
-        fileName = String_new();
+        String fileName = String_new();
         while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
                && ((testInfo.isAbortedFunction == NULL) || !testInfo.isAbortedFunction(testInfo.isAbortedUserData))
               )
         {
           // read next directory entry
+          FileInfo fileInfo;
           error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
           if (error != ERROR_NONE)
           {
@@ -2076,6 +2049,7 @@ NULL,  //               requestedAbortFlag,
      )
   {
     // check fragment lists
+    const FragmentNode *fragmentNode;
     FRAGMENTLIST_ITERATE(&testInfo.fragmentList,fragmentNode)
     {
       if (!FragmentList_isComplete(fragmentNode))

@@ -212,12 +212,9 @@ LOCAL void doneCompareInfo(CompareInfo *compareInfo)
 
 LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 {
-  const byte *b0,*b1;
-  ulong      i;
-
-  b0 = (const byte*)p0;
-  b1 = (const byte*)p1;
-  i = 0L;
+  const byte *b0 = (const byte*)p0;
+  const byte *b1 = (const byte*)p1;
+  ulong      i = 0L;
   while (   (i < length)
          && ((*b0) == (*b1))
         )
@@ -256,21 +253,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
                               uint              bufferSize
                              )
 {
-  Errors             error;
-  String             fileName;
-  ArchiveEntryInfo   archiveEntryInfo;
-  CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-  FileInfo           fileInfo;
-  uint64             fragmentOffset,fragmentSize;
-//            FileInfo         localFileInfo;
-  FileHandle         fileHandle;
-  bool               equalFlag;
-  uint64             length;
-  ulong              bufferLength;
-  ulong              diffIndex;
-  FragmentNode       *fragmentNode;
-  char               sizeString[32];
-  char               fragmentString[256];
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -283,7 +266,11 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
   assert(buffer1 != NULL);
 
   // read file
-  fileName = String_new();
+  ArchiveEntryInfo   archiveEntryInfo;
+  CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
+  String             fileName = String_new();
+  FileInfo           fileInfo;
+  uint64             fragmentOffset,fragmentSize;
   error = Archive_readFileEntry(&archiveEntryInfo,
                                 archiveHandle,
                                 &deltaCompressAlgorithm,
@@ -336,6 +323,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
     }
 
     // open file
+    FileHandle fileHandle;
     error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
     if (error != ERROR_NONE)
     {
@@ -382,14 +370,14 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
     DEBUG_TESTCODE() { (void)File_close(&fileHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
 
     // compare archive and file content
-    length    = 0LL;
-    equalFlag = TRUE;
-    diffIndex = 0L;
+    uint64 length    = 0LL;
+    bool   equalFlag = TRUE;
+    ulong  diffIndex = 0L;
     while (   (length < fragmentSize)
            && equalFlag
           )
     {
-      bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
+      ulong bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
 
       // read archive, file
       error = Archive_readData(&archiveEntryInfo,buffer0,bufferLength);
@@ -453,7 +441,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
       SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get file fragment node
-        fragmentNode = FragmentList_find(fragmentList,fileName);
+        FragmentNode *fragmentNode = FragmentList_find(fragmentList,fileName);
         if (fragmentNode == NULL)
         {
           fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
@@ -496,6 +484,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
     }
 
     // get size/fragment info
+    char sizeString[32];
     if (globalOptions.humanFormatFlag)
     {
       getHumanSizeString(sizeString,sizeof(sizeString),fragmentSize);
@@ -504,6 +493,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
     {
       stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fragmentSize);
     }
+    char fragmentString[256];
     stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
     {
@@ -564,21 +554,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
                                uint              bufferSize
                               )
 {
-  Errors             error;
-  String             deviceName;
-  ArchiveEntryInfo   archiveEntryInfo;
-  CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-  DeviceInfo         deviceInfo;
-  uint64             blockOffset,blockCount;
-  DeviceHandle       deviceHandle;
-  bool               fileSystemFlag;
-  FileSystemHandle   fileSystemHandle;
-  bool               equalFlag;
-  uint64             block;
-  ulong              diffIndex;
-  FragmentNode       *fragmentNode;
-  char               sizeString[32];
-  char               fragmentString[256];
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -591,7 +567,11 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   assert(buffer1 != NULL);
 
   // read image
-  deviceName = String_new();
+  ArchiveEntryInfo   archiveEntryInfo;
+  CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
+  String             deviceName = String_new();
+  DeviceInfo         deviceInfo;
+  uint64             blockOffset,blockCount;
   error = Archive_readImageEntry(&archiveEntryInfo,
                                  archiveHandle,
                                  &deltaCompressAlgorithm,
@@ -648,6 +628,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
 
     // get device info
+// TODO: devideInfo twice?
     error = Device_getInfo(&deviceInfo,deviceName,TRUE);
     if (error != ERROR_NONE)
     {
@@ -687,6 +668,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     assert(deviceInfo.blockSize > 0);
 
     // open device
+    DeviceHandle deviceHandle;
     error = Device_open(&deviceHandle,deviceName,DEVICE_OPEN_READ);
     if (error != ERROR_NONE)
     {
@@ -717,6 +699,8 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
 
     // check if device contain a known file system or a raw image should be compared
+    FileSystemHandle fileSystemHandle;
+    bool             fileSystemFlag;
     if (!archiveHandle->storageInfo->jobOptions->rawImagesFlag)
     {
       fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
@@ -743,9 +727,9 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     DEBUG_TESTCODE() { Device_close(&deviceHandle); Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
 
     // compare archive and device/image content
-    block     = 0LL;
-    equalFlag = TRUE;
-    diffIndex = 0L;
+    uint64 block     = 0LL;
+    bool   equalFlag = TRUE;
+    ulong  diffIndex = 0L;
     while (   (block < blockCount)
            && equalFlag
           )
@@ -829,7 +813,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get image fragment node
-        fragmentNode = FragmentList_find(fragmentList,deviceName);
+        FragmentNode *fragmentNode = FragmentList_find(fragmentList,deviceName);
         if (fragmentNode == NULL)
         {
           fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0,0);
@@ -866,6 +850,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
 
     // get size/fragment info
+    char sizeString[32];
     if (globalOptions.humanFormatFlag)
     {
       getHumanSizeString(sizeString,sizeof(sizeString),blockCount*(uint64)deviceInfo.blockSize);
@@ -874,6 +859,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     {
       stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
     }
+    char fragmentString[256];
     stringClear(fragmentString);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
@@ -932,12 +918,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
                                    const PatternList *excludePatternList
                                   )
 {
-  Errors           error;
-  String           directoryName;
-  ArchiveEntryInfo archiveEntryInfo;
-  FileInfo         fileInfo;
-//            String   localFileName;
-//            FileInfo localFileInfo;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -946,7 +927,9 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
   assert(excludePatternList != NULL);
 
   // read directory
-  directoryName = String_new();
+  ArchiveEntryInfo archiveEntryInfo;
+  String           directoryName = String_new();
+  FileInfo         fileInfo;
   error = Archive_readDirectoryEntry(&archiveEntryInfo,
                                      archiveHandle,
                                      NULL,  // cryptType
@@ -1056,13 +1039,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
                               const PatternList *excludePatternList
                              )
 {
-  Errors           error;
-  String           linkName;
-  String           fileName;
-  ArchiveEntryInfo archiveEntryInfo;
-  FileInfo         fileInfo;
-  String           localFileName;
-//                    FileInfo localFileInfo;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -1071,8 +1048,10 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
   assert(excludePatternList != NULL);
 
   // read link
-  linkName = String_new();
-  fileName = String_new();
+  ArchiveEntryInfo archiveEntryInfo;
+  String           linkName = String_new();
+  String           fileName = String_new();
+  FileInfo         fileInfo;
   error = Archive_readLinkEntry(&archiveEntryInfo,
                                 archiveHandle,
                                 NULL,  // cryptType
@@ -1128,7 +1107,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
     }
 
     // check link
-    localFileName = String_new();
+    String localFileName = String_new();
     error = File_readLink(localFileName,linkName,FALSE);
     if (error != ERROR_NONE)
     {
@@ -1158,24 +1137,6 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
     }
     String_delete(localFileName);
 
-#if 0
-    // get local file info
-    error = File_getInfo(&localFileInfo,linkName);
-    if (error != ERROR_NONE)
-    {
-      printError(_("cannot read local file '%s' (error: %s)!"),
-                 String_cString(linkName),
-                 Error_getText(error)
-                );
-      (void)Archive_closeEntry(&archiveEntryInfo);
-      String_delete(fileName);
-      String_delete(linkName);
-      return error;
-    }
-    DEBUG_TESTCODE("Command_compare403") { Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); String_delete(linkName); return DEBUG_TESTCODE_ERROR(); }
-
-    // check file time, permissions, file owner/group
-#endif /* 0 */
     printInfo(1,"OK\n");
 
     // check if all data read
@@ -1231,24 +1192,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                                   uint              bufferSize
                                  )
 {
-  Errors             error;
-  StringList         fileNameList;
-  ArchiveEntryInfo   archiveEntryInfo;
-  CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
-  FileInfo           fileInfo;
-  uint64             fragmentOffset,fragmentSize;
-  bool               comparedDataFlag;
-  const StringNode   *stringNode;
-  String             fileName;
-//            FileInfo         localFileInfo;
-  FileHandle         fileHandle;
-  bool               equalFlag;
-  uint64             length;
-  ulong              bufferLength;
-  ulong              diffIndex;
-  FragmentNode       *fragmentNode;
-  char               sizeString[32];
-  char               fragmentString[256];
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -1261,7 +1205,12 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   assert(buffer1 != NULL);
 
   // read hard link
+  ArchiveEntryInfo   archiveEntryInfo;
+  CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
+  StringList         fileNameList;
   StringList_init(&fileNameList);
+  FileInfo           fileInfo;
+  uint64             fragmentOffset,fragmentSize;
   error = Archive_readHardLinkEntry(&archiveEntryInfo,
                                     archiveHandle,
                                     &deltaCompressAlgorithm,
@@ -1289,7 +1238,9 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&archiveEntryInfo); StringList_done(&fileNameList); return DEBUG_TESTCODE_ERROR(); }
 
-  comparedDataFlag = FALSE;
+  bool             comparedDataFlag = FALSE;
+  const StringNode *stringNode;
+  String           fileName;
   STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
   {
     if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -1333,6 +1284,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         // compare hard link data
 
         // open file
+        FileHandle fileHandle;
         error = File_open(&fileHandle,fileName,FILE_OPEN_READ|FILE_OPEN_NO_ATIME|FILE_OPEN_NO_CACHE);
         if (error != ERROR_NONE)
         {
@@ -1395,14 +1347,14 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         DEBUG_TESTCODE() { (void)File_close(&fileHandle); error = DEBUG_TESTCODE_ERROR(); break; }
 
         // compare archive and hard link content
-        length    = 0LL;
-        equalFlag = TRUE;
-        diffIndex = 0L;
+        uint64 length    = 0LL;
+        bool   equalFlag = TRUE;
+        ulong  diffIndex = 0L;
         while (   (length < fragmentSize)
                && equalFlag
               )
         {
-          bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
+          ulong bufferLength = (ulong)MIN(fragmentSize-length,bufferSize);
 
           // read archive, file
           error = Archive_readData(&archiveEntryInfo,buffer0,bufferLength);
@@ -1469,7 +1421,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
           SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
             // get file fragment list
-            fragmentNode = FragmentList_find(fragmentList,fileName);
+            FragmentNode *fragmentNode = FragmentList_find(fragmentList,fileName);
             if (fragmentNode == NULL)
             {
               fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
@@ -1509,6 +1461,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
 
         // get size/fragment info
+        char sizeString[32];
         if (globalOptions.humanFormatFlag)
         {
           getHumanSizeString(sizeString,sizeof(sizeString),fragmentSize);
@@ -1517,6 +1470,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         {
           stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fragmentSize);
         }
+        char fragmentString[256];
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
@@ -1536,6 +1490,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         // compare hard link data already done
 
         // get size/fragment info
+        char sizeString[32];
         if (globalOptions.humanFormatFlag)
         {
           getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
@@ -1544,6 +1499,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         {
           stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
         }
+        char fragmentString[256];
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
@@ -1600,11 +1556,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
                                  const PatternList *excludePatternList
                                 )
 {
-  Errors           error;
-  String           fileName;
-  ArchiveEntryInfo archiveEntryInfo;
-  FileInfo         fileInfo;
-  FileInfo         localFileInfo;
+  Errors error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -1613,7 +1565,9 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
   assert(excludePatternList != NULL);
 
   // read special
-  fileName = String_new();
+  ArchiveEntryInfo archiveEntryInfo;
+  String           fileName = String_new();
+  FileInfo         fileInfo;
   error = Archive_readSpecialEntry(&archiveEntryInfo,
                                    archiveHandle,
                                    NULL,  // cryptType
@@ -1664,6 +1618,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
     }
 
     // check special settings
+    FileInfo localFileInfo;
     error = File_getInfo(&localFileInfo,fileName);
     if (error != ERROR_NONE)
     {
@@ -1862,29 +1817,23 @@ LOCAL Errors compareEntry(ArchiveHandle     *archiveHandle,
 
 LOCAL void compareThreadCode(CompareInfo *compareInfo)
 {
-  byte          *buffer0,*buffer1;
-  uint          archiveIndex;
-  ArchiveHandle archiveHandle;
-  EntryMsg      entryMsg;
-  Errors        error;
-
   assert(compareInfo != NULL);
   assert(compareInfo->jobOptions != NULL);
 
-  // init variables
-  buffer0 = (byte*)malloc(BUFFER_SIZE);
+  // compare entries
+  byte          *buffer0 = (byte*)malloc(BUFFER_SIZE);
   if (buffer0 == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  buffer1 = (byte*)malloc(BUFFER_SIZE);
+  byte          *buffer1 = (byte*)malloc(BUFFER_SIZE);
   if (buffer1 == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  archiveIndex = 0;
-
-  // compare entries
+  ArchiveHandle archiveHandle;
+  uint          archiveIndex = 0;
+  EntryMsg      entryMsg;
   while (MsgQueue_get(&compareInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
   {
     assert(entryMsg.archiveHandle != NULL);
@@ -1903,6 +1852,8 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         {
           Archive_close(&archiveHandle,FALSE);
         }
+
+        Errors error;
 
         // open new archive
         error = Archive_openHandle(&archiveHandle,
@@ -1925,6 +1876,8 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 
       // set archive crypt info
       Archive_setCryptInfo(&archiveHandle,entryMsg.archiveCryptInfo);
+
+      Errors error;
 
       // seek to start of entry
       error = Archive_seek(&archiveHandle,entryMsg.offset);
@@ -1993,33 +1946,21 @@ LOCAL Errors compareArchive(CompareInfo      *compareInfo,
                             ConstString      archiveName
                            )
 {
-  AutoFreeList         autoFreeList;
-  String               printableStorageName;
-  uint                 compareThreadCount;
-  byte                 *buffer0,*buffer1;
-  StorageInfo          storageInfo;
-  Errors               error;
-  uint                 i;
-  ArchiveHandle        archiveHandle;
-  CryptSignatureStates allCryptSignatureState;
-  uint64               lastSignatureOffset;
-  ArchiveEntryTypes    archiveEntryType;
-  ArchiveCryptInfo     *archiveCryptInfo;
-  uint64               offset;
-  EntryMsg             entryMsg;
+  Errors error;
 
   assert(compareInfo != NULL);
   assert(storageSpecifier != NULL);
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
-  printableStorageName = String_new();
-  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // get printable storage name
-  Storage_getPrintableName(printableStorageName,storageSpecifier,archiveName);
+  String printableStorageName = Storage_getPrintableName(String_new(),storageSpecifier,archiveName);
+  AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
 
   // init storage
+  StorageInfo storageInfo;
   error = Storage_init(&storageInfo,
 NULL, // masterSocketHandle
                        storageSpecifier,
@@ -2056,6 +1997,7 @@ NULL, // masterSocketHandle
   }
 
   // open archive
+  ArchiveHandle archiveHandle;
   error = Archive_open(&archiveHandle,
                        &storageInfo,
                        archiveName,
@@ -2079,6 +2021,7 @@ NULL, // masterSocketHandle
   // check signatures
   if (!compareInfo->jobOptions->skipVerifySignaturesFlag)
   {
+    CryptSignatureStates allCryptSignatureState;
     error = Archive_verifySignatures(&archiveHandle,
                                      &allCryptSignatureState
                                     );
@@ -2121,11 +2064,12 @@ NULL, // masterSocketHandle
   }
 
   // start compare threads/allocate buffers
-  compareThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  uint compareThreadCount = (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores();
+  byte *buffer0,*buffer1;
   if (compareThreadCount > 1)
   {
     MsgQueue_reset(&compareInfo->entryMsgQueue);
-    for (i = 0; i < compareThreadCount; i++)
+    for (uint i = 0; i < compareThreadCount; i++)
     {
       ThreadPool_run(&workerThreadPool,compareThreadCode,compareInfo);
     }
@@ -2156,15 +2100,18 @@ NULL, // masterSocketHandle
            );
 
   // read archive entries
-  allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
-  error                  = ERROR_NONE;
-  lastSignatureOffset    = Archive_tell(&archiveHandle);
+  error = ERROR_NONE;
+  CryptSignatureStates allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
+  uint64               lastSignatureOffset    = Archive_tell(&archiveHandle);
   while (   (compareInfo->jobOptions->skipVerifySignaturesFlag || Crypt_isValidSignatureState(allCryptSignatureState))
          && ((compareInfo->failError == ERROR_NONE) || !compareInfo->jobOptions->noStopOnErrorFlag)
          && !Archive_eof(&archiveHandle)
         )
   {
     // get next archive entry type
+    ArchiveEntryTypes archiveEntryType;
+    ArchiveCryptInfo  *archiveCryptInfo;
+    uint64            offset;
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
                                         &archiveCryptInfo,
@@ -2188,6 +2135,7 @@ NULL, // masterSocketHandle
       {
         // send entry to test threads
 //TODO: increment on multiple archives and when threads are not restarted each time
+        EntryMsg entryMsg;
         entryMsg.archiveIndex     = 1;
         entryMsg.archiveHandle    = &archiveHandle;
         entryMsg.archiveEntryType = archiveEntryType;
@@ -2305,28 +2253,17 @@ Errors Command_compare(const StringList        *storageNameList,
                        LogHandle               *logHandle
                       )
 {
-  FragmentList               fragmentList;
-  StorageSpecifier           storageSpecifier;
-  CompareInfo                compareInfo;
-  StringNode                 *stringNode;
-  String                     storageName;
-  bool                       someStorageFound;
-  Errors                     error;
-  StorageDirectoryListHandle storageDirectoryListHandle;
-  String                     fileName;
-  FileInfo                   fileInfo;
-  FragmentNode               *fragmentNode;
+  Errors error;
 
   assert(storageNameList != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
 
-  // init variables
-  FragmentList_init(&fragmentList);
-  Storage_initSpecifier(&storageSpecifier);
-
   // init compare info
+  CompareInfo  compareInfo;
+  FragmentList fragmentList;
+  FragmentList_init(&fragmentList);
   initCompareInfo(&compareInfo,
                   includeEntryList,
                   excludePatternList,
@@ -2339,7 +2276,11 @@ NULL,  //               requestedAbortFlag,
                   logHandle
                  );
 
-  someStorageFound = FALSE;
+  bool             someStorageFound = FALSE;
+  StringNode       *stringNode;
+  String           storageName;
+  StorageSpecifier           storageSpecifier;
+  Storage_initSpecifier(&storageSpecifier);
   STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
   {
     // parse storage name
@@ -2381,6 +2322,7 @@ NULL,  //               requestedAbortFlag,
     // try compare directory content
     if (error != ERROR_NONE)
     {
+      StorageDirectoryListHandle storageDirectoryListHandle;
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
                                         NULL,  // pathName
@@ -2389,10 +2331,11 @@ NULL,  //               requestedAbortFlag,
                                        );
       if (error == ERROR_NONE)
       {
-        fileName = String_new();
+        String fileName = String_new();
         while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
         {
           // read next directory entry
+          FileInfo fileInfo;
           error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
           if (error != ERROR_NONE)
           {
@@ -2450,6 +2393,7 @@ NULL,  //               requestedAbortFlag,
      )
   {
     // check fragment lists
+    const FragmentNode *fragmentNode;
     FRAGMENTLIST_ITERATE(&fragmentList,fragmentNode)
     {
       if (!FragmentList_isComplete(fragmentNode))
