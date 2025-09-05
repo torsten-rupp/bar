@@ -1204,9 +1204,6 @@ LOCAL Errors StorageSMB_create(StorageHandle *storageHandle,
     storageHandle->smb.fileHandle         = NULL;
     storageHandle->smb.index              = 0LL;
     storageHandle->smb.size               = 0LL;
-// TODO: remove
-//    storageHandle->smb.readAheadBuffer.offset = 0LL;
-//    storageHandle->smb.readAheadBuffer.length = 0L;
 
     String shareName,path;
     smb2InitSharePath(&shareName,&path,&storageHandle->storageInfo->storageSpecifier,fileName);
@@ -1469,7 +1466,6 @@ LOCAL Errors StorageSMB_read(StorageHandle *storageHandle,
   #ifdef HAVE_SMB2
     assert(storageHandle->smb.context != NULL);
     assert(storageHandle->smb.fileHandle != NULL);
-//      assert(storageHandle->smb.readAheadBuffer.data != NULL);
   #endif /* HAVE_SMB2 */
   assert(buffer != NULL);
 
@@ -1481,32 +1477,9 @@ LOCAL Errors StorageSMB_read(StorageHandle *storageHandle,
            && (error == ERROR_NONE)
           )
     {
-// TODO: remove
-#if 0
-      // copy as much data as available from read-ahead buffer
-      if (   (storageHandle->smb.index >= storageHandle->smb.readAheadBuffer.offset)
-          && (storageHandle->smb.index < (storageHandle->smb.readAheadBuffer.offset+storageHandle->smb.readAheadBuffer.length))
-         )
-      {
-        // copy data from read-ahead buffer
-        index      = (ulong)(storageHandle->smb.index-storageHandle->smb.readAheadBuffer.offset);
-        bytesAvail = MIN(bufferSize,storageHandle->smb.readAheadBuffer.length-index);
-        memCopyFast(buffer,bytesAvail,storageHandle->smb.readAheadBuffer.data+index,bytesAvail);
-
-        // adjust buffer, bufferSize, bytes read, index
-        buffer = (byte*)buffer+bytesAvail;
-        bufferSize -= bytesAvail;
-        if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-        storageHandle->smb.index += (uint64)bytesAvail;
-      }
-#endif
-
       // read rest of data
       if (bufferSize > 0)
       {
-// TODO:
-//          assert(storageHandle->smb.index >= (storageHandle->smb.readAheadBuffer.offset+storageHandle->smb.readAheadBuffer.length));
-
         // get max. number of bytes to receive in one step
         ulong length;
         if (storageHandle->storageInfo->smb.bandWidthLimiter.maxBandWidthList != NULL)
@@ -1523,54 +1496,23 @@ LOCAL Errors StorageSMB_read(StorageHandle *storageHandle,
         uint64 startTimestamp          = Misc_getTimestamp();
         uint64 startTotalReceivedBytes = storageHandle->smb.totalReceivedBytes;
 
-#if 0
-        if (length <= MAX_BUFFER_SIZE)
+        // read
+        int n = smb2_read(storageHandle->smb.context,
+                          storageHandle->smb.fileHandle,
+                          buffer,
+                          length
+                         );
+        if (n <= 0)
         {
-          // read into read-ahead buffer
-          error = smb2_read(storageHandle->smb.context,
-                            storageHandle->smb.fileHandle,
-                            storageHandle->smb.readAheadBuffer.data,
-                            MIN((size_t)(storageHandle->smb.size-storageHandle->smb.index),MAX_BUFFER_SIZE),
-                            &bytesAvail
-                           );
-          if (error != ERROR_NONE)
-          {
-            break;
-          }
-          storageHandle->smb.readAheadBuffer.offset = storageHandle->smb.index;
-          storageHandle->smb.readAheadBuffer.length = bytesAvail;
-
-          // copy data from read-ahead buffer
-          bytesAvail = MIN(length,storageHandle->smb.readAheadBuffer.length);
-          memcpy(buffer,storageHandle->smb.readAheadBuffer.data,bytesAvail);
-
-          // adjust buffer, bufferSize, bytes read, index
-          buffer = (byte*)buffer+bytesAvail;
-          bufferSize -= bytesAvail;
-          if (bytesRead != NULL) (*bytesRead) += bytesAvail;
-          storageHandle->smb.index += (uint64)bytesAvail;
+          error = ERRORX_(SMB,(uint)(-n),"%s",smb2_get_error(storageHandle->smb.context));
+          break;
         }
-        else
-        {
-#endif
-          // read direct
-          int n = smb2_read(storageHandle->smb.context,
-                            storageHandle->smb.fileHandle,
-                            buffer,
-                            length
-                           );
-          if (n <= 0)
-          {
-            error = ERRORX_(SMB,(uint)(-n),"%s",smb2_get_error(storageHandle->smb.context));
-            break;
-          }
 
-          // adjust buffer, bufferSize, bytes read, index
-          buffer = (byte*)buffer+(ulong)n;
-          bufferSize -= (ulong)n;
-          if (bytesRead != NULL) (*bytesRead) += (ulong)n;
-          storageHandle->smb.index += (uint64)n;
-//          }
+        // adjust buffer, bufferSize, bytes read, index
+        buffer = (byte*)buffer+(ulong)n;
+        bufferSize -= (ulong)n;
+        if (bytesRead != NULL) (*bytesRead) += (ulong)n;
+        storageHandle->smb.index += (uint64)n;
 
         // get end time, end received bytes
         uint64 endTimestamp          = Misc_getTimestamp();
@@ -1772,78 +1714,9 @@ LOCAL Errors StorageSMB_seek(StorageHandle *storageHandle,
 
   Errors error = ERROR_UNKNOWN;
   #ifdef HAVE_SMB2
-// TODO:
     assert(storageHandle->smb.context != NULL);
     assert(storageHandle->smb.fileHandle != NULL);
-//    assert(storageHandle->smb.readAheadBuffer.data != NULL);
 
-// TODO: remove
-#if 0
-    if      (offset > storageHandle->smb.index)
-    {
-      skip = offset-storageHandle->smb.index;
-      if (skip > 0LL)
-      {
-        // skip data in read-ahead buffer
-        if (   (storageHandle->smb.index >= storageHandle->smb.readAheadBuffer.offset)
-            && (storageHandle->smb.index < (storageHandle->smb.readAheadBuffer.offset+storageHandle->smb.readAheadBuffer.length))
-           )
-        {
-          i = storageHandle->smb.index-storageHandle->smb.readAheadBuffer.offset;
-          n = MIN(skip,storageHandle->smb.readAheadBuffer.length-i);
-          skip -= n;
-          storageHandle->smb.index += (uint64)n;
-        }
-
-        if (skip > 0LL)
-        {
-          (void)smb2_lseek(storageHandle->smb.context,
-                           storageHandle->smb.fileHandle,
-                           offset,
-                           SEEK_SET,
-                           NULL
-                          );
-          storageHandle->smb.readAheadBuffer.offset = offset;
-//          storageHandle->smb.readAheadBuffer.length = 0L;
-
-          storageHandle->smb.index = offset;
-        }
-      }
-    }
-    else if (offset < storageHandle->smb.index)
-    {
-
-      skip = storageHandle->smb.index-offset;
-      if (skip > 0LL)
-      {
-        // skip data in read-ahead buffer
-        if (   (storageHandle->smb.index >= storageHandle->smb.readAheadBuffer.offset)
-            && (storageHandle->smb.index < (storageHandle->smb.readAheadBuffer.offset+storageHandle->smb.readAheadBuffer.length))
-           )
-        {
-          i = storageHandle->smb.index-storageHandle->smb.readAheadBuffer.offset;
-          n = MIN(skip,i);
-          skip -= n;
-          storageHandle->smb.index -= (uint64)n;
-        }
-
-        if (skip > 0LL)
-        {
-          #if   defined(HAVE_SMB2_SFTP_SEEK64)
-            libssh2_smb_seek64(storageHandle->smb.smbHandle,offset);
-          #elif defined(HAVE_SMB2_SFTP_SEEK2)
-            libssh2_smb_seek2(storageHandle->smb.smbHandle,offset);
-          #else /* not HAVE_SMB2_SFTP_SEEK64 || HAVE_SMB2_SFTP_SEEK2 */
-            libssh2_smb_seek(storageHandle->smb.smbHandle,(size_t)offset);
-          #endif /* HAVE_SMB2_SFTP_SEEK64 || HAVE_SMB2_SFTP_SEEK2 */
-          storageHandle->smb.readAheadBuffer.offset = offset;
-          storageHandle->smb.readAheadBuffer.length = 0L;
-
-          storageHandle->smb.index = offset;
-        }
-      }
-    }
-#else
     int64 n = smb2_lseek(storageHandle->smb.context,
                          storageHandle->smb.fileHandle,
                          (int64)offset,
@@ -1859,7 +1732,6 @@ LOCAL Errors StorageSMB_seek(StorageHandle *storageHandle,
     {
       error = ERRORX_(SMB,(uint)(-n),"%s",smb2_get_error(storageHandle->smb.context));
     }
-#endif
   #else /* not HAVE_SMB2 */
     UNUSED_VARIABLE(storageHandle);
     UNUSED_VARIABLE(offset);

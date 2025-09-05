@@ -238,7 +238,6 @@ UNUSED_VARIABLE(privateKeyLength);
   struct curl_blob curlBLOB;
   if (curlCode == CURLE_OK)
   {
-// TODO:
     curlBLOB.data  = (void*)publicKeyData;
     curlBLOB.len   = publicKeyLength;
     curlBLOB.flags = 0;
