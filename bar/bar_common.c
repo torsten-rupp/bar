@@ -29,7 +29,7 @@
 #include "common/cstrings.h"
 
 #include "configuration.h"
-#include "archive.h"
+#include "archives.h"
 
 #include "bar_common.h"
 

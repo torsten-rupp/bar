@@ -37,7 +37,7 @@
 #include "errors.h"
 #include "deltasourcelists.h"
 #include "common/files.h"
-#include "archive.h"
+#include "archives.h"
 
 #include "commands_restore.h"
 

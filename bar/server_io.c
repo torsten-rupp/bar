@@ -2178,8 +2178,6 @@ Errors ServerIO_passResult(ServerIO        *serverIO,
                            const StringMap resultMap
                           )
 {
-  Errors erorr;
-
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
   assert(resultMap != NULL);

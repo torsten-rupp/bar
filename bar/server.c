@@ -40,7 +40,7 @@
 #include "configuration.h"
 #include "entrylists.h"
 #include "crypt.h"
-#include "archive.h"
+#include "archives.h"
 #include "storage.h"
 #include "index/index.h"
 #include "index/index_storages.h"

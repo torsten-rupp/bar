@@ -38,7 +38,7 @@
 #include "errors.h"
 #include "entrylists.h"
 #include "deltasourcelists.h"
-#include "archive.h"
+#include "archives.h"
 #include "deltasources.h"
 
 #include "commands_compare.h"

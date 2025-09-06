@@ -412,7 +412,7 @@ BAR_SOURCES                 = bar.c \
                               commands_compare.c \
                               commands_restore.c \
                               commands_convert.c \
-                              archive.c \
+                              archives.c \
                               chunks.c \
                               entrylists.c \
                               compress.c \
@@ -1026,7 +1026,7 @@ archive_format.h: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.d
 archive_format_const.h: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
 	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -n $@
 archive_format.c: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
-	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -c $@ -i archive.h -i archive_format.h
+	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -c $@ -i archives.h -i archive_format.h
 release/archive_format.o: | archive_format.c archive_format.h
 debug/archive_format.o: | archive_format.c archive_format.h
 gcov/archive_format.o: | archive_format.c archive_format.h

@@ -33,7 +33,7 @@
 #include "bar_common.h"
 #include "errors.h"
 #include "crypt.h"
-#include "archive.h"
+#include "archives.h"
 
 #include "storage.h"
 

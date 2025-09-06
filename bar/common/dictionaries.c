@@ -1332,7 +1332,7 @@ void Dictionary_printStatistic(Dictionary *dictionary)
     ulong totalIndexCount = 0;
     for (size_t i = 0; i < dictionary->entryTableCount; i++)
     {
-      fprintf(stderr,"    table #%02u: %u entries/%u size\n",i,dictionary->entryTables[i].entryCount,TABLE_SIZES[dictionary->entryTables[i].sizeIndex]);
+      fprintf(stderr,"    table #%02zu: %u entries/%u size\n",i,dictionary->entryTables[i].entryCount,TABLE_SIZES[dictionary->entryTables[i].sizeIndex]);
       totalEntryCount += dictionary->entryTables[i].entryCount;
       totalIndexCount += TABLE_SIZES[dictionary->entryTables[i].sizeIndex];
     }

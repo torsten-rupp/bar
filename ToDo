@@ -18,7 +18,6 @@ ToDo
 - support for config reload with SIGHUP
 - support for rmt? (tape control tool)
 - barcontrol: file separator character
-- rename archive.? -> archives.?
 - remove "Function" in lists.h types
 - general handling of strings containing LF, CR..
 - progress bar when writing CDs

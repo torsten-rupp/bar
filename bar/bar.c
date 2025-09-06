@@ -57,7 +57,7 @@
 #include "deltasourcelists.h"
 #include "compress.h"
 #include "crypt.h"
-#include "archive.h"
+#include "archives.h"
 #include "storage.h"
 #include "deltasources.h"
 #include "index/index.h"

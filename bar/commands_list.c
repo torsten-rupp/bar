@@ -38,7 +38,7 @@
 #include "bar.h"
 #include "errors.h"
 #include "entrylists.h"
-#include "archive.h"
+#include "archives.h"
 #include "storage.h"
 #include "server.h"
 
@@ -2350,7 +2350,9 @@ LOCAL Errors listArchiveContent(StorageSpecifier        *storageSpecifier,
   assert(jobOptions != NULL);
 
 // NYI ???
+#ifndef WERROR
 bool remoteBarFlag=FALSE;
+#endif
 
   Errors error = ERROR_NONE;
 

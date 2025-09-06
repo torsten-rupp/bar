@@ -44,7 +44,7 @@
 #include "errors.h"
 #include "configuration.h"
 #include "entrylists.h"
-#include "archive.h"
+#include "archives.h"
 #include "storage.h"
 #include "index/index.h"
 #include "continuous.h"

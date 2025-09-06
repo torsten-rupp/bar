@@ -43,7 +43,7 @@
 #include "errors.h"
 #include "jobs.h"
 #include "entrylists.h"
-#include "archive.h"
+#include "archives.h"
 #include "deltasources.h"
 #include "crypt.h"
 #include "par2.h"

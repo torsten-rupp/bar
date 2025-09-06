@@ -39,7 +39,7 @@
 #include "storage.h"
 #include "server_io.h"
 #include "index_definition.h"
-#include "archive.h"
+#include "archives.h"
 
 #include "index/index_common.h"
 #include "index/index_entities.h"

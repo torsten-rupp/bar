@@ -23,7 +23,7 @@
 #include "bar_common.h"
 #include "errors.h"
 #include "storage.h"
-#include "archive.h"
+#include "archives.h"
 
 #include "deltasources.h"
 

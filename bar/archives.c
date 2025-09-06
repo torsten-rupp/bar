@@ -41,7 +41,7 @@
 #include "index/index_uuids.h"
 #include "index/index_assign.h"
 
-#include "archive.h"
+#include "archives.h"
 
 /****************** Conditional compilation switches *******************/
 #define SUPPORT_BAR0_CHUNK       // require simple key, CTS, no salt

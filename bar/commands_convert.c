@@ -30,7 +30,7 @@
 
 #include "bar.h"
 #include "errors.h"
-#include "archive.h"
+#include "archives.h"
 
 #include "commands_convert.h"
 

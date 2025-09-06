@@ -30,7 +30,7 @@
 #include "common/strings.h"
 
 #include "entrylists.h"
-#include "archive.h"
+#include "archives.h"
 #include "storage.h"
 #include "bar.h"
 #include "jobs.h"

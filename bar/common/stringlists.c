@@ -535,7 +535,7 @@ void StringList_debugDump(FILE *handle, const StringList *stringList)
   size_t i = 1;
   while (stringNode != NULL)
   {
-    fprintf(handle,"DEBUG %03u %p: %s\n",i,stringNode,String_cString(stringNode->string));
+    fprintf(handle,"DEBUG %03zu %p: %s\n",i,stringNode,String_cString(stringNode->string));
     stringNode = stringNode->next;
     i++;
   }

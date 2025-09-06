@@ -5,8 +5,8 @@
 *
 \***********************************************************************/
 
-#ifndef __ARCHIVE__
-#define __ARCHIVE__
+#ifndef __ARCHIVES__
+#define __ARCHIVES__
 
 /****************************** Includes *******************************/
 #include <config.h>  // use <...> to support separated build directory
@@ -2036,6 +2036,6 @@ Errors Archive_removeIndex(IndexHandle *indexHandle,
   }
 #endif
 
-#endif /* __ARCHIVE__ */
+#endif /* __ARCHIVES__ */
 
 /* end of file */
