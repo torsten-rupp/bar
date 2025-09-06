@@ -3231,7 +3231,9 @@ NULL, // masterSocketHandle
   }
 
   // output signature state
-  if (showEntriesFlag || globalOptions.groupFlag)
+  if (   (showEntriesFlag || globalOptions.groupFlag)
+      && !globalOptions.noHeaderFooterFlag
+     )
   {
     switch (allCryptSignatureState)
     {
