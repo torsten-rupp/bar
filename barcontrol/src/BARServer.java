@@ -1653,6 +1653,7 @@ public class BARServer
   private static X509Certificate             serverCertificateChain[] = null;
   private static Socket                      socket = null;
   private static boolean                     insecureTLS = false;
+  private static boolean                     expiredCertificate = false;
   private static BufferedWriter              output;
   private static BufferedReader              input;
   private static ReadThread                  readThread;
@@ -1679,7 +1680,7 @@ public class BARServer
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
    * @param caFileName server CA file name
-   * @param keystoreFileName Java keystore file name (JKS only)
+   * @param keystoreFileName Java key store file name (JKS only)
    * @param tlsMode TLS mode; see BARServer.TLSModes
    * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
    * @param password server password
@@ -1872,11 +1873,18 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
-                                                      (serverCertificateChain != null)
-                                                        ? serverCertificateChain[0].toString()
-                                                        : null
-                                                     );
+                if (expiredCertificate)
+                {
+                  connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: expired certificate"));
+                }
+                else
+                {
+                  connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                                                        (serverCertificateChain != null)
+                                                          ? serverCertificateChain[0].toString()
+                                                          : null
+                                                       );
+                }
               }
             }
             catch (SSLException exception)
@@ -2021,11 +2029,18 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
-                                                      (serverCertificateChain != null)
-                                                        ? serverCertificateChain[0].toString()
-                                                        : null
-                                                     );
+                if (expiredCertificate)
+                {
+                  connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: expired certificate"));
+                }
+                else
+                {
+                  connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                                                        (serverCertificateChain != null)
+                                                          ? serverCertificateChain[0].toString()
+                                                          : null
+                                                       );
+                }
               }
             }
             catch (SSLException exception)
@@ -2193,11 +2208,18 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
-                                                      (serverCertificateChain != null)
-                                                        ? serverCertificateChain[0].toString()
-                                                        : null
-                                                     );
+                if (expiredCertificate)
+                {
+                  connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: expired certificate"));
+                }
+                else
+                {
+                  connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                                                        (serverCertificateChain != null)
+                                                          ? serverCertificateChain[0].toString()
+                                                          : null
+                                                       );
+                }
               }
             }
             catch (SSLException exception)
@@ -2339,11 +2361,18 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectionError == null)
               {
-                connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
-                                                      (serverCertificateChain != null)
-                                                        ? serverCertificateChain[0].toString()
-                                                        : null
-                                                     );
+                if (expiredCertificate)
+                {
+                  connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: expired certificate"));
+                }
+                else
+                {
+                  connectionError = new ConnectionError(BARControl.tr("TLS/SSL failure: {0}",BARControl.reniceSSLException(exception).getMessage()),
+                                                        (serverCertificateChain != null)
+                                                          ? serverCertificateChain[0].toString()
+                                                          : null
+                                                       );
+                }
               }
             }
             catch (SSLException exception)
@@ -2669,6 +2698,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static boolean isInsecureTLSConnection()
   {
     return (socket instanceof SSLSocket) && insecureTLS;
+  }
+
+  /** check if expired certificate
+   * @return true iff some certicate is expired
+   */
+  public static boolean isExpiredCertificate()
+  {
+    return expiredCertificate;
   }
 
   /** check if master-mode
@@ -4842,12 +4879,12 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /**_verify certificate with certificates from key store
+  /** verify certificate with certificates from key store
    * @param keyStore key store
    * @param certificate certificate to verify
    * return certificate true if certificate is valid and verified
    */
-  private static boolean verifyCertificate(KeyStore keyStore, X509Certificate certificate)
+  private static boolean isValidCertificate(KeyStore keyStore, X509Certificate certificate)
   {
     try
     {
@@ -4855,13 +4892,11 @@ throw new Error("NYI");
 
       for (String alias : Collections.list(keyStore.aliases()))
       {
-//Dprintf.dprintf("alias=%s",alias);
         try
         {
           if (keyStore.isCertificateEntry(alias))
           {
             Certificate trustedCertificate = keyStore.getCertificate(alias);
-//Dprintf.dprintf("trustedCertificate=%s",((X509Certificate)trustedCertificate).getSerialNumber());
             certificate.verify(trustedCertificate.getPublicKey());
             return true;
           }
@@ -4888,10 +4923,35 @@ throw new Error("NYI");
     return false;
   }
 
+  /** check if certificate in key store is expired
+   * @param keyStore key store
+   * @param certificate certificate to check
+   * return true iff certificate is expired
+   */
+  private static boolean isCertificateExpired(KeyStore keyStore, X509Certificate certificate)
+  {
+    try
+    {
+      certificate.checkValidity();
+
+      return false;
+    }
+    catch (CertificateExpiredException exception)
+    {
+      // nothing to do
+    }
+    catch (CertificateNotYetValidException exception)
+    {
+      // nothing to do
+    }
+
+    return true;
+  }
+
   /** create TLS (SSL) socket factory with PEM files
    * original from: https://gist.github.com/rohanag12/07ab7eb22556244e9698
    * @param certificateAuthorityFile certificate authority PEM file
-   * @param keystoreFile Java keystore file (JKS only) or null
+   * @param keystoreFile Java key store file (JKS only) or null
    * @param insecureTLS  TRUE to accept insecure TLS connections (no certificates check)
    * @param password password or null
    * @return socket factory
@@ -4930,7 +4990,7 @@ throw new Error("NYI");
     }
 /**/
 
-    // load default keystore
+    // load default key store
     KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(new FileInputStream((keystoreFile != null)
                                         ? keystoreFile
@@ -4948,6 +5008,7 @@ throw new Error("NYI");
       certificateHolder = (X509CertificateHolder)pemParser.readObject();
       pemParser.close();
       X509Certificate certificateAuthority = certificateConverter.getCertificate(certificateHolder);
+      if (isCertificateExpired(keyStore,certificateAuthority)) expiredCertificate = true;
 
       // add as trusted certificate
       keyStore.setEntry("ca-certificate",new KeyStore.TrustedCertificateEntry(certificateAuthority),null);

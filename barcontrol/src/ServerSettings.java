@@ -2022,7 +2022,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("Mount device")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Commadn to mount device with name."),
+                                             BARControl.tr("Command to mount device with name."),
                                              mountDeviceCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },

@@ -8463,7 +8463,7 @@ public class TabJobs
             Widgets.layout(composite,3,0,TableLayoutData.NSWE);
             {
               styledText = Widgets.newStyledText(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-              styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of job on slave.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%type - archive type\n%T - archive type short\n%file - archive file name\n%directory - archive directory\n%error - error code\n%message - message\n%nextSchedule - next schedule [s]\n%nextScheduleDateTime - next schedule date/time [s]\nAdditional time macros are available."));
+              styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of job on slave.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%type - archive type\n%T - archive type short\n%file - archive file name\n%directory - archive directory\n%error - error code\n%message - message\n%nextSchedule - next schedule [s]\n%nextScheduleDateTime - next schedule date/time\n\nAdditional time macros are available."));
               Widgets.setEnabled(styledText,false);
               Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
               styledText.addModifyListener(new ModifyListener()

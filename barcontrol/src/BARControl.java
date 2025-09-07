@@ -3686,7 +3686,9 @@ if (false) {
     {
       Dialogs.warning(new Shell(),
                       Dialogs.booleanFieldUpdater(Settings.class,"showNoneTLSWarning"),
-                      BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!")
+                      BARServer.isExpiredCertificate()
+                        ? BARControl.tr("Established a none-TLS connection only. Certificate is expired.\nTransmitted data may be vulnerable!")
+                        : BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!")
                      );
     }
   }
@@ -6030,7 +6032,9 @@ if (false) {
       {
         Dialogs.warning(new Shell(),
                         Dialogs.booleanFieldUpdater(Settings.class,"showNoneTLSWarning"),
-                        BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!")
+                        BARServer.isExpiredCertificate()
+                          ? BARControl.tr("Established a none-TLS connection only. Certificate is expired.\nTransmitted data may be vulnerable!")
+                          : BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!")
                        );
       }
 
@@ -6154,7 +6158,10 @@ if (false) {
         // show warning if no TLS connection established
         if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
         {
-          printWarning(BARControl.tr("Established a none-TLS connection only. Transmitted data may be vulnerable!"));
+          printWarning(BARServer.isExpiredCertificate()
+                         ? BARControl.tr("Established a none-TLS connection only. Certificate is expired. Transmitted data may be vulnerable!")
+                         : BARControl.tr("Established a none-TLS connection only. Transmitted data may be vulnerable!")
+                      );
         }
 
         // execute commands

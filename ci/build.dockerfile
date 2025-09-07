@@ -23,6 +23,7 @@ RUN apt-get -y --fix-missing install \
   devscripts \
   dosfstools \
   e2fsprogs \
+  faketime \
   gettext \
   git \
   imagemagick \
