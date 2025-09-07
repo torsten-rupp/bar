@@ -73,7 +73,6 @@ public class Options
       Option foundOption = null;
       String string      = null;
       int    n           = 0;
-//Dprintf.dprintf("op=%s\n",option);
       if      (args[index].startsWith(option.name+"="))
       {
         foundOption = option;
@@ -86,12 +85,12 @@ public class Options
         string      = args[index].substring(option.shortName.length()+1);
         n           = 1;
       }
-      if      (args[index].equals(option.name))
+      else if (args[index].equals(option.name))
       {
         foundOption = option;
         if ((option.type != Options.Types.BOOLEAN) && (option.type != Options.Types.INCREMENT))
         {
-          if      (index+1 < args.length)
+          if      ((index+1 < args.length) && !args[index+1].startsWith("-"))
           {
             string = args[index+1];
             n      = 2;
@@ -103,8 +102,7 @@ public class Options
           }
           else
           {
-            printError("Value expected for option '%s'",option.name);
-            System.exit(ExitCodes.FAIL);
+            throw new IllegalArgumentException("Expected value for option '"+option.name+"'");
           }
         }
         else
@@ -118,7 +116,7 @@ public class Options
         foundOption = option;
         if ((option.type != Options.Types.BOOLEAN) && (option.type != Options.Types.INCREMENT))
         {
-          if      (index+1 < args.length)
+          if      ((index+1 < args.length) && !args[index+1].startsWith("-"))
           {
             string = args[index+1];
             n      = 2;
@@ -130,8 +128,7 @@ public class Options
           }
           else
           {
-            printError("Value expected for option '%s'",option.shortName);
-            System.exit(ExitCodes.FAIL);
+            throw new IllegalArgumentException("Expected value for option '"+option.shortName+"'");
           }
         }
         else
@@ -218,8 +215,7 @@ public class Options
                   }
                   catch (NumberFormatException exception)
                   {
-                    printError("Invalid number '%s' for option %s",string,option.name);
-                    System.exit(ExitCodes.FAIL);
+                    throw new IllegalArgumentException("Invalid number '"+string+"' for option '"+option.name+"'");
                   }
                 }
                 break;
@@ -296,8 +292,7 @@ public class Options
                   }
                   catch (ParseException exception)
                   {
-                    printError("Invalid number '%s' for option %s",string,option.name);
-                    System.exit(ExitCodes.FAIL);
+                    throw new IllegalArgumentException("Invalid number '"+string+"' for option '"+option.name+"'");
                   }
                 }
                 break;
@@ -349,8 +344,7 @@ public class Options
                   }
                   catch (ParseException exception)
                   {
-                    printError("Invalid number '%s' for option %s",string,option.name);
-                    System.exit(ExitCodes.FAIL);
+                    throw new IllegalArgumentException("Invalid number '"+string+"' for option '"+option.name+"'");
                   }
                 }
                 break;
@@ -442,13 +436,11 @@ public class Options
                   }
                   else
                   {
-                    printError("INTERNAL ERROR: unsupported enumeration type '%s' for option %s",foundOption.enumeration.getClass(),option.name);
-                    System.exit(ExitCodes.FAIL);
+                    throw new InternalError("unsupported enumeration type '"+foundOption.enumeration.getClass()+"' for option '"+option.name+"'");
                   }
                   if (!foundFlag)
                   {
-                    printError("Unknown value '%s' for option %s",string,option.name);
-                    System.exit(ExitCodes.FAIL);
+                    throw new IllegalArgumentException("Unknown value '"+string+"' for option '"+option.name+"'");
                   }
                 }
                 break;
@@ -481,8 +473,7 @@ public class Options
                   }
                   if (!foundFlag)
                   {
-                    printError("Unknown value '%s' for option %s",name,option.name);
-                    System.exit(ExitCodes.FAIL);
+                    throw new IllegalArgumentException("Unknown value '"+string+"' for option '"+option.name+"'");
                   }
                 }
 
@@ -517,8 +508,7 @@ public class Options
                 }
                 catch (NumberFormatException exception)
                 {
-                  printError("Invalid number '%s'",string);
-                  System.exit(ExitCodes.FAIL);
+                  throw new IllegalArgumentException("Invalid number '"+string+"'");
                 }
                 break;
               case SPECIAL:
@@ -531,11 +521,11 @@ public class Options
         }
         catch (NoSuchFieldException exception)
         {
-          internalError("Options field not found '%s'",exception.getMessage());
+          throw new InternalError("Options field not found '"+exception.getMessage()+"'");
         }
         catch (IllegalAccessException exception)
         {
-          internalError("Invalid access to options field '%s'",exception.getMessage());
+          throw new InternalError("Invalid access to options field '"+exception.getMessage()+"'");
         }
       }
     }
@@ -806,25 +796,6 @@ public class Options
     }
 
     return array;
-  }
-
-  /** print error
-   * @param format error text
-   * @param args optional arguments
-   */
-  private static void printError(String format, Object... args)
-  {
-    System.err.println("ERROR: "+String.format(Locale.US,format,args));
-  }
-
-  /** print internal error and halt
-   * @param format error text
-   * @param args optional arguments
-   */
-  private static void internalError(String format, Object... args)
-  {
-    System.err.println("INTERNAL ERROR: "+String.format(Locale.US,format,args));
-    System.exit(ExitCodes.INTERNAL_ERROR);
   }
 }
 
