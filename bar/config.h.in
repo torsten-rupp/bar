@@ -481,6 +481,9 @@
 /* sd_id128_get_machine_app_specific() available */
 #undef HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC
 
+/* sd_notify() available */
+#undef HAVE_SD_NOTIFY
+
 /* select() available */
 #undef HAVE_SELECT
 
@@ -621,6 +624,9 @@
 
 /* sysconf() available */
 #undef HAVE_SYSCONF
+
+/* Define to 1 if you have the <systemd/sd-daemon.h> header file. */
+#undef HAVE_SYSTEMD_SD_DAEMON_H
 
 /* Define to 1 if you have the <systemd/sd-id128.h> header file. */
 #undef HAVE_SYSTEMD_SD_ID128_H

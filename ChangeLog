@@ -1,6 +1,7 @@
 2025-09-31 27
   * added option --commmand-timeout
   * fixed command timeout (bug #31)
+  * added sd_notify() for systemd
   * BARControl: improved certificate validation
 
 2025-06-29 26

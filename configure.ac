@@ -5287,6 +5287,7 @@ AC_CHECK_HEADERS(\
                  sys/vfs.h \
                  sys/wait.h \
                  sys/xattr.h \
+                 systemd/sd-daemon.h \
                  systemd/sd-id128.h \
                  termios.h \
                  unicode/utypes.h \
@@ -5551,6 +5552,7 @@ AC_CHECK_FUNCTION(textdomain,    AC_DEFINE(HAVE_TEXTDOMAIN,    1,[textdomain() a
 AC_CHECK_FUNCTION(bindtextdomain,AC_DEFINE(HAVE_BINDTEXTDOMAIN,1,[bindtextdomain() available]))
 AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() available]))
 
+AC_CHECK_FUNCTION(sd_notify,                        AC_DEFINE(HAVE_SD_NOTIFY,                        1,[sd_notify() available]),,systemd/sd-daemon.h)
 AC_CHECK_FUNCTION(sd_id128_get_machine,             AC_DEFINE(HAVE_SD_ID128_GET_MACHINE,             1,[sd_id128_get_machine() available]),,systemd/sd-id128.h)
 AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC,1,[sd_id128_get_machine_app_specific() available]),,systemd/sd-id128.h)
 

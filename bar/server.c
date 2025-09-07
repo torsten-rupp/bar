@@ -15,6 +15,9 @@
 #include <locale.h>
 #include <time.h>
 #include <signal.h>
+#ifdef HAVE_SYSTEMD_SD_DAEMON_H
+  #include <systemd/sd-daemon.h>
+#endif
 #include <assert.h>
 
 #include "common/global.h"
@@ -106,6 +109,14 @@
 #define AGE_FOREVER                              -1
 
 /***************************** Datatypes *******************************/
+
+// system notify types
+typedef enum
+{
+  SYSTEM_NOTIFY_TYPE_STARTED,
+  SYSTEM_NOTIFY_TYPE_STOPPING,
+  SYSTEM_NOTIFY_TYPE_ERROR
+} NotifyTypes;
 
 // server states
 typedef enum
@@ -425,6 +436,45 @@ LOCAL void deleteClient(ClientNode *clientNode);
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : systemNotify
+* Purpose: send system notification (systemd)
+* Input  : notifyType  - notify type
+*          errorNumber - error number or 0
+*          message     - error message printf-like
+*          ...         - optional arguments for formating error message
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void systemNotify(NotifyTypes notifyType, int errorNumber, const char *message, ...)
+{
+  #ifdef HAVE_SD_NOTIFY
+    switch (notifyType)
+    {
+      case SYSTEM_NOTIFY_TYPE_STARTED:
+        sd_notify(0,"READY=1");
+        sd_notify_barrier(0, 5*1000000);
+        break;
+      case SYSTEM_NOTIFY_TYPE_STOPPING:
+        sd_notify(0,"STOPPING=1");
+        sd_notify_barrier(0, 5*1000000);
+        break;
+      case SYSTEM_NOTIFY_TYPE_ERROR:
+        {
+          va_list arguments;
+          va_start(arguments,message);
+          char buffer[128];
+          vsnprintf(buffer,sizeof(buffer),message,arguments);
+          sd_notifyf(0,"STATUS=Failed to start up: %s\nERRNO=%d\n",buffer,errorNumber);
+          va_end(arguments);
+        }
+        break;
+    }
+  #endif
+}
 
 /***********************************************************************\
 * Name   : setQuit
@@ -23193,15 +23243,18 @@ Errors Server_socket(void)
   // initialize variables
   AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
+
   hostName                       = Network_getHostName(String_new());
-//TODO: remove
-//  serverMode                     = mode;
-//  serverPort                     = port;
+  AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   List_init(&clientList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
+  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList); });
   List_init(&authorizationFailList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
+  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList); });
   jobList.activeCount             = 0;
   Semaphore_init(&serverStateLock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
   serverState                     = SERVER_STATE_RUNNING;
   pauseFlags.create               = FALSE;
   pauseFlags.storage              = FALSE;
@@ -23210,21 +23263,16 @@ Errors Server_socket(void)
   pauseFlags.indexMaintenance     = FALSE;
   pauseEndDateTime                = 0LL;
   Semaphore_init(&newMaster.lock,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&newMaster.lock,{ Semaphore_done(&newMaster.lock); });
   newMaster.pairingMode           = PAIRING_MODE_NONE;
   Misc_initTimeout(&newMaster.pairingTimeoutInfo,0LL);
+  AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
   newMaster.name                  = String_new();
+  AUTOFREE_ADD(&autoFreeList,newMaster.name,{ String_delete(newMaster.name); });
   Crypt_initHash(&newMaster.uuidHash,PASSWORD_HASH_ALGORITHM);
+  AUTOFREE_ADD(&autoFreeList,&newMaster.uuidHash,{ Crypt_doneHash(&newMaster.uuidHash); });
   intermediateMaintenanceDateTime = 0LL;
   quitFlag                        = FALSE;
-  AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
-  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList); });
-  AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
-  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList); });
-  AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
-  AUTOFREE_ADD(&autoFreeList,&newMaster.lock,{ Semaphore_done(&newMaster.lock); });
-  AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
-  AUTOFREE_ADD(&autoFreeList,newMaster.name,{ String_delete(newMaster.name); });
-  AUTOFREE_ADD(&autoFreeList,&newMaster.uuidHash,{ Crypt_doneHash(&newMaster.uuidHash); });
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
@@ -23260,15 +23308,18 @@ Errors Server_socket(void)
                    String_cString(globalOptions.jobsDirectory),
                    Error_getText(error)
                   );
+        systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
     }
     if (!File_isDirectory(globalOptions.jobsDirectory))
     {
+      error = ERRORX_(NOT_A_DIRECTORY,ENOTDIR,"%s",String_cString(globalOptions.jobsDirectory));
       printError(_("'%s' is not a directory!"),String_cString(globalOptions.jobsDirectory));
+      systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       AutoFree_cleanup(&autoFreeList);
-      return ERRORX_(NOT_A_DIRECTORY,0,"%s",String_cString(globalOptions.jobsDirectory));
+      return error;
     }
   }
 
@@ -23282,6 +23333,7 @@ Errors Server_socket(void)
     if (error != ERROR_NONE)
     {
       printError(_("no valid database URI '%s'"),globalOptions.indexDatabaseURI);
+      systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -23294,6 +23346,7 @@ Errors Server_socket(void)
                  String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
+      systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       String_delete(printableDatabaseURI);
       Database_doneSpecifier(&databaseSpecifier);
       AutoFree_cleanup(&autoFreeList);
@@ -23314,6 +23367,7 @@ Errors Server_socket(void)
       printError(_("cannot open index database (error: %s)!"),
                  Error_getText(error)
                 );
+      systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -23348,6 +23402,7 @@ Errors Server_socket(void)
                  globalOptions.serverPort,
                  Error_getText(error)
                 );
+      systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -23382,6 +23437,7 @@ Errors Server_socket(void)
                      globalOptions.serverTLSPort,
                      Error_getText(error)
                     );
+          systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -23405,6 +23461,7 @@ Errors Server_socket(void)
     {
       printError(_("cannot start any server!"));
     }
+    systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,EINVAL,"cannot start any server");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_ARGUMENT;
   }
@@ -23551,6 +23608,9 @@ Errors Server_socket(void)
   #ifdef HAVE_SIGALRM
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
   #endif /* HAVE_SIGALRM */
+
+  // signal systemd
+  systemNotify(SYSTEM_NOTIFY_TYPE_STARTED,0,NULL);
 
   // process client requests
   WaitHandle waitHandle;
@@ -23987,6 +24047,9 @@ Errors Server_socket(void)
   StringMap_delete(argumentMap);
   String_delete(name);
   Misc_doneWait(&waitHandle);
+
+  // signal systemd
+  systemNotify(SYSTEM_NOTIFY_TYPE_STOPPING,0,NULL);
 
   // delete all clients
   while (!List_isEmpty(&clientList))

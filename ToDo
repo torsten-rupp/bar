@@ -11,7 +11,6 @@ ToDo
 - send-only ssh-login (possible?)
 - avoid negative bytes/s in performance monitor
 - multiple instances of backup threads
-- check ssl certificates
 - store partitions which are mounted ("on-the-fly-freeze")
 - md5 file check sum?
 - delete temporary image directory when writing dvd
@@ -46,7 +45,6 @@ ToDo
 - check if exclude compressed files work
 - multiple jobs in parallel
 - clients executing jobs from command server
-- barcontrol: edit schedule ESC key?
 - support bar dvd://*.bar
 - restore image to file instead of a device
 - compression lrzip
@@ -77,12 +75,12 @@ ToDo
   http://www.brynosaurus.com/cachedir/
 - barcontrol: add shortcut DEL to delete entries
 - progress on console when storing archives
-- barcontrol: test and compare of archives
+- barcontrol: compare of archives
 - check if crypt password is correct, output error message
 - test archives: CRC? fragments?
 - fix error message when connection is refused
 - BARControl: show warning when path does not exists
-- create and error message when /tmp is full
+- create an error message when /tmp is full
 - bash complete: /etc/bash_completion.d
 - barcontrol: improve busy animation
 - database entity: store host, run time
@@ -95,7 +93,6 @@ ToDo
 - remove BARServer.fileSeparator
 - support min/max keep for job, max. age for job
 - BARControl restore: filter storages by "will never expire"
-- info chunk/BAR header: create time, user, host, user comment
 - pepper for encryption?
 - multi-encryption
 - set job to error if not enough inotify watches
@@ -103,12 +100,10 @@ ToDo
 - Restore: filter storage by "no expiration date/time"
 - use kwalletcli to store/retrieve passwords
 - use GNOME secret-tool
-- restore entries mode: stop, rename, overwrite
 - BARControl: delete schedule entry -> update context menu in job status
 - systemd script: restart
 - logrotate: use signal HUP
 - job settings for max./keep until normal/full/incremental/differential storages
-- SVN number in version (Unversioned directory?)
 - restore: ask for overwrite, skip, overwrite all, skip all
 - check: restore content work?
 - use libssh instead of libssh2 because newer releases/fixed memory leaks?
@@ -122,7 +117,6 @@ ToDo
 rest time
 - hierachical jobs
 - test after create: chunk-read, test, compare
-- sd_notify() for system service startup
 - scheduler to test archives with report
 - BARControl: test archives function
 - option to local cache of archive before parallel test/compare/diff

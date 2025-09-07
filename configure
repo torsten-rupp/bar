@@ -22786,6 +22786,12 @@ then :
   printf "%s\n" "#define HAVE_SYS_XATTR_H 1" >>confdefs.h
 
 fi
+ac_fn_c_check_header_compile "$LINENO" "systemd/sd-daemon.h" "ac_cv_header_systemd_sd_daemon_h" "$ac_includes_default"
+if test "x$ac_cv_header_systemd_sd_daemon_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_SYSTEMD_SD_DAEMON_H 1" >>confdefs.h
+
+fi
 ac_fn_c_check_header_compile "$LINENO" "systemd/sd-id128.h" "ac_cv_header_systemd_sd_id128_h" "$ac_includes_default"
 if test "x$ac_cv_header_systemd_sd_id128_h" = xyes
 then :
@@ -31461,6 +31467,62 @@ then :
 
 fi
 
+
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for sd_notify" >&5
+printf %s "checking for sd_notify... " >&6; }
+if test ${ac_cv_func_sd_notify+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_sd_notify="no"
+      echo > conftest.log
+
+      for ac_headers in systemd/sd-daemon.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void sd_notify();"; fi`
+                                         #ifdef sd_notify
+                                         #else
+                                           return (intptr_t)sd_notify;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_sd_notify=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_sd_notify" >&5
+printf "%s\n" "$ac_cv_func_sd_notify" >&6; }
+  if test "$ac_cv_func_sd_notify" != no
+then :
+
+printf "%s\n" "#define HAVE_SD_NOTIFY 1" >>confdefs.h
+
+elif :
+then :
+
+fi
 
 
 
