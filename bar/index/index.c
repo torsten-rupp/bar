@@ -2792,10 +2792,9 @@ bool Index_parseState(const char *name, IndexStates *indexState, void *userData)
 
 const char *Index_modeToString(IndexModes indexMode, const char *defaultValue)
 {
-  uint       i;
   const char *name;
 
-  i = 0;
+  size_t i = 0;
   while (   (i < SIZE_OF_ARRAY(INDEX_MODES))
          && (INDEX_MODES[i].indexMode != indexMode)
         )

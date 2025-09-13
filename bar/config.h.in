@@ -67,6 +67,18 @@
 /* BLKGETSIZE available */
 #undef HAVE_BLKGETSIZE
 
+/* Define to 1 if you have the <blkid/blkid.h> header file. */
+#undef HAVE_BLKID_BLKID_H
+
+/* blkid_do_probe() available */
+#undef HAVE_BLKID_DO_PROBE
+
+/* blkid_new_probe_from_filename() available */
+#undef HAVE_BLKID_NEW_PROBE_FROM_FILENAME
+
+/* blkid_probe_lookup_value() available */
+#undef HAVE_BLKID_PROBE_LOOKUP_VALUE
+
 /* BLKSSZGET available */
 #undef HAVE_BLKSSZGET
 

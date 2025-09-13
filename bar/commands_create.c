@@ -6054,7 +6054,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     if (!createInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK (%s, %"PRIu64" bytes%s%s)\n",
-                (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
+                (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
                 fragmentSize,
                 fragmentInfoString,
                 compressionRatioString
@@ -6063,7 +6063,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                  LOG_TYPE_ENTRY_OK,
                  "Added image '%s' (%s, %"PRIu64" bytes%s%s)",
                  String_cString(deviceName),
-                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
+                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
                  fragmentSize,
                  fragmentInfoString,
                  compressionRatioString
@@ -6072,7 +6072,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     else
     {
       printInfo(1,"OK (%s, %"PRIu64" bytes%s%s, dry-run)\n",
-                fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
+                fileSystemFlag ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
                 fragmentSize,
                 fragmentInfoString,
                 compressionRatioString
@@ -6093,7 +6093,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
 
     double d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
     printInfo(1,"OK (%s, %/"PRIu64" bytes, not stored)\n",
-              fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
+              fileSystemFlag ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
               (int)d,
               fragmentSize
              );

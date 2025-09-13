@@ -1656,7 +1656,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
 
     UNUSED_VARIABLE(userData);
 
-    return FileSystem_parseFileSystemType(name,value);
+    return FileSystem_parseType(name,value);
   }
 
   assert(connectorInfo != NULL);

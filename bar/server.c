@@ -9797,11 +9797,13 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
 
         if (deviceInfo.type == DEVICE_TYPE_BLOCK)
         {
+          FileSystemTypes fileSystemType = FileSystem_getType(String_cString(deviceName));
           ServerIO_sendResult(&clientInfo->io,
                               id,FALSE,ERROR_NONE,
-                              "name=%'S size=%"PRIu64" mounted=%y",
+                              "name=%'S size=%"PRIu64" fileSystemType=%s mounted=%y",
                               deviceName,
                               deviceInfo.size,
+                              (fileSystemType != FILE_SYSTEM_TYPE_NONE) ? FileSystem_typeToString(fileSystemType,"") : "",
                               deviceInfo.mounted
                              );
         }
@@ -16653,7 +16655,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                   cryptType,
                                   deltaSourceName,
                                   deltaSourceSize,
-                                  FileSystem_fileSystemTypeToString(fileSystemType,NULL),
+                                  FileSystem_typeToString(fileSystemType,NULL),
                                   deviceInfo.blockSize,
                                   fragmentOffset,
                                   fragmentSize
@@ -18802,7 +18804,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                           storageName, \
                           entryId, \
                           name, \
-                          FileSystem_fileSystemTypeToString(fileSystemType,NULL), \
+                          FileSystem_typeToString(fileSystemType,NULL), \
                           size, \
                           fragmentCount \
                          ); \

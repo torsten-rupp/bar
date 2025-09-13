@@ -119,6 +119,7 @@ typedef struct ArchiveContentNode
       CryptTypes         cryptType;
       String             deltaSourceName;
       uint64             deltaSourceSize;
+      FileSystemTypes    fileSystemType;
       uint               blockSize;
       uint64             blockOffset;
       uint64             blockCount;
@@ -691,6 +692,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
                           CryptTypes         cryptType,
                           ConstString        deltaSourceName,
                           uint64             deltaSourceSize,
+                          FileSystemTypes    fileSystemType,
                           uint64             fragmentOffset,
                           uint64             fragmentSize
                          )
@@ -713,6 +715,15 @@ LOCAL void printImageInfo(uint               prefixWidth,
 
   const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
   const char *template;
+  char       type[32];
+  if (fileSystemType != FILE_SYSTEM_TYPE_NONE)
+  {
+    stringSet(type,sizeof(type),FileSystem_typeToString(fileSystemType,"IMAGE"));
+  }
+  else
+  {
+    stringSet(type,sizeof(type),"IMAGE");
+  }
   String     compressString = String_new();
   String     cryptString    = String_new();
   if (globalOptions.longFormatFlag)
@@ -773,7 +784,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_STRING   ("%storageName",    storageName,                                                                                    NULL);
-    TEXT_MACRO_X_CSTRING  ("%type",           "IMAGE",                                                                                        NULL);
+    TEXT_MACRO_X_CSTRING  ("%type",           type,                                                                                           NULL);
     TEXT_MACRO_X_CSTRING  ("%size",           sizeString,                                                                                     NULL);
     TEXT_MACRO_X_INT64    ("%partFrom",       fragmentOffset,                                                       NULL);
     TEXT_MACRO_X_INT64    ("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
@@ -1558,6 +1569,7 @@ LOCAL void addListImageInfo(ConstString        storageName,
                             CryptTypes         cryptType,
                             ConstString        deltaSourceName,
                             uint64             deltaSourceSize,
+                            FileSystemTypes    fileSystemType,
                             uint               blockSize,
                             uint64             blockOffset,
                             uint64             blockCount
@@ -1582,6 +1594,7 @@ LOCAL void addListImageInfo(ConstString        storageName,
   archiveContentNode->image.cryptType              = cryptType;
   archiveContentNode->image.deltaSourceName        = String_duplicate(deltaSourceName);
   archiveContentNode->image.deltaSourceSize        = deltaSourceSize;
+  archiveContentNode->image.fileSystemType         = fileSystemType;
   archiveContentNode->image.blockSize              = blockSize;
   archiveContentNode->image.blockOffset            = blockOffset;
   archiveContentNode->image.blockCount             = blockCount;
@@ -2236,6 +2249,7 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
                        archiveContentNode->image.cryptType,
                        archiveContentNode->image.deltaSourceName,
                        archiveContentNode->image.deltaSourceSize,
+                       archiveContentNode->image.fileSystemType,
                        archiveContentNode->image.blockOffset*(uint64)archiveContentNode->image.blockSize,
                        fragmentSize
                       );
@@ -2665,6 +2679,7 @@ NULL, // masterSocketHandle
                                        cryptType,
                                        deltaSourceName,
                                        deltaSourceSize,
+                                       fileSystemType,
                                        deviceInfo.blockSize,
                                        blockOffset,
                                        blockCount
@@ -2689,6 +2704,7 @@ NULL, // masterSocketHandle
                                      cryptType,
                                      deltaSourceName,
                                      deltaSourceSize,
+                                     fileSystemType,
                                      blockOffset*(uint64)deviceInfo.blockSize,
                                      blockCount*(uint64)deviceInfo.blockSize
                                     );

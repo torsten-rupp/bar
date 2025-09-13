@@ -22582,6 +22582,12 @@ then :
   printf "%s\n" "#define HAVE_BFD_H 1" >>confdefs.h
 
 fi
+ac_fn_c_check_header_compile "$LINENO" "blkid/blkid.h" "ac_cv_header_blkid_blkid_h" "$ac_includes_default"
+if test "x$ac_cv_header_blkid_blkid_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_BLKID_BLKID_H 1" >>confdefs.h
+
+fi
 ac_fn_c_check_header_compile "$LINENO" "demangle.h" "ac_cv_header_demangle_h" "$ac_includes_default"
 if test "x$ac_cv_header_demangle_h" = xyes
 then :
@@ -31743,6 +31749,175 @@ printf "%s\n" "$ac_cv_func_mnt_context_mount" >&6; }
 then :
 
 printf "%s\n" "#define HAVE_MNT_CONTEXT_MOUNT 1" >>confdefs.h
+
+elif :
+then :
+
+fi
+
+
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for blkid_new_probe_from_filename" >&5
+printf %s "checking for blkid_new_probe_from_filename... " >&6; }
+if test ${ac_cv_func_blkid_new_probe_from_filename+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_blkid_new_probe_from_filename="no"
+      echo > conftest.log
+
+      for ac_headers in blkid/blkid.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void blkid_new_probe_from_filename();"; fi`
+                                         #ifdef blkid_new_probe_from_filename
+                                         #else
+                                           return (intptr_t)blkid_new_probe_from_filename;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_blkid_new_probe_from_filename=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_blkid_new_probe_from_filename" >&5
+printf "%s\n" "$ac_cv_func_blkid_new_probe_from_filename" >&6; }
+  if test "$ac_cv_func_blkid_new_probe_from_filename" != no
+then :
+
+printf "%s\n" "#define HAVE_BLKID_NEW_PROBE_FROM_FILENAME 1" >>confdefs.h
+
+elif :
+then :
+
+fi
+
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for blkid_do_probe" >&5
+printf %s "checking for blkid_do_probe... " >&6; }
+if test ${ac_cv_func_blkid_do_probe+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_blkid_do_probe="no"
+      echo > conftest.log
+
+      for ac_headers in blkid/blkid.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void blkid_do_probe();"; fi`
+                                         #ifdef blkid_do_probe
+                                         #else
+                                           return (intptr_t)blkid_do_probe;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_blkid_do_probe=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_blkid_do_probe" >&5
+printf "%s\n" "$ac_cv_func_blkid_do_probe" >&6; }
+  if test "$ac_cv_func_blkid_do_probe" != no
+then :
+
+printf "%s\n" "#define HAVE_BLKID_DO_PROBE 1" >>confdefs.h
+
+elif :
+then :
+
+fi
+
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for blkid_probe_lookup_value" >&5
+printf %s "checking for blkid_probe_lookup_value... " >&6; }
+if test ${ac_cv_func_blkid_probe_lookup_value+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_blkid_probe_lookup_value="no"
+      echo > conftest.log
+
+      for ac_headers in blkid/blkid.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void blkid_probe_lookup_value();"; fi`
+                                         #ifdef blkid_probe_lookup_value
+                                         #else
+                                           return (intptr_t)blkid_probe_lookup_value;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_blkid_probe_lookup_value=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_blkid_probe_lookup_value" >&5
+printf "%s\n" "$ac_cv_func_blkid_probe_lookup_value" >&6; }
+  if test "$ac_cv_func_blkid_probe_lookup_value" != no
+then :
+
+printf "%s\n" "#define HAVE_BLKID_PROBE_LOOKUP_VALUE 1" >>confdefs.h
 
 elif :
 then :

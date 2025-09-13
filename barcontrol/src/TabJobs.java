@@ -522,15 +522,18 @@ public class TabJobs
   {
     String name;
     long   size;
+    String fileSystemType;
 
     /** create device data
      * @param name device name
      * @param size device size [bytes]
+     * @param fileSystemType file system type
      */
-    DeviceData(String name, long size)
+    DeviceData(String name, long size, String fileSystemType)
     {
-      this.name = name;
-      this.size = size;
+      this.name           = name;
+      this.size           = size;
+      this.fileSystemType = fileSystemType;
     }
 
     /** create device data
@@ -538,8 +541,9 @@ public class TabJobs
      */
     DeviceData(String name)
     {
-      this.name = name;
-      this.size = 0;
+      this.name           = name;
+      this.size           = 0;
+      this.fileSystemType = "";
     }
 
     /** insert in include list, remove from exclude list
@@ -587,7 +591,7 @@ public class TabJobs
      */
     public String toString()
     {
-      return "DeviceData {"+name+", "+size+" bytes}";
+      return "DeviceData {"+name+", "+size+" bytes, "+fileSystemType+"}";
     }
   }
 
@@ -3747,7 +3751,9 @@ public class TabJobs
         };
         tableColumn = Widgets.addTableColumn(widgetDeviceTable,0,"Name",SWT.LEFT, 500,true);
         tableColumn.addSelectionListener(deviceTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetDeviceTable,1,"Size",SWT.RIGHT,100,false);
+        tableColumn = Widgets.addTableColumn(widgetDeviceTable,1,"Type",SWT.LEFT, 100,false);
+        tableColumn.addSelectionListener(deviceTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetDeviceTable,2,"Size",SWT.RIGHT,100,false);
         tableColumn.addSelectionListener(deviceTableColumnSelectionListener);
 
         menu = Widgets.newPopupMenu(shell);
@@ -11120,12 +11126,15 @@ throw new Error("NYI");
                                    @Override
                                    public void handle(int i, ValueMap valueMap)
                                    {
-                                     String  name    = valueMap.getString ("name"   );
-                                     long    size    = valueMap.getLong   ("size",0L);
-// TODO: use
-                                     boolean mounted = valueMap.getBoolean("mounted");
 
-                                     deviceDataList.add(new DeviceData(name,size));
+                                     String  name           = valueMap.getString ("name"             );
+                                     long    size           = valueMap.getLong   ("size",          0L);
+// TODO: use enum?
+                                     String  fileSystemType = valueMap.getString ("fileSystemType","");
+// TODO: use
+                                     boolean mounted        = valueMap.getBoolean("mounted"          );
+
+                                     deviceDataList.add(new DeviceData(name,size,fileSystemType));
                                    }
                                  }
                                 );
@@ -11175,6 +11184,7 @@ throw new Error("NYI");
                                                                 deviceData,
                                                                 IMAGE_DEVICE,
                                                                 deviceData.name,
+                                                                deviceData.fileSystemType,
                                                                 Units.formatByteSize(deviceData.size)
                                                                );
             removeTableItems.remove(tableItem);

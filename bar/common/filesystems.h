@@ -22,20 +22,42 @@
 
 /***************************** Constants *******************************/
 
-// supported file systems
+// file system types
 typedef enum
 {
   FILE_SYSTEM_TYPE_NONE,
 
+  FILE_SYSTEM_TYPE_EXT,
   FILE_SYSTEM_TYPE_EXT2,
   FILE_SYSTEM_TYPE_EXT3,
   FILE_SYSTEM_TYPE_EXT4,
-  FILE_SYSTEM_TYPE_FAT12,
-  FILE_SYSTEM_TYPE_FAT16,
-  FILE_SYSTEM_TYPE_FAT32,
+  FILE_SYSTEM_TYPE_BTRFS,
+  FILE_SYSTEM_TYPE_HPFS,
+  FILE_SYSTEM_TYPE_ISOFS,
+  FILE_SYSTEM_TYPE_XFS,
+  FILE_SYSTEM_TYPE_UDF,
+
+  FILE_SYSTEM_TYPE_REISERFS,
   FILE_SYSTEM_TYPE_REISERFS1,
   FILE_SYSTEM_TYPE_REISERFS3,
   FILE_SYSTEM_TYPE_REISERFS4,
+
+  FILE_SYSTEM_TYPE_MINIX,
+  FILE_SYSTEM_TYPE_MINIX1,
+  FILE_SYSTEM_TYPE_MINIX2,
+  FILE_SYSTEM_TYPE_MINIX3,
+
+  FILE_SYSTEM_TYPE_FAT,
+  FILE_SYSTEM_TYPE_FAT12,
+  FILE_SYSTEM_TYPE_FAT16,
+  FILE_SYSTEM_TYPE_FAT32,
+  FILE_SYSTEM_TYPE_EXFAT,
+
+  FILE_SYSTEM_TYPE_AFS,
+  FILE_SYSTEM_TYPE_CODA,
+  FILE_SYSTEM_TYPE_NFS,
+  FILE_SYSTEM_TYPE_SMB1,
+  FILE_SYSTEM_TYPE_SMB2,
 
   FILE_SYSTEM_TYPE_UNKNOWN,
 } FileSystemTypes;
@@ -70,6 +92,41 @@ typedef struct
 #endif
 
 /***********************************************************************\
+* Name   : FileSystem_typeToString
+* Purpose: get name of file system
+* Input  : fileSystemType - file system type
+*          defaultValue   - default value for not supported file system
+*                           types
+* Output : -
+* Return : file system name
+* Notes  : -
+\***********************************************************************/
+
+const char *FileSystem_typeToString(FileSystemTypes fileSystemType, const char *defaultValue);
+
+/***********************************************************************\
+* Name   : FileSystem_parseType
+* Purpose: parse file system type
+* Input  : deviceName - device name
+* Output : fileSystemType - file system type
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool FileSystem_parseType(const char *deviceName, FileSystemTypes *fileSystemType);
+
+/***********************************************************************\
+* Name   : FileSystem_getType
+* Purpose: get file system type
+* Input  : deviceName - device name
+* Output : -
+* Return : file system type
+* Notes  : -
+\***********************************************************************/
+
+FileSystemTypes FileSystem_getType(const char *deviceName);
+
+/***********************************************************************\
 * Name   : FileSystem_init
 * Purpose: init file system
 * Input  : fileSystemHandle - file system handle
@@ -93,30 +150,6 @@ Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
 \***********************************************************************/
 
 Errors FileSystem_done(FileSystemHandle *fileSystemHandle);
-
-/***********************************************************************\
-* Name   : FileSystem_fileSystemTypeToString
-* Purpose: get name of file system
-* Input  : fileSystemType - file system type
-*          defaultValue   - default value for not supported file system
-*                           types
-* Output : -
-* Return : file system name
-* Notes  : -
-\***********************************************************************/
-
-const char *FileSystem_fileSystemTypeToString(FileSystemTypes fileSystemType, const char *defaultValue);
-
-/***********************************************************************\
-* Name   : FileSystem_parseFileSystemType
-* Purpose: parse file system type
-* Input  : name - name of archive type
-* Output : archiveType - archive type
-* Return : TRUE iff parsed
-* Notes  : -
-\***********************************************************************/
-
-bool FileSystem_parseFileSystemType(const char *name, FileSystemTypes *fileSystemType);
 
 /***********************************************************************\
 * Name   : FileSystem_blockIsUsed

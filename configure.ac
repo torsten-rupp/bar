@@ -5253,6 +5253,7 @@ AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
 AC_CHECK_HEADERS(\
                  arpa/inet.h \
                  bfd.h \
+                 blkid/blkid.h \
                  demangle.h \
                  elf.h \
                  execinfo.h \
@@ -5488,7 +5489,7 @@ AC_CHECK_FUNCTION(signal,              AC_DEFINE(HAVE_SIGNAL,              1,[si
 AC_CHECK_FUNCTION(kill,                AC_DEFINE(HAVE_KILL,                1,[kill() available]) ,,signal.h)
 AC_CHECK_MKDIR_ARGUMENTS(,AC_MSG_ERROR([cannot detect number of arguments of mkdir()]))
 
-AC_CHECK_FUNCTION(u_init,       AC_DEFINE(HAVE_U_INIT,1,[u_init() available])  ,,icu.h)
+AC_CHECK_FUNCTION(u_init,AC_DEFINE(HAVE_U_INIT,1,[u_init() available]),,icu.h)
 
 AC_CHECK_FUNCTION(inotify_init1,    AC_DEFINE(HAVE_INOTIFY_INIT1,    1,[inotify_init1() available]))
 AC_CHECK_FUNCTION(inotify_add_watch,AC_DEFINE(HAVE_INOTIFY_ADD_WATCH,1,[inotify_add_watch() available]))
@@ -5558,6 +5559,10 @@ AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_
 
 AC_CHECK_FUNCTION(mnt_new_table_from_file,AC_DEFINE(HAVE_MNT_NEW_TABLE_FROM_FILE,1,[mnt_new_table_from_file() available]),,libmount.h)
 AC_CHECK_FUNCTION(mnt_context_mount,AC_DEFINE(HAVE_MNT_CONTEXT_MOUNT,1,[mnt_context_mount() available]),,libmount.h)
+
+AC_CHECK_FUNCTION(blkid_new_probe_from_filename,AC_DEFINE(HAVE_BLKID_NEW_PROBE_FROM_FILENAME,1,[blkid_new_probe_from_filename() available]),,blkid/blkid.h)
+AC_CHECK_FUNCTION(blkid_do_probe,               AC_DEFINE(HAVE_BLKID_DO_PROBE,               1,[blkid_do_probe() available]),,blkid/blkid.h)
+AC_CHECK_FUNCTION(blkid_probe_lookup_value,     AC_DEFINE(HAVE_BLKID_PROBE_LOOKUP_VALUE,     1,[blkid_probe_lookup_value() available]),,blkid/blkid.h)
 
 AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]),,bfd.h)
 AC_CHECK_FUNCTION(bfd_get_section_flags,AC_DEFINE(HAVE_BFD_GET_SECTION_FLAGS,1,[bfd_get_section_flags() available]),,bfd.h)
