@@ -294,8 +294,6 @@ LOCAL DecryptKeyList decryptKeyList;
 
 /****************************** Macros *********************************/
 
-#define FILE_SYSTEM_CONSTANT_TO_TYPE(n) ((FileSystemTypes)(n))
-
 // debug only: store encoded data into file
 //#define DEBUG_ENCODED_DATA_FILENAME "test-encoded.dat"
 
@@ -4127,6 +4125,107 @@ LOCAL Errors readFileDataBlock(ArchiveEntryInfo *archiveEntryInfo)
 }
 
 /***********************************************************************\
+* Name   : fileSystemTypeToConstant
+* Purpose: convert file system type to chunk constant
+* Input  : fileSystemType - file system type
+* Output : -
+* Return : chunk constant
+* Notes  : -
+\***********************************************************************/
+
+LOCAL uint16 fileSystemTypeToConstant(FileSystemTypes fileSystemType)
+{
+  uint16 result;
+  switch (fileSystemType)
+  {
+    case FILE_SYSTEM_TYPE_EXT2:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_EXT2;
+      break;
+    case FILE_SYSTEM_TYPE_EXT3:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_EXT3;
+      break;
+    case FILE_SYSTEM_TYPE_EXT4:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_EXT4;
+      break;
+    case FILE_SYSTEM_TYPE_FAT12:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_FAT12;
+      break;
+    case FILE_SYSTEM_TYPE_FAT16:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_FAT16;
+      break;
+    case FILE_SYSTEM_TYPE_FAT32:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_FAT32;
+      break;
+    case FILE_SYSTEM_TYPE_REISERFS1:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_REISERFS1;
+      break;
+    case FILE_SYSTEM_TYPE_REISERFS3:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_REISERFS3;
+      break;
+    case FILE_SYSTEM_TYPE_REISERFS4:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_REISERFS4;
+      break;
+    default:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_NONE;
+      break;
+  }
+
+  return result;
+}
+
+/***********************************************************************\
+* Name   : constantToFileSystemType
+* Purpose: convert chunk constant to file system type
+* Input  : n - chunk constant
+* Output : -
+* Return : file system type
+* Notes  : -
+\***********************************************************************/
+
+LOCAL FileSystemTypes constantToFileSystemType(uint16 n)
+{
+  FileSystemTypes fileSystemType;
+  switch (n)
+  {
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_NONE:
+      fileSystemType = FILE_SYSTEM_TYPE_NONE;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_EXT2:
+      fileSystemType = FILE_SYSTEM_TYPE_EXT2;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_EXT3:
+      fileSystemType = FILE_SYSTEM_TYPE_EXT3;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_EXT4:
+      fileSystemType = FILE_SYSTEM_TYPE_EXT4;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_FAT12:
+      fileSystemType = FILE_SYSTEM_TYPE_FAT12;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_FAT16:
+      fileSystemType = FILE_SYSTEM_TYPE_FAT16;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_FAT32:
+      fileSystemType = FILE_SYSTEM_TYPE_FAT32;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_REISERFS1:
+      fileSystemType = FILE_SYSTEM_TYPE_REISERFS1;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_REISERFS3:
+      fileSystemType = FILE_SYSTEM_TYPE_REISERFS3;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_REISERFS4:
+      fileSystemType = FILE_SYSTEM_TYPE_REISERFS4;
+      break;
+    default:
+      fileSystemType = FILE_SYSTEM_TYPE_NONE;
+      break;
+  }
+
+  return fileSystemType;
+}
+
+/***********************************************************************\
 * Name   : writeImageChunks
 * Purpose: write image chunks
 * Input  : archiveEntryInfo - archive image entry info data
@@ -7589,7 +7688,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
     return error;
   }
   DEBUG_TESTCODE() { Crypt_done(&archiveEntryInfo->file.chunkFileData.cryptInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
-  archiveEntryInfo->image.chunkImageEntry.fileSystemType = fileSystemType;
+  archiveEntryInfo->image.chunkImageEntry.fileSystemType = fileSystemTypeToConstant(fileSystemType);
   archiveEntryInfo->image.chunkImageEntry.size           = deviceInfo->size;
   archiveEntryInfo->image.chunkImageEntry.blockSize      = deviceInfo->blockSize;
   convertSystemToUTF8Encoding(archiveEntryInfo->image.chunkImageEntry.name,deviceName);
@@ -10838,7 +10937,7 @@ NULL//                             password
             }
             if (fileSystemType != NULL)
             {
-              (*fileSystemType) = FILE_SYSTEM_CONSTANT_TO_TYPE(archiveEntryInfo->image.chunkImageEntry.fileSystemType);
+              (*fileSystemType) = constantToFileSystemType(archiveEntryInfo->image.chunkImageEntry.fileSystemType);
             }
             if (deviceInfo != NULL)
             {
