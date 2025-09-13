@@ -108,8 +108,6 @@ ToDo
 - check: restore content work?
 - use libssh instead of libssh2 because newer releases/fixed memory leaks?
 - BARControl: password input field invisible number of characters
-- mount: call int mount (const char *special_file, const char *dir, const char *fstype, unsigned long int options, const void *data)
-  detect file system by trying all in /proc/filesystem
 - filesystem support: partclone
   sudo apt-get install libext2fs-dev
   sudo apt-get install libreiser4-dev
@@ -123,7 +121,6 @@ rest time
 - single input of encrypt password for parallel test/compare
 - maintenance if no schedule pending for x minutes
 - BARControl: restore: show archive for file entry
-- restore: pattern+verbose 4 output "skipped" - should not
 - option --no-auto-pairing
 - slave: send log file mail on master
 - job option: do not schedule missed job executions
@@ -140,7 +137,6 @@ rest time
 - entity UUID in archives
 - bar-index: password option
 - use MongoDB for full text search
-- scheduler: test jobs
 - BARControl: show installed slave versions
 - BARControl: graphical history of job execution
 - reload configuration on SIGHUB
@@ -150,7 +146,7 @@ rest time
 - program icon
 - storage: remove running info
 - send email with log on maser for jobs executed on slave
-- restore: skip leaing directory
+- restore: skip leading directory
 - barcontrol: graphical job history
 - purge backup archives on exhausted free disk space
 - code formater

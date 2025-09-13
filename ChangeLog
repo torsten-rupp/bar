@@ -3,6 +3,7 @@
   * fixed command timeout (bug #31)
   * added sd_notify() for systemd
   * BARControl: improved certificate validation
+  * BARControl: show file system type of devices if possible
 
 2025-06-29 26
   * automatic replace deprecated configuration values by new value

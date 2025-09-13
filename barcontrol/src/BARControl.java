@@ -3033,6 +3033,7 @@ public class BARControl
   private MenuItem         serverMenuLastSelectedItem = null;
   private MenuItem         masterMenuItem;
   private TabFolder        tabFolder;
+  private Shell            widgetTabFolderToolTip = null;
   private TabStatus        tabStatus;
   private TabJobs          tabJobs;
   private TabRestore       tabRestore;
@@ -4121,16 +4122,68 @@ if (false) {
       {
         TabFolder widget = (TabFolder)paintEvent.widget;
         GC        gc     = paintEvent.gc;
-        Rectangle bounds;
 
         if (BARServer.isTLSConnection())
         {
-          Image image = BARServer.isInsecureTLSConnection() ? IMAGE_LOCK_INSECURE : IMAGE_LOCK;
-          bounds = image.getBounds();
+          Image     image  = BARServer.isInsecureTLSConnection() ? IMAGE_LOCK_INSECURE : IMAGE_LOCK;
+          Rectangle bounds = image.getBounds();
           gc.drawImage(image,
                        widget.getBounds().width-bounds.width,
                        bounds.height/2-2
                       );
+        }
+      }
+    });
+    tabFolder.addMouseTrackListener(new MouseTrackListener()
+    {
+      @Override
+      public void mouseEnter(MouseEvent mouseEvent)
+      {
+      }
+      @Override
+      public void mouseExit(MouseEvent mouseEvent)
+      {
+      }
+      @Override
+      public void mouseHover(MouseEvent mouseEvent)
+      {
+        TabFolder widget = (TabFolder)mouseEvent.widget;
+
+        if (BARServer.isTLSConnection())
+        {
+          if (widgetTabFolderToolTip != null)
+          {
+            widgetTabFolderToolTip.dispose();
+            widgetTabFolderToolTip = null;
+          }
+
+          Image     image  = BARServer.isInsecureTLSConnection() ? IMAGE_LOCK_INSECURE : IMAGE_LOCK;
+          Rectangle bounds = image.getBounds();
+          bounds.x = widget.getBounds().width-bounds.width;
+          bounds.y = bounds.height/2-2;
+          if (bounds.contains(mouseEvent.x,mouseEvent.y))
+          {
+            // show if mouse is in the right side
+            Label label;
+
+            final Color COLOR_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+            final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+
+            widgetTabFolderToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
+            widgetTabFolderToolTip.setBackground(COLOR_BACKGROUND);
+            widgetTabFolderToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+            Widgets.layout(widgetTabFolderToolTip,0,0,TableLayoutData.NSWE);
+            label = Widgets.newLabel(widgetTabFolderToolTip,BARControl.tr("Show if connection to BAR server is secure/insecure."));
+            label.setForeground(COLOR_FOREGROUND);
+            label.setBackground(COLOR_BACKGROUND);
+            Widgets.layout(label,0,0,TableLayoutData.W);
+
+            Point point = display.getCursorLocation();
+            if (point.x > 16) point.x -= 16;
+            if (point.y > 16) point.y -= 16;
+
+            Widgets.showToolTip(widgetTabFolderToolTip,point.x,point.y);
+          }
         }
       }
     });
