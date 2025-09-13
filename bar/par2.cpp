@@ -122,7 +122,7 @@ Errors PAR2_create(ConstString      dataFileName,
   String sourceLinkName    = File_getBaseName(String_new(),sourceFileName,TRUE);
   String sourceBaseName    = File_getBaseName(String_new(),sourceFileName,FALSE);
   String sourceExtension   = File_getExtension(String_new(),sourceFileName);
-  while (   (File_readDirectoryList(&directoryListHandle,fileName) == ERROR_NONE)
+  while (   (File_readDirectoryList(&directoryListHandle,fileName,NULL) == ERROR_NONE)
          && !par2ExistsFlag
         )
   {

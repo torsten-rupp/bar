@@ -2371,7 +2371,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
   while (!File_endOfDirectoryList(&directoryListHandle))
   {
     // read directory entry
-    if (File_readDirectoryList(&directoryListHandle,fileName) != ERROR_NONE)
+    if (File_readDirectoryList(&directoryListHandle,fileName,NULL) != ERROR_NONE)
     {
       continue;
     }

@@ -904,6 +904,201 @@ LOCAL bool parseMountListEntry(char *mountPointName, uint maxMountPointNameSize,
 }
 #endif /* PLATFORM_... */
 
+/***********************************************************************\
+* Name   : getFileInfo
+* Purpose: get file info (type, time, permissions, owner, attributes)
+* Input  : fileInfo - file info variable
+*          fileName - file name
+* Output : fileInfo - file info
+* Return : ERROR_NONE or error code
+* Notes  : - if getting attributes fail no error is reported
+*          - only in debug version: if environment variable
+*            DEBUG_EMULATE_BLOCK_DEVICE is set to a file name a device
+*            of that name is emulated
+\***********************************************************************/
+
+LOCAL Errors getFileInfo(FileInfo   *fileInfo,
+                         const char *fileName
+                        )
+{
+  assert(fileInfo != NULL);
+  assert(fileName != NULL);
+  assert(!stringIsEmpty(fileName));
+
+  // get file meta data
+  FileStat fileStat;
+  #ifndef NDEBUG
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
+    {
+      CStringTokenizer stringTokenizer;
+      stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+      const char *emulateDeviceName;
+      if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+          && stringEquals(fileName,emulateDeviceName)
+         )
+      {
+        // emulate block device
+        const char *emulateFileName;
+        if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+        {
+          if (LSTAT(emulateFileName,&fileStat) != 0)
+          {
+            return getLastError(ERROR_CODE_IO,emulateFileName);
+          }
+        }
+        else
+        {
+          if (LSTAT(emulateDeviceName,&fileStat) != 0)
+          {
+            return getLastError(ERROR_CODE_IO,emulateDeviceName);
+          }
+        }
+      }
+      else
+      {
+        // use block device
+        if (LSTAT(fileName,&fileStat) != 0)
+        {
+          return getLastError(ERROR_CODE_IO,fileName);
+        }
+      }
+      stringTokenizerDone(&stringTokenizer);
+    }
+    else
+    {
+      // use block device
+      if (LSTAT(fileName,&fileStat) != 0)
+      {
+        return getLastError(ERROR_CODE_IO,fileName);
+      }
+    }
+  #else /* NDEBUG */
+    if (LSTAT(fileName,&fileStat) != 0)
+    {
+      return getLastError(ERROR_CODE_IO,fileName);
+    }
+  #endif /* not NDEBUG */
+  fileInfo->timeLastAccess  = fileStat.st_atime;
+  fileInfo->timeModified    = fileStat.st_mtime;
+  fileInfo->timeLastChanged = fileStat.st_ctime;
+  fileInfo->userId          = fileStat.st_uid;
+  fileInfo->groupId         = fileStat.st_gid;
+  fileInfo->permissions     = (FilePermissions)fileStat.st_mode;
+  #ifdef HAVE_MAJOR
+    fileInfo->major         = major(fileStat.st_rdev);
+  #else
+    fileInfo->major         = 0;
+  #endif
+  #ifdef HAVE_MINOR
+    fileInfo->minor         = minor(fileStat.st_rdev);
+  #else
+    fileInfo->minor         = 0;
+  #endif
+  fileInfo->attributes      = FILE_ATTRIBUTE_NONE;
+  fileInfo->id              = (uint64)fileStat.st_ino;
+  fileInfo->linkCount       = (uint)fileStat.st_nlink;
+  fileInfo->cast.mtime      = fileStat.st_mtime;
+  fileInfo->cast.ctime      = fileStat.st_ctime;
+
+  // store specific meta data
+  if      (S_ISREG(fileStat.st_mode))
+  {
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        CStringTokenizer stringTokenizer;
+        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+        const char *emulateDeviceName;
+        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+            && stringEquals(fileName,emulateDeviceName)
+           )
+        {
+          // emulate block device
+          fileInfo->type        = FILE_TYPE_SPECIAL;
+          fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
+          fileInfo->attributes  = 0LL;
+        }
+        else
+        {
+          // use block device
+          fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
+        }
+        stringTokenizerDone(&stringTokenizer);
+      }
+      else
+      {
+        fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
+      }
+    #else /* NDEBUG */
+      fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
+    #endif /* not NDEBUG */
+    fileInfo->size = fileStat.st_size;
+
+    // get file attributes
+    (void)File_getAttributesCString(&fileInfo->attributes,fileName);
+  }
+  else if (S_ISDIR(fileStat.st_mode))
+  {
+    fileInfo->type = FILE_TYPE_DIRECTORY;
+    fileInfo->size = 0LL;
+
+    // get file attributes
+    (void)File_getAttributesCString(&fileInfo->attributes,fileName);
+  }
+  #ifdef S_ISLNK
+  else if (S_ISLNK(fileStat.st_mode))
+  {
+    fileInfo->type = FILE_TYPE_LINK;
+    fileInfo->size = 0LL;
+  }
+  #endif /* S_ISLNK */
+  else if (S_ISCHR(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = 0LL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_CHARACTER_DEVICE;
+    fileInfo->attributes  = 0LL;
+  }
+  else if (S_ISBLK(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = 0LL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
+    fileInfo->attributes  = 0LL;
+
+    // try to detect block device size
+    DeviceInfo deviceInfo;
+    if (Device_getInfoCString(&deviceInfo,fileName,TRUE) == ERROR_NONE)
+    {
+      fileInfo->size = deviceInfo.size;
+    }
+  }
+  else if (S_ISFIFO(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = 0LL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
+  }
+  #ifdef S_ISSOCK
+  else if (S_ISSOCK(fileStat.st_mode))
+  {
+    fileInfo->type        = FILE_TYPE_SPECIAL;
+    fileInfo->size        = 0LL;
+    fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
+  }
+  #endif /* S_ISSOCK */
+  else
+  {
+    fileInfo->type        = FILE_TYPE_UNKNOWN;
+    fileInfo->size        = 0LL;
+    fileInfo->attributes  = 0LL;
+  }
+
+  return ERROR_NONE;
+}
+
 /*---------------------------------------------------------------------*/
 
 String File_newFileName(void)
@@ -3443,7 +3638,8 @@ bool File_endOfDirectoryList(DirectoryListHandle *directoryListHandle)
 }
 
 Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
-                              String              fileName
+                              String              fileName,
+                              FileInfo            *fileInfo
                              )
 {
   assert(directoryListHandle != NULL);
@@ -3474,6 +3670,16 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
   // get entry name
   String_set(fileName,directoryListHandle->basePath);
   File_appendFileNameCString(fileName,directoryListHandle->entry->d_name);
+
+  // get file info
+  if (fileInfo != NULL)
+  {
+    Errors error = getFileInfo(fileInfo,String_cString(fileName));
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+  }
 
   // mark entry read
   directoryListHandle->entry = NULL;
@@ -4327,190 +4533,18 @@ Errors File_getInfo(FileInfo    *fileInfo,
   assert(fileName != NULL);
   assert(!String_isEmpty(fileName));
 
-  return File_getInfoCString(fileInfo,String_cString(fileName));
+  return getFileInfo(fileInfo,String_cString(fileName));
 }
 
 Errors File_getInfoCString(FileInfo   *fileInfo,
                            const char *fileName
                           )
 {
-  FileStat   fileStat;
-  DeviceInfo deviceInfo;
-  #ifndef NDEBUG
-    const char       *debugEmulateBlockDevice;
-    CStringTokenizer stringTokenizer;
-    const char       *emulateDeviceName,*emulateFileName;
-  #endif /* not NDEBUG */
-
   assert(fileInfo != NULL);
   assert(fileName != NULL);
   assert(!stringIsEmpty(fileName));
 
-  // get file meta data
-  #ifndef NDEBUG
-    debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-    if (debugEmulateBlockDevice != NULL)
-    {
-      stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-      if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-          && stringEquals(fileName,emulateDeviceName)
-         )
-      {
-        // emulate block device
-        if (stringGetNextToken(&stringTokenizer,&emulateFileName))
-        {
-          if (LSTAT(emulateFileName,&fileStat) != 0)
-          {
-            return getLastError(ERROR_CODE_IO,emulateFileName);
-          }
-        }
-        else
-        {
-          if (LSTAT(emulateDeviceName,&fileStat) != 0)
-          {
-            return getLastError(ERROR_CODE_IO,emulateDeviceName);
-          }
-        }
-      }
-      else
-      {
-        // use block device
-        if (LSTAT(fileName,&fileStat) != 0)
-        {
-          return getLastError(ERROR_CODE_IO,fileName);
-        }
-      }
-      stringTokenizerDone(&stringTokenizer);
-    }
-    else
-    {
-      // use block device
-      if (LSTAT(fileName,&fileStat) != 0)
-      {
-        return getLastError(ERROR_CODE_IO,fileName);
-      }
-    }
-  #else /* NDEBUG */
-    if (LSTAT(fileName,&fileStat) != 0)
-    {
-      return getLastError(ERROR_CODE_IO,fileName);
-    }
-  #endif /* not NDEBUG */
-  fileInfo->timeLastAccess  = fileStat.st_atime;
-  fileInfo->timeModified    = fileStat.st_mtime;
-  fileInfo->timeLastChanged = fileStat.st_ctime;
-  fileInfo->userId          = fileStat.st_uid;
-  fileInfo->groupId         = fileStat.st_gid;
-  fileInfo->permissions     = (FilePermissions)fileStat.st_mode;
-  #ifdef HAVE_MAJOR
-    fileInfo->major         = major(fileStat.st_rdev);
-  #else
-    fileInfo->major         = 0;
-  #endif
-  #ifdef HAVE_MINOR
-    fileInfo->minor         = minor(fileStat.st_rdev);
-  #else
-    fileInfo->minor         = 0;
-  #endif
-  fileInfo->attributes      = FILE_ATTRIBUTE_NONE;
-  fileInfo->id              = (uint64)fileStat.st_ino;
-  fileInfo->linkCount       = (uint)fileStat.st_nlink;
-  fileInfo->cast.mtime      = fileStat.st_mtime;
-  fileInfo->cast.ctime      = fileStat.st_ctime;
-
-  // store specific meta data
-  if      (S_ISREG(fileStat.st_mode))
-  {
-    #ifndef NDEBUG
-      debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-      if (debugEmulateBlockDevice != NULL)
-      {
-        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-            && stringEquals(fileName,emulateDeviceName)
-           )
-        {
-          // emulate block device
-          fileInfo->type        = FILE_TYPE_SPECIAL;
-          fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
-          fileInfo->attributes  = 0LL;
-        }
-        else
-        {
-          // use block device
-          fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
-        }
-        stringTokenizerDone(&stringTokenizer);
-      }
-      else
-      {
-        fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
-      }
-    #else /* NDEBUG */
-      fileInfo->type = (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
-    #endif /* not NDEBUG */
-    fileInfo->size = fileStat.st_size;
-
-    // get file attributes
-    (void)File_getAttributesCString(&fileInfo->attributes,fileName);
-  }
-  else if (S_ISDIR(fileStat.st_mode))
-  {
-    fileInfo->type = FILE_TYPE_DIRECTORY;
-    fileInfo->size = 0LL;
-
-    // get file attributes
-    (void)File_getAttributesCString(&fileInfo->attributes,fileName);
-  }
-  #ifdef S_ISLNK
-  else if (S_ISLNK(fileStat.st_mode))
-  {
-    fileInfo->type = FILE_TYPE_LINK;
-    fileInfo->size = 0LL;
-  }
-  #endif /* S_ISLNK */
-  else if (S_ISCHR(fileStat.st_mode))
-  {
-    fileInfo->type        = FILE_TYPE_SPECIAL;
-    fileInfo->size        = 0LL;
-    fileInfo->specialType = FILE_SPECIAL_TYPE_CHARACTER_DEVICE;
-    fileInfo->attributes  = 0LL;
-  }
-  else if (S_ISBLK(fileStat.st_mode))
-  {
-    fileInfo->type        = FILE_TYPE_SPECIAL;
-    fileInfo->size        = 0LL;
-    fileInfo->specialType = FILE_SPECIAL_TYPE_BLOCK_DEVICE;
-    fileInfo->attributes  = 0LL;
-
-    // try to detect block device size
-    if (Device_getInfoCString(&deviceInfo,fileName,TRUE) == ERROR_NONE)
-    {
-      fileInfo->size = deviceInfo.size;
-    }
-  }
-  else if (S_ISFIFO(fileStat.st_mode))
-  {
-    fileInfo->type        = FILE_TYPE_SPECIAL;
-    fileInfo->size        = 0LL;
-    fileInfo->specialType = FILE_SPECIAL_TYPE_FIFO;
-  }
-  #ifdef S_ISSOCK
-  else if (S_ISSOCK(fileStat.st_mode))
-  {
-    fileInfo->type        = FILE_TYPE_SPECIAL;
-    fileInfo->size        = 0LL;
-    fileInfo->specialType = FILE_SPECIAL_TYPE_SOCKET;
-  }
-  #endif /* S_ISSOCK */
-  else
-  {
-    fileInfo->type        = FILE_TYPE_UNKNOWN;
-    fileInfo->size        = 0LL;
-    fileInfo->attributes  = 0LL;
-  }
-
-  return ERROR_NONE;
+  return getFileInfo(fileInfo,fileName);
 }
 
 // TODO: swap fileInfo, fileName

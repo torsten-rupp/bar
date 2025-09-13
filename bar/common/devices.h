@@ -49,10 +49,8 @@ typedef struct
 typedef struct
 {
   #if   defined(PLATFORM_LINUX)
-    FILE *file;
-    char line[256];
-    char deviceName[256];
-    bool readFlag;
+    DIR                 *dir;
+    const struct dirent *entry;
   #elif defined(PLATFORM_WINDOWS)
     DWORD logicalDrives;
     uint  i;
@@ -324,13 +322,16 @@ bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle);
 * Purpose: read next (block) device list entry
 * Input  : deviceListHandle - device list handle
 *          deviceName       - device name variable
+*          deviceInfo       - device info variable (can be NULL)
 * Output : deviceName - next device name
+*          deviceInfo - next device info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
-                             String           deviceName
+                             String           deviceName,
+                             DeviceInfo       *deviceInfo
                             );
 
 /*---------------------------------------------------------------------*/

@@ -2439,7 +2439,7 @@ LOCAL void indexThreadCode(void)
       oldDatabaseFileName = String_new();
       oldDatabaseCount    = 0;
       while (   !indexQuitFlag
-             && (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName) == ERROR_NONE)
+             && (File_readDirectoryList(&directoryListHandle,oldDatabaseFileName,NULL) == ERROR_NONE)
             )
       {
         if (String_matchCString(oldDatabaseFileName,

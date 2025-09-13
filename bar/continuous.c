@@ -812,7 +812,7 @@ LOCAL void addNotifySubDirectories(const char  *jobUUID,
                 )
           {
             // read next directory entry
-            error = File_readDirectoryList(&directoryListHandle,name);
+            error = File_readDirectoryList(&directoryListHandle,name,NULL);
             if (error != ERROR_NONE)
             {
 //TODO: log?

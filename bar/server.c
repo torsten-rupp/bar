@@ -7326,18 +7326,13 @@ LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
       Errors error;
 
       // read next directory entry
-      error = File_readDirectoryList(&directoryInfoNode->directoryListHandle,fileName);
+      FileInfo fileInfo;
+      error = File_readDirectoryList(&directoryInfoNode->directoryListHandle,fileName,&fileInfo);
       if (error != ERROR_NONE)
       {
         continue;
       }
       directoryInfoNode->fileCount++;
-      FileInfo fileInfo;
-      error = File_getInfo(&fileInfo,fileName);
-      if (error != ERROR_NONE)
-      {
-        continue;
-      }
 
       switch (File_getType(fileName))
       {
@@ -9710,7 +9705,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
   UNUSED_VARIABLE(argumentMap);
 
   // get job UUID
-  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -9789,22 +9784,11 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
       while (!Device_endOfDeviceList(&deviceListHandle))
       {
         // read device list entry
-        error = Device_readDeviceList(&deviceListHandle,deviceName);
+        DeviceInfo deviceInfo;
+        error = Device_readDeviceList(&deviceListHandle,deviceName,&deviceInfo);
         if (error != ERROR_NONE)
         {
           ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read device list fail");
-          Device_closeDeviceList(&deviceListHandle);
-          String_delete(deviceName);
-          Job_listUnlock();
-          return;
-        }
-
-        // try get device info
-        DeviceInfo deviceInfo;
-        error = Device_getInfo(&deviceInfo,deviceName,FALSE);
-        if (error != ERROR_NONE)
-        {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read device info fail");
           Device_closeDeviceList(&deviceListHandle);
           String_delete(deviceName);
           Job_listUnlock();
@@ -10333,7 +10317,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
       String name = String_new();
       while (!File_endOfDirectoryList(&directoryListHandle) && (error == ERROR_NONE))
       {
-        error = File_readDirectoryList(&directoryListHandle,name);
+        error = File_readDirectoryList(&directoryListHandle,name,NULL);
         if (error == ERROR_NONE)
         {
           FileInfo fileInfo;

@@ -2243,7 +2243,8 @@ LOCAL void collector(CreateInfo     *createInfo,
                     pauseCreate(createInfo);
 
                     // read next directory entry
-                    error = File_readDirectoryList(&directoryListHandle,fileName);
+                    FileInfo fileInfo;
+                    error = File_readDirectoryList(&directoryListHandle,fileName,&fileInfo);
                     if (error != ERROR_NONE)
                     {
                       if (collectorType == COLLECTOR_TYPE_ENTRIES)
@@ -2260,29 +2261,6 @@ LOCAL void collector(CreateInfo     *createInfo,
                         {
                           createInfo->runningInfo.progress.error.count++;
                           createInfo->runningInfo.progress.error.size += fileInfo.size;
-                        }
-                      }
-                      continue;
-                    }
-
-                    // read file info
-                    FileInfo fileInfo;
-                    error = File_getInfo(&fileInfo,fileName);
-                    if (error != ERROR_NONE)
-                    {
-                      if (collectorType == COLLECTOR_TYPE_ENTRIES)
-                      {
-                        printError(_("cannot access '%s' (error: %s) - skipped"),String_cString(fileName),Error_getText(error));
-                        logMessage(createInfo->logHandle,
-                                   LOG_TYPE_ENTRY_ACCESS_DENIED,
-                                   "Access denied '%s' (error: %s)",
-                                   String_cString(fileName),
-                                   Error_getText(error)
-                                  );
-
-                        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
-                        {
-                          createInfo->runningInfo.progress.error.count++;
                         }
                       }
                       continue;

@@ -683,6 +683,13 @@ ERROR READ_DEVICE                      TR("read device failed")
 ERROR WRITE_DEVICE                     TR("write device failed")
 ERROR PARSE_DEVICE_LIST                TR("error parsing device list")
 
+ERROR DEVICE_NOT_FOUND
+  stringSet(errorText,sizeof(errorText),TR("device not found"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR MOUNT
   stringSet(errorText,sizeof(errorText),TR("mount failed"));
   if (!stringIsEmpty(ERROR_DATA))

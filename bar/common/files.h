@@ -1265,13 +1265,16 @@ bool File_endOfDirectoryList(DirectoryListHandle *directoryListHandle);
 * Purpose: read next directory list entry
 * Input  : directoryHandleList - directory list handle
 *          fileName            - file name variable
+*          fileInfo            - file info variable (can be NULL)
 * Output : fileName - next file name (including path)
+*          fileInfo - next file info
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
-                              String              fileName
+                              String              fileName,
+                              FileInfo            *fileInfo
                              );
 
 /*---------------------------------------------------------------------*/

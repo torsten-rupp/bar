@@ -690,21 +690,10 @@ LOCAL Errors StorageFile_readDirectoryList(StorageDirectoryListHandle *storageDi
                                            FileInfo                   *fileInfo
                                           )
 {
-  Errors error;
-
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
-  error = File_readDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,fileName);
-  if (error == ERROR_NONE)
-  {
-    if (fileInfo != NULL)
-    {
-      (void)File_getInfo(fileInfo,fileName);
-    }
-  }
-
-  return error;
+  return File_readDirectoryList(&storageDirectoryListHandle->fileSystem.directoryListHandle,fileName,fileInfo);
 }
 
 #ifdef __cplusplus

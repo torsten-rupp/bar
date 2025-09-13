@@ -2505,7 +2505,7 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
         String fileName = String_new();
         while (!File_endOfDirectoryList(&directoryListHandle) && (error == ERROR_NONE))
         {
-          error = File_readDirectoryList(&directoryListHandle,fileName);
+          error = File_readDirectoryList(&directoryListHandle,fileName,NULL);
           if (error == ERROR_NONE)
           {
             StringList_append(&fileNameList,fileName);

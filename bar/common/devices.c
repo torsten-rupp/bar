@@ -114,6 +114,354 @@ LOCAL_INLINE char *debugGetEmulateBlockDevice(void)
 }
 #endif /* NDEBUG */
 
+/***********************************************************************\
+* Name   : getDeviceInfo
+* Purpose: get device info
+* Input  : getDeviceInfo - device info variable
+*          deviceName    - device name
+*          sizesFlag     - TRUE to detect block size+device size
+* Output : getDeviceInfo - device info
+* Return : ERROR_NONE or eror code
+* Notes  : only in debug version: if environment variable
+*          DEBUG_EMULATE_BLOCK_DEVICE is set to a file name a device
+*          of that name is emulated
+\***********************************************************************/
+
+LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
+                           const char *deviceName,
+                           bool        sizesFlag
+                          )
+{
+  assert(deviceInfo != NULL);
+  assert(deviceName != NULL);
+
+  // initialize variables
+  deviceInfo->type            = DEVICE_TYPE_UNKNOWN;
+  deviceInfo->size            = 0LL;
+  deviceInfo->blockSize       = 0L;
+//TODO: NYI
+//  deviceInfo->freeBlocks  = 0LL;
+//  deviceInfo->totalBlocks = 0LL;
+  deviceInfo->timeLastAccess  = 0L;
+  deviceInfo->timeModified    = 0L;
+  deviceInfo->timeLastChanged = 0L;
+  deviceInfo->userId          = 0L;
+  deviceInfo->groupId         = 0L;
+  deviceInfo->permission      = 0L;
+  deviceInfo->major           = 0L;
+  deviceInfo->minor           = 0L;
+  deviceInfo->id              = 0L;
+  deviceInfo->mounted         = FALSE;
+
+  #if   defined(PLATFORM_LINUX)
+    // check if character or block device
+    FileStat fileStat;
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    #endif
+    #ifndef NDEBUG
+      debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        CStringTokenizer stringTokenizer;
+        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+        const char *emulateDeviceName,*emulateFileName;
+        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+            && stringEquals(deviceName,emulateDeviceName))
+        {
+          // emulate block device
+          if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+          {
+            if (STAT(emulateFileName,&fileStat) != 0)
+            {
+              return ERRORX_(IO,errno,"%E",errno);
+            }
+          }
+          else
+          {
+            if (STAT(emulateDeviceName,&fileStat) != 0)
+            {
+              return ERRORX_(IO,errno,"%E",errno);
+            }
+          }
+        }
+        else
+        {
+          // use block device
+          if (STAT(deviceName,&fileStat) != 0)
+          {
+            return ERRORX_(IO,errno,"%E",errno);
+          }
+          if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
+          {
+            return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
+          }
+        }
+        stringTokenizerDone(&stringTokenizer);
+      }
+      else
+      {
+        if (STAT(deviceName,&fileStat) != 0)
+        {
+          return ERRORX_(IO,errno,"%E",errno);
+        }
+        if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
+        {
+          return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
+        }
+      }
+    #else /* NDEBUG */
+      if (STAT(deviceName,&fileStat) != 0)
+      {
+        return ERRORX_(IO,errno,"%E",errno);
+      }
+      if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
+      {
+        return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
+      }
+    #endif /* not NDEBUG */
+
+    // init device info
+    deviceInfo->timeLastAccess  = fileStat.st_atime;
+    deviceInfo->timeModified    = fileStat.st_mtime;
+    deviceInfo->timeLastChanged = fileStat.st_ctime;
+    deviceInfo->userId          = fileStat.st_uid;
+    deviceInfo->groupId         = fileStat.st_gid;
+    deviceInfo->permission      = (DevicePermission)fileStat.st_mode;
+    #ifdef HAVE_MAJOR
+      deviceInfo->major         = major(fileStat.st_rdev);
+    #else
+      deviceInfo->major         = 0;
+    #endif
+    #ifdef HAVE_MINOR
+      deviceInfo->minor         = minor(fileStat.st_rdev);
+    #else
+      deviceInfo->minor         = 0;
+    #endif
+    deviceInfo->id              = (uint64)fileStat.st_ino;
+
+    // get device type
+    #ifndef NDEBUG
+      debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        CStringTokenizer stringTokenizer;
+        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+        const char *emulateDeviceName;
+        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+            && stringEquals(deviceName,emulateDeviceName)
+           )
+        {
+          // emulate block device
+          deviceInfo->type = DEVICE_TYPE_BLOCK;
+        }
+        else
+        {
+          // use block device
+          if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
+          else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
+        }
+        stringTokenizerDone(&stringTokenizer);
+      }
+      else
+      {
+        if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
+        else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
+      }
+    #else /* NDEBUG */
+      if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
+      else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
+    #endif /* not NDEBUG */
+
+    if (deviceInfo->type == DEVICE_TYPE_BLOCK)
+    {
+      // get block size, total size
+      #ifndef NDEBUG
+        const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+        if (debugEmulateBlockDevice != NULL)
+        {
+          CStringTokenizer stringTokenizer;
+          stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+          const char *emulateDeviceName,*emulateFileName;
+          if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+              && stringEquals(deviceName,emulateDeviceName)
+             )
+          {
+            // emulate block device
+            if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+            {
+              if      (STAT(emulateFileName,&fileStat) == 0)
+              {
+                deviceInfo->blockSize = 512;
+                deviceInfo->size      = fileStat.st_size;
+              }
+              else if (!sizesFlag)
+              {
+                deviceInfo->blockSize = 0;
+                deviceInfo->size      = 0LL;
+              }
+              else
+              {
+                return ERRORX_(IO,errno,"%E",errno);
+              }
+            }
+            else
+            {
+              if      (STAT(deviceName,&fileStat) == 0)
+              {
+                deviceInfo->blockSize = 512;
+                deviceInfo->size      = fileStat.st_size;
+              }
+              else if (!sizesFlag)
+              {
+                deviceInfo->blockSize = 0;
+                deviceInfo->size      = 0LL;
+              }
+              else
+              {
+                return ERRORX_(IO,errno,"%E",errno);
+              }
+            }
+          }
+          else
+          {
+            // use block device
+            int handle = open(deviceName,O_RDONLY);
+            if      (handle != -1)
+            {
+              #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+                int i;
+                if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
+              #endif
+              #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+                long l;
+                if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
+              #endif
+              close(handle);
+            }
+            else if (!sizesFlag)
+            {
+              deviceInfo->blockSize = 0;
+              deviceInfo->size      = 0LL;
+            }
+            else
+            {
+              return ERRORX_(IO,errno,"%E",errno);
+            }
+          }
+          stringTokenizerDone(&stringTokenizer);
+        }
+        else
+        {
+          int handle = open(deviceName,O_RDONLY);
+          if      (handle != -1)
+          {
+            #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+              int i;
+              if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
+            #endif
+            #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+              long l;
+              if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
+            #endif
+            close(handle);
+          }
+          else if (!sizesFlag)
+          {
+            deviceInfo->blockSize = 0;
+            deviceInfo->size      = 0LL;
+          }
+          else
+          {
+            return ERRORX_(IO,errno,"%E",errno);
+          }
+        }
+      #else /* NDEBUG */
+        int handle = open(deviceName,O_RDONLY);
+        if      (handle != -1)
+        {
+          #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+            int i;
+            if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
+          #endif
+          #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+            long l;
+            if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
+          #endif
+          close(handle);
+        }
+        else if (!sizesFlag)
+        {
+          deviceInfo->blockSize = 0;
+          deviceInfo->size      = 0LL;
+        }
+        else
+        {
+          return ERRORX_(IO,errno,"%E",errno);
+        }
+      #endif /* not NDEBUG */
+    }
+  #elif defined(PLATFORM_WINDOWS)
+    deviceInfo->type            = DEVICE_TYPE_BLOCK;
+//TODO: NYI
+    deviceInfo->timeLastAccess  = 0;
+    deviceInfo->timeModified    = 0;
+    deviceInfo->timeLastChanged = 0;
+    deviceInfo->userId          = 0;
+    deviceInfo->groupId         = 0;
+    deviceInfo->permission      = 0;
+    deviceInfo->major           = 0;
+    deviceInfo->minor           = 0;
+    deviceInfo->id              = 0;
+
+    ULARGE_INTEGER freeSpace,totalSpace,totalFreeSpace;
+    if      (GetDiskFreeSpaceEx(deviceName,&freeSpace,&totalSpace,&totalFreeSpace))
+    {
+      deviceInfo->blockSize = 0;
+      deviceInfo->size      = (uint64)totalSpace.QuadPart;
+    }
+    else if (!sizesFlag)
+    {
+      deviceInfo->blockSize = 0;
+      deviceInfo->size      = 0LL;
+    }
+    else
+    {
+      return ERRORX_(IO,errno,"%E",errno);
+    }
+  #endif /* PLATFORM_... */
+
+  // check if mounted
+  #if   defined(PLATFORM_LINUX)
+    FILE *mtab = setmntent("/etc/mtab","r");
+    if (mtab != NULL)
+    {
+      struct mntent mountEntry;
+      char          buffer[4096];
+      while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
+      {
+        if (stringEquals(deviceName,mountEntry.mnt_fsname))
+        {
+          deviceInfo->mounted = TRUE;
+          break;
+        }
+      }
+      endmntent(mtab);
+    }
+  #elif defined(PLATFORM_WINDOWS)
+// TODO: NYI
+    #ifndef NDEBUG
+UNUSED_VARIABLE(debugEmulateBlockDevice);
+UNUSED_VARIABLE(stringTokenizer);
+UNUSED_VARIABLE(emulateDeviceName);
+UNUSED_VARIABLE(emulateFileName);
+    #endif
+    deviceInfo->mounted = TRUE;
+  #endif /* PLATFORM_... */
+
+  return ERROR_NONE;
+}
+
 #if 0
 //TODO: remove?
 /***********************************************************************\
@@ -722,21 +1070,32 @@ Errors Device_openDeviceList(DeviceListHandle *deviceListHandle)
   assert(deviceListHandle != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    // open partition list file
-    deviceListHandle->file = fopen("/proc/partitions","r");
-    if (deviceListHandle->file == NULL)
-    {
-      return ERROR_(OPEN_FILE,errno);
-    }
-
-    // skip first line (header line)
-    if (fgets(deviceListHandle->line,sizeof(deviceListHandle->line),deviceListHandle->file) == NULL)
-    {
-      // ignore error
-    }
-
-    // no line read yet
-    deviceListHandle->readFlag = FALSE;
+    #ifdef HAVE_O_NOATIME
+      // open directory (try first with O_NOATIME)
+      int handle = open("/dev",O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
+      if (handle == -1)
+      {
+        handle = open("/dev",O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
+      }
+      if (handle != -1)
+      {
+        // create directory handle
+        deviceListHandle->dir = fdopendir(handle);
+      }
+      else
+      {
+        deviceListHandle->dir = NULL;
+      }
+    #else /* not HAVE_O_NOATIME */
+      // open directory
+      deviceListHandle->handle = open("/dev",O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
+      if (directoryListHandle->handle != -1)
+      {
+        // create directory handle
+        deviceListHandle->dir = fdopendir(directoryListHandle->handle);
+      }
+    #endif /* HAVE_O_NOATIME */
+    deviceListHandle->entry = NULL;
   #elif defined(PLATFORM_WINDOWS)
     deviceListHandle->logicalDrives = GetLogicalDrives();
     if (deviceListHandle->logicalDrives == 0)
@@ -754,9 +1113,9 @@ void Device_closeDeviceList(DeviceListHandle *deviceListHandle)
   assert(deviceListHandle != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    assert(deviceListHandle->file != NULL);
+    assert(deviceListHandle->dir != NULL);
 
-    fclose(deviceListHandle->file);
+    closedir(deviceListHandle->dir);
   #elif defined(PLATFORM_WINDOWS)
     UNUSED_VARIABLE(deviceListHandle);
   #endif /* PLATFORM_... */
@@ -767,61 +1126,31 @@ bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
   assert(deviceListHandle != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    #define PREFIX "/dev/"
-    #define BUFFER_SIZE 256-strlen(PREFIX)
-
-    assert(deviceListHandle->file != NULL);
+    assert(deviceListHandle->dir != NULL);
 
     // read entry iff not read
-    while (   !deviceListHandle->readFlag
-           && (fgets(deviceListHandle->line,sizeof(deviceListHandle->line),deviceListHandle->file) != NULL)
-          )
+    if (deviceListHandle->entry == NULL)
     {
-      // skip leading spaces
-      uint i = 0;
-      while ((deviceListHandle->line[i] != '\0') && isspace(deviceListHandle->line[i]))
-      {
-        i++;
-      }
-
-      // skip trailing spaces
-      uint j = i;
-      while (deviceListHandle->line[j] != '\0')
-      {
-        j++;
-      }
-      while ((j > i) && isspace(deviceListHandle->line[j-1]))
-      {
-        j--;
-      }
-      deviceListHandle->line[j] = '\0';
-
-      if (j > i)
-      {
-        // parse and get device name
-        char buffer[BUFFER_SIZE];
-        if (String_scanCString(&deviceListHandle->line[i],"%* %* %* %" STRINGIFY(BUFFER_SIZE) "s %*",buffer))
-        {
-          stringSet(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),PREFIX);
-          stringAppend(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),buffer);
-          struct stat fileStat;
-          if (stat(deviceListHandle->deviceName,&fileStat) == 0)
-          {
-            // mark entry available
-            deviceListHandle->readFlag = TRUE;
-          }
-        }
-      }
+      deviceListHandle->entry = readdir(deviceListHandle->dir);
     }
 
-    return !deviceListHandle->readFlag;
+    // skip non-block devices
+    while (   (deviceListHandle->entry != NULL)
+           && (deviceListHandle->entry->d_type != DT_BLK)
+          )
+    {
+      deviceListHandle->entry = readdir(deviceListHandle->dir);
+    }
+
+    return deviceListHandle->entry == NULL;
   #elif defined(PLATFORM_WINDOWS)
     return ((deviceListHandle->logicalDrives >> deviceListHandle->i) <= 0);
   #endif /* PLATFORM_... */
 }
 
 Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
-                             String           deviceName
+                             String           deviceName,
+                             DeviceInfo       *deviceInfo
                             )
 {
   #define DEVICE_PREFIX "/dev/"
@@ -832,58 +1161,40 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
   String_clear(deviceName);
 
   #if   defined(PLATFORM_LINUX)
-    assert(deviceListHandle->file != NULL);
+    assert(deviceListHandle->dir != NULL);
 
     // read entry iff not read
-    while (   !deviceListHandle->readFlag
-           && (fgets(deviceListHandle->line,sizeof(deviceListHandle->line),deviceListHandle->file) != NULL)
+    if (deviceListHandle->entry == NULL)
+    {
+      deviceListHandle->entry = readdir(deviceListHandle->dir);
+    }
+
+    // skip non-block devices
+    while (   (deviceListHandle->entry != NULL)
+           && (deviceListHandle->entry->d_type != DT_BLK)
           )
     {
-      // skip leading spaces
-      uint i = 0;
-      while ((deviceListHandle->line[i] != '\0') && isspace(deviceListHandle->line[i]))
-      {
-        i++;
-      }
-
-      // skip trailing spaces
-      uint j = i;
-      while (deviceListHandle->line[j] != '\0')
-      {
-        j++;
-      }
-      while ((j > i) && isspace(deviceListHandle->line[j-1]))
-      {
-        j--;
-      }
-      deviceListHandle->line[j] = '\0';
-
-      // if line is not empty set read flag
-      if (j > i)
-      {
-        // parse and get device name
-        char buffer[256-stringLength(DEVICE_PREFIX)];
-        if (String_scanCString(&deviceListHandle->line[i],"%* %* %* %256s %*",buffer))
-        {
-          stringSet(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),"/dev/");
-          stringAppend(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),buffer);
-          struct stat fileStat;
-          if (stat(deviceListHandle->deviceName,&fileStat) == 0)
-          {
-            // mark entry available
-            deviceListHandle->readFlag = TRUE;
-          }
-        }
-      }
+      deviceListHandle->entry = readdir(deviceListHandle->dir);
     }
-
-    if (deviceListHandle->readFlag)
+    if (deviceListHandle->entry == NULL)
     {
-      String_setCString(deviceName,deviceListHandle->deviceName);
-
-      // mark entry read
-      deviceListHandle->readFlag = FALSE;
+      return ERROR_DEVICE_NOT_FOUND;
     }
+
+    // get entry name
+    String_setCString(deviceName,"/dev/");
+    File_appendFileNameCString(deviceName,deviceListHandle->entry->d_name);
+
+    // try to get device info
+    if (deviceInfo != NULL)
+    {
+      (void)getDeviceInfo(deviceInfo,String_cString(deviceName),FALSE);
+    }
+
+    // mark entry read
+    deviceListHandle->entry = NULL;
+
+    return ERROR_NONE;
   #elif defined(PLATFORM_WINDOWS)
     while ((deviceListHandle->logicalDrives >> deviceListHandle->i) > 0)
     {
@@ -963,7 +1274,7 @@ Errors Device_getInfo(DeviceInfo  *deviceInfo,
   assert(deviceInfo != NULL);
   assert(deviceName != NULL);
 
-  return Device_getInfoCString(deviceInfo,String_cString(deviceName),sizesFlag);
+  return getDeviceInfo(deviceInfo,String_cString(deviceName),sizesFlag);
 }
 
 Errors Device_getInfoCString(DeviceInfo *deviceInfo,
@@ -974,322 +1285,7 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
   assert(deviceInfo != NULL);
   assert(deviceName != NULL);
 
-  // initialize variables
-  deviceInfo->type        = DEVICE_TYPE_UNKNOWN;
-  deviceInfo->size        = 0LL;
-  deviceInfo->blockSize   = 0L;
-//TODO: NYI
-//  deviceInfo->freeBlocks  = 0LL;
-//  deviceInfo->totalBlocks = 0LL;
-  deviceInfo->mounted     = FALSE;
-
-  #if   defined(PLATFORM_LINUX)
-    // check if character or block device
-    FileStat fileStat;
-    #ifndef NDEBUG
-      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-    #endif
-    #ifndef NDEBUG
-      debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-      if (debugEmulateBlockDevice != NULL)
-      {
-        CStringTokenizer stringTokenizer;
-        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-        const char *emulateDeviceName,*emulateFileName;
-        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-            && stringEquals(deviceName,emulateDeviceName))
-        {
-          // emulate block device
-          if (stringGetNextToken(&stringTokenizer,&emulateFileName))
-          {
-            if (STAT(emulateFileName,&fileStat) != 0)
-            {
-              return ERRORX_(IO,errno,"%E",errno);
-            }
-          }
-          else
-          {
-            if (STAT(emulateDeviceName,&fileStat) != 0)
-            {
-              return ERRORX_(IO,errno,"%E",errno);
-            }
-          }
-        }
-        else
-        {
-          // use block device
-          if (STAT(deviceName,&fileStat) != 0)
-          {
-            return ERRORX_(IO,errno,"%E",errno);
-          }
-          if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
-          {
-            return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
-          }
-        }
-        stringTokenizerDone(&stringTokenizer);
-      }
-      else
-      {
-        if (STAT(deviceName,&fileStat) != 0)
-        {
-          return ERRORX_(IO,errno,"%E",errno);
-        }
-        if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
-        {
-          return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
-        }
-      }
-    #else /* NDEBUG */
-      if (STAT(deviceName,&fileStat) != 0)
-      {
-        return ERRORX_(IO,errno,"%E",errno);
-      }
-      if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
-      {
-        return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
-      }
-    #endif /* not NDEBUG */
-
-    // init device info
-    deviceInfo->timeLastAccess  = fileStat.st_atime;
-    deviceInfo->timeModified    = fileStat.st_mtime;
-    deviceInfo->timeLastChanged = fileStat.st_ctime;
-    deviceInfo->userId          = fileStat.st_uid;
-    deviceInfo->groupId         = fileStat.st_gid;
-    deviceInfo->permission      = (DevicePermission)fileStat.st_mode;
-    #ifdef HAVE_MAJOR
-      deviceInfo->major         = major(fileStat.st_rdev);
-    #else
-      deviceInfo->major         = 0;
-    #endif
-    #ifdef HAVE_MINOR
-      deviceInfo->minor         = minor(fileStat.st_rdev);
-    #else
-      deviceInfo->minor         = 0;
-    #endif
-    deviceInfo->id              = (uint64)fileStat.st_ino;
-
-    // get device type
-    #ifndef NDEBUG
-      debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-      if (debugEmulateBlockDevice != NULL)
-      {
-        CStringTokenizer stringTokenizer;
-        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-        const char *emulateDeviceName;
-        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-            && stringEquals(deviceName,emulateDeviceName)
-           )
-        {
-          // emulate block device
-          deviceInfo->type = DEVICE_TYPE_BLOCK;
-        }
-        else
-        {
-          // use block device
-          if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
-          else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
-        }
-        stringTokenizerDone(&stringTokenizer);
-      }
-      else
-      {
-        if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
-        else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
-      }
-    #else /* NDEBUG */
-      if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
-      else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
-    #endif /* not NDEBUG */
-
-    if (deviceInfo->type == DEVICE_TYPE_BLOCK)
-    {
-      // get block size, total size
-      #ifndef NDEBUG
-        const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-        if (debugEmulateBlockDevice != NULL)
-        {
-          CStringTokenizer stringTokenizer;
-          stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-          const char *emulateDeviceName,*emulateFileName;
-          if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-              && stringEquals(deviceName,emulateDeviceName)
-             )
-          {
-            // emulate block device
-            if (stringGetNextToken(&stringTokenizer,&emulateFileName))
-            {
-              if      (STAT(emulateFileName,&fileStat) == 0)
-              {
-                deviceInfo->blockSize = 512;
-                deviceInfo->size      = fileStat.st_size;
-              }
-              else if (!sizesFlag)
-              {
-                deviceInfo->blockSize = 0;
-                deviceInfo->size      = 0LL;
-              }
-              else
-              {
-                return ERRORX_(IO,errno,"%E",errno);
-              }
-            }
-            else
-            {
-              if      (STAT(deviceName,&fileStat) == 0)
-              {
-                deviceInfo->blockSize = 512;
-                deviceInfo->size      = fileStat.st_size;
-              }
-              else if (!sizesFlag)
-              {
-                deviceInfo->blockSize = 0;
-                deviceInfo->size      = 0LL;
-              }
-              else
-              {
-                return ERRORX_(IO,errno,"%E",errno);
-              }
-            }
-          }
-          else
-          {
-            // use block device
-            int handle = open(deviceName,O_RDONLY);
-            if      (handle != -1)
-            {
-              #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
-                int i;
-                if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
-              #endif
-              #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
-                long l;
-                if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
-              #endif
-              close(handle);
-            }
-            else if (!sizesFlag)
-            {
-              deviceInfo->blockSize = 0;
-              deviceInfo->size      = 0LL;
-            }
-            else
-            {
-              return ERRORX_(IO,errno,"%E",errno);
-            }
-          }
-          stringTokenizerDone(&stringTokenizer);
-        }
-        else
-        {
-          int handle = open(deviceName,O_RDONLY);
-          if      (handle != -1)
-          {
-            #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
-              int i;
-              if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
-            #endif
-            #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
-              long l;
-              if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
-            #endif
-            close(handle);
-          }
-          else if (!sizesFlag)
-          {
-            deviceInfo->blockSize = 0;
-            deviceInfo->size      = 0LL;
-          }
-          else
-          {
-            return ERRORX_(IO,errno,"%E",errno);
-          }
-        }
-      #else /* NDEBUG */
-        int handle = open(deviceName,O_RDONLY);
-        if      (handle != -1)
-        {
-          #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
-            int i;
-            if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
-          #endif
-          #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
-            long l;
-            if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
-          #endif
-          close(handle);
-        }
-        else if (!sizesFlag)
-        {
-          deviceInfo->blockSize = 0;
-          deviceInfo->size      = 0LL;
-        }
-        else
-        {
-          return ERRORX_(IO,errno,"%E",errno);
-        }
-      #endif /* not NDEBUG */
-    }
-  #elif defined(PLATFORM_WINDOWS)
-    deviceInfo->type            = DEVICE_TYPE_BLOCK;
-//TODO: NYI
-    deviceInfo->timeLastAccess  = 0;
-    deviceInfo->timeModified    = 0;
-    deviceInfo->timeLastChanged = 0;
-    deviceInfo->userId          = 0;
-    deviceInfo->groupId         = 0;
-    deviceInfo->permission      = 0;
-    deviceInfo->major           = 0;
-    deviceInfo->minor           = 0;
-    deviceInfo->id              = 0;
-
-    ULARGE_INTEGER freeSpace,totalSpace,totalFreeSpace;
-    if      (GetDiskFreeSpaceEx(deviceName,&freeSpace,&totalSpace,&totalFreeSpace))
-    {
-      deviceInfo->blockSize = 0;
-      deviceInfo->size      = (uint64)totalSpace.QuadPart;
-    }
-    else if (!sizesFlag)
-    {
-      deviceInfo->blockSize = 0;
-      deviceInfo->size      = 0LL;
-    }
-    else
-    {
-      return ERRORX_(IO,errno,"%E",errno);
-    }
-  #endif /* PLATFORM_... */
-
-  // check if mounted
-  #if   defined(PLATFORM_LINUX)
-    FILE *mtab = setmntent("/etc/mtab","r");
-    if (mtab != NULL)
-    {
-      struct mntent mountEntry;
-      char          buffer[4096];
-      while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
-      {
-        if (stringEquals(deviceName,mountEntry.mnt_fsname))
-        {
-          deviceInfo->mounted = TRUE;
-          break;
-        }
-      }
-      endmntent(mtab);
-    }
-  #elif defined(PLATFORM_WINDOWS)
-// TODO: NYI
-    #ifndef NDEBUG
-UNUSED_VARIABLE(debugEmulateBlockDevice);
-UNUSED_VARIABLE(stringTokenizer);
-UNUSED_VARIABLE(emulateDeviceName);
-UNUSED_VARIABLE(emulateFileName);
-    #endif
-    deviceInfo->mounted = TRUE;
-  #endif /* PLATFORM_... */
-
-  return ERROR_NONE;
+  return getDeviceInfo(deviceInfo,deviceName,sizesFlag);
 }
 
 #ifdef __cplusplus
