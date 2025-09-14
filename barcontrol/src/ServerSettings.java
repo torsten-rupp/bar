@@ -2161,7 +2161,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC pre-command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to execute before creating error correction codes."),
+                                             BARControl.tr("Command to execute before adding error correction codes."),
                                              cdECCPreCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2173,7 +2173,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC post-command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to execute after creating error correction codes."),
+                                             BARControl.tr("Command to execute after adding error correction codes."),
                                              cdECCPreCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2185,7 +2185,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to create error correction codes."),
+                                             BARControl.tr("Command to add error correction codes."),
                                              cdECCCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2347,7 +2347,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC pre-command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to execute before creating error correction codes."),
+                                             BARControl.tr("Command to execute before adding error correction codes."),
                                              dvdECCPreCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2359,7 +2359,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC post-command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to execute after creating error correction codes."),
+                                             BARControl.tr("Command to execute after adding error correction codes."),
                                              dvdECCPreCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2371,7 +2371,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to create error correction codes."),
+                                             BARControl.tr("Command to add error correction codes."),
                                              dvdECCCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2534,7 +2534,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC pre-command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to execute before creating error correction codes."),
+                                             BARControl.tr("Command to execute before adding error correction codes."),
                                              bdECCPreCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2546,7 +2546,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC post-command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to execute after creating error correction codes."),
+                                             BARControl.tr("Command to execute after adding error correction codes."),
                                              bdECCPreCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2558,7 +2558,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to create error correction codes."),
+                                             BARControl.tr("Command to add error correction codes."),
                                              bdECCCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2721,7 +2721,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC pre-command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to execute before creating error correction codes."),
+                                             BARControl.tr("Command to execute before adding error correction codes."),
                                              deviceECCPreCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2733,7 +2733,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC post-command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to execute after creating error correction codes."),
+                                             BARControl.tr("Command to execute after adding error correction codes."),
                                              deviceECCPreCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },
@@ -2745,7 +2745,7 @@ public class ServerSettings
         label = Widgets.newLabel(subComposite,BARControl.tr("ECC command")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
-                                             BARControl.tr("Command to create error correction codes."),
+                                             BARControl.tr("Command to add error correction codes."),
                                              deviceECCCommand,
                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                          },

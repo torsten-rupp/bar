@@ -3032,11 +3032,11 @@ public class BARControl
   private Menu             serverMenu;
   private MenuItem         serverMenuLastSelectedItem = null;
   private MenuItem         masterMenuItem;
-  private TabFolder        tabFolder;
+  private TabFolder        widgetTabFolder;
   private Shell            widgetTabFolderToolTip = null;
-  private TabStatus        tabStatus;
-  private TabJobs          tabJobs;
-  private TabRestore       tabRestore;
+  private TabStatus        widgetTabStatus;
+  private TabJobs          widgetTabJobs;
+  private TabRestore       widgetTabRestore;
   private boolean          quitFlag = false;
 
   // ----------------------- native functions ---------------------------
@@ -3683,13 +3683,24 @@ if (false) {
            );
 
     // show warning if no TLS connection established
-    if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+    if ((loginData.tlsMode == BARServer.TLSModes.TRY) && (!BARServer.isTLSConnection() || !BARServer.isMatchCommonName()))
     {
+      String text;
+      if      (BARServer.isExpiredCertificate())
+      {
+        text = BARControl.tr("Established a none-TLS connection only. Certificate is expired.\nTransmitted data may be vulnerable!");
+      }
+      else if (!BARServer.isMatchCommonName())
+      {
+        text = BARControl.tr("Name in certificate do not match. TLS connection may be vulnerable!");
+      }
+      else
+      {
+        text = BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!");
+      }
       Dialogs.warning(new Shell(),
                       Dialogs.booleanFieldUpdater(Settings.class,"showNoneTLSWarning"),
-                      BARServer.isExpiredCertificate()
-                        ? BARControl.tr("Established a none-TLS connection only. Certificate is expired.\nTransmitted data may be vulnerable!")
-                        : BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!")
+                      text
                      );
     }
   }
@@ -4113,9 +4124,9 @@ if (false) {
   private void createTabs()
   {
     // create tabs
-    tabFolder = Widgets.newTabFolder(shell);
-    Widgets.layout(tabFolder,0,0,TableLayoutData.NSWE);
-    tabFolder.addPaintListener(new PaintListener()
+    widgetTabFolder = Widgets.newTabFolder(shell);
+    Widgets.layout(widgetTabFolder,0,0,TableLayoutData.NSWE);
+    widgetTabFolder.addPaintListener(new PaintListener()
     {
       @Override
       public void paintControl(PaintEvent paintEvent)
@@ -4134,7 +4145,7 @@ if (false) {
         }
       }
     });
-    tabFolder.addMouseTrackListener(new MouseTrackListener()
+    widgetTabFolder.addMouseTrackListener(new MouseTrackListener()
     {
       @Override
       public void mouseEnter(MouseEvent mouseEvent)
@@ -4163,7 +4174,6 @@ if (false) {
           bounds.y = bounds.height/2-2;
           if (bounds.contains(mouseEvent.x,mouseEvent.y))
           {
-            // show if mouse is in the right side
             Label label;
 
             final Color COLOR_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
@@ -4173,7 +4183,7 @@ if (false) {
             widgetTabFolderToolTip.setBackground(COLOR_BACKGROUND);
             widgetTabFolderToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
             Widgets.layout(widgetTabFolderToolTip,0,0,TableLayoutData.NSWE);
-            label = Widgets.newLabel(widgetTabFolderToolTip,BARControl.tr("Show if connection to BAR server is secure/insecure."));
+            label = Widgets.newLabel(widgetTabFolderToolTip,BARControl.tr("Indicate if connection to BAR server is verified as secure (lock icon) or may be insecure (broken lock icon)."));
             label.setForeground(COLOR_FOREGROUND);
             label.setBackground(COLOR_BACKGROUND);
             Widgets.layout(label,0,0,TableLayoutData.W);
@@ -4188,17 +4198,17 @@ if (false) {
       }
     });
 
-    tabStatus  = new TabStatus (tabFolder,SWT.F1);
-    tabJobs    = new TabJobs   (tabFolder,SWT.F2);
-    tabRestore = new TabRestore(tabFolder,SWT.F3);
-    tabStatus.setTabJobs(tabJobs);
-    tabJobs.setTabStatus(tabStatus);
-    tabRestore.setTabStatus(tabStatus);
-    tabRestore.setTabJobs(tabJobs);
+    widgetTabStatus  = new TabStatus (widgetTabFolder,SWT.F1);
+    widgetTabJobs    = new TabJobs   (widgetTabFolder,SWT.F2);
+    widgetTabRestore = new TabRestore(widgetTabFolder,SWT.F3);
+    widgetTabStatus.setTabJobs(widgetTabJobs);
+    widgetTabJobs.setTabStatus(widgetTabStatus);
+    widgetTabRestore.setTabStatus(widgetTabStatus);
+    widgetTabRestore.setTabJobs(widgetTabJobs);
 
     // start auto update
-    tabStatus.startUpdate();
-    tabJobs.startUpdate();
+    widgetTabStatus.startUpdate();
+    widgetTabJobs.startUpdate();
 
     // add tab listener
     display.addFilter(SWT.KeyDown,new Listener()
@@ -4208,15 +4218,15 @@ if (false) {
         switch (event.keyCode)
         {
           case SWT.F1:
-            Widgets.showTab(tabFolder,tabStatus.widgetTab);
+            Widgets.showTab(widgetTabFolder,widgetTabStatus.widgetTab);
             event.doit = false;
             break;
           case SWT.F2:
-            Widgets.showTab(tabFolder,tabJobs.widgetTab);
+            Widgets.showTab(widgetTabFolder,widgetTabStatus.widgetTab);
             event.doit = false;
             break;
           case SWT.F3:
-            Widgets.showTab(tabFolder,tabRestore.widgetTab);
+            Widgets.showTab(widgetTabFolder,widgetTabRestore.widgetTab);
             event.doit = false;
             break;
           default:
@@ -4306,10 +4316,10 @@ if (false) {
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Widgets.notify(tabStatus.widgetButtonStart);
+          Widgets.notify(widgetTabStatus.widgetButtonStart);
         }
       });
-      tabStatus.addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+      widgetTabStatus.addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
       {
         @Override
         public void handle(Widget widget, JobData jobData)
@@ -4332,10 +4342,10 @@ if (false) {
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Widgets.notify(tabStatus.widgetButtonAbort);
+          Widgets.notify(widgetTabStatus.widgetButtonAbort);
         }
       });
-      tabStatus.addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+      widgetTabStatus.addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
       {
         @Override
         public void handle(Widget widget, JobData jobData)
@@ -4360,7 +4370,7 @@ if (false) {
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            tabStatus.jobPause(10*60);
+            widgetTabStatus.jobPause(10*60);
           }
         });
 
@@ -4374,7 +4384,7 @@ if (false) {
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            tabStatus.jobPause(60*60);
+            widgetTabStatus.jobPause(60*60);
           }
         });
 
@@ -4388,7 +4398,7 @@ if (false) {
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            tabStatus.jobPause(120*60);
+            widgetTabStatus.jobPause(120*60);
           }
         });
 
@@ -4406,7 +4416,7 @@ if (false) {
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             Settings.pauseCreateFlag = widget.getSelection();
-            tabStatus.jobPause(60*60);
+            widgetTabStatus.jobPause(60*60);
           }
         });
 
@@ -4422,7 +4432,7 @@ if (false) {
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             Settings.pauseStorageFlag = widget.getSelection();
-            tabStatus.jobPause(60*60);
+            widgetTabStatus.jobPause(60*60);
           }
         });
 
@@ -4438,7 +4448,7 @@ if (false) {
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             Settings.pauseRestoreFlag = widget.getSelection();
-            tabStatus.jobPause(60*60);
+            widgetTabStatus.jobPause(60*60);
           }
         });
 
@@ -4483,7 +4493,7 @@ if (false) {
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Widgets.notify(tabStatus.widgetButtonSuspendContinue);
+          Widgets.notify(widgetTabStatus.widgetButtonSuspendContinue);
         }
       });
 
@@ -4751,7 +4761,7 @@ if (false) {
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Widgets.notify(tabStatus.widgetButtonQuit);
+          Widgets.notify(widgetTabStatus.widgetButtonQuit);
         }
       });
     }
@@ -5026,16 +5036,16 @@ if (false) {
     if (connectedFlag)
     {
       // SWT bug/limitation work-around: current tab is not refreshed, force refresh by switching tabs
-      int currentTabItemIndex = tabFolder.getSelectionIndex();
+      int currentTabItemIndex = widgetTabFolder.getSelectionIndex();
       if (currentTabItemIndex == 0)
       {
-        tabFolder.setSelection(1);
+        widgetTabFolder.setSelection(1);
       }
       else
       {
-        tabFolder.setSelection(0);
+        widgetTabFolder.setSelection(0);
       }
-      tabFolder.setSelection(currentTabItemIndex);
+      widgetTabFolder.setSelection(currentTabItemIndex);
 
       // notifiy new server
       Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
@@ -5095,7 +5105,7 @@ if (false) {
     // pre-select job
     if (Settings.selectedJobName != null)
     {
-      JobData jobData = tabStatus.getJobByName(Settings.selectedJobName);
+      JobData jobData = widgetTabStatus.getJobByName(Settings.selectedJobName);
       if (jobData != null)
       {
         Widgets.notify(shell,BARControl.USER_EVENT_SELECT_JOB,jobData.uuid);
@@ -6081,13 +6091,24 @@ if (false) {
     if (connectedFlag)
     {
       // show warning if no TLS connection established
-      if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+      if ((loginData.tlsMode == BARServer.TLSModes.TRY) && (!BARServer.isTLSConnection() || !BARServer.isMatchCommonName()))
       {
+        String text;
+        if      (BARServer.isExpiredCertificate())
+        {
+          text = BARControl.tr("Established a none-TLS connection only. Certificate is expired.\nTransmitted data may be vulnerable!");
+        }
+        else if (!BARServer.isMatchCommonName())
+        {
+          text = BARControl.tr("Name in certificate do not match. TLS connection may be vulnerable!");
+        }
+        else
+        {
+          text = BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!");
+        }
         Dialogs.warning(new Shell(),
                         Dialogs.booleanFieldUpdater(Settings.class,"showNoneTLSWarning"),
-                        BARServer.isExpiredCertificate()
-                          ? BARControl.tr("Established a none-TLS connection only. Certificate is expired.\nTransmitted data may be vulnerable!")
-                          : BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!")
+                        text
                        );
       }
 
@@ -6209,12 +6230,22 @@ if (false) {
         }
 
         // show warning if no TLS connection established
-        if ((loginData.tlsMode == BARServer.TLSModes.TRY) && !BARServer.isTLSConnection())
+        if ((loginData.tlsMode == BARServer.TLSModes.TRY) && (!BARServer.isTLSConnection() || !BARServer.isMatchCommonName()))
         {
-          printWarning(BARServer.isExpiredCertificate()
-                         ? BARControl.tr("Established a none-TLS connection only. Certificate is expired. Transmitted data may be vulnerable!")
-                         : BARControl.tr("Established a none-TLS connection only. Transmitted data may be vulnerable!")
-                      );
+          String text;
+          if      (BARServer.isExpiredCertificate())
+          {
+            text = BARControl.tr("Established a none-TLS connection only. Certificate is expired.\nTransmitted data may be vulnerable!");
+          }
+          else if (!BARServer.isMatchCommonName())
+          {
+            text = BARControl.tr("Name in certificate do not match. TLS connection may be vulnerable!");
+          }
+          else
+          {
+            text = BARControl.tr("Established a none-TLS connection only.\nTransmitted data may be vulnerable!");
+          }
+          printWarning(text);
         }
 
         // execute commands

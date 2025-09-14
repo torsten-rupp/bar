@@ -65,6 +65,8 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NullCipher;
 
+import javax.naming.ldap.LdapName;
+
 //import javax.net.ssl.HandshakeCompletedListener;
 //import javax.net.ssl.HandshakeCompletedEvent;
 import javax.net.ssl.KeyManagerFactory;
@@ -72,15 +74,16 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
-//import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
-import javax.security.auth.x500.X500Principal;
+//import javax.security.auth.x500.X500Principal;
 
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -1652,8 +1655,9 @@ public class BARServer
 
   private static X509Certificate             serverCertificateChain[] = null;
   private static Socket                      socket = null;
-  private static boolean                     insecureTLS = false;
   private static boolean                     expiredCertificate = false;
+  private static boolean                     matchCommonName = false;
+  private static boolean                     insecureTLS = false;
   private static BufferedWriter              output;
   private static BufferedReader              input;
   private static ReadThread                  readThread;
@@ -1682,7 +1686,7 @@ public class BARServer
    * @param caFileName server CA file name
    * @param keystoreFileName Java key store file name (JKS only)
    * @param tlsMode TLS mode; see BARServer.TLSModes
-   * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
+   * @param allowInsecureTLS true to allow insecure TLS connections (no certificates check)
    * @param password server password
    */
   public static void connect(Display            display,
@@ -1692,7 +1696,7 @@ public class BARServer
                              String             caFileName,
                              String             keystoreFileName,
                              BARServer.TLSModes tlsMode,
-                             boolean            insecureTLS,
+                             boolean            allowInsecureTLS,
                              String             password
                             )
     throws ConnectionError
@@ -1720,7 +1724,7 @@ public class BARServer
     assert name != null;
     assert (port != 0) || (tlsPort != 0);
 
-    // get all possible certificate/key file names
+    // get all possible certificate authority/key file names
     KeyData[] keyData_ = new KeyData[1+4];
     keyData_[0] = new KeyData(caFileName,
                               keystoreFileName
@@ -1762,7 +1766,7 @@ public class BARServer
                                                                       keystoreFile.exists() && keystoreFile.isFile() && keystoreFile.canRead()
                                                                         ? keystoreFile
                                                                         : null,
-                                                                      insecureTLS,
+                                                                      allowInsecureTLS,
                                                                       ""
                                                                      );
 
@@ -1970,15 +1974,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                                                       keystoreFile.exists() && keystoreFile.isFile() && keystoreFile.canRead()
                                                                         ? keystoreFile
                                                                         : null,
-                                                                      insecureTLS,
+                                                                      allowInsecureTLS,
                                                                       ""
                                                                      );
 
               // create TLS (SSL) socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
-// TODO:
-//              sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
-//              sslSocket.setTcpNoDelay(true);
               sslHandshake(display,sslSocket,SOCKET_READ_TIMEOUT);
 
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
@@ -2027,6 +2028,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (SSLHandshakeException exception)
             {
+Dprintf.dprintf("_");
               if (connectionError == null)
               {
                 if (expiredCertificate)
@@ -2149,9 +2151,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // create TLS socket on plain socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(plainSocket,name,tlsPort,false);
-// TODO:
-//              sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
-//              sslSocket.setTcpNoDelay(true);
               sslHandshake(display,sslSocket,SOCKET_READ_TIMEOUT);
 
               input  = new BufferedReader(new InputStreamReader(sslSocket.getInputStream(),"UTF-8"));
@@ -2206,6 +2205,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (SSLHandshakeException exception)
             {
+Dprintf.dprintf("_");
               if (connectionError == null)
               {
                 if (expiredCertificate)
@@ -2359,6 +2359,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (SSLHandshakeException exception)
             {
+Dprintf.dprintf("_");
               if (connectionError == null)
               {
                 if (expiredCertificate)
@@ -2433,6 +2434,47 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
           }
         }
+      }
+    }
+
+    if (socket != null)
+    {
+      // check common name (CN) if SSL certificate
+      SSLSession session = ((SSLSocket)socket).getSession();
+      try
+      {
+        for (Certificate certicate : session.getPeerCertificates())
+        {
+          if (certicate instanceof X509Certificate)
+          {
+            X509Certificate x509Certicate = (X509Certificate)certicate;
+            String distinguishedName = x509Certicate.getSubjectX500Principal().getName();
+
+            try
+            {
+              LdapName ldapName = new LdapName(distinguishedName);
+              for (Rdn rdn : ldapName.getRdns())
+              {
+                if (rdn.getType().equalsIgnoreCase("CN"))
+                {
+                  if (rdn.getValue().toString().equals(name)) matchCommonName = true;
+                }
+              }
+            }
+            catch (Throwable throwable)
+            {
+              // ignore all errors
+            }
+          }
+        }
+      }
+      catch (SSLPeerUnverifiedException exception)
+      {
+        // ignore all errors
+      }
+      if (!matchCommonName)
+      {
+        insecureTLS = true;
       }
     }
 
@@ -2575,13 +2617,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
 
       // setup new connection
-      BARServer.display     = display;
-      BARServer.name        = name;
-      BARServer.port        = socket.getPort();
-      BARServer.socket      = socket;
-      BARServer.insecureTLS = insecureTLS;
-      BARServer.input       = input;
-      BARServer.output      = output;
+      BARServer.display = display;
+      BARServer.name    = name;
+      BARServer.port    = socket.getPort();
+      BARServer.socket  = socket;
+      BARServer.input   = input;
+      BARServer.output  = output;
     }
 
     // start read thread, command thread
@@ -2598,7 +2639,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param caFileName server CA file name
    * @param keystoreFileName Java keystore file name (JKS only)
    * @param tlsMode TLS mode; see BARServer.TLSModes
-   * @param insecureTLS TRUE to accept insecure TLS connections (no certificates check)
+   * @param allowInsecureTLS true to allow insecure TLS connections (no certificates check)
    * @param password server password
    */
   public static void connect(String             name,
@@ -2607,7 +2648,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                              String             caFileName,
                              String             keystoreFileName,
                              BARServer.TLSModes tlsMode,
-                             boolean            insecureTLS,
+                             boolean            allowInsecureTLS,
                              String             password
                             )
   {
@@ -2618,7 +2659,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             caFileName,
             keystoreFileName,
             tlsMode,
-            insecureTLS,
+            allowInsecureTLS,
             password
            );
   }
@@ -2692,20 +2733,28 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     return (socket instanceof SSLSocket) || Settings.debugFakeTLSFlag;
   }
 
-  /** check if insecure TLS connection
-   * @return true iff insecure TLS connection
-   */
-  public static boolean isInsecureTLSConnection()
-  {
-    return (socket instanceof SSLSocket) && insecureTLS;
-  }
-
   /** check if expired certificate
    * @return true iff some certicate is expired
    */
   public static boolean isExpiredCertificate()
   {
     return expiredCertificate;
+  }
+
+  /** check if common name in certificate match
+   * @return true iff common name match
+   */
+  public static boolean isMatchCommonName()
+  {
+    return (socket instanceof SSLSocket) && matchCommonName;
+  }
+
+  /** check if insecure TLS connection
+   * @return true iff insecure TLS connection
+   */
+  public static boolean isInsecureTLSConnection()
+  {
+    return (socket instanceof SSLSocket) && (!matchCommonName || insecureTLS);
   }
 
   /** check if master-mode
@@ -4952,13 +5001,13 @@ throw new Error("NYI");
    * original from: https://gist.github.com/rohanag12/07ab7eb22556244e9698
    * @param certificateAuthorityFile certificate authority PEM file
    * @param keystoreFile Java key store file (JKS only) or null
-   * @param insecureTLS  TRUE to accept insecure TLS connections (no certificates check)
+   * @param allowInsecureTLS true to allow insecure TLS connections (no certificates check)
    * @param password password or null
    * @return socket factory
    */
   private static SSLSocketFactory getSSLSocketFactory(File          certificateAuthorityFile,
                                                       File          keystoreFile,
-                                                      final boolean insecureTLS,
+                                                      final boolean allowInsecureTLS,
                                                       String        password
                                                      )
     throws KeyManagementException,NoSuchAlgorithmException,KeyStoreException,UnrecoverableKeyException,IOException,CertificateException
@@ -5043,7 +5092,7 @@ throw new Error("NYI");
       @Override
       public X509Certificate[] getAcceptedIssuers()
       {
-        if (!insecureTLS)
+        if (!allowInsecureTLS)
         {
           return oldX509TrustManager[0].getAcceptedIssuers();
         }
@@ -5057,7 +5106,7 @@ throw new Error("NYI");
       public void checkClientTrusted(X509Certificate[] certificateChain, String authType)
         throws CertificateException
       {
-        if (!insecureTLS)
+        if (!allowInsecureTLS)
         {
           oldX509TrustManager[0].checkClientTrusted(certificateChain,authType);
         }
@@ -5070,7 +5119,7 @@ throw new Error("NYI");
 //Dprintf.dprintf("certificateChain=%d",certificateChain.length);
 //for (int i = 0; i < certificateChain.length; i++) Dprintf.dprintf("certificateChain[%d]=%s",i,certificateChain[i]);
         serverCertificateChain = certificateChain;
-        if (!insecureTLS)
+        if (!allowInsecureTLS)
         {
           oldX509TrustManager[0].checkServerTrusted(certificateChain,authType);
         }
@@ -5368,6 +5417,14 @@ throw new Error("NYI");
 
     sslSocket.setSoTimeout(timeout);
     sslSocket.setTcpNoDelay(true);
+
+/*
+    // Note: this would enable endpoint identification to force CN/SAN check like https do
+    SSLParameters sslParameters = sslSocket.getSSLParameters();
+    sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+    sslSocket.setSSLParameters(sslParameters);
+/**/
+
     Thread handshakeThread = new Thread(new Runnable()
     {
       public void run()

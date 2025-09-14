@@ -3,7 +3,6 @@ ToDo
 - check if file date/permission/owner/group is correct
 - internal pipeling of commands for e. g. repacking, remove/add encryption
 - support ssh-agent (extend libssh2?)
-- ssl server: check common name?
 - improve password quality checker
 - Windows port
 - re-read configuration when modified
@@ -154,7 +153,6 @@ rest time
 - support continuous jobs for slave
 - assign-to progress update
 - test+compare in job dialog
-- library unistring
 - option to skip missed jobs
 - verify signatures+list archive does not work with webdav
 - continous jobs for slaves
