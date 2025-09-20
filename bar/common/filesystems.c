@@ -218,7 +218,7 @@ FileSystemTypes FileSystem_getType(const char *deviceName)
 {
   assert(deviceName != NULL);
 
-  FileSystemTypes fileSystemType =  FILE_SYSTEM_TYPE_NONE;
+  FileSystemTypes fileSystemType = FILE_SYSTEM_TYPE_NONE;
 
   #if defined(HAVE_BLKID_NEW_PROBE_FROM_FILENAME) && defined(HAVE_BLKID_DO_PROBE) && defined(HAVE_BLKID_PROBE_LOOKUP_VALUE)
     blkid_probe blkidProbe = blkid_new_probe_from_filename(deviceName);
@@ -279,6 +279,8 @@ FileSystemTypes FileSystem_getType(const char *deviceName)
       }
       blkid_free_probe(blkidProbe);
     }
+  #else
+    UNUSED_VARIABLE(deviceName);
   #endif
 
   return fileSystemType;

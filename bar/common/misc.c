@@ -529,6 +529,7 @@ LOCAL Errors execute(const char        *command,
       UNUSED_VARIABLE(stderrExecuteIOFunction);
       UNUSED_VARIABLE(stderrExecuteIOUserData);
       UNUSED_VARIABLE(stderrStripCount);
+      UNUSED_VARIABLE(timeout);
 
       #error pipe()/fork()/waitpid() not available nor Windows system!
     #endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) || PLATFORM_WINDOWS */
@@ -545,6 +546,7 @@ UNUSED_VARIABLE(stdoutStripCount);
 UNUSED_VARIABLE(stderrExecuteIOFunction);
 UNUSED_VARIABLE(stderrExecuteIOUserData);
 UNUSED_VARIABLE(stderrStripCount);
+UNUSED_VARIABLE(timeout);
 #if 0
 HANDLE hOutputReadTmp,hOutputRead,hOutputWrite;
     HANDLE hInputWriteTmp,hInputRead,hInputWrite;

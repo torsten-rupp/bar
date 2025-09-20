@@ -1520,11 +1520,10 @@ Errors Network_receive(SocketHandle *socketHandle,
       }
       else
       {
-        // Note: ignore SIGALRM in Misc_wait()
+        // Note: ignore SIGALRM in Misc_waitHandle()
+        SignalMask signalMask;
+        MISC_SIGNAL_MASK_CLEAR(signalMask);
         #ifdef HAVE_SIGALRM
-          // Note: ignore SIGALRM in poll()/pselect()
-          SignalMask signalMask;
-          MISC_SIGNAL_MASK_CLEAR(signalMask);
           MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
         #endif /* HAVE_SIGALRM */
 
@@ -1545,11 +1544,10 @@ Errors Network_receive(SocketHandle *socketHandle,
         }
         else
         {
-          // Note: ignore SIGALRM in Misc_wait()
+          // Note: ignore SIGALRM in Misc_waitHandle()
+          SignalMask signalMask;
+          MISC_SIGNAL_MASK_CLEAR(signalMask);
           #ifdef HAVE_SIGALRM
-            // Note: ignore SIGALRM in poll()/pselect()
-            SignalMask signalMask;
-            MISC_SIGNAL_MASK_CLEAR(signalMask);
             MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
           #endif /* HAVE_SIGALRM */
 
@@ -1597,11 +1595,10 @@ Errors Network_send(SocketHandle *socketHandle,
       case SOCKET_TYPE_PLAIN:
         do
         {
-          // Note: ignore SIGALRM in Misc_wait()
+          // Note: ignore SIGALRM in Misc_waitHandle()
+          SignalMask signalMask;
+          MISC_SIGNAL_MASK_CLEAR(signalMask);
           #ifdef HAVE_SIGALRM
-            // Note: ignore SIGALRM in poll()/pselect()
-            SignalMask signalMask;
-            MISC_SIGNAL_MASK_CLEAR(signalMask);
             MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
           #endif /* HAVE_SIGALRM */
 
@@ -1631,11 +1628,10 @@ Errors Network_send(SocketHandle *socketHandle,
         #ifdef HAVE_GNU_TLS
           do
           {
-            // Note: ignore SIGALRM in Misc_wait()
+            // Note: ignore SIGALRM in Misc_waitHandle()
+            SignalMask signalMask;
+            MISC_SIGNAL_MASK_CLEAR(signalMask);
             #ifdef HAVE_SIGALRM
-              // Note: ignore SIGALRM in poll()/pselect()
-              SignalMask signalMask;
-              MISC_SIGNAL_MASK_CLEAR(signalMask);
               MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
             #endif /* HAVE_SIGALRM */
 
@@ -2284,12 +2280,12 @@ bool Network_isLocalHost(const SocketAddress *socketAddress)
       break;
     case SOCKET_ADDRESS_TYPE_V4:
       {
+        union
+        {
+          struct in_addr v4;
+          struct in6_addr v6;
+        } address;
         #if   defined(PLATFORM_LINUX)
-          union
-          {
-            struct in_addr v4;
-            struct in6_addr v6;
-          } address;
           inet_pton(AF_INET,"127.0.0.1",&address.v4);
           isLocalHost = (memcmp(&socketAddress->address.v4,&address.v4,sizeof(socketAddress->address.v4)) == 0);
         #elif defined(PLATFORM_WINDOWS)
@@ -2302,12 +2298,12 @@ bool Network_isLocalHost(const SocketAddress *socketAddress)
       break;
     case SOCKET_ADDRESS_TYPE_V6:
       {
+        union
+        {
+          struct in_addr v4;
+          struct in6_addr v6;
+        } address;
         #if   defined(PLATFORM_LINUX)
-          union
-          {
-            struct in_addr v4;
-            struct in6_addr v6;
-          } address;
           inet_pton(AF_INET,"::1",&address.v6);
           isLocalHost = (memcmp(&socketAddress->address.v6,&address.v6,sizeof(socketAddress->address.v6)) == 0);
         #elif defined(PLATFORM_WINDOWS)

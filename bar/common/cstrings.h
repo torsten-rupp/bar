@@ -334,6 +334,7 @@ static inline char* stringSet(char *string, size_t stringSize, const char *sourc
       */
       #pragma GCC diagnostic push
       #pragma GCC diagnostic ignored "-Wstringop-overflow"
+      #pragma GCC diagnostic ignored "-Wstringop-truncation"
       strncpy(string,source,stringSize-1);
       string[stringSize-1] = NUL;
       #pragma GCC diagnostic pop

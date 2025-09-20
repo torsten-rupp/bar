@@ -241,6 +241,7 @@ fi
     --disable-debug-thread-crash-handlers \
     \
     --disable-libburn \
+    --disable-libisofs \
     --disable-libmount \
     \
     --disable-bfd

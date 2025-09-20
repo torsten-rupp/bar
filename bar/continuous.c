@@ -628,8 +628,9 @@ LOCAL NotifyInfo *addNotify(ConstString name)
   if (notifyInfo == NULL)
   {
     // create notify
+    int watchHandle;
     #if   defined(PLATFORM_LINUX)
-      int watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_FLAGS|NOTIFY_EVENTS);
+      watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_FLAGS|NOTIFY_EVENTS);
       if (watchHandle == -1)
       {
         plogMessage(NULL,  // logHandle

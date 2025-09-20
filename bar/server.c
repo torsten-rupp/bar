@@ -473,6 +473,10 @@ LOCAL void systemNotify(NotifyTypes notifyType, int errorNumber, const char *mes
         }
         break;
     }
+  #else
+    UNUSED_VARIABLE(notifyType);
+    UNUSED_VARIABLE(errorNumber);
+    UNUSED_VARIABLE(message);
   #endif
 }
 
@@ -7281,7 +7285,7 @@ LOCAL DirectoryInfoNode *findDirectoryInfo(DirectoryInfoList *directoryInfoList,
 
 LOCAL void getDirectoryInfo(DirectoryInfoNode *directoryInfoNode,
                             long              timeout,
-                            uint64            *fileCount,
+                            ulong             *fileCount,
                             uint64            *totalFileSize,
                             bool              *timedOut
                            )

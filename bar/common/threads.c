@@ -205,7 +205,6 @@ LOCAL void debugThreadStackTraceSetThreadName(ThreadId threadId, const char *nam
 #ifdef STACKTRACE_ON_SIGNAL
 LOCAL const char *debugThreadStackTraceGetThreadName(ThreadId threadId)
 {
-
   size_t i = 0;
   while ((i < debugThreadStackTraceThreadCount) && pthread_equal(debugThreadStackTraceThreads[i].id,threadId) == 0)
   {
@@ -332,7 +331,6 @@ LOCAL void debugThreadDumpStackTrace(ThreadId                       threadId,
                                     )
 {
   const char *name = debugThreadStackTraceGetThreadName(threadId);
-
   pthread_mutex_lock(&debugConsoleLock);
   {
     debugDumpStackTraceOutput(stderr,
@@ -965,12 +963,12 @@ void Thread_delay(size_t time)
 
 const char *Thread_getName(const ThreadId threadId)
 {
-  static char name[64];
-
   #ifdef HAVE_PTHREAD_SETNAME_NP
+    static char name[64];
     (void)pthread_getname_np(threadId,name,sizeof(name));
     return name;
   #else
+    UNUSED_VARIABLE(threadId);
     return NULL;
   #endif
 }

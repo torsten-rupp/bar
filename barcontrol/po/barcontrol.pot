@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-15 03:57+0200\n"
+"POT-Creation-Date: 2025-09-15 03:58+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2144,19 +2144,19 @@ msgid "Host ''{0}:{1}'' unreachable (error: {2})"
 msgstr ""
 
 #: src/BARServer.java:1912 src/BARServer.java:2243 src/BARServer.java:2397
-#: src/BARServer.java:2515
+#: src/BARServer.java:2514
 #, java-format
 msgid "Connection to host ''{0}:{1}'' refused"
 msgstr ""
 
 #: src/BARServer.java:1919 src/BARServer.java:2250 src/BARServer.java:2404
-#: src/BARServer.java:2522
+#: src/BARServer.java:2521
 #, java-format
 msgid "Host ''{0}:{1}'' unreachable (error: no route to host)"
 msgstr ""
 
 #: src/BARServer.java:1926 src/BARServer.java:2080 src/BARServer.java:2257
-#: src/BARServer.java:2411 src/BARServer.java:2529
+#: src/BARServer.java:2411 src/BARServer.java:2528
 #, java-format
 msgid "Unknown host ''{0}:{1}''"
 msgstr ""
@@ -2166,59 +2166,59 @@ msgstr ""
 msgid "Connection to host ''{0}:{1}''refused"
 msgstr ""
 
-#: src/BARServer.java:2556
+#: src/BARServer.java:2555
 msgid "No server ports specified"
 msgstr ""
 
-#: src/BARServer.java:2585
+#: src/BARServer.java:2584
 #, java-format
 msgid "Incompatible protocol version for ''{0}:{1}'': : expected {2}, got {3}"
 msgstr ""
 
-#: src/BARServer.java:2605 src/BARServer.java:2609
+#: src/BARServer.java:2604 src/BARServer.java:2608
 #, java-format
 msgid "''{0}:{1}'': {2}"
 msgstr ""
 
-#: src/BARServer.java:2898 src/BARServer.java:3504
+#: src/BARServer.java:2897 src/BARServer.java:3503
 #, java-format
 msgid "input/output error: {0}"
 msgstr ""
 
-#: src/BARServer.java:4258 src/BARServer.java:4284
+#: src/BARServer.java:4257 src/BARServer.java:4283
 msgid "Password encryption fail"
 msgstr ""
 
-#: src/BARServer.java:5491 src/BARServer.java:5613
+#: src/BARServer.java:5490 src/BARServer.java:5612
 msgid "No result from server"
 msgstr ""
 
-#: src/BARServer.java:5497
+#: src/BARServer.java:5496
 msgid "Invalid response from server: expected SESSION"
 msgstr ""
 
-#: src/BARServer.java:5501
+#: src/BARServer.java:5500
 msgid "Invalid response from server: expected parameters"
 msgstr ""
 
-#: src/BARServer.java:5506
+#: src/BARServer.java:5505
 msgid "No session id"
 msgstr ""
 
-#: src/BARServer.java:5575
+#: src/BARServer.java:5574
 msgid "Init password cipher fail"
 msgstr ""
 
-#: src/BARServer.java:5621
+#: src/BARServer.java:5620
 #, java-format
 msgid "Invalid response from server: incomplete response ''{0}''"
 msgstr ""
 
-#: src/BARServer.java:5629
+#: src/BARServer.java:5628
 msgid "Invalid response from server: no command id"
 msgstr ""
 
-#: src/BARServer.java:5641 src/BARServer.java:5653
+#: src/BARServer.java:5640 src/BARServer.java:5652
 msgid "Invalid response from server: parameters"
 msgstr ""
 

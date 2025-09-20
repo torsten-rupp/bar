@@ -220,7 +220,7 @@ LOCAL CURLcode setFTPLogin(CURL *curlHandle, ConstString userName, Password *pas
   }
   if (curlCode == CURLE_OK)
   {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_HEADERDATA,0L);
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_HEADERDATA,NULL);
   }
   if (curlCode == CURLE_OK)
   {
@@ -228,7 +228,7 @@ LOCAL CURLcode setFTPLogin(CURL *curlHandle, ConstString userName, Password *pas
   }
   if (curlCode == CURLE_OK)
   {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,0L);
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,NULL);
   }
 
   return curlCode;

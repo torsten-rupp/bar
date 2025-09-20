@@ -451,10 +451,6 @@ LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
   #elif defined(PLATFORM_WINDOWS)
 // TODO: NYI
     #ifndef NDEBUG
-UNUSED_VARIABLE(debugEmulateBlockDevice);
-UNUSED_VARIABLE(stringTokenizer);
-UNUSED_VARIABLE(emulateDeviceName);
-UNUSED_VARIABLE(emulateFileName);
     #endif
     deviceInfo->mounted = TRUE;
   #endif /* PLATFORM_... */
@@ -1193,8 +1189,6 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
 
     // mark entry read
     deviceListHandle->entry = NULL;
-
-    return ERROR_NONE;
   #elif defined(PLATFORM_WINDOWS)
     while ((deviceListHandle->logicalDrives >> deviceListHandle->i) > 0)
     {
@@ -1208,6 +1202,12 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
       {
         deviceListHandle->i++;
       }
+    }
+
+    // try to get device info
+    if (deviceInfo != NULL)
+    {
+      (void)getDeviceInfo(deviceInfo,String_cString(deviceName),FALSE);
     }
   #endif /* PLATFORM_... */
 

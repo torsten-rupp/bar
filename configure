@@ -20922,7 +20922,7 @@ if test $ENABLE_ISOFS = "yes"; then
       cwd=`pwd`
 
 
-  printf %s "compile libiosfs... " >&6
+  printf %s "compile libisofs... " >&6
 
       result=1
       if test $result -eq 1; then

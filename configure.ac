@@ -4710,7 +4710,7 @@ if test $ENABLE_ISOFS = "yes"; then
 
       cwd=`pwd`
 
-      AC_MSG_COMPILE([libiosfs])
+      AC_MSG_COMPILE([libisofs])
       result=1
       if test $result -eq 1; then
         (cd libisofs; ./bootstrap) 1>$tmpFile 2>&1
