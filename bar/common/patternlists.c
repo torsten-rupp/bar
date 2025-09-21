@@ -1,6 +1,6 @@
 /***********************************************************************\
 *
-* Contents: Backup ARchiver pattern list functions
+* Contents: pattern list functions
 * Systems: all
 *
 \***********************************************************************/

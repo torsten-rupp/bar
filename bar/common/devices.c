@@ -1,6 +1,6 @@
 /***********************************************************************\
 *
-* Contents: Backup ARchiver device functions
+* Contents: device functions
 * Systems: all
 *
 \***********************************************************************/
@@ -621,6 +621,17 @@ Errors Device_open(DeviceHandle *deviceHandle,
                    DeviceModes  deviceMode
                   )
 {
+  assert(deviceHandle != NULL);
+  assert(deviceName != NULL);
+
+  return Device_openCString(deviceHandle,String_cString(deviceName),deviceMode);
+}
+
+Errors Device_openCString(DeviceHandle *deviceHandle,
+                          const char   *deviceName,
+                          DeviceModes  deviceMode
+                         )
+{
   Errors error;
 
   assert(deviceHandle != NULL);
@@ -644,7 +655,7 @@ Errors Device_open(DeviceHandle *deviceHandle,
             stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
             const char *emulateDeviceName,*emulateFileName;
             if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-                && String_equalsCString(deviceName,emulateDeviceName)
+                && stringEquals(deviceName,emulateDeviceName)
                )
             {
               // emulate block device
@@ -660,21 +671,21 @@ Errors Device_open(DeviceHandle *deviceHandle,
             else
             {
               // use block device
-              deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDONLY);
+              deviceHandle->handle = open(deviceName,FLAGS|O_RDONLY);
             }
             stringTokenizerDone(&stringTokenizer);
           }
           else
           {
             // use block device
-            deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDONLY);
+            deviceHandle->handle = open(deviceName,FLAGS|O_RDONLY);
           }
         #else /* NDEBUG */
-          deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDONLY);
+          deviceHandle->handle = open(deviceName,FLAGS|O_RDONLY);
         #endif /* not NDEBUG */
         if (deviceHandle->handle == -1)
         {
-          return ERRORX_(OPEN_DEVICE,errno,"%s",String_cString(deviceName));
+          return ERRORX_(OPEN_DEVICE,errno,"%s",deviceName);
         }
       }
       break;
@@ -689,7 +700,7 @@ Errors Device_open(DeviceHandle *deviceHandle,
             stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
             const char *emulateDeviceName,*emulateFileName;
             if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-                && String_equalsCString(deviceName,emulateDeviceName)
+                && stringEquals(deviceName,emulateDeviceName)
                )
             {
               // emulate block device
@@ -705,20 +716,20 @@ Errors Device_open(DeviceHandle *deviceHandle,
             else
             {
               // use block device
-              deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDWR);
+              deviceHandle->handle = open(deviceName,FLAGS|O_RDWR);
             }
             stringTokenizerDone(&stringTokenizer);
           }
           else
           {
-            deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDWR);
+            deviceHandle->handle = open(deviceName,FLAGS|O_RDWR);
           }
         #else /* NDEBUG */
-          deviceHandle->handle = open(String_cString(deviceName),FLAGS|O_RDWR);
+          deviceHandle->handle = open(deviceName,FLAGS|O_RDWR);
         #endif /* not NDEBUG */
         if (deviceHandle->handle == -1)
         {
-          return ERRORX_(OPEN_DEVICE,errno,"%s",String_cString(deviceName));
+          return ERRORX_(OPEN_DEVICE,errno,"%s",deviceName);
         }
       }
       break;
@@ -734,19 +745,19 @@ Errors Device_open(DeviceHandle *deviceHandle,
   off_t n = LSEEK(deviceHandle->handle,(off_t)0,SEEK_END);
   if (n == (off_t)(-1))
   {
-    error = ERRORX_(IO,errno,"%s",String_cString(deviceName));
+    error = ERRORX_(IO,errno,"%s",deviceName);
     close(deviceHandle->handle);
     return error;
   }
   if (LSEEK(deviceHandle->handle,(off_t)0,SEEK_SET) == -1)
   {
-    error = ERRORX_(IO,errno,"%s",String_cString(deviceName));
+    error = ERRORX_(IO,errno,"%s",deviceName);
     close(deviceHandle->handle);
     return error;
   }
 
   // initialize handle
-  deviceHandle->name  = String_duplicate(deviceName);
+  deviceHandle->name  = String_newCString(deviceName);
   deviceHandle->index = 0LL;
   deviceHandle->size  = (int64)n;
 
@@ -1081,11 +1092,11 @@ Errors Device_openDeviceList(DeviceListHandle *deviceListHandle)
       }
     #else /* not HAVE_O_NOATIME */
       // open directory
-      deviceListHandle->handle = open("/dev",O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
-      if (directoryListHandle->handle != -1)
+      int handle = open("/dev",O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
+      if (handle != -1)
       {
         // create directory handle
-        deviceListHandle->dir = fdopendir(directoryListHandle->handle);
+        deviceListHandle->dir = fdopendir(handle);
       }
     #endif /* HAVE_O_NOATIME */
     deviceListHandle->entry = NULL;

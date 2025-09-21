@@ -1,11 +1,16 @@
 /***********************************************************************\
 *
-* Contents: Backup ARchiver ReiserFS file system plug in
+* Contents: ReiserFS file system
 * Systems: all
 *
 \***********************************************************************/
 
 /****************************** Includes *******************************/
+
+#include "common/global.h"
+#include "common/filesystems.h"
+
+#include "filesystems_reiserfs.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -19,6 +24,7 @@
 #define REISERFS_MAX_BLOCK_SIZE 8192
 
 /***************************** Datatypes *******************************/
+// TODO: remove
 typedef struct
 {
   uint   blockSize;                             // block size (1024, 2048, 4096, 8192)
@@ -26,7 +32,7 @@ typedef struct
   uint32 totalBlocks;                           // total number of blocks
   int    bitmapIndex;                           // index of currently read bitmap
   uchar  bitmapData[REISERFS_MAX_BLOCK_SIZE];   // bitmap block data
-} REISERFSHandle;
+} xxxReiserFSHandle;
 
 typedef struct
 {
@@ -54,7 +60,16 @@ typedef struct
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
-#define REISERFS_BLOCK_TO_OFFSET(reiserFSHandle,block) ((block)*reiserFSHandle->blockSize)
+// convert from little endian to host system format
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+  #define LE16_TO_HOST(x) (x)
+  #define LE32_TO_HOST(x) (x)
+#else /* not __BYTE_ORDER == __LITTLE_ENDIAN */
+  #define LE16_TO_HOST(x) swapBytes16(x)
+  #define LE32_TO_HOST(x) swapBytes32(x)
+#endif /* __BYTE_ORDER == __LITTLE_ENDIAN */
+
+#define REISERFS_BLOCK_TO_OFFSET(fileSystemHandle,block) ((block)*reiserFSHandle->blockSize)
 
 /***************************** Forwards ********************************/
 
@@ -65,19 +80,17 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : REISERFS_init
-* Purpose: initialize ReiserFS handle
+* Name   : REISERFS_getType
+* Purpose: get ReiserFS file system type
 * Input  : deviceHandle   - device handle
-*          reiserFSHandle - ReiserFS handle variable
-* Output : reiserFSHandle - ReiserFS variable
-* Return : file system type or FILE_SYSTEN_UNKNOWN;
+* Output : -
+* Return : TRUE iff file system initialized
 * Notes  : -
 \***********************************************************************/
 
-LOCAL FileSystemTypes REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHandle)
+LOCAL bool ReiserFS_getType(DeviceHandle *deviceHandle)
 {
   assert(deviceHandle != NULL);
-  assert(reiserFSHandle != NULL);
 
   // read super-block
   ReiserSuperBlock reiserSuperBlock;
@@ -112,45 +125,108 @@ LOCAL FileSystemTypes REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *
   }
 
   // get file system block info
-  reiserFSHandle->totalBlocks = LE32_TO_HOST(reiserSuperBlock.blockCount);
-  reiserFSHandle->blockSize   = LE32_TO_HOST(reiserSuperBlock.blockSize);
-  reiserFSHandle->bitmapIndex = -1;
+  uint64 totalBlocks = LE32_TO_HOST(reiserSuperBlock.blockCount);
+  uint   blockSize   = LE32_TO_HOST(reiserSuperBlock.blockSize);
 
   // validate data
-  if (   !(reiserFSHandle->blockSize >= 512)
-      || !((reiserFSHandle->blockSize % 512) == 0)
-      || !(reiserFSHandle->totalBlocks > 0)
+  if (   !(blockSize >= 512)
+      || !((blockSize % 512) == 0)
+      || !(totalBlocks > 0)
      )
   {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
+    fileSystemType = FILE_SYSTEM_TYPE_UNKNOWN;
   }
 
   return fileSystemType;
 }
 
 /***********************************************************************\
-* Name   : REISERFS_done
+* Name   : ReiserFS_init
+* Purpose: initialize ReiserFS handle
+* Input  : deviceHandle - device handle
+* Output : fileSystemType - file system type
+*          reiserFSHandle - ReiserFS handle (can be NULL)
+* Return : TRUE iff file system initialized
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool ReiserFS_init(DeviceHandle *deviceHandle, FileSystemTypes *fileSystemType, ReiserFSHandle *reiserFSHandle)
+{
+  assert(deviceHandle != NULL);
+  assert(fileSystemType != NULL);
+
+  // read super-block
+  ReiserSuperBlock reiserSuperBlock;
+  if (Device_seek(deviceHandle,REISERFS_SUPER_BLOCK_OFFSET) != ERROR_NONE)
+  {
+    return FALSE;
+  }
+  if (Device_read(deviceHandle,&reiserSuperBlock,sizeof(reiserSuperBlock),NULL) != ERROR_NONE)
+  {
+    return FALSE;
+  }
+
+  // check if this a ReiserFS super block, detect file system type
+  if      (stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V1))
+  {
+    (*fileSystemType) = FILE_SYSTEM_TYPE_REISERFS3_5;
+  }
+  else if (   stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V2)
+           || stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3)
+          )
+  {
+    (*fileSystemType) = FILE_SYSTEM_TYPE_REISERFS3_6;
+  }
+  else if (stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V4))
+  {
+    (*fileSystemType) = FILE_SYSTEM_TYPE_REISERFS4;
+  }
+  else
+  {
+    return FALSE;
+  }
+
+  if (reiserFSHandle != NULL)
+  {
+    // get file system block info
+    reiserFSHandle->totalBlocks = LE32_TO_HOST(reiserSuperBlock.blockCount);
+    reiserFSHandle->blockSize   = LE32_TO_HOST(reiserSuperBlock.blockSize);
+    reiserFSHandle->bitmapIndex = -1;
+
+    // validate data
+    if (   !(reiserFSHandle->blockSize >= 512)
+        || !((reiserFSHandle->blockSize % 512) == 0)
+        || !(reiserFSHandle->totalBlocks > 0)
+       )
+    {
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : ReiserFS_done
 * Purpose: deinitialize ReiserFS handle
-* Input  : deviceHandle   - device handle
-*          reiserFSHandle - ReiserFS handle
+* Input  : reiserFSandle - ReiserFS handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void REISERFS_done(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHandle)
+LOCAL void ReiserFS_done(ReiserFSHandle *reiserFSandle)
 {
-  assert(deviceHandle != NULL);
-  assert(reiserFSHandle != NULL);
+  assert(reiserFSandle != NULL);
 
-  UNUSED_VARIABLE(deviceHandle);
-  UNUSED_VARIABLE(reiserFSHandle);
+  UNUSED_VARIABLE(reiserFSandle);
 }
 
 /***********************************************************************\
-* Name   : REISERFS_blockIsUsed
+* Name   : ReiserFS_blockIsUsed
 * Purpose: check if block is used
 * Input  : deviceHandle   - device handle
+*          fileSystemType - file system type
 *          reiserFSHandle - ReiserFS handle
 *          offset         - offset in image
 * Output : -
@@ -158,10 +234,12 @@ LOCAL void REISERFS_done(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHan
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool REISERFS_blockIsUsed(DeviceHandle *deviceHandle, REISERFSHandle *reiserFSHandle, uint64 offset)
+LOCAL bool ReiserFS_blockIsUsed(DeviceHandle *deviceHandle, FileSystemTypes fileSystemType, ReiserFSHandle *reiserFSHandle, uint64 offset)
 {
-
   assert(deviceHandle != NULL);
+  assert(   (fileSystemType == FILE_SYSTEM_TYPE_REISERFS3_5)
+         || (fileSystemType == FILE_SYSTEM_TYPE_REISERFS3_6)
+        );
   assert(reiserFSHandle != NULL);
   assert(reiserFSHandle->blockSize != 0);
 
@@ -180,7 +258,7 @@ LOCAL bool REISERFS_blockIsUsed(DeviceHandle *deviceHandle, REISERFSHandle *reis
       uint32 bitmapBlock = (bitmapIndex > 0)
                             ? (uint32)bitmapIndex*(uint32)reiserFSHandle->blockSize*8
                             : REISERFS_SUPER_BLOCK_OFFSET/reiserFSHandle->blockSize+1;
-      if (Device_seek(deviceHandle,REISERFS_BLOCK_TO_OFFSET(reiserFSHandle,bitmapBlock)) != ERROR_NONE)
+      if (Device_seek(deviceHandle,REISERFS_BLOCK_TO_OFFSET(fileSystemHandle,bitmapBlock)) != ERROR_NONE)
       {
         return TRUE;
       }

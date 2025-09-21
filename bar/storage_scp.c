@@ -994,6 +994,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
       // create directories if not existing
       String directoryName = File_getDirectoryName(String_new(),fileName);
       String name = String_new();
+      error = ERROR_NONE;
       FILE_PATH_ITERATEX(directoryName,name,TRUE,error == ERROR_NONE)
       {
         LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
@@ -1094,6 +1095,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
         return error;
       }
     }
+
+    assert(error != ERROR_UNKNOWN);
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
@@ -1691,8 +1694,6 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   #ifdef HAVE_SSH2
-    assert(storageHandle->scp.channel != NULL);
-
     Errors error = ERROR_NONE;
 
     // try sftp seek if possible, then scp functionality
@@ -1756,6 +1757,8 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
     }
     else
     {
+      assert(storageHandle->scp.channel != NULL);
+
       while (writtenBytes < bufferLength)
       {
         // get max. number of bytes to send in one step
@@ -2169,7 +2172,7 @@ UNUSED_VARIABLE(archiveName);
 
   #ifdef HAVE_SSH2
 #if 0
-whould this be a possible implementation?
+// TODO: whould this be a possible implementation?
     {
       String command;
 

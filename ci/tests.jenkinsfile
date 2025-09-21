@@ -69,8 +69,8 @@ def tests()
             sh "install -d host"
 
             // get external packages
-            sh "(cd host; ../download-third-party-packages.sh --patch-directory ../misc --local-directory /media/extern)"
-            sh "(cd host; ../download-third-party-packages.sh --patch-directory ../misc)"
+            sh "(cd host; sh -x ../download-third-party-packages.sh --patch-directory ../misc --local-directory /media/extern)"
+            sh "(cd host; sh -x ../download-third-party-packages.sh --patch-directory ../misc)"
 
             // configure
             sh "(cd host; \

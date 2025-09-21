@@ -1277,6 +1277,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   String           deviceName = String_new();
   AUTOFREE_ADD(&autoFreeList,deviceName,{ String_delete(deviceName); });
   DeviceInfo       deviceInfo;
+  FileSystemTypes  fileSystemType;
   uint64           blockOffset,blockCount;
   error = Archive_readImageEntry(&archiveEntryInfo,
                                  archiveHandle,
@@ -1288,7 +1289,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                                  NULL,  // cryptKey
                                  deviceName,
                                  &deviceInfo,
-                                 NULL,  // fileSystemType
+                                 &fileSystemType,
                                  NULL,  // deltaSourceName
                                  NULL,  // deltaSourceSize
                                  &blockOffset,
@@ -1703,6 +1704,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     }
     else
     {
+// TODO: required current fragment size from archive, not global setting
       stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),blockCount*deviceInfo.blockSize);
     }
     stringClear(fragmentString);
@@ -1717,11 +1719,21 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
 
     if (!restoreInfo->jobOptions->dryRun)
     {
-      printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
+      printInfo(1,
+                "OK (%s, %s bytes%s)\n",
+                (fileSystemType != FILE_SYSTEM_TYPE_NONE) ? FileSystem_typeToString(fileSystemType,NULL) : "raw",
+                sizeString,
+                fragmentString
+               );
     }
     else
     {
-      printInfo(1,"OK (%s bytes%s, dry-run)\n",sizeString,fragmentString);
+      printInfo(1,
+                "OK (%s, %s bytes%s, dry-run)\n",
+                (fileSystemType != FILE_SYSTEM_TYPE_NONE) ? FileSystem_typeToString(fileSystemType,NULL) : "raw",
+                sizeString,
+                fragmentString
+               );
     }
 
     /* check if all data read.

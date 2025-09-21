@@ -5745,18 +5745,31 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
   }
 
-  // check if device contain a known file system or a raw image should be stored
+  // check if device contain a supported file system or a raw image should be stored
   FileSystemHandle fileSystemHandle;
   memClear(&fileSystemHandle,sizeof(FileSystemHandle));
-  bool fileSystemFlag;
+  bool fileSystemFlag = FALSE;
   if (!createInfo->jobOptions->rawImagesFlag)
   {
-    fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
+    if (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE)
+    {
+      fileSystemFlag =    (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT12)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT16)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT32)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT2)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT3)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT4)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS3_5)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS3_6)
+                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS4);
+    }
   }
   else
   {
     fileSystemHandle.type = FILE_SYSTEM_TYPE_NONE;
-    fileSystemFlag = FALSE;
   }
 
   // init fragment
@@ -6030,7 +6043,16 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       compressionRatio = 0.0;
     }
 
-    // get fragment info
+    // get size/fragment info
+    char sizeString[32];
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(sizeString,sizeof(sizeString),fragmentSize);
+    }
+    else
+    {
+      stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fragmentSize);
+    }
     char fragmentInfoString[256];
     stringClear(fragmentInfoString);
     if (fragmentSize < deviceInfo->size)
@@ -6053,9 +6075,9 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     // output result
     if (!createInfo->jobOptions->dryRun)
     {
-      printInfo(1,"OK (%s, %"PRIu64" bytes%s%s)\n",
+      printInfo(1,"OK (%s, %s bytes%s%s)\n",
                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
-                fragmentSize,
+                sizeString,
                 fragmentInfoString,
                 compressionRatioString
                );
@@ -6071,9 +6093,9 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
     else
     {
-      printInfo(1,"OK (%s, %"PRIu64" bytes%s%s, dry-run)\n",
+      printInfo(1,"OK (%s, %s bytes%s%s, dry-run)\n",
                 fileSystemFlag ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
-                fragmentSize,
+                sizeString,
                 fragmentInfoString,
                 compressionRatioString
                );
@@ -7633,8 +7655,7 @@ Errors Command_create(ServerIO                     *masterIO,
   String_delete(directoryName);
 #endif
 
-  String incrementalListFileName    = String_new();
-  bool   useIncrementalFileInfoFlag = FALSE;
+  String incrementalListFileName = String_new();
   if (   (createInfo.archiveType == ARCHIVE_TYPE_FULL)
       || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL)
       || (createInfo.archiveType == ARCHIVE_TYPE_DIFFERENTIAL)
@@ -7642,7 +7663,7 @@ Errors Command_create(ServerIO                     *masterIO,
      )
   {
     // get increment list file name
-    bool   incrementalFileInfoExistFlag = FALSE;
+    bool incrementalFileInfoExistFlag = FALSE;
     if (!String_isEmpty(jobOptions->incrementalListFileName))
     {
       String_set(incrementalListFileName,jobOptions->incrementalListFileName);
@@ -7667,7 +7688,6 @@ Errors Command_create(ServerIO                     *masterIO,
         incrementalFileInfoExistFlag = File_exists(incrementalListFileName);
       }
     }
-    AUTOFREE_ADD(&autoFreeList,incrementalListFileName,{ String_delete(incrementalListFileName); });
 
     if (   incrementalFileInfoExistFlag
         && (   (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL )
@@ -7698,10 +7718,10 @@ Errors Command_create(ServerIO                     *masterIO,
                );
     }
 
-    useIncrementalFileInfoFlag              = TRUE;
     createInfo.storeIncrementalFileInfoFlag =    (createInfo.archiveType == ARCHIVE_TYPE_FULL)
                                               || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL);
   }
+  AUTOFREE_ADD(&autoFreeList,incrementalListFileName,{ String_delete(incrementalListFileName); });
 
   IndexId entityId = INDEX_ID_NONE;
   if (Index_isAvailable())
@@ -8034,7 +8054,7 @@ Errors Command_create(ServerIO                     *masterIO,
   }
 
   // done storage
-  AUTOFREE_REMOVE(&autoFreeList,&createInfo.storageInfo);
+  // Note: no AUTOFREE_REMOVE(&autoFreeList,&createInfo.storageInfo), it is identical with &createInfo
   Storage_done(&createInfo.storageInfo);
 
   // unmount devices
@@ -8058,18 +8078,21 @@ Errors Command_create(ServerIO                     *masterIO,
   }
 
   // free resources
-  if (useIncrementalFileInfoFlag)
-  {
-    String_delete(incrementalListFileName);
-  }
+  AUTOFREE_REMOVE(&autoFreeList,incrementalListFileName);
+  String_delete(incrementalListFileName);
+  AUTOFREE_REMOVE(&autoFreeList,&createInfo);
   doneCreateInfo(&createInfo);
   if (Index_isAvailable())
   {
     Index_close(&indexHandle);
   }
+  AUTOFREE_REMOVE(&autoFreeList,&storageSpecifier);
   Storage_doneSpecifier(&storageSpecifier);
+  AUTOFREE_REMOVE(&autoFreeList,userName);
   String_delete(userName);
+  AUTOFREE_REMOVE(&autoFreeList,hostName);
   String_delete(hostName);
+  AUTOFREE_REMOVE(&autoFreeList,printableStorageName);
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 

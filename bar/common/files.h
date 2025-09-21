@@ -1,6 +1,6 @@
 /***********************************************************************\
 *
-* Contents: Backup ARchiver files functions
+* Contents: files functions
 * Systems: all
 *
 \***********************************************************************/
@@ -1902,15 +1902,34 @@ String File_castToString(String string, const FileCast *fileCast);
 /***********************************************************************\
 * Name   : File_getDescriptor
 * Purpose: get file descriptor
+* Input  : fileHandle - file handle
+* Output : -
+* Return : file descriptor
+* Notes  : -
+\***********************************************************************/
+
+INLINE int File_getDescriptor(const FileHandle *fileHandle);
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
+INLINE int File_getDescriptor(const FileHandle *fileHandle)
+{
+  assert(fileHandle != NULL);
+
+  return fileno(fileHandle->file);
+}
+#endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : File_getDescriptorFromFile
+* Purpose: get file descriptor from FILE
 * Input  : file - file
 * Output : -
 * Return : file descriptor
 * Notes  : -
 \***********************************************************************/
 
-INLINE int File_getDescriptor(FILE *file);
+INLINE int File_getDescriptorFromFile(FILE *file);
 #if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
-INLINE int File_getDescriptor(FILE *file)
+INLINE int File_getDescriptorFromFile(FILE *file)
 {
   assert(file != NULL);
 

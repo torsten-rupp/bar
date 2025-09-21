@@ -5444,8 +5444,8 @@ ifneq (@MKFS_MSDOS@,)
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
-          tests_image_operations_check \
-          tests_image_operations_diff_image
+          tests_image_operations_diff_image \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5506,8 +5506,8 @@ ifneq (@MKFS_MSDOS@,)
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
-          tests_image_operations_check \
-          tests_image_operations_diff_image
+          tests_image_operations_diff_image \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5570,8 +5570,8 @@ ifneq (@MKFS_MSDOS@,)
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
-          tests_image_operations_check \
-          tests_image_operations_diff_image
+          tests_image_operations_diff_image \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5649,8 +5649,8 @@ ifneq (@MKFS_REISERFS@,)
           FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
           tests_image_operations_base \
-          tests_image_operations_check \
-          tests_image_operations_diff_image
+          tests_image_operations_diff_image \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5686,8 +5686,8 @@ ifneq (@MKFS_REISERFS@,)
           FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
           tests_image_operations_base \
-          tests_image_operations_check \
-          tests_image_operations_diff_image
+          tests_image_operations_diff_image \
+          tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@#
@@ -5846,8 +5846,10 @@ tests_image_operations_check:
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@#
+	# Note: e. g. fsck.reiser change the file even nothing is corrupt. Thus do fsck always after image diff
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE0) 2>/dev/null $(LOG)
 	@#
+	# Note: e. g. fsck.reiser change the file even nothing is corrupt. Thus do fsck always after image diff
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE1) 2>/dev/null $(LOG)
 	@#
 ifeq ($(TEST_MOUNT_OPERATIONS),yes)

@@ -2736,24 +2736,24 @@ bool Misc_isTerminal(int handle)
 void Misc_waitEnter(void)
 {
   #if   defined(PLATFORM_LINUX)
-    if (isatty(File_getDescriptor(stdin)) != 0)
+    if (isatty(File_getDescriptorFromFile(stdin)) != 0)
     {
       // save current console settings
       struct termios oldTermioSettings;
-      tcgetattr(File_getDescriptor(stdin),&oldTermioSettings);
+      tcgetattr(File_getDescriptorFromFile(stdin),&oldTermioSettings);
 
       // disable echo
       struct termios termioSettings;
       memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
       termioSettings.c_lflag &= ~ECHO;
-      tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
+      tcsetattr(File_getDescriptorFromFile(stdin),TCSANOW,&termioSettings);
 
       // read line (and ignore)
       char s[2];
       if (fgets(s,2,stdin) != NULL) { /* ignored */ };
 
       // restore console settings
-      tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
+      tcsetattr(File_getDescriptorFromFile(stdin),TCSANOW,&oldTermioSettings);
     }
   #elif defined(PLATFORM_WINDOWS)
 // NYI ???
@@ -2766,19 +2766,19 @@ void Misc_waitEnter(void)
 bool Misc_getYesNo(const char *message)
 {
   #if   defined(PLATFORM_LINUX)
-    if (isatty(File_getDescriptor(stdin)) != 0)
+    if (isatty(File_getDescriptorFromFile(stdin)) != 0)
     {
       fputs(message,stdout); fputs(" [y/N]",stdout); fflush(stdout);
 
       // save current console settings
       struct termios oldTermioSettings;
-      tcgetattr(File_getDescriptor(stdin),&oldTermioSettings);
+      tcgetattr(File_getDescriptorFromFile(stdin),&oldTermioSettings);
 
       // set raw mode
       struct termios termioSettings;
       memCopy(&termioSettings,sizeof(termioSettings),&oldTermioSettings,sizeof(oldTermioSettings));
       cfmakeraw(&termioSettings);
-      tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
+      tcsetattr(File_getDescriptorFromFile(stdin),TCSANOW,&termioSettings);
 
       // read yes/no
       int keyCode;
@@ -2789,7 +2789,7 @@ bool Misc_getYesNo(const char *message)
       while ((keyCode != (int)'Y') && (keyCode != (int)'N') && (keyCode != 13));
 
       // restore console settings
-      tcsetattr(File_getDescriptor(stdin),TCSANOW,&oldTermioSettings);
+      tcsetattr(File_getDescriptorFromFile(stdin),TCSANOW,&oldTermioSettings);
 
       fputc('\n',stdout);
 
