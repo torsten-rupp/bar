@@ -255,8 +255,8 @@ const FILE_SYSTEM_TYPE_EXT4          = 3
 const FILE_SYSTEM_TYPE_FAT12         = 4
 const FILE_SYSTEM_TYPE_FAT16         = 5
 const FILE_SYSTEM_TYPE_FAT32         = 6
-const FILE_SYSTEM_TYPE_REISERFS1     = 7
-const FILE_SYSTEM_TYPE_REISERFS3     = 8
+const FILE_SYSTEM_TYPE_REISERFS3_5     = 7
+const FILE_SYSTEM_TYPE_REISERFS3_6     = 8
 const FILE_SYSTEM_TYPE_REISERFS4     = 9
 
 # hash algorithms

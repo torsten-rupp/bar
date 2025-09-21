@@ -94,13 +94,13 @@ LOCAL FileSystemTypes REISERFS_init(DeviceHandle *deviceHandle, REISERFSHandle *
   FileSystemTypes fileSystemType;
   if      (stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V1))
   {
-    fileSystemType = FILE_SYSTEM_TYPE_REISERFS1;
+    fileSystemType = FILE_SYSTEM_TYPE_REISERFS3_5;
   }
   else if (   stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V2)
            || stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3)
           )
   {
-    fileSystemType = FILE_SYSTEM_TYPE_REISERFS3;
+    fileSystemType = FILE_SYSTEM_TYPE_REISERFS3_6;
   }
   else if (stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V4))
   {

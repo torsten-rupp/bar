@@ -49,35 +49,35 @@
 /***************************** Constants *******************************/
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_PREFIX         "%storageName"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG          "%type:-8s %user:-12s %group:-12s %permission:-10s %size:-12s %dateTime:-32s %part:-32s %compress:-15s %ratio:-7s  %crypt:-10s %name:s"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL               "%type:-8s %size:-12s %dateTime:-32s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG          "%type:-12s %user:-12s %group:-12s %permission:-10s %size:-12s %dateTime:-32s %part:-32s %compress:-15s %ratio:-7s  %crypt:-10s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL               "%type:-12s %size:-12s %dateTime:-32s %name:s"
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX        "%storageName"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG          "%type:-8s %    :-12s %     :-12s %          :-10s %size:12s %        :-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S -> %destinationName:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG       "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG   "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG  "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG   "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-12s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG          "%type:-12s %    :-12s %     :-12s %          :-10s %size:12s %        :-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S -> %destinationName:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG       "%type:-12s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG   "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG  "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG   "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE                     "                                                                     source: %deltaSource:S, %deltaSourceSize:s"
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE                "%type:-8s %size:12s %dateTime:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE               "%type:-8s %size:12s %        :-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR                 "%type:-8s %    :12s %dateTime:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK                "%type:-8s %    :12s %dateTime:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK            "%type:-8s %size:12s %dateTime:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR        "%type:-8s %    :12s %        :-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK       "%type:-8s %    :12s %        :-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO        "%type:-8s %    :12s %        :-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET      "%type:-8s %    :12s %        :-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE                "%type:-12s %size:12s %dateTime:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE               "%type:-12s %size:12s %        :-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR                 "%type:-12s %    :12s %dateTime:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK                "%type:-12s %    :12s %dateTime:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK            "%type:-12s %size:12s %dateTime:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR        "%type:-12s %    :12s %        :-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK       "%type:-12s %    :12s %        :-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO        "%type:-12s %    :12s %        :-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET      "%type:-12s %    :12s %        :-32s %name:S"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE                    "%type:-8s %size:-12s %dateTime:-32s %name:s"
+#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE                    "%type:-12s %size:-12s %dateTime:-32s %name:s"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT                          "%type:-8s %size:12s %dateTime:-32s %name:S"
+#define DEFAULT_DIRECTORY_LIST_FORMAT                          "%type:-12s %size:12s %dateTime:-32s %name:S"
 
 /***************************** Datatypes *******************************/
 

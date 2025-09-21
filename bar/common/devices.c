@@ -158,9 +158,6 @@ LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
     FileStat fileStat;
     #ifndef NDEBUG
       const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-    #endif
-    #ifndef NDEBUG
-      debugEmulateBlockDevice = debugGetEmulateBlockDevice();
       if (debugEmulateBlockDevice != NULL)
       {
         CStringTokenizer stringTokenizer;

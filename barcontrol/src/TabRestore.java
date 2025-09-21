@@ -9972,7 +9972,7 @@ Dprintf.dprintf("");
           Widgets.addTableColumn(widgetRestoreTable,1,BARControl.tr("Type"     ),SWT.LEFT, 100,true);
           Widgets.addTableColumn(widgetRestoreTable,2,BARControl.tr("Size"     ),SWT.RIGHT, 60,true);
           Widgets.addTableColumn(widgetRestoreTable,3,BARControl.tr("Date/Time"),SWT.LEFT, 180,true);
-          Widgets.addTableColumn(widgetRestoreTable,3,BARControl.tr("Fragments"),SWT.LEFT,  80,true);
+          Widgets.addTableColumn(widgetRestoreTable,3,BARControl.tr("Fragments"),SWT.RIGHT, 80,true);
           break;
       }
 

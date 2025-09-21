@@ -42,38 +42,38 @@ LOCAL const struct
 }
 FILESYTEM_TYPES[] =
 {
-  {"none",       FILE_SYSTEM_TYPE_NONE     },
+  {"none",        FILE_SYSTEM_TYPE_NONE       },
 
-  {"EXT",        FILE_SYSTEM_TYPE_EXT      },
-  {"EXT2",       FILE_SYSTEM_TYPE_EXT2     },
-  {"EXT3",       FILE_SYSTEM_TYPE_EXT3     },
-  {"EXT4",       FILE_SYSTEM_TYPE_EXT4     },
-  {"BTRFS",      FILE_SYSTEM_TYPE_BTRFS    },
-  {"ISOFS",      FILE_SYSTEM_TYPE_ISOFS    },
-  {"XFS",        FILE_SYSTEM_TYPE_XFS      },
-  {"UDF",        FILE_SYSTEM_TYPE_UDF      },
+  {"EXT",         FILE_SYSTEM_TYPE_EXT        },
+  {"EXT2",        FILE_SYSTEM_TYPE_EXT2       },
+  {"EXT3",        FILE_SYSTEM_TYPE_EXT3       },
+  {"EXT4",        FILE_SYSTEM_TYPE_EXT4       },
+  {"BTRFS",       FILE_SYSTEM_TYPE_BTRFS      },
+  {"ISOFS",       FILE_SYSTEM_TYPE_ISOFS      },
+  {"XFS",         FILE_SYSTEM_TYPE_XFS        },
+  {"UDF",         FILE_SYSTEM_TYPE_UDF        },
 
-  {"ReiserFS",   FILE_SYSTEM_TYPE_REISERFS },
-  {"ReiserFS 1", FILE_SYSTEM_TYPE_REISERFS1},
-  {"ReiserFS 3", FILE_SYSTEM_TYPE_REISERFS3},
-  {"ReiserFS 4", FILE_SYSTEM_TYPE_REISERFS4},
+  {"ReiserFS",    FILE_SYSTEM_TYPE_REISERFS   },
+  {"ReiserFS 3.5",FILE_SYSTEM_TYPE_REISERFS3_5},
+  {"ReiserFS 3.6",FILE_SYSTEM_TYPE_REISERFS3_6},
+  {"ReiserFS 4",  FILE_SYSTEM_TYPE_REISERFS4  },
 
-  {"Minix",      FILE_SYSTEM_TYPE_MINIX    },
-  {"Minix 1",    FILE_SYSTEM_TYPE_MINIX1   },
-  {"Minix 2",    FILE_SYSTEM_TYPE_MINIX2   },
-  {"Minix 3",    FILE_SYSTEM_TYPE_MINIX3   },
+  {"Minix",       FILE_SYSTEM_TYPE_MINIX      },
+  {"Minix 1",     FILE_SYSTEM_TYPE_MINIX1     },
+  {"Minix 2",     FILE_SYSTEM_TYPE_MINIX2     },
+  {"Minix 3",     FILE_SYSTEM_TYPE_MINIX3     },
 
-  {"FAT",        FILE_SYSTEM_TYPE_FAT      },
-  {"FAT12",      FILE_SYSTEM_TYPE_FAT12    },
-  {"FAT16",      FILE_SYSTEM_TYPE_FAT16    },
-  {"FAT32",      FILE_SYSTEM_TYPE_FAT32    },
-  {"EXFAT",      FILE_SYSTEM_TYPE_EXFAT    },
+  {"FAT",         FILE_SYSTEM_TYPE_FAT        },
+  {"FAT12",       FILE_SYSTEM_TYPE_FAT12      },
+  {"FAT16",       FILE_SYSTEM_TYPE_FAT16      },
+  {"FAT32",       FILE_SYSTEM_TYPE_FAT32      },
+  {"EXFAT",       FILE_SYSTEM_TYPE_EXFAT      },
 
-  {"AFS",        FILE_SYSTEM_TYPE_AFS      },
-  {"CODA",       FILE_SYSTEM_TYPE_CODA     },
-  {"NFS",        FILE_SYSTEM_TYPE_NFS      },
-  {"SMB1",       FILE_SYSTEM_TYPE_SMB1     },
-  {"SMB2",       FILE_SYSTEM_TYPE_SMB2     },
+  {"AFS",         FILE_SYSTEM_TYPE_AFS        },
+  {"CODA",        FILE_SYSTEM_TYPE_CODA       },
+  {"NFS",         FILE_SYSTEM_TYPE_NFS        },
+  {"SMB1",        FILE_SYSTEM_TYPE_SMB1       },
+  {"SMB2",        FILE_SYSTEM_TYPE_SMB2       },
 };
 
 
@@ -220,6 +220,7 @@ FileSystemTypes FileSystem_getType(const char *deviceName)
 
   FileSystemTypes fileSystemType = FILE_SYSTEM_TYPE_NONE;
 
+// TODO: use detector from init if possible, raiser version is not detected by libblkid
   #if defined(HAVE_BLKID_NEW_PROBE_FROM_FILENAME) && defined(HAVE_BLKID_DO_PROBE) && defined(HAVE_BLKID_PROBE_LOOKUP_VALUE)
     blkid_probe blkidProbe = blkid_new_probe_from_filename(deviceName);
     if (blkidProbe != NULL)
@@ -239,34 +240,31 @@ FileSystemTypes FileSystem_getType(const char *deviceName)
           }
           FILESYTEM_TYPES[] =
           {
-            { "ext2",    FILE_SYSTEM_TYPE_EXT2      },
-            { "ext3",    FILE_SYSTEM_TYPE_EXT3      },
-            { "ext4",    FILE_SYSTEM_TYPE_EXT4      },
-            { "btrfs",   FILE_SYSTEM_TYPE_BTRFS     },
-            { "hpfs",    FILE_SYSTEM_TYPE_HPFS      },
-            { "isofs",   FILE_SYSTEM_TYPE_ISOFS     },
-            { "xfs",     FILE_SYSTEM_TYPE_XFS       },
-            { "udf",     FILE_SYSTEM_TYPE_UDF       },
+            { "ext2",    FILE_SYSTEM_TYPE_EXT2     },
+            { "ext3",    FILE_SYSTEM_TYPE_EXT3     },
+            { "ext4",    FILE_SYSTEM_TYPE_EXT4     },
+            { "btrfs",   FILE_SYSTEM_TYPE_BTRFS    },
+            { "hpfs",    FILE_SYSTEM_TYPE_HPFS     },
+            { "isofs",   FILE_SYSTEM_TYPE_ISOFS    },
+            { "xfs",     FILE_SYSTEM_TYPE_XFS      },
+            { "udf",     FILE_SYSTEM_TYPE_UDF      },
 
             { "raiser",  FILE_SYSTEM_TYPE_REISERFS },
-            { "raiser1", FILE_SYSTEM_TYPE_REISERFS1 },
-            { "raiser3", FILE_SYSTEM_TYPE_REISERFS3 },
-            { "raiser4", FILE_SYSTEM_TYPE_REISERFS4 },
 
-            { "minix",   FILE_SYSTEM_TYPE_MINIX     },
+            { "minix",   FILE_SYSTEM_TYPE_MINIX    },
 
-            { "fat",     FILE_SYSTEM_TYPE_FAT       },
-            { "fat12",   FILE_SYSTEM_TYPE_FAT12     },
-            { "fat16",   FILE_SYSTEM_TYPE_FAT16     },
-            { "fat32",   FILE_SYSTEM_TYPE_FAT32     },
-            { "vfat",    FILE_SYSTEM_TYPE_FAT       },
-            { "exfat",   FILE_SYSTEM_TYPE_EXFAT     },
+            { "fat",     FILE_SYSTEM_TYPE_FAT      },
+            { "fat12",   FILE_SYSTEM_TYPE_FAT12    },
+            { "fat16",   FILE_SYSTEM_TYPE_FAT16    },
+            { "fat32",   FILE_SYSTEM_TYPE_FAT32    },
+            { "vfat",    FILE_SYSTEM_TYPE_FAT      },
+            { "exfat",   FILE_SYSTEM_TYPE_EXFAT    },
 
-            { "afs",     FILE_SYSTEM_TYPE_AFS       },
-            { "coda",    FILE_SYSTEM_TYPE_CODA      },
-            { "nfs",     FILE_SYSTEM_TYPE_NFS       },
-            { "smb1",    FILE_SYSTEM_TYPE_SMB1      },
-            { "smb2",    FILE_SYSTEM_TYPE_SMB2      },
+            { "afs",     FILE_SYSTEM_TYPE_AFS      },
+            { "coda",    FILE_SYSTEM_TYPE_CODA     },
+            { "nfs",     FILE_SYSTEM_TYPE_NFS      },
+            { "smb1",    FILE_SYSTEM_TYPE_SMB1     },
+            { "smb2",    FILE_SYSTEM_TYPE_SMB2     },
           };
 
           size_t i = ARRAY_FIND(FILESYTEM_TYPES,
