@@ -1,6 +1,6 @@
 /***********************************************************************\
 *
-* Contents: Backup ARchiver file system functions
+* Contents: file system functions
 * Systems: all
 *
 \***********************************************************************/
@@ -14,8 +14,11 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
-#include "devices.h"
+#include "common/strings.h"
+#include "common/devices.h"
+#include "common/filesystems_ext.h"
+#include "common/filesystems_fat.h"
+#include "common/filesystems_reiserfs.h"
 #include "errors.h"
 
 /****************** Conditional compilation switches *******************/
@@ -64,19 +67,28 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
+struct FileSystemHandle;
+
+// TODO: remove
 // file system functions
-typedef FileSystemTypes(*FileSystemInitFunction)(DeviceHandle *deviceHandle, void *handle);
-typedef void(*FileSystemDoneFunction)(DeviceHandle *deviceHandle, void *handle);
-typedef bool(*FileSystemBlockIsUsedFunction)(DeviceHandle *deviceHandle, void *handle, uint64 offset);
+//typedef FileSystemTypes(*FileSystemGetTypeFunction)(DeviceHandle *deviceHandle);
+//typedef bool(*FileSystemInitFunction)(DeviceHandle *deviceHandle, struct FileSystemHandle *fileSystemHandle);
+//typedef void(*FileSystemDoneFunction)(struct FileSystemHandle *fileSystemHandle);
+//typedef bool(*FileSystemBlockIsUsedFunction)(struct FileSystemHandle *fileSystemHandle, uint64 offset);
 
 // file system handle
 typedef struct
 {
-  DeviceHandle                  *deviceHandle;
-  FileSystemTypes               type;
-  void                          *handle;
-  FileSystemDoneFunction        doneFunction;
-  FileSystemBlockIsUsedFunction blockIsUsedFunction;
+  DeviceHandle    *deviceHandle;
+  FileSystemTypes type;
+  union
+  {
+    EXTHandle      extHandle;
+    FATHandle      fatHandle;
+    ReiserFSHandle reiserFSHandle;
+  };
+//  FileSystemDoneFunction        doneFunction;
+//  FileSystemBlockIsUsedFunction blockIsUsedFunction;
 } FileSystemHandle;
 
 /***************************** Variables *******************************/
@@ -116,7 +128,7 @@ const char *FileSystem_typeToString(FileSystemTypes fileSystemType, const char *
 bool FileSystem_parseType(const char *deviceName, FileSystemTypes *fileSystemType);
 
 /***********************************************************************\
-* Name   : FileSystem_getType
+* Name   : FileSystem_getType, FileSystem_getTypeCString
 * Purpose: get file system type
 * Input  : deviceName - device name
 * Output : -
@@ -124,7 +136,8 @@ bool FileSystem_parseType(const char *deviceName, FileSystemTypes *fileSystemTyp
 * Notes  : -
 \***********************************************************************/
 
-FileSystemTypes FileSystem_getType(const char *deviceName);
+FileSystemTypes FileSystem_getType(ConstString deviceName);
+FileSystemTypes FileSystem_getTypeCString(const char *deviceName);
 
 /***********************************************************************\
 * Name   : FileSystem_init

@@ -1,6 +1,6 @@
 /***********************************************************************\
 *
-* Contents: Backup ARchiver device functions
+* Contents: device functions
 * Systems: all
 *
 \***********************************************************************/
@@ -104,7 +104,7 @@ typedef struct
 #endif
 
 /***********************************************************************\
-* Name   : Device_open
+* Name   : Device_open, Device_openCString
 * Purpose: open device
 * Input  : deviceHandle - device handle
 *          deviceName   - device name
@@ -118,6 +118,10 @@ Errors Device_open(DeviceHandle *deviceHandle,
                    ConstString  deviceName,
                    DeviceModes  deviceMode
                   );
+Errors Device_openCString(DeviceHandle *deviceHandle,
+                          const char   *deviceName,
+                          DeviceModes  deviceMode
+                         );
 
 /***********************************************************************\
 * Name   : Device_close

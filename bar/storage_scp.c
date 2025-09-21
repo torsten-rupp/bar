@@ -994,6 +994,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
       // create directories if not existing
       String directoryName = File_getDirectoryName(String_new(),fileName);
       String name = String_new();
+      error = ERROR_NONE;
       FILE_PATH_ITERATEX(directoryName,name,TRUE,error == ERROR_NONE)
       {
         LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
@@ -1094,6 +1095,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
         return error;
       }
     }
+
+    assert(error != ERROR_UNKNOWN);
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */

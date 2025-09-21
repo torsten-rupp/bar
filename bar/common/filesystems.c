@@ -1,6 +1,6 @@
 /***********************************************************************\
 *
-* Contents: Backup ARchiver file system functions
+* Contents: file system functions
 * Systems: all
 *
 \***********************************************************************/
@@ -25,7 +25,9 @@
 #include "common/global.h"
 #include "common/strings.h"
 #include "common/devices.h"
-
+#include "common/filesystems_ext.h"
+#include "common/filesystems_fat.h"
+#include "common/filesystems_reiserfs.h"
 #include "errors.h"
 
 #include "filesystems.h"
@@ -78,36 +80,10 @@ FILESYTEM_TYPES[] =
 
 
 /***************************** Datatypes *******************************/
-// file system definition
-typedef struct
-{
-  uint                          sizeOfHandle;
-  FileSystemInitFunction        initFunction;
-  FileSystemDoneFunction        doneFunction;
-  FileSystemBlockIsUsedFunction blockIsUsedFunction;
-} FileSystem;
 
 /***************************** Variables *******************************/
 
-// define file system
-#define DEFINE_FILE_SYSTEM(name) \
-  { \
-    sizeof(name ## Handle), \
-    (FileSystemInitFunction)name ## _init, \
-    (FileSystemDoneFunction)name ## _done, \
-    (FileSystemBlockIsUsedFunction)name ## _blockIsUsed, \
-  }
-
 /****************************** Macros *********************************/
-
-// convert from little endian to host system format
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-  #define LE16_TO_HOST(x) (x)
-  #define LE32_TO_HOST(x) (x)
-#else /* not __BYTE_ORDER == __LITTLE_ENDIAN */
-  #define LE16_TO_HOST(x) swap16(x)
-  #define LE32_TO_HOST(x) swap32(x)
-#endif /* __BYTE_ORDER == __LITTLE_ENDIAN */
 
 /***************************** Forwards ********************************/
 
@@ -117,57 +93,107 @@ typedef struct
   extern "C" {
 #endif
 
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#else /* not __BYTE_ORDER == __LITTLE_ENDIAN */
-/***********************************************************************\
-* Name   : swap16
-* Purpose: swap 16bit value
-* Input  : n - value
-* Output : -
-* Return : swapped value
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE uint16 swap16(uint16 n)
-{
-  return   ((n & 0xFF00U >> 8) << 0)
-         | ((n & 0x00FFU >> 0) << 8)
-         ;
-}
-
-/***********************************************************************\
-* Name   : swap32
-* Purpose: swap 32bit value
-* Input  : n - value
-* Output : -
-* Return : swapped value
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE uint32 swap32(uint32 n)
-{
-  return   ((n & 0xFF000000U >> 24) <<  0)
-         | ((n & 0x00FF0000U >> 16) <<  8)
-         | ((n & 0x0000FF00U >>  8) << 16)
-         | ((n & 0x000000FFU >>  0) << 24)
-         ;
-}
-#endif /* __BYTE_ORDER == __LITTLE_ENDIAN */
-
 #include "filesystems_ext.c"
 #include "filesystems_fat.c"
 #include "filesystems_reiserfs.c"
 
-// support file systems
-LOCAL FileSystem FILE_SYSTEMS[] =
+/***********************************************************************\
+* Name   : getFileSystemType
+* Purpose: detect file system type
+* Input  : deviceHandle - device handle
+* Output : -
+* Return : file system type or FILE_SYSTEM_TYPE_NONE
+* Notes  : -
+\***********************************************************************/
+
+LOCAL FileSystemTypes getFileSystemType(DeviceHandle *deviceHandle)
 {
-  DEFINE_FILE_SYSTEM(EXT),
-  DEFINE_FILE_SYSTEM(FAT),
-  DEFINE_FILE_SYSTEM(REISERFS),
-};
+  assert(deviceHandle != NULL);
+
+  FileSystemTypes fileSystemType = FILE_SYSTEM_TYPE_NONE;
+
+  // detect file system on device
+  if      (EXT_init(deviceHandle,&fileSystemType,NULL))
+  {
+  }
+  else if (FAT_init(deviceHandle,&fileSystemType,NULL))
+  {
+  }
+  else if (ReiserFS_init(deviceHandle,&fileSystemType,NULL))
+  {
+  }
+  else
+  {
+    // use libblkid to detect file system on device
+    #if defined(HAVE_BLKID_NEW_PROBE_FROM_FILENAME) && defined(HAVE_BLKID_DO_PROBE) && defined(HAVE_BLKID_PROBE_LOOKUP_VALUE)
+    //    blkid_probe blkidProbe = blkid_new_probe_from_filename(deviceName);
+      blkid_probe blkidProbe = blkid_new_probe();
+      if (blkidProbe != NULL)
+      {
+        if (blkid_probe_set_device(blkidProbe,deviceHandle->handle,0,0) == 0)
+        {
+          if (blkid_do_probe(blkidProbe) == 0)
+          {
+            const char *type;
+            if (blkid_probe_lookup_value(blkidProbe, "TYPE", &type, NULL) == 0)
+            {
+      //          int version;
+      //          blkid_probe_lookup_value(blkidProbe, "VERSION", &version, NULL);
+      //fprintf(stderr,"%s:%d: deviceName=%s type=%s\n",__FILE__,__LINE__,deviceName,type);
+              const struct
+              {
+                const char      *name;
+                FileSystemTypes fileSystemType;
+              }
+              FILESYTEM_TYPES[] =
+              {
+                { "ext2",    FILE_SYSTEM_TYPE_EXT2     },
+                { "ext3",    FILE_SYSTEM_TYPE_EXT3     },
+                { "ext4",    FILE_SYSTEM_TYPE_EXT4     },
+                { "btrfs",   FILE_SYSTEM_TYPE_BTRFS    },
+                { "hpfs",    FILE_SYSTEM_TYPE_HPFS     },
+                { "isofs",   FILE_SYSTEM_TYPE_ISOFS    },
+                { "xfs",     FILE_SYSTEM_TYPE_XFS      },
+                { "udf",     FILE_SYSTEM_TYPE_UDF      },
+
+                { "raiser",  FILE_SYSTEM_TYPE_REISERFS },
+
+                { "minix",   FILE_SYSTEM_TYPE_MINIX    },
+
+                { "fat",     FILE_SYSTEM_TYPE_FAT      },
+                { "fat12",   FILE_SYSTEM_TYPE_FAT12    },
+                { "fat16",   FILE_SYSTEM_TYPE_FAT16    },
+                { "fat32",   FILE_SYSTEM_TYPE_FAT32    },
+                { "vfat",    FILE_SYSTEM_TYPE_FAT      },
+                { "exfat",   FILE_SYSTEM_TYPE_EXFAT    },
+
+                { "afs",     FILE_SYSTEM_TYPE_AFS      },
+                { "coda",    FILE_SYSTEM_TYPE_CODA     },
+                { "nfs",     FILE_SYSTEM_TYPE_NFS      },
+                { "smb1",    FILE_SYSTEM_TYPE_SMB1     },
+                { "smb2",    FILE_SYSTEM_TYPE_SMB2     },
+              };
+
+              size_t i = ARRAY_FIND(FILESYTEM_TYPES,
+                                    SIZE_OF_ARRAY(FILESYTEM_TYPES),
+                                    i,
+                                    stringEqualsIgnoreCase(FILESYTEM_TYPES[i].name,type)
+                                   );
+              if (i < SIZE_OF_ARRAY(FILESYTEM_TYPES)) fileSystemType = FILESYTEM_TYPES[i].fileSystemType;
+            }
+          }
+        }
+        blkid_free_probe(blkidProbe);
+      }
+    #else
+      UNUSED_VARIABLE(deviceHandle);
+    #endif
+  }
+
+  return fileSystemType;
+}
 
 /*---------------------------------------------------------------------*/
-
 
 const char *FileSystem_typeToString(FileSystemTypes fileSystemType, const char *defaultValue)
 {
@@ -214,72 +240,29 @@ bool FileSystem_parseType(const char *deviceName, FileSystemTypes *fileSystemTyp
   }
 }
 
-FileSystemTypes FileSystem_getType(const char *deviceName)
+FileSystemTypes FileSystem_getType(ConstString deviceName)
 {
   assert(deviceName != NULL);
 
-  FileSystemTypes fileSystemType = FILE_SYSTEM_TYPE_NONE;
+  return FileSystem_getTypeCString(String_cString(deviceName));
+}
 
-// TODO: use detector from init if possible, raiser version is not detected by libblkid
-  #if defined(HAVE_BLKID_NEW_PROBE_FROM_FILENAME) && defined(HAVE_BLKID_DO_PROBE) && defined(HAVE_BLKID_PROBE_LOOKUP_VALUE)
-    blkid_probe blkidProbe = blkid_new_probe_from_filename(deviceName);
-    if (blkidProbe != NULL)
-    {
-      if (blkid_do_probe(blkidProbe) == 0)
-      {
-        const char *type;
-        if (blkid_probe_lookup_value(blkidProbe, "TYPE", &type, NULL) == 0)
-        {
-//          int version;
-//          blkid_probe_lookup_value(blkidProbe, "VERSION", &version, NULL);
-//fprintf(stderr,"%s:%d: deviceName=%s type=%s\n",__FILE__,__LINE__,deviceName,type);
-          const struct
-          {
-            const char      *name;
-            FileSystemTypes fileSystemType;
-          }
-          FILESYTEM_TYPES[] =
-          {
-            { "ext2",    FILE_SYSTEM_TYPE_EXT2     },
-            { "ext3",    FILE_SYSTEM_TYPE_EXT3     },
-            { "ext4",    FILE_SYSTEM_TYPE_EXT4     },
-            { "btrfs",   FILE_SYSTEM_TYPE_BTRFS    },
-            { "hpfs",    FILE_SYSTEM_TYPE_HPFS     },
-            { "isofs",   FILE_SYSTEM_TYPE_ISOFS    },
-            { "xfs",     FILE_SYSTEM_TYPE_XFS      },
-            { "udf",     FILE_SYSTEM_TYPE_UDF      },
+FileSystemTypes FileSystem_getTypeCString(const char *deviceName)
+{
+  assert(deviceName != NULL);
 
-            { "raiser",  FILE_SYSTEM_TYPE_REISERFS },
+  FileSystemTypes fileSystemType;
 
-            { "minix",   FILE_SYSTEM_TYPE_MINIX    },
-
-            { "fat",     FILE_SYSTEM_TYPE_FAT      },
-            { "fat12",   FILE_SYSTEM_TYPE_FAT12    },
-            { "fat16",   FILE_SYSTEM_TYPE_FAT16    },
-            { "fat32",   FILE_SYSTEM_TYPE_FAT32    },
-            { "vfat",    FILE_SYSTEM_TYPE_FAT      },
-            { "exfat",   FILE_SYSTEM_TYPE_EXFAT    },
-
-            { "afs",     FILE_SYSTEM_TYPE_AFS      },
-            { "coda",    FILE_SYSTEM_TYPE_CODA     },
-            { "nfs",     FILE_SYSTEM_TYPE_NFS      },
-            { "smb1",    FILE_SYSTEM_TYPE_SMB1     },
-            { "smb2",    FILE_SYSTEM_TYPE_SMB2     },
-          };
-
-          size_t i = ARRAY_FIND(FILESYTEM_TYPES,
-                                SIZE_OF_ARRAY(FILESYTEM_TYPES),
-                                i,
-                                stringEqualsIgnoreCase(FILESYTEM_TYPES[i].name,type)
-                               );
-          if (i < SIZE_OF_ARRAY(FILESYTEM_TYPES)) fileSystemType = FILESYTEM_TYPES[i].fileSystemType;
-        }
-      }
-      blkid_free_probe(blkidProbe);
-    }
-  #else
-    UNUSED_VARIABLE(deviceName);
-  #endif
+  DeviceHandle deviceHandle;
+  if (Device_openCString(&deviceHandle,deviceName,DEVICE_OPEN_READ) == ERROR_NONE)
+  {
+    fileSystemType = getFileSystemType(&deviceHandle);
+    Device_close(&deviceHandle);
+  }
+  else
+  {
+    fileSystemType = FILE_SYSTEM_TYPE_UNKNOWN;
+  }
 
   return fileSystemType;
 }
@@ -292,35 +275,22 @@ Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
   assert(deviceHandle != NULL);
 
   // initialize variables
-  fileSystemHandle->deviceHandle        = deviceHandle;
-  fileSystemHandle->type                = FILE_SYSTEM_TYPE_UNKNOWN;
-  fileSystemHandle->handle              = NULL;
-  fileSystemHandle->doneFunction        = NULL;
-  fileSystemHandle->blockIsUsedFunction = NULL;
-
-  // detect file system on device
-  size_t i = 0;
-  while ((i < SIZE_OF_ARRAY(FILE_SYSTEMS)) && (fileSystemHandle->type == FILE_SYSTEM_TYPE_UNKNOWN))
+  fileSystemHandle->deviceHandle = deviceHandle;
+  fileSystemHandle->type         = FILE_SYSTEM_TYPE_UNKNOWN;
+  if      (EXT_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->extHandle))
   {
-    void *handle = malloc(FILE_SYSTEMS[i].sizeOfHandle);
-    if (handle == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-
-    fileSystemHandle->type = FILE_SYSTEMS[i].initFunction(deviceHandle,handle);
-    if (fileSystemHandle->type != FILE_SYSTEM_TYPE_UNKNOWN)
-    {
-      fileSystemHandle->handle              = handle;
-      fileSystemHandle->doneFunction        = FILE_SYSTEMS[i].doneFunction;
-      fileSystemHandle->blockIsUsedFunction = FILE_SYSTEMS[i].blockIsUsedFunction;
-    }
-    else
-    {
-      free(handle);
-    }
-    i++;
   }
+  else if (FAT_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->fatHandle))
+  {
+  }
+  else if (ReiserFS_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->reiserFSHandle))
+  {
+  }
+  else
+  {
+    fileSystemHandle->type = getFileSystemType(deviceHandle);
+  }
+  assert(fileSystemHandle->type != FILE_SYSTEM_TYPE_UNKNOWN);
 
   return ERROR_NONE;
 }
@@ -329,13 +299,24 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle)
 {
   assert(fileSystemHandle != NULL);
 
-  if (fileSystemHandle->doneFunction != NULL)
+  switch (fileSystemHandle->type)
   {
-    fileSystemHandle->doneFunction(fileSystemHandle->deviceHandle,fileSystemHandle->handle);
-  }
-  if (fileSystemHandle->handle != NULL)
-  {
-    free(fileSystemHandle->handle);
+    case FILE_SYSTEM_TYPE_EXT2:
+    case FILE_SYSTEM_TYPE_EXT3:
+    case FILE_SYSTEM_TYPE_EXT4:
+      EXT_done(&fileSystemHandle->extHandle);
+      break;
+    case FILE_SYSTEM_TYPE_FAT12:
+    case FILE_SYSTEM_TYPE_FAT16:
+    case FILE_SYSTEM_TYPE_FAT32:
+      FAT_done(&fileSystemHandle->fatHandle);
+      break;
+    case FILE_SYSTEM_TYPE_REISERFS3_5:
+    case FILE_SYSTEM_TYPE_REISERFS3_6:
+      ReiserFS_done(&fileSystemHandle->reiserFSHandle);
+      break;
+    default:
+      break;
   }
 
   return ERROR_NONE;
@@ -345,14 +326,29 @@ bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle, uint64 offset)
 {
   assert(fileSystemHandle != NULL);
 
-  if (fileSystemHandle->blockIsUsedFunction != NULL)
+  bool blockIsUsed;
+  switch (fileSystemHandle->type)
   {
-    return fileSystemHandle->blockIsUsedFunction(fileSystemHandle->deviceHandle,fileSystemHandle->handle,offset);
+    case FILE_SYSTEM_TYPE_EXT2:
+    case FILE_SYSTEM_TYPE_EXT3:
+    case FILE_SYSTEM_TYPE_EXT4:
+      blockIsUsed = EXT_blockIsUsed(fileSystemHandle->deviceHandle,fileSystemHandle->type,&fileSystemHandle->extHandle,offset);
+      break;
+    case FILE_SYSTEM_TYPE_FAT12:
+    case FILE_SYSTEM_TYPE_FAT16:
+    case FILE_SYSTEM_TYPE_FAT32:
+      blockIsUsed = FAT_blockIsUsed(fileSystemHandle->deviceHandle,fileSystemHandle->type,&fileSystemHandle->fatHandle,offset);
+      break;
+    case FILE_SYSTEM_TYPE_REISERFS3_5:
+    case FILE_SYSTEM_TYPE_REISERFS3_6:
+      blockIsUsed = ReiserFS_blockIsUsed(fileSystemHandle->deviceHandle,fileSystemHandle->type,&fileSystemHandle->reiserFSHandle,offset);
+      break;
+    default:
+      blockIsUsed = TRUE;
+      break;
   }
-  else
-  {
-    return TRUE;
-  }
+
+  return blockIsUsed;
 }
 
 #ifdef __cplusplus

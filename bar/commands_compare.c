@@ -571,6 +571,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   CompressAlgorithms deltaCompressAlgorithm,byteCompressAlgorithm;
   String             deviceName = String_new();
   DeviceInfo         deviceInfo;
+  FileSystemTypes    fileSystemType;
   uint64             blockOffset,blockCount;
   error = Archive_readImageEntry(&archiveEntryInfo,
                                  archiveHandle,
@@ -582,7 +583,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
                                  NULL,  // cryptKey
                                  deviceName,
                                  &deviceInfo,
-                                 NULL,  // fileSystemType
+                                 &fileSystemType,
                                  NULL,  // deltaSourceName
                                  NULL,  // deltaSourceSize
                                  &blockOffset,
@@ -857,7 +858,8 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
     else
     {
-      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
+// TODO: required current fragment size from archive, not global setting
+      stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),blockCount*deviceInfo.blockSize);
     }
     char fragmentString[256];
     stringClear(fragmentString);
@@ -871,7 +873,12 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
 
     // output
-    printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
+    printInfo(1,
+              "OK (%s, %s bytes%s)\n",
+              (fileSystemType != FILE_SYSTEM_TYPE_NONE) ? FileSystem_typeToString(fileSystemType,NULL) : "raw",
+              sizeString,
+              fragmentString
+             );
 
     // done file system
     if (fileSystemFlag)
