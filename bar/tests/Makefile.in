@@ -174,7 +174,6 @@ FSCK_EXT3      = fsck.ext3
 FSCK_EXT4      = fsck.ext4
 FSCK_FAT       = fsck.fat
 FSCK_VFAT      = fsck.vfat
-FSCK_REISERFS  = fsck.reiserfs
 FSCK_EXFAT     = fsck.exfat
 FSCK_OPTIONS   =
 LOSETUP        = /sbin/losetup
@@ -299,7 +298,7 @@ endif
 
 # supported image compress algorithms
 ifeq ($(TEST_IMAGE_FILESYSTEM_NAMES),)
-  TEST_IMAGE_FILESYSTEM_NAMES = raw ext fat reiser
+  TEST_IMAGE_FILESYSTEM_NAMES = raw ext fat exfat
 endif
 ifeq ($(TEST_IMAGE_COMPRESS_NAMES),)
   TEST_IMAGE_COMPRESS_NAMES ?= none zip9
@@ -597,8 +596,6 @@ help_output:
 	@$(ECHO) "  tests_image_operations_ext(2|3|4)"
 	@$(ECHO) "  tests_image_operations_fat"
 	@$(ECHO) "  tests_image_operations_fat(12|16|32)"
-	@$(ECHO) "  tests_image_operations_reiser"
-	@$(ECHO) "  tests_image_operations_reiser(fs3)"
 	@$(ECHO) "  tests_image_operations_exfat"
 	@$(ECHO) "  tests_image_operations_dryrun"
 	@$(ECHO) ""
@@ -640,7 +637,7 @@ help_output:
 	@$(ECHO) "    3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256"
         endif
 	@$(ECHO) "  TEST_IMAGE_FILESYSTEM_NAMES"
-	@$(ECHO) "    raw ext fat reiser exfat"
+	@$(ECHO) "    raw ext fat exfat"
 	@$(ECHO) "  TEST_IMAGE_COMPRESS_NAMES"
 	@$(ECHO) "    none zip9"
 	@$(ECHO) "  TEST_INDEX_DATABASES"
@@ -5569,121 +5566,6 @@ ifneq (@MKFS_MSDOS@,)
 	$(RMF) $(IMAGE0A)
 endif
 
-.PHONY: tests_image_reiser tests_image_reiserfs1 tests_image_reiserfs2 tests_image_reiserfs3 tests_image_reiser4
-tests_image_operations_reiser: \
-  tests_image_operations_reiserfs1 \
-  tests_image_operations_reiserfs2 \
-  tests_image_operations_reiserfs3 \
-  tests_image_operations_reiser4
-
-tests_image_operations_reiserfs1:
-ifneq (@MKFS_REISERFS@,)
-endif
-
-tests_image_operations_reiserfs2:
-ifneq (@MKFS_REISERFS@,)
-endif
-
-# ReiserFS version 3 (Note: Linux only support block size 4096)
-tests_image_operations_reiserfs3: \
-  $(TEST_CONFIGS)
-ifneq (@MKFS_REISERFS@,)
-	# ReiserFS 3
-	@$(call functionTestDeviceReset)
-	@#
-	# ReiserFS 3 zero-data
-	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
-	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.5)
-	$(MAKE) \
-          IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
-          FSCK=$(FSCK_REISERFS) \
-          FSCK_OPTIONS="-n -y" \
-          tests_image_operations_base \
-          tests_image_operations_diff_image \
-          tests_image_operations_check
-	$(RMF) $(IMAGE1)
-	$(RMF) $(IMAGE0)
-	@#
-	# ReiserFS 3 random-data
-	@$(call functionCreateFileRandom,$(IMAGE0),64,1M)
-	@$(call functionCreateFileRandom,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.5,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
-	$(MAKE) \
-          IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
-          FSCK=$(FSCK_REISERFS) \
-          FSCK_OPTIONS="-n -y" \
-          tests_image_operations_base \
-          tests_image_operations_check
-	$(RMF) $(IMAGE1)
-	$(RMF) $(IMAGE0)
-	@#
-	# ReiserFS 3 zero-data
-	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
-	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.6)
-	$(MAKE) \
-          IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
-          FSCK=$(FSCK_REISERFS) \
-          FSCK_OPTIONS="-n -y" \
-          tests_image_operations_base \
-          tests_image_operations_diff_image \
-          tests_image_operations_check
-	$(RMF) $(IMAGE1)
-	$(RMF) $(IMAGE0)
-	@#
-	# ReiserFS 3 random-data
-	@$(call functionCreateFileRandom,$(IMAGE0),64,1M)
-	@$(call functionCreateFileRandom,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.6,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
-	$(MAKE) \
-          IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none)" \
-          FSCK=$(FSCK_REISERFS) \
-          FSCK_OPTIONS="-n -y" \
-          tests_image_operations_base \
-          tests_image_operations_check
-	$(RMF) $(IMAGE1)
-	$(RMF) $(IMAGE0)
-	@
-	# ReiserFS 3 random-data, delta image
-	@$(call functionCreateFileZero,$(IMAGE0A),64,1M)
-	@$(call functionCreateFileZero,$(IMAGE0B),64,1M)
-	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.6,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.6,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
-	$(MAKE) \
-          IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
-          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
-          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
-          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
-          tests_image_operations_delta
-	$(RMF) $(IMAGE1)
-	$(RMF) $(IMAGE0B)
-	$(RMF) $(IMAGE0A)
-endif
-
-# Reiser4 (Note: not supported anymore)
-tests_image_operations_reiser4:
-ifneq (@MKFS_REISER4@,)
-endif
-
 .PHONY: tests_image_operations_exfat
 
 # EXFAT
@@ -5858,10 +5740,7 @@ tests_image_operations_check:
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@#
-	@# Note: e. g. fsck.reiser change the file system even nothing is corrupt. Thus do fsck always after image diff
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE0) 2>/dev/null $(LOG)
-	@#
-	@# Note: e. g. fsck.reiser change the file system even nothing is corrupt. Thus do fsck always after image diff
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE1) 2>/dev/null $(LOG)
 	@#
 ifeq ($(TEST_MOUNT_OPERATIONS),yes)

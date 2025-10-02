@@ -940,8 +940,6 @@ AC_SUBST(MKFS_EXT2)                          dnl mksfs.ext2 command
 AC_SUBST(MKFS_EXT3)                          dnl mksfs.ext3 command
 AC_SUBST(MKFS_EXT4)                          dnl mksfs.ext4 command
 AC_SUBST(MKFS_MSDOS)                         dnl mksfs.msdos command
-AC_SUBST(MKFS_REISERFS)                      dnl mksfs.reiserfs command
-AC_SUBST(MKFS_REISER4)                       dnl mksfs.reiser4 command
 AC_SUBST(MKFS_EXFAT)                         dnl mksfs.exfat command
 
 AC_SUBST(SOCAT)                              dnl socat command
@@ -1534,13 +1532,11 @@ AC_PATH_PROGS(TIME,time,,/usr/bin)
 AC_PATH_PROGS(GETFATTR,getfattr,,/usr/bin)
 AC_PATH_PROGS(SETFATTR,setfattr,,/usr/bin)
 
-AC_PATH_PROGS(MKFS_EXT2,    mkfs.ext2,    ,/sbin)
-AC_PATH_PROGS(MKFS_EXT3,    mkfs.ext3,    ,/sbin)
-AC_PATH_PROGS(MKFS_EXT4,    mkfs.ext4,    ,/sbin)
-AC_PATH_PROGS(MKFS_MSDOS,   mkfs.msdos,   ,/sbin)
-AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
-AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
-AC_PATH_PROGS(MKFS_EXFAT,   mkfs.exfat,   ,/sbin)
+AC_PATH_PROGS(MKFS_EXT2, mkfs.ext2, ,/sbin)
+AC_PATH_PROGS(MKFS_EXT3, mkfs.ext3, ,/sbin)
+AC_PATH_PROGS(MKFS_EXT4, mkfs.ext4, ,/sbin)
+AC_PATH_PROGS(MKFS_MSDOS,mkfs.msdos,,/sbin)
+AC_PATH_PROGS(MKFS_EXFAT,mkfs.exfat,,/sbin)
 
 AC_PATH_PROGS(SOCAT,socat)
 
