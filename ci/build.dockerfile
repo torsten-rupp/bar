@@ -165,7 +165,3 @@ RUN   ( \
 COPY download-third-party-packages.sh /root
 RUN    /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern \
     && rm -f /root/download-third-party-packages.sh
-
-RUN <<EOT
-echo hello
-EOT

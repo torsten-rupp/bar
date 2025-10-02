@@ -247,17 +247,18 @@ const COMPRESS_ALGORITHM_ZSTD_18     = 88
 const COMPRESS_ALGORITHM_ZSTD_19     = 89
 
 # file systems
-const FILE_SYSTEM_TYPE_NONE          = 0
+const FILE_SYSTEM_TYPE_NONE          =  0
 
-const FILE_SYSTEM_TYPE_EXT2          = 1
-const FILE_SYSTEM_TYPE_EXT3          = 2
-const FILE_SYSTEM_TYPE_EXT4          = 3
-const FILE_SYSTEM_TYPE_FAT12         = 4
-const FILE_SYSTEM_TYPE_FAT16         = 5
-const FILE_SYSTEM_TYPE_FAT32         = 6
-const FILE_SYSTEM_TYPE_REISERFS3_5   = 7
-const FILE_SYSTEM_TYPE_REISERFS3_6   = 8
-const FILE_SYSTEM_TYPE_REISERFS4     = 9
+const FILE_SYSTEM_TYPE_EXT2          =  1
+const FILE_SYSTEM_TYPE_EXT3          =  2
+const FILE_SYSTEM_TYPE_EXT4          =  3
+const FILE_SYSTEM_TYPE_FAT12         =  4
+const FILE_SYSTEM_TYPE_FAT16         =  5
+const FILE_SYSTEM_TYPE_FAT32         =  6
+const FILE_SYSTEM_TYPE_REISERFS3_5   =  7
+const FILE_SYSTEM_TYPE_REISERFS3_6   =  8
+const FILE_SYSTEM_TYPE_REISERFS4     =  9
+const FILE_SYSTEM_TYPE_EXFAT         = 10
 
 # hash algorithms
 const HASH_ALGORITHM_NONE            = 0

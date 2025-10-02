@@ -27,6 +27,7 @@
 #include "common/devices.h"
 #include "common/filesystems_ext.h"
 #include "common/filesystems_fat.h"
+#include "common/filesystems_exfat.h"
 #include "common/filesystems_reiserfs.h"
 #include "errors.h"
 
@@ -95,6 +96,7 @@ FILESYTEM_TYPES[] =
 
 #include "filesystems_ext.c"
 #include "filesystems_fat.c"
+#include "filesystems_exfat.c"
 #include "filesystems_reiserfs.c"
 
 /***********************************************************************\
@@ -115,12 +117,19 @@ LOCAL FileSystemTypes getFileSystemType(DeviceHandle *deviceHandle)
   // detect file system on device
   if      (EXT_init(deviceHandle,&fileSystemType,NULL))
   {
+    // nothing to do
   }
   else if (FAT_init(deviceHandle,&fileSystemType,NULL))
   {
+    // nothing to do
+  }
+  else if (EXFAT_init(deviceHandle,&fileSystemType,NULL))
+  {
+    // nothing to do
   }
   else if (ReiserFS_init(deviceHandle,&fileSystemType,NULL))
   {
+    // nothing to do
   }
   else
   {
@@ -279,12 +288,19 @@ Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
   fileSystemHandle->type         = FILE_SYSTEM_TYPE_UNKNOWN;
   if      (EXT_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->extHandle))
   {
+    // nothing to do
   }
   else if (FAT_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->fatHandle))
   {
+    // nothing to do
+  }
+  else if (EXFAT_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->exfatHandle))
+  {
+    // nothing to do
   }
   else if (ReiserFS_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->reiserFSHandle))
   {
+    // nothing to do
   }
   else
   {
@@ -322,7 +338,7 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle)
   return ERROR_NONE;
 }
 
-bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle, uint64 offset)
+bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle, uint64_t offset)
 {
   assert(fileSystemHandle != NULL);
 
@@ -338,6 +354,9 @@ bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle, uint64 offset)
     case FILE_SYSTEM_TYPE_FAT16:
     case FILE_SYSTEM_TYPE_FAT32:
       blockIsUsed = FAT_blockIsUsed(fileSystemHandle->deviceHandle,fileSystemHandle->type,&fileSystemHandle->fatHandle,offset);
+      break;
+    case FILE_SYSTEM_TYPE_EXFAT:
+      blockIsUsed = EXFAT_blockIsUsed(fileSystemHandle->deviceHandle,&fileSystemHandle->exfatHandle,offset);
       break;
     case FILE_SYSTEM_TYPE_REISERFS3_5:
     case FILE_SYSTEM_TYPE_REISERFS3_6:

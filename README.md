@@ -16,7 +16,7 @@ Features
   files without decompressing/decryption of the whole archive,
 * full and incremental/differential backup files archives,
 * support for raw and several file systems for disk images (ext,
-  fat, reiserfs),
+  fat, exfat),
 * can split archives into parts of selectable size; each part can
   be read independent,
 * compress of data with zlib, bzip2, lzma, lzo, lz4, or zstd

@@ -175,6 +175,7 @@ FSCK_EXT4      = fsck.ext4
 FSCK_FAT       = fsck.fat
 FSCK_VFAT      = fsck.vfat
 FSCK_REISERFS  = fsck.reiserfs
+FSCK_EXFAT     = fsck.exfat
 FSCK_OPTIONS   =
 LOSETUP        = /sbin/losetup
 MKFS           = /sbin/mkfs
@@ -598,6 +599,7 @@ help_output:
 	@$(ECHO) "  tests_image_operations_fat(12|16|32)"
 	@$(ECHO) "  tests_image_operations_reiser"
 	@$(ECHO) "  tests_image_operations_reiser(fs3)"
+	@$(ECHO) "  tests_image_operations_exfat"
 	@$(ECHO) "  tests_image_operations_dryrun"
 	@$(ECHO) ""
 	@$(ECHO) "  tests_file_operations_huge"
@@ -638,7 +640,7 @@ help_output:
 	@$(ECHO) "    3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256"
         endif
 	@$(ECHO) "  TEST_IMAGE_FILESYSTEM_NAMES"
-	@$(ECHO) "    raw ext fat reiser"
+	@$(ECHO) "    raw ext fat reiser exfat"
 	@$(ECHO) "  TEST_IMAGE_COMPRESS_NAMES"
 	@$(ECHO) "    none zip9"
 	@$(ECHO) "  TEST_INDEX_DATABASES"
@@ -823,19 +825,23 @@ functionTestDeviceInitFilesystem = \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to initialize file system on a test device
-# call functionInitFilesystem,<image file>,<mkfs options>[,<files>]
+# call functionInitFilesystem,<image file>,<loop device>,<mount point>,<mkfs options>[,<files>]
 functionInitFilesystem = \
   ( \
-    $(call functionTestDeviceInitFilesystem,$1,$2); \
-    $(if $3,$(ECHO) $(INSTALL) -d $(MOUNT_POINT0); \
-            $(INSTALL) -d $(MOUNT_POINT0); \
-            $(ECHO) $(SUDO) -n $(MOUNT) $(LOOP0) $(MOUNT_POINT0); \
-            $(SUDO) -n $(MOUNT) $(LOOP0) $(MOUNT_POINT0); rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-            $(ECHO) $(SUDO) -n $(CP) -r -p $3 $(MOUNT_POINT0); \
-            $(SUDO) -n $(CP) -r -p $3 $(MOUNT_POINT0) 1>/dev/null 2>/dev/null; \
+    $(call functionTestDeviceInitFilesystem,$1,$4); \
+    $(if $5,$(ECHO) $(SUDO) -n $(LOSETUP) $2 $1; \
+            $(SUDO) -n $(LOSETUP) $2 $1; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+            $(ECHO) $(INSTALL) -d $3; \
+            $(INSTALL) -d $3; \
+            $(ECHO) $(SUDO) -n $(MOUNT) $(LOOP0) $3; \
+            $(SUDO) -n $(MOUNT) $(LOOP0) $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+            $(ECHO) $(SUDO) -n $(CP) -r -p $5 $3; \
+            $(SUDO) -n $(CP) -r -p $5 $3 1>/dev/null 2>/dev/null; \
             $(SYNC); \
-            $(ECHO) $(SUDO) -n $(UMOUNT) $(MOUNT_POINT0); \
-            $(SUDO) -n $(UMOUNT) $(MOUNT_POINT0); \
+            $(ECHO) $(SUDO) -n $(UMOUNT) $3; \
+            $(SUDO) -n $(UMOUNT) $3; \
+            $(ECHO) $(SUDO) -n $(LOSETUP) -d $2; \
+            $(SUDO) -n $(LOSETUP) -d $2; \
     ) \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
@@ -914,9 +920,11 @@ TEST_FILE_NAMES_SIMPLE = \
   zero128.dat \
   zero1024.dat \
   zero512k.dat \
+  zero8M.dat \
   random128.dat \
   random1024.dat \
   random512k.dat \
+  random8M.dat \
   zero-random512k.dat \
   readonly.dat \
   readonly512k.dat \
@@ -3627,6 +3635,9 @@ data/zero1024.dat:
 data/zero512k.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1k count=512 2>/dev/null
+data/zero8M.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_ZERO) of=$@ bs=1M count=8 2>/dev/null
 data/random128.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1 count=128 2>/dev/null
@@ -3636,6 +3647,9 @@ data/random1024.dat:
 data/random512k.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1k count=512 2>/dev/null
+data/random8M.dat:
+	$(INSTALL) -d $(@D)
+	$(DD) if=$(DEVICE_RANDOM) of=$@ bs=1M count=8 2>/dev/null
 data/zero-random512k.dat:
 	$(INSTALL) -d $(@D)
 	$(DD) if=$(DEVICE_RANDOM) bs=1k count=64 1>$@  2>/dev/null
@@ -4697,14 +4711,13 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	# ext2 zero-data, default block size
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext2)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -4715,14 +4728,13 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	# ext2 random-data, default block size
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext2,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -4734,16 +4746,14 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2)
+	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2,data/random512k.dat data/zero512k.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2,data/random512k.dat data/zero512k.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -4756,14 +4766,13 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext2 zero-data, block size 1024 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 1024)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 1024)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -4774,14 +4783,13 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext2 random-data, block size 1024 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 1024)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 1024,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -4793,16 +4801,14 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 1024)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 1024)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 1024,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 1024,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -4816,14 +4822,13 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext2 zero-data, block size 2048 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 2048)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 2048)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -4834,14 +4839,13 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext2 random-data, block size 2048 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 2048)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 2048,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -4853,16 +4857,14 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 2048)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 2048)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 2048,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 2048,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -4874,14 +4876,13 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext2 zero-data, block size 4096 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 4096)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 4096)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -4892,14 +4893,13 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext2 random-data, block size 4096 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext2 -b 4096)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 4096,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -4911,16 +4911,14 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext2 -b 4096)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext2 -b 4096)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 4096,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext2 -b 4096,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 endif
 	$(RMF) $(IMAGE1)
@@ -4940,14 +4938,13 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	# ext3 zero-data, default block size
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext3)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -4958,14 +4955,13 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	# ext3 random-data, default block size
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3)
+	@$(call functionInitFilesystem,$(IMAGE0),-t ext3,data/random512k.data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -4977,16 +4973,14 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext3,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext3,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -4998,14 +4992,13 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext3 zero-data, block size 1024 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 1024)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 1024)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5016,14 +5009,13 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext3 random-data, block size 1024 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 1024)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 1024,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5035,16 +5027,14 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 1024)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 1024)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 1024,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 1024,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -5056,14 +5046,13 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext3 zero-data, block size 2048 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 2048)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 2048)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5074,14 +5063,13 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext3 random-data, block size 2048 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 2048)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 2048,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5093,16 +5081,14 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 2048)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 2048)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 2048,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 2048,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -5114,14 +5100,13 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext3 zero-data, block size 4096 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 4096)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 4096)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5132,14 +5117,13 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext3 random-data, block size 4096 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext3 -b 4096)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 4096,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5151,16 +5135,14 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext3 -b 4096)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext3 -b 4096)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 4096,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext3 -b 4096,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 endif
 	$(RMF) $(IMAGE1)
@@ -5180,14 +5162,13 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	# ext4 zero-data, default block size
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5198,14 +5179,14 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	# ext4 random-data, default block size
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4)
+#	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4,data/random512k.dat data/zero512k.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5217,16 +5198,14 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext4,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext4,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -5238,14 +5217,13 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext4 zero-data, block size 1024 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 1024)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 1024)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5256,14 +5234,13 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	# ext4 random-data, block size 1024 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 1024)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 1024,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5275,16 +5252,14 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 1024)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 1024,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 1024)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 1024,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 1024,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -5296,14 +5271,13 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext4 zero-data, block size 2048 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 2048)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 2048)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5314,14 +5288,13 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	# ext4 random-data, block size 2048 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 2048)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 2048,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5333,16 +5306,14 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 2048)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 2048,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 2048)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 2048,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 2048,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -5354,14 +5325,13 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext4 zero-data, block size 4096 bytes
 	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 4096)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5372,14 +5342,13 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	# ext4 random-data, block size 4096 bytes
 	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 4096,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5389,8 +5358,8 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	@#
 	#$(call functionCreateSparse,$(IMAGE0),512G)
 	#$(call functionCreateSparse,$(IMAGE1),512G)
-	#@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	#@$(call functionInitFilesystem,$(IMAGE0),-t ext4 -b 4096)
+	#@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 4096,data/random512k.dat data/zero512k.dat data/readonly*.dat data/file*.dat)
+	#@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 4096)
 	#$(MAKE) tests_image_operations_base \
         #   DEVICE0=$(LOOP0) DEVICE1=$(LOOP1)
 	$(RMF) $(IMAGE1)
@@ -5400,16 +5369,14 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t ext4 -b 4096)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t ext4 -b 4096)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 4096,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t ext4 -b 4096,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 endif
 	$(RMF) $(IMAGE1)
@@ -5433,14 +5400,13 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT12 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),1,1440K)
 	@$(call functionCreateFileZero,$(IMAGE1),1,1440K)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 12,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 12)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 12)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5452,14 +5418,13 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT12 random-data
 	@$(call functionCreateFileRandom,$(IMAGE0),1,1440K)
 	@$(call functionCreateFileRandom,$(IMAGE1),1,1440K)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 12,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 12)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 12,data/random512k.dat data/zero512k.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5471,14 +5436,13 @@ ifneq (@MKFS_MSDOS@,)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 12,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 12)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 12,data/random512k.dat data/zero512k.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -5493,16 +5457,15 @@ ifneq (@MKFS_MSDOS@,)
 	@$(call functionTestDeviceReset)
 	@#
 	# FAT16 zero-data
-	@$(call functionCreateFileZero,$(IMAGE0),20,1M)
-	@$(call functionCreateFileZero,$(IMAGE1),20,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 16)
+	@$(call functionCreateFileZero,$(IMAGE0),32,1M)
+	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 16)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5512,16 +5475,15 @@ ifneq (@MKFS_MSDOS@,)
 	$(RMF) $(IMAGE0)
 	@#
 	# FAT16 random-data
-	@$(call functionCreateFileRandom,$(IMAGE0),20,1M)
-	@$(call functionCreateFileRandom,$(IMAGE1),20,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 16)
+	@$(call functionCreateFileRandom,$(IMAGE0),32,1M)
+	@$(call functionCreateFileRandom,$(IMAGE1),32,1M)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 16,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5533,16 +5495,14 @@ ifneq (@MKFS_MSDOS@,)
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 16)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 16,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 16)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 16,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 16,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -5559,14 +5519,13 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT32 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 32)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 32)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5578,14 +5537,13 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT32 random-data
 	@$(call functionCreateFileRandom,$(IMAGE0),64,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),64,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t msdos -F 32)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 32,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
           tests_image_operations_base \
@@ -5597,16 +5555,14 @@ ifneq (@MKFS_MSDOS@,)
 	@$(call functionCreateFileZero,$(IMAGE0A),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t msdos -F 32)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 32,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t msdos -F 32)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 32,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t msdos -F 32,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -5638,14 +5594,13 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.5,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.5)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.5)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
           tests_image_operations_base \
@@ -5657,14 +5612,13 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 random-data
 	@$(call functionCreateFileRandom,$(IMAGE0),64,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),64,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.5,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.5)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.5,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
           tests_image_operations_base \
@@ -5675,14 +5629,13 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 zero-data
 	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.6)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.6)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
           tests_image_operations_base \
@@ -5694,14 +5647,13 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3 random-data
 	@$(call functionCreateFileRandom,$(IMAGE0),64,1M)
 	@$(call functionCreateFileRandom,$(IMAGE1),64,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0),-t reiserfs -b 4096 -q --format 3.6)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.6,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none)" \
           FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
           tests_image_operations_base \
@@ -5713,16 +5665,14 @@ ifneq (@MKFS_REISERFS@,)
 	@$(call functionCreateFileZero,$(IMAGE0A),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
-#	@$(call functionInitFilesystem,$(IMAGE0A),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0A),-t reiserfs -b 4096 -q --format 3.6)
-#	@$(call functionInitFilesystem,$(IMAGE0B),-t reiserfs -b 4096 -q --format 3.6,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
-	@$(call functionInitFilesystem,$(IMAGE0B),-t reiserfs -b 4096 -q --format 3.6)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.6,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t reiserfs -b 4096 -q --format 3.6,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
-          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           tests_image_operations_delta
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0B)
@@ -5732,6 +5682,68 @@ endif
 # Reiser4 (Note: not supported anymore)
 tests_image_operations_reiser4:
 ifneq (@MKFS_REISER4@,)
+endif
+
+.PHONY: tests_image_operations_exfat
+
+# EXFAT
+tests_image_operations_exfat: \
+  $(TEST_CONFIGS)
+ifneq (@MKFS_EXFAT@,)
+	# EXFAT
+	@$(call functionTestDeviceReset)
+	@#
+	# EXFAT zero-data
+	@$(call functionCreateFileZero,$(IMAGE0),64,1M)
+	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t exfat)
+	$(MAKE) \
+          IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
+          FSCK=$(FSCK_EXFAT) \
+          FSCK_OPTIONS= \
+          tests_image_operations_base \
+          tests_image_operations_diff_image \
+          tests_image_operations_check
+	$(RMF) $(IMAGE1)
+	$(RMF) $(IMAGE0)
+	@#
+	# EXFAT random-data
+	@$(call functionCreateFileRandom,$(IMAGE0),64,1M)
+	@$(call functionCreateFileRandom,$(IMAGE1),64,1M)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t exfat,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	$(MAKE) \
+          IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
+          FSCK=$(FSCK_EXFAT) \
+          FSCK_OPTIONS= \
+          tests_image_operations_base \
+          tests_image_operations_check
+	$(RMF) $(IMAGE1)
+	$(RMF) $(IMAGE0)
+	@
+	# EXFAT random-data, default block size, delta image
+	@$(call functionCreateFileZero,$(IMAGE0A),64,1M)
+	@$(call functionCreateFileZero,$(IMAGE0B),64,1M)
+	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t exfat,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t exfat,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          tests_image_operations_delta
+	$(RMF) $(IMAGE1)
+	$(RMF) $(IMAGE0B)
+	$(RMF) $(IMAGE0A)
 endif
 
 # image dry-run
@@ -5846,10 +5858,10 @@ tests_image_operations_check:
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@#
-	# Note: e. g. fsck.reiser change the file even nothing is corrupt. Thus do fsck always after image diff
+	@# Note: e. g. fsck.reiser change the file system even nothing is corrupt. Thus do fsck always after image diff
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE0) 2>/dev/null $(LOG)
 	@#
-	# Note: e. g. fsck.reiser change the file even nothing is corrupt. Thus do fsck always after image diff
+	@# Note: e. g. fsck.reiser change the file system even nothing is corrupt. Thus do fsck always after image diff
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE1) 2>/dev/null $(LOG)
 	@#
 ifeq ($(TEST_MOUNT_OPERATIONS),yes)

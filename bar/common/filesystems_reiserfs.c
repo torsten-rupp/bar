@@ -24,15 +24,6 @@
 #define REISERFS_MAX_BLOCK_SIZE 8192
 
 /***************************** Datatypes *******************************/
-// TODO: remove
-typedef struct
-{
-  uint   blockSize;                             // block size (1024, 2048, 4096, 8192)
-  ulong  firstDataBlock;                        // first data block
-  uint32 totalBlocks;                           // total number of blocks
-  int    bitmapIndex;                           // index of currently read bitmap
-  uchar  bitmapData[REISERFS_MAX_BLOCK_SIZE];   // bitmap block data
-} xxxReiserFSHandle;
 
 typedef struct
 {
@@ -56,6 +47,7 @@ typedef struct
   uchar  label[16];
   byte   unused0[88];
 } ATTRIBUTE_PACKED ReiserSuperBlock;
+static_assert(sizeof(ReiserSuperBlock) == 204);
 
 /***************************** Variables *******************************/
 
@@ -166,7 +158,7 @@ LOCAL bool ReiserFS_init(DeviceHandle *deviceHandle, FileSystemTypes *fileSystem
     return FALSE;
   }
 
-  // check if this a ReiserFS super block, detect file system type
+  // check if this is a ReiserFS super block, detect file system type
   if      (stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V1))
   {
     (*fileSystemType) = FILE_SYSTEM_TYPE_REISERFS3_5;
@@ -249,7 +241,6 @@ LOCAL bool ReiserFS_blockIsUsed(DeviceHandle *deviceHandle, FileSystemTypes file
   if (block >= 17)
   {
     // calculate bitmap index
-    assert(reiserFSHandle->blockSize != 0);
     uint bitmapIndex = block/(reiserFSHandle->blockSize*8);
 
     // read correct block bitmap if needed

@@ -702,6 +702,7 @@ CREATEDB
 PSQL
 MYSQL
 SOCAT
+MKFS_EXFAT
 MKFS_REISER4
 MKFS_REISERFS
 MKFS_MSDOS
@@ -6828,6 +6829,56 @@ fi
   test -n "$MKFS_REISER4" && break
 done
 
+for ac_prog in mkfs.exfat
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_MKFS_EXFAT+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $MKFS_EXFAT in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_MKFS_EXFAT="$MKFS_EXFAT" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in /sbin
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_MKFS_EXFAT="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+MKFS_EXFAT=$ac_cv_path_MKFS_EXFAT
+if test -n "$MKFS_EXFAT"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $MKFS_EXFAT" >&5
+printf "%s\n" "$MKFS_EXFAT" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+  test -n "$MKFS_EXFAT" && break
+done
+
 
 for ac_prog in socat
 do
@@ -9501,7 +9552,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_MKNOD_C=0;      HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9543,7 +9594,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_MKNOD_B=0;      HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9585,7 +9636,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9627,7 +9678,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9669,7 +9720,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9711,7 +9762,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9753,7 +9804,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9795,7 +9846,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9837,7 +9888,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9879,7 +9930,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_CHMOD=0;        HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9921,7 +9972,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_CP=0;           HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -9963,7 +10014,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_DIFF=0;         HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -10005,7 +10056,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_CHATTR_I=0;     HAVE_SUDO_COMMANDS=0
+
 fi
 
 
@@ -10047,7 +10098,7 @@ then :
 
 elif :
 then :
-  HAVE_SUDO_COMMAND_CHATTR_A=0;     HAVE_SUDO_COMMANDS=0
+
 fi
 
 

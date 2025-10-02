@@ -829,7 +829,7 @@ typedef byte* BitSet;
   while (0)
 
 #define BITSET_IS_SET(set,bit) \
-  ((((byte*)(set))[bit/8] & (1 << (bit%8))) != 0)
+  ((((byte*)(set))[(bit)/8] & (1 << ((bit)%8))) != 0)
 
 /***********************************************************************\
 * Name   : ATOMIC_INCREMENT, ATOMIC_DECREMENT

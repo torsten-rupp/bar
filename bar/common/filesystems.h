@@ -18,6 +18,7 @@
 #include "common/devices.h"
 #include "common/filesystems_ext.h"
 #include "common/filesystems_fat.h"
+#include "common/filesystems_exfat.h"
 #include "common/filesystems_reiserfs.h"
 #include "errors.h"
 
@@ -67,15 +68,6 @@ typedef enum
 
 /***************************** Datatypes *******************************/
 
-struct FileSystemHandle;
-
-// TODO: remove
-// file system functions
-//typedef FileSystemTypes(*FileSystemGetTypeFunction)(DeviceHandle *deviceHandle);
-//typedef bool(*FileSystemInitFunction)(DeviceHandle *deviceHandle, struct FileSystemHandle *fileSystemHandle);
-//typedef void(*FileSystemDoneFunction)(struct FileSystemHandle *fileSystemHandle);
-//typedef bool(*FileSystemBlockIsUsedFunction)(struct FileSystemHandle *fileSystemHandle, uint64 offset);
-
 // file system handle
 typedef struct
 {
@@ -85,10 +77,9 @@ typedef struct
   {
     EXTHandle      extHandle;
     FATHandle      fatHandle;
+    EXFATHandle    exfatHandle;
     ReiserFSHandle reiserFSHandle;
   };
-//  FileSystemDoneFunction        doneFunction;
-//  FileSystemBlockIsUsedFunction blockIsUsedFunction;
 } FileSystemHandle;
 
 /***************************** Variables *******************************/
@@ -175,7 +166,7 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle);
 \***********************************************************************/
 
 bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle,
-                            uint64           offset
+                            uint64_t         offset
                            );
 
 #ifdef __cplusplus

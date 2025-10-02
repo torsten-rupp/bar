@@ -192,6 +192,7 @@ typedef struct
 
   uint32 reserved[160];
 } ATTRIBUTE_PACKED EXTSuperBlock;
+static_assert(sizeof(EXTSuperBlock) == 1024);
 
 // ext2/ext3 group descriptor
 typedef struct
@@ -207,6 +208,7 @@ typedef struct
   uint16 inodeTableUnused;
   uint16 checksum;
 } ATTRIBUTE_PACKED EXT23GroupDescriptor;
+static_assert(sizeof(EXT23GroupDescriptor) == 32);
 
 // ext4 group descriptor
 typedef struct
@@ -230,6 +232,7 @@ typedef struct
   uint16 pad0;
   uint32 reserver1[3];
 } ATTRIBUTE_PACKED EXT4GroupDescriptor;
+static_assert(sizeof(EXT4GroupDescriptor) == 64);
 
 /***************************** Variables *******************************/
 
@@ -290,7 +293,6 @@ LOCAL FileSystemTypes EXT_getType(DeviceHandle *deviceHandle)
 
   // read first super-block
   EXTSuperBlock extSuperBlock;
-  assert(sizeof(extSuperBlock) == 1024);
   if (Device_seek(deviceHandle,EXT2_FIRST_SUPER_BLOCK_OFFSET) != ERROR_NONE)
   {
     return FILE_SYSTEM_TYPE_UNKNOWN;
@@ -429,7 +431,6 @@ LOCAL bool EXT_init(DeviceHandle *deviceHandle, FileSystemTypes *fileSystemType,
 
   // read first super-block
   EXTSuperBlock extSuperBlock;
-  assert(sizeof(extSuperBlock) == 1024);
   if (Device_seek(deviceHandle,EXT2_FIRST_SUPER_BLOCK_OFFSET) != ERROR_NONE)
   {
     return FALSE;
@@ -565,7 +566,6 @@ fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x
         case FILE_SYSTEM_TYPE_EXT3:
           {
             EXT23GroupDescriptor ext23GroupDescriptor;
-            assert(sizeof(ext23GroupDescriptor) == 32);
             if (Device_read(deviceHandle,&ext23GroupDescriptor,sizeof(ext23GroupDescriptor),NULL) != ERROR_NONE)
             {
               free(extHandle->bitmapBlocks);
@@ -577,7 +577,6 @@ fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x
         case FILE_SYSTEM_TYPE_EXT4:
           {
             EXT4GroupDescriptor  ext4GroupDescriptor;
-            assert(sizeof(ext4GroupDescriptor) == 64);
             if (Device_read(deviceHandle,&ext4GroupDescriptor,sizeof(ext4GroupDescriptor),NULL) != ERROR_NONE)
             {
               free(extHandle->bitmapBlocks);

@@ -15,6 +15,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+#define FAT_MAGIC 0xAA55
+
 #define MAX_FAT_CACHE_SIZE 32
 
 /* Cluster bitmap format:
@@ -239,7 +241,7 @@ LOCAL FileSystemTypes FAT_getType(DeviceHandle *deviceHandle)
   }
 
   // check if valid boot sector
-  if ((uint16)FAT_READ_INT16(bootSector,0x1FE) != 0xAA55)
+  if ((uint16)FAT_READ_INT16(bootSector,0x1FE) != FAT_MAGIC)
   {
     return FILE_SYSTEM_TYPE_UNKNOWN;
   }
@@ -333,7 +335,7 @@ LOCAL bool FAT_init(DeviceHandle *deviceHandle, FileSystemTypes *fileSystemType,
   }
 
   // check if valid boot sector
-  if ((uint16)FAT_READ_INT16(bootSector,0x1FE) != 0xAA55)
+  if ((uint16)FAT_READ_INT16(bootSector,0x1FE) != FAT_MAGIC)
   {
     return FALSE;
   }
@@ -401,7 +403,7 @@ LOCAL bool FAT_init(DeviceHandle *deviceHandle, FileSystemTypes *fileSystemType,
 
   if (fatHandle != NULL)
   {
-    // int FAT file system info
+    // init FAT file system info
     fatHandle->bytesPerSector    = bytesPerSector;
     fatHandle->sectorsPerCluster = sectorsPerCluster;
     fatHandle->reservedSectors   = reservedSectors;

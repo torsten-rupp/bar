@@ -538,6 +538,8 @@ COMMON_SOURCES_OTHER        = common/filesystems_ext.c \
                               common/filesystems_ext.h \
                               common/filesystems_fat.c \
                               common/filesystems_fat.h \
+                              common/filesystems_exfat.c \
+                              common/filesystems_exfat.h \
                               common/filesystems_reiserfs.c \
                               common/filesystems_reiserfs.h \
 

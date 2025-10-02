@@ -4165,6 +4165,9 @@ LOCAL uint16 fileSystemTypeToConstant(FileSystemTypes fileSystemType)
     case FILE_SYSTEM_TYPE_REISERFS4:
       result = CHUNK_CONST_FILE_SYSTEM_TYPE_REISERFS4;
       break;
+    case FILE_SYSTEM_TYPE_EXFAT:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_EXFAT;
+      break;
     default:
       result = CHUNK_CONST_FILE_SYSTEM_TYPE_NONE;
       break;
@@ -4216,6 +4219,9 @@ LOCAL FileSystemTypes constantToFileSystemType(uint16 n)
       break;
     case CHUNK_CONST_FILE_SYSTEM_TYPE_REISERFS4:
       fileSystemType = FILE_SYSTEM_TYPE_REISERFS4;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_EXFAT:
+      fileSystemType = FILE_SYSTEM_TYPE_EXFAT;
       break;
     default:
       fileSystemType = FILE_SYSTEM_TYPE_NONE;

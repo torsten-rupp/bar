@@ -5748,23 +5748,26 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   // check if device contain a supported file system or a raw image should be stored
   FileSystemHandle fileSystemHandle;
   memClear(&fileSystemHandle,sizeof(FileSystemHandle));
-  bool fileSystemFlag = FALSE;
+  bool fileSystemInitFlag      = FALSE;
+  bool supportedFileSystemFlag = FALSE;
   if (!createInfo->jobOptions->rawImagesFlag)
   {
     if (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE)
     {
-      fileSystemFlag =    (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT12)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT16)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT32)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT2)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT3)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT4)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS3_5)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS3_6)
-                       || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS4);
+      fileSystemInitFlag      = TRUE;
+      supportedFileSystemFlag =    (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT12)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT16)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT32)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT2)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT3)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT4)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS3_5)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS3_6)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS4)
+                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXFAT);
     }
   }
   else
@@ -5831,7 +5834,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       }
 
       String_delete(archiveEntryName);
-      if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+      if (fileSystemInitFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
 
@@ -5858,7 +5861,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
              && (bufferBlockCount < maxBufferBlockCount)
             )
       {
-        if (   !fileSystemFlag
+        if (   !supportedFileSystemFlag
             || FileSystem_blockIsUsed(&fileSystemHandle,(blockOffset+(uint64)bufferBlockCount)*(uint64)deviceInfo->blockSize)
            )
         {
@@ -5951,7 +5954,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"ABORTED\n");
       (void)Archive_closeEntry(&archiveEntryInfo);
-      if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+      if (fileSystemInitFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
       return error;
@@ -5971,7 +5974,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
-        if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+        if (fileSystemInitFlag) FileSystem_done(&fileSystemHandle);
         Device_close(&deviceHandle);
         fragmentDone(createInfo,deviceName);
 
@@ -5993,7 +5996,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
-        if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+        if (fileSystemInitFlag) FileSystem_done(&fileSystemHandle);
         Device_close(&deviceHandle);
         fragmentDone(createInfo,deviceName);
 
@@ -6019,7 +6022,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
         createInfo->runningInfo.progress.done.size += fragmentSize;
       }
 
-      if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+      if (fileSystemInitFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
 
@@ -6027,7 +6030,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
 
     // done file system
-    if (fileSystemFlag)
+    if (fileSystemInitFlag)
     {
       FileSystem_done(&fileSystemHandle);
     }
@@ -6076,7 +6079,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     if (!createInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK (%s, %s bytes%s%s)\n",
-                (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+                (supportedFileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
                 sizeString,
                 fragmentInfoString,
                 compressionRatioString
@@ -6085,7 +6088,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                  LOG_TYPE_ENTRY_OK,
                  "Added image '%s' (%s, %"PRIu64" bytes%s%s)",
                  String_cString(deviceName),
-                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+                 (supportedFileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
                  fragmentSize,
                  fragmentInfoString,
                  compressionRatioString
@@ -6094,7 +6097,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     else
     {
       printInfo(1,"OK (%s, %s bytes%s%s, dry-run)\n",
-                fileSystemFlag ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+                supportedFileSystemFlag ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
                 sizeString,
                 fragmentInfoString,
                 compressionRatioString
@@ -6115,7 +6118,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
 
     double d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
     printInfo(1,"OK (%s, %/"PRIu64" bytes, not stored)\n",
-              fileSystemFlag ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+              supportedFileSystemFlag ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
               (int)d,
               fragmentSize
              );
