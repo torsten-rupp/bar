@@ -259,6 +259,7 @@ const FILE_SYSTEM_TYPE_REISERFS3_5   =  7
 const FILE_SYSTEM_TYPE_REISERFS3_6   =  8
 const FILE_SYSTEM_TYPE_REISERFS4     =  9
 const FILE_SYSTEM_TYPE_EXFAT         = 10
+const FILE_SYSTEM_TYPE_XFS           = 11
 
 # hash algorithms
 const HASH_ALGORITHM_NONE            = 0

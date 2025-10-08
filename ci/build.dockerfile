@@ -10,6 +10,10 @@ ENV CONTAINER=docker
 # disable interactive installion
 ENV DEBIAN_FRONTEND=noninteractive
 
+# clear APT cache
+RUN    apt clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # update
 RUN apt-get -y update --fix-missing
 
@@ -59,9 +63,11 @@ RUN apt-get -y --fix-missing install \
 RUN apt-get -y --fix-missing install \
   gcc \
   g++ \
+  libblkid-dev \
   libc6 \
   libc6-dev \
   libpq-dev \
+  libinih-dev \
   libsystemd-dev \
   openjdk-8-jdk \
   openjdk-8-jre \
@@ -165,3 +171,6 @@ RUN   ( \
 COPY download-third-party-packages.sh /root
 RUN    /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern \
     && rm -f /root/download-third-party-packages.sh
+
+# default command
+CMD "/bin/bash"

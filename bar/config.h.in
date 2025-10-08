@@ -73,8 +73,8 @@
 /* blkid_do_probe() available */
 #undef HAVE_BLKID_DO_PROBE
 
-/* blkid_new_probe_from_filename() available */
-#undef HAVE_BLKID_NEW_PROBE_FROM_FILENAME
+/* blkid_new_probe() available */
+#undef HAVE_BLKID_NEW
 
 /* blkid_probe_lookup_value() available */
 #undef HAVE_BLKID_PROBE_LOOKUP_VALUE
@@ -82,7 +82,7 @@
 /* BLKSSZGET available */
 #undef HAVE_BLKSSZGET
 
-/* libisofs installed */
+/* libburn installed */
 #undef HAVE_BURN
 
 /* bzip2 installed */
@@ -481,6 +481,9 @@
 /* Define to 1 if you have the <pwd.h> header file. */
 #undef HAVE_PWD_H
 
+/* rcu installed (local) */
+#undef HAVE_RCU
+
 /* readlink() available */
 #undef HAVE_READLINK
 
@@ -796,6 +799,9 @@
 /* xdelta3 installed */
 #undef HAVE_XDELTA3
 
+/* libxfs installed */
+#undef HAVE_XFS
+
 /* z installed */
 #undef HAVE_Z
 
@@ -891,14 +897,8 @@
 /* icu version */
 #undef VERSION_ICU
 
-/* isofs version */
+/* isofs file system version */
 #undef VERSION_ISOFS
-
-/* SMB2 version */
-#undef VERSION_LIBSMB2
-
-/* libssh version */
-#undef VERSION_LIBSSH2
 
 /* lz4 version */
 #undef VERSION_LZ4
@@ -927,11 +927,23 @@
 /* PostgreSQL version */
 #undef VERSION_POSTGRESQL
 
+/* rcu version */
+#undef VERSION_RCU
+
+/* SMB2 version */
+#undef VERSION_SMB2
+
 /* sqlite version */
 #undef VERSION_SQLITE
 
+/* libssh version */
+#undef VERSION_SSH2
+
 /* xdelta3 version */
 #undef VERSION_XDELTA3
+
+/* xfs version */
+#undef VERSION_XFS
 
 /* zlib version */
 #undef VERSION_Z

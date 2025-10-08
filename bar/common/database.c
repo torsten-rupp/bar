@@ -17702,7 +17702,7 @@ Errors Database_getId(DatabaseHandle       *databaseHandle,
                       DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
-                        DATABASE_COLUMN_KEY   (columnName)
+                        DATABASE_COLUMN_KEY(columnName)
                       ),
                       filter,
                       filters,
@@ -17756,7 +17756,7 @@ Errors Database_getIds(DatabaseHandle       *databaseHandle,
                       DATABASE_FLAG_NONE,
                       DATABASE_COLUMNS
                       (
-                        DATABASE_COLUMN_KEY   (columnName)
+                        DATABASE_COLUMN_KEY(columnName)
                       ),
                       filter,
                       filters,
@@ -17809,7 +17809,7 @@ Errors Database_getMaxId(DatabaseHandle       *databaseHandle,
                      DATABASE_FLAG_NONE,
                      DATABASE_COLUMNS
                      (
-                       DATABASE_COLUMN_KEY   (columnName)
+                       DATABASE_COLUMN_KEY(columnName)
                      ),
                      filter,
                      filters,
@@ -17861,7 +17861,7 @@ Errors Database_getInt(DatabaseHandle       *databaseHandle,
                      DATABASE_FLAG_NONE,
                      DATABASE_COLUMNS
                      (
-                       DATABASE_COLUMN_KEY   (columnName)
+                       DATABASE_COLUMN_INT(columnName)
                      ),
                      filter,
                      filters,
@@ -18187,7 +18187,7 @@ Errors Database_getDouble(DatabaseHandle       *databaseHandle,
                      DATABASE_FLAG_NONE,
                      DATABASE_COLUMNS
                      (
-                       DATABASE_COLUMN_KEY   (columnName)
+                       DATABASE_COLUMN_DOUBLE(columnName)
                      ),
                      filter,
                      filters,
@@ -18268,7 +18268,7 @@ Errors Database_getString(DatabaseHandle      *databaseHandle,
                      DATABASE_FLAG_NONE,
                      DATABASE_COLUMNS
                      (
-                       DATABASE_COLUMN_KEY   (columnName)
+                       DATABASE_COLUMN_STRING(columnName)
                      ),
                      filter,
                      filters,
@@ -18319,7 +18319,7 @@ Errors Database_getCString(DatabaseHandle       *databaseHandle,
                      DATABASE_FLAG_NONE,
                      DATABASE_COLUMNS
                      (
-                       DATABASE_COLUMN_KEY   (columnName)
+                       DATABASE_COLUMN_STRING(columnName)
                      ),
                      filter,
                      filters,

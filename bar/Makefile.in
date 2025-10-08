@@ -506,6 +506,7 @@ BAR_MO                      = $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo)
 
 COMMON_SOURCES              = common/arrays.c \
                               common/autofree.c \
+                              common/bitsets.c \
                               common/cmdoptions.c \
                               common/configvalues.c \
                               common/cstrings.c \
@@ -542,6 +543,8 @@ COMMON_SOURCES_OTHER        = common/filesystems_ext.c \
                               common/filesystems_exfat.h \
                               common/filesystems_reiserfs.c \
                               common/filesystems_reiserfs.h \
+                              common/filesystems_xfs.c \
+                              common/filesystems_xfs.h \
 
 COMMON_SOURCES_FILTER       = \
 

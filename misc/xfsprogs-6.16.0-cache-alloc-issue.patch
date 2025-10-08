@@ -1,0 +1,20 @@
+--- xfsprogs-6.16.0.org/libxfs/init.c	2025-06-23 13:48:41.000000000 +0200
++++ xfsprogs-6.16.0/libxfs/init.c	2025-10-11 10:17:27.101472681 +0200
+@@ -214,9 +214,6 @@
+ 		fprintf(stderr, "Could not allocate btree cursor caches.\n");
+ 		abort();
+ 	}
+-	xfs_extfree_item_cache = kmem_cache_init(
+-			sizeof(struct xfs_extent_free_item),
+-			"xfs_extfree_item");
+ 	xfs_trans_cache = kmem_cache_init(
+ 			sizeof(struct xfs_trans), "xfs_trans");
+ 	xfs_parent_args_cache = kmem_cache_init(
+@@ -236,7 +233,6 @@
+ 	leaked += kmem_cache_destroy(xfs_da_state_cache);
+ 	xfs_defer_destroy_item_caches();
+ 	xfs_btree_destroy_cur_caches();
+-	leaked += kmem_cache_destroy(xfs_extfree_item_cache);
+ 	leaked += kmem_cache_destroy(xfs_trans_cache);
+ 	leaked += kmem_cache_destroy(xfs_parent_args_cache);
+ 

@@ -800,36 +800,37 @@ typedef byte* ValueSet;
 #define VALUESET_IS_SET(set,bit) \
   ((((byte*)(set))[bit/8] & (1 << (bit%8))) != 0)
 
-
-
 /***********************************************************************\
 * Name   : BITSET_SET, BITSET_CLEAR, BITSET_IS_SET
 * Purpose: set macros
-* Input  : set     - set (array)
-*          element - element
+* Input  : bitset - bitset (byte array)
+*          size   - size of bitset [bit]
+*          bit   - bit [0..size-1]
 * Output : -
 * Return : TRUE if value is in bitset, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-typedef byte* BitSet;
+typedef byte* StaticBitSet;
 
-#define BITSET_SET(set,bit) \
+#define BITSET_SET(staticBitset,size,bit) \
   do \
   { \
-    ((byte*)(set))[bit/8] |= (1 << (bit%8)); \
+    assert((bit) < (size)); \
+    ((byte*)(staticBitset))[(bit)/8] |= (1 << ((bit)%8)); \
   } \
   while (0)
 
-#define BITSET_CLEAR(set,bit) \
+#define BITSET_CLEAR(staticBitset,size,bit) \
   do \
   { \
-    ((byte*)(set))[bit/8] &= ~(1 << (bit%8)); \
+    assert((bit) < (size)); \
+    ((byte*)(staticBitset))[(bit)/8] &= ~(1 << ((bit)%8)); \
   } \
   while (0)
 
-#define BITSET_IS_SET(set,bit) \
-  ((((byte*)(set))[(bit)/8] & (1 << ((bit)%8))) != 0)
+#define BITSET_IS_SET(staticBitset,size,bit) \
+  ((((byte*)(staticBitset))[(bit)/8] & (1 << ((bit)%8))) != 0)
 
 /***********************************************************************\
 * Name   : ATOMIC_INCREMENT, ATOMIC_DECREMENT
@@ -2032,33 +2033,43 @@ static inline bool atomicCompareSwap64(uint *n, uint64 oldValue, uint64 newValue
 /***********************************************************************\
 * Name   : swapBytes16
 * Purpose: swap bytes of 16bit value
-* Input  : n - word (a:b)
+* Input  : n - (a:b)
 * Output : -
-* Return : swapped word (b:a)
+* Return : swapped (b:a)
 * Notes  : -
 \***********************************************************************/
 
 static inline uint16_t swapBytes16(uint16_t n)
 {
-  return   ((n & 0xFF00) >> 8)
-         | ((n & 0x00FF) << 8);
+  return __builtin_bswap16(n);
 }
 
 /***********************************************************************\
 * Name   : swapBytes32
 * Purpose: swap bytes of 32bit value
-* Input  : n - long (a:b:c:d)
+* Input  : n - (a:b:c:d)
 * Output : -
-* Return : swapped long (d:c:b:a)
+* Return : swapped (d:c:b:a)
 * Notes  : -
 \***********************************************************************/
 
 static inline uint32_t swapBytes32(uint32_t n)
 {
-  return   ((n & 0xFF000000) >> 24)
-         | ((n & 0x00FF0000) >>  8)
-         | ((n & 0x0000FF00) <<  8)
-         | ((n & 0x000000FF) << 24);
+  return __builtin_bswap32(n);
+}
+
+/***********************************************************************\
+* Name   : swapBytes64
+* Purpose: swap bytes of 64bit value
+* Input  : n - (a:b:c:d:e:f:g:h)
+* Output : -
+* Return : swapped (h:g:f:e:d:c:b:a)
+* Notes  : -
+\***********************************************************************/
+
+static inline uint32_t swapBytes64(uint64_t n)
+{
+  return __builtin_bswap64(n);
 }
 
 /***********************************************************************\

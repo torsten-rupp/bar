@@ -175,10 +175,12 @@ FSCK_EXT4      = fsck.ext4
 FSCK_FAT       = fsck.fat
 FSCK_VFAT      = fsck.vfat
 FSCK_EXFAT     = fsck.exfat
+XFS_REPAIR     = xfs_repair
 FSCK_OPTIONS   =
 LOSETUP        = /sbin/losetup
 MKFS           = /sbin/mkfs
 MOUNT          = /bin/mount
+MOUNT_OPTIONS  =
 UMOUNT         = /bin/umount
 
 LCOV           = lcov
@@ -298,7 +300,7 @@ endif
 
 # supported image compress algorithms
 ifeq ($(TEST_IMAGE_FILESYSTEM_NAMES),)
-  TEST_IMAGE_FILESYSTEM_NAMES = raw ext fat exfat
+  TEST_IMAGE_FILESYSTEM_NAMES = raw ext fat exfat xfs
 endif
 ifeq ($(TEST_IMAGE_COMPRESS_NAMES),)
   TEST_IMAGE_COMPRESS_NAMES ?= none zip9
@@ -597,6 +599,7 @@ help_output:
 	@$(ECHO) "  tests_image_operations_fat"
 	@$(ECHO) "  tests_image_operations_fat(12|16|32)"
 	@$(ECHO) "  tests_image_operations_exfat"
+	@$(ECHO) "  tests_image_operations_xfs"
 	@$(ECHO) "  tests_image_operations_dryrun"
 	@$(ECHO) ""
 	@$(ECHO) "  tests_file_operations_huge"
@@ -637,7 +640,7 @@ help_output:
 	@$(ECHO) "    3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256"
         endif
 	@$(ECHO) "  TEST_IMAGE_FILESYSTEM_NAMES"
-	@$(ECHO) "    raw ext fat exfat"
+	@$(ECHO) "    raw ext fat exfat xfs"
 	@$(ECHO) "  TEST_IMAGE_COMPRESS_NAMES"
 	@$(ECHO) "    none zip9"
 	@$(ECHO) "  TEST_INDEX_DATABASES"
@@ -843,7 +846,7 @@ functionInitFilesystem = \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to mount a test device
-# call functionDeviceMount,<loop device>,<image file>,<mount point>
+# call functionDeviceMount,<loop device>,<image file>,<mount point>,<mount options>
 functionDeviceMount = \
   ( \
     $(ECHO) $(SUDO) -n $(LOSETUP) $1 $2; \
@@ -853,7 +856,7 @@ functionDeviceMount = \
     $(ECHO) $(INSTALL) -d $3; \
     $(INSTALL) -d $3; \
     $(ECHO) $(SUDO) -n $(MOUNT) $1 $3; \
-    $(SUDO) -n $(MOUNT) $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(SUDO) -n $(MOUNT) $4 $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to umount a test device
@@ -2742,11 +2745,13 @@ endif
 ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	@$(call functionCleanTestFiles)
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
+	$(SUDO) -n $(LOSETUP) $(LOOP0) $(IMAGE0)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2)
 	$(INSTALL) -d $(MOUNT_POINT0)
 	test -z "`$(MOUNT)|$(GREP) $(MOUNT_POINT0)`"
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) $(TEST_OPTIONS) -c $(INTERMEDIATE_DIR)/test.bar $(TEST_FILES) --skip-unreadable --mount-device-command='sudo mount %device %directory' --unmount-command='sudo umount %directory' --mount $(MOUNT_POINT0)$(COMMA)$(LOOP0) $(LOG))
 	test -z "`$(MOUNT)|$(GREP) $(MOUNT_POINT0)`"
+	$(SUDO) -n $(LOSETUP) -d $(LOOP0)
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
 endif
@@ -2930,6 +2935,7 @@ endif
 ifeq ($(TEST_MOUNT_OPERATIONS),yes)
 	# mount
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
+	$(SUDO) -n $(LOSETUP) $(LOOP0) $(IMAGE0)
 	$(call functionTestDeviceInitFilesystem,$(LOOP0),-t ext2)
 	$(INSTALL) -d $(MOUNT_POINT0)
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) \
@@ -2942,6 +2948,7 @@ ifeq ($(TEST_MOUNT_OPERATIONS),yes)
           $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=2 $(LOG) \
         )
 	$(RMDIR) $(MOUNT_POINT0)
+	$(SUDO) -n $(LOSETUP) -d $(LOOP0)
 	$(RMF) $(IMAGE0)
 	@$(call functionDoneTestFiles)
 endif
@@ -4717,6 +4724,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -4734,6 +4742,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -4772,6 +4781,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -4789,6 +4799,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -4828,6 +4839,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -4845,6 +4857,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -4882,6 +4895,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -4899,6 +4913,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT2) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -4944,6 +4959,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -4961,6 +4977,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -4998,6 +5015,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5015,6 +5033,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5052,6 +5071,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5069,6 +5089,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5106,6 +5127,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5123,6 +5145,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT3) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5168,6 +5191,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5186,6 +5210,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5223,6 +5248,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5240,6 +5266,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5277,6 +5304,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5294,6 +5322,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5331,6 +5360,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5348,6 +5378,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXT4) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
@@ -5406,6 +5437,7 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_diff_image \
           tests_image_operations_check
@@ -5424,12 +5456,13 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
-	# FAT12 random-data, default block size, delta image
+	# FAT12 random-data, delta image
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
@@ -5465,6 +5498,7 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_diff_image \
           tests_image_operations_check
@@ -5483,12 +5517,13 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
-	# FAT16 random-data, default block size, delta image
+	# FAT16 random-data, delta image
 	@$(call functionCreateFileZero,$(IMAGE0A),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),32,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),32,1M)
@@ -5525,6 +5560,7 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_diff_image \
           tests_image_operations_check
@@ -5543,12 +5579,13 @@ ifneq (@MKFS_MSDOS@,)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_FAT) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
-	# FAT32 random-data, default block size, delta image
+	# FAT32 random-data, delta image
 	@$(call functionCreateFileZero,$(IMAGE0A),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
@@ -5587,6 +5624,7 @@ ifneq (@MKFS_EXFAT@,)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXFAT) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_diff_image \
           tests_image_operations_check
@@ -5605,17 +5643,82 @@ ifneq (@MKFS_EXFAT@,)
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
           FSCK=$(FSCK_EXFAT) \
           FSCK_OPTIONS= \
+          MOUNT_OPTIONS= \
           tests_image_operations_base \
           tests_image_operations_check
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
 	@
-	# EXFAT random-data, default block size, delta image
+	# EXFAT random-data, delta image
 	@$(call functionCreateFileZero,$(IMAGE0A),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE0B),64,1M)
 	@$(call functionCreateFileZero,$(IMAGE1),64,1M)
 	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t exfat,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t exfat,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	$(MAKE) \
+          IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none --raw-images) $(OPTIONS)" \
+          tests_image_operations_delta
+	$(RMF) $(IMAGE1)
+	$(RMF) $(IMAGE0B)
+	$(RMF) $(IMAGE0A)
+endif
+
+.PHONY: tests_image_operations_xfs
+
+# XFS
+tests_image_operations_xfs: \
+  $(TEST_CONFIGS)
+ifneq (@MKFS_XFS@,)
+	# XFS
+	@$(call functionTestDeviceReset)
+	@#
+	# XFS zero-data
+	@$(call functionCreateFileZero,$(IMAGE0),300,1M)
+	@$(call functionCreateFileZero,$(IMAGE1),300,1M)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t xfs)
+	$(MAKE) \
+          IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
+          FSCK=$(XFS_REPAIR) \
+          FSCK_OPTIONS= \
+          MOUNT_OPTIONS="-o nouuid" \
+          tests_image_operations_base \
+          tests_image_operations_diff_image \
+          tests_image_operations_check
+	$(RMF) $(IMAGE1)
+	$(RMF) $(IMAGE0)
+	@#
+	# XFS random-data
+	@$(call functionCreateFileRandom,$(IMAGE0),300,1M)
+	@$(call functionCreateFileRandom,$(IMAGE1),300,1M)
+	@$(call functionInitFilesystem,$(IMAGE0),$(LOOP0),$(MOUNT_POINT0),-t xfs,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	$(MAKE) \
+          IMAGE0=$(IMAGE0) IMAGE1=$(IMAGE1) \
+          DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
+          BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
+          BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
+          BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS),$(TEST_OPTIONS) --compress-algorithm=zip1 --crypt-algorithm=none)" \
+          FSCK=$(XFS_REPAIR) \
+          FSCK_OPTIONS= \
+          MOUNT_OPTIONS="-o nouuid" \
+          tests_image_operations_base \
+          tests_image_operations_check
+	$(RMF) $(IMAGE1)
+	$(RMF) $(IMAGE0)
+	@
+	# XFS random-data, delta image
+	@$(call functionCreateFileZero,$(IMAGE0A),300,1M)
+	@$(call functionCreateFileZero,$(IMAGE0B),300,1M)
+	@$(call functionCreateFileZero,$(IMAGE1),300,1M)
+	@$(call functionInitFilesystem,$(IMAGE0A),$(LOOP0),$(MOUNT_POINT0),-t xfs,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
+	@$(call functionInitFilesystem,$(IMAGE0B),$(LOOP0),$(MOUNT_POINT0),-t xfs,data/random512k.dat data/random8M.dat data/zero512k.dat data/zero8m.dat data/readonly*.dat data/file*.dat)
 	$(MAKE) \
           IMAGE0_A=$(IMAGE0A) IMAGE0_B=$(IMAGE0B) IMAGE1=$(IMAGE1) \
           DEVICE0=$(LOOP0) DEVICE1=$(LOOP1) \
@@ -5739,13 +5842,15 @@ tests_image_operations_check:
 	@$(call functionVerifyParameter,IMAGE1)
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
+	@$(call functionVerifyParameter,MOUNT_POINT0)
+	@$(call functionVerifyParameter,MOUNT_POINT1)
 	@#
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE0) 2>/dev/null $(LOG)
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(IMAGE1) 2>/dev/null $(LOG)
 	@#
 ifeq ($(TEST_MOUNT_OPERATIONS),yes)
-	@$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),$(MOUNT_POINT0))
-	@$(call functionDeviceMount,$(DEVICE1),$(IMAGE1),$(MOUNT_POINT1))
+	@$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),$(MOUNT_POINT0),$(MOUNT_OPTIONS))
+	@$(call functionDeviceMount,$(DEVICE1),$(IMAGE1),$(MOUNT_POINT1),$(MOUNT_OPTIONS))
 	$(SUDO) -n $(DIFF) -r $(MOUNT_POINT0) $(MOUNT_POINT1) $(LOG)
 	@$(call functionDeviceUmount,$(DEVICE0),$(MOUNT_POINT0))
 	@$(call functionDeviceUmount,$(DEVICE1),$(MOUNT_POINT1))
@@ -6690,8 +6795,8 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
     $(call functionServerCommandBatch,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(BAR_STORAGE)/$(BAR_FILE).bar); \
     $(call functionServerCommandBatch,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
     $(call functionServerCommandBatch,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
-    $(call functionServerCommandBatch,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
-    $(call functionServerCommandBatch,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=image pattern=$(LOOP0)); \
+    $(call functionServerCommandBatch,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryStoreType=FILE pattern=data); \
+    $(call functionServerCommandBatch,INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryStoreType=IMAGE pattern=$(LOOP0)); \
     $(call functionServerCommandBatch,JOB_FLUSH); \
     $(call functionServerCommandBatch,DEVICE_LIST jobUUID=$(TEST_JOB_UUID)); \
     $(call functionServerCommandBatch,ROOT_LIST jobUUID=$(TEST_JOB_UUID) allMounts=yes); \
@@ -6914,7 +7019,7 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=continuous); \
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(BAR_STORAGE)/$(BAR_FILE).bar); \
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=100000); \
-    $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+    $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryStoreType=FILE pattern=data); \
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=$(BAR_STORAGE)/not_existing); \
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),SOURCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
@@ -6996,8 +7101,8 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(BAR_STORAGE)/$(BAR_FILE).bar); \
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
-    $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
-    $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=image pattern=$(LOOP0)); \
+    $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryStoreType=FILE pattern=data); \
+    $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryStoreType=IMAGE pattern=$(LOOP0)); \
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),JOB_FLUSH); \
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),DEVICE_LIST jobUUID=$(TEST_JOB_UUID)); \
     $(call functionServerCommandSocket,localhost,$(TEST_SERVER_PORT),ROOT_LIST jobUUID=$(TEST_JOB_UUID) allMounts=yes); \
@@ -7211,7 +7316,7 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
     $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(BAR_STORAGE)/$(BAR_FILE).bar); \
     $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
     $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-file-mode value=overwrite); \
-    $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=file pattern=data); \
+    $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryStoreType=FILE pattern=data); \
     $(call functionServerCommandSocket,localhost,$(TEST_MASTER_PORT),JOB_FLUSH); \
     \
     : wait for pairing; \

@@ -1339,7 +1339,7 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
-    UNUSED_VARIABLE(archiveName);
+    UNUSED_VARIABLE(fileName);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */

@@ -279,143 +279,8 @@ static_assert(sizeof(EXT4GroupDescriptor) == 64);
 #endif
 
 /***********************************************************************\
-* Name   : EXT_getType
-* Purpose: get ext file system type
-* Input  : deviceHandle - device handle
-* Output : -
-* Return : file system type or FILE_SYSTEN_UNKNOWN;
-* Notes  : -
-\***********************************************************************/
-
-LOCAL FileSystemTypes EXT_getType(DeviceHandle *deviceHandle)
-{
-  assert(deviceHandle != NULL);
-
-  // read first super-block
-  EXTSuperBlock extSuperBlock;
-  if (Device_seek(deviceHandle,EXT2_FIRST_SUPER_BLOCK_OFFSET) != ERROR_NONE)
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-  if (Device_read(deviceHandle,&extSuperBlock,sizeof(extSuperBlock),NULL) != ERROR_NONE)
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-
-  // check if this a super block
-  if ((uint16)(LE16_TO_HOST(extSuperBlock.magic)) != EXT2_SUPER_MAGIC)
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-
-  // get block size
-  uint blockSize;
-  switch (LE32_TO_HOST(extSuperBlock.logBlockSize))
-  {
-    case 0: blockSize =  1*1024; break;
-    case 1: blockSize =  2*1024; break;
-    case 2: blockSize =  4*1024; break;
-    case 3: blockSize =  8*1024; break;
-    case 4: blockSize = 16*1024; break;
-    case 5: blockSize = 32*1024; break;
-    case 6: blockSize = 64*1024; break;
-    default:
-      return FILE_SYSTEM_TYPE_UNKNOWN;
-      break;
-  }
-
-  // get ext type: ext2/3/4
-#if 0
-#warning debug only
-fprintf(stderr,"%s, %d: revisionLevel = %d\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.revisionLevel));
-fprintf(stderr,"%s, %d: featureCompatible = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureCompatible));
-fprintf(stderr,"%s, %d: featureInCompatible = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureInCompatible));
-fprintf(stderr,"%s, %d: featureCompatible & ~EXT2_FEATURE_COMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureCompatible)& ~EXT2_FEATURE_COMPAT_SUPP);
-fprintf(stderr,"%s, %d: featureCompatible & ~EXT3_FEATURE_COMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureCompatible)& ~EXT3_FEATURE_COMPAT_SUPP);
-fprintf(stderr,"%s, %d: featureCompatible & ~EXT4_FEATURE_COMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureCompatible)& ~EXT4_FEATURE_COMPAT_SUPP);
-fprintf(stderr,"%s, %d: featureInCompatible & ~EXT2_FEATURE_INCOMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureInCompatible)& ~EXT2_FEATURE_INCOMPAT_SUPP);
-fprintf(stderr,"%s, %d: featureInCompatible & ~EXT3_FEATURE_INCOMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureInCompatible)& ~EXT3_FEATURE_INCOMPAT_SUPP);
-fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x\n",__FILE__,__LINE__,LE32_TO_HOST(extSuperBlock.featureInCompatible)& ~EXT4_FEATURE_INCOMPAT_SUPP);
-#endif /* 0 */
-  FileSystemTypes fileSystemType;
-  if      (   ((LE32_TO_HOST(extSuperBlock.featureCompatible  ) & ~EXT2_FEATURE_COMPAT_SUPP  ) == 0)
-           && ((LE32_TO_HOST(extSuperBlock.featureInCompatible) & ~EXT2_FEATURE_INCOMPAT_SUPP) == 0)
-          )
-  {
-    // ext2
-    fileSystemType = FILE_SYSTEM_TYPE_EXT2;
-  }
-  else if (   (LE32_TO_HOST(extSuperBlock.revisionLevel) == EXT2_REVISION_DYNAMIC)
-           && ((LE32_TO_HOST(extSuperBlock.featureCompatible  ) & ~EXT3_FEATURE_COMPAT_SUPP  ) == 0)
-           && ((LE32_TO_HOST(extSuperBlock.featureInCompatible) & ~EXT3_FEATURE_INCOMPAT_SUPP) == 0)
-          )
-  {
-    // ext3
-    fileSystemType = FILE_SYSTEM_TYPE_EXT3;
-  }
-  else if (   (LE32_TO_HOST(extSuperBlock.revisionLevel) == EXT2_REVISION_DYNAMIC)
-           && ((LE32_TO_HOST(extSuperBlock.featureCompatible  ) & ~EXT4_FEATURE_COMPAT_SUPP  ) == 0)
-           && ((LE32_TO_HOST(extSuperBlock.featureInCompatible) & ~EXT4_FEATURE_INCOMPAT_SUPP) == 0)
-          )
-  {
-    // ext4
-    fileSystemType = FILE_SYSTEM_TYPE_EXT4;
-  }
-  else
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-
-  // get file system block info, init data
-  uint     groupDescriptorSize;
-  uint32_t blocksPerGroup;
-  uint64_t firstDataBlock;
-  uint64_t totalBlocks;
-  switch (fileSystemType)
-  {
-    case FILE_SYSTEM_TYPE_EXT2:
-    case FILE_SYSTEM_TYPE_EXT3:
-      groupDescriptorSize = sizeof(EXT23GroupDescriptor);
-      blocksPerGroup      = LE32_TO_HOST(extSuperBlock.blocksPerGroup);
-      firstDataBlock      = (uint64)LE32_TO_HOST(extSuperBlock.firstDataBlock);
-      totalBlocks         = (uint64)LE32_TO_HOST(extSuperBlock.blocksCount);
-      break;
-    case FILE_SYSTEM_TYPE_EXT4:
-      groupDescriptorSize = //((LE32_TO_HOST(extSuperBlock.featureCompatible  ) & EXT4_FEATURE_COMPAT_HAS_JOURNAL) != 0)
-                            ((LE32_TO_HOST(extSuperBlock.featureInCompatible) & EXT4_FEATURE_INCOMPAT_64BIT) != 0)
-                              ? (uint)LE16_TO_HOST(extSuperBlock.groupDescriptorSize)
-                              : sizeof(EXT23GroupDescriptor);
-      blocksPerGroup      = LE32_TO_HOST(extSuperBlock.blocksPerGroup);
-      firstDataBlock      = (uint64)LE32_TO_HOST(extSuperBlock.firstDataBlock);
-      totalBlocks         = LOW_HIGH_TO_UINT64(LE32_TO_HOST(extSuperBlock.blocksCount),
-                                                          LE32_TO_HOST(extSuperBlock.blocksCountHigh)
-                                                         );
-      break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break; /* not reached */
-  }
-
-  // validate data
-  if (   !((groupDescriptorSize > 0) && (groupDescriptorSize <= EXT4_MAX_GROUP_DESCRIPTOR_SIZE))
-      || !(blocksPerGroup > 0)
-      || !(totalBlocks > 0)
-      || !(   ((blockSize <= 1024) && (firstDataBlock == 1))
-           || ((blockSize >  1024) && (firstDataBlock == 0))
-          )
-     )
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-
-  return fileSystemType;
-}
-
-/***********************************************************************\
 * Name   : EXT_init
-* Purpose: initialize Ext handle
+* Purpose: initialize Ext file system
 * Input  : deviceHandle - device handle
 * Output : fileSystemType - file system type
 *          extHandle      - Ext handle (can be NULL)
@@ -645,6 +510,8 @@ LOCAL bool EXT_blockIsUsed(DeviceHandle *deviceHandle, FileSystemTypes fileSyste
         );
   assert(extHandle->bitmapBlocks != NULL);
 
+  UNUSED_VARIABLE(fileSystemType);
+
   // calculate block
   uint64 block = offset/extHandle->blockSize;
 
@@ -716,7 +583,7 @@ write(h,s,strlen(s));
 close(h);
 }
 #endif /* 0 */
-    return ((extHandle->bitmapData[index/8] & (1 << index%8)) != 0);
+    return ((extHandle->bitmapData[index / 8] & (1 << (index % 8))) != 0);
   }
   else
   {

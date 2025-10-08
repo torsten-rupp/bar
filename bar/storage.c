@@ -719,7 +719,6 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
                           60*MS_PER_SECOND
                          ) != 0);
 }
-#endif /* HAVE_SSH2 */
 
 /***********************************************************************\
 * Name   : sftpGetPermissions
@@ -1277,6 +1276,7 @@ LOCAL Errors sftpUnlink(SocketHandle *socketHandle,
 
   return error;
 }
+#endif /* HAVE_SSH2 */
 
 /***********************************************************************\
 * Name   : transferFileToStorage
