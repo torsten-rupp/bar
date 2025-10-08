@@ -616,6 +616,15 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE() { EntryList_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,EntryList_initAll,{ EntryList_doneAll(); });
 
+  error = FileSystem_initAll();
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { FileSystem_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,FileSystem_initAll,{ FileSystem_doneAll(); });
+
   error = Pattern_initAll();
   if (error != ERROR_NONE)
   {
@@ -747,6 +756,7 @@ LOCAL void doneAll(void)
   Chunk_doneAll();
   PatternList_doneAll();
   Pattern_doneAll();
+  FileSystem_doneAll();
   EntryList_doneAll();
   Crypt_doneAll();
   Compress_doneAll();
@@ -2017,7 +2027,7 @@ Errors addStorageNameListFromCommand(StringList *storageNameList, const char *te
   return ERROR_NONE;
 }
 
-Errors addIncludeListFromFile(EntryTypes entryType, EntryList *entryList, const char *fileName)
+Errors addIncludeListFromFile(EntryStoreTypes entryStoreType, EntryList *entryList, const char *fileName)
 {
   Errors error;
 
@@ -2053,7 +2063,7 @@ Errors addIncludeListFromFile(EntryTypes entryType, EntryList *entryList, const 
       String_delete(line);
       return error;
     }
-    EntryList_append(entryList,entryType,line,PATTERN_TYPE_GLOB,NULL);
+    EntryList_append(entryList,entryStoreType,line,PATTERN_TYPE_GLOB,NULL);
   }
 
   // close file
@@ -2065,7 +2075,7 @@ Errors addIncludeListFromFile(EntryTypes entryType, EntryList *entryList, const 
   return ERROR_NONE;
 }
 
-Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, const char *template)
+Errors addIncludeListFromCommand(EntryStoreTypes entryStoreType, EntryList *entryList, const char *template)
 {
   Errors error;
 
@@ -2090,7 +2100,7 @@ Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, con
                              {
                                UNUSED_VARIABLE(userData);
 
-                               EntryList_append(entryList,entryType,line,PATTERN_TYPE_GLOB,NULL);
+                               EntryList_append(entryList,entryStoreType,line,PATTERN_TYPE_GLOB,NULL);
                              },NULL),
                              CALLBACK_(NULL,NULL),
                              (globalOptions.commandTimeout > 0) ? (long)globalOptions.commandTimeout : WAIT_FOREVER
@@ -3173,7 +3183,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   // get include/excluded entries from file list
   if (!String_isEmpty(globalOptions.includeFileListFileName))
   {
-    error = addIncludeListFromFile(ENTRY_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileListFileName));
+    error = addIncludeListFromFile(ENTRY_STORE_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileListFileName));
     if (error != ERROR_NONE)
     {
       printError(_("cannot get included list (error: %s)!"),
@@ -3185,7 +3195,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   if (!String_isEmpty(globalOptions.includeImageListFileName))
   {
-    error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageListFileName));
+    error = addIncludeListFromFile(ENTRY_STORE_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageListFileName));
     if (error != ERROR_NONE)
     {
       printError(_("cannot get included list (error: %s)!"),
@@ -3211,7 +3221,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   // get include/excluded entries from commands
   if (!String_isEmpty(globalOptions.includeFileCommand))
   {
-    error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileCommand));
+    error = addIncludeListFromCommand(ENTRY_STORE_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileCommand));
     if (error != ERROR_NONE)
     {
       printError(_("cannot get included list (error: %s)!"),
@@ -3223,7 +3233,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   if (!String_isEmpty(globalOptions.includeImageCommand))
   {
-    error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageCommand));
+    error = addIncludeListFromCommand(ENTRY_STORE_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageCommand));
     if (error != ERROR_NONE)
     {
       printError(_("cannot get included list (error: %s)!"),
@@ -3260,7 +3270,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     case COMMAND_CREATE_IMAGES:
       {
         StorageSpecifier storageSpecifier;
-        EntryTypes       entryType;
+        EntryStoreTypes  entryStoreType;
         int              i;
 
         // init varibales
@@ -3282,13 +3292,13 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         {
           switch (globalOptions.command)
           {
-            case COMMAND_CREATE_FILES:  entryType = ENTRY_TYPE_FILE;  break;
-            case COMMAND_CREATE_IMAGES: entryType = ENTRY_TYPE_IMAGE; break;
-            default:                    entryType = ENTRY_TYPE_FILE;  break;
+            case COMMAND_CREATE_FILES:  entryStoreType = ENTRY_STORE_TYPE_FILE;  break;
+            case COMMAND_CREATE_IMAGES: entryStoreType = ENTRY_STORE_TYPE_IMAGE; break;
+            default:                    entryStoreType = ENTRY_STORE_TYPE_FILE;  break;
           }
           for (i = 2; i < argc; i++)
           {
-            error = EntryList_appendCString(&globalOptions.includeEntryList,entryType,argv[i],globalOptions.patternType,NULL);
+            error = EntryList_appendCString(&globalOptions.includeEntryList,entryStoreType,argv[i],globalOptions.patternType,NULL);
             if (error != ERROR_NONE)
             {
               break;
@@ -3738,7 +3748,7 @@ LOCAL Errors runDebug(int argc, const char *argv[])
     error = ERROR_NONE;
     for (int i = 2; i < argc; i++)
     {
-      error = EntryList_appendCString(&globalOptions.includeEntryList,ENTRY_TYPE_FILE,argv[i],globalOptions.patternType,NULL);
+      error = EntryList_appendCString(&globalOptions.includeEntryList,ENTRY_STORE_TYPE_FILE,argv[i],globalOptions.patternType,NULL);
       if (error != ERROR_NONE)
       {
         break;
@@ -4427,9 +4437,9 @@ LOCAL Errors bar(int argc, const char *argv[])
     printf("  gmp        %s\n",!stringIsEmpty(VERSION_GMP       ) ? VERSION_GMP        : "(not included)");
     printf("  gnuTLS     %s\n",!stringIsEmpty(VERSION_GNUTLS    ) ? VERSION_GNUTLS     : "(not included)");
     printf("  OpenSSL    %s\n",!stringIsEmpty(VERSION_OPENSSL   ) ? VERSION_OPENSSL    : "(not included)");
-    printf("  libssh2    %s\n",!stringIsEmpty(VERSION_LIBSSH2   ) ? VERSION_LIBSSH2    : "(not included)");
+    printf("  ssh2       %s\n",!stringIsEmpty(VERSION_SSH2      ) ? VERSION_SSH2       : "(not included)");
     printf("  curl       %s\n",!stringIsEmpty(VERSION_CURL      ) ? VERSION_CURL       : "(not included)");
-    printf("  libsmb2    %s\n",!stringIsEmpty(VERSION_LIBSMB2   ) ? VERSION_LIBSMB2    : "(not included)");
+    printf("  smb2       %s\n",!stringIsEmpty(VERSION_SMB2      ) ? VERSION_SMB2       : "(not included)");
     printf("  cdio       %s\n",!stringIsEmpty(VERSION_CDIO      ) ? VERSION_CDIO       : "(not included)");
     printf("  PCRE       %s\n",!stringIsEmpty(VERSION_PCRE      ) ? VERSION_PCRE       : "(not included)");
     printf("  SQLite     %s\n",!stringIsEmpty(VERSION_SQLITE    ) ? VERSION_SQLITE     : "(not included)");
@@ -4437,6 +4447,8 @@ LOCAL Errors bar(int argc, const char *argv[])
     printf("  PostgreSQL %s\n",!stringIsEmpty(VERSION_POSTGRESQL) ? VERSION_POSTGRESQL : "(not included)");
     printf("  PAR2       %s\n",!stringIsEmpty(VERSION_PAR2      ) ? VERSION_PAR2       : "(not included)");
     printf("  isofs      %s\n",!stringIsEmpty(VERSION_ISOFS     ) ? VERSION_ISOFS      : "(not included)");
+    printf("  rcu        %s\n",!stringIsEmpty(VERSION_RCU       ) ? VERSION_RCU        : "(not included)");
+    printf("  xfs        %s\n",!stringIsEmpty(VERSION_XFS       ) ? VERSION_XFS        : "(not included)");
     printf("  burn       %s\n",!stringIsEmpty(VERSION_BURN      ) ? VERSION_BURN       : "(not included)");
     printf("  mount      %s\n",!stringIsEmpty(VERSION_MOUNT     ) ? VERSION_MOUNT      : "(not included)");
 

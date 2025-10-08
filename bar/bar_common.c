@@ -42,13 +42,13 @@
 /***************************** Variables *******************************/
 String tmpDirectory;
 
+struct
+{
+  bool       isInitialized;
+
+  bool       isUTF8System;
+
 #ifdef HAVE_ICU
-  struct
-  {
-    bool       isInitialized;
-
-    bool       isUTF8System;
-
     Semaphore  lock;
     UConverter *systemConverter;
     uint8      systemMaxCharSize;
@@ -60,8 +60,8 @@ String tmpDirectory;
     size_t     unicodeCharSize;
     char       *buffer;
     size_t     bufferSize;
-  } encodingConverter;
 #endif
+} encodingConverter;
 
 /****************************** Macros *********************************/
 
@@ -88,35 +88,39 @@ LOCAL int32_t convertToUnicode(UConverter *converter, ConstString source)
   assert(converter != NULL);
   assert(source != NULL);
 
-  // extend Unicode buffer if needed
-  if ((2*String_length(source)) > encodingConverter.unicodeCharSize)
-  {
-    size_t newUnicodeCharsSize = ALIGN(2*String_length(source),64);
-    UChar  *newUnicodeChars    = (UChar*)realloc(encodingConverter.unicodeChars,newUnicodeCharsSize);
-    if (newUnicodeChars == NULL)
+  #ifdef HAVE_ICU
+    // extend Unicode buffer if needed
+    if ((2*String_length(source)) > encodingConverter.unicodeCharSize)
+    {
+      size_t newUnicodeCharsSize = ALIGN(2*String_length(source),64);
+      UChar  *newUnicodeChars    = (UChar*)realloc(encodingConverter.unicodeChars,newUnicodeCharsSize);
+      if (newUnicodeChars == NULL)
+      {
+        return -1;
+      }
+      encodingConverter.unicodeChars    = newUnicodeChars;
+      encodingConverter.unicodeCharSize = newUnicodeCharsSize;
+    }
+
+    // convert to Unicode encoding
+    UErrorCode errorCode = U_ZERO_ERROR;
+    int32_t unicodeLength = ucnv_toUChars(converter,
+                                          encodingConverter.unicodeChars,
+                                          encodingConverter.unicodeCharSize,
+                                          String_cString(source),
+                                          String_length(source),
+                                          &errorCode
+                                         );
+    if ((unicodeLength < 0) || !U_SUCCESS(errorCode))
     {
       return -1;
     }
-    encodingConverter.unicodeChars    = newUnicodeChars;
-    encodingConverter.unicodeCharSize = newUnicodeCharsSize;
-  }
+    assert(unicodeLength <= (int32_t)encodingConverter.unicodeCharSize);
 
-  // convert to Unicode encoding
-  UErrorCode errorCode = U_ZERO_ERROR;
-  int32_t unicodeLength = ucnv_toUChars(converter,
-                                        encodingConverter.unicodeChars,
-                                        encodingConverter.unicodeCharSize,
-                                        String_cString(source),
-                                        String_length(source),
-                                        &errorCode
-                                       );
-  if ((unicodeLength < 0) || !U_SUCCESS(errorCode))
-  {
+    return unicodeLength;
+  #else
     return -1;
-  }
-  assert(unicodeLength <= (int32_t)encodingConverter.unicodeCharSize);
-
-  return unicodeLength;
+  #endif
 }
 
 /***********************************************************************\
@@ -136,37 +140,41 @@ LOCAL int32_t convertFromUnicode(String destination, UConverter *converter, int3
   assert(destination != NULL);
   assert(converter != NULL);
 
-  // extend buffer if needed
-  if (encodingConverter.bufferSize < (size_t)UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize))
-  {
-    size_t newBufferSize = ALIGN(UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize),64);
-    char   *newBuffer    = (char*)realloc(encodingConverter.buffer,newBufferSize);
-    if (newBuffer == NULL)
+  #ifdef HAVE_ICU
+    // extend buffer if needed
+    if (encodingConverter.bufferSize < (size_t)UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize))
+    {
+      size_t newBufferSize = ALIGN(UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize),64);
+      char   *newBuffer    = (char*)realloc(encodingConverter.buffer,newBufferSize);
+      if (newBuffer == NULL)
+      {
+        return -1;
+      }
+      encodingConverter.buffer     = newBuffer;
+      encodingConverter.bufferSize = newBufferSize;
+    }
+
+    // convert to destination encoding
+    UErrorCode errorCode = U_ZERO_ERROR;
+    int32_t length = ucnv_fromUChars(converter,
+                                     encodingConverter.buffer,
+                                     encodingConverter.bufferSize,
+                                     encodingConverter.unicodeChars,
+                                     unicodeLength,
+                                     &errorCode
+                                    );
+    if ((length < 0) || !U_SUCCESS(errorCode))
     {
       return -1;
     }
-    encodingConverter.buffer     = newBuffer;
-    encodingConverter.bufferSize = newBufferSize;
-  }
+    assert(length <= (int32_t)encodingConverter.bufferSize);
 
-  // convert to destination encoding
-  UErrorCode errorCode = U_ZERO_ERROR;
-  int32_t length = ucnv_fromUChars(converter,
-                                   encodingConverter.buffer,
-                                   encodingConverter.bufferSize,
-                                   encodingConverter.unicodeChars,
-                                   unicodeLength,
-                                   &errorCode
-                                  );
-  if ((length < 0) || !U_SUCCESS(errorCode))
-  {
+    String_appendBuffer(destination,encodingConverter.buffer,(ulong)length);
+
+    return length;
+  #else
     return -1;
-  }
-  assert(length <= (int32_t)encodingConverter.bufferSize);
-
-  String_appendBuffer(destination,encodingConverter.buffer,(ulong)length);
-
-  return length;
+  #endif
 }
 
 // ---------------------------------------------------------------------

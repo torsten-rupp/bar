@@ -105,7 +105,7 @@ if test $helpFlag -eq 1; then
   exit 0
 fi
 
-# enable traciing
+# enable tracing
 if test $debugFlag -eq 1; then
   set -x
 fi

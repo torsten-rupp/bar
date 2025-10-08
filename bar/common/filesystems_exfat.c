@@ -12,6 +12,7 @@
 
 #include "common/global.h"
 #include "common/filesystems.h"
+#include "common/bitsets.h"
 
 #include "filesystems_exfat.h"
 
@@ -280,40 +281,6 @@ LOCAL_INLINE uint32_t sectorToCluster(const EXFATHandle *exfatHandle, uint64_t s
 }
 
 /***********************************************************************\
-* Name   : clustersToOffset
-* Purpose: convert cluster index to byte offset
-* Input  : exfatHandle - EXFAT handle
-*          cluster     - cluster index
-* Output : -
-* Return : bytes offset
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE uint64_t clusterToOffset(const EXFATHandle *exfatHandle, uint32_t cluster)
-{
-  assert(exfatHandle != NULL);
-
-  return sectorToOffset(exfatHandle,clusterToSector(exfatHandle,cluster));
-}
-
-/***********************************************************************\
-* Name   : offsetToSector
-* Purpose: convert byte offset to cluster index
-* Input  : exfatHandle - EXFAT handle
-*          offset      - bytes offset
-* Output : -
-* Return : cluster index
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE uint32_t offsetToCluster(const EXFATHandle *exfatHandle, uint64_t offset)
-{
-  assert(exfatHandle != NULL);
-
-  return sectorToCluster(exfatHandle,offsetToSector(exfatHandle,offset));
-}
-
-/***********************************************************************\
 * Name   : readClusterBitmap
 * Purpose: read cluster bitmap
 * Input  : deviceHandle - device handle
@@ -334,8 +301,7 @@ LOCAL bool EXFAT_readClusterBitmap(DeviceHandle *deviceHandle, EXFATHandle *exfa
   Errors error;
 
   // allocate cluster allocation bitmap
-  exfatHandle->clusterBitmap = (byte*)malloc((exfatHandle->clusterCount+7)/8);
-  if (exfatHandle->clusterBitmap == NULL)
+  if (!BitSet_init(&exfatHandle->clusterBitmap,(exfatHandle->clusterCount+7)/8))
   {
     return FALSE;
   }
@@ -367,7 +333,7 @@ LOCAL bool EXFAT_readClusterBitmap(DeviceHandle *deviceHandle, EXFATHandle *exfa
               error = Device_seek(deviceHandle,offset);
               if (error == ERROR_NONE)
               {
-                error = Device_read(deviceHandle,exfatHandle->clusterBitmap,size,NULL);
+                error = Device_read(deviceHandle,exfatHandle->clusterBitmap.data,size,NULL);
                 if (error == ERROR_NONE)
                 {
                   bitmapReadFlag = TRUE;
@@ -403,7 +369,7 @@ LOCAL bool EXFAT_readClusterBitmap(DeviceHandle *deviceHandle, EXFATHandle *exfa
   }
   if ((error != ERROR_NONE) || !bitmapReadFlag)
   {
-    free(exfatHandle->clusterBitmap);
+    BitSet_done(&exfatHandle->clusterBitmap);
     return FALSE;
   }
 //debugDumpMemory(exfatHandle->clusterBitmap,exfatHandle->clusterCount/8,0); abort();
@@ -433,61 +399,6 @@ LOCAL bool EXFAT_readClusterBitmap(DeviceHandle *deviceHandle, EXFATHandle *exfa
 #endif
 
   return TRUE;
-}
-
-/***********************************************************************\
-* Name   : EXFAT_getType
-* Purpose: get EXFAT file system type
-* Input  : deviceHandle - device handle
-* Output : -
-* Return : file system type or FILE_SYSTEN_UNKNOWN;
-* Notes  : -
-\***********************************************************************/
-
-LOCAL FileSystemTypes EXFAT_getType(DeviceHandle *deviceHandle)
-{
-  assert(deviceHandle != NULL);
-
-  // read boot sector
-  EXFATBootSector exfatBootSector;
-  if (Device_seek(deviceHandle,0) != ERROR_NONE)
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-  assert(sizeof(exfatBootSector) == 1024);
-  if (Device_read(deviceHandle,&exfatBootSector,sizeof(exfatBootSector),NULL) != ERROR_NONE)
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-
-  // check if valid boot sector
-  if ((uint16)EXFAT_READ_UINT16(exfatBootSector.bootSignature) != EXFAT_MAGIC)
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-
-  // get file system info
-  uint16_t bytesPerSector       = 1 << EXFAT_READ_UINT8(exfatBootSector.bytesPerSectorShift);
-  uint8_t  sectorsPerCluster    = 1 << EXFAT_READ_UINT8(exfatBootSector.sectorsPerClusterShift);
-  uint64_t totalSectorsCount    = EXFAT_READ_UINT64(exfatBootSector.partitionLength);
-  uint32_t clusterHeapOffset    = EXFAT_READ_UINT32(exfatBootSector.clusterHeapOffset);
-  uint32_t clusterCount         = EXFAT_READ_UINT32(exfatBootSector.clusterCount);
-  uint32_t rootDirectoryCluster = EXFAT_READ_UINT32(exfatBootSector.rootDirectoryCluster);
-  uint8_t  fatCount             = EXFAT_READ_UINT8 (exfatBootSector.fatCount);
-
-  // validate data
-  if (   !(bytesPerSector >= 512)
-      || !((bytesPerSector % 512) == 0)
-      || !(sectorsPerCluster > 0)
-      || !(fatCount > 0)
-      || !(totalSectorsCount > ((1024*1024) / bytesPerSector))
-      || !(clusterCount < 0xFFFFFFF5)
-     )
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-
-  return FILE_SYSTEM_TYPE_EXFAT;
 }
 
 /***********************************************************************\
@@ -579,9 +490,8 @@ LOCAL bool EXFAT_init(DeviceHandle *deviceHandle, FileSystemTypes *fileSystemTyp
 LOCAL void EXFAT_done(EXFATHandle *exfatHandle)
 {
   assert(exfatHandle != NULL);
-  assert(exfatHandle->clusterBitmap != NULL);
 
-  free(exfatHandle->clusterBitmap);
+  BitSet_done(&exfatHandle->clusterBitmap);
 }
 
 /***********************************************************************\
@@ -601,6 +511,8 @@ LOCAL bool EXFAT_blockIsUsed(DeviceHandle *deviceHandle, EXFATHandle *exfatHandl
   assert(deviceHandle != NULL);
   assert(exfatHandle != NULL);
 
+  UNUSED_VARIABLE(deviceHandle);
+
   bool blockIsUsed = FALSE;
 
   // calculate cluster
@@ -613,7 +525,7 @@ LOCAL bool EXFAT_blockIsUsed(DeviceHandle *deviceHandle, EXFATHandle *exfatHandl
 //fprintf(stderr,"%s:%d: sector=%llu cluster=%lu clusterHeapOffset=%lu\n",__FILE__,__LINE__,sector,cluster,exfatHandle->clusterHeapOffset);
     if (cluster <= exfatHandle->clusterCount)
     {
-      blockIsUsed = BITSET_IS_SET(exfatHandle->clusterBitmap,cluster-CLUSTER_BASE_INDEX);
+      blockIsUsed = BitSet_isSet(&exfatHandle->clusterBitmap,cluster-CLUSTER_BASE_INDEX);
 #if 0
 fprintf(stderr,"%s:%d: cluster=%u [%d]=%02x bit=%x m=%x %d blockIsUsed=%d\n",__FILE__,__LINE__,
 cluster,

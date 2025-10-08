@@ -20,11 +20,11 @@
 /***************************** Datatypes *******************************/
 typedef struct
 {
-  uint   blockSize;                             // block size (1024, 2048, 4096, 8192)
-  ulong  firstDataBlock;                        // first data block
-  uint32 totalBlocks;                           // total number of blocks
-  int    bitmapIndex;                           // index of currently read bitmap
-  uchar  bitmapData[REISERFS_MAX_BLOCK_SIZE];   // bitmap block data
+  uint     blockSize;                             // block size (1024, 2048, 4096, 8192)
+  ulong    firstDataBlock;                        // first data block
+  uint32_t totalBlocks;                           // total number of blocks
+  int      bitmapIndex;                           // index of currently read bitmap
+  uchar    bitmapData[REISERFS_MAX_BLOCK_SIZE];   // bitmap block data
 } ReiserFSHandle;
 
 /***************************** Variables *******************************/

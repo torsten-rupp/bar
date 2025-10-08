@@ -612,13 +612,13 @@ UNUSED_VARIABLE(scheduleCustomText);
   EntryNode *entryNode;
   LIST_ITERATE(includeEntryList,entryNode)
   {
-    const char *entryTypeText;
-    switch (entryNode->type)
+    const char *entryStoreTypeText;
+    switch (entryNode->storeType)
     {
-      case ENTRY_TYPE_FILE :   entryTypeText = "FILE";    break;
-      case ENTRY_TYPE_IMAGE:   entryTypeText = "IMAGE";   break;
-      case ENTRY_TYPE_UNKNOWN:
-      default:                 entryTypeText = "UNKNOWN"; break;
+      case ENTRY_STORE_TYPE_FILE :   entryStoreTypeText = "FILE";    break;
+      case ENTRY_STORE_TYPE_IMAGE:   entryStoreTypeText = "IMAGE";   break;
+      case ENTRY_STORE_TYPE_UNKNOWN:
+      default:                       entryStoreTypeText = "UNKNOWN"; break;
     }
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
@@ -626,7 +626,7 @@ UNUSED_VARIABLE(scheduleCustomText);
                                                               CALLBACK_(NULL,NULL),
                                                               "INCLUDE_LIST_ADD jobUUID=%S entryType=%s patternType=%s pattern=%'S",
                                                               jobUUID,
-                                                              entryTypeText,
+                                                              entryStoreTypeText,
                                                               ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,entryNode->patternType,NULL),
                                                               entryNode->string
                                                              );

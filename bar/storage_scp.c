@@ -1303,9 +1303,10 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
 {
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
-  assert((storageHandle->scp.sftpHandle != NULL) || (storageHandle->scp.channel != NULL));
 
   #ifdef HAVE_SSH2
+    assert((storageHandle->scp.sftpHandle != NULL) || (storageHandle->scp.channel != NULL));
+
     switch (storageHandle->mode)
     {
       case STORAGE_MODE_READ:

@@ -5,6 +5,9 @@ ENV container docker
 ARG uid=1000
 ARG gid=1000
 
+# add EPEL repository
+RUN yum -y install elrepo-release
+
 # update
 RUN yum -y update
 RUN yum -y upgrade
@@ -42,6 +45,7 @@ RUN yum -y install \
   gettext-devel \
   git \
   java-1.8.0-openjdk-devel \
+  libblkid-devel \
   libtool \
   m4 \
   make \
@@ -93,6 +97,16 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; \
     rm -f /lib/systemd/system/basic.target.wants/*;\
     rm -f /lib/systemd/system/anaconda.target.wants/*;
 VOLUME [ "/sys/fs/cgroup" ]
+
+# work-around for missing package libinih-devel
+RUN (cd /tmp; \
+     git clone https://github.com/benhoyt/inih.git; \
+     cd inih; \
+     gcc -c ini.c -o ini.o; \
+     ar cr libini.a ini.o; \
+     install ini.h /usr/local/include; \
+     install libini.a /usr/local/lib; \
+    )
 
 # add external third-party packages
 COPY download-third-party-packages.sh /root

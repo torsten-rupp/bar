@@ -704,7 +704,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     bool             fileSystemFlag;
     if (!archiveHandle->storageInfo->jobOptions->rawImagesFlag)
     {
-      fileSystemFlag = (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE);
+      fileSystemFlag = (FileSystem_init(&fileSystemHandle,deviceName) == ERROR_NONE);
     }
     else
     {

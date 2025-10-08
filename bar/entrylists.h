@@ -39,20 +39,20 @@
 
 typedef enum
 {
-  ENTRY_TYPE_FILE,                      // store matching entries as files
-  ENTRY_TYPE_IMAGE,                     // store matching entries as block device images
-  ENTRY_TYPE_UNKNOWN
-} EntryTypes;
+  ENTRY_STORE_TYPE_FILE,                   // store matching entries as files
+  ENTRY_STORE_TYPE_IMAGE,                  // store matching entries as block device images
+  ENTRY_STORE_TYPE_UNKNOWN
+} EntryStoreTypes;
 
 typedef struct EntryNode
 {
   LIST_NODE_HEADER(struct EntryNode);
 
-  uint         id;                      // unique id
-  EntryTypes   type;                    // entry type; see ENTRY_TYPES_...
-  String       string;                  // entry string pattern
-  PatternTypes patternType;             // pattern type
-  Pattern      pattern;                 // compiled entry pattern
+  uint            id;                      // unique id
+  EntryStoreTypes storeType;               // entry store type; see ENTRY_STORE_TYPES_...
+  String          string;                  // entry string pattern
+  PatternTypes    patternType;             // pattern type
+  Pattern         pattern;                 // compiled entry pattern
 } EntryNode;
 
 typedef struct
@@ -95,28 +95,28 @@ Errors EntryList_initAll(void);
 void EntryList_doneAll(void);
 
 /***********************************************************************\
-* Name   : EntryList_entryTypeToString
-* Purpose: get name of entry type
-* Input  : entryType    - entry type
-*          defaultValue - default value
+* Name   : EntryList_entryStoreTypeToString
+* Purpose: get name of entry store type
+* Input  : entryStoreType - entry store type
+*          defaultValue   - default value
 * Output : -
 * Return : name
 * Notes  : -
 \***********************************************************************/
 
-const char *EntryList_entryTypeToString(EntryTypes entryType, const char* defaultValue);
+const char *EntryList_entryStoreTypeToString(EntryStoreTypes entryStoreType, const char* defaultValue);
 
 /***********************************************************************\
-* Name   : EntryList_parseEntryType
-* Purpose: get entry type
+* Name   : EntryList_parseEntryStoreType
+* Purpose: get entry stpre type
 * Input  : name     - name of entry type
 *          userData - user data (not used)
-* Output : entryType - entry type
+* Output : entryStoreType - entry store type
 * Return : TRUE iff parsed
 * Notes  : -
 \***********************************************************************/
 
-bool EntryList_parseEntryType(const char *name, EntryTypes *entryType, void *userData);
+bool EntryList_parseEntryStoreType(const char *name, EntryStoreTypes *entryStoreType, void *userData);
 
 /***********************************************************************\
 * Name   : EntryList_init
@@ -217,61 +217,61 @@ void EntryList_move(EntryList       *toEntryList,
 * Notes  : -
 \***********************************************************************/
 
-bool EntryList_contains(EntryList    *entryList,
-                        EntryTypes   type,
-                        ConstString  string,
-                        PatternTypes patternType
+bool EntryList_contains(EntryList       *entryList,
+                        EntryStoreTypes type,
+                        ConstString     string,
+                        PatternTypes    patternType
                        );
 
 /***********************************************************************\
 * Name   : EntryList_append, EntryList_appendCString
 * Purpose: add entry to entry list
-* Input  : entryList   - entry list
-+          type        - entry type; see ENTRY_TYPE_*
-*          string      - string
-*          patternType - pattern type; see PATTERN_TYPE_*
+* Input  : entryList      - entry list
++          entryStoreType - entry store type; see ENTRY_STORE_TYPE_*
+*          string         - string
+*          patternType    - pattern type; see PATTERN_TYPE_*
 * Output : id - entry node id (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors EntryList_append(EntryList    *entryList,
-                        EntryTypes   type,
-                        ConstString  string,
-                        PatternTypes patternType,
-                        uint         *id
+Errors EntryList_append(EntryList       *entryList,
+                        EntryStoreTypes entryStoreType,
+                        ConstString     string,
+                        PatternTypes    patternType,
+                        uint            *id
                        );
-Errors EntryList_appendCString(EntryList    *entryList,
-                               EntryTypes   type,
-                               const char   *string,
-                               PatternTypes patternType,
-                               uint         *id
+Errors EntryList_appendCString(EntryList       *entryList,
+                               EntryStoreTypes entryStoreType,
+                               const char      *string,
+                               PatternTypes    patternType,
+                               uint            *id
                               );
 
 /***********************************************************************\
 * Name   : EntryList_update, EntryList_updateCString
 * Purpose: update entry in entry list
-* Input  : entryList   - entry list
-+          id          - entry node id
-+          type        - entry type; see ENTRY_TYPE_*
-*          string      - string
-*          patternType - pattern type; see PATTERN_TYPE_*
+* Input  : entryList      - entry list
++          id             - entry node id
++          entryStoreType - entry store type; see ENTRY_STORE_TYPE_*
+*          string         - string
+*          patternType    - pattern type; see PATTERN_TYPE_*
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors EntryList_update(EntryList    *entryList,
-                        uint         id,
-                        EntryTypes   type,
-                        ConstString  string,
-                        PatternTypes patternType
+Errors EntryList_update(EntryList       *entryList,
+                        uint            id,
+                        EntryStoreTypes entryStoreType,
+                        ConstString     string,
+                        PatternTypes    patternType
                        );
-Errors EntryList_updateCString(EntryList    *entryList,
-                               uint         id,
-                               EntryTypes   type,
-                               const char   *string,
-                               PatternTypes patternType
+Errors EntryList_updateCString(EntryList       *entryList,
+                               uint            id,
+                               EntryStoreTypes entryStoreType,
+                               const char      *string,
+                               PatternTypes    patternType
                               );
 
 /***********************************************************************\

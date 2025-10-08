@@ -1,0 +1,14 @@
+Only in xfsprogs-6.16.0/libfrog: gettext.py
+Only in xfsprogs-6.16.0/libxfs: \
+diff -ru xfsprogs-6.16.0.org/mkfs/Makefile xfsprogs-6.16.0/mkfs/Makefile
+--- xfsprogs-6.16.0.org/mkfs/Makefile	2025-04-08 15:58:49.000000000 +0200
++++ xfsprogs-6.16.0/mkfs/Makefile	2025-10-07 10:19:06.258914389 +0200
+@@ -24,7 +24,7 @@
+ 	$(LIBUUID) $(LIBINIH) $(LIBURCU) $(LIBPTHREAD)
+ LTDEPENDENCIES += $(LIBXFS) $(LIBXCMD) $(LIBFROG)
+ LLDFLAGS = -static-libtool-libs
+-DIRT = $(XFS_PROTOFILE)
++DIRT += $(XFS_PROTOFILE)
+ 
+ default: depend $(LTCOMMAND) $(CFGFILES) $(XFS_PROTOFILE)
+ 

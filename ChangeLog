@@ -2,6 +2,8 @@
   * added option --commmand-timeout
   * fixed command timeout (bug #31)
   * added sd_notify() for systemd
+  * bar-index: improved clean-orphaned: remove entities without
+    entries or storages 
   * BARControl: improved certificate validation
   * BARControl: show file system type of devices if possible
   * BARControl: check common name of SSL certificate

@@ -809,20 +809,20 @@ Errors addStorageNameListFromCommand(StringList *storageNameList, const char *te
 /***********************************************************************\
 * Name   : addIncludeListFromFile
 * Purpose: add content list from file to include entry list
-* Input  : entryType - entry type
-*          entryList - entry list
-*          fileName  - file name
+* Input  : entryStoreType - entry store type
+*          entryList      - entry list
+*          fileName       - file name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors addIncludeListFromFile(EntryTypes entryType, EntryList *entryList, const char *fileName);
+Errors addIncludeListFromFile(EntryStoreTypes entryStoreType, EntryList *entryList, const char *fileName);
 
 /***********************************************************************\
 * Name   : addIncludeListFromCommand
 * Purpose: add output of command to include entry list
-* Input  : entryType       - entry type
+* Input  : entryStoreType  - entry store type
 *          entryList       - entry list
 *          commandTemplate - command/script template
 * Output : -
@@ -830,7 +830,7 @@ Errors addIncludeListFromFile(EntryTypes entryType, EntryList *entryList, const 
 * Notes  : -
 \***********************************************************************/
 
-Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, const char *commandTemplate);
+Errors addIncludeListFromCommand(EntryStoreTypes entryStoreType, EntryList *entryList, const char *commandTemplate);
 
 /***********************************************************************\
 * Name   : addExcludeListFromFile

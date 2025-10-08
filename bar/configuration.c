@@ -766,8 +766,8 @@ LOCAL bool cmdOptionParseEntryPattern(void *variable, const char *name, const ch
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(userData);
 
-  // get entry type
-  EntryTypes entryType = ENTRY_TYPE_FILE;
+  // get entry store type
+  EntryStoreTypes entryStoreType = ENTRY_STORE_TYPE_FILE;
   switch (globalOptions.command)
   {
     case COMMAND_NONE:
@@ -780,10 +780,10 @@ LOCAL bool cmdOptionParseEntryPattern(void *variable, const char *name, const ch
     case COMMAND_GENERATE_ENCRYPTION_KEYS:
     case COMMAND_GENERATE_SIGNATURE_KEYS:
     case COMMAND_NEW_KEY_PASSWORD:
-      entryType = ENTRY_TYPE_FILE;
+      entryStoreType = ENTRY_STORE_TYPE_FILE;
       break;
     case COMMAND_CREATE_IMAGES:
-      entryType = ENTRY_TYPE_IMAGE;
+      entryStoreType = ENTRY_STORE_TYPE_IMAGE;
       break;
     default:
       HALT_INTERNAL_ERROR("no valid command set (%d)",globalOptions.command);
@@ -801,7 +801,7 @@ LOCAL bool cmdOptionParseEntryPattern(void *variable, const char *name, const ch
   else                                          { patternType = PATTERN_TYPE_GLOB;                       }
 
   // append to list
-  Errors error = EntryList_appendCString((EntryList*)variable,entryType,value,patternType,NULL);
+  Errors error = EntryList_appendCString((EntryList*)variable,entryStoreType,value,patternType,NULL);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -5611,7 +5611,7 @@ LOCAL bool configValuePermissionsFormat(void **formatUserData, ConfigValueOperat
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
+LOCAL bool configValueEntryPatternParse(EntryStoreTypes entryStoreType, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
   const char* FILENAME_MAP_FROM[] = {"\\n","\\r","\\\\"};
   const char* FILENAME_MAP_TO[]   = {"\n","\r","\\"};
@@ -5644,7 +5644,7 @@ LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *variable, co
 
   // append to list
   String_mapCString(string,STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM),NULL);
-  Errors error = EntryList_append((EntryList*)variable,entryType,string,patternType,NULL);
+  Errors error = EntryList_append((EntryList*)variable,entryStoreType,string,patternType,NULL);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -5676,12 +5676,12 @@ LOCAL bool configValueEntryPatternParse(EntryTypes entryType, void *variable, co
 
 LOCAL bool configValueFileEntryPatternParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  return configValueEntryPatternParse(ENTRY_TYPE_FILE,variable,name,value,errorMessage,errorMessageSize,userData);
+  return configValueEntryPatternParse(ENTRY_STORE_TYPE_FILE,variable,name,value,errorMessage,errorMessageSize,userData);
 }
 
 LOCAL bool configValueImageEntryPatternParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  return configValueEntryPatternParse(ENTRY_TYPE_IMAGE,variable,name,value,errorMessage,errorMessageSize,userData);
+  return configValueEntryPatternParse(ENTRY_STORE_TYPE_IMAGE,variable,name,value,errorMessage,errorMessageSize,userData);
 }
 
 /***********************************************************************\
@@ -5727,7 +5727,7 @@ LOCAL bool configValueFileEntryPatternFormat(void **formatUserData, ConfigValueO
         String          fileName;
         String          line       = (String)data;
 
-        while ((entryNode != NULL) && (entryNode->type != ENTRY_TYPE_FILE))
+        while ((entryNode != NULL) && (entryNode->storeType != ENTRY_STORE_TYPE_FILE))
         {
           entryNode = entryNode->next;
         }
@@ -5794,7 +5794,7 @@ LOCAL bool configValueImageEntryPatternFormat(void **formatUserData, ConfigValue
         const EntryNode *entryNode = (EntryNode*)(*formatUserData);
         String          line       = (String)data;
 
-        while ((entryNode != NULL) && (entryNode->type != ENTRY_TYPE_IMAGE))
+        while ((entryNode != NULL) && (entryNode->storeType != ENTRY_STORE_TYPE_IMAGE))
         {
           entryNode = entryNode->next;
         }

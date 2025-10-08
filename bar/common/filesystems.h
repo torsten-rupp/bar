@@ -20,6 +20,7 @@
 #include "common/filesystems_fat.h"
 #include "common/filesystems_exfat.h"
 #include "common/filesystems_reiserfs.h"
+#include "common/filesystems_xfs.h"
 #include "errors.h"
 
 /****************** Conditional compilation switches *******************/
@@ -71,7 +72,7 @@ typedef enum
 // file system handle
 typedef struct
 {
-  DeviceHandle    *deviceHandle;
+  DeviceHandle    deviceHandle;
   FileSystemTypes type;
   union
   {
@@ -79,6 +80,7 @@ typedef struct
     FATHandle      fatHandle;
     EXFATHandle    exfatHandle;
     ReiserFSHandle reiserFSHandle;
+    XFSHandle      xfsHandle;
   };
 } FileSystemHandle;
 
@@ -93,6 +95,28 @@ typedef struct
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : FileSystem_initAll
+* Purpose: init file systems
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+Errors FileSystem_initAll(void);
+
+/***********************************************************************\
+* Name   : FileSystem_doneAll
+* Purpose: deinitialize file systems
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or errorcode
+* Notes  : -
+\***********************************************************************/
+
+void FileSystem_doneAll(void);
 
 /***********************************************************************\
 * Name   : FileSystem_typeToString
@@ -141,8 +165,11 @@ FileSystemTypes FileSystem_getTypeCString(const char *deviceName);
 \***********************************************************************/
 
 Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
-                       DeviceHandle     *deviceHandle
+                       ConstString      deviceName
                       );
+Errors FileSystem_initCString(FileSystemHandle *fileSystemHandle,
+                              const char       *deviceName
+                             );
 
 /***********************************************************************\
 * Name   : FileSystem_close

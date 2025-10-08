@@ -72,69 +72,8 @@ static_assert(sizeof(ReiserSuperBlock) == 204);
 #endif
 
 /***********************************************************************\
-* Name   : REISERFS_getType
-* Purpose: get ReiserFS file system type
-* Input  : deviceHandle   - device handle
-* Output : -
-* Return : TRUE iff file system initialized
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool ReiserFS_getType(DeviceHandle *deviceHandle)
-{
-  assert(deviceHandle != NULL);
-
-  // read super-block
-  ReiserSuperBlock reiserSuperBlock;
-  if (Device_seek(deviceHandle,REISERFS_SUPER_BLOCK_OFFSET) != ERROR_NONE)
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-  if (Device_read(deviceHandle,&reiserSuperBlock,sizeof(reiserSuperBlock),NULL) != ERROR_NONE)
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-
-  // check if this a ReiserFS super block, detect file system type
-  FileSystemTypes fileSystemType;
-  if      (stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V1))
-  {
-    fileSystemType = FILE_SYSTEM_TYPE_REISERFS3_5;
-  }
-  else if (   stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V2)
-           || stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V3)
-          )
-  {
-    fileSystemType = FILE_SYSTEM_TYPE_REISERFS3_6;
-  }
-  else if (stringStartsWith(reiserSuperBlock.magicString,REISERFS_SUPER_MAGIC_STRING_V4))
-  {
-    fileSystemType = FILE_SYSTEM_TYPE_REISERFS4;
-  }
-  else
-  {
-    return FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-
-  // get file system block info
-  uint64 totalBlocks = LE32_TO_HOST(reiserSuperBlock.blockCount);
-  uint   blockSize   = LE32_TO_HOST(reiserSuperBlock.blockSize);
-
-  // validate data
-  if (   !(blockSize >= 512)
-      || !((blockSize % 512) == 0)
-      || !(totalBlocks > 0)
-     )
-  {
-    fileSystemType = FILE_SYSTEM_TYPE_UNKNOWN;
-  }
-
-  return fileSystemType;
-}
-
-/***********************************************************************\
 * Name   : ReiserFS_init
-* Purpose: initialize ReiserFS handle
+* Purpose: initialize ReiserFS file system
 * Input  : deviceHandle - device handle
 * Output : fileSystemType - file system type
 *          reiserFSHandle - ReiserFS handle (can be NULL)
@@ -234,6 +173,9 @@ LOCAL bool ReiserFS_blockIsUsed(DeviceHandle *deviceHandle, FileSystemTypes file
         );
   assert(reiserFSHandle != NULL);
   assert(reiserFSHandle->blockSize != 0);
+
+  UNUSED_VARIABLE(deviceHandle);
+  UNUSED_VARIABLE(fileSystemType);
 
   // calculate block
   uint32 block = offset/reiserFSHandle->blockSize;

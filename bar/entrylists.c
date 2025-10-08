@@ -39,12 +39,12 @@
 /***************************** Constants *******************************/
 LOCAL const struct
 {
-  const char *name;
-  EntryTypes entryType;
-} ENTRY_TYPES[] =
+  const char      *name;
+  EntryStoreTypes entryStoreType;
+} ENTRY_STORE_TYPES[] =
 {
-  { "file",  ENTRY_TYPE_FILE  },
-  { "image", ENTRY_TYPE_IMAGE }
+  { "file",  ENTRY_STORE_TYPE_FILE  },
+  { "image", ENTRY_STORE_TYPE_IMAGE }
 };
 
 /***************************** Datatypes *******************************/
@@ -93,7 +93,7 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
   #else
     newEntryNode->id        = Misc_getId();
   #endif
-  newEntryNode->type        = entryNode->type;
+  newEntryNode->storeType   = entryNode->storeType;
   newEntryNode->string      = String_duplicate(entryNode->string);
   newEntryNode->patternType = entryNode->patternType;
   #if   defined(PLATFORM_LINUX)
@@ -159,19 +159,19 @@ void EntryList_doneAll(void)
 {
 }
 
-const char *EntryList_entryTypeToString(EntryTypes entryType, const char *defaultValue)
+const char *EntryList_entryStoreTypeToString(EntryStoreTypes entryStoreType, const char *defaultValue)
 {
   uint i = 0;
-  while (   (i < SIZE_OF_ARRAY(ENTRY_TYPES))
-         && (ENTRY_TYPES[i].entryType != entryType)
+  while (   (i < SIZE_OF_ARRAY(ENTRY_STORE_TYPES))
+         && (ENTRY_STORE_TYPES[i].entryStoreType != entryStoreType)
         )
   {
     i++;
   }
   const char *name;
-  if (i < SIZE_OF_ARRAY(ENTRY_TYPES))
+  if (i < SIZE_OF_ARRAY(ENTRY_STORE_TYPES))
   {
-    name = ENTRY_TYPES[i].name;
+    name = ENTRY_STORE_TYPES[i].name;
   }
   else
   {
@@ -181,23 +181,23 @@ const char *EntryList_entryTypeToString(EntryTypes entryType, const char *defaul
   return name;
 }
 
-bool EntryList_parseEntryType(const char *name, EntryTypes *entryType, void *userData)
+bool EntryList_parseEntryStoreType(const char *name, EntryStoreTypes *entryStoreType, void *userData)
 {
   assert(name != NULL);
-  assert(entryType != NULL);
+  assert(entryStoreType != NULL);
 
   UNUSED_VARIABLE(userData);
 
   uint i = 0;
-  while (   (i < SIZE_OF_ARRAY(ENTRY_TYPES))
-         && !stringEqualsIgnoreCase(ENTRY_TYPES[i].name,name)
+  while (   (i < SIZE_OF_ARRAY(ENTRY_STORE_TYPES))
+         && !stringEqualsIgnoreCase(ENTRY_STORE_TYPES[i].name,name)
         )
   {
     i++;
   }
-  if (i < SIZE_OF_ARRAY(ENTRY_TYPES))
+  if (i < SIZE_OF_ARRAY(ENTRY_STORE_TYPES))
   {
-    (*entryType) = ENTRY_TYPES[i].entryType;
+    (*entryStoreType) = ENTRY_STORE_TYPES[i].entryStoreType;
     return TRUE;
   }
   else
@@ -272,10 +272,10 @@ void EntryList_move(EntryList       *toEntryList,
   List_move(toEntryList,NULL,fromEntryList,fromEntryListFromNode,fromEntryListToNode);
 }
 
-bool EntryList_contains(EntryList    *entryList,
-                        EntryTypes   type,
-                        ConstString  string,
-                        PatternTypes patternType
+bool EntryList_contains(EntryList       *entryList,
+                        EntryStoreTypes entryStoreType,
+                        ConstString     string,
+                        PatternTypes    patternType
                        )
 {
   assert(entryList != NULL);
@@ -284,30 +284,30 @@ bool EntryList_contains(EntryList    *entryList,
   EntryNode *entryNode;
   return LIST_CONTAINS(entryList,
                        entryNode,
-                          (entryNode->type == type)
+                          (entryNode->storeType == entryStoreType)
                        && (entryNode->patternType == patternType)
                        && String_equals(entryNode->string,string)
                       );
 }
 
-Errors EntryList_append(EntryList    *entryList,
-                        EntryTypes   type,
-                        ConstString  string,
-                        PatternTypes patternType,
-                        uint         *id
+Errors EntryList_append(EntryList       *entryList,
+                        EntryStoreTypes entryStoreType,
+                        ConstString     string,
+                        PatternTypes    patternType,
+                        uint            *id
                        )
 {
   assert(entryList != NULL);
   assert(string != NULL);
 
-  return EntryList_appendCString(entryList,type,String_cString(string),patternType,id);
+  return EntryList_appendCString(entryList,entryStoreType,String_cString(string),patternType,id);
 }
 
-Errors EntryList_appendCString(EntryList    *entryList,
-                               EntryTypes   type,
-                               const char   *string,
-                               PatternTypes patternType,
-                               uint         *id
+Errors EntryList_appendCString(EntryList       *entryList,
+                               EntryStoreTypes entryStoreType,
+                               const char      *string,
+                               PatternTypes    patternType,
+                               uint            *id
                               )
 {
   Errors error;
@@ -326,7 +326,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
   #else
     entryNode->id        = Misc_getId();
   #endif
-  entryNode->type        = type;
+  entryNode->storeType   = entryStoreType;
   entryNode->string      = String_newCString(string);
   entryNode->patternType = patternType;
 
@@ -366,24 +366,24 @@ Errors EntryList_appendCString(EntryList    *entryList,
   return ERROR_NONE;
 }
 
-Errors EntryList_update(EntryList    *entryList,
-                        uint         id,
-                        EntryTypes   type,
-                        ConstString  string,
-                        PatternTypes patternType
+Errors EntryList_update(EntryList       *entryList,
+                        uint            id,
+                        EntryStoreTypes entryStoreType,
+                        ConstString     string,
+                        PatternTypes    patternType
                        )
 {
   assert(entryList != NULL);
   assert(string != NULL);
 
-  return EntryList_updateCString(entryList,id,type,String_cString(string),patternType);
+  return EntryList_updateCString(entryList,id,entryStoreType,String_cString(string),patternType);
 }
 
-Errors EntryList_updateCString(EntryList    *entryList,
-                               uint         id,
-                               EntryTypes   type,
-                               const char   *string,
-                               PatternTypes patternType
+Errors EntryList_updateCString(EntryList       *entryList,
+                               uint            id,
+                               EntryStoreTypes entryStoreType,
+                               const char      *string,
+                               PatternTypes    patternType
                               )
 {
   Errors error;
@@ -423,7 +423,7 @@ Errors EntryList_updateCString(EntryList    *entryList,
     }
 
     // store
-    entryNode->type        = type;
+    entryNode->storeType   = entryStoreType;
     String_setCString(entryNode->string,string);
     entryNode->patternType = patternType;
     Pattern_done(&entryNode->pattern);

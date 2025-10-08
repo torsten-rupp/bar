@@ -1,4 +1,4 @@
-FROM debian:10
+FROM debian:12
 ENV container docker
 
 # variables
@@ -7,6 +7,10 @@ ARG gid=1000
 
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
+
+# clear APT cache
+RUN    apt clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # update
 RUN apt-get -y update
@@ -46,8 +50,10 @@ RUN apt-get -y install \
   gcc \
   gettext \
   git \
+  libblkid-dev \
   libc6 \
   libc6-dev \
+  libinih-dev \
   m4 \
   make \
   mariadb-client \
