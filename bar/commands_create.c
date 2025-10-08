@@ -68,19 +68,6 @@
 #define INCREMENTAL_LIST_FILE_ID      "BAR incremental list"
 #define INCREMENTAL_LIST_FILE_VERSION 1
 
-typedef enum
-{
-  FORMAT_MODE_ARCHIVE_FILE_NAME,
-  FORMAT_MODE_PATTERN,
-} FormatModes;
-
-typedef enum
-{
-  INCREMENTAL_FILE_STATE_UNKNOWN,
-  INCREMENTAL_FILE_STATE_OK,
-  INCREMENTAL_FILE_STATE_ADDED,
-} IncrementalFileStates;
-
 /***************************** Datatypes *******************************/
 
 // collector types
@@ -89,6 +76,14 @@ typedef enum
   COLLECTOR_TYPE_SUM,
   COLLECTOR_TYPE_ENTRIES
 } CollectorTypes;
+
+// incremental file state
+typedef enum
+{
+  INCREMENTAL_FILE_STATE_UNKNOWN,
+  INCREMENTAL_FILE_STATE_OK,
+  INCREMENTAL_FILE_STATE_ADDED,
+} IncrementalFileStates;
 
 // incremental data info prefix
 typedef struct
@@ -162,22 +157,98 @@ typedef struct
   FileInfo   fileInfo;
 } HardLinkInfo;
 
+// format modes
+typedef enum
+{
+  FORMAT_MODE_ARCHIVE_FILE_NAME,
+  FORMAT_MODE_PATTERN,
+} FormatModes;
+
+// supported file system types
+const FileSystemTypes SUPPORTED_FILE_SYSTEM_TYPES[] =
+{
+  FILE_SYSTEM_TYPE_FAT12,
+  FILE_SYSTEM_TYPE_FAT16,
+  FILE_SYSTEM_TYPE_FAT32,
+  FILE_SYSTEM_TYPE_EXT2,
+  FILE_SYSTEM_TYPE_EXT3,
+  FILE_SYSTEM_TYPE_EXT4,
+  FILE_SYSTEM_TYPE_REISERFS3_5,
+  FILE_SYSTEM_TYPE_REISERFS3_6,
+  FILE_SYSTEM_TYPE_REISERFS4,
+  FILE_SYSTEM_TYPE_EXFAT,
+  FILE_SYSTEM_TYPE_XFS
+};
+
+// entry types
+typedef enum
+{
+  ENTRY_TYPE_FILE,
+  ENTRY_TYPE_IMAGE,
+  ENTRY_TYPE_DIRECTORY,
+  ENTRY_TYPE_LINK,
+  ENTRY_TYPE_HARDLINK,
+  ENTRY_TYPE_SPECIAL
+} EntryTypes;
+
 // entry message, send from collector thread -> main
 typedef struct
 {
-  EntryTypes entryType;
-  FileTypes  fileType;
+  EntryTypes type;
   String     name;                                                   // file/image/directory/link/special name
-  StringList nameList;                                               // list of hard link names
   union
   {
-    FileInfo   fileInfo;
-    DeviceInfo deviceInfo;
+    struct
+    {
+      FileInfo   fileInfo;
+      uint       fragmentNumber;                                     // fragment number [0..n-1]
+      uint       fragmentCount;                                      // fragment count
+      uint64     fragmentOffset;
+      uint64     fragmentSize;
+    } file;
+    struct
+    {
+      DeviceInfo       deviceInfo;
+      FileSystemHandle *fileSystemHandle;                            // file system (NULL for raw images)
+      uint             fragmentNumber;                               // fragment number [0..n-1]
+      uint             fragmentCount;                                // fragment count
+      uint64           fragmentOffset;
+      uint64           fragmentSize;
+    } image;
+    struct
+    {
+      String     name;                                               // file/image/directory/link/special name
+      FileInfo   fileInfo;
+    } directory;
+    struct
+    {
+      FileInfo   fileInfo;
+    } link;
+    struct
+    {
+      FileInfo   fileInfo;
+      StringList nameList;                                           // list of hard link names
+      uint       fragmentNumber;                                     // fragment number [0..n-1]
+      uint       fragmentCount;                                      // fragment count
+      uint64     fragmentOffset;
+      uint64     fragmentSize;
+    } hardLink;
+    struct
+    {
+      FileInfo   fileInfo;
+      union
+      {
+        struct
+        {
+          DeviceInfo deviceInfo;
+          uint       fragmentNumber;                                 // fragment number [0..n-1]
+          uint       fragmentCount;                                  // fragment count
+          uint64     fragmentOffset;
+          uint64     fragmentSize;
+        };
+      };
+    } special;
   };
-  uint       fragmentNumber;                                         // fragment number [0..n-1]
-  uint       fragmentCount;                                          // fragment count
-  uint64     fragmentOffset;
-  uint64     fragmentSize;
 } EntryMsg;
 
 // storage message, send from create threads -> storage thread
@@ -220,24 +291,23 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  switch (entryMsg->fileType)
+  switch (entryMsg->type)
   {
-    case FILE_TYPE_FILE:
-    case FILE_TYPE_DIRECTORY:
-    case FILE_TYPE_LINK:
-    case FILE_TYPE_SPECIAL:
-      StringList_done(&entryMsg->nameList);
-      String_delete(entryMsg->name);
+    case ENTRY_TYPE_FILE:
       break;
-    case FILE_TYPE_HARDLINK:
-      StringList_done(&entryMsg->nameList);
+    case ENTRY_TYPE_IMAGE:
       break;
-    default:
-      #ifndef NDEBUG
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-      #endif /* NDEBUG */
-      break; /* not reached */
+    case ENTRY_TYPE_DIRECTORY:
+      break;
+    case ENTRY_TYPE_LINK:
+      break;
+    case ENTRY_TYPE_HARDLINK:
+      StringList_done(&entryMsg->hardLink.nameList);
+      break;
+    case ENTRY_TYPE_SPECIAL:
+      break;
   }
+  String_delete(entryMsg->name);
 }
 
 /***********************************************************************\
@@ -1025,7 +1095,6 @@ LOCAL bool updateStorageProgress(uint64       doneSize,
 * Name   : appendFileToEntryList
 * Purpose: append file to entry list
 * Input  : entryMsgQueue    - entry message queue
-*          entryType        - entry type
 *          name             - name (will be copied!)
 *          fileInfo         - file info
 *          maxFragmentSize  - max. fragment size or 0
@@ -1034,14 +1103,13 @@ LOCAL bool updateStorageProgress(uint64       doneSize,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendFileToEntryList(MsgQueue       *entryMsgQueue,
-                                 EntryTypes     entryType,
+LOCAL void appendFileToEntryList(CreateInfo     *createInfo,
                                  ConstString    name,
                                  const FileInfo *fileInfo,
                                  uint64         maxFragmentSize
                                 )
 {
-  assert(entryMsgQueue != NULL);
+  assert(createInfo != NULL);
   assert(name != NULL);
   assert(fileInfo != NULL);
 
@@ -1059,18 +1127,16 @@ LOCAL void appendFileToEntryList(MsgQueue       *entryMsgQueue,
 
     // init
     EntryMsg entryMsg;
-    entryMsg.entryType         = entryType;
-    entryMsg.fileType          = FILE_TYPE_FILE;
-    entryMsg.name              = String_duplicate(name);
-    StringList_init(&entryMsg.nameList);
-    memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
-    entryMsg.fragmentNumber    = fragmentNumber;
-    entryMsg.fragmentCount     = fragmentCount;
-    entryMsg.fragmentOffset    = fragmentOffset;
-    entryMsg.fragmentSize      = fragmentSize;
+    entryMsg.type                = ENTRY_TYPE_FILE;
+    entryMsg.name                = String_duplicate(name);
+    memCopyFast(&entryMsg.file.fileInfo,sizeof(entryMsg.file.fileInfo),fileInfo,sizeof(FileInfo));
+    entryMsg.file.fragmentNumber = fragmentNumber;
+    entryMsg.file.fragmentCount  = fragmentCount;
+    entryMsg.file.fragmentOffset = fragmentOffset;
+    entryMsg.file.fragmentSize   = fragmentSize;
 
     // put into message queue
-    if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+    if (!MsgQueue_put(&createInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
       freeEntryMsg(&entryMsg,NULL);
     }
@@ -1086,7 +1152,6 @@ LOCAL void appendFileToEntryList(MsgQueue       *entryMsgQueue,
 * Name   : appendImageToEntryList
 * Purpose: append image to entry list
 * Input  : entryMsgQueue    - entry message queue
-*          entryType        - entry type
 *          name             - name (will be copied!)
 *          deviceInfo       - device info
 *          maxFragmentSize  - max. fragment size or 0
@@ -1095,15 +1160,14 @@ LOCAL void appendFileToEntryList(MsgQueue       *entryMsgQueue,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendImageToEntryList(MsgQueue         *entryMsgQueue,
-                                  EntryTypes       entryType,
+LOCAL void appendImageToEntryList(CreateInfo       *createInfo,
                                   ConstString      name,
                                   const DeviceInfo *deviceInfo,
                                   uint64           maxFragmentSize
                                  )
 {
 
-  assert(entryMsgQueue != NULL);
+  assert(createInfo != NULL);
   assert(name != NULL);
   assert(deviceInfo != NULL);
 
@@ -1121,18 +1185,16 @@ LOCAL void appendImageToEntryList(MsgQueue         *entryMsgQueue,
 
     // init
     EntryMsg entryMsg;
-    entryMsg.entryType         = entryType;
-    entryMsg.fileType          = FILE_TYPE_SPECIAL;
-    entryMsg.name              = String_duplicate(name);
-    StringList_init(&entryMsg.nameList);
-    memCopyFast(&entryMsg.deviceInfo,sizeof(entryMsg.deviceInfo),deviceInfo,sizeof(DeviceInfo));
-    entryMsg.fragmentNumber    = fragmentNumber;
-    entryMsg.fragmentCount     = fragmentCount;
-    entryMsg.fragmentOffset    = fragmentOffset;
-    entryMsg.fragmentSize      = fragmentSize;
+    entryMsg.type                   = ENTRY_TYPE_IMAGE;
+    entryMsg.name                   = String_duplicate(name);
+    memCopyFast(&entryMsg.image.deviceInfo,sizeof(entryMsg.image.deviceInfo),deviceInfo,sizeof(DeviceInfo));
+    entryMsg.image.fragmentNumber   = fragmentNumber;
+    entryMsg.image.fragmentCount    = fragmentCount;
+    entryMsg.image.fragmentOffset   = fragmentOffset;
+    entryMsg.image.fragmentSize     = fragmentSize;
 
     // put into message queue
-    if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+    if (!MsgQueue_put(&createInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
       freeEntryMsg(&entryMsg,NULL);
     }
@@ -1148,7 +1210,6 @@ LOCAL void appendImageToEntryList(MsgQueue         *entryMsgQueue,
 * Name   : appendDirectoryToEntryList
 * Purpose: append directory to entry list
 * Input  : entryMsgQueue - entry message queue
-*          entryType     - entry type
 *          name          - name (will be copied!)
 *          fileInfo      - file info
 * Output : -
@@ -1156,30 +1217,23 @@ LOCAL void appendImageToEntryList(MsgQueue         *entryMsgQueue,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendDirectoryToEntryList(MsgQueue       *entryMsgQueue,
-                                      EntryTypes     entryType,
+LOCAL void appendDirectoryToEntryList(CreateInfo     *createInfo,
                                       ConstString    name,
                                       const FileInfo *fileInfo
                                      )
 {
-  assert(entryMsgQueue != NULL);
+  assert(createInfo != NULL);
   assert(name != NULL);
   assert(fileInfo != NULL);
 
   // init
   EntryMsg entryMsg;
-  entryMsg.entryType      = entryType;
-  entryMsg.fileType       = FILE_TYPE_DIRECTORY;
-  entryMsg.name           = String_duplicate(name);
-  StringList_init(&entryMsg.nameList);
-  memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
-  entryMsg.fragmentNumber = 0;
-  entryMsg.fragmentCount  = 0;
-  entryMsg.fragmentOffset = 0LL;
-  entryMsg.fragmentSize   = 0LL;
+  entryMsg.type           = ENTRY_TYPE_DIRECTORY;
+  entryMsg.directory.name = String_duplicate(name);
+  memCopyFast(&entryMsg.directory.fileInfo,sizeof(entryMsg.directory.fileInfo),fileInfo,sizeof(FileInfo));
 
   // put into message queue
-  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+  if (!MsgQueue_put(&createInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
     freeEntryMsg(&entryMsg,NULL);
   }
@@ -1189,7 +1243,6 @@ LOCAL void appendDirectoryToEntryList(MsgQueue       *entryMsgQueue,
 * Name   : appendLinkToEntryList
 * Purpose: append link to entry list
 * Input  : entryMsgQueue - entry message queue
-*          entryType     - entry type
 *          name          - name (will be copied!)
 *          fileInfo      - file info
 * Output : -
@@ -1197,30 +1250,23 @@ LOCAL void appendDirectoryToEntryList(MsgQueue       *entryMsgQueue,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendLinkToEntryList(MsgQueue       *entryMsgQueue,
-                                 EntryTypes     entryType,
+LOCAL void appendLinkToEntryList(CreateInfo     *createInfo,
                                  ConstString    name,
                                  const FileInfo *fileInfo
                                 )
 {
-  assert(entryMsgQueue != NULL);
+  assert(createInfo != NULL);
   assert(name != NULL);
   assert(fileInfo != NULL);
 
   // init
   EntryMsg entryMsg;
-  entryMsg.entryType      = entryType;
-  entryMsg.fileType       = FILE_TYPE_LINK;
-  entryMsg.name           = String_duplicate(name);
-  StringList_init(&entryMsg.nameList);
-  memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
-  entryMsg.fragmentNumber = 0;
-  entryMsg.fragmentCount  = 0;
-  entryMsg.fragmentOffset = 0LL;
-  entryMsg.fragmentSize   = 0LL;
+  entryMsg.type = ENTRY_TYPE_LINK;
+  entryMsg.name = String_duplicate(name);
+  memCopyFast(&entryMsg.link.fileInfo,sizeof(entryMsg.link.fileInfo),fileInfo,sizeof(FileInfo));
 
   // put into message queue
-  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+  if (!MsgQueue_put(&createInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
     freeEntryMsg(&entryMsg,NULL);
   }
@@ -1230,7 +1276,6 @@ LOCAL void appendLinkToEntryList(MsgQueue       *entryMsgQueue,
 * Name   : appendHardLinkToEntryList
 * Purpose: append hard link to entry list
 * Input  : entryMsgQueue   - entry message queue
-*          entryType       - entry type
 *          nameList        - name list
 *          fileInfo        - file info
 *          maxFragmentSize - max. fragment size or 0
@@ -1239,14 +1284,13 @@ LOCAL void appendLinkToEntryList(MsgQueue       *entryMsgQueue,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendHardLinkToEntryList(MsgQueue       *entryMsgQueue,
-                                     EntryTypes     entryType,
+LOCAL void appendHardLinkToEntryList(CreateInfo     *createInfo,
                                      StringList     *nameList,
                                      const FileInfo *fileInfo,
                                      uint64         maxFragmentSize
                                     )
 {
-  assert(entryMsgQueue != NULL);
+  assert(createInfo != NULL);
   assert(nameList != NULL);
   assert(!StringList_isEmpty(nameList));
   assert(fileInfo != NULL);
@@ -1265,18 +1309,17 @@ LOCAL void appendHardLinkToEntryList(MsgQueue       *entryMsgQueue,
 
     // init
     EntryMsg entryMsg;
-    entryMsg.entryType      = entryType;
-    entryMsg.fileType       = FILE_TYPE_HARDLINK;
-    entryMsg.name           = NULL;
-    StringList_initDuplicate(&entryMsg.nameList,nameList);
-    memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
-    entryMsg.fragmentNumber = fragmentNumber;
-    entryMsg.fragmentCount  = fragmentCount;
-    entryMsg.fragmentOffset = fragmentOffset;
-    entryMsg.fragmentSize   = fragmentSize;
+    entryMsg.type                    = ENTRY_TYPE_HARDLINK;
+    entryMsg.name                    = NULL;
+    StringList_initDuplicate(&entryMsg.hardLink.nameList,nameList);
+    memCopyFast(&entryMsg.hardLink.fileInfo,sizeof(entryMsg.hardLink.fileInfo),fileInfo,sizeof(FileInfo));
+    entryMsg.hardLink.fragmentNumber = fragmentNumber;
+    entryMsg.hardLink.fragmentCount  = fragmentCount;
+    entryMsg.hardLink.fragmentOffset = fragmentOffset;
+    entryMsg.hardLink.fragmentSize   = fragmentSize;
 
     // put into message queue
-    if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+    if (!MsgQueue_put(&createInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
     {
       freeEntryMsg(&entryMsg,NULL);
     }
@@ -1293,7 +1336,6 @@ LOCAL void appendHardLinkToEntryList(MsgQueue       *entryMsgQueue,
 * Name   : appendSpecialToEntryList
 * Purpose: append special to entry list
 * Input  : entryMsgQueue - entry message queue
-*          entryType     - entry type
 *          name          - name (will be copied!)
 *          fileInfo      - file info or NULL
 *          deviceInfo    - device info or NULL
@@ -1302,43 +1344,24 @@ LOCAL void appendHardLinkToEntryList(MsgQueue       *entryMsgQueue,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendSpecialToEntryList(MsgQueue         *entryMsgQueue,
-                                    EntryTypes       entryType,
+LOCAL void appendSpecialToEntryList(CreateInfo       *createInfo,
                                     ConstString      name,
                                     const FileInfo   *fileInfo,
                                     const DeviceInfo *deviceInfo
                                    )
 {
-  assert(entryMsgQueue != NULL);
+  assert(createInfo != NULL);
   assert(name != NULL);
   assert((fileInfo != NULL) || (deviceInfo != NULL));
 
   // init
   EntryMsg entryMsg;
-  entryMsg.entryType      = entryType;
-  entryMsg.fileType       = FILE_TYPE_SPECIAL;
-  entryMsg.name           = String_duplicate(name);
-  StringList_init(&entryMsg.nameList);
-  switch (entryType)
-  {
-    case ENTRY_TYPE_FILE:
-      assert(fileInfo != NULL);
-      memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
-      break;
-    case ENTRY_TYPE_IMAGE:
-      assert(deviceInfo != NULL);
-      memCopyFast(&entryMsg.deviceInfo,sizeof(entryMsg.deviceInfo),deviceInfo,sizeof(DeviceInfo));
-      break;
-    case ENTRY_TYPE_UNKNOWN:
-      break;
-  }
-  entryMsg.fragmentNumber = 0;
-  entryMsg.fragmentCount  = 0;
-  entryMsg.fragmentOffset = 0LL;
-  entryMsg.fragmentSize   = 0LL;
+  entryMsg.type = ENTRY_TYPE_SPECIAL;
+  entryMsg.name = String_duplicate(name);
+  memCopyFast(&entryMsg.special.fileInfo,sizeof(entryMsg.special.fileInfo),fileInfo,sizeof(FileInfo));
 
   // put into message queue
-  if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
+  if (!MsgQueue_put(&createInfo->entryMsgQueue,&entryMsg,sizeof(entryMsg)))
   {
     freeEntryMsg(&entryMsg,NULL);
   }
@@ -1620,8 +1643,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                               {
                                 printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                               }
-                              appendFileToEntryList(&createInfo->entryMsgQueue,
-                                                    ENTRY_TYPE_FILE,
+                              appendFileToEntryList(createInfo,
                                                     name,
                                                     &fileInfo,
                                                     !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -1681,8 +1703,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                             {
                               printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                             }
-                            appendDirectoryToEntryList(&createInfo->entryMsgQueue,
-                                                       ENTRY_TYPE_FILE,
+                            appendDirectoryToEntryList(createInfo,
                                                        name,
                                                        &fileInfo
                                                       );
@@ -1729,8 +1750,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                             {
                               printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                             }
-                            appendLinkToEntryList(&createInfo->entryMsgQueue,
-                                                  ENTRY_TYPE_FILE,
+                            appendLinkToEntryList(createInfo,
                                                   name,
                                                   &fileInfo
                                                  );
@@ -1796,8 +1816,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                 {
                                   case COLLECTOR_TYPE_ENTRIES:
                                     // add to entry list
-                                    appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                              ENTRY_TYPE_FILE,
+                                    appendHardLinkToEntryList(createInfo,
                                                               &data.hardLinkInfo->nameList,
                                                               &data.hardLinkInfo->fileInfo,
                                                               !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -1893,8 +1912,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                           {
                             printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                           }
-                          appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                   ENTRY_TYPE_FILE,
+                          appendSpecialToEntryList(createInfo,
                                                    name,
                                                    &fileInfo,
                                                    NULL  // deviceInfo
@@ -2102,9 +2120,9 @@ LOCAL void collector(CreateInfo     *createInfo,
 
                   if (!isInExcludedList(createInfo->excludePatternList,name))
                   {
-                    switch (includeEntryNode->type)
+                    switch (includeEntryNode->storeType)
                     {
-                      case ENTRY_TYPE_FILE:
+                      case ENTRY_STORE_TYPE_FILE:
                         if (   !createInfo->partialFlag
                             || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                            )
@@ -2117,8 +2135,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                               {
                                 printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                               }
-                              appendFileToEntryList(&createInfo->entryMsgQueue,
-                                                    ENTRY_TYPE_FILE,
+                              appendFileToEntryList(createInfo,
                                                     name,
                                                     &fileInfo,
                                                     !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -2134,7 +2151,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                           }
                         }
                         break;
-                      case ENTRY_TYPE_IMAGE:
+                      case ENTRY_STORE_TYPE_IMAGE:
                         if (collectorType == COLLECTOR_TYPE_ENTRIES)
                         {
                           printWarning(_("'%s' is not a device"),String_cString(name));
@@ -2170,9 +2187,9 @@ LOCAL void collector(CreateInfo     *createInfo,
                 {
                   if (!isInExcludedList(createInfo->excludePatternList,name))
                   {
-                    switch (includeEntryNode->type)
+                    switch (includeEntryNode->storeType)
                     {
-                      case ENTRY_TYPE_FILE:
+                      case ENTRY_STORE_TYPE_FILE:
                         if (   !createInfo->partialFlag
                             || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                            )
@@ -2185,8 +2202,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                               {
                                 printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                               }
-                              appendDirectoryToEntryList(&createInfo->entryMsgQueue,
-                                                         ENTRY_TYPE_FILE,
+                              appendDirectoryToEntryList(createInfo,
                                                          name,
                                                          &fileInfo
                                                         );
@@ -2200,7 +2216,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                           }
                         }
                         break;
-                      case ENTRY_TYPE_IMAGE:
+                      case ENTRY_STORE_TYPE_IMAGE:
                         if (collectorType == COLLECTOR_TYPE_ENTRIES)
                         {
                           printWarning(_("'%s' is not a device"),String_cString(name));
@@ -2286,9 +2302,9 @@ LOCAL void collector(CreateInfo     *createInfo,
                             switch (fileInfo.type)
                             {
                               case FILE_TYPE_FILE:
-                                switch (includeEntryNode->type)
+                                switch (includeEntryNode->storeType)
                                 {
-                                  case ENTRY_TYPE_FILE:
+                                  case ENTRY_STORE_TYPE_FILE:
                                     if (   !createInfo->partialFlag
                                         || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                        )
@@ -2301,8 +2317,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                           {
                                             printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
                                           }
-                                          appendFileToEntryList(&createInfo->entryMsgQueue,
-                                                                ENTRY_TYPE_FILE,
+                                          appendFileToEntryList(createInfo,
                                                                 fileName,
                                                                 &fileInfo,
                                                                 !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -2318,7 +2333,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                       }
                                     }
                                     break;
-                                  case ENTRY_TYPE_IMAGE:
+                                  case ENTRY_STORE_TYPE_IMAGE:
                                     if (collectorType == COLLECTOR_TYPE_ENTRIES)
                                     {
                                       printWarning(_("'%s' is not a device"),String_cString(fileName));
@@ -2335,9 +2350,9 @@ LOCAL void collector(CreateInfo     *createInfo,
                                 // nothing to do: directory is appended to include list
                                 break;
                               case FILE_TYPE_LINK:
-                                switch (includeEntryNode->type)
+                                switch (includeEntryNode->storeType)
                                 {
-                                  case ENTRY_TYPE_FILE:
+                                  case ENTRY_STORE_TYPE_FILE:
                                     if (   !createInfo->partialFlag
                                         || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                        )
@@ -2350,8 +2365,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                           {
                                             printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
                                           }
-                                          appendLinkToEntryList(&createInfo->entryMsgQueue,
-                                                                ENTRY_TYPE_FILE,
+                                          appendLinkToEntryList(createInfo,
                                                                 fileName,
                                                                 &fileInfo
                                                                );
@@ -2365,7 +2379,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                       }
                                     }
                                     break;
-                                  case ENTRY_TYPE_IMAGE:
+                                  case ENTRY_STORE_TYPE_IMAGE:
                                     if (File_readLink(fileName,name,TRUE) == ERROR_NONE)
                                     {
                                       // get device info
@@ -2405,8 +2419,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                       {
                                         case COLLECTOR_TYPE_ENTRIES:
                                           // add to entry list
-                                          appendImageToEntryList(&createInfo->entryMsgQueue,
-                                                                 ENTRY_TYPE_IMAGE,
+                                          appendImageToEntryList(createInfo,
                                                                  name,
                                                                  &deviceInfo,
                                                                  !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -2433,9 +2446,9 @@ LOCAL void collector(CreateInfo     *createInfo,
                                 }
                                 break;
                               case FILE_TYPE_HARDLINK:
-                                switch (includeEntryNode->type)
+                                switch (includeEntryNode->storeType)
                                 {
-                                  case ENTRY_TYPE_FILE:
+                                  case ENTRY_STORE_TYPE_FILE:
                                     {
                                       if (   !createInfo->partialFlag
                                           || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
@@ -2462,8 +2475,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                             {
                                               case COLLECTOR_TYPE_ENTRIES:
                                                 // add to entry list
-                                                appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                                          ENTRY_TYPE_FILE,
+                                                appendHardLinkToEntryList(createInfo,
                                                                           &data.hardLinkInfo->nameList,
                                                                           &data.hardLinkInfo->fileInfo,
                                                                           !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -2516,7 +2528,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                       }
                                     }
                                     break;
-                                  case ENTRY_TYPE_IMAGE:
+                                  case ENTRY_STORE_TYPE_IMAGE:
                                     // nothing to do
                                     break;
                                   default:
@@ -2527,9 +2539,9 @@ LOCAL void collector(CreateInfo     *createInfo,
                                 }
                                 break;
                               case FILE_TYPE_SPECIAL:
-                                switch (includeEntryNode->type)
+                                switch (includeEntryNode->storeType)
                                 {
-                                  case ENTRY_TYPE_FILE:
+                                  case ENTRY_STORE_TYPE_FILE:
                                     if (   !createInfo->partialFlag
                                         || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                        )
@@ -2542,8 +2554,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                           {
                                             printIncrementalInfo(&createInfo->namesDictionary,fileName,&fileInfo.cast);
                                           }
-                                          appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                                   ENTRY_TYPE_FILE,
+                                          appendSpecialToEntryList(createInfo,
                                                                    fileName,
                                                                    &fileInfo,
                                                                    NULL  // deviceInfo
@@ -2553,7 +2564,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                           STATUS_INFO_UPDATE(createInfo,NULL,NULL)
                                           {
                                             createInfo->runningInfo.progress.total.count++;
-                                            if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
+                                            if (   (includeEntryNode->storeType == ENTRY_STORE_TYPE_IMAGE)
                                                 && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                                )
                                             {
@@ -2564,7 +2575,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                       }
                                     }
                                     break;
-                                  case ENTRY_TYPE_IMAGE:
+                                  case ENTRY_STORE_TYPE_IMAGE:
                                     if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                     {
                                       // get device info
@@ -2594,8 +2605,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                       {
                                         case COLLECTOR_TYPE_ENTRIES:
                                           // add to entry list
-                                          appendImageToEntryList(&createInfo->entryMsgQueue,
-                                                                 ENTRY_TYPE_IMAGE,
+                                          appendImageToEntryList(createInfo,
                                                                  fileName,
                                                                  &deviceInfo,
                                                                  !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -2704,9 +2714,9 @@ LOCAL void collector(CreateInfo     *createInfo,
 
                   if (!isInExcludedList(createInfo->excludePatternList,name))
                   {
-                    switch (includeEntryNode->type)
+                    switch (includeEntryNode->storeType)
                     {
-                      case ENTRY_TYPE_FILE:
+                      case ENTRY_STORE_TYPE_FILE:
                         if (  !createInfo->partialFlag
                             || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                            )
@@ -2719,8 +2729,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                               {
                                 printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                               }
-                              appendLinkToEntryList(&createInfo->entryMsgQueue,
-                                                    ENTRY_TYPE_FILE,
+                              appendLinkToEntryList(createInfo,
                                                     name,
                                                     &fileInfo
                                                    );
@@ -2734,7 +2743,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                           }
                         }
                         break;
-                      case ENTRY_TYPE_IMAGE:
+                      case ENTRY_STORE_TYPE_IMAGE:
                         {
                           error = File_readLink(fileName,name,TRUE);
                           if (error != ERROR_NONE)
@@ -2794,8 +2803,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                           {
                             case COLLECTOR_TYPE_ENTRIES:
                               // add to entry list
-                              appendImageToEntryList(&createInfo->entryMsgQueue,
-                                                     ENTRY_TYPE_IMAGE,
+                              appendImageToEntryList(createInfo,
                                                      name,
                                                      &deviceInfo,
                                                      !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -2844,9 +2852,9 @@ LOCAL void collector(CreateInfo     *createInfo,
 
                   if (!isInExcludedList(createInfo->excludePatternList,name))
                   {
-                    switch (includeEntryNode->type)
+                    switch (includeEntryNode->storeType)
                     {
-                      case ENTRY_TYPE_FILE:
+                      case ENTRY_STORE_TYPE_FILE:
                         if (   !createInfo->partialFlag
                             || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                             )
@@ -2870,8 +2878,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                               {
                                 case COLLECTOR_TYPE_ENTRIES:
                                   // add to entry list
-                                  appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                                            ENTRY_TYPE_FILE,
+                                  appendHardLinkToEntryList(createInfo,
                                                             &data.hardLinkInfo->nameList,
                                                             &data.hardLinkInfo->fileInfo,
                                                             !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -2924,7 +2931,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                           }
                         }
                         break;
-                      case ENTRY_TYPE_IMAGE:
+                      case ENTRY_STORE_TYPE_IMAGE:
                         // nothing to do
                         break;
                       default:
@@ -2957,9 +2964,9 @@ LOCAL void collector(CreateInfo     *createInfo,
 
                   if (!isInExcludedList(createInfo->excludePatternList,name))
                   {
-                    switch (includeEntryNode->type)
+                    switch (includeEntryNode->storeType)
                     {
-                      case ENTRY_TYPE_FILE:
+                      case ENTRY_STORE_TYPE_FILE:
                         if (   !createInfo->partialFlag
                             || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                            )
@@ -2972,8 +2979,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                               {
                                 printIncrementalInfo(&createInfo->namesDictionary,name,&fileInfo.cast);
                               }
-                              appendSpecialToEntryList(&createInfo->entryMsgQueue,
-                                                       ENTRY_TYPE_FILE,
+                              appendSpecialToEntryList(createInfo,
                                                        name,
                                                        &fileInfo,
                                                        NULL  // deviceInfo
@@ -2988,7 +2994,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                           }
                         }
                         break;
-                      case ENTRY_TYPE_IMAGE:
+                      case ENTRY_STORE_TYPE_IMAGE:
                         if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                         {
                           // get device info
@@ -3028,8 +3034,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                           {
                             case COLLECTOR_TYPE_ENTRIES:
                               // add to entry list
-                              appendImageToEntryList(&createInfo->entryMsgQueue,
-                                                     ENTRY_TYPE_IMAGE,
+                              appendImageToEntryList(createInfo,
                                                      name,
                                                      &deviceInfo,
                                                      !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -3150,8 +3155,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                              )
           )
     {
-      appendHardLinkToEntryList(&createInfo->entryMsgQueue,
-                                ENTRY_TYPE_FILE,
+      appendHardLinkToEntryList(createInfo,
                                 &data.hardLinkInfo->nameList,
                                 &data.hardLinkInfo->fileInfo,
                                 !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
@@ -5745,34 +5749,24 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
   }
 
-  // check if device contain a supported file system or a raw image should be stored
+  // init file system
+  bool isSupportedFileSystem = FALSE;
   FileSystemHandle fileSystemHandle;
-  memClear(&fileSystemHandle,sizeof(FileSystemHandle));
-  bool fileSystemInitFlag      = FALSE;
-  bool supportedFileSystemFlag = FALSE;
-  if (!createInfo->jobOptions->rawImagesFlag)
+  if (FileSystem_init(&fileSystemHandle,deviceName) == ERROR_NONE)
   {
-    if (FileSystem_init(&fileSystemHandle,&deviceHandle) == ERROR_NONE)
+    if (ARRAY_FIND(SUPPORTED_FILE_SYSTEM_TYPES,
+                   SIZE_OF_ARRAY(SUPPORTED_FILE_SYSTEM_TYPES),
+                   i,
+                   fileSystemHandle.type == SUPPORTED_FILE_SYSTEM_TYPES[i]
+                  )
+       )
     {
-      fileSystemInitFlag      = TRUE;
-      supportedFileSystemFlag =    (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT12)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT16)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_FAT32)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT2)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT3)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXT4)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS3_5)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS3_6)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_REISERFS4)
-                                || (fileSystemHandle.type == FILE_SYSTEM_TYPE_EXFAT);
+      isSupportedFileSystem = TRUE;
     }
-  }
-  else
-  {
-    fileSystemHandle.type = FILE_SYSTEM_TYPE_NONE;
+    else
+    {
+      FileSystem_done(&fileSystemHandle);
+    }
   }
 
   // init fragment
@@ -5812,7 +5806,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                                   NULL,  // cryptKey
                                   archiveEntryName,
                                   deviceInfo,
-                                  fileSystemHandle.type,
+                                  isSupportedFileSystem ? fileSystemHandle.type : FILE_SYSTEM_TYPE_NONE,
                                   fragmentOffset/(uint64)deviceInfo->blockSize,
                                   (fragmentSize+(uint64)deviceInfo->blockSize-1)/(uint64)deviceInfo->blockSize,
                                   archiveFlags
@@ -5834,7 +5828,6 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       }
 
       String_delete(archiveEntryName);
-      if (fileSystemInitFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
 
@@ -5861,7 +5854,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
              && (bufferBlockCount < maxBufferBlockCount)
             )
       {
-        if (   !supportedFileSystemFlag
+        if (   !isSupportedFileSystem
             || FileSystem_blockIsUsed(&fileSystemHandle,(blockOffset+(uint64)bufferBlockCount)*(uint64)deviceInfo->blockSize)
            )
         {
@@ -5954,7 +5947,6 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"ABORTED\n");
       (void)Archive_closeEntry(&archiveEntryInfo);
-      if (fileSystemInitFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
       return error;
@@ -5974,7 +5966,6 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
-        if (fileSystemInitFlag) FileSystem_done(&fileSystemHandle);
         Device_close(&deviceHandle);
         fragmentDone(createInfo,deviceName);
 
@@ -5996,7 +5987,6 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
-        if (fileSystemInitFlag) FileSystem_done(&fileSystemHandle);
         Device_close(&deviceHandle);
         fragmentDone(createInfo,deviceName);
 
@@ -6022,17 +6012,10 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
         createInfo->runningInfo.progress.done.size += fragmentSize;
       }
 
-      if (fileSystemInitFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
 
       return error;
-    }
-
-    // done file system
-    if (fileSystemInitFlag)
-    {
-      FileSystem_done(&fileSystemHandle);
     }
 
     // get final compression ratio
@@ -6079,7 +6062,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     if (!createInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK (%s, %s bytes%s%s)\n",
-                (supportedFileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+                isSupportedFileSystem ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
                 sizeString,
                 fragmentInfoString,
                 compressionRatioString
@@ -6088,7 +6071,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                  LOG_TYPE_ENTRY_OK,
                  "Added image '%s' (%s, %"PRIu64" bytes%s%s)",
                  String_cString(deviceName),
-                 (supportedFileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+                 isSupportedFileSystem ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
                  fragmentSize,
                  fragmentInfoString,
                  compressionRatioString
@@ -6097,7 +6080,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     else
     {
       printInfo(1,"OK (%s, %s bytes%s%s, dry-run)\n",
-                supportedFileSystemFlag ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+                isSupportedFileSystem ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
                 sizeString,
                 fragmentInfoString,
                 compressionRatioString
@@ -6118,7 +6101,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
 
     double d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
     printInfo(1,"OK (%s, %/"PRIu64" bytes, not stored)\n",
-              supportedFileSystemFlag ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+              isSupportedFileSystem ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
               (int)d,
               fragmentSize
              );
@@ -6143,10 +6126,12 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     }
   }
 
-  // close device
-  Device_close(&deviceHandle);
-
   // free resources
+  if (isSupportedFileSystem)
+  {
+    FileSystem_done(&fileSystemHandle);
+  }
+  Device_close(&deviceHandle);
   fragmentDone(createInfo,deviceName);
 
   return ERROR_NONE;
@@ -7302,16 +7287,31 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     // check if own file (in temporary directory or storage file)
     bool ownFileFlag =    String_startsWith(entryMsg.name,tmpDirectory)
                        || StringList_contains(&createInfo->storageFileList,entryMsg.name);
-    if (!ownFileFlag)
+    switch (entryMsg.type)
     {
-      const StringNode *stringNode;
-      String           name;
-      STRINGLIST_ITERATE(&entryMsg.nameList,stringNode,name)
-      {
-        ownFileFlag =    String_startsWith(name,tmpDirectory)
-                      || StringList_contains(&createInfo->storageFileList,name);
-        if (ownFileFlag) break;
-      }
+      case ENTRY_TYPE_FILE:
+        break;
+      case ENTRY_TYPE_IMAGE:
+        break;
+      case ENTRY_TYPE_DIRECTORY:
+        break;
+      case ENTRY_TYPE_LINK:
+        break;
+      case ENTRY_TYPE_HARDLINK:
+        if (!ownFileFlag)
+        {
+          const StringNode *stringNode;
+          String           name;
+          STRINGLIST_ITERATE(&entryMsg.hardLink.nameList,stringNode,name)
+          {
+            ownFileFlag =    String_startsWith(name,tmpDirectory)
+                          || StringList_contains(&createInfo->storageFileList,name);
+            if (ownFileFlag) break;
+          }
+        }
+        break;
+      case ENTRY_TYPE_SPECIAL:
+        break;
     }
 
     if (!ownFileFlag)
@@ -7321,129 +7321,67 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
       Errors error;
 
-      switch (entryMsg.fileType)
+      switch (entryMsg.type)
       {
-        case FILE_TYPE_FILE:
-          switch (entryMsg.entryType)
-          {
-            case ENTRY_TYPE_FILE:
-              error = storeFileEntry(createInfo,
-                                     entryMsg.name,
-                                     &entryMsg.fileInfo,
-                                     entryMsg.fragmentNumber,
-                                     entryMsg.fragmentCount,
-                                     entryMsg.fragmentOffset,
-                                     entryMsg.fragmentSize,
+        case ENTRY_TYPE_FILE:
+          error = storeFileEntry(createInfo,
+                                 entryMsg.name,
+                                 &entryMsg.file.fileInfo,
+                                 entryMsg.file.fragmentNumber,
+                                 entryMsg.file.fragmentCount,
+                                 entryMsg.file.fragmentOffset,
+                                 entryMsg.file.fragmentSize,
+                                 buffer,
+                                 BUFFER_SIZE
+                                );
+          if (error != ERROR_NONE) createInfo->failError = error;
+          break;
+        case ENTRY_TYPE_IMAGE:
+          error = storeImageEntry(createInfo,
+                                  entryMsg.name,
+                                  &entryMsg.image.deviceInfo,
+                                  entryMsg.image.fragmentNumber,
+                                  entryMsg.image.fragmentCount,
+                                  entryMsg.image.fragmentOffset,
+                                  entryMsg.image.fragmentSize,
+                                  buffer,
+                                  BUFFER_SIZE
+                                 );
+          if (error != ERROR_NONE) createInfo->failError = error;
+          break;
+        case ENTRY_TYPE_DIRECTORY:
+          error = storeDirectoryEntry(createInfo,
+                                      entryMsg.name,
+                                      &entryMsg.directory.fileInfo
+                                     );
+          if (error != ERROR_NONE) createInfo->failError = error;
+          break;
+        case ENTRY_TYPE_LINK:
+          error = storeLinkEntry(createInfo,
+                                 entryMsg.name,
+                                 &entryMsg.link.fileInfo
+                                );
+          if (error != ERROR_NONE) createInfo->failError = error;
+          break;
+        case ENTRY_TYPE_HARDLINK:
+          error = storeHardLinkEntry(createInfo,
+                                     &entryMsg.hardLink.nameList,
+                                     &entryMsg.hardLink.fileInfo,
+                                     entryMsg.hardLink.fragmentNumber,
+                                     entryMsg.hardLink.fragmentCount,
+                                     entryMsg.hardLink.fragmentOffset,
+                                     entryMsg.hardLink.fragmentSize,
                                      buffer,
                                      BUFFER_SIZE
                                     );
-              if (error != ERROR_NONE) createInfo->failError = error;
-              break;
-            case ENTRY_TYPE_IMAGE:
-              // nothing to do
-              break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
-              break; /* not reached */
-          }
+          if (error != ERROR_NONE) createInfo->failError = error;
           break;
-        case FILE_TYPE_DIRECTORY:
-          switch (entryMsg.entryType)
-          {
-            case ENTRY_TYPE_FILE:
-              error = storeDirectoryEntry(createInfo,
-                                          entryMsg.name,
-                                          &entryMsg.fileInfo
-                                         );
-              if (error != ERROR_NONE) createInfo->failError = error;
-              break;
-            case ENTRY_TYPE_IMAGE:
-              // nothing to do
-              break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
-              break; /* not reached */
-          }
-          break;
-        case FILE_TYPE_LINK:
-          switch (entryMsg.entryType)
-          {
-            case ENTRY_TYPE_FILE:
-              error = storeLinkEntry(createInfo,
-                                     entryMsg.name,
-                                     &entryMsg.fileInfo
-                                    );
-              if (error != ERROR_NONE) createInfo->failError = error;
-              break;
-            case ENTRY_TYPE_IMAGE:
-              // nothing to do
-              break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
-              break; /* not reached */
-          }
-          break;
-        case FILE_TYPE_HARDLINK:
-          switch (entryMsg.entryType)
-          {
-            case ENTRY_TYPE_FILE:
-              error = storeHardLinkEntry(createInfo,
-                                         &entryMsg.nameList,
-                                         &entryMsg.fileInfo,
-                                         entryMsg.fragmentNumber,
-                                         entryMsg.fragmentCount,
-                                         entryMsg.fragmentOffset,
-                                         entryMsg.fragmentSize,
-                                         buffer,
-                                         BUFFER_SIZE
-                                        );
-              if (error != ERROR_NONE) createInfo->failError = error;
-              break;
-            case ENTRY_TYPE_IMAGE:
-              // nothing to do
-              break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
-              break; /* not reached */
-          }
-          break;
-        case FILE_TYPE_SPECIAL:
-          switch (entryMsg.entryType)
-          {
-            case ENTRY_TYPE_FILE:
-              error = storeSpecialEntry(createInfo,
-                                        entryMsg.name,
-                                        &entryMsg.fileInfo
-                                       );
-              if (error != ERROR_NONE) createInfo->failError = error;
-              break;
-            case ENTRY_TYPE_IMAGE:
-              error = storeImageEntry(createInfo,
-                                      entryMsg.name,
-                                      &entryMsg.deviceInfo,
-                                      entryMsg.fragmentNumber,
-                                      entryMsg.fragmentCount,
-                                      entryMsg.fragmentOffset,
-                                      entryMsg.fragmentSize,
-                                      buffer,
-                                      BUFFER_SIZE
-                                     );
-              if (error != ERROR_NONE) createInfo->failError = error;
-              break;
-            default:
-              #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              #endif /* NDEBUG */
-              break; /* not reached */
-          }
+        case ENTRY_TYPE_SPECIAL:
+          error = storeSpecialEntry(createInfo,
+                                    entryMsg.name,
+                                    &entryMsg.special.fileInfo
+                                   );
+          if (error != ERROR_NONE) createInfo->failError = error;
           break;
         default:
           #ifndef NDEBUG

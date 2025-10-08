@@ -154,9 +154,9 @@ public class TabJobs
     }
   }
 
-  /** entry types
+  /** entry store types
    */
-  enum EntryTypes
+  enum EntryStoreTypes
   {
     FILE,
     IMAGE
@@ -326,7 +326,7 @@ public class TabJobs
 
     public void include()
     {
-      includeListAdd(new EntryData(EntryTypes.FILE,name));
+      includeListAdd(new EntryData(EntryStoreTypes.FILE,name));
       excludeListRemove(name);
       if (fileType == BARServer.FileTypes.DIRECTORY) setNoBackup(name,false);
       setNoDump(name,false);
@@ -550,7 +550,7 @@ public class TabJobs
      */
     public void include()
     {
-      includeListAdd(new EntryData(EntryTypes.IMAGE,name));
+      includeListAdd(new EntryData(EntryStoreTypes.IMAGE,name));
       excludeListRemove(name);
     }
 
@@ -940,25 +940,25 @@ public class TabJobs
    */
   class EntryData implements Cloneable
   {
-    EntryTypes entryType;
-    String     pattern;
+    EntryStoreTypes entryStoreType;
+    String          pattern;
 
     /** create entry data
-     * @param entryType entry type
+     * @param entryStoreType entry store type
      * @param pattern pattern
      */
-    EntryData(EntryTypes entryType, String pattern)
+    EntryData(EntryStoreTypes entryStoreType, String pattern)
     {
-      this.entryType = entryType;
+      this.entryStoreType = entryStoreType;
       this.pattern   = pattern;
     }
 
     /** create entry data
-     * @param entryType entry type
+     * @param entryStoreType entry store type
      */
-    EntryData(EntryTypes entryType)
+    EntryData(EntryStoreTypes entryStoreType)
     {
-      this(entryType,(String)null);
+      this(entryStoreType,(String)null);
     }
 
     /** clone entry data object
@@ -966,7 +966,7 @@ public class TabJobs
      */
     public EntryData clone()
     {
-      return new EntryData(entryType,pattern);
+      return new EntryData(entryStoreType,pattern);
     }
 
     /** get image for entry data
@@ -975,7 +975,7 @@ public class TabJobs
     Image getImage()
     {
       Image image = null;
-      switch (entryType)
+      switch (entryStoreType)
       {
         case FILE:  image = IMAGE_FILE;   break;
         case IMAGE: image = IMAGE_DEVICE; break;
@@ -989,7 +989,7 @@ public class TabJobs
      */
     public String toString()
     {
-      return "Entry {"+entryType+", "+pattern+"}";
+      return "Entry {"+entryStoreType+", "+pattern+"}";
     }
   }
 
@@ -11257,13 +11257,13 @@ throw new Error("NYI");
                                    @Override
                                    public void handle(int i, ValueMap valueMap)
                                    {
-                                     final EntryTypes   entryType   = valueMap.getEnum  ("entryType",  EntryTypes.class  );
-                                     final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
-                                     final String       pattern     = valueMap.getString("pattern"                       );
+                                     final EntryStoreTypes entryStoreType = valueMap.getEnum  ("entryStoreType",EntryStoreTypes.class);
+                                     final PatternTypes    patternType    = valueMap.getEnum  ("patternType",   PatternTypes.class   );
+                                     final String          pattern        = valueMap.getString("pattern"                             );
 
                                      if (!pattern.isEmpty())
                                      {
-                                       includeHashMap.put(pattern,new EntryData(entryType,pattern));
+                                       includeHashMap.put(pattern,new EntryData(entryStoreType,pattern));
                                      }
                                    }
                                  }
@@ -11372,7 +11372,7 @@ throw new Error("NYI");
       Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
         button = Widgets.newRadio(subComposite,BARControl.tr("file"));
-        button.setSelection(entryData.entryType == EntryTypes.FILE);
+        button.setSelection(entryData.entryStoreType == EntryStoreTypes.FILE);
         Widgets.layout(button,0,0,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
@@ -11383,11 +11383,11 @@ throw new Error("NYI");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            entryData.entryType = EntryTypes.FILE;
+            entryData.entryStoreType = EntryStoreTypes.FILE;
           }
         });
         button = Widgets.newRadio(subComposite,BARControl.tr("image"));
-        button.setSelection(entryData.entryType == EntryTypes.IMAGE);
+        button.setSelection(entryData.entryStoreType == EntryStoreTypes.IMAGE);
         Widgets.layout(button,0,1,TableLayoutData.W);
         button.addSelectionListener(new SelectionListener()
         {
@@ -11398,7 +11398,7 @@ throw new Error("NYI");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            entryData.entryType = EntryTypes.IMAGE;
+            entryData.entryStoreType = EntryStoreTypes.IMAGE;
           }
         });
       }
@@ -11483,9 +11483,9 @@ throw new Error("NYI");
     // update include list
     try
     {
-      BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
+      BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryStoreType=%s patternType=%s pattern=%'S",
                                                    selectedJobData.uuid,
-                                                   entryData.entryType.toString(),
+                                                   entryData.entryStoreType.toString(),
                                                    "GLOB",
                                                    entryData.pattern
                                                   ),
@@ -11552,9 +11552,9 @@ throw new Error("NYI");
 
         for (EntryData entryData : includeHashMap.values())
         {
-          BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
+          BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryStoreType=%s patternType=%s pattern=%'S",
                                                        selectedJobData.uuid,
-                                                       entryData.entryType.toString(),
+                                                       entryData.entryStoreType.toString(),
                                                        "GLOB",
                                                        entryData.pattern
                                                       ),
@@ -11614,7 +11614,7 @@ throw new Error("NYI");
   {
     if (selectedJobData != null)
     {
-      EntryData entryData = new EntryData(EntryTypes.FILE);
+      EntryData entryData = new EntryData(EntryStoreTypes.FILE);
       if (includeEdit(entryData,BARControl.tr("Add new include pattern"),BARControl.tr("Add")))
       {
         includeListAdd(entryData);

@@ -21,15 +21,15 @@
 
 typedef struct
 {
-  uint   bytesPerSector;
-  uint   sectorsPerCluster;
-  uint   reservedSectors;
-  uint   fatCount;
-  uint32 totalSectorsCount;
-  uint   maxRootEntries;
-  uint   sectorsPerFAT;
-  uint32 dataSectorsCount;
-  uint32 clustersCount;
+  uint     bytesPerSector;
+  uint     sectorsPerCluster;
+  uint     reservedSectors;
+  uint     fatCount;
+  uint32_t totalSectorsCount;
+  uint     maxRootEntries;
+  uint     sectorsPerFAT;
+  uint32_t dataSectorsCount;
+  uint32_t clustersCount;
 
   uint   bitsPerFATEntry;
   uint32 firstDataSector;

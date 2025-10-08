@@ -200,7 +200,7 @@ LOCAL bool cmdOptionParseEntityIds(void *variable, const char *name, const char 
   {
     CStringTokenizer stringTokenizer;
     stringTokenizerInit(&stringTokenizer,value,",");
-    const char *token;
+    const char       *token;
     while (stringGetNextToken(&stringTokenizer,&token))
     {
       DatabaseId databaseId;
@@ -239,7 +239,7 @@ LOCAL bool cmdOptionParseEntryIdsName(void *variable, const char *name, const ch
   {
     CStringTokenizer stringTokenizer;
     stringTokenizerInit(&stringTokenizer,value,",");
-    const char *token;
+    const char       *token;
     while (stringGetNextToken(&stringTokenizer,&token))
     {
       DatabaseId databaseId;
@@ -282,7 +282,7 @@ LOCAL bool cmdOptionParseLostEntryIdsName(void *variable, const char *name, cons
   {
     CStringTokenizer stringTokenizer;
     stringTokenizerInit(&stringTokenizer,value,",");
-    const char *token;
+    const char       *token;
     while (stringGetNextToken(&stringTokenizer,&token))
     {
       DatabaseId databaseId;
@@ -325,7 +325,7 @@ LOCAL bool cmdOptionParseStorageIdsName(void *variable, const char *name, const 
   {
     CStringTokenizer stringTokenizer;
     stringTokenizerInit(&stringTokenizer,value,",");
-    const char *token;
+    const char       *token;
     while (stringGetNextToken(&stringTokenizer,&token))
     {
       DatabaseId databaseId;
@@ -368,7 +368,7 @@ LOCAL bool cmdOptionParseCreateNewestIds(void *variable, const char *name, const
   {
     CStringTokenizer stringTokenizer;
     stringTokenizerInit(&stringTokenizer,value,",");
-    const char *token;
+    const char       *token;
     while (stringGetNextToken(&stringTokenizer,&token))
     {
       DatabaseId databaseId;
@@ -407,7 +407,7 @@ LOCAL bool cmdOptionParseCreateAggregateEntityIds(void *variable, const char *na
   {
     CStringTokenizer stringTokenizer;
     stringTokenizerInit(&stringTokenizer,value,",");
-    const char *token;
+    const char       *token;
     while (stringGetNextToken(&stringTokenizer,&token))
     {
       DatabaseId databaseId;
@@ -446,7 +446,7 @@ LOCAL bool cmdOptionParseCreateAggregateStorageIds(void *variable, const char *n
   {
     CStringTokenizer stringTokenizer;
     stringTokenizerInit(&stringTokenizer,value,",");
-    const char *token;
+    const char       *token;
     while (stringGetNextToken(&stringTokenizer,&token))
     {
       DatabaseId databaseId;
@@ -485,7 +485,7 @@ LOCAL bool cmdOptionParseCreateAggregateIds(void *variable, const char *name, co
   {
     CStringTokenizer stringTokenizer;
     stringTokenizerInit(&stringTokenizer,value,",");
-    const char *token;
+    const char       *token;
     while (stringGetNextToken(&stringTokenizer,&token))
     {
       DatabaseId databaseId;
@@ -658,11 +658,9 @@ LOCAL uint  outputProgressLength;
 
 LOCAL void vprintInfo(const char *prefix, const char *format, va_list arguments)
 {
-  String line;
-
   assert(format != NULL);
 
-  line = String_new();
+  String line = String_new();
 
   // format line
   if (prefix != NULL) String_appendCString(line,prefix);
@@ -688,12 +686,11 @@ LOCAL void vprintInfo(const char *prefix, const char *format, va_list arguments)
 
 LOCAL void printInfo(const char *format, ...)
 {
-  va_list arguments;
-
   assert(format != NULL);
 
   if (verboseFlag && !quietFlag)
   {
+    va_list arguments;
     va_start(arguments,format);
     vprintInfo(NULL,format,arguments);
     va_end(arguments);
@@ -712,14 +709,13 @@ LOCAL void printInfo(const char *format, ...)
 
 LOCAL void printWarning(const char *text, ...)
 {
-  String  line;
-  va_list arguments;
-
   assert(text != NULL);
 
   if (verboseFlag && !quietFlag)
   {
-    line = String_new();
+    String line = String_new();
+
+    va_list arguments;
     va_start(arguments,text);
     String_appendCString(line,"Warning: ");
     String_appendVFormat(line,text,arguments);
@@ -743,12 +739,11 @@ LOCAL void printWarning(const char *text, ...)
 
 LOCAL void printError(const char *text, ...)
 {
-  String  line;
-  va_list arguments;
-
   assert(text != NULL);
 
-  line = String_new();
+  String line = String_new();
+
+  va_list arguments;
   va_start(arguments,text);
   String_appendCString(line,"ERROR: ");
   String_appendVFormat(line,text,arguments);
@@ -777,14 +772,12 @@ LOCAL int sqlProgressHandler(void *userData)
   static uint64 lastTimestamp = 0LL;
   static uint   count         = 0;
 
-  struct timeval tv;
-  uint64         timestamp;
-
   UNUSED_VARIABLE(userData);
 
   // get timestamp
+  struct timeval tv;
   gettimeofday(&tv,NULL);
-  timestamp = (uint64)tv.tv_usec/1000L+((uint64)tv.tv_sec)*1000ULL;
+  uint64 timestamp = (uint64)tv.tv_usec/1000L+((uint64)tv.tv_sec)*1000ULL;
 
   // info output
   if (timestamp > (lastTimestamp+250))
@@ -857,13 +850,13 @@ LOCAL const char *getByteUnitShort(uint64 n)
 
 LOCAL void initProgress(ulong count)
 {
-  char   buffer[64];
 
   if (verboseFlag && !quietFlag)
   {
     outputProgressCount  = count;
     outputProgressDigits = (count > 0L) ? (uint)lrint(ceil(log10((double)count))) : 1;
 
+    char buffer[64];
     stringFormat(buffer,sizeof(buffer),"  0.0%% (%*"PRIu64"/%*"PRIu64")",(int)outputProgressDigits,0,(int)outputProgressDigits,count);
     outputProgressLength = stringLength(buffer);
 
@@ -885,14 +878,12 @@ LOCAL void initProgress(ulong count)
 
 LOCAL void printProgress(ulong n)
 {
-  double percentage;
-  char   buffer[64];
-
   if (verboseFlag && !quietFlag)
   {
-    percentage = (outputProgressCount > 0L) ? ((double)n*1000.0)/((double)outputProgressCount*10.0) : 0.0;
+    double percentage = (outputProgressCount > 0L) ? ((double)n*1000.0)/((double)outputProgressCount*10.0) : 0.0;
     if (percentage > 100.0) percentage = 100.0;
 
+    char buffer[64];
     stringFormat(buffer,sizeof(buffer),"%5.1lf%% (%*"PRIu64"/%*"PRIu64")",percentage,(int)outputProgressDigits,n,(int)outputProgressDigits,outputProgressCount);
     outputProgressLength = stringLength(buffer);
 
@@ -938,12 +929,10 @@ LOCAL void doneProgress(void)
 
 LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseURI, bool createFlag)
 {
-  DatabaseSpecifier databaseSpecifier;
-  String            printableDataseURI;
-  DatabaseOpenModes openMode;
-  Errors            error;
+  Errors error;
 
   // parse URI and fill default values
+  DatabaseSpecifier databaseSpecifier;
   error = Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
   if (error != ERROR_NONE)
   {
@@ -974,12 +963,12 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseUR
       #endif /* HAVE_POSTGRESQL */
       break;
   }
-  printableDataseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
+  String printableDataseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
 
   // open database
-  openMode = (createFlag)
-               ? DATABASE_OPEN_MODE_FORCE_CREATE
-               : DATABASE_OPEN_MODE_READWRITE;
+  DatabaseOpenModes openMode = (createFlag)
+                                 ? DATABASE_OPEN_MODE_FORCE_CREATE
+                                 : DATABASE_OPEN_MODE_READWRITE;
   openMode |= DATABASE_OPEN_MODE_AUX;
   error = Database_open(databaseHandle,
                         &databaseSpecifier,
@@ -1467,15 +1456,13 @@ LOCAL void formatProgressInfo(uint  progress,
 
 LOCAL String getPostgreSQLFTSTokens(String tokens, ConstString text)
 {
-  bool           spaceFlag;
-  StringIterator stringIterator;
-  Codepoint      codepoint;
-
   String_clear(tokens);
 
   if (text != NULL)
   {
-    spaceFlag = FALSE;
+    StringIterator stringIterator;
+    Codepoint      codepoint;
+    bool           spaceFlag = FALSE;
     STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
     {
       if (!isCharUTF8(codepoint))
@@ -1518,15 +1505,10 @@ LOCAL String getPostgreSQLFTSTokens(String tokens, ConstString text)
 
 LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *databaseURI)
 {
-  DatabaseSpecifier databaseSpecifier;
-  String            printableDatabaseURI;
-  uint              indexVersion;
-  ulong             maxSteps;
-  ProgressInfo      progressInfo;
-  Errors            error;
-  DatabaseHandle    oldDatabaseHandle;
+  Errors error;
 
   // parse URI and fill in default values
+  DatabaseSpecifier databaseSpecifier;
   error = Database_parseSpecifier(&databaseSpecifier,databaseURI,INDEX_DEFAULT_DATABASE_NAME);
   if (error != ERROR_NONE)
   {
@@ -1549,10 +1531,11 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
       #endif /* HAVE_POSTGRESQL */
       break;
   }
-  printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
+  String printableDatabaseURI = Database_getPrintableName(String_new(),&databaseSpecifier,NULL);
 
   printInfo("Import database '%s':\n",String_cString(printableDatabaseURI));
 
+  DatabaseHandle oldDatabaseHandle;
   error = Database_open(&oldDatabaseHandle,
                         &databaseSpecifier,
                         NULL,  // databaseName
@@ -1566,6 +1549,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
     return error;
   }
 
+  uint indexVersion;
   error = Database_getUInt(&oldDatabaseHandle,
                            &indexVersion,
                            "meta",
@@ -1583,7 +1567,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
     return error;
   }
 
-  maxSteps = 0LL;
+  size_t maxSteps = 0LL;
   switch (indexVersion)
   {
     case 1:
@@ -1604,6 +1588,7 @@ LOCAL Errors importIntoDatabase(DatabaseHandle *databaseHandle, const char *data
     default:
       break;
   }
+  ProgressInfo progressInfo;
   ProgressInfo_init(&progressInfo,
                     NULL,  // parentProgressInfo
                     128,  // filterWindowSize
@@ -1731,13 +1716,12 @@ LOCAL bool checkIntegrity(DatabaseHandle *databaseHandle)
 LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
 {
   Errors error;
-  ulong  totalCount;
-  uint   n;
 
-  totalCount = 0LL;
+  size_t totalCount = 0;
 
   printInfo("Check orphaned:\n");
 
+  uint n;
   // check entries without fragments
   printInfo("  entries without storage name...      ");
   error = Database_getUInt(databaseHandle,
@@ -1761,7 +1745,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned entry fragments check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
 
   // check entries without fragments
   printInfo("  file entries without fragments...    ");
@@ -1772,7 +1756,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                               LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
                            ",
                            "COUNT(fileEntries.id)",
-                           "    entries.deletedFlag=FALSE \
+                           "    entries.deletedFlag!=TRUE \
                             AND entryFragments.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1798,7 +1782,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                               LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
                            ",
                            "COUNT(imageEntries.id)",
-                           "    entries.deletedFlag=FALSE \
+                           "    entries.deletedFlag!=TRUE \
                             AND entryFragments.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1824,7 +1808,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                               LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
                            ",
                            "COUNT(hardlinkEntries.id)",
-                           "    entries.deletedFlag=FALSE \
+                           "    entries.deletedFlag!=TRUE \
                             AND entryFragments.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1841,7 +1825,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned hardlink entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
 
   // check entries without associated file/image/directory/link/hardlink/special entry
   printInfo("  entries without file entry...        ");
@@ -1852,7 +1836,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND entries.deletedFlag=FALSE \
+                            AND entries.deletedFlag!=TRUE \
                             AND fileEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1870,7 +1854,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned file entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
   printInfo("  entries without image entry...       ");
   error = Database_getUInt(databaseHandle,
                            &n,
@@ -1879,7 +1863,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND entries.deletedFlag=FALSE \
+                            AND entries.deletedFlag!=TRUE \
                             AND imageEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1897,7 +1881,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned image entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
   printInfo("  entries without directory entry...   ");
   error = Database_getUInt(databaseHandle,
                            &n,
@@ -1906,7 +1890,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND entries.deletedFlag=FALSE \
+                            AND entries.deletedFlag!=TRUE \
                             AND directoryEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1924,7 +1908,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned directory entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
   printInfo("  entries without link entry...        ");
   error = Database_getUInt(databaseHandle,
                            &n,
@@ -1933,7 +1917,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND entries.deletedFlag=FALSE \
+                            AND entries.deletedFlag!=TRUE \
                             AND linkEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1951,7 +1935,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned link entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
   printInfo("  entries without hardlink entry...    ");
   error = Database_getUInt(databaseHandle,
                            &n,
@@ -1960,7 +1944,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND entries.deletedFlag=FALSE \
+                            AND entries.deletedFlag!=TRUE \
                             AND hardlinkEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -1978,7 +1962,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned hardlink entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
   printInfo("  entries without special entry...     ");
   error = Database_getUInt(databaseHandle,
                            &n,
@@ -1987,7 +1971,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                            ",
                            "COUNT(entries.id)",
                            "    entries.type=? \
-                            AND entries.deletedFlag=FALSE \
+                            AND entries.deletedFlag!=TRUE \
                             AND specialEntries.id IS NULL \
                            ",
                            DATABASE_FILTERS
@@ -2005,7 +1989,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned special entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
 
   // check entries with wrong entity
   printInfo("  entries with wrong entity...         ");
@@ -2016,7 +2000,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                               LEFT JOIN storages ON storages.id=entryFragments.storageId \
                            ",
                            "COUNT(entries.id)",
-                           "    entries.deletedFlag=FALSE \
+                           "    entries.deletedFlag!=TRUE \
                             AND (entries.type=? OR entries.type=? OR entries.type=?)\
                             AND storages.entityId!=entries.entityId \
                            ",
@@ -2037,7 +2021,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned file entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
 
   // check storages without name
   printInfo("  storages without name...             ");
@@ -2060,7 +2044,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("storages name check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
 
   // check storages with invalid state
   printInfo("  storages with invalid state...       ");
@@ -2085,20 +2069,19 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("invalid storages check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
 
   // check entities without storages
-  printInfo("  entities without storages/entries... ");
+  printInfo("  entities without entries... ");
   error = Database_getUInt(databaseHandle,
                            &n,
                            "entities \
-                              LEFT JOIN storages ON storages.entityId=entities.id \
                               LEFT JOIN entries ON entries.entityId=entities.id \
                               LEFT JOIN entriesNewest ON entriesNewest.entityId=entities.id \
                            ",
                            "COUNT(entities.id)",
-                           "    entities.id!=? \
-                            AND storages.id IS NULL \
+                           "    entities.deletedFlag!=TRUE \
+                            AND entities.id!=? \
                             AND entries.id IS NULL \
                             AND entriesNewest.id IS NULL \
                            ",
@@ -2117,7 +2100,35 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned entities check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
+
+  printInfo("  entities without storages... ");
+  error = Database_getUInt(databaseHandle,
+                           &n,
+                           "entities \
+                              LEFT JOIN storages ON storages.entityId=entities.id \
+                           ",
+                           "COUNT(entities.id)",
+                           "    entities.deletedFlag!=TRUE \
+                            AND entities.id!=? \
+                            AND storages.id IS NULL \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
+                           ),
+                           NULL  // group
+                          );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%u\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError(_("orphaned entities check fail (error: %s)!"),Error_getText(error));
+  }
+  totalCount += (size_t)n;
 
   switch (Database_getType(databaseHandle))
   {
@@ -2145,7 +2156,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
         printInfo("FAIL!\n");
         printError(_("orphaned FTS entries check fail (error: %s)!"),Error_getText(error));
       }
-      totalCount += (ulong)n;
+      totalCount += (size_t)n;
 
       // check FTS storages without storage
       printInfo("  FTS storages without storage...      ");
@@ -2170,7 +2181,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
         printInfo("FAIL!\n");
         printError(_("orphaned FTS storages check fail (error: %s)!"),Error_getText(error));
       }
-      totalCount += (ulong)n;
+      totalCount += (size_t)n;
       break;
     case DATABASE_TYPE_MARIADB:
       break;
@@ -2198,7 +2209,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
         printInfo("FAIL!\n");
         printError(_("orphaned FTS entries check fail (error: %s)!"),Error_getText(error));
       }
-      totalCount += (ulong)n;
+      totalCount += (size_t)n;
 
       // check FTS storages without storage
       printInfo("  FTS storages without storage...      ");
@@ -2223,7 +2234,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
         printInfo("FAIL!\n");
         printError(_("orphaned FTS storages fail (error: %s)!"),Error_getText(error));
       }
-      totalCount += (ulong)n;
+      totalCount += (size_t)n;
       break;
   }
 
@@ -2250,11 +2261,11 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned newest entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
 
-  if (totalCount > 0LL)
+  if (totalCount > 0)
   {
-    printWarning(_("found %lu orphaned entries. Clean is recommented"),totalCount);
+    printWarning(_("found %zu orphaned entries. Clean is recommented"),totalCount);
   }
 
   // free resources
@@ -2275,17 +2286,15 @@ LOCAL ulong checkDuplicates(DatabaseHandle *databaseHandle)
 {
   String name;
   Errors error;
-  ulong  totalCount;
-  ulong  n;
 
   name       = String_new();
-  totalCount = 0LL;
+  size_t totalCount = 0;
 
   printInfo("Check duplicates:\n");
 
   // check duplicate storages
   printInfo("  storages...                          ");
-  n = 0L;
+  size_t n = 0;
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -2333,9 +2342,9 @@ LOCAL ulong checkDuplicates(DatabaseHandle *databaseHandle)
   }
   totalCount += n;
 
-  if (totalCount > 0LL)
+  if (totalCount > 0)
   {
-    printWarning(_("found %lu duplicate entries. Clean is recommented"),totalCount);
+    printWarning(_("found %zu duplicate entries. Clean is recommented"),totalCount);
   }
 
   // free resources
@@ -2868,11 +2877,14 @@ LOCAL Errors createIndices(DatabaseHandle *databaseHandle)
         error = ERROR_NONE;
         break;
     }
-    printInfo("%s\n",(error == ERROR_NONE) ? "OK" : "FAIL");
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      DATABASE_TRANSACTION_ABORT(databaseHandle);
-      break;
+      printInfo("OK");
+    }
+    else
+    {
+      printInfo("FAIL (ignored)");
+      error = ERROR_NONE;
     }
 
     // create new indices (if not exists)
@@ -2882,8 +2894,7 @@ LOCAL Errors createIndices(DatabaseHandle *databaseHandle)
       case DATABASE_TYPE_SQLITE3:
         {
           const char *indexDefinition;
-
-          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_INDICES[Database_getType(databaseHandle)], indexDefinition, error == ERROR_NONE)
+          INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_INDICES[Database_getType(databaseHandle)],indexDefinition,error == ERROR_NONE)
           {
             error = Database_execute(databaseHandle,
                                      NULL,  // changedRowCount
@@ -2949,6 +2960,7 @@ LOCAL Errors createFTSIndices(DatabaseHandle *databaseHandle)
   {
     // drop FTS indices
     printInfo("  Discard FTS indices...");
+    error = ERROR_NONE;
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
@@ -2970,13 +2982,15 @@ LOCAL Errors createFTSIndices(DatabaseHandle *databaseHandle)
         // nothing to do
         break;
     }
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      printInfo("FAIL\n");
-      DATABASE_TRANSACTION_ABORT(databaseHandle);
-      break;
+      printInfo("OK\n");
     }
-    printInfo("OK\n");
+    else
+    {
+      printInfo("FAIL (ignored)\n");
+      error = ERROR_NONE;
+    }
 
     // create new FTS tables (if not exists)
     printInfo("  Create FTS indices...");
@@ -2985,7 +2999,6 @@ LOCAL Errors createFTSIndices(DatabaseHandle *databaseHandle)
       case DATABASE_TYPE_SQLITE3:
         {
           const char *indexDefinition;
-
           INDEX_DEFINITIONS_ITERATEX(INDEX_DEFINITION_FTS_TABLES_SQLITE, indexDefinition, error == ERROR_NONE)
           {
             error = Database_execute(databaseHandle,
@@ -3078,7 +3091,8 @@ LOCAL Errors createFTSIndices(DatabaseHandle *databaseHandle)
       case DATABASE_TYPE_SQLITE3:
         if (error == ERROR_NONE)
         {
-          error = Database_insertSelect(databaseHandle,
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+            error = Database_insertSelect(databaseHandle,
                                         NULL,  // changedRowCount
                                         "FTS_storages",
                                         DATABASE_FLAG_IGNORE,
@@ -3096,7 +3110,11 @@ LOCAL Errors createFTSIndices(DatabaseHandle *databaseHandle)
                                           DATABASE_COLUMN_KEY   ("id"),
                                           DATABASE_COLUMN_STRING("name")
                                         ),
-                                        DATABASE_FILTERS_NONE,
+                                        "storages.deletedFlag!=TRUE \
+                                        ",
+                                        DATABASE_FILTERS
+                                        (
+                                        ),
                                         NULL,  // groupBy
                                         NULL,  // orderBy
                                         0LL,
@@ -3106,6 +3124,7 @@ LOCAL Errors createFTSIndices(DatabaseHandle *databaseHandle)
         }
         if (error == ERROR_NONE)
         {
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           error = Database_insertSelect(databaseHandle,
                                         NULL,  // changedRowCount
                                         "FTS_entries",
@@ -3124,7 +3143,11 @@ LOCAL Errors createFTSIndices(DatabaseHandle *databaseHandle)
                                           DATABASE_COLUMN_KEY   ("id"),
                                           DATABASE_COLUMN_STRING("name")
                                         ),
-                                        DATABASE_FILTERS_NONE,
+                                        "entries.deletedFlag!=TRUE \
+                                        ",
+                                        DATABASE_FILTERS
+                                        (
+                                        ),
                                         NULL,  // groupBy
                                         NULL,  // orderBy
                                         0LL,
@@ -4096,7 +4119,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     // delete all newest entries
     printInfo("Purge newest entries...");
     initProgress(totalEntriesNewestCount);
-    n = 0L;
+    n = 0;
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
       do
@@ -4127,7 +4150,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     // insert newest entries
     printInfo("Create newest entries...");
     initProgress(Array_length(&storageIds));
-    n = 0L;
+    n = 0;
     ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
     {
       error = addToNewest(databaseHandle,storageId);
@@ -4234,7 +4257,7 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
   }
 
   initProgress(totalCount);
-  n = 0L;
+  n = 0;
 
   // update entities total count/size aggregates
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -4760,7 +4783,7 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
   }
 
   initProgress(totalCount);
-  n = 0L;
+  n = 0;
 
   // update storage total count/size aggregates
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -5453,26 +5476,23 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
 
 LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 {
-  const uint INCREMENT_SIZE = 4096;
+  const size_t INCREMENT_SIZE = 4096;
 
-  String               storageName;
-  Errors               error;
-  ulong                totalCount;
-  ulong                n;
-  Array                ids;
-  ArraySegmentIterator arraySegmentIterator;
+  Errors error;
 
   // initialize variables
-  storageName = String_new();
+  String storageName = String_new();
+  Array  ids;
   Array_init(&ids,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  totalCount  = 0;
+  size_t totalCount  = 0;
 
   printInfo("Clean-up orphaned:\n");
+
+  size_t n = 0;
 
   // clean fragments/directory entries/link entries/special entries without or an empty storage name
   printInfo("  entries without storage name...      ");
   error = ERROR_UNKNOWN;
-  n     = 0L;
   do
   {
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -5629,7 +5649,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 
   // clean entries without fragments
   printInfo("  file entries without fragments...    ");
-  n = 0L;
+  n = 0;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     Array_clear(&ids);
@@ -5640,7 +5660,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                              LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.entryId \
                           ",
                           "fileEntries.id",
-                          "    entries.deletedFlag=FALSE \
+                          "    entries.deletedFlag!=TRUE \
                            AND entryFragments.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -5670,7 +5690,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   totalCount += n;
 
   printInfo("  image entries without fragments...   ");
-  n = 0L;
+  n = 0;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     Array_clear(&ids);
@@ -5681,7 +5701,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                              LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.entryId \
                           ",
                           "imageEntries.id",
-                          "    entries.deletedFlag=FALSE \
+                          "    entries.deletedFlag!=TRUE \
                            AND entryFragments.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -5711,7 +5731,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   totalCount += n;
 
   printInfo("  hardlink entries without fragments...");
-  n = 0L;
+  n = 0;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     Array_clear(&ids);
@@ -5722,7 +5742,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                              LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.entryId \
                           ",
                           "hardlinkEntries.id",
-                          "    entries.deletedFlag=FALSE \
+                          "    entries.deletedFlag!=TRUE \
                            AND entryFragments.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -5761,7 +5781,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
-                           AND entries.deletedFlag=FALSE \
+                           AND entries.deletedFlag!=TRUE \
                            AND fileEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -5773,7 +5793,8 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error == ERROR_NONE)
   {
     initProgress(Array_length(&ids));
-    n = 0L;
+    n = 0;
+    ArraySegmentIterator arraySegmentIterator;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -5813,7 +5834,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
-                           AND entries.deletedFlag=FALSE \
+                           AND entries.deletedFlag!=TRUE \
                            AND imageEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -5825,7 +5846,8 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error == ERROR_NONE)
   {
     initProgress(Array_length(&ids));
-    n = 0L;
+    n = 0;
+    ArraySegmentIterator arraySegmentIterator;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -5865,7 +5887,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
-                           AND entries.deletedFlag=FALSE \
+                           AND entries.deletedFlag!=TRUE \
                            AND directoryEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -5877,7 +5899,8 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error == ERROR_NONE)
   {
     initProgress(Array_length(&ids));
-    n = 0L;
+    n = 0;
+    ArraySegmentIterator arraySegmentIterator;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -5917,7 +5940,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
-                           AND entries.deletedFlag=FALSE \
+                           AND entries.deletedFlag!=TRUE \
                            AND linkEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -5929,7 +5952,8 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error == ERROR_NONE)
   {
     initProgress(Array_length(&ids));
-    n = 0L;
+    n = 0;
+    ArraySegmentIterator arraySegmentIterator;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -5969,7 +5993,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
-                           AND entries.deletedFlag=FALSE \
+                           AND entries.deletedFlag!=TRUE \
                            AND hardlinkEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -5981,7 +6005,8 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error == ERROR_NONE)
   {
     initProgress(Array_length(&ids));
-    n = 0L;
+    n = 0;
+    ArraySegmentIterator arraySegmentIterator;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -6021,7 +6046,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                           ",
                           "entries.id",
                           "    entries.type=? \
-                           AND entries.deletedFlag=FALSE \
+                           AND entries.deletedFlag!=TRUE \
                            AND specialEntries.id IS NULL \
                           ",
                           DATABASE_FILTERS
@@ -6033,7 +6058,8 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   if (error == ERROR_NONE)
   {
     initProgress(Array_length(&ids));
-    n = 0L;
+    n = 0;
+    ArraySegmentIterator arraySegmentIterator;
     ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
     {
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -6123,7 +6149,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                          DATABASE_COLUMN_KEY     ("entries.id"),
                          DATABASE_COLUMN_KEY     ("storages.entityId"),
                        ),
-                       "    entries.deletedFlag=FALSE \
+                       "    entries.deletedFlag!=TRUE \
                         AND (entries.type=? OR entries.type=? OR entries.type=?)\
                         AND entryFragments.entryId=entries.id \
                         AND storages.entityId!=entries.entityId \
@@ -6145,7 +6171,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     return error;
   }
   const EntryNode *entryNode;
-  n = 0L;
+  n = 0;
   LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
   {
     error = Database_update(databaseHandle,
@@ -6179,19 +6205,19 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 
   // clean storages without name
   printInfo("  storages without name...             ");
-  n = 0L;
+  n = 0;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     error = Database_delete(databaseHandle,
-                          &n,
-                          "storages",
-                          DATABASE_FLAG_NONE,
-                          "name IS NULL OR name=''",
-                          DATABASE_FILTERS
-                          (
-                          ),
-                          DATABASE_UNLIMITED
-                         );
+                            &n,
+                            "storages",
+                            DATABASE_FLAG_NONE,
+                            "name IS NULL OR name=''",
+                            DATABASE_FILTERS
+                            (
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
   (void)Database_flush(databaseHandle);
   if (error != ERROR_NONE)
@@ -6207,7 +6233,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 
   // clean storages with invalid state
   printInfo("  storages with invalid state...       ");
-  n = 0L;
+  n = 0;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     error = Database_delete(databaseHandle,
@@ -6235,40 +6261,108 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   printInfo("%lu\n",n);
   totalCount += n;
 
-  // clean entities withoout storages
-  printInfo("  entities without storages/entries... ");
-  n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  // clean entities without entries/storages
+  ArrayIterator entityArrayIterator;
+  DatabaseId    entityId;
+
+  printInfo("  entities without entries...          ");
+  n = 0;
+  Array_clear(&ids);
+  (void)Database_getIds(databaseHandle,
+                        &ids,
+                        "entities \
+                           LEFT JOIN entries ON entries.entityId=entities.id \
+                           LEFT JOIN entriesNewest ON entriesNewest.entityId=entities.id \
+                        ",
+                        "entities.id",
+                        "    entities.deletedFlag!=TRUE \
+                         AND entities.id!=? \
+                         AND entries.id IS NULL \
+                         AND entriesNewest.id IS NULL \
+                        ",
+                        DATABASE_FILTERS
+                        (
+                          DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
+                        ),
+                        DATABASE_UNLIMITED
+                       );
+  initProgress(Array_length(&ids));
+  n = 0;
+  ARRAY_ITERATEX(&ids,entityArrayIterator,entityId,error == ERROR_NONE)
   {
-    Array_clear(&ids);
-    (void)Database_getIds(databaseHandle,
-                          &ids,
-                          "entities \
-                             LEFT JOIN storages ON storages.entityId=entities.id \
-                             LEFT JOIN entries ON entries.entityId=entities.id \
-                             LEFT JOIN entriesNewest ON entriesNewest.entityId=entities.id \
-                          ",
-                          "entities.id",
-                          "    entities.id!=? \
-                           AND storages.id IS NULL \
-                           AND entries.id IS NULL \
-                           AND entriesNewest.id IS NULL \
-                          ",
-                          DATABASE_FILTERS
-                          (
-                            DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
-                          ),
-                          DATABASE_UNLIMITED
-                         );
-    error = Database_deleteByIds(databaseHandle,
-                                 &n,
-                                 "entities",
-                                 "id",
-                                 DATABASE_FLAG_NONE,
-                                 Array_cArray(&ids),
-                                 Array_length(&ids)
-                                );
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    {
+      error = Database_delete(databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(entityId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+    }
+    printProgress(n);
+
+    n++;
   }
+  doneProgress();
+  (void)Database_flush(databaseHandle);
+  if (error != ERROR_NONE)
+  {
+    printInfo("FAIL\n");
+    printError(_("clean orphaned fail (error: %s)!"),Error_getText(error));
+    Array_done(&ids);
+    String_delete(storageName);
+    return error;
+  }
+  printInfo("%lu\n",n);
+  totalCount += n;
+
+  printInfo("  entities without storages...         ");
+  n = 0;
+  Array_clear(&ids);
+  (void)Database_getIds(databaseHandle,
+                        &ids,
+                        "entities \
+                           LEFT JOIN storages ON storages.entityId=entities.id \
+                        ",
+                        "entities.id",
+                        "    entities.deletedFlag!=TRUE \
+                         AND entities.id!=? \
+                         AND storages.id IS NULL \
+                        ",
+                        DATABASE_FILTERS
+                        (
+                          DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
+                        ),
+                        DATABASE_UNLIMITED
+                       );
+  initProgress(Array_length(&ids));
+  n = 0;
+  ARRAY_ITERATEX(&ids,entityArrayIterator,entityId,error == ERROR_NONE)
+  {
+    DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+    {
+      error = Database_delete(databaseHandle,
+                              NULL,  // changedRowCount
+                              "entities",
+                              DATABASE_FLAG_NONE,
+                              "id=?",
+                              DATABASE_FILTERS
+                              (
+                                DATABASE_FILTER_KEY(entityId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+    }
+    printProgress(n);
+
+    n++;
+  }
+  doneProgress();
   (void)Database_flush(databaseHandle);
   if (error != ERROR_NONE)
   {
@@ -6286,7 +6380,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     case DATABASE_TYPE_SQLITE3:
       // clean FTS entries without entry
       printInfo("  FTS entries without entry...         ");
-      n = 0L;
+      n = 0;
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         Array_clear(&ids);
@@ -6317,7 +6411,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 
       // clean FTS storages without storage
       printInfo("  FTS storages without storage...      ");
-      n = 0L;
+      n = 0;
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         Array_clear(&ids);
@@ -6359,7 +6453,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
     case DATABASE_TYPE_POSTGRESQL:
       // clean FTS entries without entry
       printInfo("  FTS entries without entry...         ");
-      n = 0L;
+      n = 0;
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         Array_clear(&ids);
@@ -6390,7 +6484,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 
       // clean FTS storages without entry
       printInfo("  FTS storages without storage...      ");
-      n = 0L;
+      n = 0;
       DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
         Array_clear(&ids);
@@ -6463,7 +6557,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 #if 0
   // clean *Entries without entry
   printInfo("  orphaned entries...                  ");
-  n = 0L;
+  n = 0;
   (void)Database_get(databaseHandle,
                      CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                      {
@@ -6792,7 +6886,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   totalCount += n;
 #endif
 
-  printInfo("Total %lu orphaned entries cleaned\n",totalCount);
+  printInfo("Total %zu orphaned entries cleaned\n",totalCount);
 
   // free resources
   Array_done(&ids);
@@ -6812,22 +6906,17 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 
 LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
 {
-  Array         ids;
-  String        name;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    id;
-  ulong         totalCount;
-  ulong         n;
+  Errors error;
 
   // init variables
-  name       = String_new();
-  totalCount = 0LL;
+  size_t totalCount = 0;
 
   printInfo("Clean duplicates:\n");
 
   printInfo("  storages...                          ");
+  Array ids;
   Array_init(&ids,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  String name = String_new();
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -6879,9 +6968,11 @@ LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
     String_delete(name);
     return error;
   }
-  n = 0L;
+  size_t n = 0;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
+    ArrayIterator arrayIterator;
+    DatabaseId    id;
     ARRAY_ITERATEX(&ids,arrayIterator,id,error == ERROR_NONE)
     {
       error = Database_update(databaseHandle,
@@ -6916,7 +7007,7 @@ LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
   totalCount += n;
   Array_done(&ids);
 
-  printInfo("Total %lu duplicate entries removed\n",n);
+  printInfo("Total %zu duplicate entries removed\n",n);
 
   // free resources
   String_delete(name);
@@ -6929,32 +7020,30 @@ LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
 * Purpose: purge storages
 * Input  : databaseHandle - database handle
 *          storageIds     - storages to purge
+*          isPrintInfo    - TRUE to print info/progress
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
+LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds, bool isPrintInfo)
 {
-  Array         entryIds;
-  Errors        error;
-  ulong         n;
-  ArrayIterator storageArrayIterator,entryArrayIterator;
-  DatabaseId    storageId;
-  DatabaseId    databaseId;
-  IndexId       entityId;
-  DatabaseId    entryId;
+  Errors error;
 
+  Array entryIds;
   Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   error = ERROR_NONE;
+  ArrayIterator storageArrayIterator;
+  DatabaseId    storageId;
   ARRAY_ITERATEX(storageIds,storageArrayIterator,storageId,error == ERROR_NONE)
   {
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
-      printInfo("  %10"PRIi64"...",storageId);
+      if (isPrintInfo) printInfo("  %10"PRIi64"...",storageId);
 
-      // get entity id
+      // get entity id, job UUID
+      DatabaseId databaseId;
       if (error == ERROR_NONE)
       {
         error = Database_getId(databaseHandle,
@@ -6968,9 +7057,23 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
                                )
                               );
       }
-      entityId = INDEX_ID_ENTITY(databaseId);
+      IndexId entityId = INDEX_ID_ENTITY(databaseId);
+      StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+      if (error == ERROR_NONE)
+      {
+        error = Database_getString(databaseHandle,
+                                   jobUUID,
+                                   "entities",
+                                   "jobUUID",
+                                   "id=?",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(databaseId)
+                                   )
+                                  );
+      }
 
-      // collect file/image/hardlink entries to purge
+      // collect file/image/hardlink entries to delete
       Array_clear(&entryIds);
       if (error == ERROR_NONE)
       {
@@ -6987,7 +7090,7 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
                                 );
       }
 
-      // collect directory/link/special entries to purge
+      // collect directory/link/special entries to delete
       if (error == ERROR_NONE)
       {
          error = Database_getIds(databaseHandle,
@@ -7049,12 +7152,14 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
 
       // purge entries FTS
       initProgress(2*Array_length(&entryIds));
-      n = 0L;
+      size_t n = 0;
       switch (Database_getType(databaseHandle))
       {
         case DATABASE_TYPE_SQLITE3:
           if (error == ERROR_NONE)
           {
+            ArrayIterator entryArrayIterator;
+            DatabaseId    entryId;
             ARRAY_ITERATEX(&entryIds,entryArrayIterator,entryId,error == ERROR_NONE)
             {
               if (!Database_existsValue(databaseHandle,
@@ -7081,7 +7186,7 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
                                         DATABASE_UNLIMITED
                                        );
               }
-              printProgress(0*Array_length(&entryIds)+n);
+              if (isPrintInfo) printProgress(0*Array_length(&entryIds)+n);
             }
           }
           break;
@@ -7091,6 +7196,8 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
         case DATABASE_TYPE_POSTGRESQL:
           if (error == ERROR_NONE)
           {
+            ArrayIterator entryArrayIterator;
+            DatabaseId    entryId;
             ARRAY_ITERATEX(&entryIds,entryArrayIterator,entryId,error == ERROR_NONE)
             {
               if (!Database_existsValue(databaseHandle,
@@ -7117,7 +7224,7 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
                                         DATABASE_UNLIMITED
                                        );
               }
-              printProgress(0*Array_length(&entryIds)+n);
+              if (isPrintInfo) printProgress(0*Array_length(&entryIds)+n);
             }
           }
           break;
@@ -7230,7 +7337,9 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
       if (error == ERROR_NONE)
       {
         initProgress(2*Array_length(&entryIds));
-        n = 0L;
+        size_t        n = 0;
+        ArrayIterator entryArrayIterator;
+        DatabaseId    entryId;
         ARRAY_ITERATEX(&entryIds,entryArrayIterator,entryId,error == ERROR_NONE)
         {
           if (!Database_existsValue(databaseHandle,
@@ -7257,7 +7366,7 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
                                     DATABASE_UNLIMITED
                                    );
           }
-          printProgress(1*Array_length(&entryIds)+n);
+          if (isPrintInfo) printProgress(1*Array_length(&entryIds)+n);
         }
         doneProgress();
       }
@@ -7303,14 +7412,47 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
         }
       }
 
-      if (error != ERROR_NONE)
+      // prune UUID
+      if (error == ERROR_NONE)
       {
-        printInfo("FAIL!\n");
+        if (   !String_isEmpty(jobUUID)
+            && !Database_existsValue(databaseHandle,
+                                     "entities",
+                                     DATABASE_FLAG_NONE,
+                                     "id",
+                                     "jobUUID=?",
+                                     DATABASE_FILTERS
+                                     (
+                                       DATABASE_FILTER_STRING(jobUUID)
+                                     )
+                                    )
+           )
+        {
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount,
+                                  "uuids",
+                                  DATABASE_FLAG_NONE,
+                                  "jobUUID=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_STRING(jobUUID)
+                                  ),
+                                  DATABASE_UNLIMITED
+                                 );
+        }
+      }
+
+      if (error == ERROR_NONE)
+      {
+        if (isPrintInfo) printInfo("OK\n");
+      }
+      else
+      {
+        if (isPrintInfo) printInfo("FAIL!\n");
         DATABASE_TRANSACTION_ABORT(databaseHandle);
         break;
       }
 
-      printInfo("OK\n");
       n++;
     }
   }
@@ -7337,13 +7479,13 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds)
 
 LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
 {
-  Array  storageIds;
   Errors error;
 
   // init variables
 
   printInfo("Purge deleted storages:\n");
 
+  Array storageIds;
   Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   error = Database_getIds(databaseHandle,
@@ -7358,15 +7500,15 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
                          );
   if (error != ERROR_NONE)
   {
-    printError(_("purge deleted fail (error: %s)!"),Error_getText(error));
+    printError(_("purge deleted storages fail (error: %s)!"),Error_getText(error));
     Array_done(&storageIds);
     return error;
   }
 
-  error = purgeStorages(databaseHandle,&storageIds);
+  error = purgeStorages(databaseHandle,&storageIds,TRUE);
   if (error != ERROR_NONE)
   {
-    printError(_("purge deleted fail (error: %s)!"),Error_getText(error));
+    printError(_("purge deleted storages fail (error: %s)!"),Error_getText(error));
     Array_done(&storageIds);
     return error;
   }
@@ -7389,13 +7531,13 @@ LOCAL Errors purgeDeletedStorages(DatabaseHandle *databaseHandle)
 
 LOCAL Errors purgeStoragesWithError(DatabaseHandle *databaseHandle)
 {
-  Array  storageIds;
   Errors error;
 
   // init variables
 
   printInfo("Purge storages with error:\n");
 
+  Array storageIds;
   Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   error = Database_getIds(databaseHandle,
@@ -7411,15 +7553,15 @@ LOCAL Errors purgeStoragesWithError(DatabaseHandle *databaseHandle)
                          );
   if (error != ERROR_NONE)
   {
-    printError(_("purge with error fail (error: %s)!"),Error_getText(error));
+    printError(_("purge storages with error fail (error: %s)!"),Error_getText(error));
     Array_done(&storageIds);
     return error;
   }
 
-  error = purgeStorages(databaseHandle,&storageIds);
+  error = purgeStorages(databaseHandle,&storageIds,TRUE);
   if (error != ERROR_NONE)
   {
-    printError(_("purge with error fail (error: %s)!"),Error_getText(error));
+    printError(_("purge storages with error fail (error: %s)!"),Error_getText(error));
     Array_done(&storageIds);
     return error;
   }
@@ -7427,6 +7569,250 @@ LOCAL Errors purgeStoragesWithError(DatabaseHandle *databaseHandle)
 
   // free resources
   Array_done(&storageIds);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : purgeEntities
+* Purpose: purge entities
+* Input  : databaseHandle - database handle
+*          entityIds      - entities to purge
+*          isPrintInfo    - TRUE to print info/progress
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors purgeEntities(DatabaseHandle *databaseHandle, Array *entityIds, bool isPrintInfo)
+{
+  Errors error;
+
+  Array storageIds;
+  Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  error = ERROR_NONE;
+  ArrayIterator entityArrayIterator;
+  DatabaseId    entityId;
+  ARRAY_ITERATEX(entityIds,entityArrayIterator,entityId,error == ERROR_NONE)
+  {
+    if (   (entityId != DATABASE_ID_NONE)
+        && (entityId != INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID)
+       )
+    {
+      if (isPrintInfo) printInfo("  %10"PRIi64"...",entityId);
+
+      // get job UUID
+      StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+      if (error == ERROR_NONE)
+      {
+        error = Database_getString(databaseHandle,
+                                   jobUUID,
+                                   "entities",
+                                   "jobUUID",
+                                   "id=?",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(entityId)
+                                   )
+                                  );
+      }
+
+      // collect storages to delete
+      Array_clear(&storageIds);
+      if (error == ERROR_NONE)
+      {
+         error = Database_getIds(databaseHandle,
+                                 &storageIds,
+                                 "storages",
+                                 "id",
+                                 "entityId=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY(entityId)
+                                 ),
+                                 DATABASE_UNLIMITED
+                                );
+      }
+//fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,Array_length(&storageIds));
+
+      // delete storages of entity
+      if (error == ERROR_NONE)
+      {
+        error = purgeStorages(databaseHandle,&storageIds,FALSE);
+      }
+
+      // delete entries of entity
+      if (error == ERROR_NONE)
+      {
+        DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+        {
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "entries",
+                                  DATABASE_FLAG_NONE,
+                                  "entityId=? \
+                                  ",
+                                  DATABASE_FILTERS
+                                  (
+                                     DATABASE_FILTER_KEY(entityId)
+                                  ),
+                                  DATABASE_UNLIMITED
+                                 );
+        }
+      }
+
+      // delete skipped entries of entity
+      if (error == ERROR_NONE)
+      {
+        DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+        {
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "skippedEntries",
+                                  DATABASE_FLAG_NONE,
+                                  "entityId=? \
+                                  ",
+                                  DATABASE_FILTERS
+                                  (
+                                     DATABASE_FILTER_KEY(entityId)
+                                  ),
+                                  DATABASE_UNLIMITED
+                                 );
+        }
+      }
+
+      // delete entity
+      if (error == ERROR_NONE)
+      {
+        if (    (entityId != DATABASE_ID_NONE)
+             && (entityId != INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID)
+             && !Database_existsValue(databaseHandle,
+                                      "entities",
+                                      DATABASE_FLAG_NONE,
+                                      "id",
+                                      "entityId=?",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(entityId)
+                                      )
+                                     )
+          )
+        {
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount,
+                                  "entities",
+                                  DATABASE_FLAG_NONE,
+                                  "id=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(entityId)
+                                  ),
+                                  DATABASE_UNLIMITED
+                                 );
+        }
+      }
+
+      // prune UUID
+      if (error == ERROR_NONE)
+      {
+        if (   !String_isEmpty(jobUUID)
+            && !Database_existsValue(databaseHandle,
+                                     "entities",
+                                     DATABASE_FLAG_NONE,
+                                     "id",
+                                     "jobUUID=?",
+                                     DATABASE_FILTERS
+                                     (
+                                       DATABASE_FILTER_STRING(jobUUID)
+                                     )
+                                    )
+           )
+        {
+          error = Database_delete(databaseHandle,
+                                  NULL,  // changedRowCount,
+                                  "uuids",
+                                  DATABASE_FLAG_NONE,
+                                  "jobUUID=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_STRING(jobUUID)
+                                  ),
+                                  DATABASE_UNLIMITED
+                                 );
+        }
+      }
+
+      if (error == ERROR_NONE)
+      {
+        if (isPrintInfo) printInfo("OK\n");
+      }
+      else
+      {
+        if (isPrintInfo) printInfo("FAIL!\n");
+      }
+    }
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&storageIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&storageIds);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : purgeDeletedEntities
+* Purpose: purge deleted entities
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors purgeDeletedEntities(DatabaseHandle *databaseHandle)
+{
+  Errors error;
+
+  // init variables
+
+  printInfo("Purge deleted entities:\n");
+
+  Array entityIds;
+  Array_init(&entityIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  error = Database_getIds(databaseHandle,
+                          &entityIds,
+                          "entities",
+                          "id",
+                          "deletedFlag=TRUE",
+                          DATABASE_FILTERS
+                          (
+                          ),
+                          DATABASE_UNLIMITED
+                         );
+  if (error != ERROR_NONE)
+  {
+    printError(_("purge deleted entities fail (error: %s)!"),Error_getText(error));
+    Array_done(&entityIds);
+    return error;
+  }
+
+  error = purgeEntities(databaseHandle,&entityIds,TRUE);
+  if (error != ERROR_NONE)
+  {
+    printError(_("purge deleted fail (error: %s)!"),Error_getText(error));
+    Array_done(&entityIds);
+    return error;
+  }
+  (void)Database_flush(databaseHandle);
+
+  // free resources
+  Array_done(&entityIds);
 
   return ERROR_NONE;
 }
@@ -8824,48 +9210,30 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
-                         DatabaseId entityId;
-                         uint       type;
-                         uint64     createdDateTime;
-                         ulong      totalEntryCount;
-                         uint64     totalEntrySize;
-                         ulong      totalFileCount;
-                         uint64     totalFileSize;
-                         ulong      totalImageCount;
-                         uint64     totalImageSize;
-                         ulong      totalDirectoryCount;
-                         ulong      totalLinkCount;
-                         ulong      totalhardlinkCount;
-                         uint64     totalHardlinkSize;
-                         ulong      totalSpecialCount;
-                         DatabaseId uuidId;
-                         char       buffer[64];
-                         const char *prefix;
-                         uint       i;
-
                          assert(values != NULL);
                          assert(valueCount == 28);
 
                          UNUSED_VARIABLE(valueCount);
                          UNUSED_VARIABLE(userData);
 
-                         entityId            = values[0].id;
-                         type                = values[1].u;
-                         createdDateTime     = values[4].dateTime;
-                         totalEntryCount     = values[5].u;
-                         totalEntrySize      = values[6].u64;
-                         totalFileCount      = values[7].u;
-                         totalFileSize       = values[8].u64;
-                         totalImageCount     = values[9].u;
-                         totalImageSize      = values[10].u64;
-                         totalDirectoryCount = values[11].u;
-                         totalLinkCount      = values[12].u;
-                         totalhardlinkCount  = values[13].u;
-                         totalHardlinkSize   = values[14].u64;
-                         totalSpecialCount   = values[15].u;
+                         DatabaseId entityId            = values[0].id;
+                         uint       type                = values[1].u;
+                         uint64     createdDateTime     = values[4].dateTime;
+                         ulong      totalEntryCount     = values[5].u;
+                         uint64     totalEntrySize      = values[6].u64;
+                         ulong      totalFileCount      = values[7].u;
+                         uint64     totalFileSize       = values[8].u64;
+                         ulong      totalImageCount     = values[9].u;
+                         uint64     totalImageSize      = values[10].u64;
+                         ulong      totalDirectoryCount = values[11].u;
+                         ulong      totalLinkCount      = values[12].u;
+                         ulong      totalhardlinkCount  = values[13].u;
+                         uint64     totalHardlinkSize   = values[14].u64;
+                         ulong      totalSpecialCount   = values[15].u;
 
-                         uuidId              = values[27].id;
+                         DatabaseId uuidId              = values[27].id;
 
+                         char buffer[64];
                          printf("  Id             : %"PRIi64"\n",entityId);
                          printf("    Type         : %s\n",
                                 (type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS)
@@ -8887,8 +9255,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                          printf("\n");
                          printf("    UUID id      : %"PRIi64"\n",uuidId);
 
-                         i      = 0;
-                         prefix = "    Storage ids  : ";
+                         uint       i       = 0;
+                         const char *prefix = "    Storage ids  : ";
                          Database_get(databaseHandle,
                                       CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                       {
@@ -9025,98 +9393,68 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 #define INDEX_CONST_MODE_MANUAL 0
 #define INDEX_CONST_MODE_AUTO 1
 
-  String     storageIdsString;
-  String     ftsMatchString;
-  ulong      i;
-  DatabaseId storageId;
-  Errors     error;
-  char       filterString[1024];
+  Errors error;
 
-  storageIdsString = String_new();
+  String     storageIdsString = String_new();
+  size_t     i;
+  DatabaseId storageId;
   ARRAY_ITERATE(&storageIds,i,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
     String_appendFormat(storageIdsString,"%"PRIi64,storageId);
   }
 
-  ftsMatchString = getFTSMatchString(String_new(),databaseHandle,"FTS_storages","name",name);
+  String ftsMatchString = getFTSMatchString(String_new(),databaseHandle,"FTS_storages","name",name);
 
   printf("%s:\n",lostFlag ? "Lost storages" : "Storages");
+  char filterString[1024];
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
-                         DatabaseId storageId;
-                         char       buffer[64];
-
                          assert(values != NULL);
                          assert(valueCount == 1);
 
                          UNUSED_VARIABLE(valueCount);
                          UNUSED_VARIABLE(userData);
 
-                         storageId = values[0].id;
-
+                         DatabaseId storageId = values[0].id;
+                         char       filterString[1024];
                          error = Database_get(databaseHandle,
                                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                               {
-                                                DatabaseId id;
-                                                DatabaseId uuidId;
-                                                DatabaseId entityId;
-                                                String     jobUUID;
-                                                String     entityUUID;
-                                                String     name;
-                                                uint64     createdDateTime;
-                                                String     hostname;
-                                                String     userName;
-                                                String     comment;
-                                                uint       state;
-                                                uint       mode;
-                                                uint64     lastCheckedDateTime;
-                                                String     message;
-                                                ulong      totalEntryCount;
-                                                uint64     totalEntrySize;
-                                                ulong      totalFileCount;
-                                                uint64     totalFileSize;
-                                                ulong      totalImageCount;
-                                                uint64     totalImageSize;
-                                                ulong      totalDirectoryCount;
-                                                ulong      totalLinkCount;
-                                                ulong      totalHardlinkCount;
-                                                uint64     totalHardlinkSize;
-                                                ulong      totalSpecialCount;
-
                                                 assert(values != NULL);
                                                 assert(valueCount == 36);
 
                                                 UNUSED_VARIABLE(valueCount);
                                                 UNUSED_VARIABLE(userData);
 
-                                                id                  = values[ 0].id;
-                                                uuidId              = values[ 1].id;
-                                                entityId            = values[ 2].id;
-                                                jobUUID             = values[ 3].string;
-                                                entityUUID          = values[ 4].string;
-                                                name                = values[ 5].string;
-                                                createdDateTime     = values[ 6].dateTime;
-                                                hostname            = values[ 7].string;
-                                                userName            = values[ 8].string;
-                                                comment             = values[ 9].string;
-                                                state               = values[10].u;
-                                                mode                = values[11].u;
-                                                lastCheckedDateTime = values[12].dateTime;
-                                                message             = values[13].string;
-                                                totalEntryCount     = values[14].u;
-                                                totalEntrySize      = values[15].u64;
-                                                totalFileCount      = values[16].u;
-                                                totalFileSize       = values[17].u64;
-                                                totalImageCount     = values[18].u;
-                                                totalImageSize      = values[19].u64;
-                                                totalDirectoryCount = values[20].u;
-                                                totalLinkCount      = values[21].u64;
-                                                totalHardlinkCount  = values[22].u;
-                                                totalHardlinkSize   = values[23].u64;
-                                                totalSpecialCount   = values[24].u;
+                                                DatabaseId id                  = values[ 0].id;
+                                                DatabaseId uuidId              = values[ 1].id;
+                                                DatabaseId entityId            = values[ 2].id;
+                                                String     jobUUID             = values[ 3].string;
+                                                String     entityUUID          = values[ 4].string;
+                                                String     name                = values[ 5].string;
+                                                uint64     createdDateTime     = values[ 6].dateTime;
+                                                String     hostname            = values[ 7].string;
+                                                String     userName            = values[ 8].string;
+                                                String     comment             = values[ 9].string;
+                                                uint       state               = values[10].u;
+                                                uint       mode                = values[11].u;
+                                                uint64     lastCheckedDateTime = values[12].dateTime;
+                                                String     message             = values[13].string;
+                                                ulong      totalEntryCount     = values[14].u;
+                                                uint64     totalEntrySize      = values[15].u64;
+                                                ulong      totalFileCount      = values[16].u;
+                                                uint64     totalFileSize       = values[17].u64;
+                                                ulong      totalImageCount     = values[18].u;
+                                                uint64     totalImageSize      = values[19].u64;
+                                                ulong      totalDirectoryCount = values[20].u;
+                                                ulong      totalLinkCount      = values[21].u64;
+                                                ulong      totalHardlinkCount  = values[22].u;
+                                                uint64     totalHardlinkSize   = values[23].u64;
+                                                ulong       totalSpecialCount   = values[24].u;
 
+                                                char buffer[64];
                                                 printf("  Id             : %"PRIi64"\n",id);
                                                 printf("    Name         : %s\n",String_cString(name));
                                                 printf("    Created      : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,TIME_TYPE_LOCAL,NULL) : "-");
@@ -9285,41 +9623,36 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
 {
   const char *TYPE_TEXT[] = {"","uuid","entity","storage","entry","file","image","directory","link","hardlink","special","history"};
 
-  String     entityIdsString;
-  String     ftsMatchString;
-  ulong      i;
-  DatabaseId entityId;
-  Errors     error;
-  char       filterString[1024];
+  Errors error;
 
-  entityIdsString = String_new();
+  String     entityIdsString = String_new();
+  size_t     i;
+  DatabaseId entityId;
   ARRAY_ITERATE(&entityIds,i,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_appendFormat(entityIdsString,"%"PRIi64,entityId);
   }
 
-  ftsMatchString = getFTSMatchString(String_new(),databaseHandle,"FTS_entries","name",name);
+  String ftsMatchString = getFTSMatchString(String_new(),databaseHandle,"FTS_entries","name",name);
 
   printf("%s:\n",lostFlag ? "Lost entries" : "Entries");
+  char filterString[1024];
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
-                         DatabaseId entityId;
-                         DatabaseId uuidId;
-                         bool       entityOutputFlag;
-                         char       buffer[64];
-
                          assert(values != NULL);
                          assert(valueCount == 2);
 
                          UNUSED_VARIABLE(valueCount);
                          UNUSED_VARIABLE(userData);
 
-                         entityId = values[0].id;
-                         uuidId   = values[1].id;
+                         DatabaseId entityId = values[0].id;
+                         DatabaseId uuidId   = values[1].id;
 
-                         entityOutputFlag = FALSE;
+                         bool entityOutputFlag = FALSE;
+                         char buffer[64];
+                         char filterString[1024];
                          error = Database_get(databaseHandle,
                                               CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                                               {
@@ -9446,7 +9779,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                        (
                          "entities"
                        ),
-DATABASE_FLAG_DEBUG|                       DATABASE_FLAG_FETCH_ALL,
+                       DATABASE_FLAG_FETCH_ALL,
                        DATABASE_COLUMNS
                        (
                          DATABASE_COLUMN_KEY("id"),
@@ -9560,7 +9893,6 @@ int main(int argc, const char *argv[])
 {
   const uint MAX_LINE_LENGTH = 8192;
 
-  AutoFreeList     autoFreeList;
   const char       *databaseURI;
   char             line[MAX_LINE_LENGTH];
   Errors           error;
@@ -9575,6 +9907,7 @@ int main(int argc, const char *argv[])
   initAll();
 
   // init variables
+  AutoFreeList autoFreeList;
   AutoFree_init(&autoFreeList);
   Array_init(&uuidIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&uuids,MISC_UUID_STRING_LENGTH,64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
@@ -9927,6 +10260,7 @@ int main(int argc, const char *argv[])
   if (purgeFlag)
   {
     if (error == ERROR_NONE) error = purgeDeletedStorages(&databaseHandle);
+    if (error == ERROR_NONE) error = purgeDeletedEntities(&databaseHandle);
   }
   if (purgeWithErrorFlag)
   {

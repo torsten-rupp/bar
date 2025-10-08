@@ -1,12 +1,12 @@
 /***********************************************************************\
 *
-* Contents: EXFAT file systems
+* Contents: XFS file system
 * Systems: all
 *
 \***********************************************************************/
 
-#ifndef __FILESYSTEMS_EXFAT__
-#define __FILESYSTEMS_EXFAT__
+#ifndef __FILESYSTEMS_XFS__
+#define __FILESYSTEMS_XFS__
 
 /****************************** Includes *******************************/
 
@@ -16,21 +16,16 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+//#define XFS_MAX_BLOCK_SIZE (64*1024)
 
 /***************************** Datatypes *******************************/
-
 typedef struct
 {
-  uint     bytesPerSector;
-  uint     sectorsPerCluster;
-  uint64_t totalSectorsCount;
-  uint     fatCount;
-  uint32_t clusterHeapOffset;
-  uint32_t clusterCount;
-  uint32_t rootDirectoryCluster;
+  uint     blockSize;                         // block size [bytes]
+  uint64_t totalBlocks;                       // total number of blocks
 
-  BitSet   clusterBitmap;
-} EXFATHandle;
+  BitSet   blocksBitSet;                      // bit set with used blocks
+} XFSHandle;
 
 /***************************** Variables *******************************/
 
@@ -48,6 +43,6 @@ typedef struct
   }
 #endif
 
-#endif /* __FILESYSTEMS_EXFAT__ */
+#endif /* __FILESYSTEMS_XFS__ */
 
 /* end of file */

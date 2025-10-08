@@ -25,10 +25,6 @@
 #include "common/global.h"
 #include "common/strings.h"
 #include "common/devices.h"
-#include "common/filesystems_ext.h"
-#include "common/filesystems_fat.h"
-#include "common/filesystems_exfat.h"
-#include "common/filesystems_reiserfs.h"
 #include "errors.h"
 
 #include "filesystems.h"
@@ -98,6 +94,7 @@ FILESYTEM_TYPES[] =
 #include "filesystems_fat.c"
 #include "filesystems_exfat.c"
 #include "filesystems_reiserfs.c"
+#include "filesystems_xfs.c"
 
 /***********************************************************************\
 * Name   : getFileSystemType
@@ -131,11 +128,14 @@ LOCAL FileSystemTypes getFileSystemType(DeviceHandle *deviceHandle)
   {
     // nothing to do
   }
+  else if (XFS_init(deviceHandle,&fileSystemType,NULL))
+  {
+    // nothing to do
+  }
   else
   {
     // use libblkid to detect file system on device
-    #if defined(HAVE_BLKID_NEW_PROBE_FROM_FILENAME) && defined(HAVE_BLKID_DO_PROBE) && defined(HAVE_BLKID_PROBE_LOOKUP_VALUE)
-    //    blkid_probe blkidProbe = blkid_new_probe_from_filename(deviceName);
+    #if defined(HAVE_BLKID_NEW_PROBE) && defined(HAVE_BLKID_DO_PROBE) && defined(HAVE_BLKID_PROBE_LOOKUP_VALUE)
       blkid_probe blkidProbe = blkid_new_probe();
       if (blkidProbe != NULL)
       {
@@ -203,6 +203,24 @@ LOCAL FileSystemTypes getFileSystemType(DeviceHandle *deviceHandle)
 }
 
 /*---------------------------------------------------------------------*/
+
+Errors FileSystem_initAll(void)
+{
+  Errors error;
+
+  error = XFS_initAll();
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+void FileSystem_doneAll(void)
+{
+  XFS_doneAll();
+}
 
 const char *FileSystem_typeToString(FileSystemTypes fileSystemType, const char *defaultValue)
 {
@@ -277,34 +295,56 @@ FileSystemTypes FileSystem_getTypeCString(const char *deviceName)
 }
 
 Errors FileSystem_init(FileSystemHandle *fileSystemHandle,
-                       DeviceHandle     *deviceHandle
+                       ConstString      deviceName
                       )
 {
   assert(fileSystemHandle != NULL);
-  assert(deviceHandle != NULL);
+  assert(deviceName != NULL);
 
-  // initialize variables
-  fileSystemHandle->deviceHandle = deviceHandle;
-  fileSystemHandle->type         = FILE_SYSTEM_TYPE_UNKNOWN;
-  if      (EXT_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->extHandle))
+  return FileSystem_initCString(fileSystemHandle,String_cString(deviceName));
+}
+
+Errors FileSystem_initCString(FileSystemHandle *fileSystemHandle,
+                              const char       *deviceName
+                             )
+{
+  assert(fileSystemHandle != NULL);
+  assert(deviceName != NULL);
+
+  Errors error;
+
+  // open device
+  error = Device_openCString(&fileSystemHandle->deviceHandle,deviceName,DEVICE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // detect and init file system
+  fileSystemHandle->type = FILE_SYSTEM_TYPE_UNKNOWN;
+  if      (EXT_init(&fileSystemHandle->deviceHandle,&fileSystemHandle->type,&fileSystemHandle->extHandle))
   {
     // nothing to do
   }
-  else if (FAT_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->fatHandle))
+  else if (FAT_init(&fileSystemHandle->deviceHandle,&fileSystemHandle->type,&fileSystemHandle->fatHandle))
   {
     // nothing to do
   }
-  else if (EXFAT_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->exfatHandle))
+  else if (EXFAT_init(&fileSystemHandle->deviceHandle,&fileSystemHandle->type,&fileSystemHandle->exfatHandle))
   {
     // nothing to do
   }
-  else if (ReiserFS_init(deviceHandle,&fileSystemHandle->type,&fileSystemHandle->reiserFSHandle))
+  else if (ReiserFS_init(&fileSystemHandle->deviceHandle,&fileSystemHandle->type,&fileSystemHandle->reiserFSHandle))
+  {
+    // nothing to do
+  }
+  else if (XFS_init(&fileSystemHandle->deviceHandle,&fileSystemHandle->type,&fileSystemHandle->xfsHandle))
   {
     // nothing to do
   }
   else
   {
-    fileSystemHandle->type = getFileSystemType(deviceHandle);
+    fileSystemHandle->type = getFileSystemType(&fileSystemHandle->deviceHandle);
   }
   assert(fileSystemHandle->type != FILE_SYSTEM_TYPE_UNKNOWN);
 
@@ -327,13 +367,20 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle)
     case FILE_SYSTEM_TYPE_FAT32:
       FAT_done(&fileSystemHandle->fatHandle);
       break;
+    case FILE_SYSTEM_TYPE_EXFAT:
+      EXFAT_done(&fileSystemHandle->exfatHandle);
+      break;
     case FILE_SYSTEM_TYPE_REISERFS3_5:
     case FILE_SYSTEM_TYPE_REISERFS3_6:
       ReiserFS_done(&fileSystemHandle->reiserFSHandle);
       break;
+    case FILE_SYSTEM_TYPE_XFS:
+      XFS_done(&fileSystemHandle->xfsHandle);
+      break;
     default:
       break;
   }
+  Device_close(&fileSystemHandle->deviceHandle);
 
   return ERROR_NONE;
 }
@@ -348,19 +395,22 @@ bool FileSystem_blockIsUsed(FileSystemHandle *fileSystemHandle, uint64_t offset)
     case FILE_SYSTEM_TYPE_EXT2:
     case FILE_SYSTEM_TYPE_EXT3:
     case FILE_SYSTEM_TYPE_EXT4:
-      blockIsUsed = EXT_blockIsUsed(fileSystemHandle->deviceHandle,fileSystemHandle->type,&fileSystemHandle->extHandle,offset);
+      blockIsUsed = EXT_blockIsUsed(&fileSystemHandle->deviceHandle,fileSystemHandle->type,&fileSystemHandle->extHandle,offset);
       break;
     case FILE_SYSTEM_TYPE_FAT12:
     case FILE_SYSTEM_TYPE_FAT16:
     case FILE_SYSTEM_TYPE_FAT32:
-      blockIsUsed = FAT_blockIsUsed(fileSystemHandle->deviceHandle,fileSystemHandle->type,&fileSystemHandle->fatHandle,offset);
+      blockIsUsed = FAT_blockIsUsed(&fileSystemHandle->deviceHandle,fileSystemHandle->type,&fileSystemHandle->fatHandle,offset);
       break;
     case FILE_SYSTEM_TYPE_EXFAT:
-      blockIsUsed = EXFAT_blockIsUsed(fileSystemHandle->deviceHandle,&fileSystemHandle->exfatHandle,offset);
+      blockIsUsed = EXFAT_blockIsUsed(&fileSystemHandle->deviceHandle,&fileSystemHandle->exfatHandle,offset);
       break;
     case FILE_SYSTEM_TYPE_REISERFS3_5:
     case FILE_SYSTEM_TYPE_REISERFS3_6:
-      blockIsUsed = ReiserFS_blockIsUsed(fileSystemHandle->deviceHandle,fileSystemHandle->type,&fileSystemHandle->reiserFSHandle,offset);
+      blockIsUsed = ReiserFS_blockIsUsed(&fileSystemHandle->deviceHandle,fileSystemHandle->type,&fileSystemHandle->reiserFSHandle,offset);
+      break;
+    case FILE_SYSTEM_TYPE_XFS:
+      blockIsUsed = XFS_blockIsUsed(&fileSystemHandle->deviceHandle,&fileSystemHandle->xfsHandle,offset);
       break;
     default:
       blockIsUsed = TRUE;

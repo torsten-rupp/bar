@@ -33,16 +33,16 @@ LZ4_VERSION=r131
 ZSTD_VERSION=1.5.2
 XDELTA3_VERSION=3.0.11
 MXML_VERSION=3.3
-LIBGPG_ERROR_VERSION=1.45
-LIBGCRYPT_VERSION=1.10.1
+GPG_ERROR_VERSION=1.45
+GCRYPT_VERSION=1.10.1
 NETTLE_VERSION=3.9.1
 GMP_VERSION=6.2.1
-LIBIDN2_VERSION=2.3.4
+IDN2_VERSION=2.3.4
 GNU_TLS_SUB_DIRECTORY=v3.6
 GNU_TLS_VERSION=3.6.16
-LIBICONV_VERSION=1.16
+ICONV_VERSION=1.16
 OPENSSL_VERSION=1.1.1n
-LIBSSH2_VERSION=1.10.0
+SSH2_VERSION=1.10.0
 # Note: 1.33.0 does not compile on legacy systems; fix is in
 #       main, but not in 1.33. Thus use previous version for
 #       now.
@@ -59,13 +59,15 @@ POSTGRESQL_VERSION=9.6.24
 #ICU_VERSION=58.3
 ICU_VERSION=61.1
 MTX_VERSION=1.3.12
-LIBCDIO_VERSION=2.1.0
+CDIO_VERSION=2.1.0
 KRB5_VERSION=1.21
 KRB5_VERSION_MINOR=2
-LIBSMB2_VERSION=4.0.0
+SMB2_VERSION=4.0.0
 PAR2_VERSION=0.8.1
-LIBISOFS_VERSION="release-1.5.6.pl01"
-LIBBURN_VERSION="release-1.5.6"
+ISOFS_VERSION="release-1.5.6.pl01"
+RCU_VERSION=0.15.3
+XFSPROGS_VERSION=6.16.0
+BURN_VERSION="release-1.5.6"
 UTIL_LINUX_VERSION="v2.40"
 BINUTILS_VERSION=2.41
 PTHREAD_W32_VERSION=2-9-1
@@ -112,12 +114,14 @@ gcryptFlag=0
 curlFlag=0
 mxmlFlag=0
 opensslFlag=0
-libssh2Flag=0
+ssh2Flag=0
 gnutlsFlag=0
-libcdioFlag=0
-libsmb2Flag=0
-libisofsFlag=0
-libburnFlag=0
+cdioFlag=0
+smb2Flag=0
+isofsFlag=0
+rcuFlag=0
+xfsProgsFlag=0
+burnFlag=0
 utilLinuxFlag=0
 pcreFlag=0
 sqlite3Flag=0
@@ -218,7 +222,7 @@ while test $# != 0; do
           allFlag=0
           xdelta3Flag=1
           ;;
-        gcrypt|libgcrypt)
+        gcrypt)
           allFlag=0
           gcryptFlag=1
           ;;
@@ -235,21 +239,21 @@ while test $# != 0; do
           allFlag=0
           opensslFlag=1
           ;;
-        ssh2|libssh2)
+        ssh2)
           allFlag=0
-          libssh2Flag=1
+          ssh2Flag=1
           ;;
         gnutls)
           allFlag=0
           gnutlsFlag=1
           ;;
-        cdio|libcdio)
+        cdio)
           allFlag=0
-          libcdioFlag=1
+          cdioFlag=1
           ;;
-        smb2|libsmb2|smbclient|libsmbclient)
+        smb2|smbclient)
           allFlag=0
-          libsmb2Flag=1
+          smb2Flag=1
           ;;
         pcre)
           allFlag=0
@@ -279,15 +283,23 @@ while test $# != 0; do
           allFlag=0;
           par2Flag=1;
           ;;
-        isofs|libisofs)
+        isofs)
           allFlag=0
-          libisofsFlag=1
+          isofsFlag=1
           ;;
-        burn|libburn)
+        rcu)
           allFlag=0
-          libburnFlag=1
+          rcuFlag=1
           ;;
-        mount|libmount|util-linux)
+        xfsprogs)
+          allFlag=0
+          xfsProgsFlag=1
+          ;;
+        burn)
+          allFlag=0
+          burnFlag=1
+          ;;
+        mount|util-linux)
           allFlag=0
           utilLinuxFlag=1
           ;;
@@ -349,7 +361,7 @@ while test $# != 0; do
       allFlag=0
       xdelta3Flag=1
       ;;
-    gcrypt|libgcrypt)
+    gcrypt)
       allFlag=0
       gcryptFlag=1
       ;;
@@ -366,9 +378,9 @@ while test $# != 0; do
       allFlag=0
       opensslFlag=1
       ;;
-    ssh2|libssh2)
+    ssh2)
       allFlag=0
-      libssh2Flag=1
+      ssh2Flag=1
       ;;
     gnutls)
       allFlag=0
@@ -376,11 +388,11 @@ while test $# != 0; do
       ;;
     cdio|libcdio)
       allFlag=0
-      libcdioFlag=1
+      cdioFlag=1
       ;;
-    smb2|libsmb2|smbclient|libsmbclient)
+    smb2|smbclient)
       allFlag=0
-      libsmb2Flag=1
+      smb2Flag=1
       ;;
     pcre)
       allFlag=0
@@ -412,13 +424,21 @@ while test $# != 0; do
       ;;
     isofs|libisofs)
       allFlag=0
-      libisofsFlag=1
+      isofsFlag=1
       ;;
-    burn|libburn)
+    rcu)
       allFlag=0
-      libburnFlag=1
+      rcuFlag=1
       ;;
-    mount|libmount|util-linux)
+    xfsprogs)
+      allFlag=0
+      xfsProgsFlag=1
+      ;;
+    burn)
+      allFlag=0
+      burnFlag=1
+      ;;
+    mount|util-linux)
       allFlag=0
       utilLinuxFlag=1
       ;;
@@ -486,6 +506,8 @@ if test $helpFlag -eq 1; then
   $ECHO " par2"
   $ECHO " libisofs"
   $ECHO " libburn"
+  $ECHO " librcu"
+  $ECHO " libprogs"
   $ECHO " util-linux"
   $ECHO " binutils"
   $ECHO " launch4j"
@@ -859,6 +881,9 @@ if test $cleanFlag -eq 0; then
      fi
      if test $noDecompressFlag -eq 0; then
        $TAR xzf $fileName
+       # Note: xdelta3 does not provide a version. Thus create text file with version number
+# TODO
+#       echo $XDELTA3_VERSION > `find $destinationDirectory -maxdepth 1 -type d -name "xdelta3-*"`-$XDELTA3_VERSION/version.txt
        if test $? -ne 0; then
          fatalError "decompress"
        fi
@@ -893,11 +918,11 @@ if test $cleanFlag -eq 0; then
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get gpg-error ($LIBGPG_ERROR_VERSION)..."
-     fileName="libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2"
+     $ECHO_NO_NEW_LINE "Get gpg-error ($GPG_ERROR_VERSION)..."
+     fileName="libgpg-error-$GPG_ERROR_VERSION.tar.bz2"
      if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2; then
-         $LN -s $localDirectory/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2 $fileName
+       if test -n "$localDirectory" -a -f $localDirectory/libgpg-error-$GPG_ERROR_VERSION.tar.bz2; then
+         $LN -s $localDirectory/libgpg-error-$GPG_ERROR_VERSION.tar.bz2 $fileName
          result=1
        else
          url="https://www.gnupg.org/ftp/gcrypt/libgpg-error/$fileName"
@@ -916,7 +941,7 @@ if test $cleanFlag -eq 0; then
          fatalError "decompress"
        fi
 
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error)
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libgpg-error-$GPG_ERROR_VERSION libgpg-error)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
@@ -936,11 +961,11 @@ if test $cleanFlag -eq 0; then
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get gcrypt ($LIBGCRYPT_VERSION)..."
-     fileName="libgcrypt-$LIBGCRYPT_VERSION.tar.bz2"
+     $ECHO_NO_NEW_LINE "Get gcrypt ($GCRYPT_VERSION)..."
+     fileName="libgcrypt-$GCRYPT_VERSION.tar.bz2"
      if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/libgcrypt-$LIBGCRYPT_VERSION.tar.bz2; then
-         $LN -s $localDirectory/libgcrypt-$LIBGCRYPT_VERSION.tar.bz2 $fileName
+       if test -n "$localDirectory" -a -f $localDirectory/libgcrypt-$GCRYPT_VERSION.tar.bz2; then
+         $LN -s $localDirectory/libgcrypt-$GCRYPT_VERSION.tar.bz2 $fileName
          result=1
        else
          url="https://www.gnupg.org/ftp/gcrypt/libgcrypt/$fileName"
@@ -959,7 +984,7 @@ if test $cleanFlag -eq 0; then
          fatalError "decompress"
        fi
 
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libgcrypt-$LIBGCRYPT_VERSION libgcrypt)
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libgcrypt-$GCRYPT_VERSION libgcrypt)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
@@ -1112,17 +1137,17 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
+  if test $allFlag -eq 1 -o $ssh2Flag -eq 1; then
     # libssh2
     (
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get libssh2 ($LIBSSH2_VERSION)..."
-     fileName="libssh2-$LIBSSH2_VERSION.tar.gz"
+     $ECHO_NO_NEW_LINE "Get ssh2 ($SSH2_VERSION)..."
+     fileName="libssh2-$SSH2_VERSION.tar.gz"
      if test ! -f "$fileName"; then
-       if test -n "$localDirectory" -a -f $localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz; then
-         $LN -s $localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz $fileName
+       if test -n "$localDirectory" -a -f $localDirectory/libssh2-$SSH2_VERSION.tar.gz; then
+         $LN -s $localDirectory/libssh2-$SSH2_VERSION.tar.gz $fileName
          result=1
        else
          url="http://www.libssh2.org/download/$fileName"
@@ -1141,7 +1166,7 @@ if test $cleanFlag -eq 0; then
          fatalError "decompress"
        fi
 
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libssh2-$LIBSSH2_VERSION libssh2)
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libssh2-$SSH2_VERSION libssh2)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
@@ -1159,7 +1184,7 @@ if test $cleanFlag -eq 0; then
     )
     result=$?
     if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/libssh2-$LIBSSH2_VERSION libssh2)
+      (cd "$workingDirectory"; $LN -sfT extern/libssh2-$SSH2_VERSION libssh2)
     fi
     case $result in
       1) $ECHO "ok (local)"; ;;
@@ -1216,11 +1241,11 @@ if test $cleanFlag -eq 0; then
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get libidn2 ($LIBIDN2_VERSION)..."
-     fileName="libidn2-$LIBIDN2_VERSION.tar.gz"
+     $ECHO_NO_NEW_LINE "Get idn2 ($IDN2_VERSION)..."
+     fileName="libidn2-$IDN2_VERSION.tar.gz"
      if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz; then
-         $LN -s $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz $fileName
+       if test -n "$localDirectory" -a -f $localDirectory/libidn2-$IDN2_VERSION.tar.gz; then
+         $LN -s $localDirectory/libidn2-$IDN2_VERSION.tar.gz $fileName
          result=1
        else
          url="https://ftpmirror.gnu.org/gnu/libidn/$fileName"
@@ -1390,11 +1415,11 @@ if test $cleanFlag -eq 0; then
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get libidn2 ($LIBIDN2_VERSION)..."
-     fileName="libidn2-$LIBIDN2_VERSION.tar.gz"
+     $ECHO_NO_NEW_LINE "Get idn2 ($IDN2_VERSION)..."
+     fileName="libidn2-$IDN2_VERSION.tar.gz"
      if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz; then
-         $LN -s $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz $fileName
+       if test -n "$localDirectory" -a -f $localDirectory/libidn2-$IDN2_VERSION.tar.gz; then
+         $LN -s $localDirectory/libidn2-$IDN2_VERSION.tar.gz $fileName
          result=1
        else
          url="https://ftpmirror.gnu.org/gnu/libidn/$fileName"
@@ -1473,16 +1498,16 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
+  if test $allFlag -eq 1 -o $cdioFlag -eq 1; then
     (
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get libiconv ($LIBICONV_VERSION)..."
-     fileName="libiconv-$LIBICONV_VERSION.tar.gz"
+     $ECHO_NO_NEW_LINE "Get iconv ($ICONV_VERSION)..."
+     fileName="libiconv-$ICONV_VERSION.tar.gz"
      if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/libiconv-$LIBICONV_VERSION.tar.gz; then
-         $LN -s $localDirectory/libiconv-$LIBICONV_VERSION.tar.gz $fileName
+       if test -n "$localDirectory" -a -f $localDirectory/libiconv-$ICONV_VERSION.tar.gz; then
+         $LN -s $localDirectory/libiconv-$ICONV_VERSION.tar.gz $fileName
          result=1
        else
          url="https://ftpmirror.gnu.org/gnu/libiconv/$fileName"
@@ -1501,7 +1526,7 @@ if test $cleanFlag -eq 0; then
          fatalError "decompress"
        fi
 
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libiconv-$LIBICONV_VERSION libiconv)
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libiconv-$ICONV_VERSION libiconv)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
@@ -1521,11 +1546,11 @@ if test $cleanFlag -eq 0; then
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get libcdio ($LIBCDIO_VERSION)..."
-     fileName="libcdio-$LIBCDIO_VERSION.tar.bz2"
+     $ECHO_NO_NEW_LINE "Get cdio ($CDIO_VERSION)..."
+     fileName="libcdio-$CDIO_VERSION.tar.bz2"
      if test ! -f $fileName; then
-       if test -n "$localDirectory" -a -f $localDirectory/libcdio-$LIBCDIO_VERSION.tar.bz2; then
-         $LN -s $localDirectory/libcdio-$LIBCDIO_VERSION.tar.bz2 $fileName
+       if test -n "$localDirectory" -a -f $localDirectory/libcdio-$CDIO_VERSION.tar.bz2; then
+         $LN -s $localDirectory/libcdio-$CDIO_VERSION.tar.bz2 $fileName
          result=1
        else
          url="https://ftpmirror.gnu.org/gnu/libcdio/$fileName"
@@ -1544,7 +1569,7 @@ if test $cleanFlag -eq 0; then
          fatalError "decompress"
        fi
 
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libcdio-$LIBCDIO_VERSION libcdio)
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libcdio-$CDIO_VERSION libcdio)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
@@ -1561,7 +1586,7 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $libsmb2Flag -eq 1; then
+  if test $allFlag -eq 1 -o $smb2Flag -eq 1; then
     (
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
@@ -1609,12 +1634,12 @@ if test $cleanFlag -eq 0; then
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get libsmb2 ($LIBSMB2_VERSION)..."
-     directoryName="libsmb2-$LIBSMB2_VERSION"
+     $ECHO_NO_NEW_LINE "Get smb2 ($SMB2_VERSION)..."
+     directoryName="libsmb2-$SMB2_VERSION"
      if test ! -d $directoryName; then
-       if test -n "$localDirectory" -a -d $localDirectory/libsmb2-$LIBSMB2_VERSION; then
+       if test -n "$localDirectory" -a -d $localDirectory/libsmb2-$SMB2_VERSION; then
          # Note: make a deep copy instead of link to get usable file permissions (source may be owned by root)
-         $CP -r $localDirectory/libsmb2-$LIBSMB2_VERSION $directoryName
+         $CP -r $localDirectory/libsmb2-$SMB2_VERSION $directoryName
          result=1
        else
          url="https://github.com/sahlberg/libsmb2"
@@ -1623,11 +1648,11 @@ if test $cleanFlag -eq 0; then
            fatalError "checkout $url -> $directoryName"
          fi
          (cd $directoryName; \
-          $GIT checkout v$LIBSMB2_VERSION 1>/dev/null 2>/dev/null; \
+          $GIT checkout v$SMB2_VERSION 1>/dev/null 2>/dev/null; \
           install -d m4;
          )
          if test $? -ne 0; then
-           fatalError "checkout tag v$LIBSMB2_VERSION"
+           fatalError "checkout tag v$SMB2_VERSION"
          fi
          result=2
        fi
@@ -1636,7 +1661,7 @@ if test $cleanFlag -eq 0; then
      fi
 
      if test $noDecompressFlag -eq 0; then
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libsmb2-$LIBSMB2_VERSION libsmb2)
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libsmb2-$SMB2_VERSION libsmb2)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
@@ -1661,7 +1686,7 @@ if test $cleanFlag -eq 0; then
     esac
 
     if test $noDecompressFlag -eq 0; then
-      (cd "$workingDirectory"; $LN -sfT extern/libsmb2-$LIBSMB2_VERSION libsmb2)
+      (cd "$workingDirectory"; $LN -sfT extern/libsmb2-$SMB2_VERSION libsmb2)
     fi
   fi
 
@@ -2000,18 +2025,18 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $libisofsFlag -eq 1; then
+  if test $allFlag -eq 1 -o $isofsFlag -eq 1; then
     (
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get libisofs ($LIBISOFS_VERSION)..."
-     directoryName="libisofs-$LIBISOFS_VERSION"
+     $ECHO_NO_NEW_LINE "Get isofs ($ISOFS_VERSION)..."
+     directoryName="libisofs-$ISOFS_VERSION"
 
      if test ! -d $directoryName; then
-       if test -n "$localDirectory" -a -d $localDirectory/libisofs-$LIBISOFS_VERSION; then
+       if test -n "$localDirectory" -a -d $localDirectory/libisofs-$ISOFS_VERSION; then
          # Note: make a deep copy instead of link to get usable file permissions (source may be owned by root)
-         $CP -r $localDirectory/libisofs-$LIBISOFS_VERSION $directoryName
+         $CP -r $localDirectory/libisofs-$ISOFS_VERSION $directoryName
          result=1
        else
          url="https://dev.lovelyhq.com/libburnia/libisofs.git"
@@ -2020,11 +2045,11 @@ if test $cleanFlag -eq 0; then
            fatalError "checkout $url -> $directoryName"
          fi
          (cd $directoryName; \
-          $GIT checkout $LIBISOFS_VERSION 1>/dev/null 2>/dev/null; \
+          $GIT checkout $ISOFS_VERSION 1>/dev/null 2>/dev/null; \
           install -d m4;
          )
          if test $? -ne 0; then
-           fatalError "checkout tag v$LIBISOFS_VERSION"
+           fatalError "checkout tag v$ISOFS_VERSION"
          fi
          result=2
        fi
@@ -2033,15 +2058,18 @@ if test $cleanFlag -eq 0; then
      fi
 
      if test $noDecompressFlag -eq 0; then
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libisofs-$LIBISOFS_VERSION libisofs)
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libisofs-$ISOFS_VERSION libisofs)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
 
+       # fix ac4local.m4 for current libtool version
+       (cd $workingDirectory/libisofs; rm -f aclocal.m4 && autoreconf --force --install) 1>/dev/null 2>/dev/null
+
        # patch to fix defintions for MinGW:
-       #   diff -Naur libisofs-$LIBISOFS_VERSION.org libisofs-$LIBISOFS_VERSION > libisofs-$LIBISOFS_VERSION-mingw-definitions.patch
+       #   diff -Naur libisofs-$ISOFS_VERSION.org libisofs-$ISOFS_VERSION > libisofs-$ISOFS_VERSION-mingw-definitions.patch
        # Note: ignore exit code 1: patch may already be applied
-#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libisofs-$LIBISOFS_VERSION-mingw-definitions.patch) 1>/dev/null
+#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libisofs-$ISOFS_VERSION-mingw-definitions.patch) 1>/dev/null
 #       if test $? -gt 1; then
 #         fatalError "patch"
 #       fi
@@ -2058,31 +2086,22 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $libburnFlag -eq 1; then
+  if test $allFlag -eq 1 -o $rcuFlag -eq 1 -o $xfsProgsFlag -eq 1; then
     (
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get libburn ($LIBBURN_VERSION)..."
-     directoryName="libburn-$LIBBURN_VERSION"
-
-     if test ! -d $directoryName; then
-       if test -n "$localDirectory" -a -d $localDirectory/libburn-$LIBBURN_VERSION; then
-         # Note: make a deep copy instead of link to get usable file permissions (source may be owned by root)
-         $CP -r $localDirectory/libburn-$LIBBURN_VERSION $directoryName
+     $ECHO_NO_NEW_LINE "Get userspace-rcu ($RCU_VERSION)..."
+     fileName="userspace-rcu-$RCU_VERSION.tar.bz2"
+     if test ! -f $fileName; then
+       if test -n "$localDirectory" -a -f $localDirectory/$fileName; then
+         $LN -s $localDirectory/$fileName $fileName
          result=1
        else
-         url="https://dev.lovelyhq.com/libburnia/libburn.git"
-         $GIT clone $url $directoryName 1>/dev/null 2>/dev/null
+         url="https://lttng.org/files/urcu/$fileName"
+         $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
-           fatalError "checkout $url -> $directoryName"
-         fi
-         (cd $directoryName; \
-          $GIT checkout $LIBBURN_VERSION 1>/dev/null 2>/dev/null; \
-          install -d m4;
-         )
-         if test $? -ne 0; then
-           fatalError "checkout tag v$LIBBURN_VERSION"
+           fatalError "download $url -> $fileName"
          fi
          result=2
        fi
@@ -2091,15 +2110,141 @@ if test $cleanFlag -eq 0; then
      fi
 
      if test $noDecompressFlag -eq 0; then
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libburn-$LIBBURN_VERSION libburn)
+       $TAR xjf $fileName
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/userspace-rcu-$RCU_VERSION userspace-rcu)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
 
-       # patch to fix defintions for MinGW:
-       #   diff -Naur libburn-$LIBBURN_VERSION.org libburn-$LIBBURN_VERSION > libburn-$LIBBURN_VERSION-mingw-definitions.patch
+       # patch to add version in userspace-rcu
+       #   diff -ru userspace-rcu-0.15.3.org/ userspace-rcu-0.15.3|grep -v 'Only in' > ../misc/userspace-rcu-0.15.3-version.patch
        # Note: ignore exit code 1: patch may already be applied
-#       (cd $workingDirectory/libisofs; $PATCH --batch -N -p1 < $patchDirectory/libburn-$LIBBURN_VERSION-mingw-definitions.patch) 1>/dev/null
+       (cd $workingDirectory/userspace-rcu; $PATCH --batch -N -p1 < $patchDirectory/userspace-rcu-0.15.3-version.patch) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get xfsProgs ($XFSPROGS_VERSION)..."
+     fileName="xfsprogs-$XFSPROGS_VERSION.tar.xz"
+     if test ! -f $fileName; then
+       if test -n "$localDirectory" -a -f $localDirectory/$fileName; then
+         $LN -s $localDirectory/$fileName $fileName
+         result=1
+       else
+         url="https://www.kernel.org/pub/linux/utils/fs/xfs/xfsprogs/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "download $url -> $fileName"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+
+     if test $noDecompressFlag -eq 0; then
+       $TAR xJf $fileName
+       # Note: xfsProgs does not provide a version. Thus create text file with version number
+# TODO
+#       echo $XFSPROGS_VERSION > xfsprogs-$XFSPROGS_VERSION/version.txt
+       if test $? -ne 0; then
+         fatalError "decompress"
+       fi
+
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/xfsprogs-$XFSPROGS_VERSION xfsprogs)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # patch to fix clean+install-dev+version issue in xfsprogs 6.16.0
+       #   diff -u xfsprogs 6.16.0.org/mkfs xfsprogs 6.16.0/mkfs > ../misc/xfsprogs 6.16.0-clean-issue.patch
+       #   diff -u xfsprogs 6.16.0.org xfsprogs 6.16.0 > ../misc/xfsprogs 6.16.0-install-dev-issue.patch
+       #   diff -u xfsprogs 6.16.0.org xfsprogs 6.16.0 > ../misc/xfsprogs 6.16.0-version.patch
+       # Note: ignore exit code 1: patch may already be applied
+       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-clean-issue.patch) 1>/dev/null
+       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-install-dev-issue.patch) 1>/dev/null
+       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-cache-alloc-issue.patch; autoconf) 1>/dev/null
+       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-version.patch; autoconf) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
+       fi
+     fi
+
+     exit $result
+    )
+    result=$?
+    case $result in
+      1) $ECHO "ok (local)"; ;;
+      2) $ECHO "ok"; ;;
+      3) $ECHO "ok (cached)"; ;;
+      *) exit $result; ;;
+    esac
+  fi
+
+  if test $allFlag -eq 1 -o $burnFlag -eq 1; then
+    (
+     install -d "$destinationDirectory"
+     cd "$destinationDirectory"
+
+     $ECHO_NO_NEW_LINE "Get burn ($BURN_VERSION)..."
+     directoryName="libburn-$BURN_VERSION"
+
+     if test ! -d $directoryName; then
+       if test -n "$localDirectory" -a -d $localDirectory/libburn-$BURN_VERSION; then
+         # Note: make a deep copy instead of link to get usable file permissions (source may be owned by root)
+         $CP -r $localDirectory/libburn-$BURN_VERSION $directoryName
+         result=1
+       else
+         url="https://dev.lovelyhq.com/libburnia/libburn.git"
+         $GIT clone $url $directoryName 1>/dev/null 2>/dev/null
+         if test $? -ne 0; then
+           fatalError "checkout $url -> $directoryName"
+         fi
+         (cd $directoryName; \
+          $GIT checkout $BURN_VERSION 1>/dev/null 2>/dev/null; \
+          install -d m4;
+         )
+         if test $? -ne 0; then
+           fatalError "checkout tag v$BURN_VERSION"
+         fi
+         result=2
+       fi
+     else
+       result=3
+     fi
+
+     if test $noDecompressFlag -eq 0; then
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/libburn-$BURN_VERSION libburn)
+       if test $? -ne 0; then
+         fatalError "symbolic link"
+       fi
+
+       # fix ac4local.m4 for current libtool version
+       (cd $workingDirectory/libburn; rm -f aclocal.m4 && autoreconf --force --install) 1>/dev/null 2>/dev/null
+
+       # patch to fix defintions for MinGW:
+       #   diff -Naur libburn-$BURN_VERSION.org libburn-$BURN_VERSION > libburn-$BURN_VERSION-mingw-definitions.patch
+       # Note: ignore exit code 1: patch may already be applied
+#       (cd $workingDirectory/libburn; $PATCH --batch -N -p1 < $patchDirectory/libburn-$BURN_VERSION-mingw-definitions.patch) 1>/dev/null
 #       if test $? -gt 1; then
 #         fatalError "patch"
 #       fi
@@ -2490,7 +2635,7 @@ else
     $RMF $workingDirectory/openssl
   fi
 
-  if test $allFlag -eq 1 -o $libssh2Flag -eq 1; then
+  if test $allFlag -eq 1 -o $ssh2Flag -eq 1; then
     # libssh2
     (
       cd "$destinationDirectory"
@@ -2534,7 +2679,7 @@ else
     $RMF $workingDirectory/nettle
   fi
 
-  if test $allFlag -eq 1 -o $libcdioFlag -eq 1; then
+  if test $allFlag -eq 1 -o $cdioFlag -eq 1; then
     # libiconv
     (
       cd "$destinationDirectory"
@@ -2552,7 +2697,7 @@ else
     $RMF $workingDirectory/libcdio
   fi
 
-  if test $allFlag -eq 1 -o $libsmb2Flag -eq 1; then
+  if test $allFlag -eq 1 -o $smb2Flag -eq 1; then
     # krb5
     (
       cd "$destinationDirectory"
@@ -2633,7 +2778,7 @@ else
     $RMF $workingDirectory/par2cmdline
   fi
 
-  if test $allFlag -eq 1 -o $libisofsFlag -eq 1; then
+  if test $allFlag -eq 1 -o $isofsFlag -eq 1; then
     # libisofs
     (
       cd "$destinationDirectory"
@@ -2642,7 +2787,17 @@ else
     $RMF $workingDirectory/libisofs
   fi
 
-  if test $allFlag -eq 1 -o $libburnFlag -eq 1; then
+  if test $allFlag -eq 1 -o $rcuFlag -eq 1 -o $xfsProgsFlag -eq 1; then
+    # librcu
+    (
+      cd "$destinationDirectory"
+      $RMRF userspace-rcu-*
+      $RMRF xfsprogs-*
+    ) 2>/dev/null
+    $RMF $workingDirectory/librcu
+  fi
+
+  if test $allFlag -eq 1 -o $burnFlag -eq 1; then
     # libburn
     (
       cd "$destinationDirectory"
@@ -2652,7 +2807,7 @@ else
   fi
 
   if test $allFlag -eq 1 -o $utilLinuxFlag -eq 1; then
-    # libburn
+    # util-linux
     (
       cd "$destinationDirectory"
       $RMRF util-linux-*
@@ -2689,7 +2844,7 @@ else
     $RMF $workingDirectory/launch4j
   fi
 
-  if test $jreWindowsFlag -eq 1; then
+  if test $allFlag -eq 1 -o $jreWindowsFlag -eq 1; then
     # Windows JRE
     (
       cd "$destinationDirectory"

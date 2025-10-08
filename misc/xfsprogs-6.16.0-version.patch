@@ -1,0 +1,29 @@
+diff -ru xfsprogs-6.16.0.org/configure.ac xfsprogs-6.16.0/configure.ac
+--- xfsprogs-6.16.0.org/configure.ac	2025-08-26 20:27:13.000000000 +0200
++++ xfsprogs-6.16.0/configure.ac	2025-10-10 03:39:58.329412804 +0200
+@@ -217,4 +217,5 @@
+ AC_HAVE_LIBURCU_ATOMIC64
+ 
+ AC_CONFIG_FILES([include/builddefs])
++AC_CONFIG_FILES([include/libxfs_version.h])
+ AC_OUTPUT
+diff -ru xfsprogs-6.16.0.org/include/Makefile xfsprogs-6.16.0/include/Makefile
+--- xfsprogs-6.16.0.org/include/Makefile	2025-03-31 09:55:41.000000000 +0200
++++ xfsprogs-6.16.0/include/Makefile	2025-10-10 03:40:27.577879969 +0200
+@@ -7,6 +7,7 @@
+ include $(TOPDIR)/include/builddefs
+ 
+ LIBHFILES = libxfs.h \
++        libxfs_version.h \
+ 	libxlog.h \
+ 	libxcmd.h \
+ 	atomic.h \
+diff -ru xfsprogs-6.16.0.org/include/libxfs_version.h.in xfsprogs-6.16.0/include/libxfs_version.h.in
+--- xfsprogs-6.16.0.org/include/libxfs_version.h.in	2025-10-10 03:48:36.936694473 +0200
++++ xfsprogs-6.16.0/include/libxfs_version.h.in	2025-10-10 03:39:21.391822790 +0200
+@@ -0,0 +1,5 @@
++#ifndef __LIBXFS_VERSION_H__
++#define __LIBXFS_VERSION_H__
++#define LIBXFS_VERSION "@PACKAGE_VERSION@"
++#endif // __LIBXFS_VERSION_H__
++

@@ -713,7 +713,7 @@ AC_DEFUN([AC_PROG_SUDO_COMMAND],
         ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
         # test sudo
-        SUDO_ASKPASS=false $SUDO -n -l 2>/dev/null | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        SUDO_ASKPASS=false $SUDO -n -ll 2>/dev/null | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
         if   test $? -eq 0; then
           ac_result=yes
         else
@@ -726,7 +726,7 @@ AC_DEFUN([AC_PROG_SUDO_COMMAND],
   else
     ac_result=no
   fi
-  AS_IF([test "$ac_result" != no],[$3],:,[$4])
+  AS_IF([test "$ac_result" != "no"],[$3],[$4])
   AS_VAR_POPDEF([ac_cv_prog_sudo_command])dnl
   AC_PROVIDE([$0])dnl
 ])
@@ -848,6 +848,8 @@ AC_SUBST(HAVE_MARIADB)                       dnl "1" for MariaDB support, "" oth
 AC_SUBST(HAVE_POSTGRESQL)                    dnl "1" for PostgreSQL support, "" otherwise
 AC_SUBST(HAVE_PAR2)                          dnl "1" for PAR2 support, "" otherwise
 AC_SUBST(HAVE_ISOFS)                         dnl "1" for isofs support, "" otherwise
+AC_SUBST(HAVE_RCU)                           dnl "1" for rcu support, "" otherwise
+AC_SUBST(HAVE_XFS)                           dnl "1" for xfs support, "" otherwise
 AC_SUBST(HAVE_BURN)                          dnl "1" for burn support, "" otherwise
 AC_SUBST(HAVE_MOUNT)                         dnl "1" for mount support, "" otherwise
 AC_SUBST(HAVE_PTHREADS_W32)                  dnl "1" for pthreads-w32 support, "" otherwise
@@ -941,6 +943,7 @@ AC_SUBST(MKFS_EXT3)                          dnl mksfs.ext3 command
 AC_SUBST(MKFS_EXT4)                          dnl mksfs.ext4 command
 AC_SUBST(MKFS_MSDOS)                         dnl mksfs.msdos command
 AC_SUBST(MKFS_EXFAT)                         dnl mksfs.exfat command
+AC_SUBST(MKFS_XFS)                           dnl mksfs.xfs command
 
 AC_SUBST(SOCAT)                              dnl socat command
 
@@ -1019,6 +1022,7 @@ ENABLE_POSTGRESQL="yes"
 ENABLE_PTHREADS_W32="yes"
 ENABLE_PAR2="yes"
 ENABLE_ISOFS="yes"
+ENABLE_XFS="yes"
 ENABLE_BURN="yes"
 ENABLE_MOUNT="yes"
 ENABLE_BFD="yes"
@@ -1252,6 +1256,11 @@ AC_ARG_ENABLE(
   isofs,
   AC_HELP_STRING([--disable-isofs],[disable ISO file system support]),
   [ENABLE_ISOFS=$enableval]
+)
+AC_ARG_ENABLE(
+  xfs,
+  AC_HELP_STRING([--disable-xfs],[disable XFS file system support]),
+  [ENABLE_XFS=$enableval]
 )
 AC_ARG_ENABLE(
   burn,
@@ -1537,6 +1546,7 @@ AC_PATH_PROGS(MKFS_EXT3, mkfs.ext3, ,/sbin)
 AC_PATH_PROGS(MKFS_EXT4, mkfs.ext4, ,/sbin)
 AC_PATH_PROGS(MKFS_MSDOS,mkfs.msdos,,/sbin)
 AC_PATH_PROGS(MKFS_EXFAT,mkfs.exfat,,/sbin)
+AC_PATH_PROGS(MKFS_XFS,  mkfs.xfs,  ,/sbin)
 
 AC_PATH_PROGS(SOCAT,socat)
 
@@ -1664,20 +1674,20 @@ case $host_os in
 esac
 
 # sudo tests (Note: keep "," immediately after "]"!)
-AC_PROG_SUDO_COMMAND([mknod \* c \*],                                       [mknod \* c \*],                                       ,,[HAVE_SUDO_COMMAND_MKNOD_C=0;      HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([mknod \* b \*],                                       [mknod \* b \*],                                       ,,[HAVE_SUDO_COMMAND_MKNOD_B=0;      HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([chattr \* data/\*],                                   [chattr \* data/\*],                                   ,,[HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                              [chattr \* configure-\*],                              ,,[HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] intermediate/dev[[01]]],        [mount /dev/loop[[01]] intermediate/dev[[01]]],        ,,[HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([umount intermediate/dev[[01]]],                       [umount intermediate/dev[[01]]],                       ,,[HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                          [losetup -d /dev/loop[[01]]],                          ,,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev[[01]].dat],  [losetup /dev/loop[[01]] intermediate/dev[[01]]\.dat], ,,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],,,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                         [chmod o\+rw /dev/loop[[01]]],                         ,,[HAVE_SUDO_COMMAND_CHMOD=0;        HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([cp -r -p data/\* intermediate/dev[[01]]],             [cp -r -p data/\* intermediate/dev[[01]]],             ,,[HAVE_SUDO_COMMAND_CP=0;           HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([diff -r intermediate/dev0 intermediate/dev1],         [diff -r intermediate/dev0 intermediate/dev1],         ,,[HAVE_SUDO_COMMAND_DIFF=0;         HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([chattr -i \* data/\*],                                [chattr \* data/\*],                                   ,,[HAVE_SUDO_COMMAND_CHATTR_I=0;     HAVE_SUDO_COMMANDS=0])
-AC_PROG_SUDO_COMMAND([chattr -a \* data/\*],                                [chattr \* data/\*],                                   ,,[HAVE_SUDO_COMMAND_CHATTR_A=0;     HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([mknod \* c \*],                                       [mknod \* c \*],                                       ,[HAVE_SUDO_COMMAND_MKNOD_C=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([mknod \* b \*],                                       [mknod \* b \*],                                       ,[HAVE_SUDO_COMMAND_MKNOD_B=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chattr \* data/\*],                                   [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                              [chattr \* configure-\*],                              ,[HAVE_SUDO_COMMAND_CHATTR=0;       HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] intermediate/dev[[01]]],        [mount /dev/loop[[01]] intermediate/dev[[01]]],        ,[HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([umount intermediate/dev[[01]]],                       [umount intermediate/dev[[01]]],                       ,[HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0; HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                          [losetup -d /dev/loop[[01]]],                          ,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev[[01]].dat],  [losetup /dev/loop[[01]] intermediate/dev[[01]]\.dat], ,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] intermediate/dev0[[ab]]\.dat],,[HAVE_SUDO_COMMAND_LOSETUP=0;      HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                         [chmod o\+rw /dev/loop[[01]]],                         ,[HAVE_SUDO_COMMAND_CHMOD=0;        HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([cp -r -p data/\* intermediate/dev[[01]]],             [cp -r -p data/\* intermediate/dev[[01]]],             ,[HAVE_SUDO_COMMAND_CP=0;           HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([diff -r intermediate/dev0 intermediate/dev1],         [diff -r intermediate/dev0 intermediate/dev1],         ,[HAVE_SUDO_COMMAND_DIFF=0;         HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chattr -i \* data/\*],                                [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR_I=0;     HAVE_SUDO_COMMANDS=0])
+AC_PROG_SUDO_COMMAND([chattr -a \* data/\*],                                [chattr \* data/\*],                                   ,[HAVE_SUDO_COMMAND_CHATTR_A=0;     HAVE_SUDO_COMMANDS=0])
 
 # test user
 AC_CACHE_CHECK(
@@ -1951,7 +1961,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
     if test $result -eq 1; then
       (cd zlib; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
       if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
+        AC_MSG_RESULT([fail (install)])
         AC_MSG_OUTPUT_LOG($tmpFile)
         result=0
       fi
@@ -2253,7 +2263,7 @@ if test $ENABLE_LZO = "yes"; then
       if test $result -eq 1; then
         (cd lzo; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
+          AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
@@ -2404,7 +2414,7 @@ if test $ENABLE_ZSTD = "yes"; then
       result=1
       if test $result -eq 1; then
         if test "$build" == "$host"; then
-          (cd zstd; make clean; make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
+          (cd zstd; make clean; make -j$CPU_CORES -C lib) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             AC_MSG_RESULT([fail (make)])
             AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2412,7 +2422,7 @@ if test $ENABLE_ZSTD = "yes"; then
           fi
         else
           # Note: do not set LDFLAGS
-          (cd zstd; make clean; make -C lib -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
+          (cd zstd; make clean; make -j$CPU_CORES -C lib CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
           if test $? -ne 0; then
             AC_MSG_RESULT([fail (make)])
             AC_MSG_OUTPUT_LOG($tmpFile)
@@ -4243,7 +4253,12 @@ if test $ENABLE_SMBCLIENT = "yes"; then
           fi
           if test $result1 -eq 1; then
             # Note: build only lib: tests do not compile with static libraries
-            (cd krb5/src; make clean; make -C util -j$CPU_CORES && make -C include -j$CPU_CORES && make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
+            (   cd krb5/src \
+             && make clean \
+             && make -j$CPU_CORES -C util \
+             && make -j$CPU_CORES -C include \
+             && make -j$CPU_CORES -C lib \
+            ) 1>$tmpFile 2>&1
             if test $? -ne 0; then
               AC_MSG_RESULT([fail (make)])
               AC_MSG_OUTPUT_LOG(krb5/src/config.log)
@@ -4809,6 +4824,209 @@ if test $ENABLE_ISOFS = "yes"; then
   fi
 fi
 
+# compile/use xfsprogrs (liburcu libxfs)
+if test $ENABLE_XFS = "yes"; then
+  if test \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \) -a \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
+    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
+      dnl compile userspace rcu library
+
+      cwd=`pwd`
+
+      AC_MSG_COMPILE([userspace-rcu])
+      result1=1
+      if test $result1 -eq 1; then
+        case $host_os in
+          linux-*)
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+          windows*|mingw*)
+            ;;
+        esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            (cd userspace-rcu; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            (cd userspace-rcu; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+            ) 1>$tmpFile 2>&1
+            ;;
+        esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd userspace-rcu; \
+         make -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd userspace-rcu; \
+         make install PREFIX=$cwd/extern; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+
+      AC_MSG_COMPILE([xfsprogs])
+      result2=1
+      if test $result2 -eq 1; then
+        case $host_os in
+          linux-*)
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+          windows*|mingw*)
+            ;;
+        esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (patch)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        (cd xfsprogs; make configure)
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            (cd xfsprogs; CC="$CC" CPPFLAGS="" CFLAGS="-I$cwd/extern/include" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            (cd xfsprogs; CC="$CC" CPPFLAGS="" CFLAGS="-I$cwd/extern/include" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+            ) 1>$tmpFile 2>&1
+            ;;
+        esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result2=0
+        fi
+      fi
+
+      if test $result2 -eq 1; then
+        (   cd xfsprogs \
+         && make headers \
+         && make -j$CPU_CORES -C include install-headers \
+         && make -j$CPU_CORES -C libxfs install-headers \
+         && make -j$CPU_CORES -C include \
+         && make -j$CPU_CORES -C libfrog \
+         && make -j$CPU_CORES -C libxfs \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        (   cd xfsprogs \
+         && make -j$CPU_CORES -C libfrog install-dev \
+         && make -j$CPU_CORES -C libxfs install-dev \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result2=0
+        fi
+      fi
+      if test $result2 -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+    else
+      result1=1
+      result2=1
+    fi
+
+    if test $result1 -eq 1 -a $result2 -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES xfs frog urcu"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu"
+      fi
+      HAVE_RCU=1
+      HAVE_XFS=1
+      AC_DEFINE(HAVE_RCU,1,[rcu installed (local)])
+      AC_DEFINE(HAVE_XFS,1,[xfs installed (local)])
+    fi
+  else
+    dnl search for installed libxfs, libfrog, liburcu libraries
+
+# TODO: frog, rcu
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
+    else
+      if test -z "$HAVE_XFSPROGS"; then
+        AC_SEARCH_STATIC_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
+      fi
+      if test -z "$HAVE_XFSPROGS"; then
+        AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
+      fi
+    fi
+  fi
+
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
+  if test -z "$HAVE_RCU"; then
+    if test ! \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \); then
+      AC_MSG_WARN([userspace-rcu not compiled: userspace-rcu package missing])
+    fi
+  fi
+  if test -z "$HAVE_XFS"; then
+    if test ! \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
+      AC_MSG_WARN([xfsprogs not compiled: xfsprogs package missing])
+    fi
+  fi
+fi
+
 # compile/use burn library
 if test $ENABLE_BURN = "yes"; then
   if test -d libburn -o -d "`readlink libburn`"; then
@@ -4888,13 +5106,13 @@ if test $ENABLE_BURN = "yes"; then
     dnl search for installed burn library
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;LIBRARIES="burn $LIBRARIES";AC_DEFINE(HAVE_BURN,1,[libisofs installed])])
+      AC_SEARCH_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;LIBRARIES="burn $LIBRARIES";AC_DEFINE(HAVE_BURN,1,[libburn installed])])
     else
       if test -z "$HAVE_BURN"; then
-        AC_SEARCH_STATIC_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;STATIC_LIBRARIES="$STATIC_LIBRARIES burn";AC_DEFINE(HAVE_BURN,1,[libisofs installed])])
+        AC_SEARCH_STATIC_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;STATIC_LIBRARIES="$STATIC_LIBRARIES burn";AC_DEFINE(HAVE_BURN,1,[libburn installed])])
       fi
       if test -z "$HAVE_BURN"; then
-        AC_SEARCH_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;LIBRARIES="burn $LIBRARIES";AC_DEFINE(HAVE_BURN,1,[libisofs installed])])
+        AC_SEARCH_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;LIBRARIES="burn $LIBRARIES";AC_DEFINE(HAVE_BURN,1,[libburn installed])])
       fi
     fi
   fi
@@ -5229,6 +5447,8 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_PCRE      ,,AC_MSG_ERROR([PCRE missing]))
    AS_IF(test $HAVE_PAR2      ,,AC_MSG_ERROR([PAR2 missing]))
    AS_IF(test $HAVE_ISOFS     ,,AC_MSG_ERROR([isofs missing]))
+   AS_IF(test $HAVE_RCU       ,,AC_MSG_ERROR([rcu missing]))
+   AS_IF(test $HAVE_XFS       ,,AC_MSG_ERROR([xfs missing]))
    AS_IF(test $HAVE_BURN      ,,AC_MSG_ERROR([burn missing]))
    AS_IF(test $HAVE_MOUNT     ,,AC_MSG_ERROR([mount missing]))
   ]
@@ -5558,9 +5778,9 @@ AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_
 AC_CHECK_FUNCTION(mnt_new_table_from_file,AC_DEFINE(HAVE_MNT_NEW_TABLE_FROM_FILE,1,[mnt_new_table_from_file() available]),,libmount.h)
 AC_CHECK_FUNCTION(mnt_context_mount,AC_DEFINE(HAVE_MNT_CONTEXT_MOUNT,1,[mnt_context_mount() available]),,libmount.h)
 
-AC_CHECK_FUNCTION(blkid_new_probe_from_filename,AC_DEFINE(HAVE_BLKID_NEW_PROBE_FROM_FILENAME,1,[blkid_new_probe_from_filename() available]),,blkid/blkid.h)
-AC_CHECK_FUNCTION(blkid_do_probe,               AC_DEFINE(HAVE_BLKID_DO_PROBE,               1,[blkid_do_probe() available]),,blkid/blkid.h)
-AC_CHECK_FUNCTION(blkid_probe_lookup_value,     AC_DEFINE(HAVE_BLKID_PROBE_LOOKUP_VALUE,     1,[blkid_probe_lookup_value() available]),,blkid/blkid.h)
+AC_CHECK_FUNCTION(blkid_new_probe,         AC_DEFINE(HAVE_BLKID_NEW,               1,[blkid_new_probe() available]),,blkid/blkid.h)
+AC_CHECK_FUNCTION(blkid_do_probe,          AC_DEFINE(HAVE_BLKID_DO_PROBE,          1,[blkid_do_probe() available]),,blkid/blkid.h)
+AC_CHECK_FUNCTION(blkid_probe_lookup_value,AC_DEFINE(HAVE_BLKID_PROBE_LOOKUP_VALUE,1,[blkid_probe_lookup_value() available]),,blkid/blkid.h)
 
 AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]),,bfd.h)
 AC_CHECK_FUNCTION(bfd_get_section_flags,AC_DEFINE(HAVE_BFD_GET_SECTION_FLAGS,1,[bfd_get_section_flags() available]),,bfd.h)
@@ -5618,7 +5838,7 @@ AC_CONSTANT_VALUE([],
                   []
                  )
 if test $VERSION_SQLITE_NUMBER -lt 3038000; then
-  AC_ERROR([Required SQLite 3.38 (3038000) or newer - found $VERSION_SQLITE])
+  AC_ERROR([required SQLite 3.38 (3038000) or newer - found $VERSION_SQLITE])
 fi
 AC_DEFINE_UNQUOTED(VERSION_SQLITE,"$VERSION_SQLITE",[sqlite version])
 
@@ -5715,6 +5935,7 @@ fi
 
 if test "$HAVE_XDELTA3"; then
   # Note: xdelta3 does not have a define for version
+# TODO: version
   AC_DEFINE_UNQUOTED(VERSION_XDELTA3,"3.0.11",[xdelta3 version])
 else
   AC_DEFINE_UNQUOTED(VERSION_XDELTA3,"",[xdelta3 version])
@@ -5766,16 +5987,16 @@ fi
 
 if test "$HAVE_SSH2"; then
   AC_CONSTANT_VALUE([ssh2 version],
-                    VERSION_LIBSSH2,
+                    VERSION_SSH2,
                     [#include "libssh2.h"
                     ],
                     [LIBSSH2_VERSION],
                     [],
                     [ "]
                    )
-  AC_DEFINE_UNQUOTED(VERSION_LIBSSH2,"$VERSION_LIBSSH2",[libssh version])
+  AC_DEFINE_UNQUOTED(VERSION_SSH2,"$VERSION_SSH2",[libssh version])
 else
-  AC_DEFINE_UNQUOTED(VERSION_LIBSSH2,"",[libssh version])
+  AC_DEFINE_UNQUOTED(VERSION_SSH2,"",[libssh version])
 fi
 
 if test "$HAVE_CURL"; then
@@ -5787,16 +6008,8 @@ if test "$HAVE_CURL"; then
                     [],
                     [ "]
                    )
-  AC_CONSTANT_VALUE([],
-                    VERSION_CURL_NUMBER,
-                    [#include "curl/curl.h"
-                    ],
-                    [LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH],
-                    [],
-                    [ "]
-                   )
-  if test -n "$VERSION_CURL_NUMBER" -a $VERSION_CURL_NUMBER -lt 7770; then
-    AC_ERROR([Required libcurl 7.77 (0x077700) or newer - found '$VERSION_CURL'])
+  if test -n "$VERSION_CURL" -a "$VERSION_CURL" \< "7.77"; then
+    AC_ERROR([required libcurl 7.77 (0x077700) or newer - found '$VERSION_CURL'])
   fi
   AC_DEFINE_UNQUOTED(VERSION_CURL,"$VERSION_CURL",[curl version])
 else
@@ -5822,7 +6035,7 @@ if test "$HAVE_ISO9660"; then
                    )
 
   if test $VERSION_CDIO_NUMBER -lt 10100; then
-    AC_ERROR([Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO])
+    AC_ERROR([required libcdio 1.10 (10100) or newer - found $VERSION_CDIO])
   fi
   AC_DEFINE_UNQUOTED(VERSION_CDIO,"$VERSION_CDIO",[cdio version])
 else
@@ -5831,10 +6044,10 @@ fi
 
 if test "$HAVE_SMB2"; then
   ac_cv_value=`cd libsmb2; PKG_CONFIG_PATH=. pkg-config --modversion libsmb2`
-  AS_VAR_SET(VERSION_LIBSMB2,$ac_cv_value)
-  AC_DEFINE_UNQUOTED(VERSION_LIBSMB2,"$VERSION_LIBSMB2",[SMB2 version])
+  AS_VAR_SET(VERSION_SMB2,$ac_cv_value)
+  AC_DEFINE_UNQUOTED(VERSION_SMB2,"$VERSION_SMB2",[SMB2 version])
 else
-  AC_DEFINE_UNQUOTED(VERSION_LIBSMB2,"",[SMB2 version])
+  AC_DEFINE_UNQUOTED(VERSION_SMB2,"",[SMB2 version])
 fi
 
 if test "$HAVE_MARIADB"; then
@@ -5902,9 +6115,38 @@ if test "$HAVE_ISOFS"; then
                     [],
                     [ "]
                    )
-  AC_DEFINE_UNQUOTED(VERSION_ISOFS,"$VERSION_ISOFS",[isofs version])
+  AC_DEFINE_UNQUOTED(VERSION_ISOFS,"$VERSION_ISOFS",[isofs file system version])
 else
-  AC_DEFINE_UNQUOTED(VERSION_ISOFS,"",[isofs version])
+  AC_DEFINE_UNQUOTED(VERSION_ISOFS,"",[isofs file system version])
+fi
+
+
+if test "$HAVE_RCU"; then
+  AC_CONSTANT_VALUE([rcu version],
+                    VERSION_RCU,
+                    [#include "urcu/urcu_version.h"
+                    ],
+                    [LIBURCU_VERSION],
+                    [],
+                    [ "]
+                   )
+  AC_DEFINE_UNQUOTED(VERSION_RCU,"$VERSION_RCU",[rcu version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_RCU,"",[rcu version])
+fi
+
+if test "$HAVE_XFS"; then
+  AC_CONSTANT_VALUE([xfs version],
+                    VERSION_XFS,
+                    [#include "xfs/libxfs_version.h"
+                    ],
+                    [LIBXFS_VERSION],
+                    [],
+                    [ "]
+                   )
+  AC_DEFINE_UNQUOTED(VERSION_XFS,"$VERSION_XFS",xfs version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_XFS,"",[xfs version])
 fi
 
 if test "$HAVE_BURN"; then
@@ -6013,16 +6255,17 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  crypto support       : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support          : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
                     echo "  curl support         : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
-                    echo "  SCP/SFTP support     : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_LIBSSH2)"; else echo no; fi`";
+                    echo "  SCP/SFTP support     : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_SSH2)"; else echo no; fi`";
                     echo "  TLS/SSL server       : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support     : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
-                    echo "  SMB support          : `if test "$HAVE_SMB2"; then echo "yes ($VERSION_LIBSMB2)"; else echo no; fi`";
+                    echo "  SMB support          : `if test "$HAVE_SMB2"; then echo "yes ($VERSION_SMB2)"; else echo no; fi`";
                     echo "  PCRE support         : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  SQLite               : yes ($VERSION_SQLITE)";
                     echo "  MariaDB support      : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
                     echo "  PostgreSQL support   : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
                     echo "  PAR2 support         : `if test "$HAVE_PAR2"; then echo "yes ($VERSION_PAR2)"; else echo no; fi`";
                     echo "  isofs support        : `if test "$HAVE_ISOFS"; then echo "yes ($VERSION_ISOFS)"; else echo no; fi`";
+                    echo "  xfs support          : `if test "$HAVE_XFS"; then echo "yes ($VERSION_XFS, RCU $VERSION_RCU)"; else echo no; fi`";
                     echo "  burn support         : `if test "$HAVE_BURN"; then echo "yes ($VERSION_BURN)"; else echo no; fi`";
                     echo "  mount support        : `if test "$HAVE_MOUNT"; then echo "yes ($VERSION_MOUNT)"; else echo no; fi`";
                     echo "  GUI support          : `if test "$ENABLE_GUI" = "yes"; then echo yes; else echo no; fi`";
@@ -6063,8 +6306,9 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_PCRE" \
                             -o ! "$HAVE_PAR2" \
                             -o ! "$HAVE_ISOFS" \
+                            -o ! "$HAVE_XFSPROGS" \
                             -o ! "$HAVE_BURN" \
-                            -o ! "$HAVE_MOUNT"; then
+                            -o ! "$HAVE_MOUNT" ; then
                       echo "Note: you can download missing additional software with the script"
                       echo "      './download-third-party-packages.sh'. Please rerun configure"
                       echo "      after downloading."
@@ -6099,6 +6343,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_PCRE=$HAVE_PCRE
                    HAVE_PAR2=$HAVE_PAR2
                    HAVE_ISOFS=$HAVE_ISOFS
+                   HAVE_RCU=$HAVE_RCU
+                   HAVE_XFS=$HAVE_XFS
                    HAVE_BURN=$HAVE_BURN
                    HAVE_MOUNT=$HAVE_MOUNT
                    HAVE_BFD=$HAVE_BFD
@@ -6131,17 +6377,19 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_GCRYPT="$VERSION_GCRYPT"
                    VERSION_CURL="$VERSION_CURL"
                    VERSION_OPENSSL="$VERSION_OPENSSL"
-                   VERSION_LIBSSH2="$VERSION_LIBSSH2"
+                   VERSION_SSH2="$VERSION_SSH2"
                    VERSION_GMP="$VERSION_GMP"
                    VERSION_GNUTLS="$VERSION_GNUTLS"
                    VERSION_MARIADB="$VERSION_MARIADB"
                    VERSION_POSTGRESQL="$VERSION_POSTGRESQL"
                    VERSION_CDIO="$VERSION_CDIO"
-                   VERSION_LIBSMB2="$VERSION_LIBSMB2"
+                   VERSION_SMB2="$VERSION_SMB2"
                    VERSION_PCRE="$VERSION_PCRE"
                    VERSION_SQLITE="$VERSION_SQLITE"
                    VERSION_PAR2="$VERSION_PAR2"
                    VERSION_ISOFS="$VERSION_ISOFS"
+                   VERSION_RCU="$VERSION_RCU"
+                   VERSION_XFS="$VERSION_XFS"
                    VERSION_BURN="$VERSION_BURN"
                    VERSION_MOUNT="$VERSION_MOUNT"
                   )

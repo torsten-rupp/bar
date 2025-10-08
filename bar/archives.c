@@ -4168,6 +4168,9 @@ LOCAL uint16 fileSystemTypeToConstant(FileSystemTypes fileSystemType)
     case FILE_SYSTEM_TYPE_EXFAT:
       result = CHUNK_CONST_FILE_SYSTEM_TYPE_EXFAT;
       break;
+    case FILE_SYSTEM_TYPE_XFS:
+      result = CHUNK_CONST_FILE_SYSTEM_TYPE_XFS;
+      break;
     default:
       result = CHUNK_CONST_FILE_SYSTEM_TYPE_NONE;
       break;
@@ -4222,6 +4225,9 @@ LOCAL FileSystemTypes constantToFileSystemType(uint16 n)
       break;
     case CHUNK_CONST_FILE_SYSTEM_TYPE_EXFAT:
       fileSystemType = FILE_SYSTEM_TYPE_EXFAT;
+      break;
+    case CHUNK_CONST_FILE_SYSTEM_TYPE_XFS:
+      fileSystemType = FILE_SYSTEM_TYPE_XFS;
       break;
     default:
       fileSystemType = FILE_SYSTEM_TYPE_NONE;
@@ -7723,8 +7729,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
     archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.deltaCompressAlgorithm);
     String_set(archiveEntryInfo->image.chunkImageDelta.name,DeltaSource_getName(&archiveEntryInfo->image.deltaSourceHandle));
     archiveEntryInfo->image.chunkImageDelta.size = DeltaSource_getSize(&archiveEntryInfo->image.deltaSourceHandle);
+    AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageDelta.info,{ Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info); });
   }
-  AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImageDelta.info,{ Chunk_done(&archiveEntryInfo->image.chunkImageDelta.info); });
 
   error = Chunk_init(&archiveEntryInfo->image.chunkImageData.info,
                      &archiveEntryInfo->image.chunkImage.info,

@@ -1489,7 +1489,7 @@ class CommandThread extends Thread
 public class BARServer
 {
   // -------------------------- constants -------------------------------
-  public final static int               PROTOCOL_VERSION_MAJOR = 8;
+  public final static int               PROTOCOL_VERSION_MAJOR = 9;
   public final static int               PROTOCOL_VERSION_MINOR = 0;
   public final static String            PROTOCOL_VERSION = PROTOCOL_VERSION_MAJOR+"."+PROTOCOL_VERSION_MINOR;
 

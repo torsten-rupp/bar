@@ -3983,14 +3983,7 @@ LOCAL Errors StorageOptical_readDirectoryList(StorageDirectoryListHandle *storag
     UNUSED_VARIABLE(fileName);
     UNUSED_VARIABLE(fileInfo);
 
-    error = File_readDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle,fileName);
-    if (error == ERROR_NONE)
-    {
-      if (fileInfo != NULL)
-      {
-        (void)File_getInfo(fileInfo,fileName);
-      }
-    }
+    error = File_readDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle,fileName,fileInfo);
   #endif /* HAVE_ISO9660 */
 
   return error;

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-21 11:00+0200\n"
+"POT-Creation-Date: 2025-10-04 02:54+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1949,103 +1949,108 @@ msgstr ""
 msgid "insufficient database version"
 msgstr ""
 
-#: src/BARException.java:1511
+#: src/BARException.java:1513
+#, java-printf-format
+msgid "unknown version %s of index"
+msgstr ""
+
+#: src/BARException.java:1517
 msgid "unknown version of index"
 msgstr ""
 
-#: src/BARException.java:1518
+#: src/BARException.java:1521
 msgid "missing table"
 msgstr ""
 
-#: src/BARException.java:1525
+#: src/BARException.java:1528
 msgid "missing column"
 msgstr ""
 
-#: src/BARException.java:1532
+#: src/BARException.java:1535
 msgid "obsolete table"
 msgstr ""
 
-#: src/BARException.java:1539
+#: src/BARException.java:1542
 msgid "obsolete column"
 msgstr ""
 
-#: src/BARException.java:1546
+#: src/BARException.java:1549
 msgid "database bind failed"
 msgstr ""
 
-#: src/BARException.java:1553
+#: src/BARException.java:1556
 msgid "type mismatch"
 msgstr ""
 
-#: src/BARException.java:1560
+#: src/BARException.java:1563
 msgid "error creating index"
 msgstr ""
 
-#: src/BARException.java:1563
+#: src/BARException.java:1566
 msgid "index not found"
 msgstr ""
 
-#: src/BARException.java:1566
+#: src/BARException.java:1569
 msgid "index still not initialized"
 msgstr ""
 
-#: src/BARException.java:1569
+#: src/BARException.java:1572
 msgid "invalid index"
 msgstr ""
 
-#: src/BARException.java:1576
+#: src/BARException.java:1579
 msgid "parse index id failed"
 msgstr ""
 
-#: src/BARException.java:1583
+#: src/BARException.java:1586
 msgid "database is locked"
 msgstr ""
 
-#: src/BARException.java:1590
+#: src/BARException.java:1593
 msgid "database busy"
 msgstr ""
 
-#: src/BARException.java:1593
+#: src/BARException.java:1596
 msgid "database operation interrupted"
 msgstr ""
 
-#: src/BARException.java:1596
+#: src/BARException.java:1599
 msgid "timeout accessing index"
 msgstr ""
 
-#: src/BARException.java:1603
+#: src/BARException.java:1606
 msgid "database entry not found"
 msgstr ""
 
-#: src/BARException.java:1606
+#: src/BARException.java:1609
 msgid "master disconnected"
 msgstr ""
 
-#: src/BARException.java:1609
+#: src/BARException.java:1612
 msgid "slave disconnected"
 msgstr ""
 
-#: src/BARException.java:1612
+#: src/BARException.java:1615
 msgid "slave is not paired"
 msgstr ""
 
-#: src/BARException.java:1615
+#: src/BARException.java:1618
 msgid "instance is not a slave"
 msgstr ""
 
-#: src/BARException.java:1618
+#: src/BARException.java:1621
 msgid "create PAR2 checksums fail"
 msgstr ""
 
-#: src/BARException.java:1625
+#: src/BARException.java:1628
 msgid "invalid block size (multiple of 4)"
 msgstr ""
 
-#: src/BARException.java:1628
+#: src/BARException.java:1631
 msgid "PAR2 block size too small"
 msgstr ""
 
-#: src/BARException.java:1635
+#: src/BARException.java:1638
 msgid "too many PAR2 blocks (max. 32768)"
 msgstr ""
 

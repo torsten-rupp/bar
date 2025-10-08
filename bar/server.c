@@ -6609,14 +6609,14 @@ LOCAL void jobThreadCode(void)
       {
         if (!String_isEmpty(jobNode->job.options.includeFileCommand))
         {
-          jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.options.includeFileCommand));
+          jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_STORE_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.options.includeFileCommand));
         }
       }
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
         if (!String_isEmpty(jobNode->job.options.includeImageCommand))
         {
-          jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.options.includeImageCommand));
+          jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_STORE_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.options.includeImageCommand));
         }
       }
       if (jobNode->runningInfo.error == ERROR_NONE)
@@ -6632,14 +6632,14 @@ LOCAL void jobThreadCode(void)
       {
         if (!String_isEmpty(jobNode->job.options.includeFileListFileName))
         {
-          jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.options.includeFileListFileName));
+          jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_STORE_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.options.includeFileListFileName));
         }
       }
       if (jobNode->runningInfo.error == ERROR_NONE)
       {
         if (!String_isEmpty(jobNode->job.options.includeImageListFileName))
         {
-          jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.options.includeImageListFileName));
+          jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_STORE_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.options.includeImageListFileName));
         }
       }
       if (jobNode->runningInfo.error == ERROR_NONE)
@@ -9801,7 +9801,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
 
         if (deviceInfo.type == DEVICE_TYPE_BLOCK)
         {
-          FileSystemTypes fileSystemType = FileSystem_getType(String_cString(deviceName));
+          FileSystemTypes fileSystemType = FileSystem_getType(deviceName);
           ServerIO_sendResult(&clientInfo->io,
                               id,FALSE,ERROR_NONE,
                               "name=%'S size=%"PRIu64" fileSystemType=%s mounted=%y",
@@ -12702,7 +12702,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *          Result:
-*            id=<n> entryType=<type> pattern=<text> patternType=<type>
+*            id=<n> entryStoreType=<type> pattern=<text> patternType=<type>
 *            ...
 \***********************************************************************/
 
@@ -12737,9 +12737,9 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
     LIST_ITERATE(&jobNode->job.includeEntryList,entryNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "id=%u entryType=%s pattern=%'S patternType=%s",
+                          "id=%u entryStoreType=%s pattern=%'S patternType=%s",
                           entryNode->id,
-                          EntryList_entryTypeToString(entryNode->type,"unknown"),
+                          EntryList_entryStoreTypeToString(entryNode->storeType,"unknown"),
                           entryNode->string,
                           Pattern_patternTypeToString(entryNode->pattern.type,"unknown")
                          );
@@ -12810,7 +12810,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
-*            entryType=<type>
+*            entryStoreType=<type>
 *            pattern=<text>
 *            [patternType=<type>]
 *          Result:
@@ -12831,10 +12831,10 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
-  EntryTypes   entryType;
-  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)EntryList_parseEntryType,NULL),ENTRY_TYPE_UNKNOWN))
+  EntryStoreTypes entryStoreType;
+  if (!StringMap_getEnum(argumentMap,"entryStoreType",&entryStoreType,CALLBACK_((StringMapParseEnumFunction)EntryList_parseEntryStoreType,NULL),ENTRY_STORE_TYPE_UNKNOWN))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=FILE|IMAGE");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryStoreType=FILE|IMAGE");
     return;
   }
   String patternString = String_new();
@@ -12861,7 +12861,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // add to include list
-    EntryList_append(&jobNode->job.includeEntryList,entryType,patternString,patternType,&entryId);
+    EntryList_append(&jobNode->job.includeEntryList,entryStoreType,patternString,patternType,&entryId);
 
     // notify modified include/exclude lists
     Job_setIncludeExcludeModified(jobNode);
@@ -12885,7 +12885,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *            id=<n>
-*            entryType=<type>
+*            entryStoreType=<type>
 *            pattern=<text>
 *            [patternType=<type>]
 *          Result:
@@ -12911,10 +12911,10 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"id=<n>");
     return;
   }
-  EntryTypes entryType;
-  if (!StringMap_getEnum(argumentMap,"entryType",&entryType,CALLBACK_((StringMapParseEnumFunction)EntryList_parseEntryType,NULL),ENTRY_TYPE_UNKNOWN))
+  EntryStoreTypes entryStoreType;
+  if (!StringMap_getEnum(argumentMap,"entryStoreType",&entryStoreType,CALLBACK_((StringMapParseEnumFunction)EntryList_parseEntryStoreType,NULL),ENTRY_STORE_TYPE_UNKNOWN))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=FILE|IMAGE");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryStoreType=FILE|IMAGE");
     return;
   }
   String patternString = String_new();
@@ -12940,7 +12940,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     }
 
     // update include list
-    EntryList_update(&jobNode->job.includeEntryList,entryId,entryType,patternString,patternType);
+    EntryList_update(&jobNode->job.includeEntryList,entryId,entryStoreType,patternString,patternType);
 
     // notify modified include/exclude lists
     Job_setIncludeExcludeModified(jobNode);
@@ -21721,16 +21721,16 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       }
       if (restoreNode->entryName != NULL)
       {
-        if (!EntryList_contains(&includeEntryList,ENTRY_TYPE_FILE,restoreNode->entryName,PATTERN_TYPE_GLOB))
+        if (!EntryList_contains(&includeEntryList,ENTRY_STORE_TYPE_FILE,restoreNode->entryName,PATTERN_TYPE_GLOB))
         {
-          EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,restoreNode->entryName,PATTERN_TYPE_GLOB,NULL);
+          EntryList_append(&includeEntryList,ENTRY_STORE_TYPE_FILE,restoreNode->entryName,PATTERN_TYPE_GLOB,NULL);
         }
         if (directoryContentFlag && (INDEX_TYPE(restoreNode->entryId) == INDEX_TYPE_DIRECTORY))
         {
           String_appendCString(String_set(entryName,restoreNode->entryName),"/*");
-          if (!EntryList_contains(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB))
+          if (!EntryList_contains(&includeEntryList,ENTRY_STORE_TYPE_FILE,entryName,PATTERN_TYPE_GLOB))
           {
-            EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+            EntryList_append(&includeEntryList,ENTRY_STORE_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
           }
         }
       }

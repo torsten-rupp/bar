@@ -11,6 +11,10 @@ ARG gid=1000
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
 
+# clear APT cache
+RUN    apt clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # update
 RUN apt-get -y update
 
@@ -48,8 +52,10 @@ RUN apt-get -y install --fix-missing \
 RUN apt-get -y install --fix-missing \
   gcc \
   g++ \
+  libblkid-dev \
   libc6 \
   libc6-dev \
+  libinih-dev \
   openjdk-8-jdk \
   openjdk-8-jre \
   cmake \
