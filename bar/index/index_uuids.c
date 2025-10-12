@@ -193,7 +193,9 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
                              NULL,  // lastErrorMessage
                              NULL,  // size
                              NULL,  // totalEntryCount
-                             NULL  // totalEntrySize
+                             NULL,  // totalEntrySize
+                             NULL,  // maxIndexState
+                             NULL  // maxIndexMode
                             )
           )
     {

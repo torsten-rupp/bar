@@ -1253,6 +1253,8 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                     NULL,  // totalSize
                                     NULL,  // totalEntryCount
                                     NULL,  // totalEntrySize
+                                    NULL,  // maxIndexState
+                                    NULL,  // maxIndexMode
                                     NULL  // lockedCount
                                    )
             )
@@ -1292,7 +1294,9 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                                   NULL,  // lastErrorData
                                   NULL,  // size
                                   NULL,  // totalEntryCount
-                                  NULL  // totalEntrySize
+                                  NULL,  // totalEntrySize
+                                  NULL,  // maxIndexState
+                                  NULL  // maxIndexMode
                                  )
             )
       {
