@@ -740,7 +740,14 @@ ERROR NO_IMAGE_ENTRY                   TR("no image entry")
 ERROR NO_IMAGE_DATA                    TR("no image data entry")
 ERROR END_OF_DATA                      TR("end of data")
 ERROR INCOMPLETE_ARCHIVE               TR("incomplete archive")
-ERROR INSUFFICIENT_SPLIT_NUMBERS       TR("insufficient split number digits in name")
+ERROR INSUFFICIENT_SPLIT_NUMBERS
+  stringSet(errorText,sizeof(errorText),TR("insufficient split number digits in name"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppend(errorText,sizeof(errorText)," (");
+    stringAppendFormat(errorText,sizeof(errorText),TR("required at least %s digits"),ERROR_DATA);
+    stringAppend(errorText,sizeof(errorText),")");
+  }
 
 // Note: because of name clash with Windows include use CRC_ instead of CRC
 ERROR CRC_

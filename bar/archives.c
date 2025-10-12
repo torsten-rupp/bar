@@ -5648,7 +5648,7 @@ Errors Archive_formatName(String           fileName,
   assert(templateFileName != NULL);
 
   // init variables
-  StaticString   (uuid,MISC_UUID_STRING_LENGTH);
+  StaticString (uuid,MISC_UUID_STRING_LENGTH);
   Misc_getUUID(uuid);
 
   // init template
@@ -5693,8 +5693,9 @@ Errors Archive_formatName(String           fileName,
           switch (String_index(fileName,i+1))
           {
             case '%':
-              // keep %%
-              i += 2L;
+              // %% -> %
+              String_remove(fileName,i,1);
+              i += 1L;
               break;
             case '#':
               // %# -> #
@@ -5730,7 +5731,7 @@ Errors Archive_formatName(String           fileName,
               }
               if ((ulong)partNumber >= (divisor*10L))
               {
-                return ERROR_INSUFFICIENT_SPLIT_NUMBERS;
+                return ERRORX_(INSUFFICIENT_SPLIT_NUMBERS,0,"%u",(size_t)ceil(log10((double)partNumber)));
               }
 
               // replace #...# by part number
