@@ -1159,6 +1159,7 @@ bool Misc_hasMacrosCString(const char *templateString);
 *          macros               - array with macro definitions
 *          macroCount           - number of macro definitions
 *          expandMacroCharacter - TRUE to expand %% -> %
+*          keepUnknownMacros    - TRUE to keep unknown macros
 * Output : s - string with expanded macros
 * Return : expanded string
 * Notes  : -
@@ -1169,7 +1170,8 @@ String Misc_expandMacros(String           string,
                          ExpandMacroModes expandMacroMode,
                          const TextMacro  macros[],
                          uint             macroCount,
-                         bool             expandMacroCharacter
+                         bool             expandMacroCharacter,
+                         bool             keepUnknownMacros
                         );
 
 /*---------------------------------------------------------------------*/

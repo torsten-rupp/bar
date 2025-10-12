@@ -399,6 +399,7 @@ LOCAL void printArchiveContentListHeader(uint prefixWidth)
                                                       prefixTemplate,
                                                       EXPAND_MACRO_MODE_STRING,
                                                       MACROS,SIZE_OF_ARRAY(MACROS),
+                                                      TRUE,
                                                       TRUE
                                                      )
                                    )
@@ -411,6 +412,7 @@ LOCAL void printArchiveContentListHeader(uint prefixWidth)
                                                   template,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   MACROS,SIZE_OF_ARRAY(MACROS),
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -620,6 +622,7 @@ LOCAL void printFileInfo(uint               prefixWidth,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -633,6 +636,7 @@ LOCAL void printFileInfo(uint               prefixWidth,
                                                 EXPAND_MACRO_MODE_STRING,
                                                 textMacros.data,
                                                 textMacros.count,
+                                                TRUE,
                                                 TRUE
                                                )
                              )
@@ -647,6 +651,7 @@ LOCAL void printFileInfo(uint               prefixWidth,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -808,6 +813,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -821,6 +827,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
                                                 EXPAND_MACRO_MODE_STRING,
                                                 textMacros.data,
                                                 textMacros.count,
+                                                TRUE,
                                                 TRUE
                                                )
                              )
@@ -835,6 +842,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -941,6 +949,7 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -954,6 +963,7 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
                                                 EXPAND_MACRO_MODE_STRING,
                                                 textMacros.data,
                                                 textMacros.count,
+                                                TRUE,
                                                 TRUE
                                                )
                              )
@@ -1062,6 +1072,7 @@ LOCAL void printLinkInfo(uint            prefixWidth,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -1075,6 +1086,7 @@ LOCAL void printLinkInfo(uint            prefixWidth,
                                                 EXPAND_MACRO_MODE_STRING,
                                                 textMacros.data,
                                                 textMacros.count,
+                                                TRUE,
                                                 TRUE
                                                )
                              )
@@ -1260,6 +1272,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -1273,6 +1286,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
                                                 EXPAND_MACRO_MODE_STRING,
                                                 textMacros.data,
                                                 textMacros.count,
+                                                TRUE,
                                                 TRUE
                                                )
                              )
@@ -1287,6 +1301,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -1443,6 +1458,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -1456,6 +1472,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
                                                 EXPAND_MACRO_MODE_STRING,
                                                 textMacros.data,
                                                 textMacros.count,
+                                                TRUE,
                                                 TRUE
                                                )
                              )
@@ -3317,6 +3334,7 @@ LOCAL void printDirectoryListHeader(ConstString printableStorageName)
                                                   DEFAULT_DIRECTORY_LIST_FORMAT_TITLE,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   MACROS,SIZE_OF_ARRAY(MACROS),
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
@@ -3553,6 +3571,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
+                                                  TRUE,
                                                   TRUE
                                                  )
                                )
