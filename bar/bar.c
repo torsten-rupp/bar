@@ -1408,6 +1408,7 @@ void logPostProcess(LogHandle        *logHandle,
                           EXPAND_MACRO_MODE_STRING,
                           textMacros.data,
                           textMacros.count,
+                          TRUE,
                           TRUE
                          );
         printInfo(2,"Log post process '%s'...\n",String_cString(command));
@@ -2001,6 +2002,7 @@ Errors addStorageNameListFromCommand(StringList *storageNameList, const char *te
                     EXPAND_MACRO_MODE_STRING,
                     NULL,  // textMacros
                     0,  // SIZE_OF_ARRAY(textMacros)
+                    TRUE,
                     TRUE
                    );
 
@@ -2091,6 +2093,7 @@ Errors addIncludeListFromCommand(EntryStoreTypes entryStoreType, EntryList *entr
                     EXPAND_MACRO_MODE_STRING,
                     NULL,  // textMacros
                     0,  // SIZE_OF_ARRAY(textMacros)
+                    TRUE,
                     TRUE
                    );
 
@@ -2181,6 +2184,7 @@ Errors addExcludeListFromCommand(PatternList *patternList, const char *template)
                     EXPAND_MACRO_MODE_STRING,
                     NULL,  // textMacros
                     0,  // SIZE_OF_ARRAY(textMacros)
+                    TRUE,
                     TRUE
                    );
 

@@ -4332,15 +4332,15 @@ tests_file_operations_incremental: \
 	@#
 	# special storage name and incremental name
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-#%#_%%_%xyz-_.bar --full $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=2 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-###%####_%%_%xyz-_.bar --full $(TEST_FILES) $(BAR_OPTIONS) --test-created-archives --skip-unreadable --overwrite-archive-files --verbose=2 $(LOG))
 	$(INSTALL) -d $(BAR_STORAGE)/new; $(CP) data/random1024.dat $(BAR_STORAGE)/new/random1024-new.dat
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-#%#_%%_%xyz-_.bar --incremental $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=2 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-###%####_%%_%xyz-_.bar --incremental $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --skip-unreadable --overwrite-archive-files --verbose=2 $(LOG))
 	@#
 ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
 	# incremental name from job UUID
 	$(RMF) $(BAR_STORAGE)/$(BAR_FILE)#%.bid
 	$(INSTALL) -d $(BAR_STORAGE)/new; $(CP) data/random1024.dat $(BAR_STORAGE)/new/random1024-new.dat
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-#%#_%%_%xyz-_.bar --incremental $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --index-database=$(TEST_INDEX_DATABASE) --skip-unreadable --overwrite-archive-files --incremental-data-directory=$(BAR_STORAGE) --debug-index-uuid=$(TEST_JOB_UUID) --verbose=2 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -c $(BAR_STORAGE)/$(BAR_FILE)-###%####_%%_%xyz-_.bar --incremental $(TEST_FILES) $(BAR_STORAGE)/new $(BAR_OPTIONS) --index-database=$(TEST_INDEX_DATABASE) --skip-unreadable --overwrite-archive-files --incremental-data-directory=$(BAR_STORAGE) --debug-index-uuid=$(TEST_JOB_UUID) --verbose=2 $(LOG))
 else
 	@$(ECHO) "incremental test: debug functions not available in $(TEST_BAR) - skipped"
 endif

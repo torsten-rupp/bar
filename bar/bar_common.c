@@ -495,10 +495,11 @@ String templateDone(TemplateHandle *templateHandle,
                     templateHandle->expandMacroMode,
                     templateHandle->textMacros,
                     templateHandle->textMacroCount,
-                    FALSE
+                    FALSE,
+                    TRUE
                    );
 
-  // expand date/time macros, replace %% -> %
+  // expand date/time macros, replace %% -> %/%x if requested
   size_t i = 0L;
   char   format[4];
   while (i < String_length(string))
@@ -511,9 +512,8 @@ String templateDone(TemplateHandle *templateHandle,
           switch (String_index(string,i+1))
           {
             case '%':
-              // %% -> %
-              String_remove(string,i,1);
-              i += 1L;
+              // keep %%
+              i += 2L;
               break;
             case 'a':
             case 'A':

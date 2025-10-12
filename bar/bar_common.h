@@ -1481,7 +1481,9 @@ void templateMacros(TemplateHandle   *templateHandle,
 * Input  : templateHandle - template handle
 *          string         - string variable (can be NULL)
 * Output : -
-* Return : expanded templated string
+* Return : expanded templated string with
+*            - keep %%
+*            - keep %x (unknown)
 * Notes  : if string variable is NULL, new string is allocated and must
 *          be freed!
 \***********************************************************************/

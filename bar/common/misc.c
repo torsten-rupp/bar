@@ -1864,7 +1864,8 @@ String Misc_expandMacros(String           string,
                          ExpandMacroModes expandMacroMode,
                          const TextMacro  macros[],
                          uint             macroCount,
-                         bool             expandMacroCharacter
+                         bool             expandMacroCharacter,
+                         bool             keepUnknownMacros
                         )
 {
   #define APPEND_CHAR(string,index,ch) \
@@ -2007,14 +2008,7 @@ String Misc_expandMacros(String           string,
       // find macro
       if (!stringIsEmpty(name))
       {
-        j = 0;
-        while (   (j < macroCount)
-               && !stringEquals(name,macros[j].name)
-              )
-        {
-          j++;
-        }
-
+        j = ARRAY_FIND(macros,macroCount,j,stringEquals(name,macros[j].name));
         if (j < macroCount)
         {
           switch (expandMacroMode)
@@ -2134,36 +2128,47 @@ String Misc_expandMacros(String           string,
               #endif /* NDEBUG */
           }
         }
-        else
+        else if (keepUnknownMacros)
         {
           // keep unknown macro
           String_appendCString(expanded,name);
         }
+        else
+        {
+          // expand unknown macro to empty value
+        }
       }
       else
       {
-        // empty macro: expand with empty value
-        switch (expandMacroMode)
+        if (keepUnknownMacros)
         {
-          case EXPAND_MACRO_MODE_STRING:
-            // get default format if no format given
-            if (stringIsEmpty(format))
-            {
-              stringSet(format,sizeof(format),"%s");
-            }
+          String_appendCString(expanded,"%");
+        }
+        else
+        {
+          // empty macro: expand with empty value
+          switch (expandMacroMode)
+          {
+            case EXPAND_MACRO_MODE_STRING:
+              // get default format if no format given
+              if (stringIsEmpty(format))
+              {
+                stringSet(format,sizeof(format),"%s");
+              }
 
-            // expand macro into string
-            String_appendFormat(expanded,format,"");
-            break;
-          case EXPAND_MACRO_MODE_PATTERN:
-            // expand macro into pattern
-            String_appendCString(expanded,"\\s*");
-            break;
-          #ifndef NDEBUG
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; /* not reached */
-            #endif /* NDEBUG */
+              // expand macro into string
+              String_appendFormat(expanded,format,"");
+              break;
+            case EXPAND_MACRO_MODE_PATTERN:
+              // expand macro into pattern
+              String_appendCString(expanded,"\\s*");
+              break;
+            #ifndef NDEBUG
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break; /* not reached */
+              #endif /* NDEBUG */
+          }
         }
       }
     }
@@ -2429,7 +2434,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   {
     // expand command line
     String expandedCommandLine = String_new();
-    Misc_expandMacros(expandedCommandLine,commandTemplate,EXPAND_MACRO_MODE_STRING,macros,macroCount,TRUE);
+    Misc_expandMacros(expandedCommandLine,commandTemplate,EXPAND_MACRO_MODE_STRING,macros,macroCount,TRUE,TRUE);
 //fprintf(stderr,"%s, %d: execute command: %s\n",__FILE__,__LINE__,String_cString(commandLine));
 
     // parse command line
