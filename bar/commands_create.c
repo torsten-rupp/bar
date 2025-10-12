@@ -195,11 +195,11 @@ typedef enum
 typedef struct
 {
   EntryTypes type;
-  String     name;                                                   // file/image/directory/link/special name
   union
   {
     struct
     {
+      String     name;                                               // file/image/directory/link/special name
       FileInfo   fileInfo;
       uint       fragmentNumber;                                     // fragment number [0..n-1]
       uint       fragmentCount;                                      // fragment count
@@ -208,6 +208,7 @@ typedef struct
     } file;
     struct
     {
+      String     name;                                               // file/image/directory/link/special name
       DeviceInfo       deviceInfo;
       FileSystemHandle *fileSystemHandle;                            // file system (NULL for raw images)
       uint             fragmentNumber;                               // fragment number [0..n-1]
@@ -222,12 +223,13 @@ typedef struct
     } directory;
     struct
     {
+      String     name;                                               // file/image/directory/link/special name
       FileInfo   fileInfo;
     } link;
     struct
     {
-      FileInfo   fileInfo;
       StringList nameList;                                           // list of hard link names
+      FileInfo   fileInfo;
       uint       fragmentNumber;                                     // fragment number [0..n-1]
       uint       fragmentCount;                                      // fragment count
       uint64     fragmentOffset;
@@ -235,6 +237,7 @@ typedef struct
     } hardLink;
     struct
     {
+      String     name;                                               // file/image/directory/link/special name
       FileInfo   fileInfo;
       union
       {
@@ -294,20 +297,24 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
   switch (entryMsg->type)
   {
     case ENTRY_TYPE_FILE:
+      String_delete(entryMsg->file.name);
       break;
     case ENTRY_TYPE_IMAGE:
+      String_delete(entryMsg->image.name);
       break;
     case ENTRY_TYPE_DIRECTORY:
+      String_delete(entryMsg->directory.name);
       break;
     case ENTRY_TYPE_LINK:
+      String_delete(entryMsg->link.name);
       break;
     case ENTRY_TYPE_HARDLINK:
       StringList_done(&entryMsg->hardLink.nameList);
       break;
     case ENTRY_TYPE_SPECIAL:
+      String_delete(entryMsg->special.name);
       break;
   }
-  String_delete(entryMsg->name);
 }
 
 /***********************************************************************\
@@ -1128,7 +1135,7 @@ LOCAL void appendFileToEntryList(CreateInfo     *createInfo,
     // init
     EntryMsg entryMsg;
     entryMsg.type                = ENTRY_TYPE_FILE;
-    entryMsg.name                = String_duplicate(name);
+    entryMsg.file.name           = String_duplicate(name);
     memCopyFast(&entryMsg.file.fileInfo,sizeof(entryMsg.file.fileInfo),fileInfo,sizeof(FileInfo));
     entryMsg.file.fragmentNumber = fragmentNumber;
     entryMsg.file.fragmentCount  = fragmentCount;
@@ -1186,7 +1193,7 @@ LOCAL void appendImageToEntryList(CreateInfo       *createInfo,
     // init
     EntryMsg entryMsg;
     entryMsg.type                   = ENTRY_TYPE_IMAGE;
-    entryMsg.name                   = String_duplicate(name);
+    entryMsg.image.name             = String_duplicate(name);
     memCopyFast(&entryMsg.image.deviceInfo,sizeof(entryMsg.image.deviceInfo),deviceInfo,sizeof(DeviceInfo));
     entryMsg.image.fragmentNumber   = fragmentNumber;
     entryMsg.image.fragmentCount    = fragmentCount;
@@ -1261,8 +1268,8 @@ LOCAL void appendLinkToEntryList(CreateInfo     *createInfo,
 
   // init
   EntryMsg entryMsg;
-  entryMsg.type = ENTRY_TYPE_LINK;
-  entryMsg.name = String_duplicate(name);
+  entryMsg.type      = ENTRY_TYPE_LINK;
+  entryMsg.link.name = String_duplicate(name);
   memCopyFast(&entryMsg.link.fileInfo,sizeof(entryMsg.link.fileInfo),fileInfo,sizeof(FileInfo));
 
   // put into message queue
@@ -1310,7 +1317,6 @@ LOCAL void appendHardLinkToEntryList(CreateInfo     *createInfo,
     // init
     EntryMsg entryMsg;
     entryMsg.type                    = ENTRY_TYPE_HARDLINK;
-    entryMsg.name                    = NULL;
     StringList_initDuplicate(&entryMsg.hardLink.nameList,nameList);
     memCopyFast(&entryMsg.hardLink.fileInfo,sizeof(entryMsg.hardLink.fileInfo),fileInfo,sizeof(FileInfo));
     entryMsg.hardLink.fragmentNumber = fragmentNumber;
@@ -1356,8 +1362,8 @@ LOCAL void appendSpecialToEntryList(CreateInfo       *createInfo,
 
   // init
   EntryMsg entryMsg;
-  entryMsg.type = ENTRY_TYPE_SPECIAL;
-  entryMsg.name = String_duplicate(name);
+  entryMsg.type         = ENTRY_TYPE_SPECIAL;
+  entryMsg.special.name = String_duplicate(name);
   memCopyFast(&entryMsg.special.fileInfo,sizeof(entryMsg.special.fileInfo),fileInfo,sizeof(FileInfo));
 
   // put into message queue
@@ -7284,33 +7290,48 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
          && MsgQueue_get(&createInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
         )
   {
-    // check if own file (in temporary directory or storage file)
-    bool ownFileFlag =    String_startsWith(entryMsg.name,tmpDirectory)
-                       || StringList_contains(&createInfo->storageFileList,entryMsg.name);
+    // get name, check if own file (in temporary directory or storage file)
+    ConstString name;
+    bool        ownFileFlag = FALSE;
     switch (entryMsg.type)
     {
       case ENTRY_TYPE_FILE:
+        name        = entryMsg.file.name;
+        ownFileFlag =    String_startsWith(entryMsg.file.name,tmpDirectory)
+                      || StringList_contains(&createInfo->storageFileList,entryMsg.file.name);
         break;
       case ENTRY_TYPE_IMAGE:
+        name        = entryMsg.image.name;
+        ownFileFlag =    String_startsWith(entryMsg.image.name,tmpDirectory)
+                      || StringList_contains(&createInfo->storageFileList,entryMsg.image.name);
         break;
       case ENTRY_TYPE_DIRECTORY:
+        name        = entryMsg.directory.name;
+        ownFileFlag =    String_startsWith(entryMsg.directory.name,tmpDirectory)
+                      || StringList_contains(&createInfo->storageFileList,entryMsg.directory.name);
         break;
       case ENTRY_TYPE_LINK:
+        name        = entryMsg.link.name;
+        ownFileFlag =    String_startsWith(entryMsg.link.name,tmpDirectory)
+                      || StringList_contains(&createInfo->storageFileList,entryMsg.link.name);
         break;
       case ENTRY_TYPE_HARDLINK:
-        if (!ownFileFlag)
         {
+          name = StringList_first(&entryMsg.hardLink.nameList,NULL);
+
           const StringNode *stringNode;
           String           name;
-          STRINGLIST_ITERATE(&entryMsg.hardLink.nameList,stringNode,name)
+          STRINGLIST_ITERATEX(&entryMsg.hardLink.nameList,stringNode,name,!ownFileFlag)
           {
             ownFileFlag =    String_startsWith(name,tmpDirectory)
                           || StringList_contains(&createInfo->storageFileList,name);
-            if (ownFileFlag) break;
           }
         }
         break;
       case ENTRY_TYPE_SPECIAL:
+        name        = entryMsg.special.name;
+        ownFileFlag =    String_startsWith(entryMsg.special.name,tmpDirectory)
+                      || StringList_contains(&createInfo->storageFileList,entryMsg.special.name);
         break;
     }
 
@@ -7325,7 +7346,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
       {
         case ENTRY_TYPE_FILE:
           error = storeFileEntry(createInfo,
-                                 entryMsg.name,
+                                 entryMsg.file.name,
                                  &entryMsg.file.fileInfo,
                                  entryMsg.file.fragmentNumber,
                                  entryMsg.file.fragmentCount,
@@ -7338,7 +7359,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           break;
         case ENTRY_TYPE_IMAGE:
           error = storeImageEntry(createInfo,
-                                  entryMsg.name,
+                                  entryMsg.image.name,
                                   &entryMsg.image.deviceInfo,
                                   entryMsg.image.fragmentNumber,
                                   entryMsg.image.fragmentCount,
@@ -7351,14 +7372,14 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           break;
         case ENTRY_TYPE_DIRECTORY:
           error = storeDirectoryEntry(createInfo,
-                                      entryMsg.name,
+                                      entryMsg.directory.name,
                                       &entryMsg.directory.fileInfo
                                      );
           if (error != ERROR_NONE) createInfo->failError = error;
           break;
         case ENTRY_TYPE_LINK:
           error = storeLinkEntry(createInfo,
-                                 entryMsg.name,
+                                 entryMsg.link.name,
                                  &entryMsg.link.fileInfo
                                 );
           if (error != ERROR_NONE) createInfo->failError = error;
@@ -7378,7 +7399,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           break;
         case ENTRY_TYPE_SPECIAL:
           error = storeSpecialEntry(createInfo,
-                                    entryMsg.name,
+                                    entryMsg.special.name,
                                     &entryMsg.special.fileInfo
                                    );
           if (error != ERROR_NONE) createInfo->failError = error;
@@ -7392,9 +7413,9 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     }
     else
     {
-      printInfo(1,"Add '%s'...skipped (reason: own created file)\n",String_cString(entryMsg.name));
+      printInfo(1,"Add '%s'...skipped (reason: own created file)\n",String_cString(name));
 
-      STATUS_INFO_UPDATE(createInfo,entryMsg.name,NULL)
+      STATUS_INFO_UPDATE(createInfo,name,NULL)
       {
         createInfo->runningInfo.progress.skipped.count++;
       }

@@ -624,7 +624,7 @@ UNUSED_VARIABLE(scheduleCustomText);
                                                               CONNECTOR_DEBUG_LEVEL,
                                                               CONNECTOR_COMMAND_TIMEOUT,
                                                               CALLBACK_(NULL,NULL),
-                                                              "INCLUDE_LIST_ADD jobUUID=%S entryType=%s patternType=%s pattern=%'S",
+                                                              "INCLUDE_LIST_ADD jobUUID=%S entryStoreType=%s patternType=%s pattern=%'S",
                                                               jobUUID,
                                                               entryStoreTypeText,
                                                               ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,entryNode->patternType,NULL),
