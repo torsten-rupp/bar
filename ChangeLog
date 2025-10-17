@@ -1,9 +1,11 @@
-2025-09-31 27
+2025-10-30 27
   * added option --commmand-timeout
   * fixed command timeout (bug #31)
   * added sd_notify() for systemd
+  * support EXFAT file system
+  * support XFS file system
   * bar-index: improved clean-orphaned: remove entities without
-    entries or storages 
+    entries or storages
   * BARControl: improved certificate validation
   * BARControl: show file system type of devices if possible
   * BARControl: check common name of SSL certificate
