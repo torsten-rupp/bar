@@ -24,6 +24,7 @@
 #include "common/global.h"
 #include "common/autofree.h"
 #include "common/strings.h"
+#include "common/arrays.h"
 #include "common/files.h"
 #include "common/cmdoptions.h"
 #include "common/database.h"
@@ -7586,6 +7587,8 @@ LOCAL Errors purgeStoragesWithError(DatabaseHandle *databaseHandle)
 
 LOCAL Errors purgeEntities(DatabaseHandle *databaseHandle, Array *entityIds, bool isPrintInfo)
 {
+  const size_t INCREMENT_SIZE = 4096;
+
   Errors error;
 
   Array storageIds;
@@ -7634,7 +7637,6 @@ LOCAL Errors purgeEntities(DatabaseHandle *databaseHandle, Array *entityIds, boo
                                  DATABASE_UNLIMITED
                                 );
       }
-//fprintf(stderr,"%s:%d: %d\n",__FILE__,__LINE__,Array_length(&storageIds));
 
       // delete storages of entity
       if (error == ERROR_NONE)
@@ -7645,21 +7647,43 @@ LOCAL Errors purgeEntities(DatabaseHandle *databaseHandle, Array *entityIds, boo
       // delete entries of entity
       if (error == ERROR_NONE)
       {
+        Array ids;
+        Array_init(&ids,sizeof(DatabaseId),INCREMENT_SIZE,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+        (void)Database_getIds(databaseHandle,
+                              &ids,
+                              "entries",
+                              "id",
+                              "entityId=? \
+                              ",
+                              DATABASE_FILTERS
+                              (
+                                 DATABASE_FILTER_KEY(entityId)
+                              ),
+                              DATABASE_UNLIMITED
+                             );
+
+        initProgress(Array_length(&ids));
         DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
         {
-          error = Database_delete(databaseHandle,
-                                  NULL,  // changedRowCount
-                                  "entries",
-                                  DATABASE_FLAG_NONE,
-                                  "entityId=? \
-                                  ",
-                                  DATABASE_FILTERS
-                                  (
-                                     DATABASE_FILTER_KEY(entityId)
-                                  ),
-                                  DATABASE_UNLIMITED
-                                 );
+          ArraySegmentIterator arraySegmentIterator;
+          ARRAY_SEGMENT(&ids,arraySegmentIterator,INCREMENT_SIZE)
+          {
+            error = Database_deleteByIds(databaseHandle,
+                                         NULL,  // changedRowCount
+                                         "entries",
+                                         "id",
+                                         DATABASE_FLAG_NONE,
+                                         (DatabaseId*)Array_cArraySegment(&ids,&arraySegmentIterator),
+                                         Array_segmentLength(&ids,&arraySegmentIterator)
+                                        );
+            printProgress(Array_segmentOffset(&ids,&arraySegmentIterator)+Array_segmentLength(&ids,&arraySegmentIterator));
+          }
         }
+        doneProgress();
+
+        (void)Database_flush(databaseHandle);
+
+        Array_done(&ids);
       }
 
       // delete skipped entries of entity

@@ -160,6 +160,7 @@ rest time
 - run pre/post command in standard mode (not only server)
 - BARControl: menu entries for Debian, XFCE
 - incremental/differential backup: save/show base backup UUIDs
+- sqlite3 recover -DSQLITE_ENABLE_DBPAGE_VTAB
 
 
 
