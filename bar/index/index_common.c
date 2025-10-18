@@ -112,13 +112,11 @@ const char *IndexCommon_getIndexInUseInfo(void)
 {
   static char buffer[256];
 
-  ArrayIterator arrayIterator;
-  ThreadInfo    threadInfo;
-
   stringClear(buffer);
   SEMAPHORE_LOCKED_DO(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    ARRAY_ITERATE(&indexUsedBy,arrayIterator,threadInfo)
+    ThreadInfo threadInfo;
+    ARRAY_ITERATE(&indexUsedBy,threadInfo)
     {
       if (!stringIsEmpty(buffer)) stringAppendChar(buffer,sizeof(buffer),' ');
       stringAppendFormat(buffer,sizeof(buffer),"%s",Thread_getIdString(threadInfo.threadId));
@@ -183,16 +181,13 @@ String IndexCommon_getIndexModeSetString(String string, IndexModeSet indexModeSe
 
 String IndexCommon_getPostgreSQLFTSTokens(String string, ConstString text)
 {
-  bool           spaceFlag;
-  StringIterator stringIterator;
-  Codepoint      codepoint;
-
   String_clear(string);
 
   if (text != NULL)
   {
-    spaceFlag = FALSE;
-    STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
+    bool      spaceFlag = FALSE;
+    Codepoint codepoint;
+    STRING_CHAR_ITERATE_UTF8(text,codepoint)
     {
       if (!isCharUTF8(codepoint))
       {
@@ -225,20 +220,13 @@ String IndexCommon_getFTSMatchString(String         string,
                                      ConstString    patternText
                                     )
 {
-  String          pattern;
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  bool            addedTextFlag,addedPatternFlag;
-  StringIterator  stringIterator;
-  Codepoint       codepoint;
-
   assert(string != NULL);
   assert(databaseHandle != NULL);
   assert(tableName != NULL);
   assert(columnName != NULL);
 
   // init variables
-  pattern = String_new();
+  String pattern = String_new();
 
   String_clear(string);
 
@@ -247,100 +235,8 @@ String IndexCommon_getFTSMatchString(String         string,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        String_initTokenizer(&stringTokenizer,
-                             patternText,
-                             STRING_BEGIN,
-                             STRING_WHITE_SPACES,
-                             STRING_QUOTES,
-                             TRUE
-                            );
-        while (String_getNextToken(&stringTokenizer,&token,NULL))
         {
-          addedTextFlag    = FALSE;
-          addedPatternFlag = FALSE;
-          STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
-          {
-            if (isalnum(codepoint) || isCharUTF8(codepoint))
-            {
-              // add text character
-              if (addedPatternFlag)
-              {
-                String_appendChar(pattern,' ');
-                addedPatternFlag = FALSE;
-              }
-              String_appendCharUTF8(pattern,codepoint);
-              addedTextFlag = TRUE;
-            }
-            else
-            {
-              // add pattern
-              if (addedTextFlag && !addedPatternFlag)
-              {
-                String_appendChar(pattern,'*');
-                addedTextFlag    = FALSE;
-                addedPatternFlag = TRUE;
-              }
-            }
-          }
-          if (addedTextFlag && !addedPatternFlag)
-          {
-            String_appendChar(pattern,'*');
-          }
-        }
-        String_doneTokenizer(&stringTokenizer);
-
-        if (!String_isEmpty(pattern)) String_appendFormat(string,"%s MATCH '%S'",tableName,pattern);
-
-        break;
-      case DATABASE_TYPE_MARIADB:
-        String_initTokenizer(&stringTokenizer,
-                             patternText,
-                             STRING_BEGIN,
-                             STRING_WHITE_SPACES,
-                             STRING_QUOTES,
-                             TRUE
-                            );
-        while (String_getNextToken(&stringTokenizer,&token,NULL))
-        {
-          addedTextFlag    = FALSE;
-          addedPatternFlag = FALSE;
-          STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
-          {
-            if (isalnum(codepoint) || isCharUTF8(codepoint))
-            {
-              // add text character
-              if (addedPatternFlag)
-              {
-                String_appendChar(pattern,' ');
-                addedPatternFlag = FALSE;
-              }
-              String_appendCharUTF8(pattern,codepoint);
-              addedTextFlag = TRUE;
-            }
-            else
-            {
-              // add pattern
-              if (addedTextFlag && !addedPatternFlag)
-              {
-                String_appendChar(pattern,'*');
-                addedTextFlag    = FALSE;
-                addedPatternFlag = TRUE;
-              }
-            }
-          }
-          if (addedTextFlag && !addedPatternFlag)
-          {
-            String_appendChar(pattern,'*');
-          }
-        }
-        String_doneTokenizer(&stringTokenizer);
-
-        if (!String_isEmpty(pattern)) String_appendFormat(string,"MATCH(%s.%s) AGAINST('%S' IN BOOLEAN MODE)",tableName,columnName,pattern);
-        break;
-      case DATABASE_TYPE_POSTGRESQL:
-        {
-          bool firstTokenFlag;
-
+          StringTokenizer stringTokenizer;
           String_initTokenizer(&stringTokenizer,
                                patternText,
                                STRING_BEGIN,
@@ -348,7 +244,108 @@ String IndexCommon_getFTSMatchString(String         string,
                                STRING_QUOTES,
                                TRUE
                               );
-          firstTokenFlag = TRUE;
+          ConstString token;
+          while (String_getNextToken(&stringTokenizer,&token,NULL))
+          {
+            bool      addedTextFlag    = FALSE;
+            bool      addedPatternFlag = FALSE;
+            Codepoint codepoint;
+            STRING_CHAR_ITERATE_UTF8(token,codepoint)
+            {
+              if (isalnum(codepoint) || isCharUTF8(codepoint))
+              {
+                // add text character
+                if (addedPatternFlag)
+                {
+                  String_appendChar(pattern,' ');
+                  addedPatternFlag = FALSE;
+                }
+                String_appendCharUTF8(pattern,codepoint);
+                addedTextFlag = TRUE;
+              }
+              else
+              {
+                // add pattern
+                if (addedTextFlag && !addedPatternFlag)
+                {
+                  String_appendChar(pattern,'*');
+                  addedTextFlag    = FALSE;
+                  addedPatternFlag = TRUE;
+                }
+              }
+            }
+            if (addedTextFlag && !addedPatternFlag)
+            {
+              String_appendChar(pattern,'*');
+            }
+          }
+          String_doneTokenizer(&stringTokenizer);
+
+          if (!String_isEmpty(pattern)) String_appendFormat(string,"%s MATCH '%S'",tableName,pattern);
+        }
+        break;
+      case DATABASE_TYPE_MARIADB:
+        {
+          StringTokenizer stringTokenizer;
+          String_initTokenizer(&stringTokenizer,
+                               patternText,
+                               STRING_BEGIN,
+                               STRING_WHITE_SPACES,
+                               STRING_QUOTES,
+                               TRUE
+                              );
+          ConstString token;
+          while (String_getNextToken(&stringTokenizer,&token,NULL))
+          {
+            bool      addedTextFlag    = FALSE;
+            bool      addedPatternFlag = FALSE;
+            Codepoint codepoint;
+            STRING_CHAR_ITERATE_UTF8(token,codepoint)
+            {
+              if (isalnum(codepoint) || isCharUTF8(codepoint))
+              {
+                // add text character
+                if (addedPatternFlag)
+                {
+                  String_appendChar(pattern,' ');
+                  addedPatternFlag = FALSE;
+                }
+                String_appendCharUTF8(pattern,codepoint);
+                addedTextFlag = TRUE;
+              }
+              else
+              {
+                // add pattern
+                if (addedTextFlag && !addedPatternFlag)
+                {
+                  String_appendChar(pattern,'*');
+                  addedTextFlag    = FALSE;
+                  addedPatternFlag = TRUE;
+                }
+              }
+            }
+            if (addedTextFlag && !addedPatternFlag)
+            {
+              String_appendChar(pattern,'*');
+            }
+          }
+          String_doneTokenizer(&stringTokenizer);
+
+          if (!String_isEmpty(pattern)) String_appendFormat(string,"MATCH(%s.%s) AGAINST('%S' IN BOOLEAN MODE)",tableName,columnName,pattern);
+        }
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        {
+          StringTokenizer stringTokenizer;
+          String_initTokenizer(&stringTokenizer,
+                               patternText,
+                               STRING_BEGIN,
+                               STRING_WHITE_SPACES,
+                               STRING_QUOTES,
+                               TRUE
+                              );
+          bool        firstTokenFlag = TRUE;
+          ConstString token;
           while (String_getNextToken(&stringTokenizer,&token,NULL))
           {
             if (!firstTokenFlag)
@@ -356,9 +353,10 @@ String IndexCommon_getFTSMatchString(String         string,
               String_appendCString(pattern," & ");
             }
 
-            addedTextFlag    = FALSE;
-            addedPatternFlag = FALSE;
-            STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
+            bool      addedTextFlag    = FALSE;
+            bool      addedPatternFlag = FALSE;
+            Codepoint codepoint;
+            STRING_CHAR_ITERATE_UTF8(token,codepoint)
             {
               if (isalnum(codepoint) || isCharUTF8(codepoint))
               {

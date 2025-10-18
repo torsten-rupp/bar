@@ -1666,9 +1666,8 @@ Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
   }
 
   // prune UUIDs
-  ArrayIterator arrayIterator;
-  DatabaseId    uuidId;
-  ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,(error == ERROR_NONE) && !indexQuitFlag)
+  DatabaseId uuidId;
+  ARRAY_ITERATEX(&uuidIds,uuidId,(error == ERROR_NONE) && !indexQuitFlag)
   {
     error = IndexUUID_prune(indexHandle,
                             doneFlag,

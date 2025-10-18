@@ -1461,10 +1461,9 @@ LOCAL String getPostgreSQLFTSTokens(String tokens, ConstString text)
 
   if (text != NULL)
   {
-    StringIterator stringIterator;
-    Codepoint      codepoint;
-    bool           spaceFlag = FALSE;
-    STRING_CHAR_ITERATE_UTF8(text,stringIterator,codepoint)
+    Codepoint codepoint;
+    bool      spaceFlag = FALSE;
+    STRING_CHAR_ITERATE_UTF8(text,codepoint)
     {
       if (!isCharUTF8(codepoint))
       {
@@ -2365,17 +2364,17 @@ LOCAL ulong checkDuplicates(DatabaseHandle *databaseHandle)
 
 LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
 {
-  StringList         tableNameList;
-  Errors             error;
-  ulong              n;
-  StringListIterator stringListIterator;
-  ConstString        name;
+  Errors error;
 
   // init variables
 
   printInfo("Optimize:\n");
 
+  ulong       n;
+  ConstString name;
+
   printInfo("  Tables...");
+  StringList tableNameList;
   StringList_init(&tableNameList);
   error = Database_getTableList(&tableNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
@@ -2387,7 +2386,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
   }
   initProgress(StringList_count(&tableNameList));
   n = 0;
-  STRINGLIST_ITERATE(&tableNameList,stringListIterator,name)
+  STRINGLIST_ITERATE(&tableNameList,name)
   {
     switch (Database_getType(databaseHandle))
     {
@@ -2442,7 +2441,7 @@ LOCAL void optimizeDatabase(DatabaseHandle *databaseHandle)
   }
   initProgress(StringList_count(&tableNameList));
   n = 0;
-  STRINGLIST_ITERATE(&tableNameList,stringListIterator,name)
+  STRINGLIST_ITERATE(&tableNameList,name)
   {
     switch (Database_getType(databaseHandle))
     {
@@ -2509,12 +2508,6 @@ LOCAL String getFTSMatchString(String         string,
                                ConstString    patternText
                               )
 {
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-  bool            addedTextFlag,addedPatternFlag;
-  StringIterator  stringIterator;
-  Codepoint       codepoint;
-
   assert(string != NULL);
   assert(databaseHandle != NULL);
   assert(tableName != NULL);
@@ -2527,101 +2520,10 @@ LOCAL String getFTSMatchString(String         string,
     switch (Database_getType(databaseHandle))
     {
       case DATABASE_TYPE_SQLITE3:
-        String_appendFormat(string,"%s MATCH '",tableName);
-
-        String_initTokenizer(&stringTokenizer,
-                             patternText,
-                             STRING_BEGIN,
-                             STRING_WHITE_SPACES,
-                             STRING_QUOTES,
-                             TRUE
-                            );
-        while (String_getNextToken(&stringTokenizer,&token,NULL))
         {
-          addedTextFlag    = FALSE;
-          addedPatternFlag = FALSE;
-          STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
-          {
-            if (isalnum(codepoint) || isCharUTF8(codepoint))
-            {
-              if (addedPatternFlag)
-              {
-                String_appendChar(string,' ');
-                addedPatternFlag = FALSE;
-              }
-              String_appendCharUTF8(string,codepoint);
-              addedTextFlag = TRUE;
-            }
-            else
-            {
-              if (addedTextFlag && !addedPatternFlag)
-              {
-                String_appendChar(string,'*');
-                addedTextFlag    = FALSE;
-                addedPatternFlag = TRUE;
-              }
-            }
-          }
-          if (addedTextFlag && !addedPatternFlag)
-          {
-            String_appendChar(string,'*');
-          }
-        }
-        String_doneTokenizer(&stringTokenizer);
+          String_appendFormat(string,"%s MATCH '",tableName);
 
-        String_appendFormat(string,"'");
-        break;
-      case DATABASE_TYPE_MARIADB:
-        String_appendFormat(string,"MATCH(%s.%s) AGAINST('",tableName,columnName);
-
-        String_initTokenizer(&stringTokenizer,
-                             patternText,
-                             STRING_BEGIN,
-                             STRING_WHITE_SPACES,
-                             STRING_QUOTES,
-                             TRUE
-                            );
-        while (String_getNextToken(&stringTokenizer,&token,NULL))
-        {
-          addedTextFlag    = FALSE;
-          addedPatternFlag = FALSE;
-          STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
-          {
-            if (isalnum(codepoint) || isCharUTF8(codepoint))
-            {
-              if (addedPatternFlag)
-              {
-                String_appendChar(string,' ');
-                addedPatternFlag = FALSE;
-              }
-              String_appendCharUTF8(string,codepoint);
-              addedTextFlag = TRUE;
-            }
-            else
-            {
-              if (addedTextFlag && !addedPatternFlag)
-              {
-                String_appendChar(string,'*');
-                addedTextFlag    = FALSE;
-                addedPatternFlag = TRUE;
-              }
-            }
-          }
-          if (addedTextFlag && !addedPatternFlag)
-          {
-            String_appendChar(string,'*');
-          }
-        }
-        String_doneTokenizer(&stringTokenizer);
-
-        String_appendFormat(string,"' IN BOOLEAN MODE)");
-        break;
-      case DATABASE_TYPE_POSTGRESQL:
-        {
-          bool firstTokenFlag;
-
-          String_appendFormat(string,"%s.%s @@ to_tsquery('",tableName,columnName);
-
+          StringTokenizer stringTokenizer;
           String_initTokenizer(&stringTokenizer,
                                patternText,
                                STRING_BEGIN,
@@ -2629,7 +2531,108 @@ LOCAL String getFTSMatchString(String         string,
                                STRING_QUOTES,
                                TRUE
                               );
-          firstTokenFlag = TRUE;
+          ConstString token;
+          while (String_getNextToken(&stringTokenizer,&token,NULL))
+          {
+            bool      addedTextFlag    = FALSE;
+            bool      addedPatternFlag = FALSE;
+            Codepoint codepoint;
+            STRING_CHAR_ITERATE_UTF8(token,codepoint)
+            {
+              if (isalnum(codepoint) || isCharUTF8(codepoint))
+              {
+                if (addedPatternFlag)
+                {
+                  String_appendChar(string,' ');
+                  addedPatternFlag = FALSE;
+                }
+                String_appendCharUTF8(string,codepoint);
+                addedTextFlag = TRUE;
+              }
+              else
+              {
+                if (addedTextFlag && !addedPatternFlag)
+                {
+                  String_appendChar(string,'*');
+                  addedTextFlag    = FALSE;
+                  addedPatternFlag = TRUE;
+                }
+              }
+            }
+            if (addedTextFlag && !addedPatternFlag)
+            {
+              String_appendChar(string,'*');
+            }
+          }
+          String_doneTokenizer(&stringTokenizer);
+
+          String_appendFormat(string,"'");
+        }
+        break;
+      case DATABASE_TYPE_MARIADB:
+        {
+          String_appendFormat(string,"MATCH(%s.%s) AGAINST('",tableName,columnName);
+
+          StringTokenizer stringTokenizer;
+          String_initTokenizer(&stringTokenizer,
+                               patternText,
+                               STRING_BEGIN,
+                               STRING_WHITE_SPACES,
+                               STRING_QUOTES,
+                               TRUE
+                              );
+          ConstString token;
+          while (String_getNextToken(&stringTokenizer,&token,NULL))
+          {
+            bool      addedTextFlag    = FALSE;
+            bool      addedPatternFlag = FALSE;
+            Codepoint codepoint;
+            STRING_CHAR_ITERATE_UTF8(token,codepoint)
+            {
+              if (isalnum(codepoint) || isCharUTF8(codepoint))
+              {
+                if (addedPatternFlag)
+                {
+                  String_appendChar(string,' ');
+                  addedPatternFlag = FALSE;
+                }
+                String_appendCharUTF8(string,codepoint);
+                addedTextFlag = TRUE;
+              }
+              else
+              {
+                if (addedTextFlag && !addedPatternFlag)
+                {
+                  String_appendChar(string,'*');
+                  addedTextFlag    = FALSE;
+                  addedPatternFlag = TRUE;
+                }
+              }
+            }
+            if (addedTextFlag && !addedPatternFlag)
+            {
+              String_appendChar(string,'*');
+            }
+          }
+          String_doneTokenizer(&stringTokenizer);
+
+          String_appendFormat(string,"' IN BOOLEAN MODE)");
+        }
+        break;
+      case DATABASE_TYPE_POSTGRESQL:
+        {
+          String_appendFormat(string,"%s.%s @@ to_tsquery('",tableName,columnName);
+
+          StringTokenizer stringTokenizer;
+          String_initTokenizer(&stringTokenizer,
+                               patternText,
+                               STRING_BEGIN,
+                               STRING_WHITE_SPACES,
+                               STRING_QUOTES,
+                               TRUE
+                              );
+          bool        firstTokenFlag = TRUE;
+          ConstString token;
           while (String_getNextToken(&stringTokenizer,&token,NULL))
           {
             if (!firstTokenFlag)
@@ -2637,9 +2640,10 @@ LOCAL String getFTSMatchString(String         string,
               String_appendCString(string," & ");
             }
 
-            addedTextFlag    = FALSE;
-            addedPatternFlag = FALSE;
-            STRING_CHAR_ITERATE_UTF8(token,stringIterator,codepoint)
+            bool      addedTextFlag    = FALSE;
+            bool      addedPatternFlag = FALSE;
+            Codepoint codepoint;
+            STRING_CHAR_ITERATE_UTF8(token,codepoint)
             {
               if (isalnum(codepoint) || isCharUTF8(codepoint))
               {
@@ -2743,11 +2747,9 @@ LOCAL Errors createTriggers(DatabaseHandle *databaseHandle)
 
 LOCAL void printTableNames(DatabaseHandle *databaseHandle)
 {
-  Errors             error;
-  StringList         tableNameList;
-  StringListIterator stringListIterator;
-  ConstString        tableName;
+  Errors error;
 
+  StringList tableNameList;
   StringList_init(&tableNameList);
   error = Database_getTableList(&tableNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
@@ -2756,7 +2758,8 @@ LOCAL void printTableNames(DatabaseHandle *databaseHandle)
     printError(_("cannot get table names (error: %s)!"),Error_getText(error));
     return;
   }
-  STRINGLIST_ITERATE(&tableNameList,stringListIterator,tableName)
+  ConstString tableName;
+  STRINGLIST_ITERATE(&tableNameList,tableName)
   {
     printf("%s\n",String_cString(tableName));
   }
@@ -2774,11 +2777,9 @@ LOCAL void printTableNames(DatabaseHandle *databaseHandle)
 
 LOCAL void printIndexNames(DatabaseHandle *databaseHandle)
 {
-  Errors             error;
-  StringList         indexNameList;
-  StringListIterator stringListIterator;
-  ConstString        indexName;
+  Errors error;
 
+  StringList indexNameList;
   StringList_init(&indexNameList);
   error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
@@ -2787,7 +2788,8 @@ LOCAL void printIndexNames(DatabaseHandle *databaseHandle)
     printError(_("cannot get index names (error: %s)!"),Error_getText(error));
     return;
   }
-  STRINGLIST_ITERATE(&indexNameList,stringListIterator,indexName)
+  ConstString indexName;
+  STRINGLIST_ITERATE(&indexNameList,indexName)
   {
     printf("%s\n",String_cString(indexName));
   }
@@ -2805,11 +2807,9 @@ LOCAL void printIndexNames(DatabaseHandle *databaseHandle)
 
 LOCAL void printTriggerNames(DatabaseHandle *databaseHandle)
 {
-  Errors             error;
-  StringList         triggerNameList;
-  StringListIterator stringListIterator;
-  ConstString        triggerName;
+  Errors error;
 
+  StringList triggerNameList;
   StringList_init(&triggerNameList);
   error = Database_getTriggerList(&triggerNameList,databaseHandle,NULL);
   if (error != ERROR_NONE)
@@ -2818,7 +2818,8 @@ LOCAL void printTriggerNames(DatabaseHandle *databaseHandle)
     printError(_("cannot get trigger names (error: %s)!"),Error_getText(error));
     return;
   }
-  STRINGLIST_ITERATE(&triggerNameList,stringListIterator,triggerName)
+  ConstString triggerName;
+  STRINGLIST_ITERATE(&triggerNameList,triggerName)
   {
     printf("%s\n",String_cString(triggerName));
   }
@@ -2854,13 +2855,11 @@ LOCAL Errors createIndices(DatabaseHandle *databaseHandle)
     {
       case DATABASE_TYPE_SQLITE3:
         {
-          StringList         indexNameList;
-          StringListIterator iteratorIndexName;
-          String             indexName;
-
+          StringList indexNameList;
           StringList_init(&indexNameList);
           error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
-          STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
+          ConstString indexName;
+          STRINGLIST_ITERATEX(&indexNameList,indexName,error == ERROR_NONE)
           {
             error = Database_dropIndex(databaseHandle,
                                        String_cString(indexName)
@@ -4063,11 +4062,10 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
 
 LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
 {
-  Errors        error;
-  uint          totalEntriesNewestCount;
-  ulong         n,m;
-  ArrayIterator arrayIterator;
-  DatabaseId    storageId;
+  Errors     error;
+  uint       totalEntriesNewestCount;
+  ulong      n,m;
+  DatabaseId storageId;
 
   // initialize variables
   error = ERROR_NONE;
@@ -4152,7 +4150,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
     printInfo("Create newest entries...");
     initProgress(Array_length(&storageIds));
     n = 0;
-    ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
+    ARRAY_ITERATEX(&storageIds,storageId,error == ERROR_NONE)
     {
       error = addToNewest(databaseHandle,storageId);
       n++;
@@ -4172,7 +4170,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
   {
     // Refresh newest entries
     printInfo("Create newest entries:\n");
-    ARRAY_ITERATE(&storageIds,arrayIterator,storageId)
+    ARRAY_ITERATE(&storageIds,storageId)
     {
       printInfo("  %"PRIi64"...",storageId);
       if (error == ERROR_NONE)
@@ -4216,7 +4214,6 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
 LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Array entityIds)
 {
   String     entityIdsString;
-  ulong      i;
   DatabaseId entityId;
   Errors     error;
   uint       totalCount;
@@ -4225,7 +4222,7 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
 
   // init variables
   entityIdsString = String_new();
-  ARRAY_ITERATE(&entityIds,i,entityId)
+  ARRAY_ITERATE(&entityIds,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_appendFormat(entityIdsString,"%"PRIi64,entityId);
@@ -4742,16 +4739,11 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
 
 LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Array storageIds)
 {
-  String     storageIdsString;
-  uint       i;
-  DatabaseId storageId;
-  Errors     error;
-  uint       totalCount;
-  char       filterString[1024];
-  ulong      n;
+  Errors error;
 
-  storageIdsString = String_new();
-  ARRAY_ITERATE(&storageIds,i,storageId)
+  String     storageIdsString = String_new();
+  DatabaseId storageId;
+  ARRAY_ITERATE(&storageIds,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
     String_appendFormat(storageIdsString,"%"PRIi64,storageId);
@@ -4760,6 +4752,8 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
   printInfo("Create aggregates for storages...");
 
   // get storage total count
+  uint totalCount;
+  char filterString[1024];
   error = Database_getUInt(databaseHandle,
                            &totalCount,
                            "storages",
@@ -4784,7 +4778,7 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
   }
 
   initProgress(totalCount);
-  n = 0;
+  ulong n = 0;
 
   // update storage total count/size aggregates
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -6263,8 +6257,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
   totalCount += n;
 
   // clean entities without entries/storages
-  ArrayIterator entityArrayIterator;
-  DatabaseId    entityId;
+  DatabaseId entityId;
 
   printInfo("  entities without entries...          ");
   n = 0;
@@ -6289,7 +6282,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                        );
   initProgress(Array_length(&ids));
   n = 0;
-  ARRAY_ITERATEX(&ids,entityArrayIterator,entityId,error == ERROR_NONE)
+  ARRAY_ITERATEX(&ids,entityId,error == ERROR_NONE)
   {
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
@@ -6343,7 +6336,7 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                        );
   initProgress(Array_length(&ids));
   n = 0;
-  ARRAY_ITERATEX(&ids,entityArrayIterator,entityId,error == ERROR_NONE)
+  ARRAY_ITERATEX(&ids,entityId,error == ERROR_NONE)
   {
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
@@ -6972,9 +6965,8 @@ LOCAL Errors cleanDuplicateEntries(DatabaseHandle *databaseHandle)
   size_t n = 0;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    ArrayIterator arrayIterator;
-    DatabaseId    id;
-    ARRAY_ITERATEX(&ids,arrayIterator,id,error == ERROR_NONE)
+    DatabaseId id;
+    ARRAY_ITERATEX(&ids,id,error == ERROR_NONE)
     {
       error = Database_update(databaseHandle,
                               NULL,  // changedRowCount
@@ -7035,9 +7027,8 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds, bo
   Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   error = ERROR_NONE;
-  ArrayIterator storageArrayIterator;
-  DatabaseId    storageId;
-  ARRAY_ITERATEX(storageIds,storageArrayIterator,storageId,error == ERROR_NONE)
+  DatabaseId storageId;
+  ARRAY_ITERATEX(storageIds,storageId,error == ERROR_NONE)
   {
     DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
     {
@@ -7159,9 +7150,8 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds, bo
         case DATABASE_TYPE_SQLITE3:
           if (error == ERROR_NONE)
           {
-            ArrayIterator entryArrayIterator;
-            DatabaseId    entryId;
-            ARRAY_ITERATEX(&entryIds,entryArrayIterator,entryId,error == ERROR_NONE)
+            DatabaseId entryId;
+            ARRAY_ITERATEX(&entryIds,entryId,error == ERROR_NONE)
             {
               if (!Database_existsValue(databaseHandle,
                                         "entryFragments",
@@ -7197,9 +7187,8 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds, bo
         case DATABASE_TYPE_POSTGRESQL:
           if (error == ERROR_NONE)
           {
-            ArrayIterator entryArrayIterator;
-            DatabaseId    entryId;
-            ARRAY_ITERATEX(&entryIds,entryArrayIterator,entryId,error == ERROR_NONE)
+            DatabaseId entryId;
+            ARRAY_ITERATEX(&entryIds,entryId,error == ERROR_NONE)
             {
               if (!Database_existsValue(databaseHandle,
                                         "entryFragments",
@@ -7338,10 +7327,9 @@ LOCAL Errors purgeStorages(DatabaseHandle *databaseHandle, Array *storageIds, bo
       if (error == ERROR_NONE)
       {
         initProgress(2*Array_length(&entryIds));
-        size_t        n = 0;
-        ArrayIterator entryArrayIterator;
-        DatabaseId    entryId;
-        ARRAY_ITERATEX(&entryIds,entryArrayIterator,entryId,error == ERROR_NONE)
+        size_t     n = 0;
+        DatabaseId entryId;
+        ARRAY_ITERATEX(&entryIds,entryId,error == ERROR_NONE)
         {
           if (!Database_existsValue(databaseHandle,
                                     "entryFragments",
@@ -7595,9 +7583,8 @@ LOCAL Errors purgeEntities(DatabaseHandle *databaseHandle, Array *entityIds, boo
   Array_init(&storageIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   error = ERROR_NONE;
-  ArrayIterator entityArrayIterator;
-  DatabaseId    entityId;
-  ARRAY_ITERATEX(entityIds,entityArrayIterator,entityId,error == ERROR_NONE)
+  DatabaseId entityId;
+  ARRAY_ITERATEX(entityIds,entityId,error == ERROR_NONE)
   {
     if (   (entityId != DATABASE_ID_NONE)
         && (entityId != INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID)
@@ -8965,29 +8952,27 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
 
 LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, const Array uuids)
 {
-  String       uuidIdsString,uuidsString;
-  char         s[MISC_UUID_STRING_LENGTH];
-  StaticString (uuid,MISC_UUID_STRING_LENGTH);
-  ulong        i;
-  DatabaseId   uuidId;
-  Errors       error;
-  char         filterString[1024];
-
-  uuidIdsString = String_new();
-  uuidsString   = String_new();
-  ARRAY_ITERATE(&uuidIds,i,uuidId)
+  String     uuidIdsString = String_new();
+  String     uuidsString   = String_new();
+  DatabaseId uuidId;
+  ARRAY_ITERATE(&uuidIds,uuidId)
   {
     if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
     String_appendFormat(uuidIdsString,"%"PRIi64,uuidId);
   }
-  ARRAY_ITERATE(&uuids,i,s)
+  char s[MISC_UUID_STRING_LENGTH];
+  ARRAY_ITERATE(&uuids,s)
   {
+    StaticString (uuid,MISC_UUID_STRING_LENGTH);
     String_setBuffer(uuid,s,MISC_UUID_STRING_LENGTH);
     if (!String_isEmpty(uuidsString)) String_appendChar(uuidsString,',');
     String_appendFormat(uuidsString,"'%S'",uuid);
   }
 
+  Errors error;
+
   printf("UUIDs:\n");
+  char filterString[1024];
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -9217,20 +9202,18 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 {
   const char *TYPE_NAMES[] = {"none","normal","full","incremental","differential","continuous"};
 
-  String     entityIdsString;
-  ulong      i;
+  String     entityIdsString = String_new();
   DatabaseId entityId;
-  Errors     error;
-  char       filterString[1024];
-
-  entityIdsString = String_new();
-  ARRAY_ITERATE(&entityIds,i,entityId)
+  ARRAY_ITERATE(&entityIds,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_appendFormat(entityIdsString,"%"PRIi64,entityId);
   }
 
+  Errors error;
+
   printf("Entities:\n");
+  char filterString[1024];
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -9420,9 +9403,8 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
   Errors error;
 
   String     storageIdsString = String_new();
-  size_t     i;
   DatabaseId storageId;
-  ARRAY_ITERATE(&storageIds,i,storageId)
+  ARRAY_ITERATE(&storageIds,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
     String_appendFormat(storageIdsString,"%"PRIi64,storageId);
@@ -9650,9 +9632,8 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
   Errors error;
 
   String     entityIdsString = String_new();
-  size_t     i;
   DatabaseId entityId;
-  ARRAY_ITERATE(&entityIds,i,entityId)
+  ARRAY_ITERATE(&entityIds,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_appendFormat(entityIdsString,"%"PRIi64,entityId);

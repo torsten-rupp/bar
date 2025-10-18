@@ -2973,9 +2973,8 @@ NULL, // masterSocketHandle
                     break;
                   }
 
-                  StringNode *stringNode;
-                  String     fileName;
-                  STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
+                  ConstString fileName;
+                  STRINGLIST_ITERATE(&fileNameList,fileName)
                   {
                     if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
                         && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
@@ -3613,11 +3612,10 @@ Errors Command_list(StringList              *storageNameList,
   Storage_initSpecifier(&storageSpecifier);
 
   // list archive content
-  Errors failError        = ERROR_NONE;
-  bool   someStorageFound = FALSE;
-  StringNode *stringNode;
-  String     storageName;
-  STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
+  Errors      failError        = ERROR_NONE;
+  bool        someStorageFound = FALSE;
+  ConstString storageName;
+  STRINGLIST_ITERATE(storageNameList,storageName)
   {
     // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);

@@ -76,52 +76,58 @@ typedef const StringNode* StringListIterator;
 /***********************************************************************\
 * Name   : STRINGLIST_ITERATE
 * Purpose: iterate over string list
-* Input  : stringList       - string list
-*          iteratorVariable - iterator variable (type StringNode)
-*          variable         - iteration variable (must not be initalised!)
+* Input  : stringList - string list
+*          variable   - iteration variable (must not be initalised!)
 * Output : -
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
-*            StringListIterator stringListIterator;
-*            String             variable;
+*            String variable;
 *
-*            STRINGLIST_ITERATE(list,iteratorVariable,variable)
+*            STRINGLIST_ITERATE(list,variable)
 *            {
 *              ... = variable
 *            }
 \***********************************************************************/
 
-#define STRINGLIST_ITERATE(stringList,iteratorVariable,variable) \
+#define STRINGLIST_ITERATE_old(stringList,iteratorVariable,variable) \
   for ((iteratorVariable) = (stringList)->head, variable = (((stringList)->head) != NULL) ? (stringList)->head->string : NULL; \
        (iteratorVariable) != NULL; \
        (iteratorVariable) = (iteratorVariable)->next, variable = ((iteratorVariable) != NULL) ? (iteratorVariable)->string : NULL \
+      )
+#define STRINGLIST_ITERATE(stringList,variable) \
+  for (StringListIterator iteratorVariable##__COUNTER__ = __StringList_iteratorInit(stringList,&variable); \
+       iteratorVariable##__COUNTER__ != NULL; \
+       iteratorVariable##__COUNTER__ = iteratorVariable##__COUNTER__->next, variable = (iteratorVariable##__COUNTER__ != NULL) ? iteratorVariable##__COUNTER__->string : NULL \
       )
 
 /***********************************************************************\
 * Name   : STRINGLIST_ITERATEX
 * Purpose: iterate over string list
-* Input  : stringList       - string list
-*          iteratorVariable - iterator variable (type StringNode)
-*          variable         - iteration variable (must not be initalised!)
-*          condition        - additional condition
+* Input  : stringList - string list
+*          variable   - iteration variable (must not be initalised!)
+*          condition  - additional condition
 * Output : -
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
-*            StringListIterator stringListIterator;
-*            String             variable;
+*            String variable;
 *
-*            STRINGLIST_ITERATEX(list,iteratorVariable,variable,TRUE)
+*            STRINGLIST_ITERATEX(list,variable,TRUE)
 *            {
 *              ... = variable
 *            }
 \***********************************************************************/
 
-#define STRINGLIST_ITERATEX(stringList,iteratorVariable,variable,condition) \
+#define STRINGLIST_ITERATEX_old(stringList,iteratorVariable,variable,condition) \
   for ((iteratorVariable) = (stringList)->head, variable = ((iteratorVariable) != NULL) ? (stringList)->head->string : NULL; \
        ((iteratorVariable) != NULL) && (condition); \
        (iteratorVariable) = (iteratorVariable)->next, variable = ((iteratorVariable) != NULL) ? (iteratorVariable)->string : NULL \
+      )
+#define STRINGLIST_ITERATEX(stringList,variable,condition) \
+  for (StringListIterator iteratorVariable##__COUNTER__ = __StringList_iteratorInit(stringList,&variable); \
+       (iteratorVariable##__COUNTER__ != NULL) && (condition); \
+       iteratorVariable##__COUNTER__ = iteratorVariable##__COUNTER__->next, variable = (iteratorVariable##__COUNTER__ != NULL) ? iteratorVariable##__COUNTER__->string : NULL \
       )
 
 /***********************************************************************\
@@ -541,18 +547,40 @@ StringNode *StringList_matchCString(const StringList *stringList, const char *pa
 
 const char* const *StringList_toCStringArray(const StringList *stringList);
 
+/***********************************************************************\
+* Name   : __StringMap_iteratorInit
+* Purpose: initialize string map iterator
+* Input  : stringList - string list
+* Output : data  - string
+* Return : string list iterator
+* Notes  : internal use only!
+\***********************************************************************/
+
+static inline StringListIterator __StringList_iteratorInit(const StringList *stringList, ConstString *data);
+static inline StringListIterator __StringList_iteratorInit(const StringList *stringList, ConstString *data)
+{
+  assert(stringList != NULL);
+  assert(data != NULL);
+
+  (*data) = (((stringList)->head) != NULL) ? (stringList)->head->string : NULL;
+
+  return stringList->head;
+}
+
 #ifndef NDEBUG
+
 /***********************************************************************\
 * Name   : StringList_debugDump, StringList_debugPrint
 * Purpose: string list debug function: output not allocated strings
 * Input  : handle - output channel
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : debug only
 \***********************************************************************/
 
 void StringList_debugDump(FILE *handle, const StringList *stringList);
 void StringList_debugPrint(const StringList *stringList);
+
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

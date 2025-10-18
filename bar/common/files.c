@@ -858,9 +858,6 @@ LOCAL bool parseMountListEntry(char *mountPointName, uint maxMountPointNameSize,
 {
   char       *tokenizer;
   const char *s;
-  bool       parseFlag;
-  StringNode *iteratorVariable;
-  String     variable;
 
   // parse
   s = strtok_r(line," ",&tokenizer);
@@ -878,7 +875,7 @@ LOCAL bool parseMountListEntry(char *mountPointName, uint maxMountPointNameSize,
   stringSet(mountPointName,maxMountPointNameSize,s);
 
   // check if known file system
-  parseFlag = FALSE;
+  bool parseFlag = FALSE;
   if (fileSystemNames != NULL)
   {
     s = strtok_r(NULL," ",&tokenizer);
@@ -886,7 +883,8 @@ LOCAL bool parseMountListEntry(char *mountPointName, uint maxMountPointNameSize,
     {
       return FALSE;
     }
-    STRINGLIST_ITERATE(fileSystemNames,iteratorVariable,variable)
+    ConstString variable;
+    STRINGLIST_ITERATE(fileSystemNames,variable)
     {
       if (String_equalsCString(variable,s))
       {
@@ -3671,6 +3669,9 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
   String_set(fileName,directoryListHandle->basePath);
   File_appendFileNameCString(fileName,directoryListHandle->entry->d_name);
 
+  // mark entry read
+  directoryListHandle->entry = NULL;
+
   // get file info
   if (fileInfo != NULL)
   {
@@ -3680,9 +3681,6 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
       return error;
     }
   }
-
-  // mark entry read
-  directoryListHandle->entry = NULL;
 
   return ERROR_NONE;
 }

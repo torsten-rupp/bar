@@ -126,48 +126,42 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
 /***********************************************************************\
 * Name   : ARRAY_ITERATE
 * Purpose: iterated over array and execute block
-* Input  : array         - array
-*          arrayIterator - iteration variable
-*          data          - pointer to data element
+* Input  : array - array
+*          data  - pointer to data element
 * Output : -
 * Return : -
 * Notes  : usage:
-*            ArrayIterator arrayIterator;
-*
-*            ARRAY_ITERATE(array,arrayIterator,data)
+*            ARRAY_ITERATE(array,data)
 *            {
 *              ... = data
 *            }
 \***********************************************************************/
 
-#define ARRAY_ITERATE(array,arrayIterator,data) \
-  for ((arrayIterator) = 0, Array_get(array,0,&(data)); \
-       (arrayIterator) < Array_length(array); \
-       (arrayIterator)++, Array_get(array,arrayIterator,&(data)) \
+#define ARRAY_ITERATE(array,data) \
+  for (ArrayIterator arrayIterator##__COUNTER__ = __Array_iteratorInit(array,&(data)); \
+       arrayIterator##__COUNTER__ < Array_length(array); \
+       arrayIterator##__COUNTER__++, Array_get(array,arrayIterator##__COUNTER__,&(data)) \
       )
 
 /***********************************************************************\
 * Name   : ARRAY_ITERATEX
 * Purpose: iterated over array and execute block
-* Input  : array         - array
-*          arrayIterator - iteration variable
-*          data          - pointer to data element
-*          condition     - additional condition
+* Input  : array     - array
+*          data      - pointer to data element
+*          condition - additional condition
 * Output : -
 * Return : -
 * Notes  : usage:
-*            ArrayIterator arrayIterator;
-*
-*            ARRAY_ITERATEX(array,arrayIterator,data,TRUE)
+*            ARRAY_ITERATEX(array,data,TRUE)
 *            {
 *              ... = data
 *            }
 \***********************************************************************/
 
-#define ARRAY_ITERATEX(array,arrayIterator,data,condition) \
-  for ((arrayIterator) = 0, Array_get(array,0,&(data)); \
-       ((arrayIterator) < Array_length(array)) && (condition); \
-       (arrayIterator)++, Array_get(array,arrayIterator,&(data)) \
+#define ARRAY_ITERATEX(array,data,condition) \
+  for (ArrayIterator arrayIterator##__COUNTER__ = __Array_iteratorInit(array,&(data)); \
+       ((arrayIterator##__COUNTER__) < Array_length(array)) && (condition); \
+       (arrayIterator##__COUNTER__)++, Array_get(array,arrayIterator##__COUNTER__,&(data)) \
       )
 
 /***********************************************************************\
@@ -543,6 +537,24 @@ void Array_sort(Array                *array,
                 ArrayCompareFunction arrayCompareFunction,
                 void                 *arrayCompareUserData
                );
+
+/***********************************************************************\
+* Name   : __Array_iteratorInit
+* Purpose: initialize array iterator
+* Input  : array - array
+*          data  - variable for first element
+* Output : data - first element
+* Return : array iterator
+* Notes  : internal use only!
+\***********************************************************************/
+
+static inline ArrayIterator __Array_iteratorInit(const Array *array, void *data);
+static inline ArrayIterator __Array_iteratorInit(const Array *array, void *data)
+{
+  Array_get(array,0,data);
+
+  return 0;
+}
 
 /***********************************************************************\
 * Name   : Array_cArray
