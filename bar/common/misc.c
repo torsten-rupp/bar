@@ -2095,9 +2095,8 @@ String Misc_expandMacros(String           string,
                   }
                   else
                   {
-                    StringIterator stringIterator;
-                    char           ch;
-                    STRING_CHAR_ITERATE(macros[j].value.string,stringIterator,ch)
+                    char ch;
+                    STRING_CHAR_ITERATE(macros[j].value.string,ch)
                     {
                       if (ch != '%')
                       {
@@ -2483,11 +2482,10 @@ stringNode = stringNode->next;
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    uint       i = 0;
+    uint        i = 0;
     arguments[i] = String_cString(command); i++;
-    StringNode *stringNode;
-    String     string;
-    STRINGLIST_ITERATE(&argumentList,stringNode,string)
+    ConstString string;
+    STRINGLIST_ITERATE(&argumentList,string)
     {
       assert(i < n);
       arguments[i] = String_cString(string); i++;
@@ -2502,7 +2500,7 @@ stringNode = stringNode->next;
       String_append(commandLine,command);
       if (!StringList_isEmpty(&argumentList))
       {
-        STRINGLIST_ITERATE(&argumentList,stringNode,string)
+        STRINGLIST_ITERATE(&argumentList,string)
         {
           String_appendChar(commandLine,' ');
           String_append(commandLine,string);

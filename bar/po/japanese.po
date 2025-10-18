@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-04-05 04:14+0200\n"
+"POT-Creation-Date: 2025-10-18 13:28+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,22 +17,22 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: /home/torsten/projects/bar/bar/commands_compare.c:2496
+#: /home/torsten/projects/bar/bar/commands_compare.c:2445
 #, c-format
 msgid "Compare fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_convert.c:2703
+#: /home/torsten/projects/bar/bar/commands_convert.c:2664
 #, c-format
 msgid "Convert fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_restore.c:4136
+#: /home/torsten/projects/bar/bar/commands_restore.c:4109
 #, c-format
 msgid "Restore fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_test.c:2118
+#: /home/torsten/projects/bar/bar/commands_test.c:2097
 msgid "Test fail: {0}\n"
 msgstr ""
 
@@ -233,7 +233,7 @@ msgid "no SSH password given"
 msgstr ""
 
 #: errors.def:136 errors.def:144 errors.def:177 errors.def:193 errors.def:275
-#: errors.def:727
+#: errors.def:734
 msgid "for '{0}'"
 msgstr ""
 
@@ -389,7 +389,7 @@ msgstr ""
 msgid "end of compressed file"
 msgstr ""
 
-#: errors.def:333 errors.def:998
+#: errors.def:333 errors.def:1019
 msgid "delta source not found"
 msgstr ""
 
@@ -698,366 +698,384 @@ msgid "error parsing device list"
 msgstr ""
 
 #: errors.def:689
-msgid "mount failed"
+msgid "device not found"
 msgstr ""
 
 #: errors.def:696
+msgid "mount failed"
+msgstr ""
+
+#: errors.def:703
 msgid "unmount failed"
 msgstr ""
 
-#: errors.def:701
+#: errors.def:708
 msgid "no archive file name given"
 msgstr ""
 
-#: errors.def:706
+#: errors.def:713
 msgid "not an archive file"
 msgstr ""
 
-#: errors.def:713
+#: errors.def:720
 msgid "archive not found"
 msgstr ""
 
-#: errors.def:717
+#: errors.def:724
 msgid "end of archive"
 msgstr ""
 
-#: errors.def:718
+#: errors.def:725
 msgid "no meta entry"
 msgstr ""
 
-#: errors.def:719
+#: errors.def:726
 msgid "no file entry"
 msgstr ""
 
-#: errors.def:723
+#: errors.def:730
 msgid "no file data entry"
 msgstr ""
 
-#: errors.def:728
+#: errors.def:735
 msgid "no directory entry"
 msgstr ""
 
-#: errors.def:729
+#: errors.def:736
 msgid "no link entry"
 msgstr ""
 
-#: errors.def:730
+#: errors.def:737
 msgid "no hard link entry"
 msgstr ""
 
-#: errors.def:731
+#: errors.def:738
 msgid "no special entry"
 msgstr ""
 
-#: errors.def:732
+#: errors.def:739
 msgid "no image entry"
 msgstr ""
 
-#: errors.def:733
+#: errors.def:740
 msgid "no image data entry"
 msgstr ""
 
-#: errors.def:734
+#: errors.def:741
 msgid "end of data"
 msgstr ""
 
-#: errors.def:735
+#: errors.def:742
 msgid "incomplete archive"
 msgstr ""
 
-#: errors.def:736
+#: errors.def:746
 msgid "insufficient split number digits in name"
 msgstr ""
 
-#: errors.def:742
+#: errors.def:750
+#, c-format
+msgid "required at least %s digits"
+msgstr ""
+
+#: errors.def:756
 msgid "wrong CRC"
 msgstr ""
 
-#: errors.def:746
+#: errors.def:760
 msgid "at offset"
 msgstr ""
 
-#: errors.def:759
+#: errors.def:773
 msgid "entry is incomplete"
 msgstr ""
 
-#: errors.def:766
+#: errors.def:780
 msgid "wrong entry type"
 msgstr ""
 
-#: errors.def:773
+#: errors.def:787
 msgid "entries differ"
 msgstr ""
 
-#: errors.def:780
+#: errors.def:794
 msgid "corrupt data or invalid password"
 msgstr ""
 
-#: errors.def:784
+#: errors.def:798
 msgid "invalid chunk size"
 msgstr ""
 
-#: errors.def:788
+#: errors.def:802
 msgid "unknown chunk"
 msgstr ""
 
-#: errors.def:792
+#: errors.def:806
 msgid "invalid signature"
 msgstr ""
 
-#: errors.def:795
+#: errors.def:809
 msgid "invalid incremental file"
 msgstr ""
 
-#: errors.def:796
+#: errors.def:810
 msgid "wrong incremental file version"
 msgstr ""
 
-#: errors.def:797
+#: errors.def:811
 msgid "corrupt incremental file"
 msgstr ""
 
-#: errors.def:800
+#: errors.def:814
 msgid "invalid device specifier"
 msgstr ""
 
-#: errors.def:801
+#: errors.def:815
 msgid "load volume failed"
 msgstr ""
 
-#: errors.def:807
+#: errors.def:821
 msgid "parse command failed"
 msgstr ""
 
-#: errors.def:811
+#: errors.def:825
 msgid "expand command template failed"
 msgstr ""
 
-#: errors.def:815
+#: errors.def:829
 msgid "i/o redirect failed"
 msgstr ""
 
-#: errors.def:822
+#: errors.def:836
 msgid "execute external program failed"
 msgstr ""
 
-#: errors.def:829
+#: errors.def:843
 msgid "terminated external program"
 msgstr ""
 
-#: errors.def:837
-msgid "parsing data failed"
-msgstr ""
-
-#: errors.def:844
-msgid "parsing date failed"
-msgstr ""
-
-#: errors.def:851
-msgid "parsing time failed"
+#: errors.def:850
+msgid "execute external program timeout"
 msgstr ""
 
 #: errors.def:858
-msgid "parsing weekdays failed"
+msgid "parsing data failed"
 msgstr ""
 
 #: errors.def:865
-msgid "parsing maintenance failed"
+msgid "parsing date failed"
 msgstr ""
 
 #: errors.def:872
-msgid "parsing schedule failed"
+msgid "parsing time failed"
 msgstr ""
 
 #: errors.def:879
-msgid "unknown command"
+msgid "parsing weekdays failed"
 msgstr ""
 
 #: errors.def:886
+msgid "parsing maintenance failed"
+msgstr ""
+
+#: errors.def:893
+msgid "parsing schedule failed"
+msgstr ""
+
+#: errors.def:900
+msgid "unknown command"
+msgstr ""
+
+#: errors.def:907
 msgid "expected parameter"
 msgstr ""
 
-#: errors.def:899
+#: errors.def:920
 msgid "unknown value"
 msgstr ""
 
-#: errors.def:903
+#: errors.def:924
 msgid "invalid value"
 msgstr ""
 
-#: errors.def:910
+#: errors.def:931
 msgid "deprecated or ignored value"
 msgstr ""
 
-#: errors.def:914
+#: errors.def:935
 msgid "authorization failed"
 msgstr ""
 
-#: errors.def:918
+#: errors.def:939
 msgid "job not found"
 msgstr ""
 
-#: errors.def:925
+#: errors.def:946
 msgid "schedule not found"
 msgstr ""
 
-#: errors.def:938
+#: errors.def:959
 msgid "persistence not found"
 msgstr ""
 
-#: errors.def:948
+#: errors.def:969
 msgid "maintenance not found"
 msgstr ""
 
-#: errors.def:958
+#: errors.def:979
 msgid "server not found"
 msgstr ""
 
-#: errors.def:968
+#: errors.def:989
 msgid "entry not found"
 msgstr ""
 
-#: errors.def:978
+#: errors.def:999
 msgid "pattern not found"
 msgstr ""
 
-#: errors.def:988
+#: errors.def:1009
 msgid "mount not found"
 msgstr ""
 
-#: errors.def:1003
+#: errors.def:1024
 msgid "database"
 msgstr ""
 
-#: errors.def:1010
+#: errors.def:1031
 msgid "invalid database URI"
 msgstr ""
 
-#: errors.def:1014
+#: errors.def:1035
 msgid "database type not supported"
 msgstr ""
 
-#: errors.def:1016
+#: errors.def:1037
 msgid "database already exists"
 msgstr ""
 
-#: errors.def:1017
+#: errors.def:1038
 msgid "database not found"
 msgstr ""
 
-#: errors.def:1018
+#: errors.def:1039
 msgid "connect to database failed"
 msgstr ""
 
-#: errors.def:1019
+#: errors.def:1040
 msgid "database connection lost"
 msgstr ""
 
-#: errors.def:1020
+#: errors.def:1041
 msgid "database authorization failed"
 msgstr ""
 
-#: errors.def:1025
+#: errors.def:1046
 msgid "insufficient database version"
 msgstr ""
 
-#: errors.def:1032
+#: errors.def:1055
+#, c-format
+msgid "unknown version %s of index"
+msgstr ""
+
+#: errors.def:1059
 msgid "unknown version of index"
 msgstr ""
 
-#: errors.def:1039
+#: errors.def:1063
 msgid "missing table"
 msgstr ""
 
-#: errors.def:1046
+#: errors.def:1070
 msgid "missing column"
 msgstr ""
 
-#: errors.def:1053
+#: errors.def:1077
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:1060
+#: errors.def:1084
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:1067
+#: errors.def:1091
 msgid "database bind failed"
 msgstr ""
 
-#: errors.def:1074
+#: errors.def:1098
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:1078
+#: errors.def:1102
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:1079
+#: errors.def:1103
 msgid "index not found"
 msgstr ""
 
-#: errors.def:1080
+#: errors.def:1104
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:1084
+#: errors.def:1108
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:1091
+#: errors.def:1115
 msgid "parse index id failed"
 msgstr ""
 
-#: errors.def:1098
+#: errors.def:1122
 msgid "database is locked"
 msgstr ""
 
-#: errors.def:1102
+#: errors.def:1126
 msgid "database busy"
 msgstr ""
 
-#: errors.def:1103
+#: errors.def:1127
 msgid "database operation interrupted"
 msgstr ""
 
-#: errors.def:1107
+#: errors.def:1131
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:1111
+#: errors.def:1135
 msgid "database entry not found"
 msgstr ""
 
-#: errors.def:1114
+#: errors.def:1138
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:1115
+#: errors.def:1139
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:1116
+#: errors.def:1140
 msgid "slave is not paired"
 msgstr ""
 
-#: errors.def:1117
+#: errors.def:1141
 msgid "instance is not a slave"
 msgstr ""
 
-#: errors.def:1123
+#: errors.def:1147
 msgid "create PAR2 checksums fail"
 msgstr ""
 
-#: errors.def:1127
+#: errors.def:1151
 msgid "invalid block size (multiple of 4)"
 msgstr ""
 
-#: errors.def:1131
+#: errors.def:1155
 msgid "PAR2 block size too small"
 msgstr ""
 
-#: errors.def:1135
+#: errors.def:1159
 msgid "too many PAR2 blocks (max. 32768)"
 msgstr ""
 

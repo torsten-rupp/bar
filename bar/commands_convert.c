@@ -2542,11 +2542,10 @@ Errors Command_convert(const StringList        *storageNameList,
                  );
 
   bool             someStorageFound = FALSE;
-  StringNode       *stringNode;
-  String           storageName;
   StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
-  STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
+  ConstString      storageName;
+  STRINGLIST_ITERATE(storageNameList,storageName)
   {
     Errors error;
 

@@ -1646,9 +1646,8 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                                     indexHandle,
                                     transactionFlag,
   {
-    ArrayIterator arrayIterator;
-    DatabaseId    entryId;
-    ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
+    DatabaseId entryId;
+    ARRAY_ITERATEX(&entryIds,entryId,error == ERROR_NONE)
     {
       // delete entry if there exists no other fragments
       if (!Database_existsValue(&indexHandle->databaseHandle,
@@ -5821,11 +5820,9 @@ UNUSED_VARIABLE(progressInfo);
           }
         }
 
-        ArrayIterator arrayIterator;
-
         // delete old indizes for same storage file
-        IndexId       storageId;
-        ARRAY_ITERATEX(&storageIds,arrayIterator,storageId,error == ERROR_NONE)
+        IndexId storageId;
+        ARRAY_ITERATEX(&storageIds,storageId,error == ERROR_NONE)
         {
           // purge storage
           error = IndexStorage_purge(indexHandle,
@@ -5837,7 +5834,7 @@ UNUSED_VARIABLE(progressInfo);
 
         // prune entity index
         IndexId entityId;
-        ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
+        ARRAY_ITERATEX(&entityIds,entityId,error == ERROR_NONE)
         {
           error = IndexEntity_prune(indexHandle,NULL,NULL,entityId);
           DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
@@ -5845,7 +5842,7 @@ UNUSED_VARIABLE(progressInfo);
 
         // prune uuid index
         IndexId uuidId;
-        ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
+        ARRAY_ITERATEX(&uuidIds,uuidId,error == ERROR_NONE)
         {
           error = IndexUUID_prune(indexHandle,NULL,NULL,uuidId);
           DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
@@ -6020,9 +6017,8 @@ Errors IndexStorage_pruneAll(IndexHandle *indexHandle,
   }
 
   // prune storages
-  ArrayIterator arrayIterator;
-  DatabaseId    databaseId;
-  ARRAY_ITERATEX(&storageIds,arrayIterator,databaseId,(error == ERROR_NONE) && !indexQuitFlag)
+  DatabaseId databaseId;
+  ARRAY_ITERATEX(&storageIds,databaseId,(error == ERROR_NONE) && !indexQuitFlag)
   {
     error = IndexStorage_prune(indexHandle,doneFlag,deletedCounter,INDEX_ID_STORAGE(databaseId));
   }

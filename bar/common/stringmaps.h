@@ -136,21 +136,19 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value, void *u
 /***********************************************************************\
 * Name   : STRINGMAP_ITERATE
 * Purpose: iterate over string map
-* Input  : stringMap       - string map
-*          iteratorVariable - iterator variable (type int)
-*          name_            - iteration name (must not be initalised!)
-*          type_            - iteration type
-*          value            - iteration value (must not be initalised!)
+* Input  : stringMap - string map
+*          name_     - iteration name (must not be initalised!)
+*          type_     - iteration type
+*          value     - iteration value (must not be initalised!)
 * Output : -
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
-*            StringMapIterator iteratorVariable;
-*            const char        *name;
-*            StringMapTypes    type;
-*            StringMapValue    value;
+*            const char     *name;
+*            StringMapTypes type;
+*            StringMapValue value;
 *
-*            STRINGMAP_ITERATE(stringMap,iteratorVariable,name,type,value)
+*            STRINGMAP_ITERATE(stringMap,name,type,value)
 *            {
 *              ... = name
 *              ... = type
@@ -158,31 +156,29 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value, void *u
 *            }
 \***********************************************************************/
 
-#define STRINGMAP_ITERATE(stringMap,iteratorVariable,name_,type_,value_) \
-  for ((iteratorVariable) = 0, name_ = StringMap_indexName(stringMap,0), type_ = StringMap_indexType(stringMap,0), value_ = StringMap_indexValue(stringMap,0); \
-       (iteratorVariable) < StringMap_count(stringMap); \
-       (iteratorVariable)++, name_ = StringMap_indexName(stringMap,iteratorVariable), type_ = StringMap_indexType(stringMap,iteratorVariable), value_ = StringMap_indexValue(stringMap,iteratorVariable) \
+#define STRINGMAP_ITERATE(stringMap,name_,type_,value_) \
+  for (StringMapIterator iteratorVariable##__COUNT__ = __StringMap_iteratorInit(stringMap,&name_,&type_,&value_); \
+       iteratorVariable##__COUNT__ < StringMap_count(stringMap); \
+       iteratorVariable##__COUNT__++, name_ = StringMap_indexName(stringMap,iteratorVariable##__COUNT__), type_ = StringMap_indexType(stringMap,iteratorVariable##__COUNT__), value_ = StringMap_indexValue(stringMap,iteratorVariable##__COUNT__) \
       )
 
 /***********************************************************************\
 * Name   : STRINGMAP_ITERATEX
 * Purpose: iterate over string map
-* Input  : stringMap       - string map
-*          iteratorVariable - iterator variable (type int)
-*          name_             - iteration name (must not be initalised!)
-*          type_            - iteration type
-*          value            - iteration value (must not be initalised!)
-*          condition        - additional condition
+* Input  : stringMap- string map
+*          name_     - iteration name (must not be initalised!)
+*          type_     - iteration type
+*          value     - iteration value (must not be initalised!)
+*          condition - additional condition
 * Output : -
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
-*            StringMapIterator iteratorVariable;
-*            const char        *name;
-*            StringMapTypes    type;
-*            StringMapValue    value;
+*            const char     *name;
+*            StringMapTypes type;
+*            StringMapValue value;
 *
-*            STRINGMAP_ITERATEX(stringMap,iteratorVariable,name,type,value,TRUE)
+*            STRINGMAP_ITERATEX(stringMap,name,type,value,TRUE)
 *            {
 *              ... = name
 *              ... = type
@@ -190,10 +186,10 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value, void *u
 *            }
 \***********************************************************************/
 
-#define STRINGMAP_ITERATEX(stringMap,iteratorVariable,name_,type_,value_,condition) \
-  for ((iteratorVariable) = 0, name_ = StringMap_indexName(stringMap,0), type_ = StringMap_indexType(stringMap,0), value_ = StringMap_indexValue(stringMap,0); \
-       ((iteratorVariable) < StringMap_count(stringMap)) && (condition); \
-       (iteratorVariable)++, name_ = StringMap_indexName(stringMap,iteratorVariable), type_ = StringMap_indexType(stringMap,iteratorVariable), value_ = StringMap_indexValue(stringMap,iteratorVariable) \
+#define STRINGMAP_ITERATEX(stringMap,name_,type_,value_,condition) \
+  for (StringMapIterator iteratorVariable##__COUNT__ = __StringMap_iteratorInit(stringMap,&name_,&type_,&value_); \
+       (iteratorVariable##__COUNT__ < StringMap_count(stringMap)) && (condition); \
+       iteratorVariable##__COUNT__++, name_ = StringMap_indexName(stringMap,iteratorVariable##__COUNT__), type_ = StringMap_indexType(stringMap,iteratorVariable##__COUNT__), value_ = StringMap_indexValue(stringMap,iteratorVariable##__COUNT__) \
       )
 
 /***************************** Forwards ********************************/
@@ -589,6 +585,32 @@ void* const *StringMap_valueArray(const StringMap stringMap);
 
 bool StringMap_parseEnumNumber(const char *name, uint *value, void *userData);
 
+/***********************************************************************\
+* Name   : __StringMap_iteratorInit
+* Purpose: initialize string map iterator
+* Input  : stringMap - string map
+* Output : name  - entry name
+*          type  - entry type
+*          value - entry value
+* Return : array iterator
+* Notes  : internal use only!
+\***********************************************************************/
+
+static inline StringMapIterator __StringMap_iteratorInit(const StringMap stringMap, const char **name, StringMapTypes *type, StringMapValue *value);
+static inline StringMapIterator __StringMap_iteratorInit(const StringMap stringMap, const char **name, StringMapTypes *type, StringMapValue *value)
+{
+  assert(stringMap != NULL);
+  assert(name != NULL);
+  assert(type != NULL);
+  assert(value != NULL);
+
+  (*name)  = StringMap_indexName (stringMap,0);
+  (*type)  = StringMap_indexType (stringMap,0);
+  (*value) = StringMap_indexValue(stringMap,0);
+
+  return 0;
+}
+
 #ifndef NDEBUG
 
 /***********************************************************************\
@@ -598,7 +620,7 @@ bool StringMap_parseEnumNumber(const char *name, uint *value, void *userData);
 *          stringMap - string map
 * Output : -
 * Return : string
-* Notes  : -
+* Notes  : debug only
 \***********************************************************************/
 
 String StringMap_debugToString(String string, const StringMap stringMap);
@@ -611,7 +633,7 @@ String StringMap_debugToString(String string, const StringMap stringMap);
 *          stringMap - string map
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : debug only
 \***********************************************************************/
 
 void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap);
@@ -623,7 +645,7 @@ void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap);
 *          stringMap - string map
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : debug onlyn
 \***********************************************************************/
 
 void StringMap_debugPrint(uint indent, const StringMap stringMap);

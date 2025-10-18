@@ -2542,10 +2542,9 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
       Misc_doneTimeout(&timeoutInfo);
       if (iso9660Handle != NULL)
       {
-        StringListIterator stringListIterator;
-        String             fileName;
-        uint               n = 0;
-        STRINGLIST_ITERATEX(&fileNameList,stringListIterator,fileName,error == ERROR_NONE)
+        uint        n = 0;
+        ConstString fileName;
+        STRINGLIST_ITERATEX(&fileNameList,fileName,error == ERROR_NONE)
         {
           // open file
           FileHandle fileHandle;
@@ -2559,16 +2558,18 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
           iso9660_stat_t *iso9660Stat;
           if (error == ERROR_NONE)
           {
-            File_getBaseName(fileName,fileName,TRUE);
+            String baseName = File_getBaseName(String_new(),fileName,TRUE);
             iso9660Stat = iso9660_ifs_stat_translate(iso9660Handle,
-                                                     String_cString(fileName)
+                                                     String_cString(baseName)
                                                     );
             if (iso9660Stat == NULL)
             {
-              error = ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(fileName));
+              error = ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(baseName));
               File_close(&fileHandle);
+              String_delete(baseName);
               break;
             }
+            String_delete(baseName);
           }
 
           // read and compare content

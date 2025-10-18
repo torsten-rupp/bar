@@ -559,9 +559,8 @@ bool ThreadPool_joinSet(ThreadPoolSet *threadPoolSet)
   assert(threadPoolSet != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(threadPoolSet);
 
-  ArrayIterator  arrayIterator;
   ThreadPoolNode *threadPoolNode;
-  ARRAY_ITERATE(&threadPoolSet->threadPoolNodes,arrayIterator,threadPoolNode)
+  ARRAY_ITERATE(&threadPoolSet->threadPoolNodes,threadPoolNode)
   {
     ThreadPool_join(threadPoolSet->threadPool,threadPoolNode);
   }

@@ -2439,9 +2439,8 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
     // purge storages
     if (error == ERROR_NONE)
     {
-      ArrayIterator arrayIterator;
-      DatabaseId    databaseId;
-      ARRAY_ITERATEX(&storageIds,arrayIterator,databaseId,error == ERROR_NONE)
+      DatabaseId databaseId;
+      ARRAY_ITERATEX(&storageIds,databaseId,error == ERROR_NONE)
       {
         error = IndexStorage_purge(indexHandle,
                                    INDEX_ID_STORAGE(databaseId),
@@ -2624,9 +2623,8 @@ Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
   }
 
   // prune entities
-  ArrayIterator arrayIterator;
-  DatabaseId    databaseId;
-  ARRAY_ITERATEX(&entityIds,arrayIterator,databaseId,(error == ERROR_NONE) && !indexQuitFlag)
+  DatabaseId databaseId;
+  ARRAY_ITERATEX(&entityIds,databaseId,(error == ERROR_NONE) && !indexQuitFlag)
   {
     error = IndexEntity_prune(indexHandle,doneFlag,deletedCounter,INDEX_ID_ENTITY(databaseId));
   }

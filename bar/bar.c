@@ -890,10 +890,9 @@ void outputConsole(FILE *file, ConstString string)
         if (lastOutputLine != NULL)
         {
           // get visible line output length
-          uint           n = 0;
-          StringIterator stringIterator;
-          char           ch;
-          STRING_CHAR_ITERATE(lastOutputLine,stringIterator,ch)
+          uint n = 0;
+          char ch;
+          STRING_CHAR_ITERATE(lastOutputLine,ch)
           {
             if (ch != '\b')
             {
@@ -1269,9 +1268,8 @@ void logLines(LogHandle *logHandle, ulong logType, const char *prefix, const Str
 {
   assert(lines != NULL);
 
-  StringNode *stringNode;
-  String     line;
-  STRINGLIST_ITERATE(lines,stringNode,line)
+  ConstString line;
+  STRINGLIST_ITERATE(lines,line)
   {
     logMessage(logHandle,logType,"%s%s",prefix,String_cString(line));
   }
@@ -1427,9 +1425,8 @@ void logPostProcess(LogHandle        *logHandle,
         if (error != ERROR_NONE)
         {
           printError(_("cannot post-process log file (error: %s)"),Error_getText(error));
-          StringNode *stringNode;
-          String     string;
-          STRINGLIST_ITERATE(&stderrList,stringNode,string)
+          ConstString string;
+          STRINGLIST_ITERATE(&stderrList,string)
           {
             printError("  %s",String_cString(string));
           }
@@ -3764,9 +3761,8 @@ LOCAL Errors runDebug(int argc, const char *argv[])
       return ERROR_NO_STORAGE_NAME;
     }
 
-    StringNode *stringNode;
-    String     name;
-    STRINGLIST_ITERATEX(&globalOptions.debug.continuousNameList,stringNode,name,error == ERROR_NONE)
+    ConstString name;
+    STRINGLIST_ITERATEX(&globalOptions.debug.continuousNameList,name,error == ERROR_NONE)
     {
       error = Continuous_addEntry(&continuousDatabaseHandle,
                                   MISC_UUID_NONE,  // jobUUID,

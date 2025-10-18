@@ -2924,9 +2924,7 @@ LOCAL Errors testUUID(IndexHandle             *indexHandle,
   Index_doneList(&indexQueryHandle);
 
   // test all entities of uuid
-  ArrayIterator arrayIterator;
   ARRAY_ITERATEX(&entityIdArray,
-                 arrayIterator,
                  entityId,
                     (error == ERROR_NONE)
                  && ((isAbortedFunction == NULL) || !isAbortedFunction(isAbortedUserData))
@@ -3267,11 +3265,9 @@ LOCAL Errors deleteEntity(IndexHandle  *indexHandle,
   Index_doneList(&indexQueryHandle);
 
   // delete all storages of entity
-  ArrayIterator arrayIterator;
-  String        storageName = String_new();
-  uint          doneCount   = 0;
+  String storageName = String_new();
+  uint   doneCount   = 0;
   ARRAY_ITERATEX(&storageIdArray,
-                 arrayIterator,
                  storageId,
                     (error == ERROR_NONE)
                  && (   (clientInfo == NULL)
@@ -3480,10 +3476,8 @@ LOCAL Errors deleteUUID(IndexHandle  *indexHandle,
 
 
   // delete all entities of job
-  ArrayIterator arrayIterator;
-  uint          doneCount = 0;
+  uint doneCount = 0;
   ARRAY_ITERATEX(&entityIdArray,
-                 arrayIterator,
                  entityId,
                     (error == ERROR_NONE)
                  && (   (clientInfo == NULL)
@@ -7863,7 +7857,7 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *index
 
     // get arguments
     StringMap_clear(clientInfo->io.action.resultMap);
-    STRINGMAP_ITERATE(argumentMap,stringMapIterator,name,type,value)
+    STRINGMAP_ITERATE(argumentMap,name,type,value)
     {
       if (!stringEquals(name,"errorCode"))
       {
@@ -20659,8 +20653,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   }
 
   // set state for collected storage ids
-  ulong i;
-  ARRAY_ITERATE(&storageIdArray,i,storageId)
+  ARRAY_ITERATE(&storageIdArray,storageId)
   {
     error = IndexStorage_setState(indexHandle,
                                   storageId,
@@ -21756,7 +21749,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
 
 #if 0
 StringNode *n;
-String s;
+ConstString s;
 fprintf(stderr,"%s:%d: s %d\n",__FILE__,__LINE__,StringList_count(&storageNameList));
 STRINGLIST_ITERATE(&storageNameList,n,s)
 {

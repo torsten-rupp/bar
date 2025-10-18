@@ -12065,16 +12065,10 @@ Errors Database_rename(const DatabaseSpecifier *databaseSpecifier,
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
-          DatabaseHandle     databaseHandle;
-          uint               i;
-          StringList         tableNameList;
-          StringListIterator iterator;
-          String             name;
-          char               sqlString[256];
-
           if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->mariadb.databaseName);
 
           // open database with no selected database
+          DatabaseHandle databaseHandle;
           error = openDatabase(&databaseHandle,
                                databaseSpecifier,
                                "",  // databaseName
@@ -12086,9 +12080,10 @@ Errors Database_rename(const DatabaseSpecifier *databaseSpecifier,
           }
 
           // create new database
-          i = 0;
+          size_t i = 0;
           do
           {
+            char sqlString[256];
             error = mariaDBExecute(databaseHandle.mariadb.handle,
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "CREATE DATABASE %s CHARACTER SET '%s' COLLATE '%s_bin'",
@@ -12109,6 +12104,7 @@ Errors Database_rename(const DatabaseSpecifier *databaseSpecifier,
           }
 
           // rename tables
+          StringList tableNameList;
           StringList_init(&tableNameList);
           error = mariaDBGetTableList(&tableNameList,&databaseHandle,databaseName);
           if (error != ERROR_NONE)
@@ -12117,8 +12113,10 @@ Errors Database_rename(const DatabaseSpecifier *databaseSpecifier,
             closeDatabase(&databaseHandle);
             break;
           }
-          STRINGLIST_ITERATEX(&tableNameList,iterator,name,error == ERROR_NONE)
+          ConstString name;
+          STRINGLIST_ITERATEX(&tableNameList,name,error == ERROR_NONE)
           {
+            char sqlString[256];
             error = mariaDBExecute(databaseHandle.mariadb.handle,
                                    stringFormat(sqlString,sizeof(sqlString),
                                                 "RENAME TABLE %s.%s TO %s.%s",
@@ -12150,12 +12148,10 @@ Errors Database_rename(const DatabaseSpecifier *databaseSpecifier,
 // TODO:
       #if defined(HAVE_POSTGRESQL)
         {
-          DatabaseHandle databaseHandle;
-          char           sqlString[256];
-
           if (databaseName == NULL) databaseName = String_cString(databaseSpecifier->postgresql.databaseName);
 
           // open database with no selected database
+          DatabaseHandle databaseHandle;
           error = openDatabase(&databaseHandle,
                                databaseSpecifier,
                                "",  // databaseName
@@ -12167,6 +12163,7 @@ Errors Database_rename(const DatabaseSpecifier *databaseSpecifier,
           }
 
           // rename database
+          char sqlString[256];
           stringFormat(sqlString,sizeof(sqlString),
                        "ALTER DATABASE %s RENAME TO %s",
                        databaseName,
@@ -12219,16 +12216,12 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
   {
     case DATABASE_TYPE_SQLITE3:
       {
-        String  directoryName;
-        sqlite3 *handle;
-        int     sqliteResult;
-
         // create directory
-        directoryName = File_getDirectoryNameCString(String_new(),
-                                                     (databaseName != NULL)
-                                                       ? databaseName
-                                                       : String_cString(databaseSpecifier->sqlite.fileName)
-                                                    );
+        String directoryName = File_getDirectoryNameCString(String_new(),
+                                                            (databaseName != NULL)
+                                                              ? databaseName
+                                                              : String_cString(databaseSpecifier->sqlite.fileName)
+                                                           );
         if (   !String_isEmpty(directoryName)
             && !File_isDirectory(directoryName)
            )
@@ -12248,13 +12241,14 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
         String_delete(directoryName);
 
         // create database
-        sqliteResult = sqlite3_open_v2((databaseName != NULL)
-                                         ? databaseName
-                                         : String_cString(databaseSpecifier->sqlite.fileName),
-                                       &handle,
-                                       SQLITE_OPEN_URI|SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,
-                                       NULL
-                                      );
+        sqlite3 *handle;
+        int     sqliteResult = sqlite3_open_v2((databaseName != NULL)
+                                                 ? databaseName
+                                                 : String_cString(databaseSpecifier->sqlite.fileName),
+                                               &handle,
+                                               SQLITE_OPEN_URI|SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,
+                                               NULL
+                                              );
         if (sqliteResult != SQLITE_OK)
         {
           error = ERRORX_(DATABASE,
@@ -12273,12 +12267,10 @@ Errors Database_create(const DatabaseSpecifier *databaseSpecifier,
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
-          uint i;
-
           /* try to create with character set uft8mb4 (4-byte UTF8),
              then utf8 as a fallback for older MariaDB versions.
           */
-          i = 0;
+          size_t i = 0;
           do
           {
             error = mariaDBCreateDatabase(String_cString(databaseSpecifier->mariadb.serverName),
@@ -13086,7 +13078,6 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
     case DATABASE_TYPE_SQLITE3:
       {
         char sqlString[256];
-
         error = executeQuery(databaseHandle,
                              NULL,  // changedRowCount
                              databaseHandle->timeout,
@@ -13102,7 +13093,6 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
       #if defined(HAVE_MARIADB)
         {
           char sqlString[256];
-
           error = executeQuery(databaseHandle,
                                NULL,  // changedRowCount
                                databaseHandle->timeout,
@@ -13119,18 +13109,15 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
       break;
     case DATABASE_TYPE_POSTGRESQL:
       {
-        StringList         tableNameList;
-        StringListIterator iteratorTableName;
-        String             tableName;
-
+        StringList tableNameList;
         StringList_init(&tableNameList);
         Database_getTableList(&tableNameList,databaseHandle,NULL);
 
         error = ERROR_NONE;
-        STRINGLIST_ITERATEX(&tableNameList,iteratorTableName,tableName,error = ERROR_NONE)
+        ConstString tableName;
+        STRINGLIST_ITERATEX(&tableNameList,tableName,error = ERROR_NONE)
         {
           char sqlString[256];
-
           error = executeQuery(databaseHandle,
                                NULL,  // changedRowCount
                                databaseHandle->timeout,
@@ -13292,9 +13279,8 @@ Errors Database_dropTables(DatabaseHandle *databaseHandle)
     savedEnabledForeignKeys = databaseHandle->enabledForeignKeys;
     Database_setEnabledForeignKeys(databaseHandle,FALSE);
 
-    StringListIterator iteratorTableName;
-    String             tableName;
-    STRINGLIST_ITERATEX(&tableNameList,iteratorTableName,tableName,error == ERROR_NONE)
+    ConstString tableName;
+    STRINGLIST_ITERATEX(&tableNameList,tableName,error == ERROR_NONE)
     {
       error = Database_dropTable(databaseHandle,String_cString(tableName));
     }
@@ -13427,9 +13413,8 @@ Errors Database_dropViews(DatabaseHandle *databaseHandle)
   StringList viewNameList;
   StringList_init(&viewNameList);
   error = Database_getViewList(&viewNameList,databaseHandle,NULL);
-  StringListIterator iteratorViewName;
-  String             viewName;
-  STRINGLIST_ITERATEX(&viewNameList,iteratorViewName,viewName,error == ERROR_NONE)
+  ConstString viewName;
+  STRINGLIST_ITERATEX(&viewNameList,viewName,error == ERROR_NONE)
   {
     error = Database_dropView(databaseHandle,String_cString(viewName));
   }
@@ -13468,15 +13453,13 @@ Errors Database_dropIndex(DatabaseHandle *databaseHandle,
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
-          StringList         tableNameList;
-          StringListIterator iteratorTableName;
-          String             tableName;
-          char               sqlString[256];
-
+          StringList tableNameList;
           StringList_init(&tableNameList);
           error = Database_getTableList(&tableNameList,databaseHandle,NULL);
-          STRINGLIST_ITERATEX(&tableNameList,iteratorTableName,tableName,error == ERROR_NONE)
+          ConstString tableName;
+          STRINGLIST_ITERATEX(&tableNameList,tableName,error == ERROR_NONE)
           {
+            char sqlString[256];
             error = executeQuery(databaseHandle,
                                  NULL,  // changedRowCount
                                  databaseHandle->timeout,
@@ -13533,9 +13516,8 @@ Errors Database_dropIndices(DatabaseHandle *databaseHandle)
         StringList indexNameList;
         StringList_init(&indexNameList);
         error = Database_getIndexList(&indexNameList,databaseHandle,NULL);
-        StringListIterator iteratorIndexName;
-        String             indexName;
-        STRINGLIST_ITERATEX(&indexNameList,iteratorIndexName,indexName,error == ERROR_NONE)
+        ConstString indexName;
+        STRINGLIST_ITERATEX(&indexNameList,indexName,error == ERROR_NONE)
         {
           error = Database_dropIndex(databaseHandle,String_cString(indexName));
         }
@@ -13595,9 +13577,8 @@ Errors Database_dropTriggers(DatabaseHandle *databaseHandle)
   StringList triggerNameList;
   StringList_init(&triggerNameList);
   error = Database_getTriggerList(&triggerNameList,databaseHandle,NULL);
-  StringListIterator iteratorTriggerName;
-  String             triggerName;
-  STRINGLIST_ITERATEX(&triggerNameList,iteratorTriggerName,triggerName,error == ERROR_NONE)
+  ConstString triggerName;
+  STRINGLIST_ITERATEX(&triggerNameList,triggerName,error == ERROR_NONE)
   {
     error = Database_dropTrigger(databaseHandle,String_cString(triggerName));
   }
@@ -13667,9 +13648,8 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
 //fprintf(stderr,"%s:%d: tables: \n",__FILE__,__LINE__); STRINGLIST_ITERATE(&tableNameList,stringListIterator,tableName) fprintf(stderr,"%s:%d:   %s\n",__FILE__,__LINE__,String_cString(tableName));
 
   // compare tables
-  StringListIterator stringListIterator;
-  String             tableName;
-  STRINGLIST_ITERATEX(&referenceTableNameList,stringListIterator,tableName,error == ERROR_NONE)
+  ConstString tableName;
+  STRINGLIST_ITERATEX(&referenceTableNameList,tableName,error == ERROR_NONE)
   {
     if (   (tableNames == NULL)
         || ARRAY_CONTAINS(tableNames,tableNameCount,i,String_equalsCString(tableName,tableNames[i]))
@@ -13759,7 +13739,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
   if (!IS_SET(compareFlags,DATABASE_COMPARE_IGNORE_OBSOLETE))
   {
     // check for obsolete tables
-    STRINGLIST_ITERATEX(&tableNameList,stringListIterator,tableName,error == ERROR_NONE)
+    STRINGLIST_ITERATEX(&tableNameList,tableName,error == ERROR_NONE)
     {
       if (!StringList_contains(&referenceTableNameList,tableName))
       {
@@ -18535,12 +18515,8 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
               break;
             case DATABASE_CHECK_FULL:
               {
-                StringList         tableNameList;
-                StringListIterator stringListIterator;
-                ConstString        tableName;
-                char               sqlString[256];
-
                 // get table names
+                StringList tableNameList;
                 StringList_init(&tableNameList);
                 error = Database_getTableList(&tableNameList,databaseHandle,NULL);
                 if (error != ERROR_NONE)
@@ -18550,8 +18526,10 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
                 }
 
                 // check tables
-                STRINGLIST_ITERATEX(&tableNameList,stringListIterator,tableName,error == ERROR_NONE)
+                ConstString tableName;
+                STRINGLIST_ITERATEX(&tableNameList,tableName,error == ERROR_NONE)
                 {
+                  char sqlString[256];
                   error = executeQuery(databaseHandle,
                                        NULL,  // changedRowCount
                                        databaseHandle->timeout,

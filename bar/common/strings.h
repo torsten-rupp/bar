@@ -163,76 +163,92 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 /***********************************************************************\
 * Name   : STRING_CHAR_ITERATE
 * Purpose: iterated over characters of string and execute block
-* Input  : string         - string
-*          stringIterator - string iterator
-*          variable       - iteration variable
+* Input  : string   - string
+*          variable - iteration variable
 * Output : -
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
-*            StringIterator stringIterator;
-*            char           variable;
-*            STRING_CHAR_ITERATE(string,stringIterator,variable)
+*            char variable;
+*            STRING_CHAR_ITERATE(string,variable)
 *            {
 *              ... = variable
 *            }
 \***********************************************************************/
 
-#define STRING_CHAR_ITERATE(string,stringIterator,variable) \
-  for (stringIterator = 0, variable = String_index(string,0L); \
-       (stringIterator) < String_length(string); \
-       stringIterator++, variable = String_index(string,stringIterator) \
+#define STRING_CHAR_ITERATE(string,variable) \
+  for (StringIterator stringIterator##__COUNT__ = __String_iteratorInit(string,&variable); \
+       stringIterator##__COUNT__ < String_length(string); \
+       stringIterator##__COUNT__++, variable = String_index(string,stringIterator##__COUNT__) \
       )
 
 /***********************************************************************\
 * Name   : STRING_CHAR_ITERATEX
 * Purpose: iterated over characters of string and execute block
-* Input  : string         - string
-*          stringIterator - string iterator
-*          variable       - iteration variable
-*          condition      - additional condition
+* Input  : string    - string
+*          variable  - iteration variable
+*          condition - additional condition
 * Output : -
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
-*            StringIterator stringIterator;
-*            char           variable;
-*            STRING_CHAR_ITERATEX(string,stringIterator,variable,TRUE)
+*            char variable;
+*            STRING_CHAR_ITERATEX(string,variable,TRUE)
 *            {
 *              ... = variable->...
 *            }
 \***********************************************************************/
 
-#define STRING_CHAR_ITERATEX(string,stringIterator,variable,condition) \
-  for (stringIterator = 0, variable = String_index(string,0L); \
-       ((stringIterator) < String_length(string)) && (condition); \
-       stringIterator++, variable = String_index(string,stringIterator) \
+#define STRING_CHAR_ITERATEX(string,variable,condition) \
+  for (StringIterator stringIterator##__COUNT__ = __String_iteratorInit(string,&variable); \
+       (stringIterator##__COUNT__ < String_length(string)) && (condition); \
+       stringIterator##__COUNT__++, variable = String_index(string,stringIterator##__COUNT__) \
       )
 
 /***********************************************************************\
 * Name   : STRING_CHAR_ITERATE_UTF8
 * Purpose: iterated over characters of string and execute block
-* Input  : string         - string
-*          stringIterator - string iterator
-*          variable       - iteration variable
+* Input  : string   - string
+*          variable - iteration variable
 * Output : -
 * Return : -
-* Notes  : variable will contain all characters in string
+* Notes  : variable will contain all code points in string
 *          usage:
-*            StringIterator stringIterator;
-*            Codepoint      variable;
-*            STRING_CHAR_ITERATE_UTF8(string,stringIterator,variable)
+*            Codepoint variable;
+*            STRING_CHAR_ITERATE_UTF8(string,variable)
 *            {
 *              ... = variable->...
 *            }
 \***********************************************************************/
 
-#define STRING_CHAR_ITERATE_UTF8(string,stringIterator,variable) \
-  for (stringIterator = 0, variable = String_atUTF8(string,0,NULL); \
-       (stringIterator) < String_length(string); \
-       (stringIterator) = stringNextUTF8(string->data,stringIterator), variable = String_atUTF8(string,stringIterator,NULL) \
+#define STRING_CHAR_ITERATE_UTF8(string,variable) \
+  for (StringIterator stringIterator##__COUNT__ = __String_iteratorUTF8Init(string,&variable); \
+       stringIterator##__COUNT__ < String_length(string); \
+       stringIterator##__COUNT__ = stringNextUTF8(string->data,stringIterator##__COUNT__), variable = String_atUTF8(string,stringIterator##__COUNT__,NULL) \
       )
 
+/***********************************************************************\
+* Name   : STRING_CHAR_ITERATE_UTF8X
+* Purpose: iterated over characters of string and execute block
+* Input  : string    - string
+*          variable  - iteration variable
+*          condition - additional condition
+* Output : -
+* Return : -
+* Notes  : variable will contain all code points in string
+*          usage:
+*            Codepoint variable;
+*            STRING_CHAR_ITERATE_UTF8X(string,variable,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define STRING_CHAR_ITERATE_UTF8X(string,variable,conditon) \
+  for (StringIterator stringIterator##__COUNT__ = __String_iteratorUTF8Init(string,&variable); \
+       stringIterator##__COUNT__ < String_length(string) && (condition); \
+       stringIterator##__COUNT__ = stringNextUTF8(string->data,stringIterator##__COUNT__), variable = String_atUTF8(string,stringIterator##__COUNT__,NULL) \
+      )
 // debugging
 #ifndef NDEBUG
   #define STRING_CHECKSUM(length,maxLength,data) \
@@ -1557,6 +1573,46 @@ char* String_toCString(ConstString string);
 
 void __printErrorConstString(const struct __String *string);
 
+/***********************************************************************\
+* Name   : __String_iteratorInit
+* Purpose: initialize string iterator
+* Input  : string - string
+* Output : ch - first character
+* Return : string iterator
+* Notes  : internal use only!
+\***********************************************************************/
+
+static inline StringIterator __String_iteratorInit(ConstString string, char *ch);
+static inline StringIterator __String_iteratorInit(ConstString string, char *ch)
+{
+  assert(string != NULL);
+  assert(ch != NULL);
+
+  (*ch) = String_index(string,0);
+
+  return 0;
+}
+
+/***********************************************************************\
+* Name   : __String_iteratorUTF8Init
+* Purpose: initialize string UTF8 iterator
+* Input  : string - string
+* Output : codepoint - first code point
+* Return : string iterator
+* Notes  : internal use only!
+\***********************************************************************/
+
+static inline StringIterator __String_iteratorUTF8Init(ConstString string, Codepoint *codepoint);
+static inline StringIterator __String_iteratorUTF8Init(ConstString string, Codepoint *codepoint)
+{
+  assert(string != NULL);
+  assert(codepoint != NULL);
+
+  (*codepoint) = String_atUTF8(string,0,NULL);
+
+  return 0;
+}
+
 #ifndef NDEBUG
 
 /***********************************************************************\
@@ -1565,7 +1621,7 @@ void __printErrorConstString(const struct __String *string);
 * Input  : -
 * Output : -
 * Return : -
-* Notes  : called automatically
+* Notes  : called automatically, debug only
 \***********************************************************************/
 
 void String_debugInit(void);
@@ -1576,7 +1632,7 @@ void String_debugInit(void);
 * Input  : -
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : debug only
 \***********************************************************************/
 
 void String_debugDone(void);
@@ -1591,7 +1647,7 @@ void String_debugDone(void);
 *                                   DUMP_INFO_TYPE_*
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : debug only
 \***********************************************************************/
 
 void String_debugDumpInfo(FILE                   *handle,
@@ -1611,7 +1667,7 @@ void String_debugPrintInfo(StringDumpInfoFunction stringDumpInfoFunction,
 * Input  : -
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : debug only
 \***********************************************************************/
 
 void String_debugPrintStatistics(void);
@@ -1623,10 +1679,11 @@ void String_debugPrintStatistics(void);
 * Input  : -
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : debug only
 \***********************************************************************/
 
 void String_debugCheck(void);
+
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

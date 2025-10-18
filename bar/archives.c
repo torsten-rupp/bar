@@ -4896,9 +4896,8 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
   }
 
   // create hard link name chunks
-  StringNode *stringNode;
-  String     fileName;
-  STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
+  ConstString fileName;
+  STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,fileName)
   {
     convertSystemToUTF8Encoding(archiveEntryInfo->hardLink.chunkHardLinkName.name,fileName);
 
@@ -5302,9 +5301,8 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         if (Index_isAvailable())
         {
           // add hardlink entry
-          const StringNode *stringNode;
-          String           fileName;
-          STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
+          ConstString fileName;
+          STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,fileName)
           {
             error = indexAddHardlink(archiveEntryInfo->archiveHandle,
                                      fileName,
@@ -5731,7 +5729,10 @@ Errors Archive_formatName(String           fileName,
               }
               if ((ulong)partNumber >= (divisor*10L))
               {
-                return ERRORX_(INSUFFICIENT_SPLIT_NUMBERS,0,"%u",(size_t)ceil(log10((double)partNumber)));
+                #pragma GCC push_options
+                #pragma GCC diagnostic ignored "-Wbad-function-cast"
+                return ERRORX_(INSUFFICIENT_SPLIT_NUMBERS,0,"%u",(size_t)(ceil(log10((double)partNumber))));
+                #pragma GCC pop_options
               }
 
               // replace #...# by part number
@@ -8439,9 +8440,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   if ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(deltaCompressAlgorithm))
   {
     error = ERROR_NONE;
-    const StringNode *stringNode;
-    String           fileName;
-    STRINGLIST_ITERATE(fileNameList,stringNode,fileName)
+    ConstString fileName;
+    STRINGLIST_ITERATE(fileNameList,fileName)
     {
       error = DeltaSource_openEntry(&archiveEntryInfo->hardLink.deltaSourceHandle,
                                     archiveHandle->deltaSourceList,
@@ -8728,9 +8728,8 @@ CRYPT_KEY_DERIVE_FUNCTION,//
   archiveEntryInfo->hardLink.headerLength = Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLink.info,     &archiveEntryInfo->hardLink.chunkHardLink,     0)+
                                             Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkEntry.info,&archiveEntryInfo->hardLink.chunkHardLinkEntry,0)+
                                             Chunk_getSize(&archiveEntryInfo->hardLink.chunkHardLinkData.info, &archiveEntryInfo->hardLink.chunkHardLinkData, 0);
-  StringNode *stringNode;
-  String     fileName;
-  STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
+  ConstString fileName;
+  STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,fileName)
   {
     convertSystemToUTF8Encoding(archiveEntryInfo->hardLink.chunkHardLinkName.name,fileName);
 
@@ -13753,9 +13752,8 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               {
                 if (Index_isAvailable())
                 {
-                  StringNode *stringNode;
-                  String     fileName;
-                  STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
+                  ConstString fileName;
+                  STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,fileName)
                   {
                     error = indexAddHardlink(archiveEntryInfo->archiveHandle,
                                              fileName,
@@ -15715,9 +15713,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           }
 
           // add to index database
-          StringNode *stringNode;
-          String     name;
-          STRINGLIST_ITERATE(&fileNameList,stringNode,name)
+          ConstString name;
+          STRINGLIST_ITERATE(&fileNameList,name)
           {
             indexAddHardlink(&archiveHandle,
                              name,

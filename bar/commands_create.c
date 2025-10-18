@@ -1344,7 +1344,6 @@ LOCAL void appendHardLinkToEntryList(CreateInfo     *createInfo,
 * Input  : entryMsgQueue - entry message queue
 *          name          - name (will be copied!)
 *          fileInfo      - file info or NULL
-*          deviceInfo    - device info or NULL
 * Output : -
 * Return : -
 * Notes  : -
@@ -1352,13 +1351,12 @@ LOCAL void appendHardLinkToEntryList(CreateInfo     *createInfo,
 
 LOCAL void appendSpecialToEntryList(CreateInfo       *createInfo,
                                     ConstString      name,
-                                    const FileInfo   *fileInfo,
-                                    const DeviceInfo *deviceInfo
+                                    const FileInfo   *fileInfo
                                    )
 {
   assert(createInfo != NULL);
   assert(name != NULL);
-  assert((fileInfo != NULL) || (deviceInfo != NULL));
+  assert(fileInfo != NULL);
 
   // init
   EntryMsg entryMsg;
@@ -1920,8 +1918,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                           }
                           appendSpecialToEntryList(createInfo,
                                                    name,
-                                                   &fileInfo,
-                                                   NULL  // deviceInfo
+                                                   &fileInfo
                                                   );
                           break;
                         case COLLECTOR_TYPE_SUM:
@@ -2562,8 +2559,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                                           }
                                           appendSpecialToEntryList(createInfo,
                                                                    fileName,
-                                                                   &fileInfo,
-                                                                   NULL  // deviceInfo
+                                                                   &fileInfo
                                                                   );
                                           break;
                                         case COLLECTOR_TYPE_SUM:
@@ -2987,8 +2983,7 @@ LOCAL void collector(CreateInfo     *createInfo,
                               }
                               appendSpecialToEntryList(createInfo,
                                                        name,
-                                                       &fileInfo,
-                                                       NULL  // deviceInfo
+                                                       &fileInfo
                                                       );
                               break;
                             case COLLECTOR_TYPE_SUM:
@@ -5119,10 +5114,9 @@ LOCAL void getArchiveEntryNameList(StringList *archiveEntryNameList, const Strin
 {
   assert(archiveEntryNameList != NULL);
 
-  String     archiveEntryName = String_new();
-  StringNode *iterator;
-  String     name;
-  STRINGLIST_ITERATE(nameList,iterator,name)
+  String archiveEntryName = String_new();
+  ConstString name;
+  STRINGLIST_ITERATE(nameList,name)
   {
     StringList_append(archiveEntryNameList,getArchiveEntryName(archiveEntryName,name));
   }
@@ -7077,8 +7071,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
-    String fileName;
-    STRINGLIST_ITERATE(fileNameList,stringNode,fileName)
+    ConstString fileName;
+    STRINGLIST_ITERATE(fileNameList,fileName)
     {
       addIncrementalList(&createInfo->namesDictionary,fileName,fileInfo);
     }
@@ -7280,7 +7274,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
   // store entries
   EntryMsg entryMsg;
-  byte *buffer = (byte*)malloc(BUFFER_SIZE);
+  byte     *buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -7319,12 +7313,11 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
         {
           name = StringList_first(&entryMsg.hardLink.nameList,NULL);
 
-          const StringNode *stringNode;
-          String           name;
-          STRINGLIST_ITERATEX(&entryMsg.hardLink.nameList,stringNode,name,!ownFileFlag)
+          ConstString hardLinkName;
+          STRINGLIST_ITERATEX(&entryMsg.hardLink.nameList,hardLinkName,!ownFileFlag)
           {
-            ownFileFlag =    String_startsWith(name,tmpDirectory)
-                          || StringList_contains(&createInfo->storageFileList,name);
+            ownFileFlag =    String_startsWith(hardLinkName,tmpDirectory)
+                          || StringList_contains(&createInfo->storageFileList,hardLinkName);
           }
         }
         break;

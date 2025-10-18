@@ -1026,10 +1026,9 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
     return error;
   }
 
-  bool testedDataFlag = FALSE;
-  const StringNode *stringNode;
-  String           fileName;
-  STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
+  bool        testedDataFlag = FALSE;
+  ConstString fileName;
+  STRINGLIST_ITERATE(&fileNameList,fileName)
   {
     if (   ((includeEntryList == NULL) || List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
         && ((excludePatternList == NULL) || !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -1928,10 +1927,9 @@ NULL,  //               requestedAbortFlag,
     updateRunningInfo(&testInfo,FALSE);
   }
 
-  bool       someStorageFound = FALSE;
-  StringNode *stringNode;
-  String     storageName;
-  STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
+  bool        someStorageFound = FALSE;
+  ConstString storageName;
+  STRINGLIST_ITERATE(storageNameList,storageName)
   {
     // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);

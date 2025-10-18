@@ -662,9 +662,8 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
           if (globalOptions.debug.serverLevel >= 1)
           {
             fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
-            size_t    iteratorVariable;
             Codepoint codepoint;
-            STRING_CHAR_ITERATE_UTF8(serverIO->line,iteratorVariable,codepoint)
+            STRING_CHAR_ITERATE_UTF8(serverIO->line,codepoint)
             {
               if (iswprint(codepoint))
               {
@@ -1957,9 +1956,8 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
         if (globalOptions.debug.serverLevel >= 1)
         {
           fprintf(stderr,"DEBUG: skipped unknown data: %s\n",String_cString(serverIO->line));
-          size_t    iteratorVariable;
           Codepoint codepoint;
-          STRING_CHAR_ITERATE_UTF8(serverIO->line,iteratorVariable,codepoint)
+          STRING_CHAR_ITERATE_UTF8(serverIO->line,codepoint)
           {
             if (iswprint(codepoint))
             {
@@ -2190,11 +2188,10 @@ Errors ServerIO_passResult(ServerIO        *serverIO,
   #endif /* HAVE_NEWLOCALE */
   {
     String_format(s,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
-    StringMapIterator iteratorVariable;
-    const char        *name;
-    StringMapTypes    type;
-    StringMapValue    value;
-    STRINGMAP_ITERATE(resultMap,iteratorVariable,name,type,value)
+    const char     *name;
+    StringMapTypes type;
+    StringMapValue value;
+    STRINGMAP_ITERATE(resultMap,name,type,value)
     {
       UNUSED_VARIABLE(type);
 
