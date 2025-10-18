@@ -1753,13 +1753,9 @@ LOCAL void setComments(const ConfigValue configValues[],
                        const StringList  *commentList
                       )
 {
-  CommentsNode     *commentsNode;
-  const StringNode *iteratorVariable;
-  ConstString      comment;
-
   assert(configValue != NULL);
 
-  commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
+  CommentsNode *commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
   if (commentsNode == NULL)
   {
     commentsNode = LIST_NEW_NODE(CommentsNode);
@@ -1770,7 +1766,8 @@ LOCAL void setComments(const ConfigValue configValues[],
   }
 
   StringList_clear(&commentsNode->commentList);
-  STRINGLIST_ITERATE(commentList,iteratorVariable,comment)
+  ConstString comment;
+  STRINGLIST_ITERATE(commentList,comment)
   {
     if (!ConfigValue_isDefaultComment(configValues,comment))
     {
@@ -1796,21 +1793,17 @@ LOCAL Errors writeCommentLines(FileHandle       *fileHandle,
                                const char       *nextName
                               )
 {
-  Errors     error;
-  StringNode *iterator;
-  String     string;
-  String     name;
-
   assert(fileHandle != NULL);
 
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
 
   if (commentList != NULL)
   {
-    name = String_new();
-    STRINGLIST_ITERATEX(commentList,iterator,string,error == ERROR_NONE)
+    String      name = String_new();
+    ConstString string;
+    STRINGLIST_ITERATEX(commentList,string,error == ERROR_NONE)
     {
-      if (   !String_parse(iterator->string,STRING_BEGIN,"%S=% s",NULL,name,NULL)
+      if (   !String_parse(string,STRING_BEGIN,"%S=% s",NULL,name,NULL)
           || !String_equalsCString(name,nextName)
          )
       {
@@ -1840,11 +1833,9 @@ LOCAL Errors flushCommentLines(FileHandle *fileHandle,
                                StringList *commentList
                               )
 {
-  Errors     error;
-
   assert(fileHandle != NULL);
 
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
   if (commentList != NULL)
   {
     error = writeCommentLines(fileHandle,indent,commentList,NULL);
@@ -1878,17 +1869,13 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
                               bool              valueFlag
                              )
 {
-  const CommentsNode  *commentsNode;
-  Errors              error;
-  ConstConfigVariable configVariable;
-
   assert(fileHandle != NULL);
   assert(configValue != NULL);
 
   // find comments
-  commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
+  const CommentsNode *commentsNode = LIST_FIND(&commentsList,commentsNode,commentsNode->configValue == configValue);
 
-  error = ERROR_NONE;
+  Errors error = ERROR_NONE;
   switch (configValue->type)
   {
     case CONFIG_VALUE_TYPE_NONE:
@@ -1905,6 +1892,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
         {
           if      (variable != NULL)
           {
+            ConstConfigVariable configVariable;
             configVariable.i = (int*)((byte*)variable+configValue->offset);
             value = *configVariable.i;
           }
@@ -1912,6 +1900,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
           {
             if ((*configValue->variable.reference) != NULL)
             {
+              ConstConfigVariable configVariable;
               configVariable.i = ((int*)((byte*)(*configValue->variable.reference)+configValue->offset));
               value = *configVariable.i;
             }
@@ -1989,6 +1978,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
         {
           if (variable != NULL)
           {
+            ConstConfigVariable configVariable;
             configVariable.l = ((int64*)((byte*)variable+configValue->offset));
             value = *configVariable.l;
           }
@@ -1996,6 +1986,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
           {
             if ((*configValue->variable.reference) != NULL)
             {
+              ConstConfigVariable configVariable;
               configVariable.l = ((int64*)((byte*)(*configValue->variable.reference)+configValue->offset));
               value = *configVariable.l;
             }
@@ -2073,6 +2064,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
         {
           if      (variable != NULL)
           {
+            ConstConfigVariable configVariable;
             configVariable.d = ((double*)((byte*)variable+configValue->offset));
             value = *configVariable.d;
           }
@@ -2080,6 +2072,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
           {
             if ((*configValue->variable.reference) != NULL)
             {
+              ConstConfigVariable configVariable;
               configVariable.d = ((double*)((byte*)(*configValue->variable.reference)+configValue->offset));
               value = *configVariable.d;
             }
@@ -2152,6 +2145,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
         {
           if      (variable != NULL)
           {
+            ConstConfigVariable configVariable;
             configVariable.b = (bool*)((byte*)variable+configValue->offset);
             value = *configVariable.b;
           }
@@ -2159,6 +2153,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
           {
             if ((*configValue->variable.reference) != NULL)
             {
+              ConstConfigVariable configVariable;
               configVariable.b = (bool*)((byte*)(*configValue->variable.reference)+configValue->offset);
               value = *configVariable.b;
             }
@@ -2257,6 +2252,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
         {
           if      (variable != NULL)
           {
+            ConstConfigVariable configVariable;
             configVariable.select = (uint*)((byte*)variable+configValue->offset);
             value = *configVariable.select;
           }
@@ -2264,6 +2260,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
           {
             if ((*configValue->variable.reference) != NULL)
             {
+              ConstConfigVariable configVariable;
               configVariable.select = (uint*)((byte*)(*configValue->variable.reference)+configValue->offset);
               value = *configVariable.select;
             }
@@ -2331,6 +2328,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
         {
           if      (variable != NULL)
           {
+            ConstConfigVariable configVariable;
             configVariable.set = (ulong*)((byte*)variable+configValue->offset);
             value = *configVariable.set;
           }
@@ -2338,6 +2336,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
           {
             if ((*configValue->variable.reference) != NULL)
             {
+              ConstConfigVariable configVariable;
               configVariable.set = (ulong*)((byte*)(*configValue->variable.reference)+configValue->offset);
               value = *configVariable.set;
             }
@@ -2395,6 +2394,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
         {
           if      (variable != NULL)
           {
+            ConstConfigVariable configVariable;
             configVariable.cString = (const char**)((const byte*)variable+configValue->offset);
             String_setCString(value,*configVariable.cString);
           }
@@ -2402,6 +2402,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
           {
             if ((*configValue->variable.reference) != NULL)
             {
+              ConstConfigVariable configVariable;
               configVariable.cString = (const char**)((const byte*)(*configValue->variable.reference)+configValue->offset);
               String_setCString(value,*configVariable.cString);
             }
@@ -2457,6 +2458,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
         {
           if      (variable != NULL)
           {
+            ConstConfigVariable configVariable;
             configVariable.string = (ConstString*)((const byte*)variable+configValue->offset);
             String_set(value,*configVariable.string);
           }
@@ -2464,6 +2466,7 @@ LOCAL Errors writeConfigValue(FileHandle        *fileHandle,
           {
             if ((*configValue->variable.reference) != NULL)
             {
+              ConstConfigVariable configVariable;
               configVariable.string = (ConstString*)((const byte*)(*configValue->variable.reference)+configValue->offset);
               String_set(value,*configVariable.string);
             }
@@ -4630,15 +4633,13 @@ Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *c
 Errors ConfigValue_writeConfigFileLinesXXX(ConstString configFileName, const StringList *configLinesList);
 Errors ConfigValue_writeConfigFileLinesXXX(ConstString configFileName, const StringList *configLinesList)
 {
-  Errors     error;
-  FileHandle fileHandle;
-  StringNode *stringNode;
-  String     line;
+  Errors error;
 
   assert(configFileName != NULL);
   assert(configLinesList != NULL);
 
   // open file
+  FileHandle fileHandle;
   error = File_open(&fileHandle,configFileName,FILE_OPEN_CREATE);
   if (error != ERROR_NONE)
   {
@@ -4646,7 +4647,8 @@ Errors ConfigValue_writeConfigFileLinesXXX(ConstString configFileName, const Str
   }
 
   // write lines
-  STRINGLIST_ITERATEX(configLinesList,stringNode,line,error == ERROR_NONE)
+  ConstString line;
+  STRINGLIST_ITERATEX(configLinesList,line,error == ERROR_NONE)
   {
     error = File_writeLine(&fileHandle,line);
   }
@@ -4801,15 +4803,13 @@ void *ConfigValue_listSectionDataIterator(ConfigValueSectionDataIterator *sectio
 void ConfigValue_debugDumpComments(FILE *handle)
 {
   const CommentsNode *commentsNode;
-  const StringNode   *stringNode;
-  ConstString        string;
-
   LIST_ITERATE(&commentsList,commentsNode)
   {
     fprintf(handle,"DEBUG: comments '%s':\n",
             commentsNode->configValue->name
            );
-    STRINGLIST_ITERATE(&commentsNode->commentList,stringNode,string)
+    ConstString string;
+    STRINGLIST_ITERATE(&commentsNode->commentList,string)
     {
       fprintf(handle,"  %s\n",
               String_cString(string)
@@ -4876,9 +4876,8 @@ LOCAL void updateSHA256StringList(SHA256_ sha256, const StringList *stringList)
 {
   assert (stringList != NULL);
 
-  const StringNode *stringNode;
-  ConstString      line;
-  STRINGLIST_ITERATE(stringList,stringNode,line)
+  ConstString line;
+  STRINGLIST_ITERATE(stringList,line)
   {
     updateSHA256(sha256,String_cString(line),String_length(line));
   }

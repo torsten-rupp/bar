@@ -391,16 +391,15 @@ INLINE bool IndexCommon_isIndexInUse(void);
 #if defined(NDEBUG) || defined(__INDEX_COMMON_IMPLEMENTATION__)
 INLINE bool IndexCommon_isIndexInUse(void)
 {
-  ThreadId      threadId;
-  bool          indexInUse;
-  ArrayIterator arrayIterator;
-  ThreadInfo    threadInfo;
+  ThreadId   threadId;
+  bool       indexInUse;
+  ThreadInfo threadInfo;
 
   threadId   = Thread_getCurrentId();
   indexInUse = FALSE;
   SEMAPHORE_LOCKED_DO(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    ARRAY_ITERATEX(&indexUsedBy,arrayIterator,threadInfo,!indexInUse)
+    ARRAY_ITERATEX(&indexUsedBy,threadInfo,!indexInUse)
     {
       if (!Thread_equalThreads(threadInfo.threadId,threadId))
       {

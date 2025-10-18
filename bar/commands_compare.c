@@ -1245,10 +1245,9 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&archiveEntryInfo); StringList_done(&fileNameList); return DEBUG_TESTCODE_ERROR(); }
 
-  bool             comparedDataFlag = FALSE;
-  const StringNode *stringNode;
-  String           fileName;
-  STRINGLIST_ITERATE(&fileNameList,stringNode,fileName)
+  bool        comparedDataFlag = FALSE;
+  ConstString fileName;
+  STRINGLIST_ITERATE(&fileNameList,fileName)
   {
     if (   (List_isEmpty(includeEntryList) || EntryList_match(includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
         && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
@@ -2284,11 +2283,10 @@ NULL,  //               requestedAbortFlag,
                  );
 
   bool             someStorageFound = FALSE;
-  StringNode       *stringNode;
-  String           storageName;
-  StorageSpecifier           storageSpecifier;
+  StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
-  STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
+  ConstString      storageName;
+  STRINGLIST_ITERATE(storageNameList,storageName)
   {
     // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);

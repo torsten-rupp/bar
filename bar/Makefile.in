@@ -613,6 +613,7 @@ BAR_INDEX_SOURCES_COMMON    = common/arrays.c \
                               common/semaphores.c \
                               common/stacktraces.c \
                               common/stringlists.c \
+                              common/stringmaps.c \
                               common/strings.c \
                               common/threads.c \
 

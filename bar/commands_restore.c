@@ -271,7 +271,7 @@ LOCAL void doneRestoreInfo(RestoreInfo *restoreInfo)
 \***********************************************************************/
 
 LOCAL String getDestinationFileName(String      destinationFileName,
-                                    String      fileName,
+                                    ConstString fileName,
                                     ConstString destination,
                                     int         directoryStripCount
                                    )
@@ -2425,15 +2425,14 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   }
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ Archive_closeEntry(&archiveEntryInfo); });
 
-  String           hardLinkFileName    = String_new();
+  String      hardLinkFileName    = String_new();
   AUTOFREE_ADD(&autoFreeList,hardLinkFileName,{ String_delete(hardLinkFileName); });
-  String           destinationFileName = String_new();
+  String      destinationFileName = String_new();
   AUTOFREE_ADD(&autoFreeList,destinationFileName,{ String_delete(destinationFileName); });
-  bool             restoredDataFlag    = FALSE;
-  void             *autoFreeSavePoint  = AutoFree_save(&autoFreeList);
-  const StringNode *stringNode;
-  String           fileName;
-  STRINGLIST_ITERATEX(&fileNameList,stringNode,fileName,error == ERROR_NONE)
+  bool        restoredDataFlag    = FALSE;
+  void        *autoFreeSavePoint  = AutoFree_save(&autoFreeList);
+  ConstString fileName;
+  STRINGLIST_ITERATEX(&fileNameList,fileName,error == ERROR_NONE)
   {
     if (   (List_isEmpty(restoreInfo->includeEntryList) || EntryList_match(restoreInfo->includeEntryList,fileName,PATTERN_MATCH_MODE_EXACT))
         && ((restoreInfo->excludePatternList == NULL) || !PatternList_match(restoreInfo->excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT))
@@ -3852,12 +3851,11 @@ Errors Command_restore(const StringList           *storageNameList,
     restoreInfo.runningInfo.progress.done.size  = 0LL;
     updateRunningInfo(&restoreInfo,TRUE);
   }
-  error                       = ERROR_NONE;
-  bool       abortFlag                   = FALSE;
-  bool       someStorageFound            = FALSE;
-  StringNode *stringNode;
-  String     storageName;
-  STRINGLIST_ITERATE(storageNameList,stringNode,storageName)
+  error                        = ERROR_NONE;
+  bool        abortFlag        = FALSE;
+  bool        someStorageFound = FALSE;
+  ConstString storageName;
+  STRINGLIST_ITERATE(storageNameList,storageName)
   {
     // pause
     while ((isPauseFunction != NULL) && isPauseFunction(isPauseUserData))
