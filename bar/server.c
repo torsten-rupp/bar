@@ -2915,6 +2915,8 @@ LOCAL Errors testUUID(IndexHandle             *indexHandle,
                                 NULL,  // totalSize
                                 NULL,  // totalEntryCount
                                 NULL,  // totalEntrySize
+                                NULL,  // maxIndexState
+                                NULL,  // maxIndexMode
                                 NULL  // lockedCount
                                )
         )
@@ -3466,6 +3468,8 @@ LOCAL Errors deleteUUID(IndexHandle  *indexHandle,
                                 NULL,  // totalSize
                                 NULL,  // totalEntryCount
                                 NULL,  // totalEntrySize
+                                NULL,  // maxIndexState
+                                NULL,  // maxIndexMode
                                 NULL  // lockedCount
                                )
         )
@@ -3705,6 +3709,8 @@ LOCAL bool getEntityList(EntityList  *entityList,
                                &totalSize,
                                &totalEntryCount,
                                &totalEntrySize,
+                               NULL,  // maxIndexState
+                               NULL,  // maxIndexMode
                                &lockedCount
                               )
           )
@@ -17685,6 +17691,8 @@ LOCAL void serverCommand_indexInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 *            totalSize=<n> \
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n> \
+*            maxIndexState=<state> \
+*            maxIndexMode=<mode> \
 *            ...
 \***********************************************************************/
 
@@ -17694,14 +17702,16 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   {
     LIST_NODE_HEADER(struct UUIDNode);
 
-    IndexId uuidId;
-    String  jobUUID;
-    uint64  lastExecutedDateTime;
-    uint    lastErrorCode;
-    String  lastErrorData;
-    uint64  totalSize;
-    ulong   totalEntryCount;
-    uint64  totalEntrySize;
+    IndexId     uuidId;
+    String      jobUUID;
+    uint64      lastExecutedDateTime;
+    uint        lastErrorCode;
+    String      lastErrorData;
+    uint64      totalSize;
+    ulong       totalEntryCount;
+    uint64      totalEntrySize;
+    IndexStates maxIndexState;
+    IndexModes  maxIndexMode;
   } UUIDNode;
 
   typedef struct
@@ -17805,6 +17815,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   uint64       totalSize;
   uint         totalEntryCount;
   uint64       totalEntrySize;
+  IndexStates  maxIndexState;
+  IndexModes   maxIndexMode;
   while (   !isCommandAborted(clientInfo,id)
          && !isQuit()
          && IndexUUID_getNext(&indexQueryHandle,
@@ -17815,7 +17827,9 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
                               lastErrorData,
                               &totalSize,
                               &totalEntryCount,
-                              &totalEntrySize
+                              &totalEntrySize,
+                              &maxIndexState,
+                              &maxIndexMode
                              )
         )
   {
@@ -17832,6 +17846,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     uuidNode->totalSize            = totalSize;
     uuidNode->totalEntryCount      = totalEntryCount;
     uuidNode->totalEntrySize       = totalEntrySize;
+    uuidNode->maxIndexState        = maxIndexState;
+    uuidNode->maxIndexMode         = maxIndexMode;
 
     List_append(&uuidList,uuidNode);
   }
@@ -17856,7 +17872,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 
       // send result
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "uuidId=%"PRIu64" jobUUID=%S name=%'S lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64"",
+                          "uuidId=%"PRIu64" jobUUID=%S name=%'S lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" maxIndexState=%s maxIndexMode=%s",
                           uuidNode->uuidId,
                           uuidNode->jobUUID,
                           name,
@@ -17865,7 +17881,9 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
                           uuidNode->lastErrorData,
                           uuidNode->totalSize,
                           uuidNode->totalEntryCount,
-                          uuidNode->totalEntrySize
+                          uuidNode->totalEntrySize,
+                          Index_stateToString(uuidNode->maxIndexState,"unknown"),
+                          Index_modeToString(uuidNode->maxIndexMode,"unknown")
                          );
     }
   }
@@ -17887,7 +17905,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
       if (!exitsFlag)
       {
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                            "uuidId=0 jobUUID=%S name=%'S lastExecutedDateTime=0 lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0",
+                            "uuidId=0 jobUUID=%S name=%'S lastExecutedDateTime=0 lastErrorCode=0 lastErrorData='' totalSize=0 totalEntryCount=0 totalEntrySize=0 maxIndexState=unknown maxIndexMode=unknown",
                             jobNode->job.uuid,
                             jobNode->name
                            );
@@ -17928,6 +17946,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 *            totalSize=<n> \
 *            totalEntryCount=<n> \
 *            totalEntrySize=<n> \
+*            maxIndexState=<state> \
+*            maxIndexMode=<mode> \
 *            expireDateTime=<time stamp [s]>
 *            ...
 \***********************************************************************/
@@ -18017,6 +18037,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   uint64       totalSize;
   uint         totalEntryCount;
   uint64       totalEntrySize;
+  IndexStates  maxIndexState;
+  IndexModes   maxIndexMode;
   while (   !isCommandAborted(clientInfo,id)
          && !isQuit()
          && IndexEntity_getNext(&indexQueryHandle,
@@ -18031,6 +18053,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                 &totalSize,
                                 &totalEntryCount,
                                 &totalEntrySize,
+                                &maxIndexState,
+                                &maxIndexMode,
                                 NULL  // lockedCount
                                )
         )
@@ -18066,7 +18090,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
     // send result
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuid=%"PRIu64" jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%"PRIindexId" archiveType=%s createdDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" expireDateTime=%"PRIu64"",
+                        "uuid=%"PRIu64" jobUUID=%S jobName=%'S scheduleUUID=%S entityId=%"PRIindexId" archiveType=%s createdDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S totalSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" maxIndexState=%s maxIndexMode=%s expireDateTime=%"PRIu64"",
                         uuidId,
                         jobUUID,
                         jobName,
@@ -18079,6 +18103,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                         totalSize,
                         totalEntryCount,
                         totalEntrySize,
+                        Index_stateToString(maxIndexState,"unknown"),
+                        Index_modeToString(maxIndexMode,"unknown"),
                         expireDateTime
                        );
   }

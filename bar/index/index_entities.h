@@ -199,6 +199,8 @@ Errors IndexEntity_initList(IndexQueryHandle     *indexQueryHandle,
 *          totalEntryCount  - total number of entries (can be NULL)
 *          totalEntrySize   - total sum of entry size [bytes] (can be
 *                             NULL)
+*          maxIndexState    - max. index state (can be NULL)
+*          maxIndexMode     - max. index mode (can be NULL)
 *          lockedCount      - locked count (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
@@ -216,6 +218,8 @@ bool IndexEntity_getNext(IndexQueryHandle *indexQueryHandle,
                          uint64           *totalSize,
                          uint             *totalEntryCount,
                          uint64           *totalEntrySize,
+                         IndexStates      *maxIndexState,
+                         IndexModes       *maxIndexMode,
                          uint             *lockedCount
                         );
 

@@ -838,15 +838,17 @@ public class TabRestore
    */
   class UUIDIndexData extends IndexData
   {
-    public String  jobUUID;                       // job UUID
-    public String  scheduleUUID;                  // schedule UUID
-    public String  name;
-    public long    lastExecutedDateTime;          // last executed date/time stamp [s]
-    public int     lastErrorCode;                 // last error code
-    public String  lastErrorData;                 // last error data
-    public long    totalSize;
-    public long    totalEntryCount;
-    public long    totalEntrySize;
+    public String      jobUUID;               // job UUID
+    public String      scheduleUUID;          // schedule UUID
+    public String      name;
+    public long        lastExecutedDateTime;  // last executed date/time stamp [s]
+    public int         lastErrorCode;         // last error code
+    public String      lastErrorData;         // last error data
+    public long        totalSize;
+    public long        totalEntryCount;
+    public long        totalEntrySize;
+    public IndexStates maxIndexState;         // max. state of index
+    public IndexModes  maxIndexMode;          // max. mode of index
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
@@ -859,7 +861,7 @@ public class TabRestore
                                uuidIndexData.name,
                                "",  // date/time drawn in event handler
                                Units.formatByteSize(uuidIndexData.totalSize),
-                               ""
+                               uuidIndexData.maxIndexState.toString()
                               );
       }
     };
@@ -885,17 +887,21 @@ public class TabRestore
      * @param totalSize total size [byte]
      * @param totalEntryCount total number of entries of storage
      * @param totalEntrySize total suf of entry sizes
+     * @param maxIndexState max. storage index state
+     * @param maxIndexMode max. storage index mode
      */
-    UUIDIndexData(long   indexId,
-                  String jobUUID,
-                  String scheduleUUID,
-                  String name,
-                  long   lastExecutedDateTime,
-                  int    lastErrorCode,
-                  String lastErrorData,
-                  long   totalSize,
-                  long   totalEntryCount,
-                  long   totalEntrySize
+    UUIDIndexData(long        indexId,
+                  String      jobUUID,
+                  String      scheduleUUID,
+                  String      name,
+                  long        lastExecutedDateTime,
+                  int         lastErrorCode,
+                  String      lastErrorData,
+                  long        totalSize,
+                  long        totalEntryCount,
+                  long        totalEntrySize,
+                  IndexStates maxIndexState,
+                  IndexModes  maxIndexMode
                  )
     {
       super(indexId);
@@ -914,6 +920,8 @@ public class TabRestore
       this.totalSize            = totalSize;
       this.totalEntryCount      = totalEntryCount;
       this.totalEntrySize       = totalEntrySize;
+      this.maxIndexState        = maxIndexState;
+      this.maxIndexMode         = maxIndexMode;
     }
 
     /** create UUID data index
@@ -926,16 +934,20 @@ public class TabRestore
      * @param totalSize total size [byte]
      * @param totalEntryCount total number of entries of storage
      * @param totalEntrySize total suf of entry sizes
+     * @param maxIndexState max. storage index state
+     * @param maxIndexMode max. storage index mode
      */
-    UUIDIndexData(long   indexId,
-                  String jobUUID,
-                  String name,
-                  long   lastExecutedDateTime,
-                  int    lastErrorCode,
-                  String lastErrorData,
-                  long   totalSize,
-                  long   totalEntryCount,
-                  long   totalEntrySize
+    UUIDIndexData(long        indexId,
+                  String      jobUUID,
+                  String      name,
+                  long        lastExecutedDateTime,
+                  int         lastErrorCode,
+                  String      lastErrorData,
+                  long        totalSize,
+                  long        totalEntryCount,
+                  long        totalEntrySize,
+                  IndexStates maxIndexState,
+                  IndexModes  maxIndexMode
                  )
     {
       this(indexId,
@@ -947,7 +959,9 @@ public class TabRestore
            lastErrorData,
            totalSize,
            totalEntryCount,
-           totalEntrySize
+           totalEntrySize,
+           maxIndexState,
+           maxIndexMode
           );
     }
 
@@ -966,6 +980,8 @@ public class TabRestore
       this.totalSize            = otherIndexData.totalSize;
       this.totalEntryCount      = otherIndexData.totalEntryCount;
       this.totalEntrySize       = otherIndexData.totalEntrySize;
+      this.maxIndexState        = otherIndexData.maxIndexState;
+      this.maxIndexMode         = otherIndexData.maxIndexMode;
     }
 
     /** get name
@@ -1055,7 +1071,7 @@ public class TabRestore
     @Override
     public String toString()
     {
-      return "UUIDIndexData {"+id+", jobUUID="+jobUUID+", scheduleUUID="+scheduleUUID+", name="+name+", lastExecutedDateTime="+lastExecutedDateTime+", totalEntryCount="+totalEntryCount+", totalEntrySize="+totalEntrySize+" bytes}";
+      return "UUIDIndexData {"+id+", jobUUID="+jobUUID+", scheduleUUID="+scheduleUUID+", name="+name+", lastExecutedDateTime="+lastExecutedDateTime+", totalEntryCount="+totalEntryCount+", totalEntrySize="+totalEntrySize+" bytes, state="+maxIndexState+"}";
     }
   }
 
@@ -1072,6 +1088,8 @@ public class TabRestore
     public long         totalSize;
     public long         totalEntryCount;
     public long         totalEntrySize;
+    public IndexStates  maxIndexState;        // max. state of index
+    public IndexModes   maxIndexMode;         // max. mode of index
     public long         expireDateTime;       // expire date/time or 0
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
@@ -1085,7 +1103,7 @@ public class TabRestore
                                entityIndexData.archiveType.toString(),
                                "",  // date/time drawn in event handler
                                Units.formatByteSize(entityIndexData.totalSize),
-                               ""
+                               entityIndexData.maxIndexState.toString()
                               );
       }
     };
@@ -1112,6 +1130,8 @@ Dprintf.dprintf("");
      * @param totalSize total size [byte]
      * @param totalEntryCount total number of entresi of storage
      * @param totalEntrySize total suf of entry sizes
+     * @param maxIndexState max. storage index state
+     * @param maxIndexMode max. storage index mode
      * @param expireDateTime expire date/time (timestamp)
      */
     EntityIndexData(long         indexId,
@@ -1124,6 +1144,8 @@ Dprintf.dprintf("");
                     long         totalSize,
                     long         totalEntryCount,
                     long         totalEntrySize,
+                    IndexStates  maxIndexState,
+                    IndexModes   maxIndexMode,
                     long         expireDateTime
                    )
     {
@@ -1142,6 +1164,8 @@ Dprintf.dprintf("");
       this.totalSize        = totalSize;
       this.totalEntryCount  = totalEntryCount;
       this.totalEntrySize   = totalEntrySize;
+      this.maxIndexState    = maxIndexState;
+      this.maxIndexMode     = maxIndexMode;
       this.expireDateTime   = expireDateTime;
     }
 
@@ -1242,6 +1266,8 @@ Dprintf.dprintf("");
       out.writeObject(totalSize);
       out.writeObject(totalEntryCount);
       out.writeObject(totalEntrySize);
+      out.writeObject(maxIndexState);
+      out.writeObject(maxIndexMode);
       out.writeObject(expireDateTime);
     }
 
@@ -1264,6 +1290,8 @@ Dprintf.dprintf("");
       totalSize        = (Long)in.readObject();
       totalEntryCount  = (Long)in.readObject();
       totalEntrySize   = (Long)in.readObject();
+      maxIndexState    = (IndexStates)in.readObject();
+      maxIndexMode     = (IndexModes)in.readObject();
       expireDateTime   = (Long)in.readObject();
     }
 
@@ -1273,7 +1301,7 @@ Dprintf.dprintf("");
     @Override
     public String toString()
     {
-      return "EntityIndexData {"+id+", archiveType="+archiveType.toString()+", jobUUID="+jobUUID+", scheduleUUID="+scheduleUUID+", createdDateTime="+createdDateTime+", totalSize="+totalSize+" bytes, totalEntrySize="+totalEntrySize+" bytes, expireDateTime="+expireDateTime+"}";
+      return "EntityIndexData {"+id+", archiveType="+archiveType.toString()+", jobUUID="+jobUUID+", scheduleUUID="+scheduleUUID+", createdDateTime="+createdDateTime+", totalSize="+totalSize+" bytes, totalEntrySize="+totalEntrySize+" bytes, max. state="+maxIndexState+",expireDateTime="+expireDateTime+"}";
     }
   }
 
@@ -2226,15 +2254,17 @@ Dprintf.dprintf("");
                                    @Override
                                    public void handle(int i, ValueMap valueMap)
                                    {
-                                     long   uuidId               = valueMap.getLong  ("uuidId"              );
-                                     String jobUUID              = valueMap.getString("jobUUID"             );
-                                     String name                 = valueMap.getString("name"                );
-                                     long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
-                                     int    lastErrorCode        = valueMap.getInt   ("lastErrorCode"       );
-                                     String lastErrorData        = valueMap.getString("lastErrorData"       );
-                                     long   totalSize            = valueMap.getLong  ("totalSize"           );
-                                     long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                     long   totalEntrySize       = valueMap.getLong  ("totalEntrySize",     Long.MAX_VALUE);
+                                     long        uuidId               = valueMap.getLong  ("uuidId"              );
+                                     String      jobUUID              = valueMap.getString("jobUUID"             );
+                                     String      name                 = valueMap.getString("name"                );
+                                     long        lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
+                                     int         lastErrorCode        = valueMap.getInt   ("lastErrorCode"       );
+                                     String      lastErrorData        = valueMap.getString("lastErrorData"       );
+                                     long        totalSize            = valueMap.getLong  ("totalSize"           );
+                                     long        totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                     long        totalEntrySize       = valueMap.getLong  ("totalEntrySize",     Long.MAX_VALUE);
+                                     IndexStates maxIndexState        = valueMap.getEnum  ("maxIndexState",      IndexStates.class);
+                                     IndexModes  maxIndexMode         = valueMap.getEnum  ("maxIndexMode",       IndexModes.class);
 
                                      UUIDIndexData uuidIndexData = new UUIDIndexData(uuidId,
                                                                                      jobUUID,
@@ -2244,7 +2274,9 @@ Dprintf.dprintf("");
                                                                                      lastErrorData,
                                                                                      totalSize,
                                                                                      totalEntryCount,
-                                                                                     totalEntrySize
+                                                                                     totalEntrySize,
+                                                                                     maxIndexState,
+                                                                                     maxIndexMode
                                                                                     );
                                      uuidIndexDataList.add(uuidIndexData);
 
@@ -2277,7 +2309,7 @@ Dprintf.dprintf("");
                                                                      "",  // hostName
                                                                      "",  // date/time drawn in tree item renderer
                                                                      Units.formatByteSize(uuidIndexData.totalSize),
-                                                                     ""
+                                                                     uuidIndexData.maxIndexState.toString()
                                                                     );
                 Widgets.setTreeItemChecked(uuidTreeItem,checkedIndexIdSet.contains(uuidIndexData.id));
 
@@ -2384,6 +2416,8 @@ Dprintf.dprintf("");
                                      long         totalSize        = valueMap.getLong  ("totalSize",      0L);
                                      long         totalEntryCount  = valueMap.getLong  ("totalEntryCount",0L);
                                      long         totalEntrySize   = valueMap.getLong  ("totalEntrySize", 0L);
+                                     IndexStates  maxIndexState    = valueMap.getEnum  ("maxIndexState",  IndexStates.class);
+                                     IndexModes   maxIndexMode     = valueMap.getEnum  ("maxIndexMode",   IndexModes.class);
                                      long         expireDateTime   = valueMap.getLong  ("expireDateTime"  );
 
                                      // add entity data index
@@ -2397,6 +2431,8 @@ Dprintf.dprintf("");
                                                                                            totalSize,
                                                                                            totalEntryCount,
                                                                                            totalEntrySize,
+                                                                                           maxIndexState,
+                                                                                           maxIndexMode,
                                                                                            expireDateTime
                                                                                           );
                                      entityIndexDataList.add(entityIndexData);
@@ -2432,7 +2468,7 @@ Dprintf.dprintf("");
                                                                        "",  // hostName
                                                                        "",  // date/time drawn in tree item renderer
                                                                        Units.formatByteSize(entityIndexData.totalSize),
-                                                                       ""
+                                                                       entityIndexData.maxIndexState.toString()
                                                                       );
                 Widgets.setTreeItemChecked(entityTreeItem,checkedIndexIdSet.contains(entityIndexData.id));
 
@@ -2607,23 +2643,23 @@ Dprintf.dprintf("");
                                    @Override
                                    public void handle(int i, ValueMap valueMap)
                                    {
-                                     long         storageId           = valueMap.getLong  ("storageId"                     );
-                                     String       jobUUID             = valueMap.getString("jobUUID"                       );
-                                     String       jobName             = valueMap.getString("jobName"                       );
-                                     long         entityId            = valueMap.getLong  ("entityId"                      );
-                                     String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
-                                     String       hostName            = valueMap.getString("hostName"                      );
-                                     long         createdDateTime     = valueMap.getLong  ("createdDateTime"               );
-                                     ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                     String       name                = valueMap.getString("name"                          );
-                                     long         dateTime            = valueMap.getLong  ("dateTime"                      );
-                                     long         size                = valueMap.getLong  ("size"                          );
-                                     IndexStates  indexState          = valueMap.getEnum  ("indexState",IndexStates.class  );
-                                     IndexModes   indexMode           = valueMap.getEnum  ("indexMode",IndexModes.class    );
-                                     long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime"           );
-                                     String       errorMessage_       = valueMap.getString("errorMessage"                  );
-                                     long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"               );
-                                     long         totalEntrySize      = valueMap.getLong  ("totalEntrySize",               Long.MAX_VALUE);
+                                     long         storageId           = valueMap.getLong  ("storageId"          );
+                                     String       jobUUID             = valueMap.getString("jobUUID"            );
+                                     String       jobName             = valueMap.getString("jobName"            );
+                                     long         entityId            = valueMap.getLong  ("entityId"           );
+                                     String       scheduleUUID        = valueMap.getString("scheduleUUID"       );
+                                     String       hostName            = valueMap.getString("hostName"           );
+                                     long         createdDateTime     = valueMap.getLong  ("createdDateTime"    );
+                                     ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",       ArchiveTypes.class);
+                                     String       name                = valueMap.getString("name"               );
+                                     long         dateTime            = valueMap.getLong  ("dateTime"           );
+                                     long         size                = valueMap.getLong  ("size"               );
+                                     IndexStates  indexState          = valueMap.getEnum  ("indexState",        IndexStates.class);
+                                     IndexModes   indexMode           = valueMap.getEnum  ("indexMode",         IndexModes.class);
+                                     long         lastCheckedDateTime = valueMap.getLong  ("lastCheckedDateTime");
+                                     String       errorMessage_       = valueMap.getString("errorMessage"       );
+                                     long         totalEntryCount     = valueMap.getLong  ("totalEntryCount"    );
+                                     long         totalEntrySize      = valueMap.getLong  ("totalEntrySize",    Long.MAX_VALUE);
 
                                      // add storage index data
                                      storageIndexDataList.add(new StorageIndexData(storageId,
@@ -7455,15 +7491,17 @@ Dprintf.dprintf("");
                                  @Override
                                  public void handle(int i, ValueMap valueMap)
                                  {
-                                   long   uuidId               = valueMap.getLong  ("uuidId"              );
-                                   String jobUUID              = valueMap.getString("jobUUID"             );
-                                   String name                 = valueMap.getString("name"                );
-                                   long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
-                                   int    lastErrorCode        = valueMap.getInt   ("lastErrorCode"       );
-                                   String lastErrorData        = valueMap.getString("lastErrorData"       );
-                                   long   totalSize            = valueMap.getLong  ("totalSize"           );
-                                   long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                   long   totalEntrySize       = valueMap.getLong  ("totalEntrySize",     Long.MAX_VALUE);
+                                   long        uuidId               = valueMap.getLong  ("uuidId"              );
+                                   String      jobUUID              = valueMap.getString("jobUUID"             );
+                                   String      name                 = valueMap.getString("name"                );
+                                   long        lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
+                                   int         lastErrorCode        = valueMap.getInt   ("lastErrorCode"       );
+                                   String      lastErrorData        = valueMap.getString("lastErrorData"       );
+                                   long        totalSize            = valueMap.getLong  ("totalSize"           );
+                                   long        totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                   long        totalEntrySize       = valueMap.getLong  ("totalEntrySize",     Long.MAX_VALUE);
+                                   IndexStates maxIndexState        = valueMap.getEnum  ("maxIndexState",      IndexStates.class);
+                                   IndexModes  maxIndexMode         = valueMap.getEnum  ("maxIndexMode",       IndexModes.class);
 
                                    // add UUID index data
                                    assignToUUIDIndexDataList.add(new UUIDIndexData(uuidId,
@@ -7474,7 +7512,9 @@ Dprintf.dprintf("");
                                                                                    lastErrorData,
                                                                                    totalSize,
                                                                                    totalEntryCount,
-                                                                                   totalEntrySize
+                                                                                   totalEntrySize,
+                                                                                   maxIndexState,
+                                                                                   maxIndexMode
                                                                                   )
                                                                 );
                                  }
@@ -7490,17 +7530,19 @@ Dprintf.dprintf("");
                                  @Override
                                  public void handle(int i, ValueMap valueMap)
                                  {
-                                   long         entityId         = valueMap.getLong  ("entityId"                      );
-                                   String       jobUUID          = valueMap.getString("jobUUID"                       );
-                                   String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
-                                   ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                   long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
-                                   int          lastErrorCode    = valueMap.getInt   ("lastErrorCode"                 );
-                                   String       lastErrorData    = valueMap.getString("lastErrorData"                 );
-                                   long         totalSize        = valueMap.getLong  ("totalSize"                     );
-                                   long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
-                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize",               Long.MAX_VALUE);
-                                   long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
+                                   long         entityId         = valueMap.getLong  ("entityId"       );
+                                   String       jobUUID          = valueMap.getString("jobUUID"        );
+                                   String       scheduleUUID     = valueMap.getString("scheduleUUID"   );
+                                   ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",   ArchiveTypes.class);
+                                   long         createdDateTime  = valueMap.getLong  ("createdDateTime");
+                                   int          lastErrorCode    = valueMap.getInt   ("lastErrorCode"  );
+                                   String       lastErrorData    = valueMap.getString("lastErrorData"  );
+                                   long         totalSize        = valueMap.getLong  ("totalSize"      );
+                                   long         totalEntryCount  = valueMap.getLong  ("totalEntryCount");
+                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize",Long.MAX_VALUE);
+                                   IndexStates  maxIndexState    = valueMap.getEnum  ("maxIndexState", IndexStates.class);
+                                   IndexModes   maxIndexMode     = valueMap.getEnum  ("maxIndexMode",  IndexModes.class);
+                                   long         expireDateTime   = valueMap.getLong  ("expireDateTime" );
 
                                    // get entity data list
                                    java.util.List<EntityIndexData> entityIndexDataList = assignToEntityIndexDataMap.get(jobUUID);
@@ -7521,6 +7563,8 @@ Dprintf.dprintf("");
                                                                                totalSize,
                                                                                totalEntryCount,
                                                                                totalEntrySize,
+                                                                               maxIndexState,
+                                                                               maxIndexMode,
                                                                                expireDateTime
                                                                               )
                                                         );

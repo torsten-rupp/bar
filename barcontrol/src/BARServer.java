@@ -2205,7 +2205,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (SSLHandshakeException exception)
             {
-Dprintf.dprintf("_");
               if (connectionError == null)
               {
                 if (expiredCertificate)
