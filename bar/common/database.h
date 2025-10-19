@@ -535,7 +535,7 @@ typedef struct
     bool       b;
     int        i;
     int64      i64;
-    uint32     u;
+    uint       u;
     uint64     u64;
     double     d;
     uint64     dateTime;

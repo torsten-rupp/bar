@@ -1744,7 +1744,7 @@ static inline bool stringToUInt(const char *string, uint *i, const char **tail)
   if (tail != NULL) (*tail) = s;
   if (((*s) == NUL) || (tail != NULL))
   {
-    (*i) = (uint)n;
+    (*i) = (n >= 0) ? (uint)n : 0;
     return TRUE;
   }
   else
@@ -1812,7 +1812,7 @@ static inline bool stringToULong(const char *string, ulong *i, const char **tail
   if (tail != NULL) (*tail) = s;
   if (((*s) == NUL) || (tail != NULL))
   {
-    (*i) = (ulong)n;
+    (*i) = (n >= 0) ? (ulong)n : 0;
     return TRUE;
   }
   else
@@ -1880,7 +1880,7 @@ static inline bool stringToUInt64(const char *string, uint64 *l, const char **ta
   if (tail != NULL) (*tail) = s;
   if (((*s) == NUL) || (tail != NULL))
   {
-    (*l) = (uint64)n;
+    (*l) = (n >= 0) ? (uint64)n : 0;
     return TRUE;
   }
   else
