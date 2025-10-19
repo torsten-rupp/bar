@@ -169,6 +169,8 @@ Errors IndexUUID_initList(IndexQueryHandle *indexQueryHandle,
 *          totalEntryCount      - total number of entries (can be NULL)
 *          totalEntrySize       - total sum of entry size [bytes] (can
 *                                 be NULL)
+*          maxIndexState        - max. index state (can be NULL)
+*          maxIndexMode         - max. index mode (can be NULL)
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -181,7 +183,9 @@ bool IndexUUID_getNext(IndexQueryHandle *indexQueryHandle,
                        String           lastErrorData,
                        uint64           *totalSize,
                        uint             *totalEntryCount,
-                       uint64           *totalEntrySize
+                       uint64           *totalEntrySize,
+                       IndexStates      *maxIndexState,
+                       IndexModes       *maxIndexMode
                       );
 
 /***********************************************************************\

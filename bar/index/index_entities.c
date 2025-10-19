@@ -1232,6 +1232,8 @@ Errors IndexEntity_initList(IndexQueryHandle     *indexQueryHandle,
                                DATABASE_COLUMN_UINT64  ("(SELECT SUM(size) FROM storages WHERE entityId=entities.id)"),
                                DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM storages WHERE entityId=entities.id)"),
                                DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("(SELECT MAX(storages.state) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("(SELECT MAX(storages.mode) FROM storages WHERE entityId=entities.id)"),
                                DATABASE_COLUMN_UINT    ("entities.lockedCount")
                              ),
                              stringFormat(sqlString,sizeof(sqlString),
@@ -1278,6 +1280,8 @@ Errors IndexEntity_initList(IndexQueryHandle     *indexQueryHandle,
                                DATABASE_COLUMN_UINT64  ("(SELECT SUM(size) FROM storages WHERE entityId=entities.id)"),
                                DATABASE_COLUMN_UINT    ("(SELECT SUM(storages.totalEntryCount) FROM storages WHERE entityId=entities.id)"),
                                DATABASE_COLUMN_UINT64  ("(SELECT SUM(storages.totalEntrySize) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("(SELECT MAX(storages.state) FROM storages WHERE entityId=entities.id)"),
+                               DATABASE_COLUMN_UINT    ("(SELECT MAX(storages.mode) FROM storages WHERE entityId=entities.id)"),
                                DATABASE_COLUMN_UINT    ("entities.lockedCount")
                              ),
                              stringFormat(sqlString,sizeof(sqlString),
@@ -1331,6 +1335,8 @@ bool IndexEntity_getNext(IndexQueryHandle *indexQueryHandle,
                          uint64           *totalSize,
                          uint             *totalEntryCount,
                          uint64           *totalEntrySize,
+                         IndexStates      *maxIndexState,
+                         IndexModes       *maxIndexMode,
                          uint             *lockedCount
                         )
 {
@@ -1358,6 +1364,8 @@ if (lastErrorCode != NULL) (*lastErrorCode) = 0;
                            totalSize,
                            totalEntryCount,
                            totalEntrySize,
+                           maxIndexState,
+                           maxIndexMode,
                            lockedCount
                           )
      )

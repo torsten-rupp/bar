@@ -1217,7 +1217,7 @@ Errors IndexUUID_initList(IndexQueryHandle *indexQueryHandle,
                            &indexHandle->databaseHandle,
 //TODO newest
                            "uuids \
-                              LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                              LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID AND entities.deletedFlag!=TRUE \
                               LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=TRUE \
                            ",
                            DATABASE_FLAG_NONE,
@@ -1225,11 +1225,13 @@ Errors IndexUUID_initList(IndexQueryHandle *indexQueryHandle,
                            (
                              DATABASE_COLUMN_KEY     ("uuids.id"),
                              DATABASE_COLUMN_STRING  ("uuids.jobUUID"),
-                             DATABASE_COLUMN_DATETIME("(SELECT MAX(entities.created) FROM entities WHERE entities.jobUUID=uuids.jobUUID)"),
-                             DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 1)"),
+                             DATABASE_COLUMN_DATETIME("(SELECT MAX(entities.created) FROM entities WHERE entities.jobUUID=uuids.jobUUID AND entities.deletedFlag!=TRUE)"),
+                             DATABASE_COLUMN_STRING  ("(SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=TRUE WHERE entities.jobUUID=uuids.jobUUID AND entities.deletedFlag!=TRUE ORDER BY storages.created DESC LIMIT 1)"),
                              DATABASE_COLUMN_UINT64  ("SUM(storages.size)"),
                              DATABASE_COLUMN_UINT    ("SUM(storages.totalEntryCount)"),
-                             DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)")
+                             DATABASE_COLUMN_UINT64  ("SUM(storages.totalEntrySize)"),
+                             DATABASE_COLUMN_UINT    ("(SELECT MAX(storages.state) FROM entities LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=TRUE WHERE entities.jobUUID=uuids.jobUUID AND entities.deletedFlag!=TRUE)"),
+                             DATABASE_COLUMN_UINT    ("(SELECT MAX(storages.mode) FROM entities LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=TRUE WHERE entities.jobUUID=uuids.jobUUID AND entities.deletedFlag!=TRUE )"),
                            ),
                            stringFormat(sqlString,sizeof(sqlString),
                                         "     %s \
@@ -1272,7 +1274,9 @@ bool IndexUUID_getNext(IndexQueryHandle *indexQueryHandle,
                        String           lastErrorData,
                        uint64           *totalSize,
                        uint             *totalEntryCount,
-                       uint64           *totalEntrySize
+                       uint64           *totalEntrySize,
+                       IndexStates      *maxIndexState,
+                       IndexModes       *maxIndexMode
                       )
 {
   assert(indexQueryHandle != NULL);
@@ -1295,7 +1299,9 @@ if (lastErrorCode != NULL) (*lastErrorCode) = 0;
                            lastErrorData,
                            totalSize,
                            totalEntryCount,
-                           totalEntrySize
+                           totalEntrySize,
+                           maxIndexState,
+                           maxIndexMode
                           )
      )
   {

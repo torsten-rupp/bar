@@ -872,6 +872,8 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
                                   NULL,  // totalSize
                                   NULL,  // totalEntryCount
                                   NULL,  // totalEntrySize
+                                  NULL,  // maxIndexState
+                                  NULL,  // maxIndexMode
                                   NULL  // lockedCount
                                  )
           )

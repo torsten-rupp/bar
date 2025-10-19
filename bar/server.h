@@ -25,7 +25,7 @@
 
 /***************************** Constants *******************************/
 
-#define SERVER_PROTOCOL_VERSION_MAJOR 8
+#define SERVER_PROTOCOL_VERSION_MAJOR 9
 #define SERVER_PROTOCOL_VERSION_MINOR 0
 
 /***************************** Datatypes *******************************/
