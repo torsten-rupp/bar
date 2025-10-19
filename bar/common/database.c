@@ -7920,9 +7920,9 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                 break;
               case DATABASE_DATATYPE_PRIMARY_KEY:
               case DATABASE_DATATYPE_KEY:
-                databaseStatementHandle->results[i].id = sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
-                                                                              i
-                                                                             );
+                databaseStatementHandle->results[i].id = (DatabaseId)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                                                          i
+                                                                                         );
                 break;
               case DATABASE_DATATYPE_BOOL:
                 databaseStatementHandle->results[i].b = (sqlite3_column_int(databaseStatementHandle->sqlite.statementHandle,
@@ -7940,14 +7940,34 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                                                                               );
                 break;
               case DATABASE_DATATYPE_UINT:
-                databaseStatementHandle->results[i].u = (uint)sqlite3_column_int(databaseStatementHandle->sqlite.statementHandle,
-                                                                                 i
-                                                                                );
+                {
+                  int value = sqlite3_column_int(databaseStatementHandle->sqlite.statementHandle,
+                                                 i
+                                                );
+                  if (value >= 0)
+                  {
+                    databaseStatementHandle->results[i].u = (uint)value;
+                  }
+                  else
+                  {
+                    databaseStatementHandle->results[i].u = 0;
+                  }
+                }
                 break;
               case DATABASE_DATATYPE_UINT64:
-                databaseStatementHandle->results[i].u64 = (uint64)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
-                                                                                       i
-                                                                                      );
+                {
+                  int64_t value = sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                       i
+                                                      );
+                  if (value >= 0)
+                  {
+                    databaseStatementHandle->results[i].u64 = (uint64_t)value;
+                  }
+                  else
+                  {
+                    databaseStatementHandle->results[i].u64 = 0;
+                  }
+                }
                 break;
               case DATABASE_DATATYPE_DOUBLE:
                 databaseStatementHandle->results[i].d = sqlite3_column_double(databaseStatementHandle->sqlite.statementHandle,
@@ -7960,9 +7980,19 @@ LOCAL bool getNextRow(DatabaseStatementHandle *databaseStatementHandle,
                                                                                 );
                 break;
               case DATABASE_DATATYPE_DATETIME:
-                databaseStatementHandle->results[i].dateTime = (uint64)sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
-                                                                                            i
-                                                                                           );
+                {
+                  int64_t value = sqlite3_column_int64(databaseStatementHandle->sqlite.statementHandle,
+                                                       i
+                                                      );
+                  if (value >= 0)
+                  {
+                    databaseStatementHandle->results[i].dateTime = (uint64_t)value;
+                  }
+                  else
+                  {
+                    databaseStatementHandle->results[i].dateTime = 0;
+                  }
+                }
                 break;
               case DATABASE_DATATYPE_STRING:
                 String_setBuffer(databaseStatementHandle->results[i].string,
@@ -17232,7 +17262,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           value.id = va_arg(arguments,DatabaseId*);
           if (value.id != NULL)
           {
-            (*value.id) = (int64)databaseStatementHandle->results[i].id;
+            (*value.id) = (DatabaseId)databaseStatementHandle->results[i].id;
           }
           break;
         case DATABASE_DATATYPE_BOOL:
@@ -17246,7 +17276,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           value.i = va_arg(arguments,int*);
           if (value.i != NULL)
           {
-            (*value.i) = (int)databaseStatementHandle->results[i].i;
+            (*value.i) = databaseStatementHandle->results[i].i;
           }
           break;
         case DATABASE_DATATYPE_INT64:
@@ -17260,7 +17290,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           value.u = va_arg(arguments,uint*);
           if (value.u != NULL)
           {
-            (*value.u) = (int)databaseStatementHandle->results[i].u;
+            (*value.u) = databaseStatementHandle->results[i].u;
           }
           break;
         case DATABASE_DATATYPE_UINT64:
@@ -17274,14 +17304,14 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
           value.d = va_arg(arguments,double*);
           if (value.d != NULL)
           {
-            (*value.d) = (ulong)databaseStatementHandle->results[i].d;
+            (*value.d) = databaseStatementHandle->results[i].d;
           }
           break;
         case DATABASE_DATATYPE_ENUM:
           value.u = va_arg(arguments,uint*);
           if (value.u != NULL)
           {
-            (*value.u) = (int)databaseStatementHandle->results[i].u;
+            (*value.u) = databaseStatementHandle->results[i].u;
           }
           break;
         case DATABASE_DATATYPE_DATETIME:

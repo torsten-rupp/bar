@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-10-04 02:54+0200\n"
+"POT-Creation-Date: 2025-10-19 02:13+0200\n"
 "PO-Revision-Date: 2025-09-14 09:40+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -1401,7 +1401,7 @@ msgstr "Initialisierung der Dekompression fehlgeschlagen"
 msgid "end of compressed file"
 msgstr "Komprimierte Datei unvollständig"
 
-#: src/BARException.java:707 src/BARException.java:1468
+#: src/BARException.java:707 src/BARException.java:1474
 msgid "delta source not found"
 msgstr "Delta-Quelle nicht gefunden"
 
@@ -1786,304 +1786,309 @@ msgstr "Unvollständiges Archiv"
 msgid "insufficient split number digits in name"
 msgstr "Unzureichende Anzahl von Ziffer für Archivteilung"
 
-#: src/BARException.java:1194
+#: src/BARException.java:1195
+#, java-printf-format
+msgid "required at least %s digits"
+msgstr ""
+
+#: src/BARException.java:1200
 msgid "wrong CRC"
 msgstr "CRC-Fehler"
 
-#: src/BARException.java:1198
+#: src/BARException.java:1204
 msgid "at offset"
 msgstr "ab"
 
-#: src/BARException.java:1211
+#: src/BARException.java:1217
 msgid "entry is incomplete"
 msgstr "Datei/Abbild ist unvollständig"
 
-#: src/BARException.java:1218
+#: src/BARException.java:1224
 msgid "wrong entry type"
 msgstr "Falscher Eintrags-Typ"
 
-#: src/BARException.java:1225
+#: src/BARException.java:1231
 msgid "entries differ"
 msgstr "Einträge verschieden"
 
-#: src/BARException.java:1232
+#: src/BARException.java:1238
 msgid "corrupt data or invalid password"
 msgstr "Ungültige Daten oder ungültiges Passwort"
 
-#: src/BARException.java:1239
+#: src/BARException.java:1245
 msgid "invalid chunk size"
 msgstr "Unbekannte Datenfragment-Größe"
 
-#: src/BARException.java:1242
+#: src/BARException.java:1248
 msgid "unknown chunk"
 msgstr "Unbekanntes Datenfragment"
 
-#: src/BARException.java:1249
+#: src/BARException.java:1255
 msgid "invalid signature"
 msgstr "Ungültige Signaturen"
 
-#: src/BARException.java:1252
+#: src/BARException.java:1258
 msgid "invalid incremental file"
 msgstr "Ungültige Inkrementdatei"
 
-#: src/BARException.java:1255
+#: src/BARException.java:1261
 msgid "wrong incremental file version"
 msgstr "Falsche Version der Inkrementdatei"
 
-#: src/BARException.java:1258
+#: src/BARException.java:1264
 msgid "corrupt incremental file"
 msgstr "Inkrementdatei beschädigt"
 
-#: src/BARException.java:1261
+#: src/BARException.java:1267
 msgid "invalid device specifier"
 msgstr "Ungültiges Geräte-Prefix"
 
-#: src/BARException.java:1264
+#: src/BARException.java:1270
 msgid "load volume failed"
 msgstr "Medium laden fehlgeschlagen"
 
-#: src/BARException.java:1267
+#: src/BARException.java:1273
 msgid "parse command failed"
 msgstr "Ungültige Befehlssyntax"
 
-#: src/BARException.java:1274
+#: src/BARException.java:1280
 msgid "expand command template failed"
 msgstr "Befehlserzeugung aus Vorlage fehlgeschlagen"
 
-#: src/BARException.java:1277
+#: src/BARException.java:1283
 msgid "i/o redirect failed"
 msgstr "Ein-/Ausgabeumleitung fehlgeschlagen"
 
-#: src/BARException.java:1284
+#: src/BARException.java:1290
 msgid "execute external program failed"
 msgstr "Ausführen des externen Programms fehlgeschlagen"
 
-#: src/BARException.java:1291
+#: src/BARException.java:1297
 msgid "terminated external program"
 msgstr "Externes Programm wurde beendet"
 
-#: src/BARException.java:1298
+#: src/BARException.java:1304
 msgid "execute external program timeout"
 msgstr "Zeitüberschreitung beim Ausführen eines externen Programms"
 
-#: src/BARException.java:1305
+#: src/BARException.java:1311
 msgid "parsing data failed"
 msgstr "Fehler beim Verarbeiten der Daten"
 
-#: src/BARException.java:1312
+#: src/BARException.java:1318
 msgid "parsing date failed"
 msgstr "Fehler beim Lesen des Datums"
 
-#: src/BARException.java:1319
+#: src/BARException.java:1325
 msgid "parsing time failed"
 msgstr "Fehler beim Lesen einer Zeitangabe"
 
-#: src/BARException.java:1326
+#: src/BARException.java:1332
 msgid "parsing weekdays failed"
 msgstr "Fehler beim Lesen der Wochentagsangabe"
 
-#: src/BARException.java:1333
+#: src/BARException.java:1339
 msgid "parsing maintenance failed"
 msgstr "Fehler beim Lesen der Wartungszeit"
 
-#: src/BARException.java:1340
+#: src/BARException.java:1346
 msgid "parsing schedule failed"
 msgstr "Fehler beim Lesen des Zeitplans"
 
-#: src/BARException.java:1347
+#: src/BARException.java:1353
 msgid "unknown command"
 msgstr "Unbekanntes Kommando"
 
-#: src/BARException.java:1354
+#: src/BARException.java:1360
 msgid "expected parameter"
 msgstr "Parameter erwartet"
 
-#: src/BARException.java:1367
+#: src/BARException.java:1373
 msgid "unknown value"
 msgstr "Unbekannter Wert"
 
-#: src/BARException.java:1371
+#: src/BARException.java:1377
 msgid "invalid value"
 msgstr "Ungültiger Wert"
 
-#: src/BARException.java:1378
+#: src/BARException.java:1384
 msgid "deprecated or ignored value"
 msgstr "veralteter oder ignorierter Wert"
 
-#: src/BARException.java:1385
+#: src/BARException.java:1391
 msgid "authorization failed"
 msgstr "Authorisierungsfehler"
 
-#: src/BARException.java:1388
+#: src/BARException.java:1394
 msgid "job not found"
 msgstr "Auftrag nicht gefunden"
 
-#: src/BARException.java:1395
+#: src/BARException.java:1401
 msgid "schedule not found"
 msgstr "Zeitplan nicht gefunden"
 
-#: src/BARException.java:1408
+#: src/BARException.java:1414
 msgid "persistence not found"
 msgstr "Persistenzeintrag nicht gefunden"
 
-#: src/BARException.java:1418
+#: src/BARException.java:1424
 msgid "maintenance not found"
 msgstr "Wartungszeit nicht gefunden"
 
-#: src/BARException.java:1428
+#: src/BARException.java:1434
 msgid "server not found"
 msgstr "Rechner nicht gefunden"
 
-#: src/BARException.java:1438
+#: src/BARException.java:1444
 msgid "entry not found"
 msgstr "Dateneintrag nicht gefunden"
 
-#: src/BARException.java:1448
+#: src/BARException.java:1454
 msgid "pattern not found"
 msgstr "Muster nicht gefunden"
 
-#: src/BARException.java:1458
+#: src/BARException.java:1464
 msgid "mount not found"
 msgstr "Dateisystem-Einhängepunkt nicht gefunden"
 
-#: src/BARException.java:1472
+#: src/BARException.java:1478
 msgid "database"
 msgstr "Datenbank"
 
-#: src/BARException.java:1479
+#: src/BARException.java:1485
 msgid "invalid database URI"
 msgstr "Ungültige Datenbankbezeichnung"
 
-#: src/BARException.java:1486
+#: src/BARException.java:1492
 msgid "database type not supported"
 msgstr "Datenbanktyp wird nicht unterstützt"
 
-#: src/BARException.java:1489
+#: src/BARException.java:1495
 msgid "database already exists"
 msgstr "Datenbank existiert bereits"
 
-#: src/BARException.java:1492
+#: src/BARException.java:1498
 msgid "database not found"
 msgstr "Datenbank nicht gefunden"
 
-#: src/BARException.java:1495
+#: src/BARException.java:1501
 msgid "connect to database failed"
 msgstr "Verbindung zur Datenbank fehlgeschlagen"
 
-#: src/BARException.java:1498
+#: src/BARException.java:1504
 msgid "database connection lost"
 msgstr "Datenbankverbindung verloren"
 
-#: src/BARException.java:1501
+#: src/BARException.java:1507
 msgid "database authorization failed"
 msgstr "Datenbank Autorisierungsfehler"
 
-#: src/BARException.java:1504
+#: src/BARException.java:1510
 msgid "insufficient database version"
 msgstr "Datenbankversion ist nicht ausreichend"
 
-#: src/BARException.java:1513
+#: src/BARException.java:1519
 #, fuzzy, java-printf-format
 msgid "unknown version %s of index"
 msgstr "Unbekannte Indexversion"
 
-#: src/BARException.java:1517
+#: src/BARException.java:1523
 msgid "unknown version of index"
 msgstr "Unbekannte Indexversion"
 
-#: src/BARException.java:1521
+#: src/BARException.java:1527
 msgid "missing table"
 msgstr "Datenbank-Tabelle nicht gefunden"
 
-#: src/BARException.java:1528
+#: src/BARException.java:1534
 msgid "missing column"
 msgstr "Datenbank-Spalte nicht gefunden"
 
-#: src/BARException.java:1535
+#: src/BARException.java:1541
 msgid "obsolete table"
 msgstr "Überflüssige Datenbanktabelle"
 
-#: src/BARException.java:1542
+#: src/BARException.java:1548
 msgid "obsolete column"
 msgstr "Überflüssige Datenbankspalte"
 
-#: src/BARException.java:1549
+#: src/BARException.java:1555
 msgid "database bind failed"
 msgstr "Datenbankverknüpfung fehlgeschlagen"
 
-#: src/BARException.java:1556
+#: src/BARException.java:1562
 msgid "type mismatch"
 msgstr "Unpassender Datentyp"
 
-#: src/BARException.java:1563
+#: src/BARException.java:1569
 msgid "error creating index"
 msgstr "Fehler beim Erstellen des Datenbank-Index"
 
-#: src/BARException.java:1566
+#: src/BARException.java:1572
 msgid "index not found"
 msgstr "Datenbank-Index nicht gefunden"
 
-#: src/BARException.java:1569
+#: src/BARException.java:1575
 msgid "index still not initialized"
 msgstr "Index noch nicht initialisiert"
 
-#: src/BARException.java:1572
+#: src/BARException.java:1578
 msgid "invalid index"
 msgstr "Ungültiger Index"
 
-#: src/BARException.java:1579
+#: src/BARException.java:1585
 msgid "parse index id failed"
 msgstr "Fehler beim Lesen der Datensatzkennung"
 
-#: src/BARException.java:1586
+#: src/BARException.java:1592
 msgid "database is locked"
 msgstr "Datenbank ist gesperrt"
 
-#: src/BARException.java:1593
+#: src/BARException.java:1599
 msgid "database busy"
 msgstr "Datenbank in Benutzung"
 
-#: src/BARException.java:1596
+#: src/BARException.java:1602
 msgid "database operation interrupted"
 msgstr "Datenbankoperation unterbrochen"
 
-#: src/BARException.java:1599
+#: src/BARException.java:1605
 msgid "timeout accessing index"
 msgstr "Zeitüberschreitung bei Zugriff auf Index"
 
-#: src/BARException.java:1606
+#: src/BARException.java:1612
 msgid "database entry not found"
 msgstr "Datenbankeintrag nicht gefunden"
 
-#: src/BARException.java:1609
+#: src/BARException.java:1615
 msgid "master disconnected"
 msgstr "Verbindung zu Hauptinstanz verloren"
 
-#: src/BARException.java:1612
+#: src/BARException.java:1618
 msgid "slave disconnected"
 msgstr "Verbindung zu Nebeninstanz verloren"
 
-#: src/BARException.java:1615
+#: src/BARException.java:1621
 msgid "slave is not paired"
 msgstr "Nebeninstanz nicht gekoppelt"
 
-#: src/BARException.java:1618
+#: src/BARException.java:1624
 msgid "instance is not a slave"
 msgstr "Instanz ist keine Nebeninstanz"
 
-#: src/BARException.java:1621
+#: src/BARException.java:1627
 msgid "create PAR2 checksums fail"
 msgstr "Erzeugen der PAR2 Prüfsumme fehlgeschlagen"
 
-#: src/BARException.java:1628
+#: src/BARException.java:1634
 msgid "invalid block size (multiple of 4)"
 msgstr "Ungültige Blockgröße (vielfaches von 4)"
 
-#: src/BARException.java:1631
+#: src/BARException.java:1637
 msgid "PAR2 block size too small"
 msgstr "PAR2 Blockgröße zu klein"
 
-#: src/BARException.java:1638
+#: src/BARException.java:1644
 msgid "too many PAR2 blocks (max. 32768)"
 msgstr "Zu viele PAR2 Blöcke (max. 32768)"
 
