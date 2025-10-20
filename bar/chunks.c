@@ -2234,6 +2234,9 @@ Errors Chunk_skip(const ChunkIO     *chunkIO,
   assert(chunkHeader != NULL);
 
   int64 size = chunkIO->getSize(chunkIOUserData);
+fprintf(stderr,"%s:%d: size=%lu\n",__FILE__,__LINE__,size);
+fprintf(stderr,"%s:%d: chunkHeader->offset=%lu\n",__FILE__,__LINE__,chunkHeader->offset);
+fprintf(stderr,"%s:%d: chunkHeader->size=%lu\n",__FILE__,__LINE__,chunkHeader->size);
   if ((size >= 0) && (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size > (uint64)size))
   {
     return ERROR_INVALID_CHUNK_SIZE;
