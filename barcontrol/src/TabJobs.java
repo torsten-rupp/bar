@@ -3281,7 +3281,7 @@ public class TabJobs
 
               widgetFileTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
               widgetFileTreeToolTip.setBackground(COLOR_BACKGROUND);
-              widgetFileTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+              widgetFileTreeToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
               Widgets.layout(widgetFileTreeToolTip,0,0,TableLayoutData.NSWE);
               label = Widgets.newLabel(widgetFileTreeToolTip,BARControl.tr("Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.\nNote size column: numbers in red color indicates size update is still in progress."));
               label.setForeground(COLOR_FOREGROUND);
@@ -8719,7 +8719,7 @@ public class TabJobs
 
               widgetScheduleTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
               widgetScheduleTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
-              widgetScheduleTableToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+              widgetScheduleTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
               Widgets.layout(widgetScheduleTableToolTip,0,0,TableLayoutData.NSWE);
               widgetScheduleTableToolTip.addMouseTrackListener(new MouseTrackListener()
               {
@@ -16090,7 +16090,7 @@ throw new Error("NYI");
     {
       widgetPersistenceTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetPersistenceTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
-      widgetPersistenceTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+      widgetPersistenceTreeToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
       Widgets.layout(widgetPersistenceTreeToolTip,0,0,TableLayoutData.NSWE);
 
       row = 0;

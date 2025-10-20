@@ -4310,7 +4310,7 @@ Dprintf.dprintf("");
     {
       widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetStorageTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
-      widgetStorageTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+      widgetStorageTreeToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
       Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
 
       row = 0;
@@ -4424,7 +4424,7 @@ Dprintf.dprintf("");
     {
       widgetStorageTreeToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetStorageTreeToolTip.setBackground(COLOR_INFO_BACKGROUND);
-      widgetStorageTreeToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+      widgetStorageTreeToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
       Widgets.layout(widgetStorageTreeToolTip,0,0,TableLayoutData.NSWE);
 
       row = 0;
@@ -4576,7 +4576,13 @@ Dprintf.dprintf("");
     {
       widgetStorageTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
       widgetStorageTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
-      widgetStorageTableToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+      widgetStorageTableToolTip.setLayout(new TableLayout((Settings.debugLevel > 0)
+                                                            ? new double[]{0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0}
+                                                            : new double[]{0.0,0.0,    0.0,1.0,0.0,0.0,0.0,0.0,0.0},
+                                                          new double[]{0.0,1.0},
+                                                          2
+                                                         )
+                                         );
       Widgets.layout(widgetStorageTableToolTip,0,0,TableLayoutData.NSWE);
 
       row = 0;
@@ -4635,21 +4641,21 @@ Dprintf.dprintf("");
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Storage")+":");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
-      Widgets.layout(label,row,0,TableLayoutData.W);
+      Widgets.layout(label,row,0,TableLayoutData.NW);
       composite = Widgets.newComposite(widgetStorageTableToolTip);
       composite.setBackground(COLOR_INFO_BACKGROUND);
-      composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
-      Widgets.layout(composite,row,1,TableLayoutData.WE);
+      composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
+      Widgets.layout(composite,row,1,TableLayoutData.NSWE);
       {
-        label = Widgets.newLabel(composite,storageIndexData.name);
-        label.setForeground(COLOR_INFO_FOREGROUND);
-        label.setBackground(COLOR_INFO_BACKGROUND);
-        Widgets.layout(label,0,0,TableLayoutData.WE);
+        text = Widgets.newStringView(composite,storageIndexData.name,SWT.MULTI|SWT.WRAP|SWT.V_SCROLL);
+        text.setForeground(COLOR_INFO_FOREGROUND);
+        text.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(text,0,0,TableLayoutData.NSWE,0,0,0,0,200,SWT.DEFAULT);
 
         button = new Button(composite,SWT.CENTER);
         button.setToolTipText(BARControl.tr("Copy name to clipboard."));
         button.setImage(IMAGE_CLIPBOARD);
-        Widgets.layout(button,0,1,TableLayoutData.E);
+        Widgets.layout(button,0,1,TableLayoutData.E|TableLayoutData.NS);
         button.addSelectionListener(new SelectionListener()
         {
           public void widgetSelected(SelectionEvent selectionEvent)
@@ -4751,6 +4757,8 @@ Dprintf.dprintf("");
         }
       }
 
+widgetStorageTableToolTip.layout();
+
       Widgets.showToolTip(widgetStorageTableToolTip,x,y);
     }
   }
@@ -4786,9 +4794,6 @@ Dprintf.dprintf("");
         this.fragmentSize   = fragmentSize;
       }
     };
-
-    final Color COLOR_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-    final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
 
     int         row;
     Label       label;
@@ -4853,8 +4858,14 @@ Dprintf.dprintf("");
     if (!shell.isDisposed() && (entryIndexData != null))
     {
       widgetEntryTableToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
-      widgetEntryTableToolTip.setBackground(COLOR_BACKGROUND);
-      widgetEntryTableToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
+      widgetEntryTableToolTip.setBackground(COLOR_INFO_BACKGROUND);
+      widgetEntryTableToolTip.setLayout(new TableLayout((Settings.debugLevel > 0)
+                                                          ? new double[]{0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0}
+                                                          : new double[]{    0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0},
+                                                        new double[]{0.0,1.0},
+                                                        2
+                                                       )
+                                         );
       Widgets.layout(widgetEntryTableToolTip,0,0,TableLayoutData.NSWE);
 
       row = 0;
@@ -4875,42 +4886,42 @@ Dprintf.dprintf("");
       }
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Job")+":");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.jobName);
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Type")+":");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.archiveType.getText());
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Hostname")+":");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.hostName);
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Created")+":");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,(entryIndexData.dateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)) : "-");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
@@ -4919,18 +4930,18 @@ Dprintf.dprintf("");
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Name")+":");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
-      Widgets.layout(label,row,0,TableLayoutData.W);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.NW);
       composite = Widgets.newComposite(widgetEntryTableToolTip);
-      composite.setBackground(COLOR_BACKGROUND);
-      composite.setLayout(new TableLayout(null,new double[]{1.0,0.0}));
-      Widgets.layout(composite,row,1,TableLayoutData.WE);
+      composite.setBackground(COLOR_INFO_BACKGROUND);
+      composite.setLayout(new TableLayout(1.0,new double[]{1.0,0.0}));
+      Widgets.layout(composite,row,1,TableLayoutData.NSWE);
       {
-        text = Widgets.newStringView(composite,entryIndexData.name);
-        text.setForeground(COLOR_FOREGROUND);
-        text.setBackground(COLOR_BACKGROUND);
-        Widgets.layout(text,0,0,TableLayoutData.WE);
+        text = Widgets.newStringView(composite,entryIndexData.name,SWT.MULTI|SWT.WRAP|SWT.V_SCROLL);
+        text.setForeground(COLOR_INFO_FOREGROUND);
+        text.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(text,0,0,TableLayoutData.NSWE,0,0,0,0,200,SWT.DEFAULT);
 
         button = new Button(composite,SWT.CENTER);
         button.setToolTipText(BARControl.tr("Copy name to clipboard."));
@@ -4950,48 +4961,48 @@ Dprintf.dprintf("");
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Type")+":");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.entryType.getText());
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Size")+":");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,String.format(BARControl.tr("{0} ({1} {1,choice,0#bytes|1#byte|1<bytes})",Units.formatByteSize(entryIndexData.size),entryIndexData.size)));
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Date/Time")+":");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,(entryIndexData.dateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)) : "-");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Fragments")+":");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
       label = Widgets.newLabel(widgetEntryTableToolTip,(fragmentDataList.size() > 0) ? String.format("%d",fragmentDataList.size()) : "-");
-      label.setForeground(COLOR_FOREGROUND);
-      label.setBackground(COLOR_BACKGROUND);
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
       table = Widgets.newTable(widgetEntryTableToolTip,SWT.V_SCROLL|SWT.H_SCROLL);
-      table.setForeground(COLOR_FOREGROUND);
-      table.setBackground(COLOR_BACKGROUND);
+      table.setForeground(COLOR_INFO_FOREGROUND);
+      table.setBackground(COLOR_INFO_BACKGROUND);
       table.setHeaderVisible(false);
       Widgets.layout(table,row,1,TableLayoutData.NSWE,0,0,0,0,400,200);
       Widgets.addTableColumn(table,0,SWT.RIGHT,80, true);
