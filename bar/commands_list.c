@@ -3659,13 +3659,13 @@ Errors Command_list(StringList              *storageNameList,
     {
       // open directory list
       StorageDirectoryListHandle storageDirectoryListHandle;
-      error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                        &storageSpecifier,
-                                        NULL,  // fileName
-                                        jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_HIGH
-                                       );
-      if (error == ERROR_NONE)
+      if (Storage_openDirectoryList(&storageDirectoryListHandle,
+                                    &storageSpecifier,
+                                    NULL,  // fileName
+                                    jobOptions,
+                                    SERVER_CONNECTION_PRIORITY_HIGH
+                                   ) == ERROR_NONE
+         )
       {
         if (String_isEmpty(storageSpecifier.archivePatternString))
         {
