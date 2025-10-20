@@ -2266,7 +2266,7 @@ public class TabStatus
 
             widgetMessageToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
             widgetMessageToolTip.setBackground(COLOR_BACKGROUND);
-            widgetMessageToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+            widgetMessageToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
             Widgets.layout(widgetMessageToolTip,0,0,TableLayoutData.NSWE);
 
             text = Widgets.newText(widgetMessageToolTip,SWT.LEFT|SWT.V_SCROLL|SWT.MULTI|SWT.WRAP);

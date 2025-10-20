@@ -4181,7 +4181,7 @@ if (false) {
 
             widgetTabFolderToolTip = new Shell(shell,SWT.ON_TOP|SWT.NO_FOCUS|SWT.TOOL);
             widgetTabFolderToolTip.setBackground(COLOR_BACKGROUND);
-            widgetTabFolderToolTip.setLayout(new TableLayout(1.0,new double[]{0.0,1.0},2));
+            widgetTabFolderToolTip.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
             Widgets.layout(widgetTabFolderToolTip,0,0,TableLayoutData.NSWE);
             label = Widgets.newLabel(widgetTabFolderToolTip,BARControl.tr("Indicate if connection to BAR server is verified as secure (lock icon) or may be insecure (broken lock icon)."));
             label.setForeground(COLOR_FOREGROUND);
@@ -6068,7 +6068,7 @@ if (false) {
       {
         // show error dialog
         Dialogs.error(new Shell(),
-        connectErrorExtendedMessage,
+                      connectErrorExtendedMessage,
                       (connectErrorMessage != null)
                         ? connectErrorMessage
                         : BARControl.tr("Connection fail")
