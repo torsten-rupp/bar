@@ -4073,6 +4073,32 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle)
   IndexCommon_doneIndexQueryHandle(indexQueryHandle);
 }
 
+bool StringMap_getIndexId(const StringMap stringMap, const char *name, IndexId *data, IndexTypes indexType, IndexId defaultValue)
+{
+  assert(stringMap != NULL);
+  assert(name != NULL);
+  assert(data != NULL);
+
+  bool result;
+
+  IndexId indexId;
+  if (StringMap_getInt64(stringMap,name,&indexId.data,defaultValue.data))
+  {
+    assert(indexId.type == indexType);
+
+    (*data) = indexId;
+    result = TRUE;
+  }
+  else
+  {
+    (*data) = defaultValue;
+    result = FALSE;
+  }
+  UNUSED_VARIABLE(indexType);
+
+  return result;
+}
+
 #ifdef INDEX_DEBUG_LOCK
 void Index_debugPrintInUseInfo(void)
 {

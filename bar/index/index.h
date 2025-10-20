@@ -746,43 +746,6 @@ bool Index_containsType(const IndexId indexIds[],
                         IndexTypes    indexType
                        );
 
-/***********************************************************************\
-* Name   : StringMap_getIndexId
-* Purpose: additional string map functions: get index id
-* Input  : stringMap    - stringMap
-*          name         - value name
-*          indexType    - index id type; see INDEX_TYPE_...
-*          defaultValue - value/default value
-* Output : data - value or default value
-* Return : TRUE if read, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-INLINE bool StringMap_getIndexId(const StringMap stringMap, const char *name, IndexId *data, IndexTypes indexType, IndexId defaultValue);
-#if defined(NDEBUG) || defined(__INDEX_IMPLEMENTATION__)
-INLINE bool StringMap_getIndexId(const StringMap stringMap, const char *name, IndexId *data, IndexTypes indexType, IndexId defaultValue)
-{
-  assert(stringMap != NULL);
-  assert(name != NULL);
-  assert(data != NULL);
-
-  bool result;
-  DatabaseId databaseId;
-  if (StringMap_getInt64(stringMap,name,&databaseId,defaultValue.data))
-  {
-    (*data) = INDEX_ID_(indexType,databaseId);
-    result = TRUE;
-  }
-  else
-  {
-    (*data) = defaultValue;
-    result = FALSE;
-  }
-
-  return result;
-}
-#endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
-
 // ---------------------------------------------------------------------
 
 /***********************************************************************\
@@ -923,6 +886,19 @@ INLINE bool Index_getIndexId(StringMap stringMap, const char *name, IndexId *ind
 }
 #endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
 
+/***********************************************************************\
+* Name   : StringMap_getIndexId
+* Purpose: additional string map functions: get index id
+* Input  : stringMap    - stringMap
+*          name         - value name
+*          indexType    - expected index id type; see INDEX_TYPE_...
+*          defaultValue - value/default value
+* Output : data - value or default value
+* Return : TRUE if read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool StringMap_getIndexId(const StringMap stringMap, const char *name, IndexId *data, IndexTypes indexType, IndexId defaultValue);
 
 #ifdef INDEX_DEBUG_LOCK
 /***********************************************************************\
