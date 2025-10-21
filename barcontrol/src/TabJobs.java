@@ -9248,8 +9248,10 @@ TODO: implement delete entity
                                        )
                       )
                     {
-                      deleteEntity(entityIndexData);
-                      Widgets.removeTreeItem(treeItem);
+                      if (deleteEntity(entityIndexData))
+                      {
+                        Widgets.removeTreeItem(treeItem);
+                      }
                     }
                   }
                 });
@@ -16062,8 +16064,10 @@ throw new Error("NYI");
             else if (treeItem.getData() instanceof EntityIndexData)
             {
               EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
-              deleteEntity(entityIndexData);
-              Widgets.removeTreeItem(widgetPersistenceTree,entityIndexData);
+              if (deleteEntity(entityIndexData))
+              {
+                Widgets.removeTreeItem(widgetPersistenceTree,entityIndexData);
+              }
             }
           }
         }
@@ -16285,9 +16289,12 @@ throw new Error("NYI");
 
   /** delete entity
    * @param entityIndexData entity index data
+   * @return true iff deleted
    */
-  private void deleteEntity(EntityIndexData entityIndexData)
+  private boolean deleteEntity(EntityIndexData entityIndexData)
   {
+    boolean result = false;
+
     if (selectedJobData != null)
     {
       {
@@ -16339,6 +16346,7 @@ throw new Error("NYI");
                                      }
                                    }
                                   );
+          result = true;
         }
         catch (final BARException exception)
         {
@@ -16349,7 +16357,7 @@ throw new Error("NYI");
               @Override
               public void run()
               {
-                Dialogs.error(shell,BARControl.tr("Cannot restore:\n\n{0}",exception.getMessage()));
+                Dialogs.error(shell,BARControl.tr("Cannot delete entity:\n\n{0}",exception.getMessage()));
               }
             });
           }
@@ -16362,7 +16370,7 @@ throw new Error("NYI");
             @Override
             public void run()
             {
-              Dialogs.error(shell,BARControl.tr("Cannot restore:\n\n{0}",exception.getMessage()));
+              Dialogs.error(shell,BARControl.tr("Cannot delete entity:\n\n{0}",exception.getMessage()));
             }
           });
           busyDialog.close();
@@ -16375,7 +16383,7 @@ throw new Error("NYI");
             @Override
             public void run()
             {
-              Dialogs.error(shell,BARControl.tr("Error while restoring:\n\n{0}",error.getMessage()));
+              Dialogs.error(shell,BARControl.tr("Error while deleting entity:\n\n{0}",error.getMessage()));
              }
           });
         }
@@ -16387,7 +16395,7 @@ throw new Error("NYI");
             @Override
             public void run()
             {
-              Dialogs.error(shell,BARControl.tr("Connection error while restoring\n\n(error: {0})",error.getMessage()));
+              Dialogs.error(shell,BARControl.tr("Connection error while deleteing entity\n\n(error: {0})",error.getMessage()));
              }
           });
         }
@@ -16429,13 +16437,14 @@ throw new Error("NYI");
                                    )
                      );
         BARControl.logThrowable(exception);
-        return;
       }
       finally
       {
         BARControl.resetCursor();
       }
     }
+
+    return result;
   }
 }
 

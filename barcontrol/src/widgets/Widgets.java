@@ -8715,21 +8715,25 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
           case SWT.UP:
             if ((comparator != String.CASE_INSENSITIVE_ORDER) && (comparator != STRING_COLLATOR))
             {
-              foundFlag = (comparator.compare((T)treeItems[index].getData(),data) > 0);
+              T existingData = (T)treeItems[index].getData();
+              foundFlag = (existingData != null) && (comparator.compare(existingData,data) > 0);
             }
             else
             {
-              foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) > 0);
+              T existingData = (T)treeItems[index].getText(sortColumnIndex);
+              foundFlag = (existingData != null) && (comparator.compare(existingData,data) > 0);
             }
             break;
           case SWT.DOWN:
             if ((comparator != String.CASE_INSENSITIVE_ORDER) && (comparator != STRING_COLLATOR))
             {
-              foundFlag = (comparator.compare((T)treeItems[index].getData(),data) < 0);
+              T existingData = (T)treeItems[index].getData();
+              foundFlag = (existingData != null) && (comparator.compare(existingData,data) < 0);
             }
             else
             {
-              foundFlag = (comparator.compare((T)treeItems[index].getText(sortColumnIndex),data) < 0);
+              T existingData = (T)treeItems[index].getText(sortColumnIndex);
+              foundFlag = (existingData != null) && (comparator.compare(existingData,data) < 0);
             }
             break;
         }
