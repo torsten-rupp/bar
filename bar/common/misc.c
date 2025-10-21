@@ -1868,13 +1868,32 @@ String Misc_expandMacros(String           string,
                          bool             keepUnknownMacros
                         )
 {
-  #define APPEND_CHAR(string,index,ch) \
+  #define APPEND_CHAR(string,index,value) \
     do \
     { \
-      if ((index) < sizeof(string)-1) \
+      if ((index) < (sizeof(string)-1)) \
       { \
-        (string)[index] = ch; \
+        (string)[index] = value; \
         (index)++; \
+        (string)[index] = '\0'; \
+      } \
+    } \
+    while (0)
+  #define APPEND_STRING(string,index,value) \
+    do \
+    { \
+      if ((index) < (sizeof(string)-1)) \
+      { \
+        const char *s = value; \
+        while (   ((index) < (sizeof(string)-1)) \
+               && ((*s) != '\0') \
+              ) \
+        { \
+          (string)[index] = (*s); \
+          (index)++; \
+          s++; \
+        } \
+        (string)[index] = '\0'; \
       } \
     } \
     while (0)
@@ -1896,7 +1915,7 @@ String Misc_expandMacros(String           string,
   assert((macroCount == 0) || (macros != NULL));
 
   String expanded = String_new();
-  ulong  i        = 0;
+  size_t i        = 0;
   bool   macroFlag;
   do
   {
@@ -1920,11 +1939,6 @@ String Misc_expandMacros(String           string,
             }
             i+=2;
             break;
-          case ':':
-            // escaped :
-            String_appendChar(expanded,':');
-            i+=2;
-            break;
           default:
             // macro %
             macroFlag = TRUE;
@@ -1944,7 +1958,17 @@ String Misc_expandMacros(String           string,
       // skip spaces
       SKIP_SPACES(templateString,i);
 
-      uint j;
+      // check if '{'
+      bool hasCurlyBrace = FALSE;
+      if (   (templateString[i] != '\0')
+          && (templateString[i] == '{')
+         )
+      {
+        hasCurlyBrace = TRUE;
+        i++;
+      }
+
+      size_t j;
 
       // get macro name
       char name[128];
@@ -1964,11 +1988,15 @@ String Misc_expandMacros(String           string,
               );
       }
       name[j] = '\0';
+//fprintf(stderr,"%s, %d: name='%s'\n",__FILE__,__LINE__,name);
 
-      // get format data (if any)
+      // get format width with '%' (if any)
       char format[128];
       j = 0;
-      if (templateString[i] == ':')
+      APPEND_CHAR(format,j,'%');
+      if (   (templateString[i] != '\0')
+          && (templateString[i] == ':')
+         )
       {
         // skip ':'
         i++;
@@ -1976,13 +2004,29 @@ String Misc_expandMacros(String           string,
         // skip spaces
         SKIP_SPACES(templateString,i);
 
-        // get format string
-        APPEND_CHAR(format,j,'%');
+        if (   (templateString[i] != '\0')
+            && (strchr("+-",templateString[i]) != NULL)
+           )
+        {
+          APPEND_CHAR(format,j,templateString[i]);
+          i++;
+        }
         while (   (templateString[i] != '\0')
-               && (   isdigit(templateString[i])
-                   || (templateString[i] == '-')
-                   || (templateString[i] == '.')
-                  )
+               && isdigit(templateString[i])
+              )
+        {
+          APPEND_CHAR(format,j,templateString[i]);
+          i++;
+        }
+        if (   (templateString[i] != '\0')
+            && (templateString[i] == '.')
+           )
+        {
+          APPEND_CHAR(format,j,templateString[i]);
+          i++;
+        }
+        while (   (templateString[i] != '\0')
+               && isdigit(templateString[i])
               )
         {
           APPEND_CHAR(format,j,templateString[i]);
@@ -1992,90 +2036,77 @@ String Misc_expandMacros(String           string,
                && (strchr("l",templateString[i]) != NULL)
               )
         {
-          APPEND_CHAR(format,j,templateString[i]);
+          // ignore
           i++;
         }
         if (   (templateString[i] != '\0')
             && (strchr("duxfsS",templateString[i]) != NULL)
            )
         {
-          APPEND_CHAR(format,j,templateString[i]);
+          // ignore
           i++;
         }
       }
-      format[j] = '\0';
+//fprintf(stderr,"%s, %d: format=%s\n",__FILE__,__LINE__,format);
 
-      // find macro
+      if (hasCurlyBrace)
+      {
+        // skip spaces
+        SKIP_SPACES(templateString,i);
+
+        // skip closing '}'
+        if (   (templateString[i] != '\0')
+            && (templateString[i] == '}')
+           )
+        {
+          i++;
+        }
+      }
+
       if (!stringIsEmpty(name))
       {
-        j = ARRAY_FIND(macros,macroCount,j,stringEquals(name,macros[j].name));
-        if (j < macroCount)
+        // find macro
+        size_t k = ARRAY_FIND(macros,macroCount,k,stringEquals(name,macros[k].name));
+        if (k < macroCount)
         {
+  //fprintf(stderr,"%s, %d: name=%s -> %d\n",__FILE__,__LINE__,name,k);
           switch (expandMacroMode)
           {
             case EXPAND_MACRO_MODE_STRING:
-              // get default format if no format given
-              if (stringIsEmpty(format))
-              {
-                switch (macros[j].type)
-                {
-                  case TEXT_MACRO_TYPE_INT:
-                    stringSet(format,sizeof(format),"%d");
-                    break;
-                  case TEXT_MACRO_TYPE_UINT:
-                    stringSet(format,sizeof(format),"%u");
-                    break;
-                  case TEXT_MACRO_TYPE_INT64:
-                    stringSet(format,sizeof(format),"%"PRIi64);
-                    break;
-                  case TEXT_MACRO_TYPE_UINT64:
-                    stringSet(format,sizeof(format),"%"PRIu64);
-                    break;
-                  case TEXT_MACRO_TYPE_DOUBLE:
-                    stringSet(format,sizeof(format),"%lf");
-                    break;
-                  case TEXT_MACRO_TYPE_CSTRING:
-                    stringSet(format,sizeof(format),"%s");
-                    break;
-                  case TEXT_MACRO_TYPE_STRING:
-                    stringSet(format,sizeof(format),"%S");
-                    break;
-                  #ifndef NDEBUG
-                    default:
-                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                      break; /* not reached */
-                  #endif /* NDEBUG */
-                }
-              }
-
               // expand macro into string
-              switch (macros[j].type)
+              switch (macros[k].type)
               {
                 case TEXT_MACRO_TYPE_INT:
-                  String_appendFormat(expanded,format,macros[j].value.i);
+                  APPEND_CHAR(format,j,'d');
+                  String_appendFormat(expanded,format,macros[k].value.i);
                   break;
                 case TEXT_MACRO_TYPE_UINT:
-                  String_appendFormat(expanded,format,macros[j].value.u);
+                  APPEND_CHAR(format,j,'u');
+                  String_appendFormat(expanded,format,macros[k].value.u);
                   break;
                 case TEXT_MACRO_TYPE_INT64:
-                  String_appendFormat(expanded,format,macros[j].value.i64);
+                  APPEND_STRING(format,j,PRIi64);
+                  String_appendFormat(expanded,format,macros[k].value.i64);
                   break;
                 case TEXT_MACRO_TYPE_UINT64:
-                  String_appendFormat(expanded,format,macros[j].value.u64);
+                  APPEND_STRING(format,j,PRIu64);
+                  String_appendFormat(expanded,format,macros[k].value.u64);
                   break;
                 case TEXT_MACRO_TYPE_DOUBLE:
-                  String_appendFormat(expanded,format,macros[j].value.d);
+                  APPEND_STRING(format,j,"lf");
+                  String_appendFormat(expanded,format,macros[k].value.d);
                   break;
                 case TEXT_MACRO_TYPE_CSTRING:
+                  APPEND_CHAR(format,j,'s');
                   if (expandMacroCharacter)
                   {
-                    String_appendFormat(expanded,format,macros[j].value.s);
+                    String_appendFormat(expanded,format,macros[k].value.s);
                   }
                   else
                   {
                   CStringIterator cStringIterator;
                   Codepoint       codepoint;
-                    CSTRING_CHAR_ITERATE(macros[j].value.s,cStringIterator,codepoint)
+                    CSTRING_CHAR_ITERATE(macros[k].value.s,cStringIterator,codepoint)
                     {
                       if (codepoint != '%')
                       {
@@ -2089,14 +2120,15 @@ String Misc_expandMacros(String           string,
                   }
                   break;
                 case TEXT_MACRO_TYPE_STRING:
+                  APPEND_CHAR(format,j,'S');
                   if (expandMacroCharacter)
                   {
-                    String_appendFormat(expanded,format,macros[j].value.string);
+                    String_appendFormat(expanded,format,macros[k].value.string);
                   }
                   else
                   {
                     char ch;
-                    STRING_CHAR_ITERATE(macros[j].value.string,ch)
+                    STRING_CHAR_ITERATE(macros[k].value.string,ch)
                     {
                       if (ch != '%')
                       {
@@ -2118,7 +2150,7 @@ String Misc_expandMacros(String           string,
               break;
             case EXPAND_MACRO_MODE_PATTERN:
               // expand macro into pattern
-              String_appendCString(expanded,macros[j].pattern);
+              String_appendCString(expanded,macros[k].pattern);
               break;
             #ifndef NDEBUG
               default:
@@ -2139,36 +2171,23 @@ String Misc_expandMacros(String           string,
       }
       else
       {
-        if (keepUnknownMacros)
+        // no name -> expand to spaces
+        uint       n;
+        char       *s = &format[1];
+        if      (!stringIsEmpty(s) && (*s) == '+') s++;
+        else if (!stringIsEmpty(s) && (*s) == '-') s++;
+        const char *t;
+        if (   !stringIsEmpty(format)
+            && stringToUInt(s,&n,&t)
+           )
         {
-          String_appendCString(expanded,"%");
-        }
-        else
-        {
-          // empty macro: expand with empty value
-          switch (expandMacroMode)
+          while (n > 0)
           {
-            case EXPAND_MACRO_MODE_STRING:
-              // get default format if no format given
-              if (stringIsEmpty(format))
-              {
-                stringSet(format,sizeof(format),"%s");
-              }
-
-              // expand macro into string
-              String_appendFormat(expanded,format,"");
-              break;
-            case EXPAND_MACRO_MODE_PATTERN:
-              // expand macro into pattern
-              String_appendCString(expanded,"\\s*");
-              break;
-            #ifndef NDEBUG
-              default:
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                break; /* not reached */
-              #endif /* NDEBUG */
+            String_appendChar(expanded,' ');
+            n--;
           }
         }
+        UNUSED_VARIABLE(t);
       }
     }
   }

@@ -1153,7 +1153,7 @@ bool Misc_hasMacrosCString(const char *templateString);
 
 /***********************************************************************\
 * Name   : Misc_expandMacros
-* Purpose: expand macros %<name>:<format> in string
+* Purpose: expand macros
 * Input  : string               - string variable
 *          templateStruing      - template string with macros
 *          macros               - array with macro definitions
@@ -1162,7 +1162,11 @@ bool Misc_hasMacrosCString(const char *templateString);
 *          keepUnknownMacros    - TRUE to keep unknown macros
 * Output : s - string with expanded macros
 * Return : expanded string
-* Notes  : -
+* Notes  : %{<name>:<format>} -> value with format
+*          %{<name>} -> value with printf-standard format
+*          %<name>:<format> -> value with format
+*          %<name> -> value with printf-standard format
+*          %:<n> -> n spaces
 \***********************************************************************/
 
 String Misc_expandMacros(String           string,
