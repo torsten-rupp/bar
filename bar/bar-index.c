@@ -672,6 +672,7 @@ LOCAL void vprintInfo(const char *prefix, const char *format, va_list arguments)
   // output
   UNUSED_RESULT(fwrite(String_cString(consoleEncodedLine),1,String_length(consoleEncodedLine),stdout)); fflush(stdout);
 
+  String_delete(consoleEncodedLine);
   String_delete(line);
 }
 
@@ -2879,11 +2880,11 @@ LOCAL Errors createIndices(DatabaseHandle *databaseHandle)
     }
     if (error == ERROR_NONE)
     {
-      printInfo("OK");
+      printInfo("OK\n");
     }
     else
     {
-      printInfo("FAIL (ignored)");
+      printInfo("FAIL (ignored)\n");
       error = ERROR_NONE;
     }
 
@@ -3414,7 +3415,7 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
   // init variables
   List_init(&entryList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeEntryNode,NULL));
 
-  // get entries info to add
+  // get entries to add
   error = Database_get(databaseHandle,
                        CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                        {
@@ -3553,8 +3554,8 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
                            DATABASE_COLUMN_DATETIME("entriesNewest.timeLastChanged","timeLastChanged")
                          ),
                          "    storages.deletedFlag!=TRUE \
-                          AND entriesNewest.name=? \
                           AND entriesNewest.id IS NOT NULL \
+                          AND entriesNewest.name=? \
                          ",
                          DATABASE_FILTERS
                          (
@@ -3573,65 +3574,68 @@ LOCAL Errors addToNewest(DatabaseHandle *databaseHandle,
   }
 
   // update/add entries to newest entries
-  LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
+    LIST_ITERATEX(&entryList,entryNode,error == ERROR_NONE)
     {
-      if (entryNode->newest.entryId != DATABASE_ID_NONE)
+      if (entryNode->timeLastChanged > entryNode->newest.timeLastChanged)
       {
-        error = Database_update(databaseHandle,
-                                NULL,  // changedRowCount
-                                "entriesNewest",
-                                DATABASE_FLAG_REPLACE,
-                                DATABASE_VALUES
-                                (
-                                  DATABASE_VALUE_KEY     ("entryId",         entryNode->entryId),
-                                  DATABASE_VALUE_KEY     ("uuidId",          entryNode->uuidId),
-                                  DATABASE_VALUE_KEY     ("entityId",        entryNode->entityId),
-                                  DATABASE_VALUE_UINT    ("type",            entryNode->indexType),
-                                  DATABASE_VALUE_STRING  ("name",            entryNode->name),
-                                  DATABASE_VALUE_DATETIME("timeLastChanged", entryNode->timeLastChanged),
-                                  DATABASE_VALUE_UINT    ("userId",          entryNode->userId),
-                                  DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
-                                  DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
-                                  DATABASE_VALUE_UINT64  ("size",            entryNode->size)
-                                ),
-                                "id=?",
-                                DATABASE_FILTERS
-                                (
-                                  DATABASE_FILTER_KEY(entryNode->newest.entryId)
-                                )
-                               );
-      }
-      else
-      {
-        error = Database_insert(databaseHandle,
-                                NULL,  // insertRowId
-                                "entriesNewest",
-                                DATABASE_FLAG_REPLACE,
-                                DATABASE_VALUES
-                                (
-                                  DATABASE_VALUE_KEY     ("entryId",         entryNode->entryId),
-                                  DATABASE_VALUE_KEY     ("uuidId",          entryNode->uuidId),
-                                  DATABASE_VALUE_KEY     ("entityId",        entryNode->entityId),
-                                  DATABASE_VALUE_UINT    ("type",            entryNode->indexType),
-                                  DATABASE_VALUE_STRING  ("name",            entryNode->name),
-                                  DATABASE_VALUE_DATETIME("timeLastChanged", entryNode->timeLastChanged),
-                                  DATABASE_VALUE_UINT    ("userId",          entryNode->userId),
-                                  DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
-                                  DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
-                                  DATABASE_VALUE_UINT64  ("size",            entryNode->size)
-                                ),
-                                DATABASE_COLUMNS
-                                (
-                                  DATABASE_COLUMN_STRING("name")
-                                ),
-                                "entriesNewest.name=?",
-                                DATABASE_FILTERS
-                                (
-                                  DATABASE_FILTER_STRING(entryNode->name)
-                                )
-                               );
+        if (entryNode->newest.entryId != DATABASE_ID_NONE)
+        {
+          error = Database_update(databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "entriesNewest",
+                                  DATABASE_FLAG_REPLACE,
+                                  DATABASE_VALUES
+                                  (
+                                    DATABASE_VALUE_KEY     ("entryId",         entryNode->entryId),
+                                    DATABASE_VALUE_KEY     ("uuidId",          entryNode->uuidId),
+                                    DATABASE_VALUE_KEY     ("entityId",        entryNode->entityId),
+                                    DATABASE_VALUE_UINT    ("type",            entryNode->indexType),
+                                    DATABASE_VALUE_STRING  ("name",            entryNode->name),
+                                    DATABASE_VALUE_DATETIME("timeLastChanged", entryNode->timeLastChanged),
+                                    DATABASE_VALUE_UINT    ("userId",          entryNode->userId),
+                                    DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
+                                    DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
+                                    DATABASE_VALUE_UINT64  ("size",            entryNode->size)
+                                  ),
+                                  "id=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(entryNode->newest.entryId)
+                                  )
+                                 );
+        }
+        else
+        {
+          error = Database_insert(databaseHandle,
+                                  NULL,  // insertRowId
+                                  "entriesNewest",
+                                  DATABASE_FLAG_REPLACE,
+                                  DATABASE_VALUES
+                                  (
+                                    DATABASE_VALUE_KEY     ("entryId",         entryNode->entryId),
+                                    DATABASE_VALUE_KEY     ("uuidId",          entryNode->uuidId),
+                                    DATABASE_VALUE_KEY     ("entityId",        entryNode->entityId),
+                                    DATABASE_VALUE_UINT    ("type",            entryNode->indexType),
+                                    DATABASE_VALUE_STRING  ("name",            entryNode->name),
+                                    DATABASE_VALUE_DATETIME("timeLastChanged", entryNode->timeLastChanged),
+                                    DATABASE_VALUE_UINT    ("userId",          entryNode->userId),
+                                    DATABASE_VALUE_UINT    ("groupId",         entryNode->groupId),
+                                    DATABASE_VALUE_UINT    ("permission",      entryNode->permission),
+                                    DATABASE_VALUE_UINT64  ("size",            entryNode->size)
+                                  ),
+                                  DATABASE_COLUMNS
+                                  (
+                                    DATABASE_COLUMN_STRING("name")
+                                  ),
+                                  "entriesNewest.name=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_STRING(entryNode->name)
+                                  )
+                                 );
+        }
       }
     }
   }
@@ -4060,7 +4064,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
+LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array *storageIds)
 {
   Errors     error;
   uint       totalEntriesNewestCount;
@@ -4070,14 +4074,14 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
   // initialize variables
   error = ERROR_NONE;
 
-  if (Array_isEmpty(&storageIds))
+  if (Array_isEmpty(storageIds))
   {
     printInfo("Collect data for newest entries...");
     initProgress(2);
 
     // get storage ids
     error = Database_getIds(databaseHandle,
-                            &storageIds,
+                            storageIds,
                             "storages",
                             "id",
                             "deletedFlag!=TRUE",
@@ -4148,9 +4152,9 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
 
     // insert newest entries
     printInfo("Create newest entries...");
-    initProgress(Array_length(&storageIds));
+    initProgress(Array_length(storageIds));
     n = 0;
-    ARRAY_ITERATEX(&storageIds,storageId,error == ERROR_NONE)
+    ARRAY_ITERATEX(storageIds,storageId,error == ERROR_NONE)
     {
       error = addToNewest(databaseHandle,storageId);
       n++;
@@ -4170,7 +4174,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
   {
     // Refresh newest entries
     printInfo("Create newest entries:\n");
-    ARRAY_ITERATE(&storageIds,storageId)
+    ARRAY_ITERATE(storageIds,storageId)
     {
       printInfo("  %"PRIi64"...",storageId);
       if (error == ERROR_NONE)
@@ -4211,7 +4215,7 @@ LOCAL Errors createNewest(DatabaseHandle *databaseHandle, Array storageIds)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Array entityIds)
+LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Array *entityIds)
 {
   String     entityIdsString;
   DatabaseId entityId;
@@ -4222,7 +4226,7 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
 
   // init variables
   entityIdsString = String_new();
-  ARRAY_ITERATE(&entityIds,entityId)
+  ARRAY_ITERATE(entityIds,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_appendFormat(entityIdsString,"%"PRIi64,entityId);
@@ -4690,11 +4694,11 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
                                       "     (? OR id IN (%s)) \
                                        AND deletedFlag!=TRUE \
                                       ",
-                                      !Array_isEmpty(&entityIds) ? String_cString(entityIdsString) : "0"
+                                      !Array_isEmpty(entityIds) ? String_cString(entityIdsString) : "0"
                                      ),
                          DATABASE_FILTERS
                          (
-                           DATABASE_FILTER_BOOL   (Array_isEmpty(&entityIds))
+                           DATABASE_FILTER_BOOL   (Array_isEmpty(entityIds))
                          ),
                          NULL,  // groupBy
                          NULL,  // orderBy
@@ -4737,13 +4741,13 @@ LOCAL Errors createAggregatesEntities(DatabaseHandle *databaseHandle, const Arra
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Array storageIds)
+LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Array *storageIds)
 {
   Errors error;
 
   String     storageIdsString = String_new();
   DatabaseId storageId;
-  ARRAY_ITERATE(&storageIds,storageId)
+  ARRAY_ITERATE(storageIds,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
     String_appendFormat(storageIdsString,"%"PRIi64,storageId);
@@ -8950,18 +8954,18 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, const Array uuids)
+LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array *uuidIds, const Array *uuids)
 {
   String     uuidIdsString = String_new();
   String     uuidsString   = String_new();
   DatabaseId uuidId;
-  ARRAY_ITERATE(&uuidIds,uuidId)
+  ARRAY_ITERATE(uuidIds,uuidId)
   {
     if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
     String_appendFormat(uuidIdsString,"%"PRIi64,uuidId);
   }
   char s[MISC_UUID_STRING_LENGTH];
-  ARRAY_ITERATE(&uuids,s)
+  ARRAY_ITERATE(uuids,s)
   {
     StaticString (uuid,MISC_UUID_STRING_LENGTH);
     String_setBuffer(uuid,s,MISC_UUID_STRING_LENGTH);
@@ -9164,13 +9168,13 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
                                     "    (? OR id IN (%s)) \
                                      AND (? OR jobUUID IN (%s)) \
                                     ",
-                                    !Array_isEmpty(&uuidIds) ? String_cString(uuidIdsString) : "0",
-                                    !Array_isEmpty(&uuids  ) ? String_cString(uuidsString  ) : "''"
+                                    !Array_isEmpty(uuidIds) ? String_cString(uuidIdsString) : "0",
+                                    !Array_isEmpty(uuids  ) ? String_cString(uuidsString  ) : "''"
                                    ),
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL  (Array_isEmpty(&uuidIds)),
-                         DATABASE_FILTER_BOOL  (Array_isEmpty(&uuids))
+                         DATABASE_FILTER_BOOL  (Array_isEmpty(uuidIds)),
+                         DATABASE_FILTER_BOOL  (Array_isEmpty(uuids))
                        ),
                        NULL,  // groupBy
                        NULL,  // orderBy
@@ -9198,13 +9202,13 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIds, c
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityIds)
+LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array *entityIds)
 {
   const char *TYPE_NAMES[] = {"none","normal","full","incremental","differential","continuous"};
 
   String     entityIdsString = String_new();
   DatabaseId entityId;
-  ARRAY_ITERATE(&entityIds,entityId)
+  ARRAY_ITERATE(entityIds,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_appendFormat(entityIdsString,"%"PRIi64,entityId);
@@ -9359,11 +9363,11 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                     "    (? OR id IN (%s)) \
                                      AND deletedFlag!=TRUE \
                                     ",
-                                    !Array_isEmpty(&entityIds) ? String_cString(entityIdsString) : "0"
+                                    !Array_isEmpty(entityIds) ? String_cString(entityIdsString) : "0"
                                    ),
                        DATABASE_FILTERS
                        (
-                         DATABASE_FILTER_BOOL  (Array_isEmpty(&entityIds))
+                         DATABASE_FILTER_BOOL  (Array_isEmpty(entityIds))
                        ),
                        NULL,  // groupBy
                        "id ASC",
@@ -9391,7 +9395,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storageIds, ConstString name, bool lostFlag)
+LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array *storageIds, ConstString name, bool lostFlag)
 {
   const char *STATE_TEXT[] = {"","OK","create","update requested","update","error"};
   const char *MODE_TEXT [] = {"manual","auto"};
@@ -9404,7 +9408,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 
   String     storageIdsString = String_new();
   DatabaseId storageId;
-  ARRAY_ITERATE(&storageIds,storageId)
+  ARRAY_ITERATE(storageIds,storageId)
   {
     if (!String_isEmpty(storageIdsString)) String_appendChar(storageIdsString,',');
     String_appendFormat(storageIdsString,"%"PRIi64,storageId);
@@ -9587,12 +9591,12 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                          ) \
                                      AND deletedFlag!=TRUE \
                                     ",
-                                    !Array_isEmpty(&storageIds) ? String_cString(storageIdsString) : "0"
+                                    !Array_isEmpty(storageIds) ? String_cString(storageIdsString) : "0"
                                    ),
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_BOOL  (lostFlag),
-                         DATABASE_FILTER_BOOL  (Array_isEmpty(&storageIds)),
+                         DATABASE_FILTER_BOOL  (Array_isEmpty(storageIds)),
                          DATABASE_FILTER_BOOL  (lostFlag),
                          DATABASE_FILTER_KEY   (DATABASE_ID_NONE)
                        ),
@@ -9625,7 +9629,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityIds, uint entryType, ConstString name, bool lostFlag)
+LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array *entityIds, uint entryType, ConstString name, bool lostFlag)
 {
   const char *TYPE_TEXT[] = {"","uuid","entity","storage","entry","file","image","directory","link","hardlink","special","history"};
 
@@ -9633,7 +9637,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
 
   String     entityIdsString = String_new();
   DatabaseId entityId;
-  ARRAY_ITERATE(&entityIds,entityId)
+  ARRAY_ITERATE(entityIds,entityId)
   {
     if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
     String_appendFormat(entityIdsString,"%"PRIi64,entityId);
@@ -9796,12 +9800,12 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                          ) \
                                      AND deletedFlag!=TRUE \
                                     ",
-                                    !Array_isEmpty(&entityIds) ? String_cString(entityIdsString) : "0"
+                                    !Array_isEmpty(entityIds) ? String_cString(entityIdsString) : "0"
                                    ),
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_BOOL  (lostFlag),
-                         DATABASE_FILTER_BOOL  (Array_isEmpty(&entityIds)),
+                         DATABASE_FILTER_BOOL  (Array_isEmpty(entityIds)),
                          DATABASE_FILTER_BOOL  (lostFlag),
                          DATABASE_FILTER_KEY   (DATABASE_ID_NONE)
                        ),
@@ -10123,30 +10127,30 @@ int main(int argc, const char *argv[])
 
   if (infoUUIDsFlag)
   {
-    printUUIDsInfo(&databaseHandle,uuidIds,uuids);
+    printUUIDsInfo(&databaseHandle,&uuidIds,&uuids);
   }
 
   if (infoEntitiesFlag)
   {
-    printEntitiesInfo(&databaseHandle,entityIds);
+    printEntitiesInfo(&databaseHandle,&entityIds);
   }
 
   if      (infoLostEntriesFlag)
   {
-    printEntriesInfo(&databaseHandle,entryIds,entryType,entryName,TRUE);
+    printEntriesInfo(&databaseHandle,&entryIds,entryType,entryName,TRUE);
   }
   else if (infoEntriesFlag)
   {
-    printEntriesInfo(&databaseHandle,entryIds,entryType,entryName,FALSE);
+    printEntriesInfo(&databaseHandle,&entryIds,entryType,entryName,FALSE);
   }
 
   if      (infoLostStoragesFlag)
   {
-    printStoragesInfo(&databaseHandle,storageIds,storageName,TRUE);
+    printStoragesInfo(&databaseHandle,&storageIds,storageName,TRUE);
   }
   else if (infoStoragesFlag)
   {
-    printStoragesInfo(&databaseHandle,storageIds,storageName,FALSE);
+    printStoragesInfo(&databaseHandle,&storageIds,storageName,FALSE);
   }
 
   if (showTableNames)
@@ -10248,17 +10252,17 @@ int main(int argc, const char *argv[])
   // recreate newest data
   if (createNewestFlag)
   {
-    if (error == ERROR_NONE) error = createNewest(&databaseHandle,storageIds);
+    if (error == ERROR_NONE) error = createNewest(&databaseHandle,&storageIds);
   }
 
   // calculate aggregates data
   if (createAggregatesStoragesFlag || createAggregatesFlag)
   {
-    if (error == ERROR_NONE) error = createAggregatesStorages(&databaseHandle,storageIds);
+    if (error == ERROR_NONE) error = createAggregatesStorages(&databaseHandle,&storageIds);
   }
   if (createAggregatesEntitiesFlag || createAggregatesFlag)
   {
-    if (error == ERROR_NONE) error = createAggregatesEntities(&databaseHandle,entityIds);
+    if (error == ERROR_NONE) error = createAggregatesEntities(&databaseHandle,&entityIds);
   }
 
   // purge deleted storages
