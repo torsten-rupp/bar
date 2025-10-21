@@ -1906,7 +1906,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               "entries.id",
+                               "entriesNewest.id",
                                NULL,  // orderby
                                offset,
                                limit
@@ -2113,7 +2113,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               "entries.id",
+                               "entriesNewest.id",
                                NULL,  // orderby
                                offset,
                                limit
