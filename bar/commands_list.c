@@ -55,25 +55,25 @@
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX        "%storageName"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-12s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG          "%type:-12s                                      %size:12s                                  %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S -> %destinationName:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S -> %destinationName:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG       "%type:-12s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG   "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG  "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S, %major:llu %minor:llu"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG   "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG   "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S, %major:llu %minor:llu"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG  "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S, %major:llu %minor:llu"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG   "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S"
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE                     "                                                                     source: %deltaSource:S, %deltaSourceSize:s"
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE                "%type:-12s %size:12s %dateTime:-32s %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE               "%type:-12s %size:12s                                  %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR                 "%type:-12s %    :12s %dateTime:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK                "%type:-12s %    :12s %dateTime:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR                 "%type:-12s %:12s %dateTime:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK                "%type:-12s %:12s %dateTime:-32s %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK            "%type:-12s %size:12s %dateTime:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR        "%type:-12s %    :12s %        :-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK       "%type:-12s %    :12s %        :-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO        "%type:-12s %    :12s %        :-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET      "%type:-12s %    :12s %        :-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR        "%type:-12s %:12s %:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK       "%type:-12s %:12s %:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO        "%type:-12s %:12s %:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET      "%type:-12s %:12s %:-32s %name:S"
 
 #define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE                    "%type:-12s %size:-12s %dateTime:-32s %name:s"
 
@@ -1049,15 +1049,15 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   TextMacros (textMacros,9);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING   ("%storageName",    storageName,     NULL);
-    TEXT_MACRO_X_CSTRING  ("%type",           "LINK",          NULL);
-    TEXT_MACRO_X_CSTRING  ("%dateTime",       dateTimeString,  NULL);
-    TEXT_MACRO_X_CSTRING  ("%user",           userName,        NULL);
-    TEXT_MACRO_X_CSTRING  ("%group",          groupName,       NULL);
-    TEXT_MACRO_X_CSTRING  ("%permission",     permissionString,NULL);
-    TEXT_MACRO_X_STRING   ("%crypt",          cryptString,     NULL);
-    TEXT_MACRO_X_STRING   ("%name",           linkName,        NULL);
-    TEXT_MACRO_X_STRING   ("%destinationName",destinationName, NULL);
+    TEXT_MACRO_X_STRING ("%storageName",    storageName,     NULL);
+    TEXT_MACRO_X_CSTRING("%type",           "LINK",          NULL);
+    TEXT_MACRO_X_CSTRING("%dateTime",       dateTimeString,  NULL);
+    TEXT_MACRO_X_CSTRING("%user",           userName,        NULL);
+    TEXT_MACRO_X_CSTRING("%group",          groupName,       NULL);
+    TEXT_MACRO_X_CSTRING("%permission",     permissionString,NULL);
+    TEXT_MACRO_X_STRING ("%crypt",          cryptString,     NULL);
+    TEXT_MACRO_X_STRING ("%name",           linkName,        NULL);
+    TEXT_MACRO_X_STRING ("%destinationName",destinationName, NULL);
   }
 
   // print
@@ -1243,21 +1243,21 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   TextMacros (textMacros,15);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING   ("%storageName",    storageName,                                                          NULL);
-    TEXT_MACRO_X_CSTRING  ("%type",           "HARDLINK",                                                           NULL);
-    TEXT_MACRO_X_CSTRING  ("%size",           sizeString,                                                           NULL);
-    TEXT_MACRO_X_CSTRING  ("%dateTime",       dateTimeString,                                                       NULL);
-    TEXT_MACRO_X_CSTRING  ("%user",           userName,                                                             NULL);
-    TEXT_MACRO_X_CSTRING  ("%group",          groupName,                                                            NULL);
-    TEXT_MACRO_X_CSTRING  ("%permission",     permissionString,                                                     NULL);
-    TEXT_MACRO_X_INT64    ("%partFrom",       fragmentOffset,                                                       NULL);
-    TEXT_MACRO_X_INT64    ("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
-    TEXT_MACRO_X_STRING   ("%compress",       compressString,                                                       NULL);
-    TEXT_MACRO_X_DOUBLE   ("%ratio",          ratio,                                                                NULL);
-    TEXT_MACRO_X_STRING   ("%crypt",          cryptString,                                                          NULL);
-    TEXT_MACRO_X_STRING   ("%name",           fileName,                                                             NULL);
-    TEXT_MACRO_X_STRING   ("%deltaSourceName",deltaSourceName,                                                      NULL);
-    TEXT_MACRO_X_CSTRING  ("%deltaSourceSize",deltaSourceSizeString,                                                NULL);
+    TEXT_MACRO_X_STRING ("%storageName",    storageName,                                                          NULL);
+    TEXT_MACRO_X_CSTRING("%type",           "HARDLINK",                                                           NULL);
+    TEXT_MACRO_X_CSTRING("%size",           sizeString,                                                           NULL);
+    TEXT_MACRO_X_CSTRING("%dateTime",       dateTimeString,                                                       NULL);
+    TEXT_MACRO_X_CSTRING("%user",           userName,                                                             NULL);
+    TEXT_MACRO_X_CSTRING("%group",          groupName,                                                            NULL);
+    TEXT_MACRO_X_CSTRING("%permission",     permissionString,                                                     NULL);
+    TEXT_MACRO_X_INT64  ("%partFrom",       fragmentOffset,                                                       NULL);
+    TEXT_MACRO_X_INT64  ("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
+    TEXT_MACRO_X_STRING ("%compress",       compressString,                                                       NULL);
+    TEXT_MACRO_X_DOUBLE ("%ratio",          ratio,                                                                NULL);
+    TEXT_MACRO_X_STRING ("%crypt",          cryptString,                                                          NULL);
+    TEXT_MACRO_X_STRING ("%name",           fileName,                                                             NULL);
+    TEXT_MACRO_X_STRING ("%deltaSourceName",deltaSourceName,                                                      NULL);
+    TEXT_MACRO_X_CSTRING("%deltaSourceSize",deltaSourceSizeString,                                                NULL);
   }
 
   // print
@@ -3612,11 +3612,13 @@ Errors Command_list(StringList              *storageNameList,
   Storage_initSpecifier(&storageSpecifier);
 
   // list archive content
-  Errors      failError        = ERROR_NONE;
-  bool        someStorageFound = FALSE;
+  Errors      failError    = ERROR_NONE;
+  bool        anyFileFound = FALSE;
   ConstString storageName;
   STRINGLIST_ITERATE(storageNameList,storageName)
   {
+    bool someFileFound = FALSE;
+
     // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
@@ -3631,7 +3633,7 @@ Errors Command_list(StringList              *storageNameList,
 
     error = ERROR_UNKNOWN;
 
-    // try list archive content
+    // try list archives content
     if (error != ERROR_NONE)
     {
       if (   !String_isEmpty(storageSpecifier.archiveName)
@@ -3649,13 +3651,68 @@ Errors Command_list(StringList              *storageNameList,
                                   );
         if (error == ERROR_NONE)
         {
-          someStorageFound = TRUE;
+          someFileFound = TRUE;
         }
+      }
+    }
+    if (error != ERROR_NONE)
+    {
+      StorageDirectoryListHandle storageDirectoryListHandle;
+      if (Storage_openDirectoryList(&storageDirectoryListHandle,
+                                    &storageSpecifier,
+                                    NULL,  // fileName
+                                    jobOptions,
+                                    SERVER_CONNECTION_PRIORITY_HIGH
+                                   ) == ERROR_NONE
+         )
+      {
+        String fileName = String_new();
+        while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
+        {
+          // read next directory entry
+          FileInfo fileInfo;
+          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
+          if (error != ERROR_NONE)
+          {
+            continue;
+          }
+
+          // match pattern
+          if (!String_isEmpty(storageSpecifier.archivePatternString))
+          {
+            if (!Pattern_match(&storageSpecifier.archivePattern,fileName,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
+            {
+              continue;
+            }
+          }
+
+          // test archive content
+          if (   (fileInfo.type == FILE_TYPE_FILE)
+              || (fileInfo.type == FILE_TYPE_LINK)
+              || (fileInfo.type == FILE_TYPE_HARDLINK)
+             )
+          {
+            error = listArchiveContent(&storageSpecifier,
+                                       fileName,
+                                       includeEntryList,
+                                       excludePatternList,
+                                       showEntriesFlag,
+                                       jobOptions,
+                                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
+                                       logHandle
+                                      );
+          }
+
+          someFileFound = TRUE;
+        }
+        String_delete(fileName);
+
+        Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
     }
 
     // try list directory content
-    if (error != ERROR_NONE)
+    if (!someFileFound)
     {
       // open directory list
       StorageDirectoryListHandle storageDirectoryListHandle;
@@ -3677,7 +3734,7 @@ Errors Command_list(StringList              *storageNameList,
                                       );
           if (error == ERROR_NONE)
           {
-            someStorageFound = TRUE;
+            someFileFound = TRUE;
           }
         }
         else
@@ -3714,7 +3771,7 @@ Errors Command_list(StringList              *storageNameList,
                                       );
             if (error == ERROR_NONE)
             {
-              someStorageFound = TRUE;
+              someFileFound = TRUE;
             }
           }
           String_delete(fileName);
@@ -3731,8 +3788,10 @@ Errors Command_list(StringList              *storageNameList,
                 );
       if (failError == ERROR_NONE) failError = error;
     }
+
+    anyFileFound |= someFileFound;
   }
-  if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
+  if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !anyFileFound)
   {
     printError(_("no matching storage files found!"));
     failError = ERROR_FILE_NOT_FOUND_;
