@@ -250,6 +250,7 @@ void Array_clear(Array *array)
 {
   assert(array != NULL);
   assert(array->data != NULL);
+  assert(array->length <= array->maxLength);
 
   if (array->arrayFreeFunction != NULL)
   {
@@ -265,6 +266,7 @@ bool Array_put(Array *array, ulong index, const void *data)
 {
   assert(array != NULL);
   assert(array->data != NULL);
+  assert(array->length <= array->maxLength);
 
   // extend array if needed
   if (index >= array->maxLength)
@@ -302,6 +304,7 @@ void *Array_get(const Array *array, ulong index, void *data)
 {
   assert(array != NULL);
   assert(array->data != NULL);
+  assert(array->length <= array->maxLength);
 
   void *element = NULL;
 
@@ -326,34 +329,35 @@ bool Array_insert(Array *array, long nextIndex, const void *data)
 {
   assert(array != NULL);
   assert(array->data != NULL);
+  assert(array->length <= array->maxLength);
+
+  // extend array if needed
+  if (array->length >= array->maxLength)
+  {
+    ulong newMaxLength = array->maxLength+DELTA_LENGTH;
+
+    byte *newData = realloc(array->data,newMaxLength*array->elementSize);
+    if (newData == NULL)
+    {
+      return FALSE;
+    }
+
+    #ifndef NDEBUG
+      pthread_once(&debugArrayInitFlag,debugArrayInit);
+
+      pthread_mutex_lock(&debugArrayLock);
+      {
+        debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
+      }
+      pthread_mutex_unlock(&debugArrayLock);
+    #endif /* not NDEBUG */
+
+    array->maxLength = newMaxLength;
+    array->data      = newData;
+  }
 
   if (nextIndex != ARRAY_END)
   {
-    // extend array if needed
-    if ((ulong)nextIndex+1L >= array->maxLength)
-    {
-      ulong newMaxLength = nextIndex+1L;
-
-      byte *newData = realloc(array->data,newMaxLength*array->elementSize);
-      if (newData == NULL)
-      {
-        return FALSE;
-      }
-
-      #ifndef NDEBUG
-        pthread_once(&debugArrayInitFlag,debugArrayInit);
-
-        pthread_mutex_lock(&debugArrayLock);
-        {
-          debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
-        }
-        pthread_mutex_unlock(&debugArrayLock);
-      #endif /* not NDEBUG */
-
-      array->maxLength = newMaxLength;
-      array->data      = newData;
-    }
-
     // insert element
     if (nextIndex < (long)array->length)
     {
@@ -366,32 +370,7 @@ bool Array_insert(Array *array, long nextIndex, const void *data)
   }
   else
   {
-    // extend array if needed
-    if (array->length >= array->maxLength)
-    {
-      ulong newMaxLength = array->maxLength+DELTA_LENGTH;
-
-      byte *newData = realloc(array->data,newMaxLength*array->elementSize);
-      if (newData == NULL)
-      {
-        return FALSE;
-      }
-
-      #ifndef NDEBUG
-        pthread_once(&debugArrayInitFlag,debugArrayInit);
-
-        pthread_mutex_lock(&debugArrayLock);
-        {
-          debugArrayList.allocatedMemory += (newMaxLength-array->maxLength)*array->elementSize;
-        }
-        pthread_mutex_unlock(&debugArrayLock);
-      #endif /* not NDEBUG */
-
-      array->maxLength = newMaxLength;
-      array->data      = newData;
-    }
-
-    // store element
+    // append
     memcpy(array->data+array->length*array->elementSize,data,array->elementSize);
   }
   array->length++;
@@ -403,6 +382,7 @@ bool Array_append(Array *array, const void *data)
 {
   assert(array != NULL);
   assert(array->data != NULL);
+  assert(array->length <= array->maxLength);
 
   // extend array if needed
   if (array->length >= array->maxLength)
@@ -440,6 +420,7 @@ void Array_remove(Array *array, ulong index)
 {
   assert(array != NULL);
   assert(array->data != NULL);
+  assert(array->length <= array->maxLength);
 
   if (index < array->length)
   {
@@ -541,6 +522,7 @@ long Array_find(const Array          *array,
 {
   assert(array != NULL);
   assert(array->data != NULL);
+  assert(array->length <= array->maxLength);
 
   switch (arrayFindMode)
   {
@@ -631,6 +613,7 @@ long Array_findNext(const Array          *array,
 {
   assert(array != NULL);
   assert(array->data != NULL);
+  assert(array->length <= array->maxLength);
 
   switch (arrayFindMode)
   {
@@ -702,6 +685,7 @@ void Array_sort(Array                *array,
 {
   assert(array != NULL);
   assert(array->data != NULL);
+  assert(array->length <= array->maxLength);
 
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 UNUSED_VARIABLE(array);
