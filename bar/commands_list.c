@@ -63,7 +63,7 @@
 #define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_SOCKET   "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name"
 
 // TODO: normal/long
-#define DEFAULT_ARCHIVE_LIST_FORMAT_DELTA_SOURCE          "xxx                                                                     source: %deltaSource, %deltaSourceSize"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_DELTA_SOURCE          "  delta source: %deltaSourceName, %deltaSourceSize"
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_TITLE          "%type:-12 %size:-12 %dateTime:-32 %name"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE           "%type:-12 %size: 12 %dateTime:-32 %name"

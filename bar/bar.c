@@ -107,6 +107,13 @@ typedef struct
   Semaphore lock;
 } MountedList;
 
+// console output line handle
+typedef struct
+{
+  String     line;
+  StringList nextLines;
+} ConsoleOutput;
+
 /***************************** Variables *******************************/
 Semaphore  consoleLock;
 #ifdef HAVE_NEWLOCALE
@@ -116,8 +123,8 @@ Semaphore  consoleLock;
 ThreadPool clientThreadPool;
 ThreadPool workerThreadPool;
 
-LOCAL ThreadLocalStorage outputLineHandle;
-LOCAL String             lastOutputLine;
+LOCAL ThreadLocalStorage consoleOutputHandle;
+LOCAL ConsoleOutput      *lastConsoleOutput = NULL;
 
 /*---------------------------------------------------------------------*/
 
@@ -351,24 +358,32 @@ LOCAL void signalHandler(int signalNumber)
 }
 
 /***********************************************************************\
-* Name   : outputLineInit
-* Purpose: init output line variable instance callback
+* Name   : consoleOutputHandleInit
+* Purpose: init output line handle instance callback
 * Input  : userData - user data (not used)
 * Output : -
 * Return : output line variable instance
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void *outputLineInit(void *userData)
+LOCAL void *consoleOutputHandleInit(void *userData)
 {
   UNUSED_VARIABLE(userData);
 
-  return String_new();
+  ConsoleOutput *consoleOutputHandle = (ConsoleOutput*)malloc(sizeof(ConsoleOutput));
+  if (consoleOutputHandle == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  consoleOutputHandle->line = String_new();;
+  StringList_init(&consoleOutputHandle->nextLines);
+
+  return consoleOutputHandle;
 }
 
 /***********************************************************************\
-* Name   : outputLineDone
-* Purpose: done output line variable instance callback
+* Name   : consoleOutputHandleDone
+* Purpose: done output line handle instance callback
 * Input  : variable - output line variable instance
 *          userData - user data (not used)
 * Output : -
@@ -376,13 +391,16 @@ LOCAL void *outputLineInit(void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void outputLineDone(void *variable, void *userData)
+LOCAL void consoleOutputHandleDone(void *variable, void *userData)
 {
   assert(variable != NULL);
 
   UNUSED_VARIABLE(userData);
 
-  String_delete((String)variable);
+  ConsoleOutput *consoleOutputHandle = (ConsoleOutput*)variable;
+
+  StringList_done(&consoleOutputHandle->nextLines);
+  String_delete(consoleOutputHandle->line);
 }
 
 /***********************************************************************\
@@ -519,16 +537,16 @@ LOCAL Errors initAll(void)
   List_init(&mountedList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
 
   Semaphore_init(&logLock,SEMAPHORE_TYPE_BINARY);
-  logFile                                = NULL;
+  logFile = NULL;
 
-  Thread_initLocalVariable(&outputLineHandle,outputLineInit,NULL);
-  lastOutputLine                         = NULL;
+  Thread_initLocalVariable(&consoleOutputHandle,consoleOutputHandleInit,NULL);
+  lastConsoleOutput = NULL;
 
   AUTOFREE_ADD(&autoFreeList,&consoleLock,{ Semaphore_done(&consoleLock); });
   AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList); });
   AUTOFREE_ADD(&autoFreeList,&mountedList.lock,{ Semaphore_done(&mountedList.lock); });
   AUTOFREE_ADD(&autoFreeList,&logLock,{ Semaphore_done(&logLock); });
-  AUTOFREE_ADD(&autoFreeList,&outputLineHandle,{ Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL); });
+  AUTOFREE_ADD(&autoFreeList,&consoleOutputHandle,{ Thread_doneLocalVariable(&consoleOutputHandle,consoleOutputHandleDone,NULL); });
 
   // initialize i18n
   #if defined(HAVE_SETLOCALE) && defined(HAVE_BINDTEXTDOMAIN) && defined(HAVE_TEXTDOMAIN)
@@ -766,7 +784,7 @@ LOCAL void doneAll(void)
   Configuration_doneAll();
   Common_doneAll();
 
-  Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
+  Thread_doneLocalVariable(&consoleOutputHandle,consoleOutputHandleDone,NULL);
 
   // deinitialize variables
   #ifdef HAVE_NEWLOCALE
@@ -828,6 +846,290 @@ LOCAL void doneAll(void)
 }
 
 /***********************************************************************\
+* Name   : outputConsole
+* Purpose: output string to console
+* Input  : file   - output stream (stdout, stderr)
+*          string - string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void outputConsole(FILE *file, ConstString string)
+{
+  assert(file != NULL);
+  assert(Semaphore_isLocked(&consoleLock));
+
+  ConsoleOutput *consoleOutput = (ConsoleOutput*)Thread_getLocalVariable(&consoleOutputHandle);
+  if (consoleOutput != NULL)
+  {
+    if (File_isTerminal(file) || globalOptions.forceConsoleEncodingFlag)
+    {
+      // output to terminal
+
+      size_t i;
+      if (consoleOutput != lastConsoleOutput)
+      {
+        // wipe out if new output line is different to last line
+        if (lastConsoleOutput != NULL)
+        {
+          // get visible line output length
+          size_t n = 0;
+          char   ch;
+          STRING_CHAR_ITERATE(lastConsoleOutput->line,ch)
+          {
+            if (ch != '\b')
+            {
+              n++;
+            }
+            else
+            {
+              assert(n > 0);
+              n--;
+            }
+          }
+
+          // wipe out last line
+          for (size_t i = 0; i < n; i++)
+          {
+            UNUSED_RESULT(fwrite("\b",1,1,file));
+          }
+          for (size_t i = 0; i < n; i++)
+          {
+            UNUSED_RESULT(fwrite(" ",1,1,file));
+          }
+          for (size_t i = 0; i < n; i++)
+          {
+            UNUSED_RESULT(fwrite("\b",1,1,file));
+          }
+        }
+
+        // get new output line
+        i = 0;
+        convertSystemToConsoleEncodingAppend(consoleOutput->line,string);
+      }
+      else
+      {
+        i = String_length(consoleOutput->line);
+        convertSystemToConsoleEncodingAppend(consoleOutput->line,string);
+      }
+
+      // output line part
+      UNUSED_RESULT(fwrite(String_cString(consoleOutput->line)+i,1,String_length(consoleOutput->line)-i,file));
+
+      // store new output line
+      ssize_t j = String_findLastChar(consoleOutput->line,STRING_END,'\n');
+      if (j >= 0)
+      {
+        String_remove(consoleOutput->line,STRING_BEGIN,(size_t)(j+1));
+      }
+
+      // output next lines if current console line now completed
+      if (String_isEmpty(consoleOutput->line))
+      {
+        while (!StringList_isEmpty(&consoleOutput->nextLines))
+        {
+          String line = StringList_removeFirst(&consoleOutput->nextLines,NULL);
+
+          convertSystemToConsoleEncodingAppend(consoleOutput->line,line);
+          UNUSED_RESULT(fwrite(String_cString(consoleOutput->line)+i,1,String_length(consoleOutput->line)-i,file));
+          String_clear(consoleOutput->line);
+
+          String_delete(line);
+        }
+      }
+
+      // save last output line
+      lastConsoleOutput = consoleOutput;
+    }
+    else
+    {
+      // output to file
+      if (String_index(string,STRING_END) == '\n')
+      {
+        UNUSED_RESULT(fwrite(String_cString(consoleOutput->line),1,String_length(consoleOutput->line),file));
+        UNUSED_RESULT(fwrite(String_cString(string),1,String_length(string),file));
+        String_clear(consoleOutput->line);
+      }
+      else
+      {
+        String_append(consoleOutput->line,string);
+      }
+
+      // output next lines if current console line now completed
+      if (String_isEmpty(consoleOutput->line))
+      {
+        while (!StringList_isEmpty(&consoleOutput->nextLines))
+        {
+          String line = StringList_removeFirst(&consoleOutput->nextLines,NULL);
+
+          convertSystemToConsoleEncodingAppend(consoleOutput->line,line);
+          UNUSED_RESULT(fwrite(String_cString(consoleOutput->line),1,String_length(consoleOutput->line),file));
+          String_clear(consoleOutput->line);
+
+          String_delete(line);
+        }
+      }
+    }
+  }
+  else
+  {
+    // no thread local vairable -> output string
+    UNUSED_RESULT(fwrite(String_cString(string),1,String_length(string),file));
+  }
+  fflush(file);
+}
+
+/***********************************************************************\
+* Name   : outputConsoleNext
+* Purpose: output string to console after next EOL
+* Input  : file   - output stream (stdout, stderr)
+*          string - string
+* Output : -
+* Return : -
+* Notes  : string must be terminated with LF
+\***********************************************************************/
+
+LOCAL void outputConsoleNext(FILE *file, ConstString string)
+{
+  assert(file != NULL);
+  assert(String_index(string,STRING_END) == '\n');
+  assert(Semaphore_isLocked(&consoleLock));
+
+  ConsoleOutput *consoleOutput = (ConsoleOutput*)Thread_getLocalVariable(&consoleOutputHandle);
+  if (consoleOutput != NULL)
+  {
+    if (File_isTerminal(file) || globalOptions.forceConsoleEncodingFlag)
+    {
+      // output to terminal
+      if (!String_isEmpty(consoleOutput->line))
+      {
+        // append to next line list -> output after current console is completed
+        StringList_append(&consoleOutput->nextLines,string);
+      }
+      else
+      {
+        String line = convertSystemToConsoleEncodingAppend(String_new(),string);
+        UNUSED_RESULT(fwrite(String_cString(line),1,String_length(line),file));
+        String_delete(line);
+      }
+    }
+    else
+    {
+      // output to file
+      String line = convertSystemToConsoleEncodingAppend(String_new(),string);
+      UNUSED_RESULT(fwrite(String_cString(line),1,String_length(line),file));
+      String_delete(line);
+    }
+  }
+  else
+  {
+    // no thread local vairable -> output string
+    convertSystemToConsoleEncodingAppend(consoleOutput->line,string);
+    UNUSED_RESULT(fwrite(String_cString(consoleOutput->line),1,String_length(consoleOutput->line),file));
+    String_clear(consoleOutput->line);
+  }
+  fflush(file);
+}
+
+/***********************************************************************\
+* Name   : lockConsole
+* Purpose: lock console
+* Input  : -
+* Output : -
+* Return : TRUE iff locked
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool lockConsole(void)
+{
+  return Semaphore_lock(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+}
+
+/***********************************************************************\
+* Name   : unlockConsole
+* Purpose: unlock console
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void unlockConsole(void)
+{
+  assert(Semaphore_isLocked(&consoleLock));
+
+  Semaphore_unlock(&consoleLock);
+}
+
+/***********************************************************************\
+* Name   : saveConsole
+* Purpose: save and clear current console line
+* Input  : file - stdout or stderr
+* Output : -
+* Return : saved console line
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void saveConsole(FILE *file, String *saveLine)
+{
+  assert(file != NULL);
+  assert(saveLine != NULL);
+  assert(Semaphore_isLocked(&consoleLock));
+
+  (*saveLine) = String_new();
+
+  if (File_isTerminal(file))
+  {
+    // wipe-out last line
+    if (lastConsoleOutput != NULL)
+    {
+      for (size_t i = 0; i < String_length(lastConsoleOutput->line); i++)
+      {
+        UNUSED_RESULT(fwrite("\b",1,1,file));
+      }
+      for (size_t i = 0; i < String_length(lastConsoleOutput->line); i++)
+      {
+        UNUSED_RESULT(fwrite(" ",1,1,file));
+      }
+      for (size_t i = 0; i < String_length(lastConsoleOutput->line); i++)
+      {
+        UNUSED_RESULT(fwrite("\b",1,1,file));
+      }
+      fflush(file);
+    }
+
+    // save last line
+    String_set(*saveLine,lastConsoleOutput->line);
+  }
+}
+
+/***********************************************************************\
+* Name   : restoreConsole
+* Purpose: restore saved console line
+* Input  : file     - stdout or stderr
+*          saveLine - saved console line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void restoreConsole(FILE *file, const String *saveLine)
+{
+  assert(file != NULL);
+  assert(saveLine != NULL);
+  assert(Semaphore_isLocked(&consoleLock));
+
+  if (File_isTerminal(file))
+  {
+    // force restore of line on next output
+    lastConsoleOutput = NULL;
+  }
+
+  String_delete(*saveLine);
+}
+
+/***********************************************************************\
 * Name   : vprintInfo
 * Purpose: output info to console
 * Input  : verboseLevel - verbosity level
@@ -860,169 +1162,6 @@ LOCAL void vprintInfo(uint verboseLevel, const char *prefix, const char *format,
 
     String_delete(line);
   }
-}
-
-/***********************************************************************\
-* Name   : outputConsole
-* Purpose: output string to console
-* Input  : file   - output stream (stdout, stderr)
-*          string - string
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void outputConsole(FILE *file, ConstString string)
-{
-  assert(file != NULL);
-  assert(Semaphore_isLocked(&consoleLock));
-
-  String outputLine = (String)Thread_getLocalVariable(&outputLineHandle);
-  if (outputLine != NULL)
-  {
-    if (File_isTerminal(file) || globalOptions.forceConsoleEncodingFlag)
-    {
-      // wipe out if new output line is different to last line
-      uint i;
-      if (outputLine != lastOutputLine)
-      {
-        // wipe-out last line
-        if (lastOutputLine != NULL)
-        {
-          // get visible line output length
-          uint n = 0;
-          char ch;
-          STRING_CHAR_ITERATE(lastOutputLine,ch)
-          {
-            if (ch != '\b')
-            {
-              n++;
-            }
-            else
-            {
-              assert(n > 0);
-              n--;
-            }
-          }
-
-          // wipe out old line
-          for (uint i = 0; i < n; i++)
-          {
-            UNUSED_RESULT(fwrite("\b",1,1,file));
-          }
-          for (uint i = 0; i < n; i++)
-          {
-            UNUSED_RESULT(fwrite(" ",1,1,file));
-          }
-          for (uint i = 0; i < n; i++)
-          {
-            UNUSED_RESULT(fwrite("\b",1,1,file));
-          }
-        }
-
-        // get new output line
-        i = 0;
-        convertSystemToConsoleEncodingAppend(outputLine,string);
-      }
-      else
-      {
-        i = String_length(outputLine);
-        convertSystemToConsoleEncodingAppend(outputLine,string);
-      }
-
-      // output line part
-      UNUSED_RESULT(fwrite(String_cString(outputLine)+i,1,String_length(outputLine)-i,file));
-
-      // store new output line
-      long j = String_findLastChar(outputLine,STRING_END,'\n');
-      if (j >= 0)
-      {
-        String_remove(outputLine,STRING_BEGIN,(ulong)(j+1));
-      }
-
-      // save last output line
-      lastOutputLine = outputLine;
-    }
-    else
-    {
-      if (String_index(string,STRING_END) == '\n')
-      {
-        if (outputLine != NULL) UNUSED_RESULT(fwrite(String_cString(outputLine),1,String_length(outputLine),file));
-        UNUSED_RESULT(fwrite(String_cString(string),1,String_length(string),file));
-        String_clear(outputLine);
-      }
-      else
-      {
-        String_append(outputLine,string);
-      }
-    }
-  }
-  else
-  {
-    // no thread local vairable -> output string
-    UNUSED_RESULT(fwrite(String_cString(string),1,String_length(string),file));
-  }
-  fflush(file);
-}
-
-bool lockConsole(void)
-{
-  return Semaphore_lock(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-}
-
-void unlockConsole(void)
-{
-  assert(Semaphore_isLocked(&consoleLock));
-
-  Semaphore_unlock(&consoleLock);
-}
-
-void saveConsole(FILE *file, String *saveLine)
-{
-  assert(file != NULL);
-  assert(saveLine != NULL);
-  assert(Semaphore_isLocked(&consoleLock));
-
-  (*saveLine) = String_new();
-
-  if (File_isTerminal(file))
-  {
-    // wipe-out last line
-    if (lastOutputLine != NULL)
-    {
-      for (size_t i = 0; i < String_length(lastOutputLine); i++)
-      {
-        UNUSED_RESULT(fwrite("\b",1,1,file));
-      }
-      for (size_t i = 0; i < String_length(lastOutputLine); i++)
-      {
-        UNUSED_RESULT(fwrite(" ",1,1,file));
-      }
-      for (size_t i = 0; i < String_length(lastOutputLine); i++)
-      {
-        UNUSED_RESULT(fwrite("\b",1,1,file));
-      }
-      fflush(file);
-    }
-
-    // save last line
-    String_set(*saveLine,lastOutputLine);
-  }
-}
-
-void restoreConsole(FILE *file, const String *saveLine)
-{
-  assert(file != NULL);
-  assert(saveLine != NULL);
-  assert(Semaphore_isLocked(&consoleLock));
-
-  if (File_isTerminal(file))
-  {
-    // force restore of line on next output
-    lastOutputLine = NULL;
-  }
-
-  String_delete(*saveLine);
 }
 
 void printConsole(FILE *file, uint width, const char *format, ...)
@@ -1078,7 +1217,7 @@ void printWarning(const char *text, ...)
 
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    outputConsole(stderr,line);
+    outputConsoleNext(stderr,line);
   }
   String_delete(line);
 }
@@ -1103,7 +1242,7 @@ void printError(const char *text, ...)
 
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    outputConsole(stderr,line);
+    outputConsoleNext(stderr,line);
   }
   String_delete(line);
 }
