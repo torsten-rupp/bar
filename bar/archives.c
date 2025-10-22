@@ -7585,7 +7585,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
     else
     {
       // no delta source -> print warning and disable delta compress
-      printWarning(_("image of devicee '%s' not delta compressed (no source file found)"),String_cString(deviceName));
+      printWarning(_("image of device '%s' not delta compressed (no source file found)"),String_cString(deviceName));
       logMessage(archiveHandle->logHandle,
                  LOG_TYPE_WARNING,
                  "Image of device '%s' not delta compressed (no source file found)\n",

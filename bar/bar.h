@@ -119,54 +119,9 @@ INLINE bool isPrintInfo(uint verboseLevel)
 * Notes  : -
 \***********************************************************************/
 
-void outputConsole(FILE *file, ConstString string);
+//void outputConsole(FILE *file, ConstString string);
 
 // ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : lockConsole
-* Purpose: lock console
-* Input  : -
-* Output : -
-* Return : TRUE iff locked
-* Notes  : -
-\***********************************************************************/
-
-bool lockConsole(void);
-
-/***********************************************************************\
-* Name   : unlockConsole
-* Purpose: unlock console
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void unlockConsole(void);
-
-/***********************************************************************\
-* Name   : saveConsole
-* Purpose: save and clear current console line
-* Input  : file - stdout or stderr
-* Output : -
-* Return : saved console line
-* Notes  : -
-\***********************************************************************/
-
-void saveConsole(FILE *file, String *saveLine);
-
-/***********************************************************************\
-* Name   : restoreConsole
-* Purpose: restore saved console line
-* Input  : file     - stdout or stderr
-*          saveLine - saved console line
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void restoreConsole(FILE *file, const String *saveLine);
 
 /***********************************************************************\
 * Name   : printConsole
