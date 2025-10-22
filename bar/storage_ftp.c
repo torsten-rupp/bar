@@ -1213,9 +1213,9 @@ LOCAL Errors StorageFTP_preProcess(const StorageInfo *storageInfo,
       TextMacros (textMacros,3);
       TEXT_MACROS_INIT(textMacros)
       {
-        TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
-        TEXT_MACRO_X_STRING("%file",     archiveName,                                 NULL);
-        TEXT_MACRO_X_INT   ("%number",   storageInfo->volumeNumber,                   NULL);
+        TEXT_MACRO_X_STRING("directory",File_getDirectoryName(directory,archiveName),NULL);
+        TEXT_MACRO_X_STRING("file",     archiveName,                                 NULL);
+        TEXT_MACRO_X_INT   ("number",   storageInfo->volumeNumber,                   NULL);
       }
 
       // write pre-processing
@@ -1270,9 +1270,9 @@ LOCAL Errors StorageFTP_postProcess(const StorageInfo *storageInfo,
       TextMacros (textMacros,3);
       TEXT_MACROS_INIT(textMacros)
       {
-        TEXT_MACRO_X_STRING("%directory",File_getDirectoryName(directory,archiveName),NULL);
-        TEXT_MACRO_X_STRING("%file",     archiveName,                                 NULL);
-        TEXT_MACRO_X_INT   ("%number",   storageInfo->volumeNumber,                   NULL);
+        TEXT_MACRO_X_STRING("directory",File_getDirectoryName(directory,archiveName),NULL);
+        TEXT_MACRO_X_STRING("file",     archiveName,                                 NULL);
+        TEXT_MACRO_X_INT   ("number",   storageInfo->volumeNumber,                   NULL);
       }
 
       // write post-process

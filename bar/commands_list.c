@@ -48,36 +48,37 @@
 
 /***************************** Constants *******************************/
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_PREFIX         "%storageName"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG          "%type:-12s %user:-12s %group:-12s %permission:-10s %size:-12s %dateTime:-32s %part:-32s %compress:-15s %ratio:-7s  %crypt:-10s %name:s"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL               "%type:-12s %size:-12s %dateTime:-32s %name:s"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_PREFIX    "%storageName"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_GROUP_PREFIX     "%storageName"
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX        "%storageName"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-12s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG          "%type:-12s                                      %size:12s                                  %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG            "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG           "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %dateTime:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S -> %destinationName:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG       "%type:-12s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG   "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S, %major:llu %minor:llu"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG  "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S, %major:llu %minor:llu"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG   "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG "%type:-12s %user:-12s %group:-12s %permission:-10s %    :12s %:-32s %:32s %:-15s %:7s  %crypt:-10S %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_TITLE            "%type:-12 %user:-12 %group:-12 %permission:-10 %size:-12 %dateTime:-32 %{part                 :-32} %compress:-15 %ratio:  -7  %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_FILE             "%type:-12 %user:-12 %group:-12 %permission:-10 %size: 12 %dateTime:-32 %{partFrom:15}..%{partTo:15} %compress:-15 %ratio: 7.1%% %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_IMAGE            "%type:-12 %    :-12 %     :-12 %          :-10 %size: 12 %        :-32 %{partFrom:15}..%{partTo:15} %compress:-15 %ratio: 7.1%% %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_DIR              "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %dateTime:-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_LINK             "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %dateTime:-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name -> %destinationName"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_HARDLINK         "%type:-12 %user:-12 %group:-12 %permission:-10 %size: 12 %dateTime:-32 %{partFrom:15}..%{partTo:15} %compress:-15 %ratio: 7.1%% %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_CHAR     "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name, %major %minor"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_BLOCK    "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name, %major %minor"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_FIFO     "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_SOCKET   "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name"
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE                     "                                                                     source: %deltaSource:S, %deltaSourceSize:s"
+// TODO: normal/long
+#define DEFAULT_ARCHIVE_LIST_FORMAT_DELTA_SOURCE          "xxx                                                                     source: %deltaSource, %deltaSourceSize"
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE                "%type:-12s %size:12s %dateTime:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE               "%type:-12s %size:12s                                  %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR                 "%type:-12s %:12s %dateTime:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK                "%type:-12s %:12s %dateTime:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK            "%type:-12s %size:12s %dateTime:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR        "%type:-12s %:12s %:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK       "%type:-12s %:12s %:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO        "%type:-12s %:12s %:-32s %name:S"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET      "%type:-12s %:12s %:-32s %name:S"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_TITLE          "%type:-12 %size:-12 %dateTime:-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE           "%type:-12 %size: 12 %dateTime:-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE          "%type:-12 %size: 12 %        :-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR            "%type:-12 %    : 12 %dateTime:-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK           "%type:-12 %    : 12 %dateTime:-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK       "%type:-12 %size: 12 %dateTime:-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR   "%type:-12 %    : 12 %        :-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK  "%type:-12 %    : 12 %        :-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO   "%type:-12 %    : 12 %        :-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET "%type:-12 %    : 12 %        :-32 %name"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE                    "%type:-12s %size:-12s %dateTime:-32s %name:s"
+#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE               "%type:-12 %size:-12 %dateTime:-32 %name"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT                          "%type:-12s %size:12s %dateTime:-32s %name:S"
+#define DEFAULT_DIRECTORY_LIST_FORMAT                     "%type:-12 %size: 12 %dateTime:-32 %name"
 
 /***************************** Datatypes *******************************/
 
@@ -359,18 +360,18 @@ LOCAL void printArchiveContentListHeader(uint prefixWidth)
 {
   const TextMacro MACROS[] =
   {
-    TEXT_MACRO_CSTRING("%storageName","Storage",            NULL),
-    TEXT_MACRO_CSTRING("%type",       "Type",               NULL),
-    TEXT_MACRO_CSTRING("%size",       "Size",               NULL),
-    TEXT_MACRO_CSTRING("%dateTime",   "Date/Time",          NULL),
-    TEXT_MACRO_CSTRING("%user",       "User",               NULL),
-    TEXT_MACRO_CSTRING("%group",      "Group",              NULL),
-    TEXT_MACRO_CSTRING("%permission", "Permission",         NULL),
-    TEXT_MACRO_CSTRING("%part",       "Part [bytes..bytes]",NULL),
-    TEXT_MACRO_CSTRING("%compress",   "Compress",           NULL),
-    TEXT_MACRO_CSTRING("%ratio",      "Ratio",              NULL),
-    TEXT_MACRO_CSTRING("%crypt",      "Crypt",              NULL),
-    TEXT_MACRO_CSTRING("%name",       "Name",               NULL)
+    TEXT_MACRO_CSTRING("storageName","Storage",            NULL),
+    TEXT_MACRO_CSTRING("type",       "Type",               NULL),
+    TEXT_MACRO_CSTRING("size",       "Size",               NULL),
+    TEXT_MACRO_CSTRING("dateTime",   "Date/Time",          NULL),
+    TEXT_MACRO_CSTRING("user",       "User",               NULL),
+    TEXT_MACRO_CSTRING("group",      "Group",              NULL),
+    TEXT_MACRO_CSTRING("permission", "Permission",         NULL),
+    TEXT_MACRO_CSTRING("part",       "Part [bytes..bytes]",NULL),
+    TEXT_MACRO_CSTRING("compress",   "Compress",           NULL),
+    TEXT_MACRO_CSTRING("ratio",      "Ratio",              NULL),
+    TEXT_MACRO_CSTRING("crypt",      "Crypt",              NULL),
+    TEXT_MACRO_CSTRING("name",       "Name",               NULL)
   };
 
   if (!globalOptions.noHeaderFooterFlag)
@@ -383,11 +384,11 @@ LOCAL void printArchiveContentListHeader(uint prefixWidth)
     const char *template;
     if (globalOptions.longFormatFlag)
     {
-      template = DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG;
+      template = DEFAULT_ARCHIVE_LIST_FORMAT_LONG_TITLE;
     }
     else
     {
-      template = DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL;
+      template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_TITLE;
     }
     printConsole(stdout,0,"\n");
     if (prefixTemplate != NULL)
@@ -532,13 +533,13 @@ LOCAL void printFileInfo(uint               prefixWidth,
     File_permissionToString(permissionString,sizeof(permissionString),permissions,FALSE);
   }
 
-  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
+  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_LONG_GROUP_PREFIX : NULL;
   const char *template;
   String     compressString = String_new();
   String     cryptString    = String_new();
   if (globalOptions.longFormatFlag)
   {
-    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_LONG_FILE;
     if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
     {
       String_appendFormat(compressString,
@@ -593,21 +594,21 @@ LOCAL void printFileInfo(uint               prefixWidth,
   TextMacros (textMacros,15);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING   ("%storageName",    storageName,                                                          NULL);
-    TEXT_MACRO_X_CSTRING  ("%type",           "FILE",                                                               NULL);
-    TEXT_MACRO_X_CSTRING  ("%size",           sizeString,                                                           NULL);
-    TEXT_MACRO_X_CSTRING  ("%dateTime",       dateTimeString,                                                       NULL);
-    TEXT_MACRO_X_CSTRING  ("%user",           userName,                                                             NULL);
-    TEXT_MACRO_X_CSTRING  ("%group",          groupName,                                                            NULL);
-    TEXT_MACRO_X_CSTRING  ("%permission",     permissionString,                                                     NULL);
-    TEXT_MACRO_X_INT64    ("%partFrom",       fragmentOffset,                                                       NULL);
-    TEXT_MACRO_X_INT64    ("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
-    TEXT_MACRO_X_STRING   ("%compress",       compressString,                                                       NULL);
-    TEXT_MACRO_X_DOUBLE   ("%ratio",          ratio,                                                                NULL);
-    TEXT_MACRO_X_STRING   ("%crypt",          cryptString,                                                          NULL);
-    TEXT_MACRO_X_STRING   ("%name",           fileName,                                                             NULL);
-    TEXT_MACRO_X_STRING   ("%deltaSourceName",deltaSourceName,                                                      NULL);
-    TEXT_MACRO_X_CSTRING  ("%deltaSourceSize",deltaSourceSizeString,                                                NULL);
+    TEXT_MACRO_X_STRING   ("storageName",    storageName,                                                          NULL);
+    TEXT_MACRO_X_CSTRING  ("type",           "FILE",                                                               NULL);
+    TEXT_MACRO_X_CSTRING  ("size",           sizeString,                                                           NULL);
+    TEXT_MACRO_X_CSTRING  ("dateTime",       dateTimeString,                                                       NULL);
+    TEXT_MACRO_X_CSTRING  ("user",           userName,                                                             NULL);
+    TEXT_MACRO_X_CSTRING  ("group",          groupName,                                                            NULL);
+    TEXT_MACRO_X_CSTRING  ("permission",     permissionString,                                                     NULL);
+    TEXT_MACRO_X_INT64    ("partFrom",       fragmentOffset,                                                       NULL);
+    TEXT_MACRO_X_INT64    ("partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
+    TEXT_MACRO_X_STRING   ("compress",       compressString,                                                       NULL);
+    TEXT_MACRO_X_DOUBLE   ("ratio",          ratio,                                                                NULL);
+    TEXT_MACRO_X_STRING   ("crypt",          cryptString,                                                          NULL);
+    TEXT_MACRO_X_STRING   ("name",           fileName,                                                             NULL);
+    TEXT_MACRO_X_STRING   ("deltaSourceName",deltaSourceName,                                                      NULL);
+    TEXT_MACRO_X_CSTRING  ("deltaSourceSize",deltaSourceSizeString,                                                NULL);
   }
 
   // print
@@ -647,7 +648,7 @@ LOCAL void printFileInfo(uint               prefixWidth,
                  0,
                  "%s\n",
                  String_cString(Misc_expandMacros(line,
-                                                  DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
+                                                  DEFAULT_ARCHIVE_LIST_FORMAT_DELTA_SOURCE,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
@@ -718,7 +719,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
     stringFormat(deltaSourceSizeString,sizeof(deltaSourceSizeString),"%"PRIu64,deltaSourceSize);
   }
 
-  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
+  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_LONG_GROUP_PREFIX : NULL;
   const char *template;
   char       type[32];
   if (fileSystemType != FILE_SYSTEM_TYPE_NONE)
@@ -733,7 +734,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
   String     cryptString    = String_new();
   if (globalOptions.longFormatFlag)
   {
-    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_LONG_IMAGE;
     if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
     {
       String_appendFormat(compressString,
@@ -788,17 +789,17 @@ LOCAL void printImageInfo(uint               prefixWidth,
   TextMacros (textMacros,11);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING   ("%storageName",    storageName,                                                                                    NULL);
-    TEXT_MACRO_X_CSTRING  ("%type",           type,                                                                                           NULL);
-    TEXT_MACRO_X_CSTRING  ("%size",           sizeString,                                                                                     NULL);
-    TEXT_MACRO_X_INT64    ("%partFrom",       fragmentOffset,                                                       NULL);
-    TEXT_MACRO_X_INT64    ("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
-    TEXT_MACRO_X_STRING   ("%compress",       compressString,                                                                                 NULL);
-    TEXT_MACRO_X_DOUBLE   ("%ratio",          ratio,                                                                                          NULL);
-    TEXT_MACRO_X_STRING   ("%crypt",          cryptString,                                                                                    NULL);
-    TEXT_MACRO_X_STRING   ("%name",           imageName,                                                                                      NULL);
-    TEXT_MACRO_X_STRING   ("%deltaSourceName",deltaSourceName,                                                                                NULL);
-    TEXT_MACRO_X_STRING   ("%deltaSourceSize",deltaSourceSizeString,                                                                          NULL);
+    TEXT_MACRO_X_STRING ("storageName",    storageName,                                                                                    NULL);
+    TEXT_MACRO_X_CSTRING("type",           type,                                                                                           NULL);
+    TEXT_MACRO_X_CSTRING("size",           sizeString,                                                                                     NULL);
+    TEXT_MACRO_X_INT64  ("partFrom",       fragmentOffset,                                                       NULL);
+    TEXT_MACRO_X_INT64  ("partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
+    TEXT_MACRO_X_STRING ("compress",       compressString,                                                                                 NULL);
+    TEXT_MACRO_X_DOUBLE ("ratio",          ratio,                                                                                          NULL);
+    TEXT_MACRO_X_STRING ("crypt",          cryptString,                                                                                    NULL);
+    TEXT_MACRO_X_STRING ("name",           imageName,                                                                                      NULL);
+    TEXT_MACRO_X_STRING ("deltaSourceName",deltaSourceName,                                                                                NULL);
+    TEXT_MACRO_X_STRING ("deltaSourceSize",deltaSourceSizeString,                                                                          NULL);
   }
 
   // print
@@ -838,7 +839,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
                  0,
                  "%s\n",
                  String_cString(Misc_expandMacros(line,
-                                                  DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
+                                                  DEFAULT_ARCHIVE_LIST_FORMAT_DELTA_SOURCE,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
@@ -911,12 +912,12 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
     File_permissionToString(permissionString,sizeof(permissionString),permissions,FALSE);
   }
 
-  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
+  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_LONG_GROUP_PREFIX : NULL;
   const char *template;
   String     cryptString = String_new();
   if (globalOptions.longFormatFlag)
   {
-    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_LONG_DIR;
     String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
@@ -927,14 +928,14 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   TextMacros (textMacros,8);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING ("%storageName",storageName,     NULL);
-    TEXT_MACRO_X_CSTRING("%type",       "DIR",           NULL);
-    TEXT_MACRO_X_CSTRING ("%dateTime",  dateTimeString,  NULL);
-    TEXT_MACRO_X_CSTRING("%user",       userName,        NULL);
-    TEXT_MACRO_X_CSTRING("%group",      groupName,       NULL);
-    TEXT_MACRO_X_CSTRING("%permission", permissionString,NULL);
-    TEXT_MACRO_X_STRING ("%crypt",      cryptString,     NULL);
-    TEXT_MACRO_X_STRING ("%name",       directoryName,   NULL);
+    TEXT_MACRO_X_STRING ("storageName",storageName,     NULL);
+    TEXT_MACRO_X_CSTRING("type",       "DIR",           NULL);
+    TEXT_MACRO_X_CSTRING("dateTime",   dateTimeString,  NULL);
+    TEXT_MACRO_X_CSTRING("user",       userName,        NULL);
+    TEXT_MACRO_X_CSTRING("group",      groupName,       NULL);
+    TEXT_MACRO_X_CSTRING("permission", permissionString,NULL);
+    TEXT_MACRO_X_STRING ("crypt",      cryptString,     NULL);
+    TEXT_MACRO_X_STRING ("name",       directoryName,   NULL);
   }
 
   // print
@@ -1033,12 +1034,12 @@ LOCAL void printLinkInfo(uint            prefixWidth,
     File_permissionToString(permissionString,sizeof(permissionString),permissions,FALSE);
   }
 
-  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
+  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_LONG_GROUP_PREFIX : NULL;
   const char *template;
   String     cryptString = String_new();
   if (globalOptions.longFormatFlag)
   {
-    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_LONG_LINK;
     String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
@@ -1049,15 +1050,15 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   TextMacros (textMacros,9);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING ("%storageName",    storageName,     NULL);
-    TEXT_MACRO_X_CSTRING("%type",           "LINK",          NULL);
-    TEXT_MACRO_X_CSTRING("%dateTime",       dateTimeString,  NULL);
-    TEXT_MACRO_X_CSTRING("%user",           userName,        NULL);
-    TEXT_MACRO_X_CSTRING("%group",          groupName,       NULL);
-    TEXT_MACRO_X_CSTRING("%permission",     permissionString,NULL);
-    TEXT_MACRO_X_STRING ("%crypt",          cryptString,     NULL);
-    TEXT_MACRO_X_STRING ("%name",           linkName,        NULL);
-    TEXT_MACRO_X_STRING ("%destinationName",destinationName, NULL);
+    TEXT_MACRO_X_STRING ("storageName",    storageName,     NULL);
+    TEXT_MACRO_X_CSTRING("type",           "LINK",          NULL);
+    TEXT_MACRO_X_CSTRING("dateTime",       dateTimeString,  NULL);
+    TEXT_MACRO_X_CSTRING("user",           userName,        NULL);
+    TEXT_MACRO_X_CSTRING("group",          groupName,       NULL);
+    TEXT_MACRO_X_CSTRING("permission",     permissionString,NULL);
+    TEXT_MACRO_X_STRING ("crypt",          cryptString,     NULL);
+    TEXT_MACRO_X_STRING ("name",           linkName,        NULL);
+    TEXT_MACRO_X_STRING ("destinationName",destinationName, NULL);
   }
 
   // print
@@ -1182,13 +1183,13 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
     File_permissionToString(permissionString,sizeof(permissionString),permissions,FALSE);
   }
 
-  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
+  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_LONG_GROUP_PREFIX : NULL;
   const char *template;
   String     compressString = String_new();
   String     cryptString    = String_new();
   if (globalOptions.longFormatFlag)
   {
-    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_LONG_HARDLINK;
     if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
     {
       String_appendFormat(compressString,
@@ -1243,21 +1244,21 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   TextMacros (textMacros,15);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING ("%storageName",    storageName,                                                          NULL);
-    TEXT_MACRO_X_CSTRING("%type",           "HARDLINK",                                                           NULL);
-    TEXT_MACRO_X_CSTRING("%size",           sizeString,                                                           NULL);
-    TEXT_MACRO_X_CSTRING("%dateTime",       dateTimeString,                                                       NULL);
-    TEXT_MACRO_X_CSTRING("%user",           userName,                                                             NULL);
-    TEXT_MACRO_X_CSTRING("%group",          groupName,                                                            NULL);
-    TEXT_MACRO_X_CSTRING("%permission",     permissionString,                                                     NULL);
-    TEXT_MACRO_X_INT64  ("%partFrom",       fragmentOffset,                                                       NULL);
-    TEXT_MACRO_X_INT64  ("%partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
-    TEXT_MACRO_X_STRING ("%compress",       compressString,                                                       NULL);
-    TEXT_MACRO_X_DOUBLE ("%ratio",          ratio,                                                                NULL);
-    TEXT_MACRO_X_STRING ("%crypt",          cryptString,                                                          NULL);
-    TEXT_MACRO_X_STRING ("%name",           fileName,                                                             NULL);
-    TEXT_MACRO_X_STRING ("%deltaSourceName",deltaSourceName,                                                      NULL);
-    TEXT_MACRO_X_CSTRING("%deltaSourceSize",deltaSourceSizeString,                                                NULL);
+    TEXT_MACRO_X_STRING ("storageName",    storageName,                                                          NULL);
+    TEXT_MACRO_X_CSTRING("type",           "HARDLINK",                                                           NULL);
+    TEXT_MACRO_X_CSTRING("size",           sizeString,                                                           NULL);
+    TEXT_MACRO_X_CSTRING("dateTime",       dateTimeString,                                                       NULL);
+    TEXT_MACRO_X_CSTRING("user",           userName,                                                             NULL);
+    TEXT_MACRO_X_CSTRING("group",          groupName,                                                            NULL);
+    TEXT_MACRO_X_CSTRING("permission",     permissionString,                                                     NULL);
+    TEXT_MACRO_X_INT64  ("partFrom",       fragmentOffset,                                                       NULL);
+    TEXT_MACRO_X_INT64  ("partTo",         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset,NULL);
+    TEXT_MACRO_X_STRING ("compress",       compressString,                                                       NULL);
+    TEXT_MACRO_X_DOUBLE ("ratio",          ratio,                                                                NULL);
+    TEXT_MACRO_X_STRING ("crypt",          cryptString,                                                          NULL);
+    TEXT_MACRO_X_STRING ("name",           fileName,                                                             NULL);
+    TEXT_MACRO_X_STRING ("deltaSourceName",deltaSourceName,                                                      NULL);
+    TEXT_MACRO_X_CSTRING("deltaSourceSize",deltaSourceSizeString,                                                NULL);
   }
 
   // print
@@ -1297,7 +1298,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
                  0,
                  "%s\n",
                  String_cString(Misc_expandMacros(line,
-                                                  DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
+                                                  DEFAULT_ARCHIVE_LIST_FORMAT_DELTA_SOURCE,
                                                   EXPAND_MACRO_MODE_STRING,
                                                   textMacros.data,
                                                   textMacros.count,
@@ -1349,7 +1350,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
   assert(fileName != NULL);
 
   // format
-  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
+  const char *prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_LONG_GROUP_PREFIX : NULL;
   const char *template       = NULL;
   const char *type           = NULL;
   String     cryptString = String_new();
@@ -1358,7 +1359,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
     case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
       if (globalOptions.longFormatFlag)
       {
-        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_CHAR;
         String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
@@ -1370,7 +1371,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
     case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
       if (globalOptions.longFormatFlag)
       {
-        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_BLOCK;
         String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
@@ -1382,7 +1383,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
     case FILE_SPECIAL_TYPE_FIFO:
       if (globalOptions.longFormatFlag)
       {
-        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_FIFO;
         String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
@@ -1394,7 +1395,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
     case FILE_SPECIAL_TYPE_SOCKET:
       if (globalOptions.longFormatFlag)
       {
-        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_SOCKET;
         String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
@@ -1434,16 +1435,16 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
   TextMacros (textMacros,10);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING ("%storageName",storageName,      NULL);
-    TEXT_MACRO_X_CSTRING("%type",       type,             NULL);
-    TEXT_MACRO_X_CSTRING("%user",       userName,         NULL);
-    TEXT_MACRO_X_CSTRING("%group",      groupName,        NULL);
-    TEXT_MACRO_X_CSTRING("%permission", permissionsString,NULL);
-    TEXT_MACRO_X_CSTRING("%permissions",permissionsString,NULL);
-    TEXT_MACRO_X_STRING ("%crypt",      cryptString,      NULL);
-    TEXT_MACRO_X_STRING ("%name",       fileName,         NULL);
-    TEXT_MACRO_X_INT("%major",      major,            NULL);
-    TEXT_MACRO_X_INT("%minor",      minor,            NULL);
+    TEXT_MACRO_X_STRING ("storageName",storageName,      NULL);
+    TEXT_MACRO_X_CSTRING("type",       type,             NULL);
+    TEXT_MACRO_X_CSTRING("user",       userName,         NULL);
+    TEXT_MACRO_X_CSTRING("group",      groupName,        NULL);
+    TEXT_MACRO_X_CSTRING("permission", permissionsString,NULL);
+    TEXT_MACRO_X_CSTRING("permissions",permissionsString,NULL);
+    TEXT_MACRO_X_STRING ("crypt",      cryptString,      NULL);
+    TEXT_MACRO_X_STRING ("name",       fileName,         NULL);
+    TEXT_MACRO_X_INT    ("major",      major,            NULL);
+    TEXT_MACRO_X_INT    ("minor",      minor,            NULL);
   }
 
   // print
@@ -3304,13 +3305,13 @@ LOCAL void printDirectoryListHeader(ConstString printableStorageName)
 {
   const TextMacro MACROS[] =
   {
-    TEXT_MACRO_CSTRING("%type",      "Type",      NULL),
-    TEXT_MACRO_CSTRING("%size",      "Size",      NULL),
-    TEXT_MACRO_CSTRING("%dateTime",  "Date/Time" ,NULL),
-    TEXT_MACRO_CSTRING("%user",      "User",      NULL),
-    TEXT_MACRO_CSTRING("%group",     "Group",     NULL),
-    TEXT_MACRO_CSTRING("%permission","Permission",NULL),
-    TEXT_MACRO_CSTRING("%name",      "Name",      NULL)
+    TEXT_MACRO_CSTRING("type",      "Type",      NULL),
+    TEXT_MACRO_CSTRING("size",      "Size",      NULL),
+    TEXT_MACRO_CSTRING("dateTime",  "Date/Time" ,NULL),
+    TEXT_MACRO_CSTRING("user",      "User",      NULL),
+    TEXT_MACRO_CSTRING("group",     "Group",     NULL),
+    TEXT_MACRO_CSTRING("permission","Permission",NULL),
+    TEXT_MACRO_CSTRING("name",      "Name",      NULL)
   };
 
   if (!globalOptions.noHeaderFooterFlag)
@@ -3504,7 +3505,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           break;
         case FILE_TYPE_FILE:
         case FILE_TYPE_HARDLINK:
-          TEXT_MACRO_X_CSTRING("%type","FILE",NULL);
+          TEXT_MACRO_X_CSTRING("type","FILE",NULL);
           if (globalOptions.humanFormatFlag)
           {
             getHumanSizeString(sizeString,sizeof(sizeString),directoryEntryNode->fileInfo.size);
@@ -3513,20 +3514,20 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
           {
             stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,directoryEntryNode->fileInfo.size);
           }
-          TEXT_MACRO_X_CSTRING("%size",sizeString,NULL);
+          TEXT_MACRO_X_CSTRING("size",sizeString,NULL);
           totalFileSize += directoryEntryNode->fileInfo.size;
           break;
         case FILE_TYPE_DIRECTORY:
-          TEXT_MACRO_X_CSTRING("%type","DIR",NULL);
-          TEXT_MACRO_X_CSTRING("%size","",   NULL);
+          TEXT_MACRO_X_CSTRING("type","DIR",NULL);
+          TEXT_MACRO_X_CSTRING("size","",   NULL);
           break;
         case FILE_TYPE_LINK:
-          TEXT_MACRO_X_CSTRING("%type","LINK",NULL);
-          TEXT_MACRO_X_CSTRING("%size","",    NULL);
+          TEXT_MACRO_X_CSTRING("type","LINK",NULL);
+          TEXT_MACRO_X_CSTRING("size","",    NULL);
           break;
         case FILE_TYPE_SPECIAL:
-          TEXT_MACRO_X_CSTRING("%type","SPECIAL",NULL);
-          TEXT_MACRO_X_CSTRING("%size","",       NULL);
+          TEXT_MACRO_X_CSTRING("type","SPECIAL",NULL);
+          TEXT_MACRO_X_CSTRING("size","",       NULL);
           break;
         default:
           #ifndef NDEBUG
@@ -3553,12 +3554,12 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       {
         File_permissionToString(permissionsString,sizeof(permissionsString),directoryEntryNode->fileInfo.permissions,FALSE);
       }
-      TEXT_MACRO_X_CSTRING("%dateTime",   dateTimeString,              NULL);
-      TEXT_MACRO_X_CSTRING("%user",       userName,                    NULL);
-      TEXT_MACRO_X_CSTRING("%group",      groupName,                   NULL);
-      TEXT_MACRO_X_STRING ("%permission" ,permissionsString,           NULL);
-      TEXT_MACRO_X_STRING ("%permissions",permissionsString,           NULL);
-      TEXT_MACRO_X_STRING ("%name",       directoryEntryNode->fileName,NULL);
+      TEXT_MACRO_X_CSTRING("dateTime",   dateTimeString,              NULL);
+      TEXT_MACRO_X_CSTRING("user",       userName,                    NULL);
+      TEXT_MACRO_X_CSTRING("group",      groupName,                   NULL);
+      TEXT_MACRO_X_STRING ("permission" ,permissionsString,           NULL);
+      TEXT_MACRO_X_STRING ("permissions",permissionsString,           NULL);
+      TEXT_MACRO_X_STRING ("name",       directoryEntryNode->fileName,NULL);
     }
 
     // print

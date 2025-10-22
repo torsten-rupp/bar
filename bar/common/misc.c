@@ -161,7 +161,7 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
               char s[2+1];
               s[0] = buffer[2*i+0];
               s[1] = buffer[2*i+1];
-              s[2] = '\0';
+              s[2] = NUL;
               machineId[i] = strtol(s,NULL,16);
             }
             state = BASE;
@@ -913,17 +913,17 @@ LOCAL bool hexDecode(byte *data, uint *dataLength, const char *s, ulong n, uint 
 
   uint length = 0;
 
-  while (((*s) != '\0') && (length < n))
+  while (((*s) != NUL) && (length < n))
   {
     char t[3];
     t[0] = (*s); s++;
-    if ((*s) != '\0')
+    if ((*s) != NUL)
     {
       t[1] = (*s); s++;
-      t[2] = '\0';
+      t[2] = NUL;
 
       char *w;
-      if (length < maxDataLength) { data[length] = (byte)strtol(t,&w,16); if ((*w) != '\0') break; length++; }
+      if (length < maxDataLength) { data[length] = (byte)strtol(t,&w,16); if ((*w) != NUL) break; length++; }
     }
     else
     {
@@ -1242,7 +1242,7 @@ uint64 Misc_parseDateTime(const char *string)
       while ((i < SIZE_OF_ARRAY(DATE_TIME_FORMATS)) && (tm == NULL))
       {
         const char * s = (const char*)strptime(string,DATE_TIME_FORMATS[i],&tmBuffer);
-        if ((s != NULL) && ((*s) == '\0'))
+        if ((s != NULL) && ((*s) == NUL))
         {
           tm = &tmBuffer;
         }
@@ -1325,7 +1325,7 @@ String Misc_formatDateTime(String string, uint64 dateTime, TimeTypes timeType, c
     }
   }
   while (length == 0);
-  buffer[length] = '\0';
+  buffer[length] = NUL;
 
   // append to string
   String_appendBuffer(string,buffer,length);
@@ -1376,7 +1376,7 @@ const char* Misc_formatDateTimeCString(char *buffer, uint bufferSize, uint64 dat
   {
     return NULL;
   }
-  buffer[length] = '\0';
+  buffer[length] = NUL;
 
   return buffer;
 }
@@ -1751,10 +1751,10 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
 
       char s[36+1];
       uuid_unparse_lower(uuid,s);
-      s[36] = '\0';
+      s[36] = NUL;
 
       strncpy(buffer,s,bufferSize-1);
-      buffer[bufferSize-1] = '\0';
+      buffer[bufferSize-1] = NUL;
     #else /* not HAVE_UUID_GENERATE */
       FILE *file = fopen("/proc/sys/kernel/random/uuid","r");
       if (file != NULL)
@@ -1765,13 +1765,13 @@ const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
 
         // remove trailing white spaces
         char *s = buffer;
-        while ((*s) != '\0')
+        while ((*s) != NUL)
         {
           s++;
         }
         do
         {
-          (*s) = '\0';
+          (*s) = NUL;
           s--;
         }
         while ((s >= buffer) && isspace(*s));
@@ -1875,7 +1875,7 @@ String Misc_expandMacros(String           string,
       { \
         (string)[index] = value; \
         (index)++; \
-        (string)[index] = '\0'; \
+        (string)[index] = NUL; \
       } \
     } \
     while (0)
@@ -1886,14 +1886,14 @@ String Misc_expandMacros(String           string,
       { \
         const char *s = value; \
         while (   ((index) < (sizeof(string)-1)) \
-               && ((*s) != '\0') \
+               && ((*s) != NUL) \
               ) \
         { \
           (string)[index] = (*s); \
           (index)++; \
           s++; \
         } \
-        (string)[index] = '\0'; \
+        (string)[index] = NUL; \
       } \
     } \
     while (0)
@@ -1901,7 +1901,7 @@ String Misc_expandMacros(String           string,
   #define SKIP_SPACES(string,i) \
     do \
     { \
-      while (   ((string)[i] != '\0') \
+      while (   ((string)[i] != NUL) \
              && isspace((string)[i]) \
             ) \
       { \
@@ -1921,7 +1921,7 @@ String Misc_expandMacros(String           string,
   {
     // add prefix string
     macroFlag = FALSE;
-    while ((templateString[i] != '\0') && !macroFlag)
+    while ((templateString[i] != NUL) && !macroFlag)
     {
       if (templateString[i] == '%')
       {
@@ -1955,12 +1955,9 @@ String Misc_expandMacros(String           string,
 
     if (macroFlag)
     {
-      // skip spaces
-      SKIP_SPACES(templateString,i);
-
       // check if '{'
       bool hasCurlyBrace = FALSE;
-      if (   (templateString[i] != '\0')
+      if (   (templateString[i] != NUL)
           && (templateString[i] == '{')
          )
       {
@@ -1968,82 +1965,80 @@ String Misc_expandMacros(String           string,
         i++;
       }
 
-      size_t j;
+      // skip spaces
+      SKIP_SPACES(templateString,i);
 
       // get macro name
-      char name[128];
-      j = 0;
-      if (   (templateString[i] != '\0')
+      char   name[128];
+      size_t nameLength = 0;
+      if (   (templateString[i] != NUL)
           && isalpha(templateString[i])
          )
       {
-        APPEND_CHAR(name,j,'%');
         do
         {
-          APPEND_CHAR(name,j,templateString[i]);
+          APPEND_CHAR(name,nameLength,templateString[i]);
           i++;
         }
-        while (   (templateString[i] != '\0')
+        while (   (templateString[i] != NUL)
                && isalnum(templateString[i])
               );
       }
-      name[j] = '\0';
+      name[nameLength] = NUL;
 //fprintf(stderr,"%s, %d: name='%s'\n",__FILE__,__LINE__,name);
 
       // get format width with '%' (if any)
-      char format[128];
-      j = 0;
-      APPEND_CHAR(format,j,'%');
-      if (   (templateString[i] != '\0')
-          && (templateString[i] == ':')
-         )
+      char   format[128];
+      size_t formatLength = 0;
+      APPEND_CHAR(format,formatLength,'%');
+      size_t j = i;
+      while (   (templateString[j] != NUL)
+             && isspace(templateString[j])
+            )
       {
+        j++;
+      }
+      if (   (templateString[j] != NUL)
+           && (templateString[j] == ':')
+          )
+      {
+        i = j;
+
         // skip ':'
         i++;
 
         // skip spaces
         SKIP_SPACES(templateString,i);
 
-        if (   (templateString[i] != '\0')
+        // prefix +,-
+        if (   (templateString[i] != NUL)
             && (strchr("+-",templateString[i]) != NULL)
            )
         {
-          APPEND_CHAR(format,j,templateString[i]);
+          APPEND_CHAR(format,formatLength,templateString[i]);
           i++;
         }
-        while (   (templateString[i] != '\0')
+
+        // number <n> or <n>.<m>
+        while (   (templateString[i] != NUL)
                && isdigit(templateString[i])
               )
         {
-          APPEND_CHAR(format,j,templateString[i]);
+          APPEND_CHAR(format,formatLength,templateString[i]);
           i++;
         }
-        if (   (templateString[i] != '\0')
+        if (   (templateString[i] != NUL)
             && (templateString[i] == '.')
            )
         {
-          APPEND_CHAR(format,j,templateString[i]);
+          APPEND_CHAR(format,formatLength,templateString[i]);
           i++;
         }
-        while (   (templateString[i] != '\0')
+        while (   (templateString[i] != NUL)
                && isdigit(templateString[i])
               )
         {
-          APPEND_CHAR(format,j,templateString[i]);
-          i++;
-        }
-        while (   (templateString[i] != '\0')
-               && (strchr("l",templateString[i]) != NULL)
-              )
-        {
-          // ignore
-          i++;
-        }
-        if (   (templateString[i] != '\0')
-            && (strchr("duxfsS",templateString[i]) != NULL)
-           )
-        {
-          // ignore
+          APPEND_CHAR(format,formatLength,templateString[i]);
           i++;
         }
       }
@@ -2055,7 +2050,7 @@ String Misc_expandMacros(String           string,
         SKIP_SPACES(templateString,i);
 
         // skip closing '}'
-        if (   (templateString[i] != '\0')
+        if (   (templateString[i] != NUL)
             && (templateString[i] == '}')
            )
         {
@@ -2069,7 +2064,7 @@ String Misc_expandMacros(String           string,
         size_t k = ARRAY_FIND(macros,macroCount,k,stringEquals(name,macros[k].name));
         if (k < macroCount)
         {
-  //fprintf(stderr,"%s, %d: name=%s -> %d\n",__FILE__,__LINE__,name,k);
+//fprintf(stderr,"%s, %d: name=%s -> %d\n",__FILE__,__LINE__,name,k);
           switch (expandMacroMode)
           {
             case EXPAND_MACRO_MODE_STRING:
@@ -2077,69 +2072,32 @@ String Misc_expandMacros(String           string,
               switch (macros[k].type)
               {
                 case TEXT_MACRO_TYPE_INT:
-                  APPEND_CHAR(format,j,'d');
+                  APPEND_CHAR(format,formatLength,'d');
                   String_appendFormat(expanded,format,macros[k].value.i);
                   break;
                 case TEXT_MACRO_TYPE_UINT:
-                  APPEND_CHAR(format,j,'u');
+                  APPEND_CHAR(format,formatLength,'u');
                   String_appendFormat(expanded,format,macros[k].value.u);
                   break;
                 case TEXT_MACRO_TYPE_INT64:
-                  APPEND_STRING(format,j,PRIi64);
+                  APPEND_STRING(format,formatLength,PRIi64);
                   String_appendFormat(expanded,format,macros[k].value.i64);
                   break;
                 case TEXT_MACRO_TYPE_UINT64:
-                  APPEND_STRING(format,j,PRIu64);
+                  APPEND_STRING(format,formatLength,PRIu64);
                   String_appendFormat(expanded,format,macros[k].value.u64);
                   break;
                 case TEXT_MACRO_TYPE_DOUBLE:
-                  APPEND_STRING(format,j,"lf");
+                  APPEND_STRING(format,formatLength,"lf");
                   String_appendFormat(expanded,format,macros[k].value.d);
                   break;
                 case TEXT_MACRO_TYPE_CSTRING:
-                  APPEND_CHAR(format,j,'s');
-                  if (expandMacroCharacter)
-                  {
-                    String_appendFormat(expanded,format,macros[k].value.s);
-                  }
-                  else
-                  {
-                  CStringIterator cStringIterator;
-                  Codepoint       codepoint;
-                    CSTRING_CHAR_ITERATE(macros[k].value.s,cStringIterator,codepoint)
-                    {
-                      if (codepoint != '%')
-                      {
-                        String_appendChar(expanded,codepoint);
-                      }
-                      else
-                      {
-                        String_appendCString(expanded,"%%");
-                      }
-                    }
-                  }
+                  APPEND_CHAR(format,formatLength,'s');
+                  String_appendFormat(expanded,format,macros[k].value.s);
                   break;
                 case TEXT_MACRO_TYPE_STRING:
-                  APPEND_CHAR(format,j,'S');
-                  if (expandMacroCharacter)
-                  {
-                    String_appendFormat(expanded,format,macros[k].value.string);
-                  }
-                  else
-                  {
-                    char ch;
-                    STRING_CHAR_ITERATE(macros[k].value.string,ch)
-                    {
-                      if (ch != '%')
-                      {
-                        String_appendChar(expanded,ch);
-                      }
-                      else
-                      {
-                        String_appendCString(expanded,"%%");
-                      }
-                    }
-                  }
+                  APPEND_CHAR(format,formatLength,'S');
+                  String_appendFormat(expanded,format,macros[k].value.string);
                   break;
                 #ifndef NDEBUG
                   default:
@@ -2162,6 +2120,7 @@ String Misc_expandMacros(String           string,
         else if (keepUnknownMacros)
         {
           // keep unknown macro
+          String_appendChar(expanded,'%');
           String_appendCString(expanded,name);
         }
         else

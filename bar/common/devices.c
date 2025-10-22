@@ -882,8 +882,8 @@ Errors Device_mount(ConstString mountCommand,
     TextMacros (textMacros,2);
     TEXT_MACROS_INIT(textMacros)
     {
-      TEXT_MACRO_X_STRING ("%device",   deviceName,    NULL);
-      TEXT_MACRO_X_STRING ("%directory",mountPointName,NULL);
+      TEXT_MACRO_X_STRING ("device",   deviceName,    NULL);
+      TEXT_MACRO_X_STRING ("directory",mountPointName,NULL);
     }
     error = Misc_executeCommand(String_cString(mountCommand),
                                 textMacros.data,
@@ -955,8 +955,8 @@ Errors Device_mount(ConstString mountCommand,
   TextMacros (textMacros,2);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING ("%device",   deviceName,    NULL);
-    TEXT_MACRO_X_STRING ("%directory",mountPointName,NULL);
+    TEXT_MACRO_X_STRING ("device",   deviceName,    NULL);
+    TEXT_MACRO_X_STRING ("directory",mountPointName,NULL);
   }
   error = Misc_executeCommand(command,
                               textMacros.data,
@@ -982,7 +982,7 @@ Errors Device_umount(ConstString umountCommand,
   TextMacros (textMacros,1);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING ("%directory",mountPointName,NULL);
+    TEXT_MACRO_X_STRING ("directory",mountPointName,NULL);
   }
 
   if (!String_isEmpty(umountCommand))
