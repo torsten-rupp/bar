@@ -5661,11 +5661,11 @@ Errors Archive_formatName(String           fileName,
   TextMacros (textMacros,5);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_CSTRING("%type", Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_CSTRING);
-    TEXT_MACRO_X_CSTRING("%T",    Archive_archiveTypeToShortString(archiveType),".");
-    TEXT_MACRO_X_STRING ("%uuid", uuid,TEXT_MACRO_PATTERN_CSTRING);
-    TEXT_MACRO_X_CSTRING("%title",(scheduleTitle != NULL) ? scheduleTitle : "",TEXT_MACRO_PATTERN_CSTRING);
-    TEXT_MACRO_X_CSTRING("%text", (scheduleCustomText != NULL) ? scheduleCustomText : "",TEXT_MACRO_PATTERN_CSTRING);
+    TEXT_MACRO_X_CSTRING("type", Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_CSTRING);
+    TEXT_MACRO_X_CSTRING("T",    Archive_archiveTypeToShortString(archiveType),".");
+    TEXT_MACRO_X_STRING ("uuid", uuid,TEXT_MACRO_PATTERN_CSTRING);
+    TEXT_MACRO_X_CSTRING("title",(scheduleTitle != NULL) ? scheduleTitle : "",TEXT_MACRO_PATTERN_CSTRING);
+    TEXT_MACRO_X_CSTRING("text", (scheduleCustomText != NULL) ? scheduleCustomText : "",TEXT_MACRO_PATTERN_CSTRING);
   }
   templateMacros(&templateHandle,
                  textMacros.data,

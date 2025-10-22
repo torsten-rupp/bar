@@ -6545,29 +6545,29 @@ LOCAL void jobThreadCode(void)
         TextMacros (textMacros,14);
         TEXT_MACROS_INIT(textMacros)
         {
-          TEXT_MACRO_X_STRING ("%name",                jobName,                                                      NULL);
-          TEXT_MACRO_X_STRING ("%archive",             storageName,                                                  NULL);
-          TEXT_MACRO_X_CSTRING("%type",                Archive_archiveTypeToString(archiveType),                     NULL);
-          TEXT_MACRO_X_CSTRING("%T",                   Archive_archiveTypeToShortString(archiveType),                NULL);
-          TEXT_MACRO_X_STRING ("%directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-          TEXT_MACRO_X_STRING ("%file",                storageSpecifier.archiveName,                                 NULL);
+          TEXT_MACRO_X_STRING ("name",                jobName,                                                      NULL);
+          TEXT_MACRO_X_STRING ("archive",             storageName,                                                  NULL);
+          TEXT_MACRO_X_CSTRING("type",                Archive_archiveTypeToString(archiveType),                     NULL);
+          TEXT_MACRO_X_CSTRING("T",                   Archive_archiveTypeToShortString(archiveType),                NULL);
+          TEXT_MACRO_X_STRING ("directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+          TEXT_MACRO_X_STRING ("file",                storageSpecifier.archiveName,                                 NULL);
           if (nextScheduleDateTime < MAX_UINT64)
           {
-            TEXT_MACRO_X_STRING ("%nextJobName",         nextJobName,                                                NULL);
-            TEXT_MACRO_X_STRING ("%nextJobUUID",         nextJobUUID,                                                NULL);
-            TEXT_MACRO_X_STRING ("%nextScheduleUUID",    nextScheduleUUID,                                           NULL);
-            TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
+            TEXT_MACRO_X_STRING ("nextJobName",         nextJobName,                                                NULL);
+            TEXT_MACRO_X_STRING ("nextJobUUID",         nextJobUUID,                                                NULL);
+            TEXT_MACRO_X_STRING ("nextScheduleUUID",    nextScheduleUUID,                                           NULL);
+            TEXT_MACRO_X_UINT64 ("nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
                                                            ? nextScheduleDateTime-executeStartDateTime
                                                            : 0,                                                      NULL);
-            TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                       NULL);
+            TEXT_MACRO_X_UINT64 ("nextScheduleDateTime",nextScheduleDateTime,                                       NULL);
           }
           else
           {
-            TEXT_MACRO_X_CSTRING("%nextJobName",         "",                                                         NULL);
-            TEXT_MACRO_X_CSTRING("%nextJobUUID",         "",                                                         NULL);
-            TEXT_MACRO_X_CSTRING("%nextScheduleUUID",    "",                                                         NULL);
-            TEXT_MACRO_X_CSTRING("%nextSchedule",        "",                                                         NULL);
-            TEXT_MACRO_X_CSTRING("%nextScheduleDateTime","",                                                         NULL);
+            TEXT_MACRO_X_CSTRING("nextJobName",         "",                                                         NULL);
+            TEXT_MACRO_X_CSTRING("nextJobUUID",         "",                                                         NULL);
+            TEXT_MACRO_X_CSTRING("nextScheduleUUID",    "",                                                         NULL);
+            TEXT_MACRO_X_CSTRING("nextSchedule",        "",                                                         NULL);
+            TEXT_MACRO_X_CSTRING("nextScheduleDateTime","",                                                         NULL);
           }
         }
         Errors error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
@@ -6832,32 +6832,32 @@ LOCAL void jobThreadCode(void)
       TextMacros (textMacros,14);
       TEXT_MACROS_INIT(textMacros)
       {
-        TEXT_MACRO_X_STRING ("%name",                jobName,                                                               NULL);
-        TEXT_MACRO_X_STRING ("%archive",             storageName,                                                           NULL);
-        TEXT_MACRO_X_CSTRING("%type",                Archive_archiveTypeToString(archiveType),                              NULL);
-        TEXT_MACRO_X_CSTRING("%T",                   Archive_archiveTypeToShortString(archiveType),                         NULL);
-        TEXT_MACRO_X_STRING ("%directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),         NULL);
-        TEXT_MACRO_X_STRING ("%file",                storageSpecifier.archiveName,                                          NULL);
-        TEXT_MACRO_X_CSTRING("%state",               Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),NULL);
-        TEXT_MACRO_X_UINT   ("%error",               Error_getCode(jobNode->runningInfo.error),                             NULL);
-        TEXT_MACRO_X_CSTRING("%message",             Error_getText(jobNode->runningInfo.error),                             NULL);
+        TEXT_MACRO_X_STRING ("name",                jobName,                                                               NULL);
+        TEXT_MACRO_X_STRING ("archive",             storageName,                                                           NULL);
+        TEXT_MACRO_X_CSTRING("type",                Archive_archiveTypeToString(archiveType),                              NULL);
+        TEXT_MACRO_X_CSTRING("T",                   Archive_archiveTypeToShortString(archiveType),                         NULL);
+        TEXT_MACRO_X_STRING ("directory",           File_getDirectoryName(directory,storageSpecifier.archiveName),         NULL);
+        TEXT_MACRO_X_STRING ("file",                storageSpecifier.archiveName,                                          NULL);
+        TEXT_MACRO_X_CSTRING("state",               Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),NULL);
+        TEXT_MACRO_X_UINT   ("error",               Error_getCode(jobNode->runningInfo.error),                             NULL);
+        TEXT_MACRO_X_CSTRING("message",             Error_getText(jobNode->runningInfo.error),                             NULL);
         if (nextScheduleDateTime < MAX_UINT64)
         {
-          TEXT_MACRO_X_STRING ("%nextJobName",         nextJobName,                                                         NULL);
-          TEXT_MACRO_X_STRING ("%nextJobUUID",         nextJobUUID,                                                         NULL);
-          TEXT_MACRO_X_STRING ("%nextScheduleUUID",    nextScheduleUUID,                                                    NULL);
-          TEXT_MACRO_X_UINT64 ("%nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
+          TEXT_MACRO_X_STRING ("nextJobName",         nextJobName,                                                         NULL);
+          TEXT_MACRO_X_STRING ("nextJobUUID",         nextJobUUID,                                                         NULL);
+          TEXT_MACRO_X_STRING ("nextScheduleUUID",    nextScheduleUUID,                                                    NULL);
+          TEXT_MACRO_X_UINT64 ("nextSchedule",        (nextScheduleDateTime >= executeStartDateTime)
                                                          ? nextScheduleDateTime-executeStartDateTime
                                                          : 0,                                                               NULL);
-          TEXT_MACRO_X_UINT64 ("%nextScheduleDateTime",nextScheduleDateTime,                                                NULL);
+          TEXT_MACRO_X_UINT64 ("nextScheduleDateTime",nextScheduleDateTime,                                                NULL);
         }
         else
         {
-          TEXT_MACRO_X_CSTRING("%nextJobName",         "",                                                                  NULL);
-          TEXT_MACRO_X_CSTRING("%nextJobUUID",         "",                                                                  NULL);
-          TEXT_MACRO_X_CSTRING("%nextScheduleUUID",    "",                                                                  NULL);
-          TEXT_MACRO_X_CSTRING("%nextSchedule",        "",                                                                  NULL);
-          TEXT_MACRO_X_CSTRING("%nextScheduleDateTime","",                                                                  NULL);
+          TEXT_MACRO_X_CSTRING("nextJobName",         "",                                                                  NULL);
+          TEXT_MACRO_X_CSTRING("nextJobUUID",         "",                                                                  NULL);
+          TEXT_MACRO_X_CSTRING("nextScheduleUUID",    "",                                                                  NULL);
+          TEXT_MACRO_X_CSTRING("nextSchedule",        "",                                                                  NULL);
+          TEXT_MACRO_X_CSTRING("nextScheduleDateTime","",                                                                  NULL);
         }
       }
       Errors error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),

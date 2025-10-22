@@ -1392,13 +1392,13 @@ void logPostProcess(LogHandle        *logHandle,
         TextMacros (textMacros,7);
         TEXT_MACROS_INIT(textMacros)
         {
-          TEXT_MACRO_X_STRING ("%file",   logHandle->logFileName,                       TEXT_MACRO_PATTERN_STRING);
-          TEXT_MACRO_X_STRING ("%name",   jobName,                                      TEXT_MACRO_PATTERN_STRING);
-          TEXT_MACRO_X_CSTRING("%type",   Archive_archiveTypeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
-          TEXT_MACRO_X_CSTRING("%T",      Archive_archiveTypeToShortString(archiveType),".");
-          TEXT_MACRO_X_STRING ("%text",   scheduleCustomText,                           TEXT_MACRO_PATTERN_STRING);
-          TEXT_MACRO_X_CSTRING("%state",  Job_getStateText(jobState,noStorage,dryRun),  NULL);
-          TEXT_MACRO_X_STRING ("%message",String_cString(message),NULL);
+          TEXT_MACRO_X_STRING ("file",   logHandle->logFileName,                       TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_STRING ("name",   jobName,                                      TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_CSTRING("type",   Archive_archiveTypeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_CSTRING("T",      Archive_archiveTypeToShortString(archiveType),".");
+          TEXT_MACRO_X_STRING ("text",   scheduleCustomText,                           TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_CSTRING("state",  Job_getStateText(jobState,noStorage,dryRun),  NULL);
+          TEXT_MACRO_X_STRING ("message",String_cString(message),NULL);
         }
 //TODO: macro expanded 2x!
         Misc_expandMacros(command,
@@ -3331,12 +3331,12 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             directory = String_new();
             TEXT_MACROS_INIT(textMacros)
             {
-              TEXT_MACRO_X_CSTRING ("%name",    "",                                                           NULL);
-              TEXT_MACRO_X_STRING ("%archive",  globalOptions.storageName,                                    NULL);
-              TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(globalOptions.archiveType),       NULL);
-              TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(globalOptions.archiveType),  NULL);
-              TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-              TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+              TEXT_MACRO_X_CSTRING("name",     "",                                                           NULL);
+              TEXT_MACRO_X_STRING ("archive",  globalOptions.storageName,                                    NULL);
+              TEXT_MACRO_X_CSTRING("type",     Archive_archiveTypeToString(globalOptions.archiveType),       NULL);
+              TEXT_MACRO_X_CSTRING("T",        Archive_archiveTypeToShortString(globalOptions.archiveType),  NULL);
+              TEXT_MACRO_X_STRING ("directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+              TEXT_MACRO_X_STRING ("file",     storageSpecifier.archiveName,                                 NULL);
             }
             error = executeTemplate(String_cString(globalOptions.preProcessScript),
                                     Misc_getCurrentDateTime(),
@@ -3398,15 +3398,15 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             directory = String_new();
             TEXT_MACROS_INIT(textMacros)
             {
-              TEXT_MACRO_X_CSTRING("%name",     "",                                                           NULL);
-              TEXT_MACRO_X_STRING ("%archive",  globalOptions.storageName,                                    NULL);
-              TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(globalOptions.archiveType),       NULL);
-              TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(globalOptions.archiveType),  NULL);
-              TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-              TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
-              TEXT_MACRO_X_CSTRING("%state",    "",                                                           NULL);
-              TEXT_MACRO_X_UINT   ("%error",    Error_getCode(error),                                         NULL);
-              TEXT_MACRO_X_CSTRING("%message",  Error_getText(error),                                         NULL);
+              TEXT_MACRO_X_CSTRING("name",     "",                                                           NULL);
+              TEXT_MACRO_X_STRING ("archive",  globalOptions.storageName,                                    NULL);
+              TEXT_MACRO_X_CSTRING("type",     Archive_archiveTypeToString(globalOptions.archiveType),       NULL);
+              TEXT_MACRO_X_CSTRING("T",        Archive_archiveTypeToShortString(globalOptions.archiveType),  NULL);
+              TEXT_MACRO_X_STRING ("directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+              TEXT_MACRO_X_STRING ("file",     storageSpecifier.archiveName,                                 NULL);
+              TEXT_MACRO_X_CSTRING("state",    "",                                                           NULL);
+              TEXT_MACRO_X_UINT   ("error",    Error_getCode(error),                                         NULL);
+              TEXT_MACRO_X_CSTRING("message",  Error_getText(error),                                         NULL);
             }
             error = executeTemplate(String_cString(globalOptions.postProcessScript),
                                     Misc_getCurrentDateTime(),
