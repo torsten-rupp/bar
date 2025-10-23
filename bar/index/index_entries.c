@@ -95,20 +95,23 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
 
   error = ERROR_NONE;
 
-  // purge FTS entry
+  // delete FTS entry
   if (error == ERROR_NONE)
   {
     error = Database_delete(&indexHandle->databaseHandle,
-                             NULL,  // changedRowCount
-                             "FTS_entries"
-                             DATABASE_FLAG_NONE,
-                             "entryId=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY(entryId)
-                             ),
-                             DATABASE_UNLIMITED
-                            );
+                            NULL,  // changedRowCount
+                            "FTS_entries",
+                            DATABASE_FLAG_NONE,
+                            "    FTS_entries=? \
+                             AND entryId=? \
+                            ",
+                            DATABASE_FILTERS
+                            (
+                              DATABASE_FILTER_KEY(entryId),
+                              DATABASE_FILTER_KEY(entryId)
+                            ),
+                            DATABASE_UNLIMITED
+                           );
   }
 
   // update newest entries
@@ -178,7 +181,7 @@ LOCAL Errors purgeEntry(IndexHandle *indexHandle,
   {
     error = Database_delete(&indexHandle->databaseHandle,
                             NULL,  // changedRowCount
-                            "entries"
+                            "entries",
                             DATABASE_FLAG_NONE,
                             "id=?",
                             DATABASE_FILTERS
@@ -622,7 +625,7 @@ Errors IndexEntry_addFile(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      // atomic add/get entry (Note: file entry may already exists wheren there are multiple fragments)
+      // atomic add/get entry (Note: entry may already exists when there are multiple fragments)
       IndexId entryId;
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
@@ -678,6 +681,23 @@ Errors IndexEntry_addFile(IndexHandle *indexHandle,
             switch (Database_getType(&indexHandle->databaseHandle))
             {
               case DATABASE_TYPE_SQLITE3:
+                // delete FTS entry (if it exists)
+                (void)Database_delete(&indexHandle->databaseHandle,
+                                      NULL,  // changedRowCount
+                                      "FTS_entries",
+                                      DATABASE_FLAG_NONE,
+                                      "    FTS_entries=? \
+                                       AND entryId=? \
+                                      ",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId)),
+                                        DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                      ),
+                                      DATABASE_UNLIMITED
+                                     );
+
+                // insert FTS entry
                 error = Database_insert(&indexHandle->databaseHandle,
                                         NULL,  // insertRowId
                                         "FTS_entries",
@@ -695,9 +715,21 @@ Errors IndexEntry_addFile(IndexHandle *indexHandle,
                 break;
               case DATABASE_TYPE_POSTGRESQL:
                 {
-                  String tokens;
+                  // delete FTS entry (if it exists)
+                  (void)Database_delete(&indexHandle->databaseHandle,
+                                        NULL,  // changedRowCount
+                                        "FTS_entries",
+                                        DATABASE_FLAG_NONE,
+                                        "entryId=?",
+                                        DATABASE_FILTERS
+                                        (
+                                          DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                        ),
+                                        DATABASE_UNLIMITED
+                                       );
 
-                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+                  // insert FTS entry
+                  String tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
                   error = Database_insert(&indexHandle->databaseHandle,
                                           NULL,  // insertRowId
                                           "FTS_entries",
@@ -832,7 +864,7 @@ Errors IndexEntry_addImage(IndexHandle     *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      // atomic add/get entry (Note: image entry may already exists wheren there are multiple fragments)
+      // atomic add/get entry (Note: entry may already exists when there are multiple fragments)
       IndexId entryId;
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
@@ -886,6 +918,23 @@ Errors IndexEntry_addImage(IndexHandle     *indexHandle,
             switch (Database_getType(&indexHandle->databaseHandle))
             {
               case DATABASE_TYPE_SQLITE3:
+                // delete FTS entry (if it exists)
+                (void)Database_delete(&indexHandle->databaseHandle,
+                                      NULL,  // changedRowCount
+                                      "FTS_entries",
+                                      DATABASE_FLAG_NONE,
+                                      "    FTS_entries=? \
+                                       AND entryId=? \
+                                      ",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId)),
+                                        DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                      ),
+                                      DATABASE_UNLIMITED
+                                     );
+
+                // insert FTS entry
                 error = Database_insert(&indexHandle->databaseHandle,
                                         NULL,  // insertRowId
                                         "FTS_entries",
@@ -903,9 +952,21 @@ Errors IndexEntry_addImage(IndexHandle     *indexHandle,
                 break;
               case DATABASE_TYPE_POSTGRESQL:
                 {
-                  String tokens;
+                  // delete FTS entry (if it exists)
+                  (void)Database_delete(&indexHandle->databaseHandle,
+                                        NULL,  // changedRowCount
+                                        "FTS_entries",
+                                        DATABASE_FLAG_NONE,
+                                        "entryId=?",
+                                        DATABASE_FILTERS
+                                        (
+                                          DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                        ),
+                                        DATABASE_UNLIMITED
+                                       );
 
-                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+                  // insert FTS entry
+                  String tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
                   error = Database_insert(&indexHandle->databaseHandle,
                                           NULL,  // insertRowId
                                           "FTS_entries",
@@ -1070,6 +1131,23 @@ Errors IndexEntry_addDirectory(IndexHandle *indexHandle,
       switch (Database_getType(&indexHandle->databaseHandle))
       {
         case DATABASE_TYPE_SQLITE3:
+          // delete FTS entry (if it exists)
+          (void)Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "FTS_entries",
+                                DATABASE_FLAG_NONE,
+                                "    FTS_entries=? \
+                                 AND entryId=? \
+                                ",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId)),
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                ),
+                                DATABASE_UNLIMITED
+                               );
+
+          // insert FTS entry
           error = Database_insert(&indexHandle->databaseHandle,
                                   NULL,  // insertRowId
                                   "FTS_entries",
@@ -1087,9 +1165,21 @@ Errors IndexEntry_addDirectory(IndexHandle *indexHandle,
           break;
         case DATABASE_TYPE_POSTGRESQL:
           {
-            String tokens;
+            // delete FTS entry (if it exists)
+            (void)Database_delete(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "FTS_entries",
+                                  DATABASE_FLAG_NONE,
+                                  "entryId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                  ),
+                                  DATABASE_UNLIMITED
+                                 );
 
-            tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+            // insert FTS entry
+            String tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
             error = Database_insert(&indexHandle->databaseHandle,
                                     NULL,  // insertRowId
                                     "FTS_entries",
@@ -1233,6 +1323,23 @@ Errors IndexEntry_addLink(IndexHandle *indexHandle,
       switch (Database_getType(&indexHandle->databaseHandle))
       {
         case DATABASE_TYPE_SQLITE3:
+          // delete FTS entry (if it exists)
+          (void)Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "FTS_entries",
+                                DATABASE_FLAG_NONE,
+                                "    FTS_entries=? \
+                                 AND entryId=? \
+                                ",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId)),
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                ),
+                                DATABASE_UNLIMITED
+                               );
+
+          // insert FTS entry
           error = Database_insert(&indexHandle->databaseHandle,
                                   NULL,  // insertRowId
                                   "FTS_entries",
@@ -1250,9 +1357,21 @@ Errors IndexEntry_addLink(IndexHandle *indexHandle,
           break;
         case DATABASE_TYPE_POSTGRESQL:
           {
-            String tokens;
+            // delete FTS entry (if it exists)
+            (void)Database_delete(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "FTS_entries",
+                                  DATABASE_FLAG_NONE,
+                                  "entryId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                  ),
+                                  DATABASE_UNLIMITED
+                                 );
 
-            tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),linkName);
+            // insert FTS entry
+            String tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),linkName);
             error = Database_insert(&indexHandle->databaseHandle,
                                     NULL,  // insertRowId
                                     "FTS_entries",
@@ -1354,7 +1473,7 @@ Errors IndexEntry_addHardlink(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      // atomic add/get entry (Note: hardlink entry may already exists wheren there are multiple fragments)
+      // atomic add/get entry (Note: entry may already exists when there are multiple fragments)
       IndexId entryId;
       DATABASE_LOCKED_DO(&indexHandle->databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
@@ -1410,6 +1529,23 @@ Errors IndexEntry_addHardlink(IndexHandle *indexHandle,
             switch (Database_getType(&indexHandle->databaseHandle))
             {
               case DATABASE_TYPE_SQLITE3:
+                // delete FTS entry (if it exists)
+                (void)Database_delete(&indexHandle->databaseHandle,
+                                      NULL,  // changedRowCount
+                                      "FTS_entries",
+                                      DATABASE_FLAG_NONE,
+                                      "    FTS_entries=? \
+                                       AND entryId=? \
+                                      ",
+                                      DATABASE_FILTERS
+                                      (
+                                        DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId)),
+                                        DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                      ),
+                                      DATABASE_UNLIMITED
+                                     );
+
+                // insert FTS entry
                 error = Database_insert(&indexHandle->databaseHandle,
                                         NULL,  // insertRowId
                                         "FTS_entries",
@@ -1427,9 +1563,21 @@ Errors IndexEntry_addHardlink(IndexHandle *indexHandle,
                 break;
               case DATABASE_TYPE_POSTGRESQL:
                 {
-                  String tokens;
+                  // delete FTS entry (if it exists)
+                  (void)Database_delete(&indexHandle->databaseHandle,
+                                        NULL,  // changedRowCount
+                                        "FTS_entries",
+                                        DATABASE_FLAG_NONE,
+                                        "entryId=?",
+                                        DATABASE_FILTERS
+                                        (
+                                          DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                        ),
+                                        DATABASE_UNLIMITED
+                                       );
 
-                  tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+                  // insert FTS entry
+                  String tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
                   error = Database_insert(&indexHandle->databaseHandle,
                                           NULL,  // insertRowId
                                           "FTS_entries",
@@ -1601,6 +1749,23 @@ Errors IndexEntry_addSpecial(IndexHandle      *indexHandle,
       switch (Database_getType(&indexHandle->databaseHandle))
       {
         case DATABASE_TYPE_SQLITE3:
+          // delete FTS entry (if it exists)
+          (void)Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "FTS_entries",
+                                DATABASE_FLAG_NONE,
+                                "    FTS_entries=? \
+                                 AND entryId=? \
+                                ",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId)),
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                ),
+                                DATABASE_UNLIMITED
+                               );
+
+          // insert FTS entry
           error = Database_insert(&indexHandle->databaseHandle,
                                   NULL,  // insertRowId
                                   "FTS_entries",
@@ -1618,9 +1783,21 @@ Errors IndexEntry_addSpecial(IndexHandle      *indexHandle,
           break;
         case DATABASE_TYPE_POSTGRESQL:
           {
-            String tokens;
+            // delete FTS entry (if it exists)
+            (void)Database_delete(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "FTS_entries",
+                                  DATABASE_FLAG_NONE,
+                                  "entryId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entryId))
+                                  ),
+                                  DATABASE_UNLIMITED
+                                 );
 
-            tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
+            // insert FTS entry
+            String tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),name);
             error = Database_insert(&indexHandle->databaseHandle,
                                     NULL,  // insertRowId
                                     "FTS_entries",
@@ -1721,7 +1898,6 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
   {
     return indexHandle->upgradeError;
   }
-
 
   // get FTS match string
   String ftsMatchString = String_new();
@@ -1906,7 +2082,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               "entriesNewest.id",
+                               "entriesNewest.entryId",
                                NULL,  // orderby
                                offset,
                                limit
@@ -2113,7 +2289,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               "entriesNewest.id",
+                               "entriesNewest.entryId",
                                NULL,  // orderby
                                offset,
                                limit

@@ -1903,6 +1903,19 @@ Errors IndexStorage_new(IndexHandle *indexHandle,
       switch (Database_getType(&indexHandle->databaseHandle))
       {
         case DATABASE_TYPE_SQLITE3:
+          // delete FTS entry (if it exists)
+          (void)Database_delete(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "FTS_entries",
+                                DATABASE_FLAG_NONE,
+                                "storageId=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(databaseId)
+                                ),
+                                DATABASE_UNLIMITED
+                               );
+          // insert entry
           error = Database_insert(&indexHandle->databaseHandle,
                                    NULL,  // insertRowId
                                    "FTS_storages",
@@ -1921,9 +1934,20 @@ Errors IndexStorage_new(IndexHandle *indexHandle,
           break;
         case DATABASE_TYPE_POSTGRESQL:
           {
-            String tokens;
-
-            tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),storageName);
+            // delete FTS entry (if it exists)
+            (void)Database_delete(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "FTS_entries",
+                                  DATABASE_FLAG_NONE,
+                                  "storageId=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(databaseId)
+                                  ),
+                                  DATABASE_UNLIMITED
+                                 );
+            // insert entry
+            String tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),storageName);
             error = Database_insert(&indexHandle->databaseHandle,
                                      NULL,  // insertRowId
                                      "FTS_storages",
@@ -4137,9 +4161,7 @@ Errors IndexStorage_update(IndexHandle  *indexHandle,
             break;
           case DATABASE_TYPE_POSTGRESQL:
             {
-              String tokens;
-
-              tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),storageName);
+              String tokens = IndexCommon_getPostgreSQLFTSTokens(String_new(),storageName);
               error = Database_update(&indexHandle->databaseHandle,
                                       NULL,  // changedRowCount
                                       "FTS_storages",

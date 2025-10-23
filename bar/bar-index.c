@@ -3092,7 +3092,6 @@ LOCAL Errors createFTSIndices(DatabaseHandle *databaseHandle)
       case DATABASE_TYPE_SQLITE3:
         if (error == ERROR_NONE)
         {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
             error = Database_insertSelect(databaseHandle,
                                         NULL,  // changedRowCount
                                         "FTS_storages",
@@ -3125,7 +3124,6 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
         }
         if (error == ERROR_NONE)
         {
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
           error = Database_insertSelect(databaseHandle,
                                         NULL,  // changedRowCount
                                         "FTS_entries",
