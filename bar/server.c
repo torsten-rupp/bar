@@ -19278,12 +19278,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
 
   // get entry pattern, index type, new entries only
   String name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<text>");
-    String_delete(name);
-    return;
-  }
+  StringMap_getString(argumentMap,"name",name,NULL);
   IndexTypes entryType;
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType",NULL),"*"))
   {
