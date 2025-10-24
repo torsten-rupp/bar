@@ -23336,7 +23336,7 @@ Errors Server_socket(void)
     error = Database_parseSpecifier(&databaseSpecifier,String_cString(globalOptions.indexDatabaseURI),INDEX_DEFAULT_DATABASE_NAME);
     if (error != ERROR_NONE)
     {
-      printError(_("no valid database URI '%s'"),globalOptions.indexDatabaseURI);
+      printError(_("no valid database URI '%s'"),String_cString(globalOptions.indexDatabaseURI));
       systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       AutoFree_cleanup(&autoFreeList);
       return error;
