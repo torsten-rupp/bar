@@ -1485,7 +1485,7 @@ LOCAL Errors StorageWebDAV_preProcess(const StorageInfo *storageInfo,
       {
         TEXT_MACRO_X_STRING("directory",File_getDirectoryName(directory,archiveName),NULL);
         TEXT_MACRO_X_STRING("file",     archiveName,                                 NULL);
-        TEXT_MACRO_X_INT   ("number",   storageInfo->volumeNumber,                   NULL);
+        TEXT_MACRO_X_UINT  ("number",   storageInfo->volumeNumber,                   NULL);
       }
 
       // write pre-processing
@@ -1542,7 +1542,7 @@ LOCAL Errors StorageWebDAV_postProcess(const StorageInfo *storageInfo,
       {
         TEXT_MACRO_X_STRING("directory",File_getDirectoryName(directory,archiveName),NULL);
         TEXT_MACRO_X_STRING("file",     archiveName,                                 NULL);
-        TEXT_MACRO_X_INT   ("number",   storageInfo->volumeNumber,                   NULL);
+        TEXT_MACRO_X_UINT  ("number",   storageInfo->volumeNumber,                   NULL);
       }
 
       // write post-process

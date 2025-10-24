@@ -574,7 +574,7 @@ LOCAL Errors StorageSCP_preProcess(const StorageInfo *storageInfo,
       {
         TEXT_MACRO_X_STRING("directory",File_getDirectoryName(directory,archiveName),NULL);
         TEXT_MACRO_X_STRING("file",     archiveName,                                 NULL);
-        TEXT_MACRO_X_INT   ("number",   storageInfo->volumeNumber,                   NULL);
+        TEXT_MACRO_X_UINT  ("number",   storageInfo->volumeNumber,                   NULL);
       }
 
       if (!String_isEmpty(globalOptions.scp.writePreProcessCommand))
@@ -628,7 +628,7 @@ LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
       {
         TEXT_MACRO_X_STRING("directory",File_getDirectoryName(directory,archiveName),NULL);
         TEXT_MACRO_X_STRING("file",     archiveName,                                 NULL);
-        TEXT_MACRO_X_INT   ("number",   storageInfo->volumeNumber,                   NULL);
+        TEXT_MACRO_X_UINT  ("number",   storageInfo->volumeNumber,                   NULL);
       }
 
       if (!String_isEmpty(globalOptions.scp.writePostProcessCommand))
