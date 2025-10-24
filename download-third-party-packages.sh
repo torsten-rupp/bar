@@ -52,7 +52,8 @@ PCRE_VERSION=8.45
 SQLITE_YEAR=2025
 SQLITE_VERSION=3490100
 MARIADB_CLIENT_VERSION=3.1.13
-POSTGRESQL_VERSION=9.6.24
+#POSTGRESQL_VERSION=9.6.24
+POSTGRESQL_VERSION=10.23
 # Note ICU: * 61.1 seems to be the latest version without C++11
 #           * 58.2 seems to be the latest version which can be
 #              compiled on older 32bit systems, e. g. CentOS 6
