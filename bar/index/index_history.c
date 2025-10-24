@@ -232,8 +232,6 @@ Errors IndexHistory_initList(IndexQueryHandle *indexQueryHandle,
                              uint64           limit
                             )
 {
-  String filterString;
-  String orderString;
   Errors error;
 
   assert(indexQueryHandle != NULL);
@@ -245,16 +243,14 @@ Errors IndexHistory_initList(IndexQueryHandle *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-  // init variables
-  filterString = Database_newFilter();
-  orderString  = String_new();
-
   // get filters
+  String filterString = Database_newFilter();
   Database_filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%"PRIi64"",INDEX_DATABASE_ID(uuidId));
   Database_filterAppend(filterString,!String_isEmpty(jobUUID),"AND","history.jobUUID=%'S",jobUUID);
 
   // get ordering
-  IndexCommon_appendOrdering(orderString,TRUE,"history.created",ordering);
+  String orderBy = String_new();
+  IndexCommon_appendOrdering(orderBy,TRUE,"history.created",ordering);
 
   // prepare list
   IndexCommon_initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -291,7 +287,7 @@ Errors IndexHistory_initList(IndexQueryHandle *indexQueryHandle,
                            (
                            ),
                            NULL,  // groupBy
-                           String_cString(orderString),
+                           String_cString(orderBy),
                            offset,
                            limit
                           );
@@ -299,13 +295,13 @@ Errors IndexHistory_initList(IndexQueryHandle *indexQueryHandle,
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(orderString);
+    String_delete(orderBy);
     Database_deleteFilter(filterString);
     return error;
   }
 
   // free resources
-  String_delete(orderString);
+  String_delete(orderBy);
   Database_deleteFilter(filterString);
 
   DEBUG_ADD_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);

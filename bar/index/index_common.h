@@ -511,8 +511,7 @@ String IndexCommon_getFTSMatchString(String         string,
 * Notes  : -
 \***********************************************************************/
 
-// TODO: replace by separate parameter in select
-void IndexCommon_appendOrdering(String          orderString,
+void IndexCommon_appendOrdering(String          orderBy,
                                 bool            condition,
                                 const char      *columnName,
                                 DatabaseOrdering ordering

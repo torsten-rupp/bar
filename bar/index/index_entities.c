@@ -1189,8 +1189,8 @@ Errors IndexEntity_initList(IndexQueryHandle     *indexQueryHandle,
   String_delete(string);
 
   // get sort mode, ordering
-  String orderString = String_new();
-  IndexCommon_appendOrdering(orderString,
+  String orderBy = String_new();
+  IndexCommon_appendOrdering(orderBy,
                              sortMode != INDEX_ENTITY_SORT_MODE_NONE,
                              INDEX_ENTITY_SORT_MODE_COLUMNS[sortMode],
                              ordering
@@ -1247,7 +1247,7 @@ Errors IndexEntity_initList(IndexQueryHandle     *indexQueryHandle,
                              (
                              ),
                              "uuids.id,entities.id",
-                             String_cString(orderString),
+                             String_cString(orderBy),
                              offset,
                              limit
                             );
@@ -1294,7 +1294,7 @@ Errors IndexEntity_initList(IndexQueryHandle     *indexQueryHandle,
                              (
                              ),
                              "uuids.id,entities.id",
-                             String_cString(orderString),
+                             String_cString(orderBy),
                              offset,
                              limit
                             );
@@ -1303,7 +1303,7 @@ Errors IndexEntity_initList(IndexQueryHandle     *indexQueryHandle,
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(orderString);
+    String_delete(orderBy);
     Database_deleteFilter(filterString);
     String_delete(ftsMatchString);
     return error;
@@ -1314,7 +1314,7 @@ Errors IndexEntity_initList(IndexQueryHandle     *indexQueryHandle,
   #endif
 
   // free resources
-  String_delete(orderString);
+  String_delete(orderBy);
   Database_deleteFilter(filterString);
   String_delete(ftsMatchString);
 

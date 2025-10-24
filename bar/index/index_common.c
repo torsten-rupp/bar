@@ -401,28 +401,28 @@ String IndexCommon_getFTSMatchString(String         string,
   return string;
 }
 
-void IndexCommon_appendOrdering(String          orderString,
+void IndexCommon_appendOrdering(String          orderBy,
                                 bool            condition,
                                 const char      *columnName,
                                 DatabaseOrdering ordering
                                )
 {
-  assert(orderString != NULL);
+  assert(orderBy != NULL);
 
   if (condition && (ordering != DATABASE_ORDERING_NONE))
   {
     assert(columnName != NULL);
 
-    if (!String_isEmpty(orderString))
+    if (!String_isEmpty(orderBy))
     {
-      String_appendChar(orderString,',');
+      String_appendChar(orderBy,',');
     }
-    String_appendCString(orderString,columnName);
+    String_appendCString(orderBy,columnName);
     switch (ordering)
     {
       case DATABASE_ORDERING_NONE:       /* nothing tod do */                       break;
-      case DATABASE_ORDERING_ASCENDING:  String_appendCString(orderString," ASC");  break;
-      case DATABASE_ORDERING_DESCENDING: String_appendCString(orderString," DESC"); break;
+      case DATABASE_ORDERING_ASCENDING:  String_appendCString(orderBy," ASC");  break;
+      case DATABASE_ORDERING_DESCENDING: String_appendCString(orderBy," DESC"); break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
