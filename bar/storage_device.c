@@ -94,7 +94,7 @@ LOCAL Errors loadDeviceVolume(const StorageInfo *storageInfo)
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_CSTRING("device",deviceName,                      NULL);
-    TEXT_MACRO_X_STRING ("number",storageInfo->volumeRequestNumber,NULL);
+    TEXT_MACRO_X_UINT   ("number",storageInfo->volumeRequestNumber,NULL);
   }
   String     commandLine = String_new();
   StringList stderrList;
@@ -168,7 +168,7 @@ LOCAL Errors unloadDeviceVolume(const StorageInfo *storageInfo)
   TEXT_MACROS_INIT(textMacros)
   {
     TEXT_MACRO_X_CSTRING("device",deviceName,                      NULL);
-    TEXT_MACRO_X_STRING ("number",storageInfo->volumeRequestNumber,NULL);
+    TEXT_MACRO_X_UINT   ("number",storageInfo->volumeRequestNumber,NULL);
   }
   String     commandLine = String_new();
   StringList stderrList;
@@ -270,7 +270,7 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_STRING("device",storageInfo->storageSpecifier.deviceName,NULL);
-      TEXT_MACRO_X_INT   ("number",storageInfo->volumeRequestNumber,        NULL);
+      TEXT_MACRO_X_UINT  ("number",storageInfo->volumeRequestNumber,        NULL);
     }
 
     // request new volume via external command
@@ -685,9 +685,9 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
   {
     TEXT_MACRO_X_STRING("device",storageInfo->storageSpecifier.deviceName,NULL);
     TEXT_MACRO_X_STRING("file",  archiveName,                             NULL);
-    TEXT_MACRO_X_INT   ("number",storageInfo->volumeRequestNumber,        NULL);
-    TEXT_MACRO_X_INT   ("j",     j,                                       NULL);
-    TEXT_MACRO_X_INT   ("j1",    (j > 1) ? j-1 : 1,                       NULL);
+    TEXT_MACRO_X_UINT  ("number",storageInfo->volumeRequestNumber,        NULL);
+    TEXT_MACRO_X_UINT  ("j",     j,                                       NULL);
+    TEXT_MACRO_X_UINT  ("j1",    (j > 1) ? j-1 : 1,                       NULL);
   }
 
   // write pre-processing
@@ -772,9 +772,9 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       TEXT_MACRO_X_STRING ("directory",storageInfo->device.write.directory,     NULL);
       TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
       TEXT_MACRO_X_STRING ("file",     archiveName,                             NULL);
-      TEXT_MACRO_X_STRING ("number",   storageInfo->volumeNumber,               NULL);
-      TEXT_MACRO_X_STRING ("j",        j,                                       NULL);
-      TEXT_MACRO_X_STRING ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+      TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+      TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+      TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
     }
 
     // create image pre-processing

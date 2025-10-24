@@ -1018,7 +1018,7 @@ LOCAL Errors loadOpticalVolume(const StorageInfo *storageInfo)
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_CSTRING("device",deviceName,                      NULL);
-      TEXT_MACRO_X_STRING ("number",storageInfo->volumeRequestNumber,NULL);
+      TEXT_MACRO_X_UINT   ("number",storageInfo->volumeRequestNumber,NULL);
     }
     StringList stderrList;
     StringList_init(&stderrList);
@@ -1126,7 +1126,7 @@ LOCAL Errors unloadOpticalVolume(const StorageInfo *storageInfo)
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_CSTRING("device",deviceName,                      NULL);
-      TEXT_MACRO_X_STRING ("number",storageInfo->volumeRequestNumber,NULL);
+      TEXT_MACRO_X_UINT   ("number",storageInfo->volumeRequestNumber,NULL);
     }
     StringList stderrList;
     StringList_init(&stderrList);
@@ -1242,7 +1242,7 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_STRING("device",deviceName,                      NULL);
-      TEXT_MACRO_X_INT   ("number",storageInfo->volumeRequestNumber,NULL);
+      TEXT_MACRO_X_UINT  ("number",storageInfo->volumeRequestNumber,NULL);
     }
 
     // request new volume via external command
@@ -1467,11 +1467,11 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
         TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
         TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
         TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
-        TEXT_MACRO_X_STRING ("sectors",  0,                                       NULL);
+        TEXT_MACRO_X_UINT   ("sectors",  0,                                       NULL);
         TEXT_MACRO_X_STRING ("file",     archiveName,                             NULL);
-        TEXT_MACRO_X_STRING ("number",   storageInfo->volumeNumber,               NULL);
-        TEXT_MACRO_X_STRING ("j",        j,                                       NULL);
-        TEXT_MACRO_X_STRING ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+        TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+        TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+        TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
       }
 
       // init variables
@@ -1558,11 +1558,11 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
     TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
     TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
     TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
-    TEXT_MACRO_X_STRING ("sectors",  0,                                       NULL);
+    TEXT_MACRO_X_UINT   ("sectors",  0,                                       NULL);
     TEXT_MACRO_X_STRING ("file",     archiveName,                             NULL);
-    TEXT_MACRO_X_STRING ("number",   storageInfo->volumeNumber,               NULL);
-    TEXT_MACRO_X_STRING ("j",        j,                                       NULL);
-    TEXT_MACRO_X_STRING ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+    TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+    TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+    TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
   }
 
   ExecuteIOInfo executeIOInfo;
@@ -2210,11 +2210,11 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
       TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
       TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
       TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
-      TEXT_MACRO_X_STRING ("sectors",  (ulong)(fileInfo.size/ISO_SECTOR_SIZE),  NULL);
+      TEXT_MACRO_X_UINT64 ("sectors",  (ulong)(fileInfo.size/ISO_SECTOR_SIZE),  NULL);
       TEXT_MACRO_X_STRING ("file",     archiveName,                             NULL);
-      TEXT_MACRO_X_STRING ("number",   storageInfo->volumeNumber,               NULL);
-      TEXT_MACRO_X_STRING ("j",        j,                                       NULL);
-      TEXT_MACRO_X_STRING ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+      TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+      TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+      TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
     }
 
     // init variables
@@ -2400,9 +2400,9 @@ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   //    TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
       TEXT_MACRO_X_STRING ("sectors",  0,                                       NULL);
       TEXT_MACRO_X_STRING ("file",     archiveName,                             NULL);
-      TEXT_MACRO_X_STRING ("number",   storageInfo->volumeNumber,               NULL);
-      TEXT_MACRO_X_STRING ("j",        j,                                       NULL);
-      TEXT_MACRO_X_STRING ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+      TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+      TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+      TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
     }
 
     // init variables
@@ -2738,9 +2738,9 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
     {
       TEXT_MACRO_X_CSTRING("device",deviceName,                      NULL);
       TEXT_MACRO_X_STRING ("file",  archiveName,                     NULL);
-      TEXT_MACRO_X_STRING ("number",storageInfo->volumeRequestNumber,NULL);
-      TEXT_MACRO_X_STRING ("j",     j,                               NULL);
-      TEXT_MACRO_X_STRING ("j1",    (j > 1) ? j-1 : 1,               NULL);
+      TEXT_MACRO_X_UINT   ("number",storageInfo->volumeRequestNumber,NULL);
+      TEXT_MACRO_X_UINT   ("j",     j,                               NULL);
+      TEXT_MACRO_X_UINT   ("j1",    (j > 1) ? j-1 : 1,               NULL);
     }
 
     // write pre-processing
@@ -2997,9 +2997,9 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     {
       TEXT_MACRO_X_CSTRING("device",deviceName,                      NULL);
       TEXT_MACRO_X_STRING ("file",  archiveName,                     NULL);
-      TEXT_MACRO_X_STRING ("number",storageInfo->volumeRequestNumber,NULL);
-      TEXT_MACRO_X_STRING ("j",     j,                               NULL);
-      TEXT_MACRO_X_STRING ("j1",    (j > 1) ? j-1 : 1,               NULL);
+      TEXT_MACRO_X_UINT   ("number",storageInfo->volumeRequestNumber,NULL);
+      TEXT_MACRO_X_UINT   ("j",     j,                               NULL);
+      TEXT_MACRO_X_UINT   ("j1",    (j > 1) ? j-1 : 1,               NULL);
     }
 
     // write post-processing
