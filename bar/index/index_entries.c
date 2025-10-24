@@ -1949,10 +1949,10 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
   }
 
   // get sort mode, ordering
-  String orderString = String_new();
+  String orderBy = String_new();
   if (newestOnly)
   {
-    IndexCommon_appendOrdering(orderString,
+    IndexCommon_appendOrdering(orderBy,
                                sortMode != INDEX_ENTRY_SORT_MODE_NONE,
                                INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[sortMode],
                                ordering
@@ -1960,7 +1960,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
   }
   else
   {
-    IndexCommon_appendOrdering(orderString,
+    IndexCommon_appendOrdering(orderBy,
                                sortMode != INDEX_ENTRY_SORT_MODE_NONE,
                                INDEX_ENTRY_SORT_MODE_COLUMNS[sortMode],
                                ordering
@@ -2061,10 +2061,8 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                             "     entities.deletedFlag!=TRUE \
                                              AND entriesNewest.id IS NOT NULL \
                                              AND %s \
-                                             %s \
                                             ",
-                                            String_cString(filterString),
-                                            String_cString(orderString)
+                                            String_cString(filterString)
                                            ),
                                DATABASE_FILTERS
                                (
@@ -2083,7 +2081,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
                                "entriesNewest.entryId",
-                               NULL,  // orderby
+                               String_cString(orderBy),
                                offset,
                                limit
                               );
@@ -2152,10 +2150,8 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                stringFormat(sqlString,sizeof(sqlString),
                                             "     entities.deletedFlag!=TRUE \
                                              AND %s \
-                                             %s \
                                             ",
-                                            String_cString(filterString),
-                                            String_cString(orderString)
+                                            String_cString(filterString)
                                            ),
                                DATABASE_FILTERS
                                (
@@ -2174,7 +2170,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
                                "entries.id",
-                               NULL,  // orderby
+                               String_cString(orderBy),
                                offset,
                                limit
                               );
@@ -2268,10 +2264,8 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                             "     entities.deletedFlag!=TRUE \
                                               AND entriesNewest.id IS NOT NULL \
                                               AND %s \
-                                              %s \
                                             ",
-                                            String_cString(filterString),
-                                            String_cString(orderString)
+                                            String_cString(filterString)
                                            ),
                                DATABASE_FILTERS
                                (
@@ -2290,7 +2284,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
                                "entriesNewest.entryId",
-                               NULL,  // orderby
+                               String_cString(orderBy),
                                offset,
                                limit
                               );
@@ -2367,10 +2361,8 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                stringFormat(sqlString,sizeof(sqlString),
                                             "     entities.deletedFlag!=TRUE \
                                                AND %s \
-                                               %s \
                                             ",
-                                            String_cString(filterString),
-                                            String_cString(orderString)
+                                            String_cString(filterString)
                                            ),
                                DATABASE_FILTERS
                                (
@@ -2389,7 +2381,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
                                "entries.id",
-                               NULL,  // orderby
+                               String_cString(orderBy),
                                offset,
                                limit
                               );
@@ -2399,7 +2391,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(orderString);
+    String_delete(orderBy);
     Database_deleteFilter(filterString);
     String_delete(entryIdsString);
     String_delete(entityIdsString);
@@ -2413,7 +2405,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
   #endif
 
   // free resources
-  String_delete(orderString);
+  String_delete(orderBy);
   Database_deleteFilter(filterString);
   String_delete(entryIdsString);
   String_delete(entityIdsString);

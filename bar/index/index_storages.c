@@ -4317,12 +4317,8 @@ Errors IndexStorage_initList(IndexQueryHandle      *indexQueryHandle,
     return indexHandle->upgradeError;
   }
 
-  // init variables
-  String ftsMatchString = String_new();
-  String filterString   = Database_newFilter();
-  String orderString    = String_new();
-
   // get FTS match string
+  String ftsMatchString = String_new();
   IndexCommon_getFTSMatchString(ftsMatchString,&indexHandle->databaseHandle,"FTS_storages","name",name);
 
   // get id sets
@@ -4352,6 +4348,7 @@ Errors IndexStorage_initList(IndexQueryHandle      *indexQueryHandle,
   }
 
   // get filters
+  String filterString    = Database_newFilter();
   String filterIdsString = String_new();
   String string          = String_new();
   Database_filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_UUID) && !String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
@@ -4371,7 +4368,8 @@ Errors IndexStorage_initList(IndexQueryHandle      *indexQueryHandle,
   String_delete(filterIdsString);
 
   // get sort mode, ordering
-  IndexCommon_appendOrdering(orderString,
+  String orderBy = String_new();
+  IndexCommon_appendOrdering(orderBy,
                              sortMode != INDEX_STORAGE_SORT_MODE_NONE,
                              INDEX_STORAGE_SORT_MODE_COLUMNS[sortMode],
                              ordering
@@ -4440,7 +4438,7 @@ Errors IndexStorage_initList(IndexQueryHandle      *indexQueryHandle,
                            (
                            ),
                            "uuids.id,entities.id,storages.id",
-                           String_cString(orderString),
+                           String_cString(orderBy),
                            offset,
                            limit
                           );
@@ -4448,7 +4446,7 @@ Errors IndexStorage_initList(IndexQueryHandle      *indexQueryHandle,
   if (error != ERROR_NONE)
   {
     IndexCommon_doneIndexQueryHandle(indexQueryHandle);
-    String_delete(orderString);
+    String_delete(orderBy);
     Database_deleteFilter(filterString);
     String_delete(storageIdsString);
     String_delete(entityIdsString);
@@ -4462,7 +4460,7 @@ Errors IndexStorage_initList(IndexQueryHandle      *indexQueryHandle,
   #endif
 
   // free resources
-  String_delete(orderString);
+  String_delete(orderBy);
   Database_deleteFilter(filterString);
   String_delete(storageIdsString);
   String_delete(entityIdsString);
