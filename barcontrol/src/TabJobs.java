@@ -603,6 +603,7 @@ public class TabJobs
     enum SortModes
     {
       NAME,
+      FILE_SYSTEM_TYPE,
       SIZE
     };
 
@@ -615,7 +616,8 @@ public class TabJobs
     DeviceDataComparator(Table table, TableColumn sortColumn)
     {
       if      (table.getColumn(0) == sortColumn) sortMode = SortModes.NAME;
-      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.SIZE;
+      else if (table.getColumn(1) == sortColumn) sortMode = SortModes.FILE_SYSTEM_TYPE;
+      else if (table.getColumn(2) == sortColumn) sortMode = SortModes.SIZE;
       else                                       sortMode = SortModes.NAME;
     }
 
@@ -640,6 +642,8 @@ public class TabJobs
       {
         case NAME:
           return deviceData1.name.compareTo(deviceData2.name);
+        case FILE_SYSTEM_TYPE:
+          return deviceData1.fileSystemType.compareTo(deviceData2.fileSystemType);
         case SIZE:
           if      (deviceData1.size < deviceData2.size) return -1;
           else if (deviceData1.size > deviceData2.size) return  1;
