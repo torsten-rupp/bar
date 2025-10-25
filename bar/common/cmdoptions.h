@@ -1022,7 +1022,7 @@ extern "C" {
                      );
 #else /* not NDEBUG */
   bool __CmdOption_init(const char        *__fileName__,
-                        ulong             __lineNb__,
+                        size_t            __lineNb__,
                         CommandLineOption commandLineOptions[]
                        );
 #endif /* NDEBUG */
@@ -1043,7 +1043,7 @@ extern "C" {
                      );
 #else /* not NDEBUG */
   void __CmdOption_done(const char        *__fileName__,
-                        ulong             __lineNb__,
+                        size_t            __lineNb__,
                         CommandLineOption commandLineOptions[]
                        );
 #endif /* NDEBUG */

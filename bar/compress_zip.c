@@ -252,17 +252,21 @@ LOCAL Errors CompressZIP_init(CompressInfo       *compressInfo,
   switch (compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-      int zlibResult = deflateInit(&compressInfo->zlib.stream,compressionLevel);
-      if (zlibResult != Z_OK)
       {
-        return ERRORX_(INIT_COMPRESS,zlibResult,"%s",zError(zlibResult));
+        int zlibResult = deflateInit(&compressInfo->zlib.stream,compressionLevel);
+        if (zlibResult != Z_OK)
+        {
+          return ERRORX_(INIT_COMPRESS,zlibResult,"%s",zError(zlibResult));
+        }
       }
       break;
     case COMPRESS_MODE_INFLATE:
-      zlibResult = inflateInit(&compressInfo->zlib.stream);
-      if (zlibResult != Z_OK)
       {
-        return ERRORX_(INIT_DECOMPRESS,zlibResult,"%s",zError(zlibResult));
+        int zlibResult = inflateInit(&compressInfo->zlib.stream);
+        if (zlibResult != Z_OK)
+        {
+          return ERRORX_(INIT_DECOMPRESS,zlibResult,"%s",zError(zlibResult));
+        }
       }
       break;
     #ifndef NDEBUG

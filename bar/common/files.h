@@ -385,9 +385,9 @@ typedef struct
 
 typedef bool(*FileDumpInfoFunction)(const FileHandle *fileHandle,
                                     const char       *fileName,
-                                    ulong            lineNb,
-                                    ulong            n,
-                                    ulong            count,
+                                    size_t           lineNb,
+                                    size_t           n,
+                                    size_t           count,
                                     void             *userData
                                    );
 #endif /* not NDEBUG */
@@ -726,13 +726,13 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
                                );
 #else /* not NDEBUG */
   Errors __File_getTmpFile(const char  *__fileName__,
-                           ulong       __lineNb__,
+                           size_t      __lineNb__,
                            FileHandle  *fileHandle,
                            ConstString pattern,
                            ConstString directory
                           );
   Errors __File_getTmpFileCString(const char *__fileName__,
-                                  ulong      __lineNb__,
+                                  size_t     __lineNb__,
                                   FileHandle *fileHandle,
                                   const char *pattern,
                                   const char *directory
@@ -882,13 +882,13 @@ Errors File_openCString(FileHandle *fileHandle,
                        );
 #else /* not NDEBUG */
 Errors __File_open(const char  *__fileName__,
-                   ulong       __lineNb__,
+                   size_t      __lineNb__,
                    FileHandle   *fileHandle,
                    ConstString fileName,
                    FileModes   fileMode
                   );
 Errors __File_openCString(const char *__fileName__,
-                          ulong      __lineNb__,
+                          size_t     __lineNb__,
                           FileHandle *fileHandle,
                           const char *fileName,
                           FileModes  fileMode
@@ -913,7 +913,7 @@ Errors File_openDescriptor(FileHandle *fileHandle,
                           );
 #else /* not NDEBUG */
 Errors __File_openDescriptor(const char *__fileName__,
-                             ulong      __lineNb__,
+                             size_t     __lineNb__,
                              FileHandle *fileHandle,
                              int        fileDescriptor,
                              FileModes  fileMode
@@ -933,7 +933,7 @@ Errors __File_openDescriptor(const char *__fileName__,
 Errors File_close(FileHandle *fileHandle);
 #else /* not NDEBUG */
 Errors __File_close(const char *__fileName__,
-                    ulong      __lineNb__,
+                    size_t     __lineNb__,
                     FileHandle *fileHandle
                    );
 #endif /* NDEBUG */
@@ -1069,7 +1069,7 @@ Errors File_flush(FileHandle *fileHandle);
 
 bool File_getLine(FileHandle *fileHandle,
                   String     line,
-                  uint       *lineNb,
+                  size_t     *lineNb,
                   const char *commentChars
                  );
 
@@ -1086,7 +1086,7 @@ bool File_getLine(FileHandle *fileHandle,
 
 void File_ungetLine(FileHandle  *fileHandle,
                     ConstString line,
-                    uint        *lineNb
+                    size_t      *lineNb
                    );
 
 /***********************************************************************\
@@ -1639,7 +1639,7 @@ INLINE bool File_hasAttributeNoDump(const FileInfo *fileInfo)
 void File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
 #else /* not NDEBUG */
 void __File_initExtendedAttributes(const char                *__fileName__,
-                                   ulong                     __lineNb__,
+                                   size_t                    __lineNb__,
                                    FileExtendedAttributeList *fileExtendedAttributeList
                                   );
 #endif /* NDEBUG */
@@ -1657,7 +1657,7 @@ void __File_initExtendedAttributes(const char                *__fileName__,
 void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList);
 #else /* not NDEBUG */
 void __File_doneExtendedAttributes(const char                *__fileName__,
-                                   ulong                     __lineNb__,
+                                   size_t                    __lineNb__,
                                    FileExtendedAttributeList *fileExtendedAttributeList
                                   );
 #endif /* NDEBUG */

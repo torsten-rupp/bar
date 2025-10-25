@@ -250,7 +250,7 @@ bool Dictionary_valueCompareEntry(const void *value0, const void *value1, ulong 
                       );
 #else /* not NDEBUG */
   bool __Dictionary_init(const char                     *__fileName__,
-                         ulong                          __lineNb__,
+                         size_t                         __lineNb__,
                          Dictionary                     *dictionary,
                          DictionaryInitEntryFunction    dictionaryInitEntryFunction,
                          void                           *dictionaryInitEntryUserData,
@@ -285,7 +285,7 @@ static inline bool Dictionary_initValue(Dictionary *dictionary)
   void Dictionary_done(Dictionary *dictionary);
 #else /* not NDEBUG */
   void __Dictionary_done(const char *__fileName__,
-                         ulong      __lineNb__,
+                         size_t     __lineNb__,
                          Dictionary *dictionary
                         );
 #endif /* NDEBUG */

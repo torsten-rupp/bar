@@ -37,7 +37,7 @@
     LIST_NODE_HEADER(struct DebugArrayNode);
 
     const char  *fileName;
-    ulong       lineNb;
+    size_t      lineNb;
     const Array *array;
   } DebugArrayNode;
 
@@ -95,7 +95,7 @@ void Array_init(Array                *array,
                )
 #else /* not NDEBUG */
 void __Array_init(const char           *__fileName__,
-                  ulong                __lineNb__,
+                  size_t               __lineNb__,
                   Array                *array,
                   ulong                elementSize,
                   ulong                length,
@@ -206,7 +206,7 @@ Array *Array_new(ulong                elementSize,
                 )
 #else /* not NDEBUG */
 Array *__Array_new(const char           *__fileName__,
-                   ulong                __lineNb__,
+                   size_t               __lineNb__,
                    ulong                elementSize,
                    ulong                length,
                    ArrayFreeFunction    arrayFreeFunction,
@@ -527,74 +527,78 @@ long Array_find(const Array          *array,
   switch (arrayFindMode)
   {
     case ARRAY_FIND_FORWARD:
-      long i = 0;
-      if      (arrayCompareFunction != NULL)
       {
-        while (i < (long)array->length)
+        long i = 0;
+        if      (arrayCompareFunction != NULL)
         {
-          if (arrayCompareFunction(array->data+i*array->elementSize,data,arrayCompareUserData) == 0)
+          while (i < (long)array->length)
           {
-            return i;
+            if (arrayCompareFunction(array->data+i*array->elementSize,data,arrayCompareUserData) == 0)
+            {
+              return i;
+            }
+            i++;
           }
-          i++;
         }
-      }
-      else if (array->arrayCompareFunction != NULL)
-      {
-        while (i < (long)array->length)
+        else if (array->arrayCompareFunction != NULL)
         {
-          if (array->arrayCompareFunction(array->data+i*array->elementSize,data,array->arrayCompareUserData) == 0)
+          while (i < (long)array->length)
           {
-            return i;
+            if (array->arrayCompareFunction(array->data+i*array->elementSize,data,array->arrayCompareUserData) == 0)
+            {
+              return i;
+            }
+            i++;
           }
-          i++;
         }
-      }
-      else
-      {
-        while (i < (long)array->length)
+        else
         {
-          if (memcmp(array->data+i*array->elementSize,data,array->elementSize) == 0)
+          while (i < (long)array->length)
           {
-            return i;
+            if (memcmp(array->data+i*array->elementSize,data,array->elementSize) == 0)
+            {
+              return i;
+            }
+            i++;
           }
-          i++;
         }
       }
       break;
     case ARRAY_FIND_BACKWARD:
-      i = array->length-1;
-      if      (arrayCompareFunction != NULL)
       {
-        while (i >= 0)
+        long i = array->length-1;
+        if      (arrayCompareFunction != NULL)
         {
-          if (arrayCompareFunction(array->data+i*array->elementSize,data,arrayCompareUserData) == 0)
+          while (i >= 0)
           {
-            return i;
+            if (arrayCompareFunction(array->data+i*array->elementSize,data,arrayCompareUserData) == 0)
+            {
+              return i;
+            }
+            i--;
           }
-          i--;
         }
-      }
-      else if (array->arrayCompareFunction != NULL)
-      {
-        while (i >= 0)
+        else if (array->arrayCompareFunction != NULL)
         {
-          if (array->arrayCompareFunction(array->data+i*array->elementSize,data,array->arrayCompareUserData) == 0)
+          while (i >= 0)
           {
-            return i;
+            if (array->arrayCompareFunction(array->data+i*array->elementSize,data,array->arrayCompareUserData) == 0)
+            {
+              return i;
+            }
+            i--;
           }
-          i--;
         }
-      }
-      else
-      {
-        while (i >= 0)
+        else
         {
-          if (memcmp(array->data+i*array->elementSize,data,array->elementSize) == 0)
+          while (i >= 0)
           {
-            return i;
+            if (memcmp(array->data+i*array->elementSize,data,array->elementSize) == 0)
+            {
+              return i;
+            }
+            i--;
           }
-          i--;
         }
       }
       break;
@@ -720,7 +724,7 @@ void Array_debugDumpInfo(FILE                  *handle,
     const DebugArrayNode *debugArrayNode;
     LIST_ITERATE(&debugArrayList,debugArrayNode)
     {
-      fprintf(handle,"DEBUG: array %p[%ld] allocated at %s, line %ld\n",
+      fprintf(handle,"DEBUG: array %p[%ld] allocated at %s, line %zu\n",
               debugArrayNode->array->data,
               debugArrayNode->array->maxLength,
               debugArrayNode->fileName,
@@ -783,7 +787,7 @@ void Array_debugCheck(void)
       const DebugArrayNode *debugArrayNode;
       LIST_ITERATE(&debugArrayList,debugArrayNode)
       {
-        fprintf(stderr,"DEBUG: array %p[%ld] allocated at %s, line %ld\n",
+        fprintf(stderr,"DEBUG: array %p[%ld] allocated at %s, line %zu\n",
                 debugArrayNode->array->data,
                 debugArrayNode->array->maxLength,
                 debugArrayNode->fileName,

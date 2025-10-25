@@ -41,7 +41,7 @@ typedef struct AutoFreeNode
 
   #ifndef NDEBUG
     const char   *fileName;
-    ulong        lineNb;
+    size_t       lineNb;
     #ifdef HAVE_BACKTRACE
       void const *stackTrace[16];
       int        stackTraceSize;
@@ -186,7 +186,7 @@ bool AutoFree_add(AutoFreeList     *autoFreeList,
                  );
 #else /* not NDEBUG */
 bool __AutoFree_add(const char       *__fileName__,
-                    ulong            __lineNb__,
+                    size_t           __lineNb__,
                     AutoFreeList     *autoFreeList,
                     const void       *resource,
                     AutoFreeFunction autoFreeFunction
@@ -209,7 +209,7 @@ void AutoFree_remove(AutoFreeList *autoFreeList,
                     );
 #else /* not NDEBUG */
 void __AutoFree_remove(const char   *__fileName__,
-                       ulong        __lineNb__,
+                       size_t       __lineNb__,
                        AutoFreeList *autoFreeList,
                        const void   *resource
                       );

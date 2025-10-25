@@ -301,9 +301,9 @@ typedef pthread_once_t ExecuteOnceHandle;
 typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
                                         const void *resource,
                                         const char *allocFileName,
-                                        ulong      allocLineNb,
-                                        ulong      n,
-                                        ulong      count,
+                                        size_t     allocLineNb,
+                                        size_t     n,
+                                        size_t     count,
                                         void       *userData
                                        );
 
@@ -1869,7 +1869,7 @@ extern "C" {
 \***********************************************************************/
 
 void __dprintf__(const char *__fileName__,
-                 ulong      __lineNb__,
+                 size_t     __lineNb__,
                  const char *format,
                  ...
                 );
@@ -2249,7 +2249,7 @@ void doneSecure(void);
 void *allocSecure(size_t size);
 #else /* not NDEBUG */
 void *__allocSecure(const char *__fileName__,
-                    ulong      __lineNb__,
+                    size_t     __lineNb__,
                     size_t     size
                    );
 #endif /* NDEBUG */
@@ -2267,7 +2267,7 @@ void *__allocSecure(const char *__fileName__,
 void freeSecure(void *p);
 #else /* not NDEBUG */
 void __freeSecure(const char *__fileName__,
-                  ulong      __lineNb__,
+                  size_t     __lineNb__,
                   void       *p
                  );
 #endif /* NDEBUG */
@@ -2567,7 +2567,7 @@ void __halt(int        exitcode,
              __attribute__((format(printf,2,3)));
 #else /* not NDEBUG */
 void __halt(const char *__fileName__,
-            ulong      __lineNb__,
+            size_t     __lineNb__,
             int        exitcode,
             const char *format,
             ...
@@ -2597,7 +2597,7 @@ void __abort(const char *prefix,
 
 #else /* not NDEBUG */
 void __abort(const char *__fileName__,
-             ulong      __lineNb__,
+             size_t     __lineNb__,
              const char *prefix,
              const char *format,
              ...
@@ -2605,7 +2605,7 @@ void __abort(const char *__fileName__,
               __attribute__((format(printf,4,5)));
 #endif /* NDEBUG */
 void __abortAt(const char *fileName,
-             ulong        lineNb,
+             size_t       lineNb,
              const char   *prefix,
              const char   *format,
              ...
@@ -2627,7 +2627,7 @@ void __abortAt(const char *fileName,
 \***********************************************************************/
 
 bool debugIsTestCodeEnabled(const char *__fileName__,
-                            ulong      __lineNb__,
+                            size_t     __lineNb__,
                             const char *functionName,
                             uint       counter
                            );
@@ -2642,7 +2642,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
 \***********************************************************************/
 
 Errors debugTestCodeError(const char *__fileName__,
-                          ulong      __lineNb__
+                          size_t     __lineNb__
                          );
 
 /***********************************************************************\
@@ -2658,7 +2658,7 @@ Errors debugTestCodeError(const char *__fileName__,
 \***********************************************************************/
 
 void debugLocalResource(const char *__fileName__,
-                        ulong      __lineNb__,
+                        size_t     __lineNb__,
                         const void *resource
                        ) ATTRIBUTE_NO_INSTRUMENT_FUNCTION;
 #endif /* not NDEBUG */
@@ -2677,7 +2677,7 @@ void debugLocalResource(const char *__fileName__,
 \***********************************************************************/
 
 void debugAddResourceTrace(const char *__fileName__,
-                           ulong      __lineNb__,
+                           size_t     __lineNb__,
                            const char *typeName,
                            const char *variableName,
                            const void *resource
@@ -2695,7 +2695,7 @@ void debugAddResourceTrace(const char *__fileName__,
 \***********************************************************************/
 
 void debugRemoveResourceTrace(const char *__fileName__,
-                              ulong      __lineNb__,
+                              size_t     __lineNb__,
                               const char *typeName,
                               const char *variableName,
                               const void *resource
@@ -2714,7 +2714,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
 \***********************************************************************/
 
 void debugCheckResourceTrace(const char *__fileName__,
-                             ulong      __lineNb__,
+                             size_t     __lineNb__,
                              const char *variableName,
                              const void *resource
                             );

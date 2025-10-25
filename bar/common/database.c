@@ -1289,7 +1289,7 @@ LOCAL const char *debugGetLockedByInfo(const DatabaseHandle *databaseHandle)
     else if (databaseHandle->databaseNode->readWriteCount > 0)
     {
       stringSet(buffer,sizeof(buffer),"read/write by");
-      for (uint i = 0; i < databaseHandle->databaseNode->readWriteCount; i++)
+      for (size_t i = 0; i < databaseHandle->databaseNode->readWriteCount; i++)
       {
         long index = stringFindReverseChar(databaseHandle->databaseNode->debug.readWrites[i].fileName,FILE_PATH_SEPARATOR_CHAR);
 
@@ -1305,7 +1305,7 @@ LOCAL const char *debugGetLockedByInfo(const DatabaseHandle *databaseHandle)
     else if (databaseHandle->databaseNode->readCount > 0)
     {
       stringSet(buffer,sizeof(buffer),"read by");
-      for (uint i = 0; i < databaseHandle->databaseNode->readCount; i++)
+      for (size_t i = 0; i < databaseHandle->databaseNode->readCount; i++)
       {
         long index = stringFindReverseChar(databaseHandle->databaseNode->debug.reads[i].fileName,FILE_PATH_SEPARATOR_CHAR);
 
@@ -1354,7 +1354,7 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
               databaseNode->readWriteCount,
               databaseNode->transactionCount
              );
-      for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads); i++)
+      for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads); i++)
       {
         if (!Thread_isNone(databaseNode->debug.reads[i].threadId))
         {
@@ -1384,7 +1384,7 @@ LOCAL void debugPrintLockInfo(const DatabaseNode *databaseNode)
 #endif
         }
       }
-      for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites); i++)
+      for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites); i++)
       {
         if (!Thread_isNone(databaseNode->debug.readWrites[i].threadId))
         {
@@ -2474,7 +2474,7 @@ LOCAL void mariaDBFinalizeStatement(DatabaseStatementHandle *databaseStatementHa
 
   // free bind data
   assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
-  for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
+  for (size_t i = 0; i < databaseStatementHandle->resultCount; i++)
   {
     switch (databaseStatementHandle->mariadb.results.bind[i].buffer_type)
     {
@@ -4541,14 +4541,14 @@ LOCAL Errors postgresqlGetTriggerList(StringList     *triggerList,
       #endif /* DATABASE_DEBUG_LOCK */
 
       #ifndef NDEBUG
-        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads);      i++) databaseNode->debug.pendingReads[i].threadId      = THREAD_ID_NONE;
-        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads);             i++) databaseNode->debug.reads[i].threadId             = THREAD_ID_NONE;
-        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++) databaseNode->debug.pendingReadWrites[i].threadId = THREAD_ID_NONE;
+        for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads);      i++) databaseNode->debug.pendingReads[i].threadId      = THREAD_ID_NONE;
+        for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads);             i++) databaseNode->debug.reads[i].threadId             = THREAD_ID_NONE;
+        for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++) databaseNode->debug.pendingReadWrites[i].threadId = THREAD_ID_NONE;
         databaseNode->debug.readWriteLockedBy               = THREAD_ID_NONE;
-        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites);        i++) databaseNode->debug.readWrites[i].threadId        = THREAD_ID_NONE;
+        for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites);        i++) databaseNode->debug.readWrites[i].threadId        = THREAD_ID_NONE;
         databaseNode->debug.lastTrigger.threadInfo.threadId = THREAD_ID_NONE;
         databaseNode->debug.transaction.threadId            = THREAD_ID_NONE;
-        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history);           i++) databaseNode->debug.history[i].threadId           = THREAD_ID_NONE;
+        for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history);           i++) databaseNode->debug.history[i].threadId           = THREAD_ID_NONE;
         databaseNode->debug.historyIndex                    = 0;
       #endif /* not NDEBUG */
 
@@ -8592,7 +8592,7 @@ LOCAL void finalizeStatement(DatabaseStatementHandle *databaseStatementHandle)
 
   // free result data
   assert((databaseStatementHandle->resultCount == 0) || (databaseStatementHandle->results != NULL));
-  for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
+  for (size_t i = 0; i < databaseStatementHandle->resultCount; i++)
   {
     switch (databaseStatementHandle->results[i].type)
     {
@@ -8703,7 +8703,7 @@ LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
         sqliteResult = sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
         if (sqliteResult == SQLITE_OK)
         {
-          for (uint i = 0; i < parameterCount; i++)
+          for (size_t i = 0; i < parameterCount; i++)
           {
             switch (parameters[i].type)
             {
@@ -8895,7 +8895,7 @@ LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
       #if defined(HAVE_MARIADB)
         {
           // bind values
-          for (uint i = 0; i < parameterCount; i++)
+          for (size_t i = 0; i < parameterCount; i++)
           {
             switch (parameters[i].type)
             {
@@ -9091,7 +9091,7 @@ LOCAL Errors bindParameters(DatabaseStatementHandle *databaseStatementHandle,
       #if defined(HAVE_POSTGRESQL)
         {
           // bind values
-          for (uint i = 0; i < parameterCount; i++)
+          for (size_t i = 0; i < parameterCount; i++)
           {
             switch (parameters[i].type)
             {
@@ -9353,7 +9353,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
         sqliteResult = sqlite3_reset(databaseStatementHandle->sqlite.statementHandle);
         if (sqliteResult == SQLITE_OK)
         {
-          for (uint i = 0; i < valueCount; i++)
+          for (size_t i = 0; i < valueCount; i++)
           {
             switch (values[i].type)
             {
@@ -9545,7 +9545,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
       #if defined(HAVE_MARIADB)
         {
           // bind values
-          for (uint i = 0; i < valueCount; i++)
+          for (size_t i = 0; i < valueCount; i++)
           {
             switch (values[i].type)
             {
@@ -9741,7 +9741,7 @@ LOCAL Errors bindValues(DatabaseStatementHandle *databaseStatementHandle,
       #if defined(HAVE_POSTGRESQL)
         {
           // bind values
-          for (uint i = 0; i < valueCount; i++)
+          for (size_t i = 0; i < valueCount; i++)
           {
             switch (values[i].type)
             {
@@ -10035,7 +10035,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
       {
         int sqliteResult = SQLITE_ERROR;
 
-        for (uint i = 0; i < filterCount; i++)
+        for (size_t i = 0; i < filterCount; i++)
         {
           switch (filters[i].type)
           {
@@ -10237,7 +10237,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
     case DATABASE_TYPE_MARIADB:
       #if defined(HAVE_MARIADB)
         {
-          for (uint i = 0; i < filterCount; i++)
+          for (size_t i = 0; i < filterCount; i++)
           {
             switch (filters[i].type)
             {
@@ -10423,7 +10423,7 @@ LOCAL Errors bindFilters(DatabaseStatementHandle *databaseStatementHandle,
     case DATABASE_TYPE_POSTGRESQL:
       #if defined(HAVE_POSTGRESQL)
         {
-          for (uint i = 0; i < filterCount; i++)
+          for (size_t i = 0; i < filterCount; i++)
           {
             switch (filters[i].type)
             {
@@ -10847,7 +10847,7 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
   uint parameterCount = 0;
   if (!IS_SET(flags,DATABASE_FLAG_PLAIN))
   {
-    for (uint i = 0; i < tableNameCount; i++)
+    for (size_t i = 0; i < tableNameCount; i++)
     {
       if (i > 0)
       {
@@ -10859,7 +10859,7 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
       }
       if (columns != NULL)
       {
-        for (uint j = 0; j < columnCount; j++)
+        for (size_t j = 0; j < columnCount; j++)
         {
           if (j > 0) String_appendChar(sqlString,',');
           switch (columns[j].type)
@@ -10973,7 +10973,7 @@ LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
   // bind filters, results
   if (filter != NULL)
   {
-    for (uint i = 0; i < tableNameCount; i++)
+    for (size_t i = 0; i < tableNameCount; i++)
     {
       error = bindFilters(&databaseStatementHandle,
                           filters,
@@ -11408,7 +11408,7 @@ LOCAL void freeTableColumns(DatabaseColumn columns[],
                             uint           columnCount
                            )
 {
-  for (uint i = 0; i < columnCount; i++)
+  for (size_t i = 0; i < columnCount; i++)
   {
     // Note: suppress warning
     free((char*)columns[i].name);
@@ -11446,7 +11446,7 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
       {
         (*columnCount) = sqlite3_column_count(databaseStatementHandle->sqlite.statementHandle);
 
-        for (uint i = 0; i < (*columnCount); i++)
+        for (size_t i = 0; i < (*columnCount); i++)
         {
           if (i < maxColumnCount)
           {
@@ -11475,7 +11475,7 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
 
             mysqlFields = mysql_fetch_fields(mysqlMetaData);
             assert(mysqlFields != NULL);
-            for (uint i = 0; i < (*columnCount); i++)
+            for (size_t i = 0; i < (*columnCount); i++)
             {
               if (i < maxColumnCount)
               {
@@ -11524,7 +11524,7 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
           }
           (*columnCount) = PQnfields(postgresqlResult);
 
-          for (uint i = 0; i < (*columnCount); i++)
+          for (size_t i = 0; i < (*columnCount); i++)
           {
             if (i < maxColumnCount)
             {
@@ -11559,7 +11559,7 @@ LOCAL DatabaseValue *findTableColumn(const DatabaseColumnInfo *columnInfo, const
 {
   assert(columnInfo != NULL);
 
-  for (uint i = 0; i < columnInfo->count; i++)
+  for (size_t i = 0; i < columnInfo->count; i++)
   {
     // Note: ignore case, because PostgreSQL does not support names in camel-case :-(
     if (stringEqualsIgnoreCase(columnInfo->values[i].name,columnName))
@@ -13714,7 +13714,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
         }
 
         // compare columns (Note: case-insesitive, because some database engines do not support case-sensitive names)
-        for (uint i = 0; i < referenceColumnCount; i++)
+        for (size_t i = 0; i < referenceColumnCount; i++)
         {
           // find column
           uint j = ARRAY_FIND(columnNames,columnCount,j,stringEqualsIgnoreCase(referenceColumns[i].name,columns[j].name));
@@ -13740,7 +13740,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
         if (!IS_SET(compareFlags,DATABASE_COMPARE_IGNORE_OBSOLETE))
         {
           // check for obsolete columns (Note: case-insesitive, because some database engines do not support case-sensitive names)
-          for (uint i = 0; i < columnCount; i++)
+          for (size_t i = 0; i < columnCount; i++)
           {
             // find column
             uint j = ARRAY_FIND(referenceColumns,referenceColumnCount,j,stringEqualsIgnoreCase(columns[i].name,referenceColumns[j].name));
@@ -13887,7 +13887,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   }
   #ifdef DEBUG_COPY_TABLE
     fprintf(stderr,"fromTable '%s': %u\n",fromTableName,fromColumnCount);
-    for (uint i = 0; i < fromColumnCount; i++)
+    for (size_t i = 0; i < fromColumnCount; i++)
     {
       fprintf(stderr,"  %2u: %s %s\n",i,fromColumns[i].name,DATABASE_DATATYPE_NAMES[fromColumns[i].type]);
     }
@@ -13908,7 +13908,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   }
   #ifdef DEBUG_COPY_TABLE
     fprintf(stderr,"toTable '%s': %u\n",toTableName,toColumnCount);
-    for (uint i = 0; i < toColumnCount; i++)
+    for (size_t i = 0; i < toColumnCount; i++)
     {
       fprintf(stderr,"  %2u: %s %s\n",i,toColumns[i].name,DATABASE_DATATYPE_NAMES[toColumns[i].type]);
     }
@@ -13917,7 +13917,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 
   // get column mapping: toColumn[i] := fromColumn[fromColumnMap[i]]
   int fromColumnMap[DATABASE_MAX_TABLE_COLUMNS];
-  for (uint i = 0; i < toColumnCount; i++)
+  for (size_t i = 0; i < toColumnCount; i++)
   {
     uint j = ARRAY_FIND(fromColumns,fromColumnCount,j,stringEqualsIgnoreCase(fromColumns[j].name,toColumns[i].name));
     if (j < fromColumnCount)
@@ -13931,7 +13931,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   }
   #ifdef DEBUG_COPY_TABLE
     fprintf(stderr,"mapping: %u\n",toColumnCount);
-    for (uint i = 0; i < toColumnCount; i++)
+    for (size_t i = 0; i < toColumnCount; i++)
     {
       if (fromColumnMap[i] != UNUSED)
       {
@@ -13950,7 +13950,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   int  toColumnPrimaryKeyIndex = UNUSED;
   uint parameterMap[DATABASE_MAX_TABLE_COLUMNS];
   uint parameterMapCount       = 0;
-  for (uint i = 0; i < toColumnCount; i++)
+  for (size_t i = 0; i < toColumnCount; i++)
   {
     if (toColumns[i].type != DATABASE_DATATYPE_PRIMARY_KEY)
     {
@@ -13967,7 +13967,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   }
   #ifdef DEBUG_COPY_TABLE
     fprintf(stderr,"parameter mapping: %u\n",parameterMapCount);
-    for (uint i = 0; i < parameterMapCount; i++)
+    for (size_t i = 0; i < parameterMapCount; i++)
     {
       fprintf(stderr,
               "  from %2u:%-30s -> to %2u:%-30s %s\n",
@@ -13978,7 +13978,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
               DATABASE_DATATYPE_NAMES[fromColumns[fromColumnMap[parameterMap[i]]].type]
              );
     }
-    for (uint i = 0; i < parameterMapCount; i++)
+    for (size_t i = 0; i < parameterMapCount; i++)
     {
       if (fromColumnMap[parameterMap[i]] != UNUSED)
       {
@@ -13990,7 +13990,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   // init to-values, parameters
   DatabaseValue toValues[DATABASE_MAX_TABLE_COLUMNS];
   uint          toValueCount;
-  for (uint i = 0; i < toColumnCount; i++)
+  for (size_t i = 0; i < toColumnCount; i++)
   {
     toValues[i].type = toColumns[i].type;
     toValues[i].name = toColumns[i].name;
@@ -13999,7 +13999,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 
   DatabaseValue parameterValues[DATABASE_MAX_TABLE_COLUMNS];
   uint          parameterValueCount = parameterMapCount;
-  for (uint i = 0; i < parameterMapCount; i++)
+  for (size_t i = 0; i < parameterMapCount; i++)
   {
     parameterValues[i].type = toColumns[parameterMap[i]].type;
   }
@@ -14007,7 +14007,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   // create SQL select statement strings
   String sqlSelectString      = String_format(String_new(),"SELECT ");
   uint   selectParameterCount = 0;
-  for (uint i = 0; i < fromColumnCount; i++)
+  for (size_t i = 0; i < fromColumnCount; i++)
   {
     if (i > 0) String_appendChar(sqlSelectString,',');
     String_appendCString(sqlSelectString,fromColumns[i].name);
@@ -14041,13 +14041,13 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 
   String sqlInsertString      = String_format(String_new(),"INSERT INTO %s (",toTableName);
   uint   insertParameterCount = 0;
-  for (uint i = 0; i < parameterMapCount; i++)
+  for (size_t i = 0; i < parameterMapCount; i++)
   {
     if (i > 0) String_appendChar(sqlInsertString,',');
     String_appendCString(sqlInsertString,fromColumns[fromColumnMap[parameterMap[i]]].name);
   }
   String_appendFormat(sqlInsertString,") VALUES (");
-  for (uint i = 0; i < parameterMapCount; i++)
+  for (size_t i = 0; i < parameterMapCount; i++)
   {
     if (i > 0) String_appendChar(sqlInsertString,',');
     formatParameters(sqlInsertString,toDatabaseHandle,"?",&insertParameterCount);
@@ -14170,7 +14170,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
                                        #endif /* DATABASE_DEBUG_COPY_TABLE */
 
                                        // set to-values
-                                       for (uint i = 0; i < parameterMapCount; i++)
+                                       for (size_t i = 0; i < parameterMapCount; i++)
                                        {
                                          assert(i < parameterValueCount);
                                          assert(parameterMap[i] < toColumnCount);
@@ -14197,7 +14197,7 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
 #endif
                                        }
 
-                                       for (uint i = 0; i < toColumnCount; i++)
+                                       for (size_t i = 0; i < toColumnCount; i++)
                                        {
                                          if (fromColumnMap[i] != UNUSED)
                                          {
@@ -14236,7 +14236,7 @@ debugDatabaseValueToString(buffer2,sizeof(buffer2),&toValues[parameterMap[i]])
                                        }
 
                                        // copy parameter data
-                                       for (uint i = 0; i < parameterMapCount; i++)
+                                       for (size_t i = 0; i < parameterMapCount; i++)
                                        {
                                          assert(i < parameterValueCount);
 
@@ -15065,7 +15065,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     // create new table
     formatSQLString(String_clear(sqlString),"CREATE TABLE IF NOT EXISTS __new__(");
     uint n = 0;
-    for (uint i = 0; i < columnCount; i++)
+    for (size_t i = 0; i < columnCount; i++)
     {
       if (!stringEquals(columns[i].name,columnName))
       {
@@ -16090,13 +16090,13 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
   String_appendCString(sqlString," INTO ");
   formatParameters(sqlString,databaseHandle,tableName,&parameterCount);
   String_appendCString(sqlString," (");
-  for (uint i = 0; i < valueCount; i++)
+  for (size_t i = 0; i < valueCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
     appendName(sqlString,databaseHandle,values[i].name);
   }
   String_appendCString(sqlString,") VALUES (");
-  for (uint i = 0; i < valueCount; i++)
+  for (size_t i = 0; i < valueCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
     if (values[i].value != NULL)
@@ -16134,13 +16134,13 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
         else if (IS_SET(flags,DATABASE_FLAG_REPLACE))
         {
           String_appendCString(sqlString," ON CONFLICT (");
-          for (uint i = 0; i < conflictColumnCount; i++)
+          for (size_t i = 0; i < conflictColumnCount; i++)
           {
             if (i > 0) String_appendChar(sqlString,',');
             String_appendCString(sqlString,conflictColumns[i].name);
           }
           String_appendCString(sqlString,") DO UPDATE SET ");
-          for (uint i = 0; i < valueCount; i++)
+          for (size_t i = 0; i < valueCount; i++)
           {
             if (i > 0) String_appendChar(sqlString,',');
             if (values[i].value != NULL)
@@ -16375,14 +16375,14 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
   String_appendCString(sqlString," INTO ");
   formatParameters(sqlString,databaseHandle,tableName,&parameterCount);
   String_appendCString(sqlString," (");
-  for (uint i = 0; i < toColumnCount; i++)
+  for (size_t i = 0; i < toColumnCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
     String_appendCString(sqlString,toColumns[i].name);
   }
   String_appendCString(sqlString,") ");
 
-  for (uint i = 0; i < tableNameCount; i++)
+  for (size_t i = 0; i < tableNameCount; i++)
   {
     if (i > 0)
     {
@@ -16392,7 +16392,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
     {
       String_appendCString(sqlString,"SELECT ");
     }
-    for (uint j = 0; j < fromColumnCount; j++)
+    for (size_t j = 0; j < fromColumnCount; j++)
     {
       if (j > 0) String_appendChar(sqlString,',');
       formatParameters(sqlString,databaseHandle,fromColumns[j].name,&parameterCount);
@@ -16541,7 +16541,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
     }
   }
   String_appendFormat(sqlString,"%s SET ",tableName);
-  for (uint i = 0; i < valueCount; i++)
+  for (size_t i = 0; i < valueCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
     if (values[i].value != NULL)
@@ -17068,7 +17068,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
   }
 #endif
 
-  for (uint i = 0; i < columnCount; i++)
+  for (size_t i = 0; i < columnCount; i++)
   {
     if (i > 0) String_appendChar(sqlString,',');
     switch (columns[i].type)
@@ -17234,7 +17234,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
 
     va_list arguments;
     va_start(arguments,databaseStatementHandle);
-    for (uint i = 0; i < databaseStatementHandle->resultCount; i++)
+    for (size_t i = 0; i < databaseStatementHandle->resultCount; i++)
     {
       union
       {
@@ -17483,7 +17483,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   uint   parameterCount = 0;
   if (!IS_SET(flags,DATABASE_FLAG_PLAIN))
   {
-    for (uint i = 0; i < tableNameCount; i++)
+    for (size_t i = 0; i < tableNameCount; i++)
     {
       if (i > 0)
       {
@@ -17495,7 +17495,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
       }
       if (columns != NULL)
       {
-        for (uint j = 0; j < columnCount; j++)
+        for (size_t j = 0; j < columnCount; j++)
         {
           if (j > 0) String_appendChar(sqlString,',');
           switch (columns[j].type)
@@ -17609,7 +17609,7 @@ Errors Database_get(DatabaseHandle       *databaseHandle,
   // bind filters, results
   if (filter != NULL)
   {
-    for (uint i = 0; i < tableNameCount; i++)
+    for (size_t i = 0; i < tableNameCount; i++)
     {
       error = bindFilters(&databaseStatementHandle,
                           filters,
@@ -18438,7 +18438,7 @@ Errors Database_vacuum(DatabaseHandle     *databaseHandle,
         UNUSED_VARIABLE(force);          // not supported
 
         error = ERROR_NONE;
-        for (uint i = 0; i < tableNameCount; i++)
+        for (size_t i = 0; i < tableNameCount; i++)
         {
           char sqlString[256];
           error = Database_execute(databaseHandle,
@@ -18462,7 +18462,7 @@ Errors Database_vacuum(DatabaseHandle     *databaseHandle,
         UNUSED_VARIABLE(force);          // not supported
 
         error = ERROR_NONE;
-        for (uint i = 0; i < tableNameCount; i++)
+        for (size_t i = 0; i < tableNameCount; i++)
         {
           char sqlString[256];
           error = Database_execute(databaseHandle,
@@ -18810,7 +18810,7 @@ void Database_debugPrintInfo(void)
                 databaseNode->readWriteCount,
                 databaseNode->transactionCount
                );
-        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads); i++)
+        for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReads); i++)
         {
           if (!Thread_isNone(databaseNode->debug.pendingReads[i].threadId))
           {
@@ -18833,7 +18833,7 @@ void Database_debugPrintInfo(void)
             #endif /* HAVE_BACKTRACE */
           }
         }
-        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads); i++)
+        for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.reads); i++)
         {
           if (!Thread_isNone(databaseNode->debug.reads[i].threadId))
           {
@@ -18856,7 +18856,7 @@ void Database_debugPrintInfo(void)
             #endif /* HAVE_BACKTRACE */
           }
         }
-        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++)
+        for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.pendingReadWrites); i++)
         {
           if (!Thread_isNone(databaseNode->debug.pendingReadWrites[i].threadId))
           {
@@ -18879,7 +18879,7 @@ void Database_debugPrintInfo(void)
             #endif /* HAVE_BACKTRACE */
           }
         }
-        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites); i++)
+        for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.readWrites); i++)
         {
           if (!Thread_isNone(databaseNode->debug.readWrites[i].threadId))
           {
@@ -18973,7 +18973,7 @@ databaseNode->debug.lastTrigger.transactionCount
         fprintf(stderr,
                 "  lock history (ascending):\n"
                );
-        for (uint i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history); i++)
+        for (size_t i = 0; i < SIZE_OF_ARRAY(databaseNode->debug.history); i++)
         {
           uint index = (databaseNode->debug.historyIndex+i) % SIZE_OF_ARRAY(databaseNode->debug.history);
 
@@ -19062,7 +19062,7 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
               databaseHandle->databaseNode->readWriteCount,
               databaseHandle->databaseNode->transactionCount
              );
-      for (uint i = 0; i < SIZE_OF_ARRAY(databaseHandle->databaseNode->debug.reads); i++)
+      for (size_t i = 0; i < SIZE_OF_ARRAY(databaseHandle->databaseNode->debug.reads); i++)
       {
         if (!Thread_isNone(databaseHandle->databaseNode->debug.reads[i].threadId))
         {
@@ -19088,7 +19088,7 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
           #endif /* HAVE_BACKTRACE */
         }
       }
-      for (uint i = 0; i < SIZE_OF_ARRAY(databaseHandle->databaseNode->debug.readWrites); i++)
+      for (size_t i = 0; i < SIZE_OF_ARRAY(databaseHandle->databaseNode->debug.readWrites); i++)
       {
         if (!Thread_isNone(databaseHandle->databaseNode->debug.readWrites[i].threadId))
         {
@@ -19223,7 +19223,7 @@ LOCAL size_t* debugGetColumnsWidth(const DatabaseValue values[], uint valueCount
   size_t *widths = (size_t*)malloc(valueCount*sizeof(size_t));
   assert(widths != NULL);
 
-  for (uint i = 0; i < valueCount; i++)
+  for (size_t i = 0; i < valueCount; i++)
   {
     widths[i] = 0;
     char buffer[1024];
@@ -19273,7 +19273,7 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
                         if (dumpTableData->widths == NULL) dumpTableData->widths = debugGetColumnsWidth(values,valueCount);
                         assert(dumpTableData->widths != NULL);
 
-                        for (uint i = 0; i < valueCount; i++)
+                        for (size_t i = 0; i < valueCount; i++)
                         {
                           char buffer[1024];
                           Database_valueToCString(buffer,sizeof(buffer),&values[i]);
@@ -19315,7 +19315,7 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
 
                         if (dumpTableData->showHeaderFlag && !dumpTableData->headerPrintedFlag)
                         {
-                          for (uint i = 0; i < columnCount; i++)
+                          for (size_t i = 0; i < columnCount; i++)
                           {
                             printf("%s ",columns[i].name); debugPrintSpaces(dumpTableData->widths[i]-stringLength(columns[i].name));
                           }
@@ -19323,7 +19323,7 @@ void Database_debugDumpTable(DatabaseHandle *databaseHandle, const char *tableNa
 
                           dumpTableData->headerPrintedFlag = TRUE;
                         }
-                        for (uint i = 0; i < valueCount; i++)
+                        for (size_t i = 0; i < valueCount; i++)
                         {
                           char buffer[1024];
                           Database_valueToCString(buffer,sizeof(buffer),&values[i]);

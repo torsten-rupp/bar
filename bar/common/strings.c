@@ -127,14 +127,14 @@ typedef struct
     LIST_NODE_HEADER(struct DebugStringNode);
 
     const char      *allocFileName;
-    ulong           allocLineNb;
+    size_t          allocLineNb;
     #ifdef HAVE_BACKTRACE
       const void *stackTrace[16];
       int        stackTraceSize;
     #endif /* HAVE_BACKTRACE */
 
     const char      *deleteFileName;
-    ulong           deleteLineNb;
+    size_t          deleteLineNb;
     #ifdef HAVE_BACKTRACE
       const void *deleteStackTrace[16];
       int        deleteStackTraceSize;
@@ -146,12 +146,12 @@ typedef struct
   typedef struct
   {
     LIST_HEADER(DebugStringNode);
-    ulong memorySize;
+    size_t memorySize;
 
     struct
     {
       DebugStringNode *first;
-      ulong           count;
+      size_t          count;
     } hash[DEBUG_LIST_HASH_SIZE];
   } DebugStringList;
 #endif /* not NDEBUG */
@@ -166,7 +166,7 @@ typedef struct
     LOCAL DebugStringList     debugStringFreeList;
   #endif /* TRACE_STRING_ALLOCATIONS */
   #ifdef MAX_STRINGS_CHECK
-    LOCAL ulong debugMaxStringNextWarningCount;
+    LOCAL size_t debugMaxStringNextWarningCount;
   #endif /* MAX_STRINGS_CHECK */
 #endif /* not NDEBUG */
 
@@ -266,7 +266,7 @@ LOCAL DebugStringNode *debugFindString(const DebugStringList *debugStringList, C
   uint index = debugStringHashIndex(string);
 
   DebugStringNode *debugStringNode = debugStringList->hash[index].first;
-  ulong           n                = debugStringList->hash[index].count;
+  size_t          n                = debugStringList->hash[index].count;
   while ((debugStringNode != NULL) && (n > 0) && (debugStringNode->string != string))
   {
     debugStringNode = debugStringNode->next;
@@ -358,12 +358,12 @@ void __extendStringSize(struct __String *string, size_t newSize)
   {
     case STRING_TYPE_DYNAMIC:
       {
-        ulong newMaxLength = ALIGN(newSize,__STRING_DELTA_LENGTH);
+        size_t newMaxLength = ALIGN(newSize,__STRING_DELTA_LENGTH);
         assert(newMaxLength >= newSize);
         char *newData = (char*)realloc(string->data,newMaxLength*sizeof(char));
         if (newData == NULL)
         {
-          fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%lu bytes) - program halted: %s\n",(ulong)(newSize*sizeof(char)),strerror(errno));
+          fprintf(stderr,"FATAL ERROR: insufficient memory for allocating string (%zu bytes) - program halted: %s\n",(size_t)(newSize*sizeof(char)),strerror(errno));
           abort();
         }
         #ifndef NDEBUG
@@ -386,7 +386,7 @@ void __extendStringSize(struct __String *string, size_t newSize)
       }
       break;
     case STRING_TYPE_STATIC:
-      HALT_INTERNAL_ERROR("exceeded static string (required length %lu, max. length %lu) - program halted\n",(ulong)(newSize*sizeof(char)),(ulong)string->maxLength);
+      HALT_INTERNAL_ERROR("exceeded static string (required length %zu, max. length %zu) - program halted\n",(size_t)(newSize*sizeof(char)),(size_t)string->maxLength);
       break;
     case STRING_TYPE_CONST:
       {
@@ -404,7 +404,7 @@ void __extendStringSize(struct __String *string, size_t newSize)
               if (debugStringNode != NULL)
               {
                 fprintf(stderr,
-                        "FATAL ERROR: cannot modify constant string '%s' which was allocated at %s, %lu!\n",
+                        "FATAL ERROR: cannot modify constant string '%s' which was allocated at %s, %zu!\n",
                         string->data,
                         debugStringNode->allocFileName,
                         debugStringNode->allocLineNb
@@ -496,7 +496,7 @@ LOCAL_INLINE struct __String* allocString(void)
 #ifdef NDEBUG
 LOCAL_INLINE struct __String* allocTmpString(void)
 #else /* not NDEBUG */
-LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, ulong __lineNb__)
+LOCAL_INLINE struct __String* allocTmpString(const char *__fileName__, size_t __lineNb__)
 #endif /* NDEBUG */
 {
   String tmpString = allocString();
@@ -2287,121 +2287,122 @@ LOCAL bool parseString(const char *string,
           case 'n':
             break;
           case 'S':
-            // get and copy data
-            union
             {
-              int                *i;
-              long               *l;
-              long long          *ll;
-              unsigned int       *ui;
-              unsigned long      *ul;
-              unsigned long long *ull;
-              float              *f;
-              double             *d;
-              char               *c;
-              char               *s;
-              void               *p;
-              bool               *b;
-              struct __String    *string;
-            } value;
-            value.string = va_arg(arguments,String);
-            STRING_CHECK_VALID(value.string);
-            STRING_CHECK_ASSIGNABLE(value.string);
-
-            String_clear(value.string);
-            if (index < length)
-            {
-              size_t i = 0;
-              while (   (index < length)
-                     && (formatToken.blankFlag || !isspace(string[index]))
-// NUL in string here a problem?
-                     && (string[index] != (*nextFormat))
-                    )
+              // get and copy data
+              union
               {
-                if (   (string[index] == STRING_ESCAPE_CHARACTER)
-                    && ((index+1) < length)
-                    && !formatToken.blankFlag
-                   )
-                {
-                  // quoted character
-                  if ((formatToken.width == 0) || (i < formatToken.width-1))
-                  {
-                    String_appendChar(value.string,string[index+1]);
-                    i++;
-                  }
-                  index += 2;
-                }
-                else
-                {
-                  // check for string quote
-                  const char *stringQuote = NULL;
-                  if ((formatToken.quoteChar != NUL) && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
-                  if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
+                int                *i;
+                long               *l;
+                long long          *ll;
+                unsigned int       *ui;
+                unsigned long      *ul;
+                unsigned long long *ull;
+                float              *f;
+                double             *d;
+                char               *c;
+                char               *s;
+                void               *p;
+                bool               *b;
+                struct __String    *string;
+              } value;
+              value.string = va_arg(arguments,String);
+              STRING_CHECK_VALID(value.string);
+              STRING_CHECK_ASSIGNABLE(value.string);
 
-                  if (   (stringQuote != NULL)
+              String_clear(value.string);
+              if (index < length)
+              {
+                size_t i = 0;
+                while (   (index < length)
+                       && (formatToken.blankFlag || !isspace(string[index]))
+  // NUL in string here a problem?
+                       && (string[index] != (*nextFormat))
+                      )
+                {
+                  if (   (string[index] == STRING_ESCAPE_CHARACTER)
+                      && ((index+1) < length)
                       && !formatToken.blankFlag
                      )
                   {
-                    do
+                    // quoted character
+                    if ((formatToken.width == 0) || (i < formatToken.width-1))
                     {
-                      // skip quote-char
-                      index++;
-
-                      // get string
-                      while ((index < length) && (string[index] != (*stringQuote)))
-                      {
-                        if (   ((index+1) < length)
-                            && (string[index] == STRING_ESCAPE_CHARACTER)
-                            && (string[index+1] == (*stringQuote))
-                           )
-                        {
-                          if ((formatToken.width == 0) || (i < formatToken.width-1))
-                          {
-                            String_appendChar(value.string,string[index+1]);
-                            i++;
-                          }
-                          index += 2;
-                        }
-                        else
-                        {
-                          if ((formatToken.width == 0) || (i < formatToken.width-1))
-                          {
-                            String_appendChar(value.string,string[index]);
-                            i++;
-                          }
-                          index++;
-                        }
-                      }
-
-                      // skip quote-char
-                      if (index < length)
-                      {
-                        index++;
-                      }
-
-                      // check for string quote
-                      stringQuote = NULL;
-                      if (index < length)
-                      {
-                        if ((formatToken.quoteChar != NUL) && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
-                        if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
-                      }
+                      String_appendChar(value.string,string[index+1]);
+                      i++;
                     }
-                    while (stringQuote != NULL);
+                    index += 2;
                   }
                   else
                   {
-                    if ((formatToken.width == 0) || (i < formatToken.width-1))
+                    // check for string quote
+                    const char *stringQuote = NULL;
+                    if ((formatToken.quoteChar != NUL) && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
+                    if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
+
+                    if (   (stringQuote != NULL)
+                        && !formatToken.blankFlag
+                       )
                     {
-                      String_appendChar(value.string,string[index]);
-                      i++;
+                      do
+                      {
+                        // skip quote-char
+                        index++;
+
+                        // get string
+                        while ((index < length) && (string[index] != (*stringQuote)))
+                        {
+                          if (   ((index+1) < length)
+                              && (string[index] == STRING_ESCAPE_CHARACTER)
+                              && (string[index+1] == (*stringQuote))
+                             )
+                          {
+                            if ((formatToken.width == 0) || (i < formatToken.width-1))
+                            {
+                              String_appendChar(value.string,string[index+1]);
+                              i++;
+                            }
+                            index += 2;
+                          }
+                          else
+                          {
+                            if ((formatToken.width == 0) || (i < formatToken.width-1))
+                            {
+                              String_appendChar(value.string,string[index]);
+                              i++;
+                            }
+                            index++;
+                          }
+                        }
+
+                        // skip quote-char
+                        if (index < length)
+                        {
+                          index++;
+                        }
+
+                        // check for string quote
+                        stringQuote = NULL;
+                        if (index < length)
+                        {
+                          if ((formatToken.quoteChar != NUL) && (formatToken.quoteChar == string[index])) stringQuote = &formatToken.quoteChar;
+                          if ((stringQuote == NULL) && (stringQuotes != NULL)) stringQuote = strchr(stringQuotes,string[index]);
+                        }
+                      }
+                      while (stringQuote != NULL);
                     }
-                    index++;
+                    else
+                    {
+                      if ((formatToken.width == 0) || (i < formatToken.width-1))
+                      {
+                        String_appendChar(value.string,string[index]);
+                        i++;
+                      }
+                      index++;
+                    }
                   }
                 }
               }
             }
-
             break;
 #if 0
 still not implemented
@@ -2448,6 +2449,22 @@ still not implemented
           case 'y':
             {
               // get data
+              union
+              {
+                int                *i;
+                long               *l;
+                long long          *ll;
+                unsigned int       *ui;
+                unsigned long      *ul;
+                unsigned long long *ull;
+                float              *f;
+                double             *d;
+                char               *c;
+                char               *s;
+                void               *p;
+                bool               *b;
+                struct __String    *string;
+              } value;
               size_t i = 0L;
               char   buffer[64];
               while (   (index < length)
@@ -2563,12 +2580,12 @@ still not implemented
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
-                          uint             stringUnitCount,
-                          const char       *string,
-                          const char       *unitString,
-                          long             *nextIndex
-                         )
+LOCAL size_t getUnitFactor(const StringUnit stringUnits[],
+                           uint             stringUnitCount,
+                           const char       *string,
+                           const char       *unitString,
+                           long             *nextIndex
+                          )
 {
   assert(stringUnits != NULL);
   assert(string != NULL);
@@ -2581,7 +2598,7 @@ LOCAL ulong getUnitFactor(const StringUnit stringUnits[],
   {
     i++;
   }
-  ulong factor;
+  size_t factor;
   if (i < stringUnitCount)
   {
     factor = stringUnits[i].factor;
@@ -2791,7 +2808,7 @@ LOCAL bool vmatchString(const char *string,
 #ifdef NDEBUG
 String String_new(void)
 #else /* not DEBUG */
-String __String_new(const char *__fileName__, ulong __lineNb__)
+String __String_new(const char *__fileName__, size_t __lineNb__)
 #endif /* NDEBUG */
 {
   struct __String *string = allocString();
@@ -2842,10 +2859,10 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
         // add string to allocated-list
         debugAddString(&debugStringAllocList,debugStringNode);
         #ifdef MAX_STRINGS_CHECK
-          ulong debugStringCount = List_count(&debugStringAllocList);
+          size_t debugStringCount = List_count(&debugStringAllocList);
           if (debugStringCount >= debugMaxStringNextWarningCount)
           {
-            fprintf(stderr,"DEBUG Warning: %lu strings allocated!\n",debugStringCount);
+            fprintf(stderr,"DEBUG Warning: %zu strings allocated!\n",debugStringCount);
             debugMaxStringNextWarningCount += WARN_MAX_STRINGS_DELTA;
 //String_debugDumpInfo(stderr);
 //          sleep(1);
@@ -2867,7 +2884,7 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
 #ifdef NDEBUG
 String String_newCString(const char *s)
 #else /* not NDEBUG */
-String __String_newCString(const char *__fileName__, ulong __lineNb__, const char *s)
+String __String_newCString(const char *__fileName__, size_t __lineNb__, const char *s)
 #endif /* NDEBUG */
 {
   String string;
@@ -2886,7 +2903,7 @@ String __String_newCString(const char *__fileName__, ulong __lineNb__, const cha
 #ifdef NDEBUG
 String String_newChar(char ch)
 #else /* not NDEBUG */
-String __String_newChar(const char *__fileName__, ulong __lineNb__, char ch)
+String __String_newChar(const char *__fileName__, size_t __lineNb__, char ch)
 #endif /* NDEBUG */
 {
   String string;
@@ -2905,7 +2922,7 @@ String __String_newChar(const char *__fileName__, ulong __lineNb__, char ch)
 #ifdef NDEBUG
 String String_newBuffer(const void *buffer, size_t bufferLength)
 #else /* not NDEBUG */
-String __String_newBuffer(const char *__fileName__, ulong __lineNb__, const void *buffer, size_t bufferLength)
+String __String_newBuffer(const char *__fileName__, size_t __lineNb__, const void *buffer, size_t bufferLength)
 #endif /* NDEBUG */
 {
   String string;
@@ -2924,7 +2941,7 @@ String __String_newBuffer(const char *__fileName__, ulong __lineNb__, const void
 #ifdef NDEBUG
 String String_duplicate(ConstString fromString)
 #else /* not NDEBUG */
-String __String_duplicate(const char *__fileName__, ulong __lineNb__, ConstString fromString)
+String __String_duplicate(const char *__fileName__, size_t __lineNb__, ConstString fromString)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
@@ -2966,7 +2983,7 @@ String __String_duplicate(const char *__fileName__, ulong __lineNb__, ConstStrin
 #ifdef NDEBUG
 String String_copy(String *string, ConstString fromString)
 #else /* not NDEBUG */
-String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, ConstString fromString)
+String __String_copy(const char *__fileName__, size_t __lineNb__, String *string, ConstString fromString)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
@@ -3024,7 +3041,7 @@ String __String_copy(const char *__fileName__, ulong __lineNb__, String *string,
 #ifdef NDEBUG
 void String_delete(ConstString string)
 #else /* not NDEBUG */
-void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString string)
+void __String_delete(const char *__fileName__, size_t __lineNb__, ConstString string)
 #endif /* NDEBUG */
 {
   #ifdef NDEBUG
@@ -3048,7 +3065,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString str
           DebugStringNode *debugStringNode = debugFindString(&debugStringFreeList,string);
           if (debugStringNode != NULL)
           {
-            fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
+            fprintf(stderr,"DEBUG WARNING: multiple free of string %p at %s, %zu and previously at %s, %zu which was allocated at %s, %zu!\n",
                     string,
                     __fileName__,
                     __lineNb__,
@@ -3097,7 +3114,7 @@ void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString str
           }
           else
           {
-            fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list at %s, line %lu\n",
+            fprintf(stderr,"DEBUG WARNING: string '%s' not found in debug list at %s, line %zu\n",
                     string->data,
                     __fileName__,
                     __lineNb__
@@ -5979,11 +5996,11 @@ void String_debugDone(void)
   #endif /* TRACE_STRING_ALLOCATIONS */
 }
 
-void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string)
+void String_debugCheckValid(const char *__fileName__, size_t __lineNb__, ConstString string)
 {
   if ((string != NULL) && (string != STRING_EMPTY))
   {
-    ulong checkSum;
+    size_t checkSum;
 
     checkSum = STRING_CHECKSUM(string->length,string->maxLength,string->data);
     if (checkSum != string->checkSum)
@@ -6003,11 +6020,11 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
               #endif /* HAVE_BACKTRACE */
               HALT_INTERNAL_ERROR_AT(__fileName__,
                                      __lineNb__,
-                                     "Invalid checksum 0x%08lx in string %p, length %lu (max. %lu) allocated at %s, %lu (expected 0x%08lx)!",
+                                     "Invalid checksum 0x%08lx in string %p, length %zu (max. %zu) allocated at %s, %zu (expected 0x%08lx)!",
                                      string->checkSum,
                                      string,
-                                     (ulong)string->length,
-                                     (ulong)string->maxLength,
+                                     string->length,
+                                     string->maxLength,
                                      debugStringNode->allocFileName,
                                      debugStringNode->allocLineNb,
                                      checkSum
@@ -6018,7 +6035,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
               debugStringNode = debugFindString(&debugStringFreeList,string);
               if (debugStringNode != NULL)
               {
-                fprintf(stderr,"DEBUG WARNING: string %p at %s, %lu was already freed at %s, %lu!\n",
+                fprintf(stderr,"DEBUG WARNING: string %p at %s, %zu was already freed at %s, %zu!\n",
                         string,
                         __fileName__,
                         __lineNb__,
@@ -6028,7 +6045,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
               }
               else
               {
-                fprintf(stderr,"DEBUG WARNING: string %p is not allocated and not known at %s, %lu!\n",
+                fprintf(stderr,"DEBUG WARNING: string %p is not allocated and not known at %s, %zu!\n",
                         string,
                         __fileName__,
                         __lineNb__
@@ -6039,11 +6056,11 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
               #endif /* HAVE_BACKTRACE */
               HALT_INTERNAL_ERROR_AT(__fileName__,
                                      __lineNb__,
-                                     "Invalid checksum 0x%08lx in unknown string %p, length %lu (max. %lu) (expected 0x%08lx)!",
+                                     "Invalid checksum 0x%08lx in unknown string %p, length %zu (max. %zu) (expected 0x%08lx)!",
                                      string->checkSum,
                                      string,
-                                     (ulong)string->length,
-                                     (ulong)string->maxLength,
+                                     string->length,
+                                     string->maxLength,
                                      checkSum
                                     );
             }
@@ -6057,11 +6074,11 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
           #endif /* HAVE_BACKTRACE */
           HALT_INTERNAL_ERROR_AT(__fileName__,
                                  __lineNb__,
-                                 "Invalid checksum 0x%08lx in static string %p, length %lu (max. %lu) (expected 0x%08lx)!",
+                                 "Invalid checksum 0x%08lx in static string %p, length %zu (max. %zu) (expected 0x%08lx)!",
                                  string->checkSum,
                                  string,
-                                 (ulong)string->length,
-                                 (ulong)string->maxLength,
+                                 string->length,
+                                 string->maxLength,
                                  checkSum
                                 );
         }
@@ -6071,7 +6088,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
         #endif /* HAVE_BACKTRACE */
         HALT_INTERNAL_ERROR_AT(__fileName__,
                                __lineNb__,
-                               "Invalid checksum 0x%08lx in static string %p, length %lu (max. %lu) (expected 0x%08lx)!",
+                               "Invalid checksum 0x%08lx in static string %p, length %zu (max. %zu) (expected 0x%08lx)!",
                                string->checkSum,
                                string,
                                string->length,
@@ -6100,7 +6117,7 @@ void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstStr
             {
               HALT_INTERNAL_ERROR_AT(__fileName__,
                                      __lineNb__,
-                                     "String %p allocated at %s, %lu is already freed at %s, %lu!",
+                                     "String %p allocated at %s, %zu is already freed at %s, %zu!",
                                      string,
                                      debugStringNode->allocFileName,
                                      debugStringNode->allocLineNb,
@@ -6176,7 +6193,7 @@ void String_debugDumpInfo(FILE                   *handle,
       StringHistogramList stringHistogramList;
       List_init(&stringHistogramList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
       size_t n     = 0L;
-      ulong count = 0L;
+      size_t count = 0L;
 
       // collect histogram data
       if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
@@ -6223,7 +6240,7 @@ void String_debugDumpInfo(FILE                   *handle,
         const DebugStringNode *debugStringNode;
         LIST_ITERATE(&debugStringAllocList,debugStringNode)
         {
-          fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %lu\n",
+          fprintf(handle,"DEBUG: string %p '%s' allocated at %s, line %zu\n",
                   debugStringNode->string,
                   debugStringNode->string->data,
                   debugStringNode->allocFileName,
@@ -6259,7 +6276,7 @@ void String_debugDumpInfo(FILE                   *handle,
         const StringHistogramNode *stringHistogramNode,
         LIST_ITERATE(&stringHistogramList,stringHistogramNode)
         {
-          fprintf(handle,"DEBUG: string allocated %u times at %s, line %lu\n",
+          fprintf(handle,"DEBUG: string allocated %u times at %s, line %zu\n",
                   stringHistogramNode->count,
                   stringHistogramNode->debugStringNode->allocFileName,
                   stringHistogramNode->debugStringNode->allocLineNb
@@ -6318,11 +6335,11 @@ void String_debugPrintStatistics(void)
 
     pthread_mutex_lock(&debugStringLock);
     {
-      fprintf(stderr,"DEBUG: %lu string(s) allocated, total %lu bytes\n",
+      fprintf(stderr,"DEBUG: %zu string(s) allocated, total %zu bytes\n",
               List_count(&debugStringAllocList),
               debugStringAllocList.memorySize
              );
-      fprintf(stderr,"DEBUG: %lu string(s) in free list, total %lu bytes\n",
+      fprintf(stderr,"DEBUG: %zu string(s) in free list, total %zu bytes\n",
               List_count(&debugStringFreeList),
               debugStringFreeList.memorySize
              );

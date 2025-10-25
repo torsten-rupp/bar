@@ -1356,7 +1356,7 @@ static inline size_t stringFormatLengthCodepointsUTF8(const char *format, ...)
 * Notes  : -
 \***********************************************************************/
 
-static inline long stringFind(const char *string, const char *findString)
+static inline ssize_t stringFind(const char *string, const char *findString)
 {
   const char *t;
 
@@ -1364,27 +1364,27 @@ static inline long stringFind(const char *string, const char *findString)
   assert(findString != NULL);
 
   t = strstr(string,findString);
-  return (t != NULL) ? (long)(t-string) : -1L;
+  return (t != NULL) ? (ssize_t)(t-string) : -1L;
 }
 
-static inline long stringFindChar(const char *string, char findChar)
+static inline ssize_t stringFindChar(const char *string, char findChar)
 {
   const char *t;
 
   assert(string != NULL);
 
   t = strchr(string,findChar);
-  return (t != NULL) ? (long)(t-string) : -1L;
+  return (t != NULL) ? (ssize_t)(t-string) : -1L;
 }
 
-static inline long stringFindReverseChar(const char *string, char findChar)
+static inline ssize_t stringFindReverseChar(const char *string, char findChar)
 {
   const char *t;
 
   assert(string != NULL);
 
   t = strrchr(string,findChar);
-  return (t != NULL) ? (long)(t-string) : -1L;
+  return (t != NULL) ? (ssize_t)(t-string) : -1L;
 }
 
 /***********************************************************************\
@@ -1400,9 +1400,9 @@ static inline long stringFindReverseChar(const char *string, char findChar)
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringSub(char *string, size_t stringSize, const char *source, size_t index, long length)
+static inline char* stringSub(char *string, size_t stringSize, const char *source, size_t index, ssize_t length)
 {
-  long n;
+  ssize_t n;
 
   assert(stringSize > 0);
 
@@ -1411,8 +1411,8 @@ static inline char* stringSub(char *string, size_t stringSize, const char *sourc
     if (source != NULL)
     {
       n = (length >= 0)
-            ? MIN((long)stringSize-1,length)
-            : MIN((long)stringSize-1,(long)strlen(source)-(long)index);
+            ? MIN((ssize_t)stringSize-1,length)
+            : MIN((ssize_t)stringSize-1,(ssize_t)strlen(source)-(ssize_t)index);
       if (n < 0) n = 0;
       strncpy(string,source+index,n); string[n] = NUL;
     }

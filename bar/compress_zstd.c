@@ -337,24 +337,26 @@ LOCAL Errors CompressZStd_reset(CompressInfo *compressInfo)
   switch (compressInfo->compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-      #ifdef HAVE_ZSTD_CCTX_RESET
-        size_t zstdResult = ZSTD_CCtx_reset(compressInfo->zstd.cStream, ZSTD_reset_session_only);
-        if (ZSTD_isError(zstdResult))
-        {
-          return ERROR_(DEFLATE,ZSTD_getErrorCode(zstdResult));
-        }
-        zstdResult = ZSTD_CCtx_setPledgedSrcSize(compressInfo->zstd.cStream,ZSTD_CONTENTSIZE_UNKNOWN);
-        if (ZSTD_isError(zstdResult))
-        {
-          return ERROR_(DEFLATE,ZSTD_getErrorCode(zstdResult));
-        }
-      #else /* not HAVE_ZSTD_CCTX_RESET */
-        zstdResult = ZSTD_resetCStream(compressInfo->zstd.cStream,0);
-      if (ZSTD_isError(zstdResult))
       {
-        return ERROR_(DEFLATE,ZSTD_getErrorCode(zstdResult));
+        #ifdef HAVE_ZSTD_CCTX_RESET
+          size_t zstdResult = ZSTD_CCtx_reset(compressInfo->zstd.cStream, ZSTD_reset_session_only);
+          if (ZSTD_isError(zstdResult))
+          {
+            return ERROR_(DEFLATE,ZSTD_getErrorCode(zstdResult));
+          }
+          zstdResult = ZSTD_CCtx_setPledgedSrcSize(compressInfo->zstd.cStream,ZSTD_CONTENTSIZE_UNKNOWN);
+          if (ZSTD_isError(zstdResult))
+          {
+            return ERROR_(DEFLATE,ZSTD_getErrorCode(zstdResult));
+          }
+        #else /* not HAVE_ZSTD_CCTX_RESET */
+          zstdResult = ZSTD_resetCStream(compressInfo->zstd.cStream,0);
+        if (ZSTD_isError(zstdResult))
+        {
+          return ERROR_(DEFLATE,ZSTD_getErrorCode(zstdResult));
+        }
+        #endif /* HAVE_ZSTD_CCTX_RESET */
       }
-      #endif /* HAVE_ZSTD_CCTX_RESET */
       break;
     case COMPRESS_MODE_INFLATE:
       {

@@ -295,7 +295,7 @@ bool Pattern_parsePatternType(const char *name, PatternTypes *patternType, void 
                      )
 #else /* not NDEBUG */
   Errors __Pattern_init(const char   *__fileName__,
-                        ulong        __lineNb__,
+                        size_t       __lineNb__,
                         Pattern      *pattern,
                         ConstString  string,
                         PatternTypes patternType,
@@ -318,7 +318,7 @@ bool Pattern_parsePatternType(const char *name, PatternTypes *patternType, void 
                             )
 #else /* not NDEBUG */
   Errors __Pattern_initCString(const char   *__fileName__,
-                               ulong        __lineNb__,
+                               size_t       __lineNb__,
                                Pattern      *pattern,
                                const char   *string,
                                PatternTypes patternType,
@@ -370,7 +370,7 @@ bool Pattern_parsePatternType(const char *name, PatternTypes *patternType, void 
   void Pattern_done(Pattern *pattern)
 #else /* not NDEBUG */
   void __Pattern_done(const char *__fileName__,
-                      ulong      __lineNb__,
+                      size_t     __lineNb__,
                       Pattern    *pattern
                      )
 #endif /* NDEBUG */
