@@ -780,7 +780,6 @@ HAVE_PTHREADS_W32
 HAVE_MOUNT
 HAVE_BURN
 HAVE_XFS
-HAVE_RCU
 HAVE_ISOFS
 HAVE_PAR2
 HAVE_POSTGRESQL
@@ -11995,7 +11994,6 @@ LIBRARY_PATHS="$cwd/extern/lib $cwd/extern/lib/mariadb $LIBRARY_PATHS"
 # compile/use icu
 if test -d icu -o -d "`readlink icu`"; then
   if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
     cwd=`pwd`
 
 
@@ -12759,7 +12757,6 @@ fi
 # compile/use zlib
 if test -d zlib -o -d "`readlink zlib`"; then
   if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
     cwd=`pwd`
 
 
@@ -13043,7 +13040,6 @@ fi
 if test $ENABLE_BZ2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -13343,7 +13339,6 @@ fi
 if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -13672,7 +13667,6 @@ fi
 if test $ENABLE_LZO = "yes"; then
   if test -d lzo -o -d "`readlink lzo`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -13995,7 +13989,6 @@ fi
 if test $ENABLE_LZ4 = "yes"; then
   if test -d lz4 -o -d "`readlink lz4`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -14283,7 +14276,6 @@ fi
 if test $ENABLE_ZSTD = "yes"; then
   if test -d zstd -o -d "`readlink zstd`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -14621,7 +14613,6 @@ fi
 if test $ENABLE_GCRYPT = "yes"; then
   if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -15260,7 +15251,6 @@ fi
 if test $ENABLE_SSH = "yes"; then
   if test -d openssl -o -d "`readlink openssl`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -15402,7 +15392,6 @@ printf "%s\n" "#define HAVE_SSL 1" >>confdefs.h
 
   if test -d libssh2 -o -d "`readlink libssh2`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
 
   printf %s "compile libssh2... " >&6
 
@@ -16275,7 +16264,6 @@ fi
 if test \( $ENABLE_TLS = "yes" \) -o \( $ENABLE_CURL = "yes" \); then
   if test \( -d libidn2 -o -d "`readlink libidn2`" \) ; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -18438,7 +18426,6 @@ fi
 if test $ENABLE_MARIADB = "yes"; then
   if test \( -d zlib -o -d "`readlink zlib`" \) -a \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -18796,7 +18783,6 @@ fi
 if test $ENABLE_POSTGRESQL = "yes"; then
   if test -d postgresql -o -d "`readlink postgresql`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -19318,7 +19304,6 @@ fi
 if test $ENABLE_ISO9660 = "yes"; then
   if test \( -d libiconv -o -d "`readlink libiconv`" \) -a \( -d libcdio -o -d "`readlink libcdio`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -19731,7 +19716,6 @@ fi
 if test $ENABLE_SMBCLIENT = "yes"; then
   if test -d libsmb2 -o -d "`readlink libsmb2`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -19847,7 +19831,6 @@ printf "%s\n" "done" >&6; }
 printf "%s\n" "skipped" >&6; }
           ;;
       esac
-
 
 
   printf %s "compile libsmb2... " >&6
@@ -20247,7 +20230,6 @@ fi
 if test $ENABLE_PCRE = "yes"; then
   if test -d pcre -o -d "`readlink pcre`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -20593,7 +20575,6 @@ fi
 if test $ENABLE_PAR2 = "yes"; then
   if test -d par2cmdline -o -d "`readlink par2cmdline`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -20921,7 +20902,6 @@ fi
 if test $ENABLE_ISOFS = "yes"; then
   if test -d libisofs -o -d "`readlink libisofs`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -21240,18 +21220,91 @@ printf "%s\n" "$as_me: WARNING: libisofs not compiled: libisofs package missing"
   fi
 fi
 
-# compile/use xfsprogrs (liburcu libxfs)
+# compile/use xfsprogrs (libuuid liburcu libxfs)
 if test $ENABLE_XFS = "yes"; then
-  if test \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \) -a \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
+  if test \( -d util-linux -o -d "`readlink util-linux`" \) -a \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \) -a \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
+
+
+  printf %s "compile libuuid... " >&6
+
+      result1=1
+      if test $result1 -eq 1; then
+        (cd util-linux; ./autogen.sh) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (autogen)" >&5
+printf "%s\n" "fail (autogen)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            (cd util-linux; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+              --disable-all-programs --enable-libuuid --enable-libblkid \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            ;;
+        esac
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+printf "%s\n" "fail (configure)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd util-linux; \
+         make -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
+printf "%s\n" "fail (make)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd util-linux; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
+printf "%s\n" "fail (install)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
+printf "%s\n" "done" >&6; }
+      fi
 
 
   printf %s "compile userspace-rcu... " >&6
 
-      result1=1
-      if test $result1 -eq 1; then
+      result2=1
+      if test $result2 -eq 1; then
         case $host_os in
           linux-*)
             ;;
@@ -21270,10 +21323,10 @@ printf "%s\n" "fail (patch)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result1=0
+          result2=0
         fi
       fi
-      if test $result1 -eq 1; then
+      if test $result2 -eq 1; then
         case $host_os in
           linux-* | sunos | solaris* | darwin*)
             (cd userspace-rcu; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
@@ -21298,10 +21351,10 @@ printf "%s\n" "fail (configure)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result1=0
+          result2=0
         fi
       fi
-      if test $result1 -eq 1; then
+      if test $result2 -eq 1; then
         (cd userspace-rcu; \
          make -j$CPU_CORES; \
         ) 1>$tmpFile 2>&1
@@ -21313,10 +21366,10 @@ printf "%s\n" "fail (make)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result1=0
+          result2=0
         fi
       fi
-      if test $result1 -eq 1; then
+      if test $result2 -eq 1; then
         (cd userspace-rcu; \
          make install PREFIX=$cwd/extern; \
         ) 1>$tmpFile 2>&1
@@ -21328,10 +21381,10 @@ printf "%s\n" "fail (install)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result1=0
+          result2=0
         fi
       fi
-      if test $result1 -eq 1; then
+      if test $result2 -eq 1; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
 printf "%s\n" "done" >&6; }
       fi
@@ -21339,8 +21392,8 @@ printf "%s\n" "done" >&6; }
 
   printf %s "compile xfsprogs... " >&6
 
-      result2=1
-      if test $result2 -eq 1; then
+      result3=1
+      if test $result3 -eq 1; then
         case $host_os in
           linux-*)
             ;;
@@ -21359,11 +21412,11 @@ printf "%s\n" "fail (patch)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result2=0
+          result3=0
         fi
       fi
-      if test $result2 -eq 1; then
-        (cd xfsprogs; make configure)
+      if test $result3 -eq 1; then
+        (cd xfsprogs; make configure) 1>$tmpFile 2>&1
         case $host_os in
           linux-* | sunos | solaris* | darwin*)
             (cd xfsprogs; CC="$CC" CPPFLAGS="" CFLAGS="-I$cwd/extern/include" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
@@ -21388,11 +21441,11 @@ printf "%s\n" "fail (configure)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result2=0
+          result3=0
         fi
       fi
 
-      if test $result2 -eq 1; then
+      if test $result3 -eq 1; then
         (   cd xfsprogs \
          && make headers \
          && make -j$CPU_CORES -C include install-headers \
@@ -21409,10 +21462,10 @@ printf "%s\n" "fail (make)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result2=0
+          result3=0
         fi
       fi
-      if test $result2 -eq 1; then
+      if test $result3 -eq 1; then
         (   cd xfsprogs \
          && make -j$CPU_CORES -C libfrog install-dev \
          && make -j$CPU_CORES -C libxfs install-dev \
@@ -21425,29 +21478,26 @@ printf "%s\n" "fail (install)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result2=0
+          result3=0
         fi
       fi
-      if test $result2 -eq 1; then
+      if test $result3 -eq 1; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
 printf "%s\n" "done" >&6; }
       fi
     else
       result1=1
       result2=1
+      result3=1
     fi
 
-    if test $result1 -eq 1 -a $result2 -eq 1; then
+    if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES xfs frog urcu"
+        LIBRARIES="$LIBRARIES xfs frog urcu uuid blkid"
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu uuid blkid"
       fi
-      HAVE_RCU=1
       HAVE_XFS=1
-
-printf "%s\n" "#define HAVE_RCU 1" >>confdefs.h
-
 
 printf "%s\n" "#define HAVE_XFS 1" >>confdefs.h
 
@@ -21515,7 +21565,7 @@ printf "%s\n" "$ac_cv_search_libraries_libxfs_init" >&6; }
   ac_result=$ac_cv_search_libraries_libxfs_init
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu $LIBRARIES";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu uuid blkid $LIBRARIES";
 printf "%s\n" "#define HAVE_XFS 1" >>confdefs.h
 
 fi
@@ -21583,7 +21633,7 @@ printf "%s\n" "$ac_cv_search_static_libxfs_init" >&6; }
   ac_result=$ac_cv_search_static_libxfs_init
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_XFSPROGS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_XFSPROGS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu uuid blkid";
 printf "%s\n" "#define HAVE_XFS 1" >>confdefs.h
 
 fi
@@ -21649,7 +21699,7 @@ printf "%s\n" "$ac_cv_search_libraries_libxfs_init" >&6; }
   ac_result=$ac_cv_search_libraries_libxfs_init
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu $LIBRARIES";
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu uuid blkid $LIBRARIES";
 printf "%s\n" "#define HAVE_XFS 1" >>confdefs.h
 
 fi
@@ -21669,13 +21719,15 @@ fi
       ;;
   esac
 
-  if test -z "$HAVE_RCU"; then
+  if test -z "$HAVE_XFS"; then
+    if test ! \( -d util-linux -o -d "`readlink util-linux`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: util-linux not compiled: util-linux package missing" >&5
+printf "%s\n" "$as_me: WARNING: util-linux not compiled: util-linux package missing" >&2;}
+    fi
     if test ! \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: userspace-rcu not compiled: userspace-rcu package missing" >&5
 printf "%s\n" "$as_me: WARNING: userspace-rcu not compiled: userspace-rcu package missing" >&2;}
     fi
-  fi
-  if test -z "$HAVE_XFS"; then
     if test ! \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: xfsprogs not compiled: xfsprogs package missing" >&5
 printf "%s\n" "$as_me: WARNING: xfsprogs not compiled: xfsprogs package missing" >&2;}
@@ -21687,7 +21739,6 @@ fi
 if test $ENABLE_BURN = "yes"; then
   if test -d libburn -o -d "`readlink libburn`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -22010,7 +22061,6 @@ fi
 if test $ENABLE_MOUNT = "yes"; then
   if test -d util-linux -o -d "`readlink util-linux`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -22337,7 +22387,6 @@ case $host_os in
     if test $ENABLE_PTHREADS_W32 = "yes"; then
       if test -d pthreads-w32 -o -d "`readlink pthreads-w32`"; then
         if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
           cwd=`pwd`
 
 
@@ -22409,7 +22458,6 @@ esac
 if test $ENABLE_BFD = "yes"; then
   if test -d binutils -o -d "`readlink binutils`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
 
@@ -22918,12 +22966,6 @@ then :
 
 else $as_nop
   as_fn_error $? "isofs missing" "$LINENO" 5
-fi
-   if test $HAVE_RCU
-then :
-
-else $as_nop
-  as_fn_error $? "rcu missing" "$LINENO" 5
 fi
    if test $HAVE_XFS
 then :

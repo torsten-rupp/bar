@@ -832,11 +832,11 @@ rpmd: \
 rpm32: \
   $(DISTRIBUTION_NAME).rpm
 rpm32d:
-	$(MAKE) $(DISTRIBUTION_NAME).rpm DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME).rpm PACKAGE_DEBUG=1
 rpm64: \
   $(DISTRIBUTION_NAME)-x86_64.rpm
 rpm64d:
-	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm PACKAGE_DEBUG=1
 
 clean_rpm:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm
@@ -854,7 +854,7 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
             --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
-            bar-rpm setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm DEBUG=$(DEBUG)" \
+            bar-rpm setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -869,7 +869,7 @@ build_rpm:
            $(VERSION) \
            $(shell id -u):$(shell id -g) \
            $(DISTRIBUTION_NAME)-x86_64.rpm \
-           $(if $(DEBUG),--debug) \
+           $(if $(PACKAGE_DEBUG),--debug) \
            ; \
         )
 
@@ -886,19 +886,19 @@ debd: \
 deb32: \
   $(DISTRIBUTION_NAME).deb
 deb32d:
-	$(MAKE) $(DISTRIBUTION_NAME).deb DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME).deb PACKAGE_DEBUG=1
 deb-gui32: \
   $(DISTRIBUTION_NAME_GUI).deb
 deb-gui32d:
-	$(MAKE) $(DISTRIBUTION_NAME_GUI).deb DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME_GUI).deb PACKAGE_DEBUG=1
 deb64: \
   $(DISTRIBUTION_NAME)-x86_64.deb
 deb64d:
-	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.deb DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.deb PACKAGE_DEBUG=1
 deb-gui64: \
   $(DISTRIBUTION_NAME_GUI)-x86_64.deb
 deb-gui64d:
-	$(MAKE) $(DISTRIBUTION_NAME_GUI)-x86_64.deb DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME_GUI)-x86_64.deb PACKAGE_DEBUG=1
 
 clean_deb:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME).deb
@@ -918,7 +918,7 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
             --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
-            bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb DEBUG=$(DEBUG)" \
+            bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -935,7 +935,7 @@ build_deb:
            $(shell id -u):$(shell id -g) \
            $(DISTRIBUTION_NAME)-x86_64.deb \
            $(DISTRIBUTION_NAME_GUI)-x86_64.deb \
-           $(if $(DEBUG),--debug); \
+           $(if $(PACKAGE_DEBUG),--debug); \
         )
 
 # Windows setup
@@ -943,7 +943,7 @@ build_deb:
 win32:
 	$(MAKE) $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@
 win32d:
-	$(MAKE) $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@ DEBUG=1
+	$(MAKE) $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@ PACKAGE_DEBUG=1
 
 clean_win32:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm
@@ -964,7 +964,7 @@ $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@: \
             -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
-            bar-mingw32 setarch x86_64 -- /bin/bash -c "make -C /media/home build_win32 DEBUG=$(DEBUG)" \
+            bar-mingw32 setarch x86_64 -- /bin/bash -c "make -C /media/home build_win32 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -979,7 +979,7 @@ build_win32:
            $(VERSION) \
            $(shell id -u):$(shell id -g) \
            $(PACKAGE_NAME)-setup-$(VERSION) \
-           $(if $(DEBUG),--debug); \
+           $(if $(PACKAGE_DEBUG),--debug); \
         )
 
 # install test

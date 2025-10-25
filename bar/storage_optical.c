@@ -486,14 +486,14 @@ LOCAL void executeIOgrowisofsStderr(ConstString line,
 
 LOCAL Errors StorageOptical_initAll(void)
 {
-  #ifdef HAVE_ISOFS
+  #ifdef HAVE_ISO9660
     (void)cdio_log_set_handler(libcdioLogCallback);
     int result = iso_init();
     if (result != ISO_SUCCESS)
     {
       return ERRORX_(INIT,result,"%s",iso_error_to_msg(result));
     }
-  #endif // HAVE_ISOFS
+  #endif // HAVE_ISO9660
 
   #ifdef HAVE_BURN
     if (burn_initialize() == 0)

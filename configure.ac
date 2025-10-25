@@ -848,7 +848,6 @@ AC_SUBST(HAVE_MARIADB)                       dnl "1" for MariaDB support, "" oth
 AC_SUBST(HAVE_POSTGRESQL)                    dnl "1" for PostgreSQL support, "" otherwise
 AC_SUBST(HAVE_PAR2)                          dnl "1" for PAR2 support, "" otherwise
 AC_SUBST(HAVE_ISOFS)                         dnl "1" for isofs support, "" otherwise
-AC_SUBST(HAVE_RCU)                           dnl "1" for rcu support, "" otherwise
 AC_SUBST(HAVE_XFS)                           dnl "1" for xfs support, "" otherwise
 AC_SUBST(HAVE_BURN)                          dnl "1" for burn support, "" otherwise
 AC_SUBST(HAVE_MOUNT)                         dnl "1" for mount support, "" otherwise
@@ -1775,8 +1774,6 @@ AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
 # compile/use icu
 if test -d icu -o -d "`readlink icu`"; then
   if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    dnl compile icu library
-
     cwd=`pwd`
 
     AC_MSG_COMPILE([icu])
@@ -1933,8 +1930,6 @@ fi
 # compile/use zlib
 if test -d zlib -o -d "`readlink zlib`"; then
   if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    dnl compile zlib library
-
     cwd=`pwd`
 
     AC_MSG_COMPILE([zlib])
@@ -2007,8 +2002,6 @@ fi
 if test $ENABLE_BZ2 = "yes"; then
   if test -d bzip2 -o -d "`readlink bzip2`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile bzip2 library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([bzip2])
@@ -2098,8 +2091,6 @@ fi
 if test $ENABLE_LZMA = "yes"; then
   if test -d xz -o -d "`readlink xz`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile lzma library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([xz utils])
@@ -2213,8 +2204,6 @@ fi
 if test $ENABLE_LZO = "yes"; then
   if test -d lzo -o -d "`readlink lzo`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile lzo library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([lzo])
@@ -2322,8 +2311,6 @@ fi
 if test $ENABLE_LZ4 = "yes"; then
   if test -d lz4 -o -d "`readlink lz4`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile lz4 library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([lz4])
@@ -2406,8 +2393,6 @@ fi
 if test $ENABLE_ZSTD = "yes"; then
   if test -d zstd -o -d "`readlink zstd`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile zstd library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([zstd])
@@ -2530,8 +2515,6 @@ fi
 if test $ENABLE_GCRYPT = "yes"; then
   if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile libgpg-error, libgcrypt libraries
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([libgpg-error])
@@ -2740,8 +2723,6 @@ fi
 if test $ENABLE_SSH = "yes"; then
   if test -d openssl -o -d "`readlink openssl`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile openssl library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([openssl])
@@ -2853,8 +2834,6 @@ if test $ENABLE_SSH = "yes"; then
 
   if test -d libssh2 -o -d "`readlink libssh2`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile ssh2 library
-
       AC_MSG_COMPILE([libssh2])
       result=1
       if test $result -eq 1; then
@@ -3007,8 +2986,6 @@ fi
 if test \( $ENABLE_TLS = "yes" \) -o \( $ENABLE_CURL = "yes" \); then
   if test \( -d libidn2 -o -d "`readlink libidn2`" \) ; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile libidn2
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([libidn2])
@@ -3778,8 +3755,6 @@ fi
 if test $ENABLE_MARIADB = "yes"; then
   if test \( -d zlib -o -d "`readlink zlib`" \) -a \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile MariaDB client library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([MariaDB client])
@@ -3921,8 +3896,6 @@ fi
 if test $ENABLE_POSTGRESQL = "yes"; then
   if test -d postgresql -o -d "`readlink postgresql`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile PostgreSQL client library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([PostgreSQL])
@@ -4043,8 +4016,6 @@ fi
 if test $ENABLE_ISO9660 = "yes"; then
   if test \( -d libiconv -o -d "`readlink libiconv`" \) -a \( -d libcdio -o -d "`readlink libcdio`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile libiconv, cdio libraries
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([libiconv])
@@ -4212,8 +4183,6 @@ fi
 if test $ENABLE_SMBCLIENT = "yes"; then
   if test -d libsmb2 -o -d "`readlink libsmb2`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile krb5, smb2 libraries
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([libkrb5])
@@ -4293,8 +4262,6 @@ if test $ENABLE_SMBCLIENT = "yes"; then
           AC_MSG_RESULT([skipped])
           ;;
       esac
-
-      dnl compile libsmb2 library
 
       AC_MSG_COMPILE([libsmb2])
       result2=1
@@ -4473,8 +4440,6 @@ fi
 if test $ENABLE_PCRE = "yes"; then
   if test -d pcre -o -d "`readlink pcre`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile pcre library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([pcre])
@@ -4605,8 +4570,6 @@ fi
 if test $ENABLE_PAR2 = "yes"; then
   if test -d par2cmdline -o -d "`readlink par2cmdline`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile PAR2 library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([PAR2])
@@ -4719,8 +4682,6 @@ fi
 if test $ENABLE_ISOFS = "yes"; then
   if test -d libisofs -o -d "`readlink libisofs`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile isofs library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([libisofs])
@@ -4824,17 +4785,67 @@ if test $ENABLE_ISOFS = "yes"; then
   fi
 fi
 
-# compile/use xfsprogrs (liburcu libxfs)
+# compile/use xfsprogrs (libuuid liburcu libxfs)
 if test $ENABLE_XFS = "yes"; then
-  if test \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \) -a \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
+  if test \( -d util-linux -o -d "`readlink util-linux`" \) -a \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \) -a \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile userspace rcu library
-
       cwd=`pwd`
 
-      AC_MSG_COMPILE([userspace-rcu])
+      dnl compile libuuid, libblkid from util-linux
+      AC_MSG_COMPILE([libuuid])
       result1=1
       if test $result1 -eq 1; then
+        (cd util-linux; ./autogen.sh) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (autogen)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        case $host_os in
+          linux-* | sunos | solaris* | darwin*)
+            (cd util-linux; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+              --disable-all-programs --enable-libuuid --enable-libblkid \
+            ) 1>$tmpFile 2>&1
+            ;;
+          windows*|mingw*)
+            ;;
+        esac
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd util-linux; \
+         make -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        (cd util-linux; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (install)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result1=0
+        fi
+      fi
+      if test $result1 -eq 1; then
+        AC_MSG_RESULT([done])
+      fi
+
+      AC_MSG_COMPILE([userspace-rcu])
+      result2=1
+      if test $result2 -eq 1; then
         case $host_os in
           linux-*)
             ;;
@@ -4848,10 +4859,10 @@ if test $ENABLE_XFS = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (patch)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
+          result2=0
         fi
       fi
-      if test $result1 -eq 1; then
+      if test $result2 -eq 1; then
         case $host_os in
           linux-* | sunos | solaris* | darwin*)
             (cd userspace-rcu; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
@@ -4871,36 +4882,36 @@ if test $ENABLE_XFS = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
+          result2=0
         fi
       fi
-      if test $result1 -eq 1; then
+      if test $result2 -eq 1; then
         (cd userspace-rcu; \
          make -j$CPU_CORES; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
+          result2=0
         fi
       fi
-      if test $result1 -eq 1; then
+      if test $result2 -eq 1; then
         (cd userspace-rcu; \
          make install PREFIX=$cwd/extern; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
+          result2=0
         fi
       fi
-      if test $result1 -eq 1; then
+      if test $result2 -eq 1; then
         AC_MSG_RESULT([done])
       fi
 
       AC_MSG_COMPILE([xfsprogs])
-      result2=1
-      if test $result2 -eq 1; then
+      result3=1
+      if test $result3 -eq 1; then
         case $host_os in
           linux-*)
             ;;
@@ -4914,11 +4925,11 @@ if test $ENABLE_XFS = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (patch)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
+          result3=0
         fi
       fi
-      if test $result2 -eq 1; then
-        (cd xfsprogs; make configure)
+      if test $result3 -eq 1; then
+        (cd xfsprogs; make configure) 1>$tmpFile 2>&1
         case $host_os in
           linux-* | sunos | solaris* | darwin*)
             (cd xfsprogs; CC="$CC" CPPFLAGS="" CFLAGS="-I$cwd/extern/include" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
@@ -4938,11 +4949,11 @@ if test $ENABLE_XFS = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
+          result3=0
         fi
       fi
 
-      if test $result2 -eq 1; then
+      if test $result3 -eq 1; then
         (   cd xfsprogs \
          && make headers \
          && make -j$CPU_CORES -C include install-headers \
@@ -4954,10 +4965,10 @@ if test $ENABLE_XFS = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
+          result3=0
         fi
       fi
-      if test $result2 -eq 1; then
+      if test $result3 -eq 1; then
         (   cd xfsprogs \
          && make -j$CPU_CORES -C libfrog install-dev \
          && make -j$CPU_CORES -C libxfs install-dev \
@@ -4965,26 +4976,25 @@ if test $ENABLE_XFS = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
+          result3=0
         fi
       fi
-      if test $result2 -eq 1; then
+      if test $result3 -eq 1; then
         AC_MSG_RESULT([done])
       fi
     else
       result1=1
       result2=1
+      result3=1
     fi
 
-    if test $result1 -eq 1 -a $result2 -eq 1; then
+    if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES xfs frog urcu"
+        LIBRARIES="$LIBRARIES xfs frog urcu uuid blkid"
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu uuid blkid"
       fi
-      HAVE_RCU=1
       HAVE_XFS=1
-      AC_DEFINE(HAVE_RCU,1,[rcu installed (local)])
       AC_DEFINE(HAVE_XFS,1,[xfs installed (local)])
     fi
   else
@@ -4992,13 +5002,13 @@ if test $ENABLE_XFS = "yes"; then
 
 # TODO: frog, rcu
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
+      AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu uuid blkid $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
     else
       if test -z "$HAVE_XFSPROGS"; then
-        AC_SEARCH_STATIC_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
+        AC_SEARCH_STATIC_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu uuid blkid";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
       fi
       if test -z "$HAVE_XFSPROGS"; then
-        AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
+        AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu uuid blkid $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
       fi
     fi
   fi
@@ -5015,12 +5025,13 @@ if test $ENABLE_XFS = "yes"; then
       ;;
   esac
 
-  if test -z "$HAVE_RCU"; then
+  if test -z "$HAVE_XFS"; then
+    if test ! \( -d util-linux -o -d "`readlink util-linux`" \); then
+      AC_MSG_WARN([util-linux not compiled: util-linux package missing])
+    fi
     if test ! \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \); then
       AC_MSG_WARN([userspace-rcu not compiled: userspace-rcu package missing])
     fi
-  fi
-  if test -z "$HAVE_XFS"; then
     if test ! \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
       AC_MSG_WARN([xfsprogs not compiled: xfsprogs package missing])
     fi
@@ -5031,8 +5042,6 @@ fi
 if test $ENABLE_BURN = "yes"; then
   if test -d libburn -o -d "`readlink libburn`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile burn library
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([libburn])
@@ -5140,10 +5149,9 @@ fi
 if test $ENABLE_MOUNT = "yes"; then
   if test -d util-linux -o -d "`readlink util-linux`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile libmount from util-linux
-
       cwd=`pwd`
 
+      dnl compile libmount from util-linux
       AC_MSG_COMPILE([libmount])
       result=1
       if test $result -eq 1; then
@@ -5253,8 +5261,6 @@ case $host_os in
     if test $ENABLE_PTHREADS_W32 = "yes"; then
       if test -d pthreads-w32 -o -d "`readlink pthreads-w32`"; then
         if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-          dnl compile pthreads-w32 library
-
           cwd=`pwd`
 
           AC_MSG_COMPILE([pthreads-w32])
@@ -5311,8 +5317,6 @@ esac
 if test $ENABLE_BFD = "yes"; then
   if test -d binutils -o -d "`readlink binutils`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile bfd, sframe, iberty libraries
-
       cwd=`pwd`
 
       AC_MSG_COMPILE([bfd])
@@ -5447,7 +5451,6 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_PCRE      ,,AC_MSG_ERROR([PCRE missing]))
    AS_IF(test $HAVE_PAR2      ,,AC_MSG_ERROR([PAR2 missing]))
    AS_IF(test $HAVE_ISOFS     ,,AC_MSG_ERROR([isofs missing]))
-   AS_IF(test $HAVE_RCU       ,,AC_MSG_ERROR([rcu missing]))
    AS_IF(test $HAVE_XFS       ,,AC_MSG_ERROR([xfs missing]))
    AS_IF(test $HAVE_BURN      ,,AC_MSG_ERROR([burn missing]))
    AS_IF(test $HAVE_MOUNT     ,,AC_MSG_ERROR([mount missing]))
@@ -5538,7 +5541,7 @@ AC_CHECK_SIZEOF(size_t)
 if test $ENABLE_LINK_DYNAMIC = "yes"; then
   AC_SEARCH_LIBRARIES(uuid_generate,uuid,[LIBRARIES="$LIBRARIES uuid"],,uuid/uuid.h)
 else
-  AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],,uuid/uuid.h)
+  AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],[],uuid/uuid.h)
 fi
 case $host_os in
   linux-*)
