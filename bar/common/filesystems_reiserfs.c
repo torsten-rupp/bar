@@ -47,7 +47,7 @@ typedef struct
   uchar  label[16];
   byte   unused0[88];
 } ATTRIBUTE_PACKED ReiserSuperBlock;
-static_assert(sizeof(ReiserSuperBlock) == 204);
+static_assert(sizeof(ReiserSuperBlock) == 204,"sizeof(ReiserSuperBlock) == 204");
 
 /***************************** Variables *******************************/
 

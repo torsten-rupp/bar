@@ -1337,291 +1337,295 @@ LOCAL void pairingThreadCode(void)
     switch (globalOptions.serverMode)
     {
       case SERVER_MODE_MASTER:
-        // try pairing all slaves
-        bool anyOfflineFlag  = FALSE;
-        bool anyUnpairedFlag = FALSE;
-        JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
-          // disconnect shutdown slaves
-          SlaveNode *slaveNode;
-          JOB_SLAVE_LIST_ITERATE(slaveNode)
+          // try pairing all slaves
+          bool anyOfflineFlag  = FALSE;
+          bool anyUnpairedFlag = FALSE;
+          JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
-            if (Connector_isShutdown(&slaveNode->connectorInfo))
+            // disconnect shutdown slaves
+            SlaveNode *slaveNode;
+            JOB_SLAVE_LIST_ITERATE(slaveNode)
             {
-              // disconnect slave
-              Connector_disconnect(&slaveNode->connectorInfo);
-
-              // update slave state in job
-              updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE,FALSE,FALSE);
-
-              // log info
-              if (slaveNode->authorizedFlag)
+              if (Connector_isShutdown(&slaveNode->connectorInfo))
               {
-                logMessage(NULL,  // logHandle,
-                           LOG_TYPE_INFO,
-                           "Slave %s:%d disconnected",
-                           String_cString(slaveNode->name),slaveNode->port
-                          );
-              }
+                // disconnect slave
+                Connector_disconnect(&slaveNode->connectorInfo);
 
-              slaveNode->authorizedFlag = FALSE;
-            }
-          }
+                // update slave state in job
+                updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE,FALSE,FALSE);
 
-          // update slave list
-          JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-          {
-            // collect new slaves
-            JobNode *jobNode;
-            JOB_LIST_ITERATE(jobNode)
-            {
-              if (Job_isRemote(jobNode))
-              {
-                slaveNode = JOB_SLAVE_LIST_FIND(slaveNode,
-                                                   (slaveNode->port == jobNode->job.slaveHost.port)
-                                                && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
-                                               );
-                if (slaveNode == NULL)
+                // log info
+                if (slaveNode->authorizedFlag)
                 {
-                  slaveNode = Job_addSlave(jobNode->job.slaveHost.name,
-                                           jobNode->job.slaveHost.port,
-                                           jobNode->job.slaveHost.tlsMode
-                                          );
-                }
-                else
-                {
-                  slaveNode->tlsMode = jobNode->job.slaveHost.tlsMode;
-                }
-              }
-            }
-
-            // discard obsolete slaves
-            slaveNode = JOB_SLAVE_LIST_HEAD();
-            while (slaveNode != NULL)
-            {
-              if (   !Job_isSlaveLocked(slaveNode)
-                  && !JOB_LIST_CONTAINS(jobNode,
-                                           (jobNode->job.slaveHost.port == slaveNode->port)
-                                        && String_equals(jobNode->job.slaveHost.name,slaveNode->name)
-                                       )
-                 )
-              {
-                slaveNode = Job_removeSlave(slaveNode);
-              }
-              else
-              {
-                slaveNode = slaveNode->next;
-              }
-            }
-          }  // JOB_LIST_LOCKED_DO
-
-          // try connect new slaves, authorize
-          JOB_SLAVE_LIST_ITERATE(slaveNode)
-          {
-            assert(slaveNode->name != NULL);
-
-            if (!Connector_isShutdown(&slaveNode->connectorInfo))
-            {
-              // try connect to slave
-              if (!Connector_isConnected(&slaveNode->connectorInfo))
-              {
-                Errors error = Connector_connect(&slaveNode->connectorInfo,
-                                                 slaveNode->name,
-                                                 slaveNode->port,
-                                                 slaveNode->tlsMode,
-                                                 globalOptions.serverCA.data,
-                                                 globalOptions.serverCA.length,
-                                                 globalOptions.serverCert.data,
-                                                 globalOptions.serverCert.length,
-                                                 globalOptions.serverKey.data,
-                                                 globalOptions.serverKey.length
-                                                );
-                if (error == ERROR_NONE)
-                {
-                  // log info
-                  if (Misc_getCurrentDateTime() > (slaveNode->lastOnlineDateTime+10*S_PER_MINUTE))
-                  {
-                    logMessage(NULL,  // logHandle,
-                               LOG_TYPE_INFO,
-                               "Slave %s:%d online",
-                               String_cString(slaveNode->name),slaveNode->port
-                              );
-                  }
-                  slaveNode->lastOnlineDateTime = Misc_getCurrentDateTime();
-                }
-                else
-                {
-                  anyOfflineFlag = TRUE;
-                }
-              }
-
-              // try authorize on slave
-              if (   Connector_isConnected(&slaveNode->connectorInfo)
-                  && !Connector_isAuthorized(&slaveNode->connectorInfo)
-                 )
-              {
-                Errors error = Connector_authorize(&slaveNode->connectorInfo,30*MS_PER_SECOND);
-                if (error == ERROR_NONE)
-                {
-                  slaveNode->authorizedFlag = TRUE;
-
-                  // log info
                   logMessage(NULL,  // logHandle,
                              LOG_TYPE_INFO,
-                             "Slave %s:%d authorized",
+                             "Slave %s:%d disconnected",
                              String_cString(slaveNode->name),slaveNode->port
                             );
                 }
-                else
+
+                slaveNode->authorizedFlag = FALSE;
+              }
+            }
+
+            // update slave list
+            JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+            {
+              // collect new slaves
+              JobNode *jobNode;
+              JOB_LIST_ITERATE(jobNode)
+              {
+                if (Job_isRemote(jobNode))
                 {
-                  anyUnpairedFlag = TRUE;
+                  slaveNode = JOB_SLAVE_LIST_FIND(slaveNode,
+                                                     (slaveNode->port == jobNode->job.slaveHost.port)
+                                                  && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
+                                                 );
+                  if (slaveNode == NULL)
+                  {
+                    slaveNode = Job_addSlave(jobNode->job.slaveHost.name,
+                                             jobNode->job.slaveHost.port,
+                                             jobNode->job.slaveHost.tlsMode
+                                            );
+                  }
+                  else
+                  {
+                    slaveNode->tlsMode = jobNode->job.slaveHost.tlsMode;
+                  }
                 }
               }
 
-              // update slave state in job
-              if      (Connector_isAuthorized(&slaveNode->connectorInfo))
+              // discard obsolete slaves
+              slaveNode = JOB_SLAVE_LIST_HEAD();
+              while (slaveNode != NULL)
               {
-                uint        slaveProtocolVersionMajor;
-                ServerModes slaveServerMode;
-                Errors error = Connector_getVersion(&slaveNode->connectorInfo,
-                                                    &slaveProtocolVersionMajor,
-                                                    NULL,  // slaveProtocolVersionMinor
-                                                    &slaveServerMode
-                                                   );
-                if (error == ERROR_NONE)
+                if (   !Job_isSlaveLocked(slaveNode)
+                    && !JOB_LIST_CONTAINS(jobNode,
+                                             (jobNode->job.slaveHost.port == slaveNode->port)
+                                          && String_equals(jobNode->job.slaveHost.name,slaveNode->name)
+                                         )
+                   )
                 {
-                  if (slaveServerMode == SERVER_MODE_SLAVE)
+                  slaveNode = Job_removeSlave(slaveNode);
+                }
+                else
+                {
+                  slaveNode = slaveNode->next;
+                }
+              }
+            }  // JOB_LIST_LOCKED_DO
+
+            // try connect new slaves, authorize
+            JOB_SLAVE_LIST_ITERATE(slaveNode)
+            {
+              assert(slaveNode->name != NULL);
+
+              if (!Connector_isShutdown(&slaveNode->connectorInfo))
+              {
+                // try connect to slave
+                if (!Connector_isConnected(&slaveNode->connectorInfo))
+                {
+                  Errors error = Connector_connect(&slaveNode->connectorInfo,
+                                                   slaveNode->name,
+                                                   slaveNode->port,
+                                                   slaveNode->tlsMode,
+                                                   globalOptions.serverCA.data,
+                                                   globalOptions.serverCA.length,
+                                                   globalOptions.serverCert.data,
+                                                   globalOptions.serverCert.length,
+                                                   globalOptions.serverKey.data,
+                                                   globalOptions.serverKey.length
+                                                  );
+                  if (error == ERROR_NONE)
                   {
-                    if (slaveProtocolVersionMajor == SERVER_PROTOCOL_VERSION_MAJOR)
+                    // log info
+                    if (Misc_getCurrentDateTime() > (slaveNode->lastOnlineDateTime+10*S_PER_MINUTE))
                     {
-                      updateSlaveState(slaveNode,
-                                       SLAVE_STATE_PAIRED,
-                                       Connector_isTLS(&slaveNode->connectorInfo),
-                                       Connector_isInsecureTLS(&slaveNode->connectorInfo)
-                                      );
+                      logMessage(NULL,  // logHandle,
+                                 LOG_TYPE_INFO,
+                                 "Slave %s:%d online",
+                                 String_cString(slaveNode->name),slaveNode->port
+                                );
+                    }
+                    slaveNode->lastOnlineDateTime = Misc_getCurrentDateTime();
+                  }
+                  else
+                  {
+                    anyOfflineFlag = TRUE;
+                  }
+                }
+
+                // try authorize on slave
+                if (   Connector_isConnected(&slaveNode->connectorInfo)
+                    && !Connector_isAuthorized(&slaveNode->connectorInfo)
+                   )
+                {
+                  Errors error = Connector_authorize(&slaveNode->connectorInfo,30*MS_PER_SECOND);
+                  if (error == ERROR_NONE)
+                  {
+                    slaveNode->authorizedFlag = TRUE;
+
+                    // log info
+                    logMessage(NULL,  // logHandle,
+                               LOG_TYPE_INFO,
+                               "Slave %s:%d authorized",
+                               String_cString(slaveNode->name),slaveNode->port
+                              );
+                  }
+                  else
+                  {
+                    anyUnpairedFlag = TRUE;
+                  }
+                }
+
+                // update slave state in job
+                if      (Connector_isAuthorized(&slaveNode->connectorInfo))
+                {
+                  uint        slaveProtocolVersionMajor;
+                  ServerModes slaveServerMode;
+                  Errors error = Connector_getVersion(&slaveNode->connectorInfo,
+                                                      &slaveProtocolVersionMajor,
+                                                      NULL,  // slaveProtocolVersionMinor
+                                                      &slaveServerMode
+                                                     );
+                  if (error == ERROR_NONE)
+                  {
+                    if (slaveServerMode == SERVER_MODE_SLAVE)
+                    {
+                      if (slaveProtocolVersionMajor == SERVER_PROTOCOL_VERSION_MAJOR)
+                      {
+                        updateSlaveState(slaveNode,
+                                         SLAVE_STATE_PAIRED,
+                                         Connector_isTLS(&slaveNode->connectorInfo),
+                                         Connector_isInsecureTLS(&slaveNode->connectorInfo)
+                                        );
+                      }
+                      else
+                      {
+                        updateSlaveState(slaveNode,
+                                         SLAVE_STATE_WRONG_PROTOCOL_VERSION,
+                                         Connector_isTLS(&slaveNode->connectorInfo),
+                                         Connector_isInsecureTLS(&slaveNode->connectorInfo)
+                                        );
+                      }
                     }
                     else
                     {
                       updateSlaveState(slaveNode,
-                                       SLAVE_STATE_WRONG_PROTOCOL_VERSION,
+                                       SLAVE_STATE_WRONG_MODE,
                                        Connector_isTLS(&slaveNode->connectorInfo),
                                        Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                       );
                     }
                   }
-                  else
-                  {
-                    updateSlaveState(slaveNode,
-                                     SLAVE_STATE_WRONG_MODE,
-                                     Connector_isTLS(&slaveNode->connectorInfo),
-                                     Connector_isInsecureTLS(&slaveNode->connectorInfo)
-                                    );
-                  }
                 }
-              }
-              else if (Connector_isConnected(&slaveNode->connectorInfo))
-              {
-                updateSlaveState(slaveNode,
-                                 SLAVE_STATE_ONLINE,
-                                 Connector_isTLS(&slaveNode->connectorInfo),
-                                 Connector_isInsecureTLS(&slaveNode->connectorInfo)
-                                );
-              }
-              else
-              {
-                updateSlaveState(slaveNode,
-                                 SLAVE_STATE_OFFLINE,
-                                 FALSE,  // slaveTLS
-                                 FALSE  // slaveInsecureTLS
-                                );
-              }
+                else if (Connector_isConnected(&slaveNode->connectorInfo))
+                {
+                  updateSlaveState(slaveNode,
+                                   SLAVE_STATE_ONLINE,
+                                   Connector_isTLS(&slaveNode->connectorInfo),
+                                   Connector_isInsecureTLS(&slaveNode->connectorInfo)
+                                  );
+                }
+                else
+                {
+                  updateSlaveState(slaveNode,
+                                   SLAVE_STATE_OFFLINE,
+                                   FALSE,  // slaveTLS
+                                   FALSE  // slaveInsecureTLS
+                                  );
+                }
 
-#if 0
-fprintf(stderr,"%s, %d: checked %s:%d : slavestate=%d slaveNode=%p connectstate=%d Connector_isConnected=%d\n",__FILE__,__LINE__,
-String_cString(slaveNode->name),
-slaveNode->port,
-jobNode->slaveState,
-slaveNode,
-slaveNode->connectorInfo.state,
-Connector_isConnected(&slaveNode->connectorInfo)
-);
-#endif
+  #if 0
+  fprintf(stderr,"%s, %d: checked %s:%d : slavestate=%d slaveNode=%p connectstate=%d Connector_isConnected=%d\n",__FILE__,__LINE__,
+  String_cString(slaveNode->name),
+  slaveNode->port,
+  jobNode->slaveState,
+  slaveNode,
+  slaveNode->connectorInfo.state,
+  Connector_isConnected(&slaveNode->connectorInfo)
+  );
+  #endif
+              }
             }
           }
-        }
 
-        if (!anyOfflineFlag && !anyUnpairedFlag)
-        {
-          // sleep and check quit flag
-          delayThread(SLEEP_TIME_PAIRING_THREAD,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
-        }
-        else
-        {
-          // short sleep
-          delayThread(30,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
+          if (!anyOfflineFlag && !anyUnpairedFlag)
+          {
+            // sleep and check quit flag
+            delayThread(SLEEP_TIME_PAIRING_THREAD,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
+          }
+          else
+          {
+            // short sleep
+            delayThread(30,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
+          }
         }
         break;
       case SERVER_MODE_SLAVE:
-        // check if pairing/clear master requested
-        uint64      pairingStopDateTime = 0LL;
-        FileHandle  fileHandle;
-        if (File_open(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
         {
-          bool clearPairing = FALSE;
-
-          // get modified time
-          FileInfo fileInfo;
-          if (File_getInfo(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
+          // check if pairing/clear master requested
+          uint64      pairingStopDateTime = 0LL;
+          FileHandle  fileHandle;
+          if (File_open(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
           {
-            pairingStopDateTime = fileInfo.timeModified+DEFAULT_PAIRING_MASTER_TIMEOUT;
-          }
+            bool clearPairing = FALSE;
 
-          // read file
-          if (File_readLine(&fileHandle,line) == ERROR_NONE)
-          {
-            clearPairing = String_equalsIgnoreCaseCString(line,"0") || String_equalsIgnoreCaseCString(line,"clear");
-          }
-
-          // close and delete file
-          File_close(&fileHandle);
-          (void)File_delete(globalOptions.masterInfo.pairingFileName,FALSE);
-
-          // check if clear/start/stop pairing
-          if (!clearPairing)
-          {
-            if (Misc_getCurrentDateTime() < pairingStopDateTime)
+            // get modified time
+            FileInfo fileInfo;
+            if (File_getInfo(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
             {
-              beginPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
+              pairingStopDateTime = fileInfo.timeModified+DEFAULT_PAIRING_MASTER_TIMEOUT;
+            }
+
+            // read file
+            if (File_readLine(&fileHandle,line) == ERROR_NONE)
+            {
+              clearPairing = String_equalsIgnoreCaseCString(line,"0") || String_equalsIgnoreCaseCString(line,"clear");
+            }
+
+            // close and delete file
+            File_close(&fileHandle);
+            (void)File_delete(globalOptions.masterInfo.pairingFileName,FALSE);
+
+            // check if clear/start/stop pairing
+            if (!clearPairing)
+            {
+              if (Misc_getCurrentDateTime() < pairingStopDateTime)
+              {
+                beginPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
+              }
+              else
+              {
+                abortPairingMaster();
+              }
             }
             else
             {
-              abortPairingMaster();
+              clearPairedMaster();
             }
           }
           else
           {
-            clearPairedMaster();
+            if (Misc_isTimeout(&newMaster.pairingTimeoutInfo))
+            {
+              abortPairingMaster();
+            }
           }
-        }
-        else
-        {
-          if (Misc_isTimeout(&newMaster.pairingTimeoutInfo))
-          {
-            abortPairingMaster();
-          }
-        }
 
-        if (   (newMaster.pairingMode != PAIRING_MODE_NONE)
-            || String_isEmpty(globalOptions.masterInfo.name)
-           )
-        {
-          // short sleep
-          delayThread(5,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
-        }
-        else
-        {
-          // sleep and check quit flag
-          delayThread(SLEEP_TIME_PAIRING_THREAD,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
+          if (   (newMaster.pairingMode != PAIRING_MODE_NONE)
+              || String_isEmpty(globalOptions.masterInfo.name)
+             )
+          {
+            // short sleep
+            delayThread(5,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
+          }
+          else
+          {
+            // sleep and check quit flag
+            delayThread(SLEEP_TIME_PAIRING_THREAD,(globalOptions.serverMode == SERVER_MODE_MASTER) ? &pairingThreadTrigger : NULL);
+          }
         }
         break;
     }
@@ -6727,23 +6731,25 @@ LOCAL void jobThreadCode(void)
                                                          );
               break;
             case JOB_TYPE_RESTORE:
-              // restore archive
-              StringList storageNameList;
-              StringList_init(&storageNameList);
-              StringList_append(&storageNameList,storageName);
-              jobNode->runningInfo.error = Command_restore(&storageNameList,
-                                                           &includeEntryList,
-                                                           &excludePatternList,
-                                                           &jobOptions,
-                                                           CALLBACK_(restoreRunningInfo,jobNode),
-                                                           CALLBACK_(NULL,NULL),  // restoreErrorHandler
-                                                           CALLBACK_(getCryptPasswordFromConfig,jobNode),
-                                                           CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
-// TODO: use isCommandAborted9)
-                                                           CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
-                                                           &logHandle
-                                                          );
-              StringList_done(&storageNameList);
+              {
+                // restore archive
+                StringList storageNameList;
+                StringList_init(&storageNameList);
+                StringList_append(&storageNameList,storageName);
+                jobNode->runningInfo.error = Command_restore(&storageNameList,
+                                                             &includeEntryList,
+                                                             &excludePatternList,
+                                                             &jobOptions,
+                                                             CALLBACK_(restoreRunningInfo,jobNode),
+                                                             CALLBACK_(NULL,NULL),  // restoreErrorHandler
+                                                             CALLBACK_(getCryptPasswordFromConfig,jobNode),
+                                                             CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
+  // TODO: use isCommandAborted9)
+                                                             CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
+                                                             &logHandle
+                                                            );
+                StringList_done(&storageNameList);
+              }
               break;
             #ifndef NDEBUG
               default:
@@ -7602,31 +7608,33 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
         switch (newMaster.pairingMode)
         {
           case PAIRING_MODE_NONE:
-            // not pairing -> verify master UUID
-
-            // calculate hash from UUID
-            CryptHash uuidHash;
-            (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
-            Crypt_updateHash(&uuidHash,Misc_getMachineId(),MISC_MACHINE_ID_LENGTH);
-            Crypt_updateHash(&uuidHash,buffer,bufferLength);
-
-            // verify master UUID (UUID hash)
-            if (!Configuration_equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
             {
-              error = ((globalOptions.serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
-                        ? ERROR_NOT_PAIRED
-                        : ERROR_INVALID_PASSWORD_;
-              char s[256];
-              logMessage(NULL,  // logHandle,
-                         LOG_TYPE_ALWAYS,
-                         "Authorization of master %s failed (error: %s)",
-                         getClientInfoString(clientInfo,s,sizeof(s)),
-                         Error_getText(error)
-                        );
-            }
+              // not pairing -> verify master UUID
 
-            // free resources
-            Crypt_doneHash(&uuidHash);
+              // calculate hash from UUID
+              CryptHash uuidHash;
+              (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
+              Crypt_updateHash(&uuidHash,Misc_getMachineId(),MISC_MACHINE_ID_LENGTH);
+              Crypt_updateHash(&uuidHash,buffer,bufferLength);
+
+              // verify master UUID (UUID hash)
+              if (!Configuration_equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
+              {
+                error = ((globalOptions.serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
+                          ? ERROR_NOT_PAIRED
+                          : ERROR_INVALID_PASSWORD_;
+                char s[256];
+                logMessage(NULL,  // logHandle,
+                           LOG_TYPE_ALWAYS,
+                           "Authorization of master %s failed (error: %s)",
+                           getClientInfoString(clientInfo,s,sizeof(s)),
+                           Error_getText(error)
+                          );
+              }
+
+              // free resources
+              Crypt_doneHash(&uuidHash);
+            }
             break;
           case PAIRING_MODE_AUTO:
             // auto pairing -> done pairing

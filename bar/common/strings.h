@@ -71,7 +71,7 @@ struct __String
   } type : 2;
   char  *data;                          // string data
   #ifndef NDEBUG
-    ulong checkSum;                     // checksum of data
+    size_t checkSum;                    // checksum of data
   #endif /* not NDEBUG */
 };
 
@@ -120,9 +120,9 @@ typedef struct
 
 typedef bool(*StringDumpInfoFunction)(ConstString string,
                                       const char  *allocFileName,
-                                      ulong       allocLineNb,
-                                      ulong       n,
-                                      ulong       count,
+                                      size_t      allocLineNb,
+                                      size_t      n,
+                                      size_t      count,
                                       void        *userData
                                      );
 
@@ -252,7 +252,7 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 // debugging
 #ifndef NDEBUG
   #define STRING_CHECKSUM(length,maxLength,data) \
-    ((ulong)((length)^(ulong)(maxLength)^(ulong)(intptr_t)(data)))
+    ((size_t)((length)^(size_t)(maxLength)^(size_t)(intptr_t)(data)))
 
   /***********************************************************************\
   * Name   : String_debugCheckValid, STRING_CHECK_VALID,
@@ -266,7 +266,7 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
   * Notes  : HALT if string is invalid
   \***********************************************************************/
 
-  void String_debugCheckValid(const char *__fileName__, ulong __lineNb__, ConstString string);
+  void String_debugCheckValid(const char *__fileName__, size_t __lineNb__, ConstString string);
 
   #define STRING_CHECK_VALID(string) \
     do \
@@ -440,10 +440,10 @@ String String_newCString(const char *s);
 String String_newChar(char ch);
 String String_newBuffer(const void *buffer, size_t bufferLength);
 #else /* not NDEBUG */
-String __String_new(const char *__fileName__, ulong __lineNb__);
-String __String_newCString(const char *__fileName__, ulong __lineNb__, const char *s);
-String __String_newChar(const char *__fileName__, ulong __lineNb__, char ch);
-String __String_newBuffer(const char *__fileName__, ulong __lineNb__, const void *buffer, size_t bufferLength);
+String __String_new(const char *__fileName__, size_t __lineNb__);
+String __String_newCString(const char *__fileName__, size_t __lineNb__, const char *s);
+String __String_newChar(const char *__fileName__, size_t __lineNb__, char ch);
+String __String_newBuffer(const char *__fileName__, size_t __lineNb__, const void *buffer, size_t bufferLength);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -458,7 +458,7 @@ String __String_newBuffer(const char *__fileName__, ulong __lineNb__, const void
 #ifdef NDEBUG
 String String_duplicate(ConstString fromString);
 #else /* not NDEBUG */
-String __String_duplicate(const char *__fileName__, ulong __lineNb__, ConstString fromString);
+String __String_duplicate(const char *__fileName__, size_t __lineNb__, ConstString fromString);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -475,7 +475,7 @@ String __String_duplicate(const char *__fileName__, ulong __lineNb__, ConstStrin
 #ifdef NDEBUG
 String String_copy(String *string, ConstString fromString);
 #else /* not NDEBUG */
-String __String_copy(const char *__fileName__, ulong __lineNb__, String *string, ConstString fromString);
+String __String_copy(const char *__fileName__, size_t __lineNb__, String *string, ConstString fromString);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -491,7 +491,7 @@ String __String_copy(const char *__fileName__, ulong __lineNb__, String *string,
 #ifdef NDEBUG
 void String_delete(ConstString string);
 #else /* not NDEBUG */
-void __String_delete(const char *__fileName__, ulong __lineNb__, ConstString string);
+void __String_delete(const char *__fileName__, size_t __lineNb__, ConstString string);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -578,7 +578,7 @@ INLINE String String_appendChar(String string, char ch);
 #if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
 INLINE String String_appendChar(String string, char ch)
 {
-  ulong n;
+  size_t n;
 
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);

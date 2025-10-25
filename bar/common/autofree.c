@@ -63,14 +63,12 @@ void *AutoFree_save(AutoFreeList *autoFreeList)
 
 void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint, bool freeFlag)
 {
-  AutoFreeNode *autoFreeNode;
-
   assert(autoFreeList != NULL);
 
   while (autoFreeList->tail != savePoint)
   {
     // remove last from list
-    autoFreeNode = (AutoFreeNode*)List_removeLast(autoFreeList);
+    AutoFreeNode *autoFreeNode = (AutoFreeNode*)List_removeLast(autoFreeList);
 
     // free resource
     if (freeFlag && (autoFreeNode->autoFreeFunction != NULL))
@@ -78,7 +76,7 @@ void AutoFree_restore(AutoFreeList *autoFreeList, void *savePoint, bool freeFlag
 #if 0
       #ifndef NDEBUG
         fprintf(stderr,
-                "DEBUG: call auto free %p at %s, line %lu with auto resource 0x%"PRIx64"\n",
+                "DEBUG: call auto free %p at %s, line %zu with auto resource 0x%"PRIx64"\n",
                 autoFreeNode->autoFreeFunction,
                 autoFreeNode->fileName,
                 autoFreeNode->lineNb,
@@ -110,20 +108,19 @@ bool AutoFree_add(AutoFreeList     *autoFreeList,
                  )
 #else /* not NDEBUG */
 bool __AutoFree_add(const char       *__fileName__,
-                    ulong            __lineNb__,
+                    size_t           __lineNb__,
                     AutoFreeList     *autoFreeList,
                     const void       *resource,
                     AutoFreeFunction autoFreeFunction
                    )
 #endif /* NDEBUG */
 {
-  AutoFreeNode *autoFreeNode;
-
   assert(autoFreeList != NULL);
 
   pthread_mutex_lock(&autoFreeList->lock);
   {
     // allocate new node
+    AutoFreeNode *autoFreeNode;
     #ifdef NDEBUG
       autoFreeNode = LIST_NEW_NODE(AutoFreeNode);
     #else /* not NDEBUG */
@@ -159,22 +156,19 @@ void AutoFree_remove(AutoFreeList *autoFreeList,
                     )
 #else /* not NDEBUG */
 void __AutoFree_remove(const char   *__fileName__,
-                       ulong        __lineNb__,
+                       size_t       __lineNb__,
                        AutoFreeList *autoFreeList,
                        const void   *resource
                       )
 #endif /* NDEBUG */
 {
-  bool         foundFlag;
-  AutoFreeNode *autoFreeNode;
-
   assert(autoFreeList != NULL);
 
   pthread_mutex_lock(&autoFreeList->lock);
   {
     // remove resources from list
-    foundFlag = FALSE;
-    autoFreeNode = autoFreeList->tail;
+    bool         foundFlag     = FALSE;
+    AutoFreeNode *autoFreeNode = autoFreeList->tail;
     while (autoFreeNode != NULL)
     {
       if (autoFreeNode->resource == resource)
@@ -192,7 +186,7 @@ void __AutoFree_remove(const char   *__fileName__,
     if (!foundFlag)
     {
       #ifndef NDEBUG
-        fprintf(stderr,"DEBUG WARNING: auto resource %p not found in auto resource list at %s, line %lu\n",
+        fprintf(stderr,"DEBUG WARNING: auto resource %p not found in auto resource list at %s, line %zu\n",
                 resource,
                 __fileName__,
                 __lineNb__
@@ -215,14 +209,12 @@ void AutoFree_free(AutoFreeList *autoFreeList,
                    const void   *resource
                   )
 {
-  AutoFreeNode *autoFreeNode;
-
   assert(autoFreeList != NULL);
 
   pthread_mutex_lock(&autoFreeList->lock);
   {
     // remove resource from list
-    autoFreeNode = autoFreeList->tail;
+    AutoFreeNode *autoFreeNode = autoFreeList->tail;
     while ((autoFreeNode != NULL) && (autoFreeNode->resource != resource))
     {
       autoFreeNode = autoFreeNode->prev;
@@ -247,8 +239,6 @@ void AutoFree_free(AutoFreeList *autoFreeList,
 
 void AutoFree_freeAll(AutoFreeList *autoFreeList)
 {
-  AutoFreeNode *autoFreeNode;
-
   assert(autoFreeList != NULL);
 
   pthread_mutex_lock(&autoFreeList->lock);
@@ -256,7 +246,7 @@ void AutoFree_freeAll(AutoFreeList *autoFreeList)
     while (!List_isEmpty(autoFreeList))
     {
       // remove from list
-      autoFreeNode = (AutoFreeNode*)List_removeLast(autoFreeList);
+      AutoFreeNode *autoFreeNode = (AutoFreeNode*)List_removeLast(autoFreeList);
 
       // free resource
       if (autoFreeNode->autoFreeFunction != NULL)
@@ -264,7 +254,7 @@ void AutoFree_freeAll(AutoFreeList *autoFreeList)
 #if 0
         #ifndef NDEBUG
           fprintf(stderr,
-                  "DEBUG: call auto free %p at %s, line %lu with auto resource 0x%"PRIx64"\n",
+                  "DEBUG: call auto free %p at %s, line %zu with auto resource 0x%"PRIx64"\n",
                   autoFreeNode->autoFreeFunction,
                   autoFreeNode->fileName,
                   autoFreeNode->lineNb,
@@ -285,13 +275,12 @@ void AutoFree_freeAll(AutoFreeList *autoFreeList)
 #ifndef NDEBUG
 void AutoFree_debugDumpInfo(AutoFreeList *autoFreeList, FILE *handle)
 {
-  AutoFreeNode *autoFreeNode;
-
   pthread_mutex_lock(&autoFreeList->lock);
   {
+    AutoFreeNode *autoFreeNode;
     LIST_ITERATE(autoFreeList,autoFreeNode)
     {
-      fprintf(handle,"DEBUG: auto resource %p added at %s, line %lu\n",
+      fprintf(handle,"DEBUG: auto resource %p added at %s, line %zu\n",
               autoFreeNode->resource,
               autoFreeNode->fileName,
               autoFreeNode->lineNb

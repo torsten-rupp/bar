@@ -248,17 +248,21 @@ LOCAL Errors CompressBZ2_init(CompressInfo       *compressInfo,
   switch (compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-      int bz2Result = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
-      if (bz2Result != BZ_OK)
       {
-        return ERRORX_(INIT_COMPRESS,bz2Result,NULL);
+        int bz2Result = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
+        if (bz2Result != BZ_OK)
+        {
+          return ERRORX_(INIT_COMPRESS,bz2Result,NULL);
+        }
       }
       break;
     case COMPRESS_MODE_INFLATE:
-      bz2Result = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
-      if (bz2Result != BZ_OK)
       {
-        return ERRORX_(INIT_DECOMPRESS,bz2Result,NULL);
+        int bz2Result = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
+        if (bz2Result != BZ_OK)
+        {
+          return ERRORX_(INIT_DECOMPRESS,bz2Result,NULL);
+        }
       }
       break;
     #ifndef NDEBUG

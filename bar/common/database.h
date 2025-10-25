@@ -276,9 +276,9 @@ typedef struct
   typedef struct
   {
     ThreadId   threadId;
-    uint       count;
+    size_t     count;
     const char *fileName;
-    uint       lineNb;
+    size_t     lineNb;
     uint64     cycleCounter;
     #ifdef HAVE_BACKTRACE
       void const *stackTrace[16];
@@ -290,7 +290,7 @@ typedef struct
   {
     ThreadId                       threadId;
     const char                     *fileName;
-    uint                           lineNb;
+    size_t                         lineNb;
     uint64                         cycleCounter;
     DatabaseHistoryThreadInfoTypes type;
     #ifdef HAVE_BACKTRACE
@@ -307,7 +307,7 @@ typedef struct
   volatile ThreadId threadId;
   #ifndef NDEBUG
     volatile const char *fileName;
-    volatile ulong      lineNb;
+    volatile size_t     lineNb;
   #endif
 } DatabaseLockedBy;
 
@@ -321,18 +321,18 @@ typedef struct DatabaseNode
     DatabaseLockedBy            lockedBy;
   #endif /* DATABASE_LOCK_PER_INSTANCE */
   DatabaseSpecifier           databaseSpecifier;
-  uint                        openCount;
+  size_t                      openCount;
 
-  uint                        pendingReadCount;
-  uint                        readCount;
+  size_t                      pendingReadCount;
+  size_t                      readCount;
   pthread_cond_t              readTrigger;
 
-  uint                        pendingReadWriteCount;
-  uint                        readWriteCount;
+  size_t                      pendingReadWriteCount;
+  size_t                      readWriteCount;
   pthread_cond_t              readWriteTrigger;
 
-  uint                        pendingTransactionCount;
-  uint                        transactionCount;
+  size_t                      pendingTransactionCount;
+  size_t                      transactionCount;
   pthread_cond_t              transactionTrigger;
 
   DatabaseBusyHandlerList     busyHandlerList;
@@ -362,15 +362,15 @@ typedef struct DatabaseNode
       {
         DatabaseThreadInfo threadInfo;
         DatabaseLockTypes  lockType;
-        uint               pendingReadCount;
-        uint               readCount;
-        uint               pendingReadWriteCount;
-        uint               readWriteCount;
-        uint               pendingTransactionCount;
-        uint               transactionCount;
+        size_t             pendingReadCount;
+        size_t             readCount;
+        size_t             pendingReadWriteCount;
+        size_t             readWriteCount;
+        size_t             pendingTransactionCount;
+        size_t             transactionCount;
         #ifdef HAVE_BACKTRACE
           void const *stackTrace[16];
-          uint       stackTraceSize;
+          size_t     stackTraceSize;
         #endif /* HAVE_BACKTRACE */
       }                         lastTrigger;
       // running transaction
@@ -378,10 +378,10 @@ typedef struct DatabaseNode
       {
         ThreadId   threadId;
         const char *fileName;
-        uint       lineNb;
+        size_t     lineNb;
         #ifdef HAVE_BACKTRACE
           void const *stackTrace[16];
-          uint       stackTraceSize;
+          size_t     stackTraceSize;
         #endif /* HAVE_BACKTRACE */
       }                         transaction;
       // history
@@ -431,9 +431,9 @@ typedef struct DatabaseHandle
     postgresql;
     #endif /* HAVE_POSTGRESQL */
   };
-  uint                        readLockCount;
-  uint                        readWriteLockCount;
-  uint                        transactionCount;
+  size_t                      readLockCount;
+  size_t                      readWriteLockCount;
+  size_t                      transactionCount;
   long                        timeout;                    // timeout [ms]
   void                        *busyHandlerUserData;
   bool                        enabledSync;
@@ -446,7 +446,7 @@ typedef struct DatabaseHandle
     {
       ThreadId                  threadId;                 // id of thread who opened/created database
       const char                *fileName;                // open/create location
-      ulong                     lineNb;
+      size_t                    lineNb;
       #ifdef HAVE_BACKTRACE
         void const              *stackTrace[16];
         int                     stackTraceSize;
@@ -456,7 +456,7 @@ typedef struct DatabaseHandle
       {
         ThreadId   threadId;                              // thread who aquired lock
         const char *fileName;
-        uint       lineNb;
+        size_t     lineNb;
         char       text[8*1024];
         uint64     t0,t1;                                 // lock start/end timestamp [s]
       }                         locked;
@@ -664,17 +664,17 @@ typedef struct
   };
 
   // values+filters
-  uint           parameterCount;
-  uint           parameterIndex;
+  size_t         parameterCount;
+  size_t         parameterIndex;
 
   // results
   char           **columnNames;
   DatabaseValue  *results;
-  uint           resultCount;
-  uint           resultIndex;
+  size_t         resultCount;
+  size_t         resultIndex;
 
   uint           *valueMap;
-  uint           valueMapCount;
+  size_t         valueMapCount;
 
   DatabaseId     lastInsertId;
 
@@ -684,7 +684,7 @@ typedef struct
       String sqlString;
       #ifdef HAVE_BACKTRACE
         void const *stackTrace[16];
-        int        stackTraceSize;
+        size_t     stackTraceSize;
       #endif /* HAVE_BACKTRACE */
       uint64 t0,t1;
       uint64 dt;
@@ -708,8 +708,8 @@ typedef Errors(*DatabaseRowFunction)(const DatabaseValue values[], uint valueCou
 // table column info
 typedef struct
 {
-  DatabaseValue        *values;
-  uint                 count;
+  DatabaseValue *values;
+  size_t        count;
 } DatabaseColumnInfo;
 
 /***********************************************************************\
@@ -725,7 +725,7 @@ typedef struct
 
 typedef Errors(*DatabaseCopyTableFunction)(DatabaseColumnInfo *fromColumns,
                                            DatabaseColumnInfo *toColumns,
-                                           void            *userData
+                                           void               *userData
                                           );
 
 /***********************************************************************\

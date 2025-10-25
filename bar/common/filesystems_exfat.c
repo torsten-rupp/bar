@@ -85,7 +85,7 @@ typedef struct
   uint8_t  bootSignature[2];
   uint8_t  excessSpace[512];
 } ATTRIBUTE_PACKED EXFATBootSector;
-static_assert(sizeof(EXFATBootSector) == 1024);
+static_assert(sizeof(EXFATBootSector) == 1024,"sizeof(EXFATBootSector) == 1024");
 
 // EXTFAT entry
 typedef struct EXFATEntry
@@ -160,7 +160,7 @@ typedef struct EXFATEntry
     } ATTRIBUTE_PACKED windowsCEAccessControlTable;
   };
 } ATTRIBUTE_PACKED EXFATEntry;
-static_assert(sizeof(EXFATEntry) == 32);
+static_assert(sizeof(EXFATEntry) == 32,"sizeof(EXFATEntry) == 32");
 
 /***************************** Variables *******************************/
 

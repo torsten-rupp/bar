@@ -107,7 +107,7 @@ typedef struct
 
 typedef bool(*ArrayDumpInfoFunction)(const Array *array,
                                      const char  *fileName,
-                                     ulong       lineNb,
+                                     size_t      lineNb,
                                      ulong       n,
                                      ulong       count,
                                      void        *userData
@@ -272,7 +272,7 @@ void Array_init(Array                *array,
                );
 #else /* not NDEBUG */
 void __Array_init(const char           *__fileName__,
-                  ulong                __lineNb__,
+                  size_t               __lineNb__,
                   Array                *array,
                   ulong                elementSize,
                   ulong                length,
@@ -318,7 +318,7 @@ Array *Array_new(ulong                elementSize,
                 );
 #else /* not NDEBUG */
 Array *__Array_new(const char           *__fileName__,
-                   ulong                __lineNb__,
+                   size_t               __lineNb__,
                    ulong                elementSize,
                    ulong                length,
                    ArrayFreeFunction    arrayFreeFunction,

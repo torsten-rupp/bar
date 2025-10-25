@@ -90,11 +90,6 @@ typedef const StringNode* StringListIterator;
 *            }
 \***********************************************************************/
 
-#define STRINGLIST_ITERATE_old(stringList,iteratorVariable,variable) \
-  for ((iteratorVariable) = (stringList)->head, variable = (((stringList)->head) != NULL) ? (stringList)->head->string : NULL; \
-       (iteratorVariable) != NULL; \
-       (iteratorVariable) = (iteratorVariable)->next, variable = ((iteratorVariable) != NULL) ? (iteratorVariable)->string : NULL \
-      )
 #define STRINGLIST_ITERATE(stringList,variable) \
   for (StringListIterator iteratorVariable##__COUNTER__ = __StringList_iteratorInit(stringList,&variable); \
        iteratorVariable##__COUNTER__ != NULL; \
@@ -119,11 +114,6 @@ typedef const StringNode* StringListIterator;
 *            }
 \***********************************************************************/
 
-#define STRINGLIST_ITERATEX_old(stringList,iteratorVariable,variable,condition) \
-  for ((iteratorVariable) = (stringList)->head, variable = ((iteratorVariable) != NULL) ? (stringList)->head->string : NULL; \
-       ((iteratorVariable) != NULL) && (condition); \
-       (iteratorVariable) = (iteratorVariable)->next, variable = ((iteratorVariable) != NULL) ? (iteratorVariable)->string : NULL \
-      )
 #define STRINGLIST_ITERATEX(stringList,variable,condition) \
   for (StringListIterator iteratorVariable##__COUNTER__ = __StringList_iteratorInit(stringList,&variable); \
        (iteratorVariable##__COUNTER__ != NULL) && (condition); \

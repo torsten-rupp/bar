@@ -92,7 +92,7 @@ typedef enum
     void                      *freeUserData; \
     \
     const char                *fileName; \
-    ulong                     lineNb
+    size_t                    lineNb
 #else /* NDEBUG */
   #define LIST_HEADER(type) \
     type                      *head; \
@@ -404,9 +404,9 @@ typedef struct
 \***********************************************************************/
 
 #ifdef NDEBUG
-Node *List_newNode(ulong size);
+Node *List_newNode(size_t size);
 #else /* not NDEBUG */
-Node *__List_newNode(const char *__fileName__, ulong __lineNb__, ulong size);
+Node *__List_newNode(const char *__fileName__, size_t __lineNb__, size_t size);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -421,7 +421,7 @@ Node *__List_newNode(const char *__fileName__, ulong __lineNb__, ulong size);
 #ifdef NDEBUG
 Node *List_deleteNode(Node *node);
 #else /* not NDEBUG */
-Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node);
+Node *__List_deleteNode(const char *__fileName__, size_t __lineNb__, Node *node);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -448,7 +448,7 @@ void List_init(void                      *list,
               );
 #else /* not NDEBUG */
 void __List_init(const char                *__fileName__,
-                 ulong                     __lineNb__,
+                 size_t                    __lineNb__,
                  void                      *list,
                  ListNodeDuplicateFunction duplicateFunction,
                  void                      *duplicateUserData,
@@ -487,7 +487,7 @@ void List_initDuplicate(void                      *list,
                        );
 #else /* not NDEBUG */
 void __List_initDuplicate(const char                *__fileName__,
-                          ulong                     __lineNb__,
+                          size_t                    __lineNb__,
                           void                      *list,
                           const void                *fromList,
                           const void                *fromListFromNode,
@@ -532,7 +532,7 @@ List *List_new(ListNodeDuplicateFunction duplicateFunction,
               );
 #else /* not NDEBUG */
 List *__List_new(const char                *__fileName__,
-                 ulong                     __lineNb__,
+                 size_t                    __lineNb__,
                  ListNodeDuplicateFunction duplicateFunction,
                  void                      *duplicateUserData,
                  ListNodeFreeFunction      freeFunction,
@@ -568,7 +568,7 @@ List *List_duplicate(const void                *fromList,
                     );
 #else /* not NDEBUG */
 List *__List_duplicate(const char                *__fileName__,
-                       ulong                     __lineNb__,
+                       size_t                    __lineNb__,
                        const void                *fromList,
                        const void                *fromListFromNode,
                        const void                *fromListToNode,
@@ -719,7 +719,7 @@ void List_insert(void *list,
                 );
 #else /* not NDEBUG */
 void __List_insert(const char *fileName,
-                   ulong      lineNb,
+                   size_t     lineNb,
                    void       *list,
                    void       *node,
                    void       *nextNode
@@ -742,7 +742,7 @@ void List_append(void *list,
                 );
 #else /* not NDEBUG */
 void __List_append(const char *fileName,
-                   ulong      lineNb,
+                   size_t     lineNb,
                    void       *list,
                    void       *node
                   );

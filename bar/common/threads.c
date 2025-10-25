@@ -783,7 +783,7 @@ bool Thread_init(Thread     *thread,
                 )
 #else /* not NDEBUG */
 bool __Thread_init(const char *__fileName__,
-                   ulong      __lineNb__,
+                   size_t     __lineNb__,
                    Thread     *thread,
                    const char *name,
                    int        niceLevel,
@@ -872,7 +872,7 @@ bool __Thread_init(const char *__fileName__,
 void Thread_done(Thread *thread)
 #else /* not NDEBUG */
 void __Thread_done(const char *__fileName__,
-                   ulong      __lineNb__,
+                   size_t     __lineNb__,
                    Thread     *thread
                   )
 #endif /* NDEBUG */

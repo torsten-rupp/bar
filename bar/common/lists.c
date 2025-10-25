@@ -38,14 +38,14 @@
     LIST_NODE_HEADER(struct DebugListNode);
 
     const char      *fileName;
-    ulong           lineNb;
+    size_t          lineNb;
     #ifdef HAVE_BACKTRACE
       void const *stackTrace[16];
       int        stackTraceSize;
     #endif /* HAVE_BACKTRACE */
 
     const char      *deleteFileName;
-    ulong           deleteLineNb;
+    size_t          deleteLineNb;
     #ifdef HAVE_BACKTRACE
       void const *deleteStackTrace[16];
       int        deleteStackTraceSize;
@@ -227,7 +227,7 @@ LOCAL void debugListInit(void)
 \***********************************************************************/
 
 LOCAL void debugCheckDuplicateNode(const char *fileName,
-                                   ulong      lineNb,
+                                   size_t     lineNb,
                                    const List *list,
                                    const Node *node
                                   )
@@ -248,11 +248,11 @@ LOCAL void debugCheckDuplicateNode(const char *fileName,
       {
         if      (debugListNode->list == list)
         {
-           HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is already in list %p initialized at %s, %lu!",node,list,list->fileName,list->lineNb);
+           HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is already in list %p initialized at %s, line %zu!",node,list,list->fileName,list->lineNb);
         }
         else if (debugListNode->list != NULL)
         {
-           HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is still in other list %p initialized at %s, %lu!",node,debugListNode->list,debugListNode->list->fileName,debugListNode->list->lineNb);
+           HALT_INTERNAL_ERROR_AT(fileName,lineNb,"node %p is still in other list %p initialized at %s, line %zu!",node,debugListNode->list,debugListNode->list->fileName,debugListNode->list->lineNb);
         }
       }
       debugListNode = debugListNode->next;
@@ -423,9 +423,9 @@ LOCAL_INLINE bool listContains(void *list,
 
 
 #ifdef NDEBUG
-Node * List_newNode(ulong size)
+Node * List_newNode(size_t size)
 #else /* not NDEBUG */
-Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
+Node * __List_newNode(const char *__fileName__, size_t __lineNb__, size_t size)
 #endif /* NDEBUG */
 {
   // allocate node
@@ -480,7 +480,7 @@ Node * __List_newNode(const char *__fileName__, ulong __lineNb__, ulong size)
 #ifdef NDEBUG
 Node *List_deleteNode(Node *node)
 #else /* not NDEBUG */
-Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
+Node *__List_deleteNode(const char *__fileName__, size_t __lineNb__, Node *node)
 #endif /* NDEBUG */
 {
   assert(node != NULL);
@@ -495,7 +495,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
       DebugListNode *debugListNode = debugFindNode(&debugListFreeNodeList,node);
       if (debugListNode != NULL)
       {
-        fprintf(stderr,"DEBUG WARNING: multiple free of node %p at %s, %lu and previously at %s, %lu which was allocated at %s, %ld!\n",
+        fprintf(stderr,"DEBUG WARNING: multiple free of node %p at %s, line %zu and previously at %s, line %zu which was allocated at %s, line %zu!\n",
                 node,
                 __fileName__,
                 __lineNb__,
@@ -520,7 +520,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
         // check if node still in some list
         if (debugListNode->list != NULL)
         {
-          fprintf(stderr,"DEBUG WARNING: node %p allocated at %s, %lu is still in list %p at %s, %lu!\n",
+          fprintf(stderr,"DEBUG WARNING: node %p allocated at %s, line %zu is still in list %p at %s, line %zu!\n",
                   node,
                   debugListNode->fileName,
                   debugListNode->lineNb,
@@ -557,7 +557,7 @@ Node *__List_deleteNode(const char *__fileName__, ulong __lineNb__, Node *node)
       }
       else
       {
-        fprintf(stderr,"DEBUG WARNING: node %p not found in debug list at %s, line %lu\n",
+        fprintf(stderr,"DEBUG WARNING: node %p not found in debug list at %s, line %zu\n",
                 node,
                 __fileName__,
                 __lineNb__
@@ -587,7 +587,7 @@ void List_init(void                      *list,
               )
 #else /* not NDEBUG */
 void __List_init(const char                *__fileName__,
-                 ulong                     __lineNb__,
+                 size_t                    __lineNb__,
                  void                      *list,
                  ListNodeDuplicateFunction duplicateFunction,
                  void                      *duplicateUserData,
@@ -623,7 +623,7 @@ void List_initDuplicate(void                      *list,
                        )
 #else /* not NDEBUG */
 void __List_initDuplicate(const char                *__fileName__,
-                          ulong                     __lineNb__,
+                          size_t                    __lineNb__,
                           void                      *list,
                           const void                *fromList,
                           const void                *fromListFromNode,
@@ -668,7 +668,7 @@ List *List_new(ListNodeDuplicateFunction duplicateFunction,
               )
 #else /* not NDEBUG */
 List *__List_new(const char                *__fileName__,
-                 ulong                     __lineNb__,
+                 size_t                    __lineNb__,
                  ListNodeDuplicateFunction duplicateFunction,
                  void                      *duplicateUserData,
                  ListNodeFreeFunction      freeFunction,
@@ -699,7 +699,7 @@ List *List_duplicate(const void                *fromList,
                     )
 #else /* not NDEBUG */
 List *__List_duplicate(const char                *__fileName__,
-                       ulong                     __lineNb__,
+                       size_t                    __lineNb__,
                        const void                *fromList,
                        const void                *fromListFromNode,
                        const void                *fromListToNode,
@@ -854,7 +854,7 @@ void List_insert(void *list,
                 )
 #else /* not NDEBUG */
 void __List_insert(const char *fileName,
-                   ulong      lineNb,
+                   size_t     lineNb,
                    void       *list,
                    void       *node,
                    void       *nextNode
@@ -877,7 +877,7 @@ void List_append(void *list,
                 )
 #else /* not NDEBUG */
 void __List_append(const char *fileName,
-                   ulong      lineNb,
+                   size_t     lineNb,
                    void       *list,
                    void       *node
                   )
@@ -1194,7 +1194,7 @@ void List_debugDumpInfo(FILE *handle)
     DebugListNode *debugListNode;
     LIST_ITERATE(&debugListAllocNodeList,debugListNode)
     {
-      fprintf(handle,"DEBUG: list node %p allocated at %s, line %lu\n",
+      fprintf(handle,"DEBUG: list node %p allocated at %s, line %zu\n",
               debugListNode->node,
               debugListNode->fileName,
               debugListNode->lineNb

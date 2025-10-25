@@ -87,14 +87,14 @@
     LIST_NODE_HEADER(struct DebugResourceNode);
 
     const char      *allocFileName;
-    ulong           allocLineNb;
+    size_t          allocLineNb;
     #ifdef HAVE_BACKTRACE
       void const *stackTrace[16];
       int        stackTraceSize;
     #endif /* HAVE_BACKTRACE */
 
     const char      *freeFileName;
-    ulong           freeLineNb;
+    size_t          freeLineNb;
     #ifdef HAVE_BACKTRACE
       void const *deleteStackTrace[16];
       int        deleteStackTraceSize;
@@ -230,7 +230,7 @@ void doneSecure(void)
 void *allocSecure(size_t size)
 #else /* not NDEBUG */
 void *__allocSecure(const char *__fileName__,
-                    ulong      __lineNb__,
+                    size_t     __lineNb__,
                     size_t     size
                    )
 #endif /* NDEBUG */
@@ -275,7 +275,7 @@ void *__allocSecure(const char *__fileName__,
 void freeSecure(void *p)
 #else /* not NDEBUG */
 void __freeSecure(const char *__fileName__,
-                  ulong      __lineNb__,
+                  size_t     __lineNb__,
                   void       *p
                  )
 #endif /* NDEBUG */
@@ -306,7 +306,7 @@ void __freeSecure(const char *__fileName__,
 
 #ifndef NDEBUG
 void __dprintf__(const char *__fileName__,
-                 ulong      __lineNb__,
+                 size_t     __lineNb__,
                  const char *format,
                  ...
                 )
@@ -337,7 +337,7 @@ void __halt(int        exitcode,
            )
 #else /* not NDEBUG */
 void __halt(const char *__fileName__,
-            ulong      __lineNb__,
+            size_t     __lineNb__,
             int        exitcode,
             const char *format,
             ...
@@ -354,7 +354,7 @@ void __halt(const char *__fileName__,
   vfprintf(stderr,format,arguments);
   va_end(arguments);
   #ifndef NDEBUG
-    fprintf(stderr," - halt in file %s, line %lu\n",__fileName__,__lineNb__);
+    fprintf(stderr," - halt in file %s, line %zu\n",__fileName__,__lineNb__);
   #else /* NDEBUG */
     fprintf(stderr," - halt\n");
   #endif /* not NDEBUG */
@@ -368,7 +368,7 @@ void __abort(const char *prefix,
             )
 #else /* not NDEBUG */
 void __abort(const char *__fileName__,
-             ulong       __lineNb__,
+             size_t      __lineNb__,
              const char *prefix,
              const char *format,
              ...
@@ -386,7 +386,7 @@ void __abort(const char *__fileName__,
   vfprintf(stderr,format,arguments);
   va_end(arguments);
   #ifndef NDEBUG
-    fprintf(stderr," - program aborted in file %s, line %lu\n",__fileName__,__lineNb__);
+    fprintf(stderr," - program aborted in file %s, line %zu\n",__fileName__,__lineNb__);
   #else /* NDEBUG */
     fprintf(stderr," - program aborted\n");
   #endif /* not NDEBUG */
@@ -405,7 +405,7 @@ void __abort(const char *__fileName__,
   abort();
 }
 void __abortAt(const char *fileName,
-               ulong      lineNb,
+               size_t     lineNb,
                const char *prefix,
                const char *format,
                ...
@@ -419,7 +419,7 @@ void __abortAt(const char *fileName,
   va_start(arguments,format);
   vfprintf(stderr,format,arguments);
   va_end(arguments);
-  fprintf(stderr," - program aborted in file %s, line %lu\n",fileName,lineNb);
+  fprintf(stderr," - program aborted in file %s, line %zu\n",fileName,lineNb);
   abort();
 }
 
@@ -559,7 +559,7 @@ void __cyg_profile_func_exit(void *functionCode, void *callAddress)
 }
 
 bool debugIsTestCodeEnabled(const char *__fileName__,
-                            ulong      __lineNb__,
+                            size_t     __lineNb__,
                             const char *functionName,
                             uint       counter
                            )
@@ -617,7 +617,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
         file = fopen(value,"a");
         if (file != NULL)
         {
-          fprintf(file,"%s %s %lu\n",debugTestCodeName,__fileName__,__lineNb__);
+          fprintf(file,"%s %s %zu\n",debugTestCodeName,__fileName__,__lineNb__);
           fclose(file);
         }
       }
@@ -726,7 +726,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
         fclose(file);
       }
       fprintf(stderr,"DEBUG: -----------------------------------------------------------------\n");
-      fprintf(stderr,"DEBUG: Execute testcode '%s', %s, line %lu\n",debugTestCodeName,__fileName__,__lineNb__);
+      fprintf(stderr,"DEBUG: Execute testcode '%s', %s, line %zu\n",debugTestCodeName,__fileName__,__lineNb__);
     }
 
     // set testcode name
@@ -737,7 +737,7 @@ bool debugIsTestCodeEnabled(const char *__fileName__,
 }
 
 Errors debugTestCodeError(const char *__fileName__,
-                          ulong      __lineNb__
+                          size_t     __lineNb__
                          )
 {
   assert(__testCodeName__ != NULL);
@@ -751,7 +751,7 @@ Errors debugTestCodeError(const char *__fileName__,
 }
 
 void debugLocalResource(const char *__fileName__,
-                        ulong      __lineNb__,
+                        size_t     __lineNb__,
                         const void *resource
                        )
 {
@@ -764,7 +764,7 @@ void debugLocalResource(const char *__fileName__,
 #ifndef NDEBUG
 
 void debugAddResourceTrace(const char *__fileName__,
-                           ulong      __lineNb__,
+                           size_t     __lineNb__,
                            const char *typeName,
                            const char *variableName,
                            const void *resource
@@ -782,7 +782,7 @@ void debugAddResourceTrace(const char *__fileName__,
                                                     );
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG WARNING: multiple init of resource %s '%s' 0x%016"PRIxPTR" at %s, %lu which was previously initialized at %s, %ld!\n",
+      fprintf(stderr,"DEBUG WARNING: multiple init of resource %s '%s' 0x%016"PRIxPTR" at %s, %zu which was previously initialized at %s, %zu!\n",
               typeName,
               variableName,
               (uintptr_t)resource,
@@ -823,7 +823,7 @@ void debugAddResourceTrace(const char *__fileName__,
       debugResourceNode->stackTraceSize = getStackTrace(debugResourceNode->stackTrace,SIZE_OF_ARRAY(debugResourceNode->stackTrace));
     #endif /* HAVE_BACKTRACE */
     debugResourceNode->freeFileName  = NULL;
-    debugResourceNode->freeLineNb    = 0L;
+    debugResourceNode->freeLineNb    = 0;
     #ifdef HAVE_BACKTRACE
       debugResourceNode->deleteStackTraceSize = 0;
     #endif /* HAVE_BACKTRACE */
@@ -838,7 +838,7 @@ void debugAddResourceTrace(const char *__fileName__,
 }
 
 void debugRemoveResourceTrace(const char *__fileName__,
-                              ulong      __lineNb__,
+                              size_t     __lineNb__,
                               const char *typeName,
                               const char *variableName,
                               const void *resource
@@ -856,7 +856,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
                                                     );
     if (debugResourceNode != NULL)
     {
-      fprintf(stderr,"DEBUG ERROR: multiple free of resource %s '%s', 0x%016"PRIxPTR" at %s, %lu and previously at %s, %lu which was allocated at %s, %lu!\n",
+      fprintf(stderr,"DEBUG ERROR: multiple free of resource %s '%s', 0x%016"PRIxPTR" at %s, %zu and previously at %s, %zu which was allocated at %s, %zu!\n",
               debugResourceNode->typeName,
               debugResourceNode->variableName,
               (uintptr_t)debugResourceNode->resource,
@@ -904,7 +904,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
     }
     else
     {
-      fprintf(stderr,"DEBUG ERROR: resource %s '%s', 0x%016"PRIxPTR" not found in debug list at %s, line %lu\n",
+      fprintf(stderr,"DEBUG ERROR: resource %s '%s', 0x%016"PRIxPTR" not found in debug list at %s, line %zu\n",
               typeName,
               variableName,
               (uintptr_t)resource,
@@ -921,7 +921,7 @@ void debugRemoveResourceTrace(const char *__fileName__,
 }
 
 void debugCheckResourceTrace(const char *__fileName__,
-                             ulong      __lineNb__,
+                             size_t     __lineNb__,
                              const char *variableName,
                              const void *resource
                             )
@@ -938,7 +938,7 @@ void debugCheckResourceTrace(const char *__fileName__,
       debugResourceNode = LIST_FIND(&debugResourceFreeList,debugResourceNode,debugResourceNode->resource == resource);
       if (debugResourceNode != NULL)
       {
-        fprintf(stderr,"DEBUG ERROR: resource %s '%s', 0x%016"PRIxPTR" invalid at %s, %lu which was allocated at %s, %lu and freed at %s, %lu!\n",
+        fprintf(stderr,"DEBUG ERROR: resource %s '%s', 0x%016"PRIxPTR" invalid at %s, line %zu which was allocated at %s, line %zu and freed at %s, line %zu!\n",
                 debugResourceNode->typeName,
                 debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
@@ -959,7 +959,7 @@ void debugCheckResourceTrace(const char *__fileName__,
       }
       else
       {
-        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIxPTR" not found in debug list at %s, line %lu\n",
+        fprintf(stderr,"DEBUG ERROR: resource '%s' 0x%016"PRIxPTR" not found in debug list at %s, line %zu\n",
                 variableName,
                 (uintptr_t)resource,
                 __fileName__,
@@ -1087,7 +1087,7 @@ void debugResourceDumpInfo(FILE                     *handle,
       DebugResourceNode *debugResourceNode;
       LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
       {
-        fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIxPTR" allocated at %s, line %lu\n",
+        fprintf(handle,"DEBUG: resource '%s' 0x%016"PRIxPTR" allocated at %s, line %zu\n",
                 debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
                 debugResourceNode->allocFileName,
@@ -1128,7 +1128,7 @@ void debugResourceDumpInfo(FILE                     *handle,
         stringSet(s,sizeof(s),"'");
         stringAppend(s,sizeof(s),resourceHistogramNode->debugResourceNode->variableName);
         stringAppend(s,sizeof(s),"'");
-        fprintf(handle,"DEBUG: resource %-32s 0x%016"PRIxPTR" allocated %u times at %s, line %lu\n",
+        fprintf(handle,"DEBUG: resource %-32s 0x%016"PRIxPTR" allocated %u times at %s, line %zu\n",
                 s,
                 (uintptr_t)resourceHistogramNode->debugResourceNode->resource,
                 resourceHistogramNode->count,
@@ -1208,7 +1208,7 @@ void debugResourceCheck(void)
     {
       LIST_ITERATE(&debugResourceAllocList,debugResourceNode)
       {
-        fprintf(stderr,"DEBUG: lost resource %s '%s' 0x%016"PRIxPTR" allocated at %s, line %lu\n",
+        fprintf(stderr,"DEBUG: lost resource %s '%s' 0x%016"PRIxPTR" allocated at %s, line %zu\n",
                 debugResourceNode->typeName,
                 debugResourceNode->variableName,
                 (uintptr_t)debugResourceNode->resource,
@@ -1235,7 +1235,7 @@ void debugResourceCheck(void)
 LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
                                            const char *fileName,
                                            const char *symbolName,
-                                           ulong      lineNb,
+                                           size_t     lineNb,
                                            void       *userData
                                           )
 {
@@ -1250,7 +1250,7 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
     debugDumpStackTraceOutput(stackTraceOutputInfo->handle,
                               stackTraceOutputInfo->indent,
                               stackTraceOutputInfo->type,
-                              "  [0x%016"PRIxPTR"] %s (%s:%lu)\n",
+                              "  [0x%016"PRIxPTR"] %s (%s:%zu)\n",
                               (uintptr_t)address,
                               symbolName,
                               fileName,

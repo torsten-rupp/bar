@@ -184,13 +184,13 @@ LOCAL const struct
     LIST_NODE_HEADER(struct DebugFileNode);
 
     const char *fileName;
-    ulong      lineNb;
+    size_t     lineNb;
     #ifdef HAVE_BACKTRACE
       void const *stackTrace[16];
       int        stackTraceSize;
     #endif /* HAVE_BACKTRACE */
     const char *closeFileName;
-    ulong      closeLineNb;
+    size_t     closeLineNb;
     #ifdef HAVE_BACKTRACE
       void const *closeStackTrace[16];
       int        closeStackTraceSize;
@@ -305,7 +305,7 @@ LOCAL Errors getLastError(ErrorCodes errorCode,
                          )
 #else /* not NDEBUG */
 LOCAL Errors __getLastError(const char *__fileName__,
-                            ulong      __lineNb__,
+                            size_t     __lineNb__,
                             ErrorCodes errorCode,
                             const char *fileName
                            )
@@ -382,7 +382,7 @@ LOCAL FileTypes getFileType(const FileStat *fileStat)
 \***********************************************************************/
 
 LOCAL void fileCheckValid(const char       *fileName,
-                          ulong            lineNb,
+                          size_t           lineNb,
                           const FileHandle *fileHandle
                          )
 {
@@ -406,7 +406,7 @@ LOCAL void fileCheckValid(const char       *fileName,
       #endif /* HAVE_BACKTRACE */
       HALT_INTERNAL_ERROR_AT(fileName,
                              lineNb,
-                             "File %p was closed at %s, line %lu",
+                             "File %p was closed at %s, line %zu",
                              fileHandle,
                              debugFileNode->closeFileName,
                              debugFileNode->closeLineNb
@@ -456,7 +456,7 @@ LOCAL Errors initFileHandle(FileHandle *fileHandle,
                            )
 #else /* not NDEBUG */
 LOCAL Errors initFileHandle(const char *__fileName__,
-                            ulong      __lineNb__,
+                            size_t     __lineNb__,
                             FileHandle *fileHandle,
                             int        fileDescriptor,
                             const char *fileName,
@@ -621,7 +621,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
-          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %lu",
+          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened again at %s, line %zu",
                               String_cString(debugFileNode->fileHandle->name),
                               debugFileNode->fileName,
                               debugFileNode->lineNb,
@@ -631,7 +631,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
         }
         else
         {
-          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened again at %s, line %lu",
+          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened again at %s, line %zu",
                               debugFileNode->fileHandle,
                               debugFileNode->fileName,
                               debugFileNode->lineNb,
@@ -695,7 +695,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
 LOCAL Errors doneFileHandle(FileHandle *fileHandle)
 #else /* not NDEBUG */
 LOCAL Errors doneFileHandle(const char  *__fileName__,
-                            ulong       __lineNb__,
+                            size_t      __lineNb__,
                             FileHandle  *fileHandle
                            )
 #endif /* NDEBUG */
@@ -752,8 +752,8 @@ LOCAL Errors doneFileHandle(const char  *__fileName__,
         List_remove(&debugOpenFileList,debugFileNode);
 
         // add to closed list
-        debugFileNode->closeFileName         = __fileName__;
-        debugFileNode->closeLineNb           = __lineNb__;
+        debugFileNode->closeFileName = __fileName__;
+        debugFileNode->closeLineNb   = __lineNb__;
         #ifdef HAVE_BACKTRACE
           debugFileNode->closeStackTraceSize = getStackTrace(debugFileNode->closeStackTrace,SIZE_OF_ARRAY(debugFileNode->closeStackTrace));
         #endif /* HAVE_BACKTRACE */
@@ -771,7 +771,7 @@ LOCAL Errors doneFileHandle(const char  *__fileName__,
         #ifdef HAVE_BACKTRACE
           debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
         #endif /* HAVE_BACKTRACE */
-        HALT_INTERNAL_ERROR("File '%p' not found in debug list at %s, line %lu",
+        HALT_INTERNAL_ERROR("File '%p' not found in debug list at %s, line %zu",
                             fileHandle->file,
                             __fileName__,
                             __lineNb__
@@ -1812,7 +1812,7 @@ Errors File_getTmpFile(FileHandle  *fileHandle,
                       )
 #else /* not NDEBUG */
 Errors __File_getTmpFile(const char  *__fileName__,
-                         ulong       __lineNb__,
+                         size_t      __lineNb__,
                          FileHandle  *fileHandle,
                          ConstString prefix,
                          ConstString directory
@@ -1833,7 +1833,7 @@ Errors File_getTmpFileCString(FileHandle *fileHandle,
                              )
 #else /* not NDEBUG */
 Errors __File_getTmpFileCString(const char *__fileName__,
-                                ulong      __lineNb__,
+                                size_t     __lineNb__,
                                 FileHandle *fileHandle,
                                 char const *prefix,
                                 const char *directory
@@ -1971,7 +1971,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
         #endif /* HAVE_BACKTRACE */
         if (debugFileNode->fileHandle->name != NULL)
         {
-          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened multiple times at %s, line %lu",
+          HALT_INTERNAL_ERROR("File '%s' at %s, line %lu opened multiple times at %s, line %zu",
                               String_cString(debugFileNode->fileHandle->name),
                               debugFileNode->fileName,
                               debugFileNode->lineNb,
@@ -1981,7 +1981,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
         }
         else
         {
-          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened multiple times at %s, line %lu",
+          HALT_INTERNAL_ERROR("File %p at %s, line %lu opened multiple times at %s, line %zu",
                               debugFileNode->fileHandle,
                               debugFileNode->fileName,
                               debugFileNode->lineNb,
@@ -2378,7 +2378,7 @@ Errors File_open(FileHandle   *fileHandle,
                 )
 #else /* not NDEBUG */
 Errors __File_open(const char  *__fileName__,
-                   ulong       __lineNb__,
+                   size_t      __lineNb__,
                    FileHandle  *fileHandle,
                    ConstString fileName,
                    FileModes   fileMode
@@ -2407,7 +2407,7 @@ Errors File_openCString(FileHandle *fileHandle,
                        )
 #else /* not NDEBUG */
 Errors __File_openCString(const char *__fileName__,
-                          ulong      __lineNb__,
+                          size_t     __lineNb__,
                           FileHandle *fileHandle,
                           const char *fileName,
                           FileModes  fileMode
@@ -2692,7 +2692,7 @@ Errors File_openDescriptor(FileHandle *fileHandle,
                           )
 #else /* not NDEBUG */
 Errors __File_openDescriptor(const char *__fileName__,
-                             ulong      __lineNb__,
+                             size_t     __lineNb__,
                              FileHandle *fileHandle,
                              int        fileDescriptor,
                              FileModes  fileMode
@@ -2739,7 +2739,7 @@ Errors __File_openDescriptor(const char *__fileName__,
 Errors File_close(FileHandle *fileHandle)
 #else /* not NDEBUG */
 Errors __File_close(const char *__fileName__,
-                    ulong      __lineNb__,
+                    size_t     __lineNb__,
                     FileHandle *fileHandle
                    )
 #endif /* NDEBUG */
@@ -3146,7 +3146,7 @@ Errors File_flush(FileHandle *fileHandle)
 
 bool File_getLine(FileHandle *fileHandle,
                   String     line,
-                  uint       *lineNb,
+                  size_t     *lineNb,
                   const char *commentChars
                  )
 {
@@ -3191,7 +3191,7 @@ bool File_getLine(FileHandle *fileHandle,
 
 void File_ungetLine(FileHandle  *fileHandle,
                     ConstString line,
-                    uint        *lineNb
+                    size_t      *lineNb
                    )
 {
   FILE_CHECK_VALID(fileHandle);
@@ -4806,7 +4806,7 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
 void File_initExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
 #else /* not NDEBUG */
 void __File_initExtendedAttributes(const char                *__fileName__,
-                                   ulong                     __lineNb__,
+                                   size_t                    __lineNb__,
                                    FileExtendedAttributeList *fileExtendedAttributeList
                                   )
 #endif /* NDEBUG */
@@ -4826,7 +4826,7 @@ void __File_initExtendedAttributes(const char                *__fileName__,
 void File_doneExtendedAttributes(FileExtendedAttributeList *fileExtendedAttributeList)
 #else /* not NDEBUG */
 void __File_doneExtendedAttributes(const char                *__fileName__,
-                                   ulong                     __lineNb__,
+                                   size_t                    __lineNb__,
                                    FileExtendedAttributeList *fileExtendedAttributeList
                                   )
 #endif /* NDEBUG */
@@ -5815,7 +5815,7 @@ void File_debugDumpInfo(FILE                 *handle,
 
       if (debugFileNode->fileHandle->name != NULL)
       {
-        fprintf(handle,"DEBUG: file '%s' opened at %s, line %lu\n",
+        fprintf(handle,"DEBUG: file '%s' opened at %s, line %zu\n",
                 String_cString(debugFileNode->fileHandle->name),
                 debugFileNode->fileName,
                 debugFileNode->lineNb
@@ -5823,7 +5823,7 @@ void File_debugDumpInfo(FILE                 *handle,
       }
       else
       {
-        fprintf(handle,"DEBUG: file %p opened at %s, line %lu\n",
+        fprintf(handle,"DEBUG: file %p opened at %s, line %zu\n",
                 debugFileNode->fileHandle,
                 debugFileNode->fileName,
                 debugFileNode->lineNb

@@ -132,7 +132,7 @@ typedef struct
 void FragmentList_init(FragmentList *fragmentList);
 #else /* not NDEBUG */
 void __FragmentList_init(const char   *__fileName__,
-                         ulong        __lineNb__,
+                         size_t       __lineNb__,
                          FragmentList *fragmentList
                         );
 #endif /* NDEBUG */
@@ -172,7 +172,7 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
                           );
 #else /* not NDEBUG */
 void __FragmentList_initNode(const char   *__fileName__,
-                             ulong        __lineNb__,
+                             size_t       __lineNb__,
                              FragmentNode *fragmentNode,
                              ConstString  name,
                              uint64       size,
@@ -240,7 +240,7 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList,
                               );
 #else /* not NDEBUG */
 FragmentNode *__FragmentList_add(const char   *__fileName__,
-                                 ulong        __lineNb__,
+                                 size_t       __lineNb__,
                                  FragmentList *fragmentList,
                                  ConstString  name,
                                  uint64       size,

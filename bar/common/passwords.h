@@ -129,7 +129,7 @@ void Password_doneAll(void);
   void Password_init(Password *password);
 #else /* not NDEBUG */
   void __Password_init(const char *__fileName__,
-                       ulong      __lineNb__,
+                       size_t     __lineNb__,
                        Password   *password
                       );
 #endif /* NDEBUG */
@@ -148,7 +148,7 @@ void Password_doneAll(void);
   void Password_initDuplicate(Password *password, const Password *fromPassword);
 #else /* not NDEBUG */
   void __Password_initDuplicate(const char     *__fileName__,
-                                ulong          __lineNb__,
+                                size_t         __lineNb__,
                                 Password       *password,
                                 const Password *fromPassword
                                );
@@ -167,7 +167,7 @@ void Password_doneAll(void);
   void Password_done(Password *password);
 #else /* not NDEBUG */
   void __Password_done(const char *__fileName__,
-                       ulong      __lineNb__,
+                       size_t     __lineNb__,
                        Password   *password
                       );
 #endif /* NDEBUG */
@@ -185,14 +185,14 @@ void Password_doneAll(void);
   Password *Password_new(void);
 #else /* not NDEBUG */
   Password *__Password_new(const char *__fileName__,
-                           ulong      __lineNb__
+                           size_t     __lineNb__
                           );
 #endif /* NDEBUG */
 #ifdef NDEBUG
   Password *Password_newString(const String string);
 #else /* not NDEBUG */
   Password *__Password_newString(const char   *__fileName__,
-                                 ulong        __lineNb__,
+                                 size_t       __lineNb__,
                                  const String string
                                 );
 #endif /* NDEBUG */
@@ -200,7 +200,7 @@ void Password_doneAll(void);
   Password *Password_newCString(const char *s);
 #else /* not NDEBUG */
   Password *__Password_newCString(const char *__fileName__,
-                                  ulong      __lineNb__,
+                                  size_t     __lineNb__,
                                   const char *s
                                  );
 #endif /* NDEBUG */
@@ -218,7 +218,7 @@ void Password_doneAll(void);
   Password *Password_duplicate(const Password *fromPassword);
 #else /* not NDEBUG */
   Password *__Password_duplicate(const char     *__fileName__,
-                                 ulong          __lineNb__,
+                                 size_t         __lineNb__,
                                  const Password *fromPassword
                                 );
 #endif /* NDEBUG */
@@ -236,7 +236,7 @@ void Password_doneAll(void);
   void Password_delete(Password *password);
 #else /* not NDEBUG */
   void __Password_delete(const char *__fileName__,
-                         ulong      __lineNb__,
+                         size_t     __lineNb__,
                          Password   *password
                         );
 #endif /* NDEBUG */

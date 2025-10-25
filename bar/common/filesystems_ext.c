@@ -192,7 +192,7 @@ typedef struct
 
   uint32 reserved[160];
 } ATTRIBUTE_PACKED EXTSuperBlock;
-static_assert(sizeof(EXTSuperBlock) == 1024);
+static_assert(sizeof(EXTSuperBlock) == 1024,"sizeof(EXTSuperBlock) == 1024");
 
 // ext2/ext3 group descriptor
 typedef struct
@@ -208,7 +208,7 @@ typedef struct
   uint16 inodeTableUnused;
   uint16 checksum;
 } ATTRIBUTE_PACKED EXT23GroupDescriptor;
-static_assert(sizeof(EXT23GroupDescriptor) == 32);
+static_assert(sizeof(EXT23GroupDescriptor) == 32,"sizeof(EXT23GroupDescriptor) == 32");
 
 // ext4 group descriptor
 typedef struct
@@ -232,7 +232,7 @@ typedef struct
   uint16 pad0;
   uint32 reserver1[3];
 } ATTRIBUTE_PACKED EXT4GroupDescriptor;
-static_assert(sizeof(EXT4GroupDescriptor) == 64);
+static_assert(sizeof(EXT4GroupDescriptor) == 64,"sizeof(EXT4GroupDescriptor) == 64");
 
 /***************************** Variables *******************************/
 
