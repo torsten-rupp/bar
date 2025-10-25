@@ -68,14 +68,6 @@ RUN yum -y install \
   cmake \
   ;
 
-# add cmake 3.2
-#RUN    wget https://cmake.org/files/v3.2/cmake-3.2.3.tar.gz \
-#    && tar xf cmake-3.2.3.tar.gz \
-#    && (cd cmake-3.2.3; ./bootstrap) \
-#    && (cd cmake-3.2.3; make) \
-#    && (cd cmake-3.2.3; make install) \
-#    && rm -rf cmake-3.2.3
-
 # add user for build process
 RUN    userdel `id -un $uid 2>/dev/null` 2>/dev/null || true \
     && groupadd -g $gid jenkins || true \
@@ -99,14 +91,14 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; \
 VOLUME [ "/sys/fs/cgroup" ]
 
 # work-around for missing package libinih-devel
-RUN (cd /tmp; \
-     git clone https://github.com/benhoyt/inih.git; \
-     cd inih; \
-     gcc -c ini.c -o ini.o; \
-     ar cr libini.a ini.o; \
-     install ini.h /usr/local/include; \
-     install libini.a /usr/local/lib; \
-    )
+RUN    cd /tmp \
+    && rm -rf inih \
+    && git clone https://github.com/benhoyt/inih.git \
+    && (cd inih; gcc -c ini.c -o ini.o) \
+    && (cd inih; ar cr libinih.a ini.o) \
+    && (cd inih; install ini.h /usr/local/include) \
+    && (cd inih; install libinih.a /usr/local/lib) \
+    && rm -rf inih
 
 # add external third-party packages
 COPY download-third-party-packages.sh /root
@@ -118,3 +110,6 @@ RUN install -d /media/home  && chown root /media/home
 VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]
+
+RUN yum -y install \
+  libuuid-devel \

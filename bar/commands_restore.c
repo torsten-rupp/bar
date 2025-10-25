@@ -797,17 +797,19 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               getUniqName(destinationFileName);
               break;
             case RESTORE_ENTRY_MODE_OVERWRITE:
-              // truncate to 0-file
-              FileHandle fileHandle;
-              error = File_open(&fileHandle,destinationFileName,FILE_OPEN_CREATE);
-              if (error != ERROR_NONE)
               {
-                error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
-                Semaphore_unlock(&restoreInfo->namesDictionaryLock);
-                AutoFree_cleanup(&autoFreeList);
-                return error;
+                // truncate to 0-file
+                FileHandle fileHandle;
+                error = File_open(&fileHandle,destinationFileName,FILE_OPEN_CREATE);
+                if (error != ERROR_NONE)
+                {
+                  error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
+                  Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+                  AutoFree_cleanup(&autoFreeList);
+                  return error;
+                }
+                (void)File_close(&fileHandle);
               }
-              (void)File_close(&fileHandle);
               break;
             case RESTORE_ENTRY_MODE_SKIP_EXISTING:
               // skip
@@ -2487,17 +2489,19 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 getUniqName(destinationFileName);
                 break;
               case RESTORE_ENTRY_MODE_OVERWRITE:
-                // truncate to 0-file
-                FileHandle fileHandle;
-                error = File_open(&fileHandle,destinationFileName,FILE_OPEN_CREATE);
-                if (error != ERROR_NONE)
                 {
-                  error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
-                  Semaphore_unlock(&restoreInfo->namesDictionaryLock);
-                  AutoFree_cleanup(&autoFreeList);
-                  return error;
+                  // truncate to 0-file
+                  FileHandle fileHandle;
+                  error = File_open(&fileHandle,destinationFileName,FILE_OPEN_CREATE);
+                  if (error != ERROR_NONE)
+                  {
+                    error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationFileName,error);
+                    Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+                    AutoFree_cleanup(&autoFreeList);
+                    return error;
+                  }
+                  (void)File_close(&fileHandle);
                 }
-                (void)File_close(&fileHandle);
                 break;
               case RESTORE_ENTRY_MODE_SKIP_EXISTING:
                 // skip
