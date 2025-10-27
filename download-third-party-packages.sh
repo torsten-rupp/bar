@@ -27,33 +27,32 @@ XZ="xz"
 
 ZLIB_VERSION=1.3.1
 BZIP2_VERSION=1.0.8
-XZ_VERSION=5.2.5
+XZ_VERSION=5.8.1
 LZO_VERSION=2.10
-LZ4_VERSION=r131
-ZSTD_VERSION=1.5.2
+LZ4_VERSION=v1.10.0
+ZSTD_VERSION=1.5.7
 XDELTA3_VERSION=3.0.11
 MXML_VERSION=3.3
-GPG_ERROR_VERSION=1.45
-GCRYPT_VERSION=1.10.1
+GPG_ERROR_VERSION=1.56
+GCRYPT_VERSION=1.11.2
 NETTLE_VERSION=3.9.1
-GMP_VERSION=6.2.1
-IDN2_VERSION=2.3.4
-GNU_TLS_SUB_DIRECTORY=v3.6
-GNU_TLS_VERSION=3.6.16
-ICONV_VERSION=1.16
-OPENSSL_VERSION=1.1.1n
-SSH2_VERSION=1.10.0
+GMP_VERSION=6.3.0
+IDN2_VERSION=2.3.8
+GNU_TLS_SUB_DIRECTORY=v3.8
+GNU_TLS_VERSION=3.8.10
+ICONV_VERSION=1.18
+OPENSSL_VERSION=3.6.0
+SSH2_VERSION=1.11.1
 # Note: 1.33.0 does not compile on legacy systems; fix is in
 #       main, but not in 1.33. Thus use previous version for
 #       now.
-C_ARES_VERSION=1.32.3
-CURL_VERSION=7.77.0
+C_ARES_VERSION=1.34.5
+CURL_VERSION=8.16.0
 PCRE_VERSION=8.45
 SQLITE_YEAR=2025
-SQLITE_VERSION=3490100
-MARIADB_CLIENT_VERSION=3.1.13
-#POSTGRESQL_VERSION=9.6.24
-POSTGRESQL_VERSION=10.23
+SQLITE_VERSION=3500400
+MARIADB_CLIENT_VERSION=3.4.7
+POSTGRESQL_VERSION=18.0
 # Note ICU: * 61.1 seems to be the latest version without C++11
 #           * 58.2 seems to be the latest version which can be
 #              compiled on older 32bit systems, e. g. CentOS 6
@@ -61,16 +60,16 @@ POSTGRESQL_VERSION=10.23
 ICU_VERSION=61.1
 MTX_VERSION=1.3.12
 CDIO_VERSION=2.1.0
-KRB5_VERSION=1.21
-KRB5_VERSION_MINOR=2
-SMB2_VERSION=4.0.0
-PAR2_VERSION=0.8.1
-UTIL_LINUX_VERSION="v2.40"
+KRB5_VERSION=1.22
+KRB5_VERSION_MINOR=1
+SMB2_VERSION=6.0.0
+PAR2_VERSION=1.0.0
+UTIL_LINUX_VERSION="v2.41.1"
 ISOFS_VERSION="release-1.5.6.pl01"
 RCU_VERSION=0.15.3
 XFSPROGS_VERSION=6.16.0
 BURN_VERSION="release-1.5.6"
-BINUTILS_VERSION=2.41
+BINUTILS_VERSION=2.45
 PTHREAD_W32_VERSION=2-9-1
 LAUNCH4J_MAJOR_VERSION=3
 LAUNCH4J_VERSION=3.14
@@ -1040,6 +1039,7 @@ if test $cleanFlag -eq 0; then
      exit $result
     )
     result=$?
+#TODO remove
     if test $noDecompressFlag -eq 0; then
       (cd "$workingDirectory"; $LN -sfT extern/curl-$CURL_VERSION curl)
     fi
@@ -1866,6 +1866,14 @@ if test $cleanFlag -eq 0; then
        (cd "$workingDirectory"; $LN -sfT $destinationDirectory/postgresql-$POSTGRESQL_VERSION postgresql)
        if test $? -ne 0; then
          fatalError "symbolic link"
+       fi
+
+       # patch to fix insufficient exit-test in postgresql >= 15.xx
+       #   diff -u postgresql-18.0.org/src/interfaces/libpq/Makefile postgresql-18.0/src/interfaces/libpq/Makefile > ../misc/postgresql-exit-test.patch
+       # Note: ignore exit code 1: patch may already be applied
+       (cd $workingDirectory/postgresql; $PATCH --batch -N -p1 < $patchDirectory/postgresql-exit-test.patch) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
        fi
      fi
 

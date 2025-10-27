@@ -1,0 +1,11 @@
+--- postgresql-18.0.org/src/interfaces/libpq/Makefile	2025-09-22 22:11:33.000000000 +0200
++++ postgresql-18.0/src/interfaces/libpq/Makefile	2025-10-27 10:51:39.019093384 +0100
+@@ -144,7 +144,7 @@
+ libpq-refs-stamp: $(shlib)
+ ifneq ($(enable_coverage), yes)
+ ifeq (,$(filter solaris,$(PORTNAME)))
+-	@if nm -A -u $< 2>/dev/null | grep -v -e __cxa_atexit -e __tsan_func_exit | grep exit; then \
++	@if nm -A -u $< 2>/dev/null | grep -v -e __cxa_atexit -e __tsan_func_exit -e pthread_exit | grep exit; then \
+ 		echo 'libpq must not be calling any function which invokes exit'; exit 1; \
+ 	fi
+ endif

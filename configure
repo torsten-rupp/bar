@@ -16491,7 +16491,6 @@ fi
 if test $ENABLE_TLS = "yes"; then
   if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \) -a "$HAVE_IDN2"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-
       cwd=`pwd`
 
       if test -z "$HAVE_GCRYPT"; then
@@ -16739,7 +16738,6 @@ printf "%s\n" "#define HAVE_GNU_TLS 1" >>confdefs.h
 
     fi
   else
-
     ac_fn_c_check_type "$LINENO" "gnutls_session_t" "ac_cv_type_gnutls_session_t" "#include <gnutls/gnutls.h>
 "
 if test "x$ac_cv_type_gnutls_session_t" = xyes
@@ -17176,10 +17174,6 @@ printf "%s\n" "$as_me: WARNING: gnutls not compiled: nettle package missing" >&2
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: gnutls not compiled: gnutls package missing" >&5
 printf "%s\n" "$as_me: WARNING: gnutls not compiled: gnutls package missing" >&2;}
     fi
-    if test ! "$HAVE_IDN2"; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: gnutls not compiled: libidn2 package missing" >&5
-printf "%s\n" "$as_me: WARNING: gnutls not compiled: libidn2 package missing" >&2;}
-    fi
   fi
 fi
 
@@ -17195,6 +17189,10 @@ if test $ENABLE_CURL = "yes"; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: zlib is missing. Compiling or linking curl may fail!" >&5
 printf "%s\n" "$as_me: WARNING: zlib is missing. Compiling or linking curl may fail!" >&2;}
       fi
+      if test -z "$HAVE_ZSTD"; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: zstd is missing. Compiling or linking curl may fail!" >&5
+printf "%s\n" "$as_me: WARNING: zstd is missing. Compiling or linking curl may fail!" >&2;}
+      fi
       if test -z "$HAVE_GNU_TLS"; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: gnutls is missing. Compiling or linking curl may fail!" >&5
 printf "%s\n" "$as_me: WARNING: gnutls is missing. Compiling or linking curl may fail!" >&2;}
@@ -17208,8 +17206,8 @@ printf "%s\n" "$as_me: WARNING: libssl is missing. Compiling or linking curl may
 printf "%s\n" "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fail!" >&2;}
       fi
       if test -z "$HAVE_IDN2"; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libssh2 is missing. Compiling or linking curl may fail!" >&5
-printf "%s\n" "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fail!" >&2;}
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: libidn2 is missing. Compiling or linking curl may fail!" >&5
+printf "%s\n" "$as_me: WARNING: libidn2 is missing. Compiling or linking curl may fail!" >&2;}
       fi
 
 
@@ -17315,7 +17313,7 @@ printf "%s\n" "done" >&6; }
       fi
 
 
-  printf %s "compile curl... " >&6
+  printf %s "compile mxml... " >&6
 
       result2=1
       if test $result2 -eq 1; then
@@ -17352,69 +17350,26 @@ printf "%s\n" "fail (patch)" >&6; }
         fi
       fi
       if test $result2 -eq 1; then
-        if test "$host" == "$build"; then
-          # compile build
-# TODO: temporary disabled brotli compression, psl
-          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-            --disable-shared \
-            --enable-static \
-            --disable-ldap \
-            --disable-rtsp \
-            --without-librtmp \
-            --enable-ares=$cwd/extern \
-            --with-zlib=$cwd/extern \
-            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
-            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; fi` \
-            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
---without-brotli \
---without-libpsl \
-            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-          ) 1>$tmpFile 2>&1
-          if test $? -ne 0; then
-            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+        (cd mxml; ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --disable-shared \
+          --enable-static \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 printf "%s\n" "fail (configure)" >&6; }
 
   printf "%s\n" "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-            result2=0
-          fi
-        else
-          # cross-compile host
-          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CPPFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32 -liphlpapi -lssp" ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-            --disable-shared \
-            --enable-static \
-            --disable-ldap \
-            --disable-rtsp \
-            --without-librtmp \
-            --enable-ares=$cwd/extern \
-            --with-zlib=$cwd/extern \
-            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
-            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; fi` \
-            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
-            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-          ) 1>$tmpFile 2>&1
-          if test $? -ne 0; then
-            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
-printf "%s\n" "fail (configure)" >&6; }
-
-  printf "%s\n" "--- error log -------------------------------------------------------------------------"
-  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
-  printf "%s\n" "---------------------------------------------------------------------------------------"
-
-            result2=0
-          fi
+          result2=0
         fi
       fi
       if test $result2 -eq 1; then
-        (cd curl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd mxml; make clean; make -j$CPU_CORES libmxml.a) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 printf "%s\n" "fail (make)" >&6; }
@@ -17427,7 +17382,12 @@ printf "%s\n" "fail (make)" >&6; }
         fi
       fi
       if test $result2 -eq 1; then
-        (cd curl; make install) 1>$tmpFile 2>&1
+        # Note: there is no target to install the library and header files only; do it manually
+        (cd mxml; \
+         make install-libmxml.a; \
+         install -m 644 mxml.h $cwd/extern/include; \
+         install -m 644 mxml.pc $cwd/extern/lib/pkgconfig; \
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 printf "%s\n" "fail (install)" >&6; }
@@ -17446,7 +17406,7 @@ printf "%s\n" "fail (install)" >&6; }
           darwin*)
             ;;
           windows*|mingw*)
-            (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
+            (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -17456,7 +17416,7 @@ printf "%s\n" "done" >&6; }
       fi
 
 
-  printf %s "compile mxml... " >&6
+  printf %s "compile curl... " >&6
 
       result3=1
       if test $result3 -eq 1; then
@@ -17493,26 +17453,71 @@ printf "%s\n" "fail (patch)" >&6; }
         fi
       fi
       if test $result3 -eq 1; then
-        (cd mxml; ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --disable-shared \
-          --enable-static \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+        if test "$host" == "$build"; then
+          # compile build
+# TODO: temporary disabled brotli compression, psl
+          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --disable-shared \
+            --enable-static \
+            --disable-ldap \
+            --disable-rtsp \
+            --without-librtmp \
+            --enable-ares=$cwd/extern \
+            --with-zlib=$cwd/extern \
+            `if test $HAVE_ZSTD; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
+            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
+            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
+--without-brotli \
+--without-libpsl \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+          ) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 printf "%s\n" "fail (configure)" >&6; }
 
   printf "%s\n" "--- error log -------------------------------------------------------------------------"
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result3=0
+            result3=0
+          fi
+        else
+          # cross-compile host
+          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CPPFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32 -liphlpapi -lssp" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --disable-shared \
+            --enable-static \
+            --disable-ldap \
+            --disable-rtsp \
+            --without-librtmp \
+            --enable-ares=$cwd/extern \
+            --with-zlib=$cwd/extern \
+            `if test $HAVE_ZSTD; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
+            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
+            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+          ) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+printf "%s\n" "fail (configure)" >&6; }
+
+  printf "%s\n" "--- error log -------------------------------------------------------------------------"
+  cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
+  printf "%s\n" "---------------------------------------------------------------------------------------"
+
+            result3=0
+          fi
         fi
       fi
       if test $result3 -eq 1; then
-        (cd mxml; make clean; make -j$CPU_CORES libmxml.a) 1>$tmpFile 2>&1
+        (cd curl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 printf "%s\n" "fail (make)" >&6; }
@@ -17525,12 +17530,7 @@ printf "%s\n" "fail (make)" >&6; }
         fi
       fi
       if test $result3 -eq 1; then
-        # Note: there is no target to install the library and header files only; do it manually
-        (cd mxml; \
-         make install-libmxml.a; \
-         install -m 644 mxml.h $cwd/extern/include; \
-         install -m 644 mxml.pc $cwd/extern/lib/pkgconfig; \
-        ) 1>$tmpFile 2>&1
+        (cd curl; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 printf "%s\n" "fail (install)" >&6; }
@@ -17549,7 +17549,7 @@ printf "%s\n" "fail (install)" >&6; }
           darwin*)
             ;;
           windows*|mingw*)
-            (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
+            (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
             ;;
         esac
       fi
@@ -17578,85 +17578,20 @@ printf "%s\n" "done" >&6; }
       fi
       HAVE_FTP=1
       HAVE_CARES=1
-      HAVE_CURL=1
       HAVE_MXML=1
+      HAVE_CURL=1
 
 printf "%s\n" "#define HAVE_CARES 1" >>confdefs.h
-
-
-printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
 
 
 printf "%s\n" "#define HAVE_MXML 1" >>confdefs.h
 
+
+printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
+
     fi
   else
-
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-
-
-    ac_result=""
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing ares_library_init" >&5
-printf %s "checking for library containing ares_library_init... " >&6; }
-if test ${ac_cv_search_libraries_ares_library_init+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_libraries_save_LIBS=$LIBS
-
-      for ac_library in cares ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void ares_library_init();"; fi`
-                                         return (int)ares_library_init;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_libraries_ares_library_init=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_libraries_ares_library_init+y}
-then :
-
-else $as_nop
-  ac_cv_search_libraries_ares_library_init=no
-fi
-
-            LIBS=$ac_func_search_libraries_save_LIBS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ares_library_init" >&5
-printf "%s\n" "$ac_cv_search_libraries_ares_library_init" >&6; }
-  ac_result=$ac_cv_search_libraries_ares_library_init
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";
-printf "%s\n" "#define HAVE_CARES 1" >>confdefs.h
-
-fi
-
 
 
     ac_result=""
@@ -17718,6 +17653,70 @@ printf "%s\n" "$ac_cv_search_libraries_curl_global_init" >&6; }
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";
 printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
+
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing ares_library_init" >&5
+printf %s "checking for library containing ares_library_init... " >&6; }
+if test ${ac_cv_search_libraries_ares_library_init+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in cares ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void ares_library_init();"; fi`
+                                         return (int)ares_library_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_ares_library_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_ares_library_init+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_ares_library_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ares_library_init" >&5
+printf "%s\n" "$ac_cv_search_libraries_ares_library_init" >&6; }
+  ac_result=$ac_cv_search_libraries_ares_library_init
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";
+printf "%s\n" "#define HAVE_CARES 1" >>confdefs.h
 
 fi
 
@@ -17786,140 +17785,6 @@ printf "%s\n" "#define HAVE_MXML 1" >>confdefs.h
 fi
 
     else
-      if test -z "$HAVE_CARES"; then
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing ares_library_init" >&5
-printf %s "checking for static library containing ares_library_init... " >&6; }
-if test ${ac_cv_search_static_ares_library_init+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      for ac_library in cares ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void ares_library_init();"; fi`
-                                         return (int)ares_library_init;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_static_ares_library_init=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_static_ares_library_init+y}
-then :
-
-else $as_nop
-  ac_cv_search_static_ares_library_init=no
-fi
-
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_ares_library_init" >&5
-printf "%s\n" "$ac_cv_search_static_ares_library_init" >&6; }
-  ac_result=$ac_cv_search_static_ares_library_init
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";
-printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
-
-fi
-
-      fi
-      if test -z "$HAVE_CARES"; then
-
-
-    ac_result=""
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing ares_library_init" >&5
-printf %s "checking for library containing ares_library_init... " >&6; }
-if test ${ac_cv_search_libraries_ares_library_init+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_libraries_save_LIBS=$LIBS
-
-      for ac_library in cares ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void ares_library_init();"; fi`
-                                         return (int)ares_library_init;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_libraries_ares_library_init=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_libraries_ares_library_init+y}
-then :
-
-else $as_nop
-  ac_cv_search_libraries_ares_library_init=no
-fi
-
-            LIBS=$ac_func_search_libraries_save_LIBS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ares_library_init" >&5
-printf "%s\n" "$ac_cv_search_libraries_ares_library_init" >&6; }
-  ac_result=$ac_cv_search_libraries_ares_library_init
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";
-printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
-
-fi
-
-      fi
       if test -z "$HAVE_CURL"; then
 
 
@@ -18049,6 +17914,140 @@ printf "%s\n" "$ac_cv_search_libraries_curl_global_init" >&6; }
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";
+printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_CARES"; then
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing ares_library_init" >&5
+printf %s "checking for static library containing ares_library_init... " >&6; }
+if test ${ac_cv_search_static_ares_library_init+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in cares ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void ares_library_init();"; fi`
+                                         return (int)ares_library_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_ares_library_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_ares_library_init+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_ares_library_init=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_ares_library_init" >&5
+printf "%s\n" "$ac_cv_search_static_ares_library_init" >&6; }
+  ac_result=$ac_cv_search_static_ares_library_init
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";
+printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
+
+fi
+
+      fi
+      if test -z "$HAVE_CARES"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing ares_library_init" >&5
+printf %s "checking for library containing ares_library_init... " >&6; }
+if test ${ac_cv_search_libraries_ares_library_init+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in cares ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void ares_library_init();"; fi`
+                                         return (int)ares_library_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_ares_library_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_ares_library_init+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_ares_library_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_ares_library_init" >&5
+printf "%s\n" "$ac_cv_search_libraries_ares_library_init" >&6; }
+  ac_result=$ac_cv_search_libraries_ares_library_init
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";
 printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
 
 fi
@@ -18202,16 +18201,16 @@ fi
       ;;
   esac
 
-  if test -z "$HAVE_CARES"; then
-    if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: curl not compiled: c-ares package missing" >&5
-printf "%s\n" "$as_me: WARNING: curl not compiled: c-ares package missing" >&2;}
-    fi
-  fi
   if test -z "$HAVE_CURL"; then
     if test ! \( -d curl -o -d "`readlink curl`" \); then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: curl not compiled: curl package missing" >&5
 printf "%s\n" "$as_me: WARNING: curl not compiled: curl package missing" >&2;}
+    fi
+  fi
+  if test -z "$HAVE_CARES"; then
+    if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: curl not compiled: c-ares package missing" >&5
+printf "%s\n" "$as_me: WARNING: curl not compiled: c-ares package missing" >&2;}
     fi
   fi
   if test -z "$HAVE_MXML"; then
@@ -18786,7 +18785,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       cwd=`pwd`
 
 
-  printf %s "compile PostgreSQL... " >&6
+  printf %s "compile PostgreSQL connector... " >&6
 
       result=1
       if test $result -eq 1; then
@@ -18832,6 +18831,7 @@ printf "%s\n" "fail (configure)" >&6; }
       if test $result -eq 1; then
         (cd postgresql; \
          make -C src/common -j$CPU_CORES; \
+         make -C src/port -j$CPU_CORES; \
          make -C src/interfaces/libpq -j$CPU_CORES; \
          make -C src/interfaces/ecpg -j$CPU_CORES; \
         ) 1>$tmpFile 2>&1
@@ -18849,6 +18849,8 @@ printf "%s\n" "fail (make)" >&6; }
       if test $result -eq 1; then
         (cd postgresql; \
          make -C src/include install PREFIX=$cwd/extern; \
+         make -C src/common install PREFIX=$cwd/extern; \
+         make -C src/port install PREFIX=$cwd/extern; \
          make -C src/interfaces/libpq install PREFIX=$cwd/extern; \
          make -C src/interfaces/ecpg install PREFIX=$cwd/extern; \
         ) 1>$tmpFile 2>&1
@@ -18873,9 +18875,9 @@ printf "%s\n" "done" >&6; }
 
     if test $result -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES pq pgtypes"
+        LIBRARIES="$LIBRARIES pq pgport pgcommon pgcommon_shlib pgtypes"
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgtypes"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgport pgcommon pgcommon_shlib pgtypes"
       fi
       HAVE_POSTGRESQL=1
 
@@ -18945,6 +18947,198 @@ printf "%s\n" "$ac_cv_search_libraries_pq_init" >&6; }
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";
+printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing pg_printf" >&5
+printf %s "checking for library containing pg_printf... " >&6; }
+if test ${ac_cv_search_libraries_pg_printf+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pgport ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void pg_printf();"; fi`
+                                         return (int)pg_printf;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_pg_printf=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_pg_printf+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_pg_printf=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pg_printf" >&5
+printf "%s\n" "$ac_cv_search_libraries_pg_printf" >&6; }
+  ac_result=$ac_cv_search_libraries_pg_printf
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgport $LIBRARIES";
+printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing scram_HMAC_init" >&5
+printf %s "checking for library containing scram_HMAC_init... " >&6; }
+if test ${ac_cv_search_libraries_scram_HMAC_init+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pgcommon ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void scram_HMAC_init();"; fi`
+                                         return (int)scram_HMAC_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_scram_HMAC_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_scram_HMAC_init+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_scram_HMAC_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_scram_HMAC_init" >&5
+printf "%s\n" "$ac_cv_search_libraries_scram_HMAC_init" >&6; }
+  ac_result=$ac_cv_search_libraries_scram_HMAC_init
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgcommon $LIBRARIES";
+printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing pg_encoding_to_char" >&5
+printf %s "checking for library containing pg_encoding_to_char... " >&6; }
+if test ${ac_cv_search_libraries_pg_encoding_to_char+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pgcommon_shlib ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void pg_encoding_to_char();"; fi`
+                                         return (int)pg_encoding_to_char;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_pg_encoding_to_char=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_pg_encoding_to_char+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_pg_encoding_to_char=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pg_encoding_to_char" >&5
+printf "%s\n" "$ac_cv_search_libraries_pg_encoding_to_char" >&6; }
+  ac_result=$ac_cv_search_libraries_pg_encoding_to_char
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgcommon_shlib $LIBRARIES";
 printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
 
 fi
@@ -19083,6 +19277,204 @@ fi
 
 
 
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing pg_printf" >&5
+printf %s "checking for static library containing pg_printf... " >&6; }
+if test ${ac_cv_search_static_pg_printf+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in pgport ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void pg_printf();"; fi`
+                                         return (int)pg_printf;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_pg_printf=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_pg_printf+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_pg_printf=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_pg_printf" >&5
+printf "%s\n" "$ac_cv_search_static_pg_printf" >&6; }
+  ac_result=$ac_cv_search_static_pg_printf
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgport $LIBRARIES";
+printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing scram_HMAC_init" >&5
+printf %s "checking for static library containing scram_HMAC_init... " >&6; }
+if test ${ac_cv_search_static_scram_HMAC_init+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in pgcommon ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void scram_HMAC_init();"; fi`
+                                         return (int)scram_HMAC_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_scram_HMAC_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_scram_HMAC_init+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_scram_HMAC_init=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_scram_HMAC_init" >&5
+printf "%s\n" "$ac_cv_search_static_scram_HMAC_init" >&6; }
+  ac_result=$ac_cv_search_static_scram_HMAC_init
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgcommon $LIBRARIES";
+printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing pg_encoding_to_char" >&5
+printf %s "checking for static library containing pg_encoding_to_char... " >&6; }
+if test ${ac_cv_search_static_pg_encoding_to_char+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in pgcommon_shlib ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void pg_encoding_to_char();"; fi`
+                                         return (int)pg_encoding_to_char;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_pg_encoding_to_char=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_static_pg_encoding_to_char+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_pg_encoding_to_char=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_pg_encoding_to_char" >&5
+printf "%s\n" "$ac_cv_search_static_pg_encoding_to_char" >&6; }
+  ac_result=$ac_cv_search_static_pg_encoding_to_char
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgcommon_shlib $LIBRARIES";
+printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+
+
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing PGTYPESnumeric_to_long" >&5
 printf %s "checking for static library containing PGTYPESnumeric_to_long... " >&6; }
 if test ${ac_cv_search_static_PGTYPESnumeric_to_long+y}
@@ -19209,6 +19601,198 @@ printf "%s\n" "$ac_cv_search_libraries_pq_init" >&6; }
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";
+printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing pg_printf" >&5
+printf %s "checking for library containing pg_printf... " >&6; }
+if test ${ac_cv_search_libraries_pg_printf+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pgport ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void pg_printf();"; fi`
+                                         return (int)pg_printf;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_pg_printf=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_pg_printf+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_pg_printf=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pg_printf" >&5
+printf "%s\n" "$ac_cv_search_libraries_pg_printf" >&6; }
+  ac_result=$ac_cv_search_libraries_pg_printf
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgport $LIBRARIES";
+printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing scram_HMAC_init" >&5
+printf %s "checking for library containing scram_HMAC_init... " >&6; }
+if test ${ac_cv_search_libraries_scram_HMAC_init+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pgcommon ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void scram_HMAC_init();"; fi`
+                                         return (int)scram_HMAC_init;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_scram_HMAC_init=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_scram_HMAC_init+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_scram_HMAC_init=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_scram_HMAC_init" >&5
+printf "%s\n" "$ac_cv_search_libraries_scram_HMAC_init" >&6; }
+  ac_result=$ac_cv_search_libraries_scram_HMAC_init
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgcommon $LIBRARIES";
+printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
+
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing pg_encoding_to_char" >&5
+printf %s "checking for library containing pg_encoding_to_char... " >&6; }
+if test ${ac_cv_search_libraries_pg_encoding_to_char+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in pgcommon_shlib ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "extern void pg_encoding_to_char();"; fi`
+                                         return (int)pg_encoding_to_char;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_pg_encoding_to_char=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_pg_encoding_to_char+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_pg_encoding_to_char=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_pg_encoding_to_char" >&5
+printf "%s\n" "$ac_cv_search_libraries_pg_encoding_to_char" >&6; }
+  ac_result=$ac_cv_search_libraries_pg_encoding_to_char
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" HAVE_POSTGRESQL=1;LIBRARIES="pgcommon_shlib $LIBRARIES";
 printf "%s\n" "#define HAVE_POSTGRESQL 1" >>confdefs.h
 
 fi
@@ -19862,7 +20446,7 @@ printf "%s\n" "fail (patch)" >&6; }
           linux-* | sunos | solaris* | darwin*)
             if test "$ENABLE_DEBUG" = "yes"; then
               # Note: use configure, because with cmake the external Kerberos libraries are not used
-              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
+              (cd libsmb2; sh ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -19871,7 +20455,7 @@ printf "%s\n" "fail (patch)" >&6; }
                 --disable-werror \
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
+              (cd libsmb2; sh ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -19939,7 +20523,11 @@ printf "%s\n" "fail (configure)" >&6; }
         esac
       fi
       if test $result2 -eq 1; then
-        (cd libsmb2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd libsmb2; \
+         make clean; \
+         make -C include -j$CPU_CORES; \
+         make -C lib -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 printf "%s\n" "fail (make)" >&6; }
@@ -19952,7 +20540,10 @@ printf "%s\n" "fail (make)" >&6; }
         fi
       fi
       if test $result2 -eq 1; then
-        (cd libsmb2; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        (cd libsmb2; \
+         make -C include install PREFIX=$cwd/extern; \
+         make -C lib install PREFIX=$cwd/extern; \
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 printf "%s\n" "fail (install)" >&6; }
@@ -36154,6 +36745,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_FTP=$HAVE_FTP
                    HAVE_CURL=$HAVE_CURL
                    HAVE_MXML=$HAVE_MXML
+                   HAVE_SSL=$HAVE_SSL
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_MARIADB=$HAVE_MARIADB
@@ -36805,7 +37397,7 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                     echo "  FTP support          : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
                     echo "  curl support         : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
                     echo "  SCP/SFTP support     : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_SSH2)"; else echo no; fi`";
-                    echo "  TLS/SSL server       : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
+                    echo "  TLS/SSL              : `if test "$HAVE_GNU_TLS"; then echo "yes (OpenSSL $VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support     : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  SMB support          : `if test "$HAVE_SMB2"; then echo "yes ($VERSION_SMB2)"; else echo no; fi`";
                     echo "  PCRE support         : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";

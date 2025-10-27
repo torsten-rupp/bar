@@ -3067,8 +3067,6 @@ fi
 if test $ENABLE_TLS = "yes"; then
   if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \) -a "$HAVE_IDN2"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile gmp, nettle, libidn2, gnutls libraries
-
       cwd=`pwd`
 
       if test -z "$HAVE_GCRYPT"; then
@@ -3259,8 +3257,6 @@ if test $ENABLE_TLS = "yes"; then
       AC_DEFINE(HAVE_GNU_TLS,1,[gnutls installed (local)])
     fi
   else
-    dnl search for installed gmp, nettle, libidn2, gnutls libraries
-
     AC_CHECK_TYPE(gnutls_session_t,,AC_MSG_WARN([no or wrong version of gnutls. gnutls version >=2.0.1 needed. Disabled TLS support.]); ENABLE_TLS=no,[#include <gnutls/gnutls.h>])
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
@@ -3304,9 +3300,6 @@ if test $ENABLE_TLS = "yes"; then
     if test ! \( -d gnutls -o -d "`readlink gnutls`" \); then
       AC_MSG_WARN([gnutls not compiled: gnutls package missing])
     fi
-    if test ! "$HAVE_IDN2"; then
-      AC_MSG_WARN([gnutls not compiled: libidn2 package missing])
-    fi
   fi
 fi
 
@@ -3322,6 +3315,9 @@ if test $ENABLE_CURL = "yes"; then
       if test -z "$HAVE_Z"; then
         AC_MSG_WARN([zlib is missing. Compiling or linking curl may fail!])
       fi
+      if test -z "$HAVE_ZSTD"; then
+        AC_MSG_WARN([zstd is missing. Compiling or linking curl may fail!])
+      fi
       if test -z "$HAVE_GNU_TLS"; then
         AC_MSG_WARN([gnutls is missing. Compiling or linking curl may fail!])
       fi
@@ -3332,7 +3328,7 @@ if test $ENABLE_CURL = "yes"; then
         AC_MSG_WARN([libssh2 is missing. Compiling or linking curl may fail!])
       fi
       if test -z "$HAVE_IDN2"; then
-        AC_MSG_WARN([libssh2 is missing. Compiling or linking curl may fail!])
+        AC_MSG_WARN([libidn2 is missing. Compiling or linking curl may fail!])
       fi
 
       AC_MSG_COMPILE([c-ares])
@@ -3414,7 +3410,7 @@ if test $ENABLE_CURL = "yes"; then
         AC_MSG_RESULT([done])
       fi
 
-      AC_MSG_COMPILE([curl])
+      AC_MSG_COMPILE([mxml])
       result2=1
       if test $result2 -eq 1; then
         case $host_os in
@@ -3445,59 +3441,21 @@ if test $ENABLE_CURL = "yes"; then
         fi
       fi
       if test $result2 -eq 1; then
-        if test "$host" == "$build"; then
-          # compile build
-# TODO: temporary disabled brotli compression, psl
-          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-            --disable-shared \
-            --enable-static \
-            --disable-ldap \
-            --disable-rtsp \
-            --without-librtmp \
-            --enable-ares=$cwd/extern \
-            --with-zlib=$cwd/extern \
-            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
-            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; fi` \
-            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
---without-brotli \
---without-libpsl \
-            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-          ) 1>$tmpFile 2>&1
-          if test $? -ne 0; then
-            AC_MSG_RESULT([fail (configure)])
-            AC_MSG_OUTPUT_LOG($tmpFile)
-            result2=0
-          fi
-        else
-          # cross-compile host
-          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CPPFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32 -liphlpapi -lssp" ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-            --disable-shared \
-            --enable-static \
-            --disable-ldap \
-            --disable-rtsp \
-            --without-librtmp \
-            --enable-ares=$cwd/extern \
-            --with-zlib=$cwd/extern \
-            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
-            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; fi` \
-            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
-            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-          ) 1>$tmpFile 2>&1
-          if test $? -ne 0; then
-            AC_MSG_RESULT([fail (configure)])
-            AC_MSG_OUTPUT_LOG($tmpFile)
-            result2=0
-          fi
+        (cd mxml; ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --disable-shared \
+          --enable-static \
+        ) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (configure)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result2=0
         fi
       fi
       if test $result2 -eq 1; then
-        (cd curl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd mxml; make clean; make -j$CPU_CORES libmxml.a) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3505,7 +3463,12 @@ if test $ENABLE_CURL = "yes"; then
         fi
       fi
       if test $result2 -eq 1; then
-        (cd curl; make install) 1>$tmpFile 2>&1
+        # Note: there is no target to install the library and header files only; do it manually
+        (cd mxml; \
+         make install-libmxml.a; \
+         install -m 644 mxml.h $cwd/extern/include; \
+         install -m 644 mxml.pc $cwd/extern/lib/pkgconfig; \
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3519,7 +3482,7 @@ if test $ENABLE_CURL = "yes"; then
           darwin*)
             ;;
           windows*|mingw*)
-            (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
+            (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
             ;;
         esac
       fi
@@ -3527,7 +3490,7 @@ if test $ENABLE_CURL = "yes"; then
         AC_MSG_RESULT([done])
       fi
 
-      AC_MSG_COMPILE([mxml])
+      AC_MSG_COMPILE([curl])
       result3=1
       if test $result3 -eq 1; then
         case $host_os in
@@ -3558,21 +3521,61 @@ if test $ENABLE_CURL = "yes"; then
         fi
       fi
       if test $result3 -eq 1; then
-        (cd mxml; ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --disable-shared \
-          --enable-static \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
+        if test "$host" == "$build"; then
+          # compile build
+# TODO: temporary disabled brotli compression, psl
+          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --disable-shared \
+            --enable-static \
+            --disable-ldap \
+            --disable-rtsp \
+            --without-librtmp \
+            --enable-ares=$cwd/extern \
+            --with-zlib=$cwd/extern \
+            `if test $HAVE_ZSTD; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
+            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
+            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
+--without-brotli \
+--without-libpsl \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+          ) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (configure)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result3=0
+          fi
+        else
+          # cross-compile host
+          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CPPFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32 -liphlpapi -lssp" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --disable-shared \
+            --enable-static \
+            --disable-ldap \
+            --disable-rtsp \
+            --without-librtmp \
+            --enable-ares=$cwd/extern \
+            --with-zlib=$cwd/extern \
+            `if test $HAVE_ZSTD; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
+            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
+            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+          ) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (configure)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result3=0
+          fi
         fi
       fi
       if test $result3 -eq 1; then
-        (cd mxml; make clean; make -j$CPU_CORES libmxml.a) 1>$tmpFile 2>&1
+        (cd curl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3580,12 +3583,7 @@ if test $ENABLE_CURL = "yes"; then
         fi
       fi
       if test $result3 -eq 1; then
-        # Note: there is no target to install the library and header files only; do it manually
-        (cd mxml; \
-         make install-libmxml.a; \
-         install -m 644 mxml.h $cwd/extern/include; \
-         install -m 644 mxml.pc $cwd/extern/lib/pkgconfig; \
-        ) 1>$tmpFile 2>&1
+        (cd curl; make install) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3599,7 +3597,7 @@ if test $ENABLE_CURL = "yes"; then
           darwin*)
             ;;
           windows*|mingw*)
-            (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
+            (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
             ;;
         esac
       fi
@@ -3627,31 +3625,29 @@ if test $ENABLE_CURL = "yes"; then
       fi
       HAVE_FTP=1
       HAVE_CARES=1
-      HAVE_CURL=1
       HAVE_MXML=1
+      HAVE_CURL=1
       AC_DEFINE(HAVE_CARES,1,[c-ares installed (local)])
-      AC_DEFINE(HAVE_CURL,1,[curl installed (local)])
       AC_DEFINE(HAVE_MXML,1,[mxml installed (local)])
+      AC_DEFINE(HAVE_CURL,1,[curl installed (local)])
     fi
   else
-    dnl search for installed c-ares, curl, mxml libraries
-
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CARES,1,[c-ares installed])])
       AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
+      AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CARES,1,[c-ares installed])])
       AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
     else
-      if test -z "$HAVE_CARES"; then
-        AC_SEARCH_STATIC_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[static c-ares installed])])
-      fi
-      if test -z "$HAVE_CARES"; then
-        AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[c-ares installed])])
-      fi
       if test -z "$HAVE_CURL"; then
         AC_SEARCH_STATIC_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[static curl installed])])
       fi
       if test -z "$HAVE_CURL"; then
         AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
+      fi
+      if test -z "$HAVE_CARES"; then
+        AC_SEARCH_STATIC_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[static c-ares installed])])
+      fi
+      if test -z "$HAVE_CARES"; then
+        AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[c-ares installed])])
       fi
       if test -z "$HAVE_MXML"; then
         AC_SEARCH_STATIC_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[static mxml installed])])
@@ -3674,14 +3670,14 @@ if test $ENABLE_CURL = "yes"; then
       ;;
   esac
 
-  if test -z "$HAVE_CARES"; then
-    if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
-      AC_MSG_WARN([curl not compiled: c-ares package missing])
-    fi
-  fi
   if test -z "$HAVE_CURL"; then
     if test ! \( -d curl -o -d "`readlink curl`" \); then
       AC_MSG_WARN([curl not compiled: curl package missing])
+    fi
+  fi
+  if test -z "$HAVE_CARES"; then
+    if test ! \( -d c-ares -o -d "`readlink c-ares`" \); then
+      AC_MSG_WARN([curl not compiled: c-ares package missing])
     fi
   fi
   if test -z "$HAVE_MXML"; then
@@ -3898,7 +3894,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       cwd=`pwd`
 
-      AC_MSG_COMPILE([PostgreSQL])
+      AC_MSG_COMPILE([PostgreSQL connector])
       result=1
       if test $result -eq 1; then
         case $host_os in
@@ -3938,6 +3934,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       if test $result -eq 1; then
         (cd postgresql; \
          make -C src/common -j$CPU_CORES; \
+         make -C src/port -j$CPU_CORES; \
          make -C src/interfaces/libpq -j$CPU_CORES; \
          make -C src/interfaces/ecpg -j$CPU_CORES; \
         ) 1>$tmpFile 2>&1
@@ -3950,6 +3947,8 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       if test $result -eq 1; then
         (cd postgresql; \
          make -C src/include install PREFIX=$cwd/extern; \
+         make -C src/common install PREFIX=$cwd/extern; \
+         make -C src/port install PREFIX=$cwd/extern; \
          make -C src/interfaces/libpq install PREFIX=$cwd/extern; \
          make -C src/interfaces/ecpg install PREFIX=$cwd/extern; \
         ) 1>$tmpFile 2>&1
@@ -3968,26 +3967,35 @@ if test $ENABLE_POSTGRESQL = "yes"; then
 
     if test $result -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES pq pgtypes"
+        LIBRARIES="$LIBRARIES pq pgport pgcommon pgcommon_shlib pgtypes"
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgtypes"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES pq pgport pgcommon pgcommon_shlib pgtypes"
       fi
       HAVE_POSTGRESQL=1
-      AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed (local)])
+      AC_DEFINE(HAVE_POSTGRESQL,1,[pq/pgport/pgcommon/pgtypes installed (local)])
     fi
   else
     dnl search for installed pq library
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-      AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+      AC_SEARCH_LIBRARIES(pg_printf,pgport,[HAVE_POSTGRESQL=1;LIBRARIES="pgport $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgport installed])])
+      AC_SEARCH_LIBRARIES(scram_HMAC_init,pgcommon,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon installed])])
+      AC_SEARCH_LIBRARIES(pg_encoding_to_char,pgcommon_shlib,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon_shlib $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon_shlib installed])])
+      AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pqtypes installed])])
     else
       if test -z "$HAVE_POSTGRESQL"; then
         AC_SEARCH_STATIC_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+        AC_SEARCH_STATIC_LIBRARIES(pg_printf,pgport,[HAVE_POSTGRESQL=1;LIBRARIES="pgport $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgport installed])])
+        AC_SEARCH_STATIC_LIBRARIES(scram_HMAC_init,pgcommon,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon installed])])
+        AC_SEARCH_STATIC_LIBRARIES(pg_encoding_to_char,pgcommon_shlib,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon_shlib $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon_shlib installed])])
         AC_SEARCH_STATIC_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pgtypes";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
       fi
       if test -z "$HAVE_POSTGRESQL"; then
         AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+        AC_SEARCH_LIBRARIES(pg_printf,pgport,[HAVE_POSTGRESQL=1;LIBRARIES="pgport $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgport installed])])
+        AC_SEARCH_LIBRARIES(scram_HMAC_init,pgcommon,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon installed])])
+        AC_SEARCH_LIBRARIES(pg_encoding_to_char,pgcommon_shlib,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon_shlib $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon_shlib installed])])
         AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
       fi
     fi
@@ -4286,7 +4294,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
           linux-* | sunos | solaris* | darwin*)
             if test "$ENABLE_DEBUG" = "yes"; then
               # Note: use configure, because with cmake the external Kerberos libraries are not used
-              (cd libsmb2; ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
+              (cd libsmb2; sh ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -4295,7 +4303,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
                 --disable-werror \
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
+              (cd libsmb2; sh ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -4353,7 +4361,11 @@ if test $ENABLE_SMBCLIENT = "yes"; then
         esac
       fi
       if test $result2 -eq 1; then
-        (cd libsmb2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd libsmb2; \
+         make clean; \
+         make -C include -j$CPU_CORES; \
+         make -C lib -j$CPU_CORES; \
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -4361,7 +4373,10 @@ if test $ENABLE_SMBCLIENT = "yes"; then
         fi
       fi
       if test $result2 -eq 1; then
-        (cd libsmb2; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        (cd libsmb2; \
+         make -C include install PREFIX=$cwd/extern; \
+         make -C lib install PREFIX=$cwd/extern; \
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -6259,7 +6274,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  FTP support          : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
                     echo "  curl support         : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
                     echo "  SCP/SFTP support     : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_SSH2)"; else echo no; fi`";
-                    echo "  TLS/SSL server       : `if test "$HAVE_GNU_TLS"; then echo "yes ($VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
+                    echo "  TLS/SSL              : `if test "$HAVE_GNU_TLS"; then echo "yes (OpenSSL $VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support     : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  SMB support          : `if test "$HAVE_SMB2"; then echo "yes ($VERSION_SMB2)"; else echo no; fi`";
                     echo "  PCRE support         : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
@@ -6337,6 +6352,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_FTP=$HAVE_FTP
                    HAVE_CURL=$HAVE_CURL
                    HAVE_MXML=$HAVE_MXML
+                   HAVE_SSL=$HAVE_SSL
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
                    HAVE_MARIADB=$HAVE_MARIADB

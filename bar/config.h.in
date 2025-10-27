@@ -103,7 +103,7 @@
 /* crypto installed */
 #undef HAVE_CRYPTO
 
-/* curl installed */
+/* c-ares installed */
 #undef HAVE_CURL
 
 /* CURLINFO_CONTENT_LENGTH_DOWNLOAD_T available */
