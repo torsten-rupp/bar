@@ -2080,7 +2080,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               "entriesNewest.entryId",
+                               NULL,  // groupBy
                                String_cString(orderBy),
                                offset,
                                limit
@@ -2169,7 +2169,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               "entries.id",
+                               NULL,  // groupBy
                                String_cString(orderBy),
                                offset,
                                limit
@@ -2283,7 +2283,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               "entriesNewest.entryId",
+                               NULL,  // groupBy
                                String_cString(orderBy),
                                offset,
                                limit
@@ -2380,7 +2380,7 @@ Errors IndexEntry_initList(IndexQueryHandle    *indexQueryHandle,
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_HARDLINK),
                                  DATABASE_FILTER_UINT  (INDEX_TYPE_SPECIAL)
                                ),
-                               "entries.id",
+                               NULL,  // groupBy
                                String_cString(orderBy),
                                offset,
                                limit
