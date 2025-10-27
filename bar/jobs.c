@@ -1952,7 +1952,7 @@ bool Job_read(JobNode *jobNode)
   bool   failed        = FALSE;
   bool   hasDeprecated = FALSE;
   String line          = String_new();
-  uint   lineNb        = 0;
+  size_t lineNb        = 0;
   StringList commentList;
   StringList_init(&commentList);
   String s             = String_new();

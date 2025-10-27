@@ -854,9 +854,9 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
                           )
                        );
         }
-        if (libssh2_session_startup(socketHandle->ssh2.session,
-                                    socketHandle->handle
-                                   ) != 0
+        if (libssh2_session_handshake(socketHandle->ssh2.session,
+                                      socketHandle->handle
+                                     ) != 0
            )
         {
           char *ssh2ErrorText;
@@ -2371,7 +2371,12 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
     libssh2_channel_set_blocking(networkExecuteHandle->channel,0);
 
     // disable stderr if not requested
-    if ((ioMask & NETWORK_EXECUTE_IO_MASK_STDERR) == 0) libssh2_channel_handle_extended_data(networkExecuteHandle->channel,LIBSSH2_CHANNEL_EXTENDED_DATA_IGNORE);
+    if ((ioMask & NETWORK_EXECUTE_IO_MASK_STDERR) == 0)
+    {
+      libssh2_channel_handle_extended_data2(networkExecuteHandle->channel,
+                                            LIBSSH2_CHANNEL_EXTENDED_DATA_IGNORE
+                                           );
+    }
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */

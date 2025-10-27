@@ -4082,7 +4082,7 @@ bool StringMap_getIndexId(const StringMap stringMap, const char *name, IndexId *
   bool result;
 
   IndexId indexId;
-  if (StringMap_getInt64(stringMap,name,&indexId.data,defaultValue.data))
+  if (StringMap_getUInt64(stringMap,name,&indexId.data,defaultValue.data))
   {
     assert(indexId.type == indexType);
 

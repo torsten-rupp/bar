@@ -7205,7 +7205,7 @@ LOCAL bool configValueHashDataFormat(void **formatUserData, ConfigValueOperation
 
 LOCAL Errors readConfigFileSection(ConstString fileName,
                                    FileHandle  *fileHandle,
-                                   uint        *lineNb,
+                                   size_t      *lineNb,
                                    const char  *sectionName,
                                    uint        firstValueIndex,
                                    uint        lastValueIndex,
@@ -7390,7 +7390,7 @@ LOCAL Errors readConfigFile(ConstString fileName, bool printInfoFlag)
   // parse file
   error             = ERROR_NONE;
   String     line   = String_new();
-  uint       lineNb = 0;
+  size_t     lineNb = 0;
   String     name   = String_new();
   String     value  = String_new();
   StringList commentList;
