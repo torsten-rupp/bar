@@ -806,6 +806,7 @@ public class ServerSettings
     String serverName;
     String userName;
     String password;
+    String databaseName;
 
     /** parse URI and create database specifier
      * @param uri database URI
@@ -814,69 +815,110 @@ public class ServerSettings
     {
       Matcher matcher;
 
-      if      ((matcher = Pattern.compile("^sqlite:([^:]*?)$").matcher(uri)).matches())
+      if      (uri.startsWith("sqlite:"))
       {
-        type       = Types.SQLITE;
-        fileName   = matcher.group(1);
-        serverName = "";
-        userName   = "";
-        password   = "";
+        type         = Types.SQLITE;
+        fileName     = uri.substring(7);
+        serverName   = "";
+        userName     = "";
+        password     = "";
+        databaseName = "";
       }
-      else if ((matcher = Pattern.compile("^mariadb:([^:]*?):([^:]*?):([^:]*?)$").matcher(uri)).matches())
+      else if (uri.startsWith("sqlite3:"))
       {
-        type       = Types.MARIADB;
-        fileName   = "";
-        serverName = matcher.group(1);
-        userName   = matcher.group(2);
-        password   = matcher.group(3);
+        type         = Types.SQLITE;
+        fileName     = uri.substring(8);
+        serverName   = "";
+        userName     = "";
+        password     = "";
+        databaseName = "";
       }
-      else if ((matcher = Pattern.compile("^mariadb:([^:]*?):([^:]*?)$").matcher(uri)).matches())
+      else if (uri.startsWith("mariadb:"))
       {
-        type       = Types.MARIADB;
-        fileName   = "";
-        serverName = matcher.group(1);
-        userName   = matcher.group(2);
-        password   = "";
+        if      ((matcher = Pattern.compile("^([^:]*?):([^:]*?):([^:]*?):([^:]*?)$").matcher(uri.substring(8))).matches())
+        {
+          type         = Types.MARIADB;
+          fileName     = "";
+          serverName   = matcher.group(1);
+          userName     = matcher.group(2);
+          password     = matcher.group(3);
+          databaseName = matcher.group(4);
+        }
+        else if ((matcher = Pattern.compile("^([^:]*?):([^:]*?):([^:]*?)$").matcher(uri.substring(8))).matches())
+        {
+          type         = Types.MARIADB;
+          fileName     = "";
+          serverName   = matcher.group(1);
+          userName     = matcher.group(2);
+          password     = matcher.group(3);
+          databaseName = "";
+        }
+        else if ((matcher = Pattern.compile("^([^:]*?):([^:]*?)$").matcher(uri.substring(8))).matches())
+        {
+          type         = Types.MARIADB;
+          fileName     = "";
+          serverName   = matcher.group(1);
+          userName     = matcher.group(2);
+          password     = "";
+          databaseName = "";
+        }
+        else
+        {
+          type         = Types.MARIADB;
+          fileName     = "";
+          serverName   = uri.substring(8);
+          userName     = "";
+          password     = "";
+          databaseName = "";
+        }
       }
-      else if ((matcher = Pattern.compile("^mariadb:([^:]*?)$").matcher(uri)).matches())
+      else if (uri.startsWith("postgresql:"))
       {
-        type       = Types.MARIADB;
-        fileName   = "";
-        serverName = matcher.group(1);
-        userName   = "";
-        password   = "";
-      }
-      else if ((matcher = Pattern.compile("^postgresql:([^:]*?):([^:]*?):([^:]*?)$").matcher(uri)).matches())
-      {
-        type       = Types.POSTGRESQL;
-        fileName   = "";
-        serverName = matcher.group(1);
-        userName   = matcher.group(2);
-        password   = matcher.group(3);
-      }
-      else if ((matcher = Pattern.compile("^postgresql:([^:]*?):([^:]*?)$").matcher(uri)).matches())
-      {
-        type       = Types.POSTGRESQL;
-        fileName   = "";
-        serverName = matcher.group(1);
-        userName   = matcher.group(2);
-        password   = "";
-      }
-      else if ((matcher = Pattern.compile("^postgresql:([^:]*?)$").matcher(uri)).matches())
-      {
-        type       = Types.POSTGRESQL;
-        fileName   = "";
-        serverName = matcher.group(1);
-        userName   = "";
-        password   = "";
+        if      ((matcher = Pattern.compile("^([^:]*?):([^:]*?):([^:]*?):([^:]*?)$").matcher(uri.substring(11))).matches())
+        {
+          type         = Types.POSTGRESQL;
+          fileName     = "";
+          serverName   = matcher.group(1);
+          userName     = matcher.group(2);
+          password     = matcher.group(3);
+          databaseName = matcher.group(4);
+        }
+        else if ((matcher = Pattern.compile("^([^:]*?):([^:]*?):([^:]*?)$").matcher(uri.substring(11))).matches())
+        {
+          type         = Types.POSTGRESQL;
+          fileName     = "";
+          serverName   = matcher.group(1);
+          userName     = matcher.group(2);
+          password     = matcher.group(3);
+          databaseName = "";
+        }
+        else if ((matcher = Pattern.compile("^([^:]*?):([^:]*?)$").matcher(uri.substring(11))).matches())
+        {
+          type         = Types.POSTGRESQL;
+          fileName     = "";
+          serverName   = matcher.group(1);
+          userName     = matcher.group(2);
+          password     = "";
+          databaseName = "";
+        }
+        else
+        {
+          type         = Types.POSTGRESQL;
+          fileName     = "";
+          serverName   = uri.substring(11);
+          userName     = "";
+          password     = "";
+          databaseName = "";
+        }
       }
       else
       {
-        type       = Types.SQLITE;
-        fileName   = uri;
-        serverName = "";
-        userName   = "";
-        password   = "";
+        type         = Types.SQLITE;
+        fileName     = uri;
+        serverName   = "";
+        userName     = "";
+        password     = "";
+        databaseName = "";
       }
     }
 
