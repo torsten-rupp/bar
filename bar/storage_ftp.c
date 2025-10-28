@@ -1748,10 +1748,10 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     }
 
     // get file size
-    double fileSize;
-    curlCode = curl_easy_getinfo(storageHandle->ftp.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&fileSize);
+    curl_off_t fileSize;
+    curlCode = curl_easy_getinfo(storageHandle->ftp.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,&fileSize);
     if (   (curlCode != CURLE_OK)
-        || (fileSize < 0.0)
+        || (fileSize < 0)
        )
     {
       String_delete(url);
