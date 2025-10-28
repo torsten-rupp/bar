@@ -1592,6 +1592,7 @@ AC_CC_OPTION(-Wsign-compare,                  CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_CC_OPTION(-Wstrict-prototypes,             CC_WARN_FLAGS)
 AC_CC_OPTION(-Wno-declaration-after-statement,CC_WARN_FLAGS)
 AC_CC_OPTION(-Wno-unknown-pragmas,            CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wvla,                           CC_WARN_FLAGS CXX_WARN_FLAGS)
 case $host_os in
   linux-*)
     ;;

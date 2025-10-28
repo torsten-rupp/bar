@@ -324,8 +324,9 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
                                  ulong         bufferLength
                                 )
 {
+  #define MAX_BLOCKS 16  // max. number of pending transfer blocks
+
   const uint MAX_BLOCK_SIZE = 32*1024;
-  const uint MAX_BLOCKS     = 16;  // max. number of pending transfer blocks
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
@@ -425,8 +426,9 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
                                     FileHandle    *fileHandle
                                    )
 {
+  #define MAX_BLOCKS 16  // max. number of pending transfer blocks
+
   const uint MAX_BLOCK_SIZE = 32*1024;
-  const uint MAX_BLOCKS     = 16;  // max. number of pending transfer blocks
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);

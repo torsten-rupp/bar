@@ -8797,6 +8797,44 @@ fi
 eval ac_res=\$ac_cv_c_option_`echo -Wno-unknown-pragmas|tr -c -d a-zA-Z0-9_`
 	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 printf "%s\n" "$ac_res" >&6; }
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if $CC support option -Wvla" >&5
+printf %s "checking if $CC support option -Wvla... " >&6; }
+if { as_var=ac_cv_c_option_`echo -Wvla|tr -c -d a-zA-Z0-9_`; eval test \${$as_var+y}; }
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      cat << \EOF > test.c
+int main(void)
+{
+  return 0;
+}
+EOF
+      if { ac_try='$CC -Wvla test.c -o test.o'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+        ac_supported=yes
+        for s in CC_WARN_FLAGS CXX_WARN_FLAGS; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s-Wvla\""
+        done
+      else
+        ac_supported=no
+      fi
+      eval "ac_cv_c_option_`echo -Wvla|tr -c -d a-zA-Z0-9_`=\$ac_supported"
+
+      rm -f test.c test.o
+
+
+fi
+eval ac_res=\$ac_cv_c_option_`echo -Wvla|tr -c -d a-zA-Z0-9_`
+	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+printf "%s\n" "$ac_res" >&6; }
 case $host_os in
   linux-*)
     ;;

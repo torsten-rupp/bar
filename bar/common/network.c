@@ -2380,7 +2380,6 @@ Errors Network_execute(NetworkExecuteHandle *networkExecuteHandle,
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
-    UNUSED_VARIABLE(networkExecuteHandle);
     UNUSED_VARIABLE(ioMask);
     UNUSED_VARIABLE(command);
 
