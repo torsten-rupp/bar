@@ -62,6 +62,21 @@
 
 /****************************** Macros *********************************/
 
+#ifdef HAVE_SSH2
+
+#define SCP_SET_SEND_CALLBACK(socketHandle,new) \
+  (ssize_t(*)(libssh2_socket_t,const void *,size_t,int,void**))libssh2_session_callback_set2(Network_getSSHSession(socketHandle), \
+                                                                                             LIBSSH2_CALLBACK_SEND, \
+                                                                                             (libssh2_cb_generic *)(new) \
+                                                                                            )
+#define SCP_SET_RECEIVE_CALLBACK(socketHandle,new) \
+  (ssize_t(*)(libssh2_socket_t,void *,size_t,int,void**))libssh2_session_callback_set2(Network_getSSHSession(socketHandle), \
+                                                                                       LIBSSH2_CALLBACK_RECV, \
+                                                                                       (libssh2_cb_generic *)(new) \
+                                                                                      )
+
+#endif /* HAVE_SSH2 */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -958,8 +973,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
 
     // install send/receive callback to track number of sent/received bytes
     (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->scp.socketHandle)))) = storageHandle;
-    storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
-    storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
+    storageHandle->scp.oldSendCallback    = SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,scpSendCallback   );
+    storageHandle->scp.oldReceiveCallback = SCP_SET_RECEIVE_CALLBACK(&storageHandle->scp.socketHandle,scpReceiveCallback);
 
     // try to open file first with sftp-protocol, then scp-protocol
     error = ERROR_UNKNOWN;
@@ -1089,8 +1104,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                         "%s",
                         sshErrorText
                        );
-        libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
-        libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
+        SCP_SET_RECEIVE_CALLBACK(&storageHandle->scp.socketHandle,storageHandle->scp.oldReceiveCallback);
+        SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,storageHandle->scp.oldSendCallback);
         Network_disconnect(&storageHandle->scp.socketHandle);
         return error;
       }
@@ -1171,8 +1186,8 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
 
     // install send/receive callback to track number of sent/received bytes
     (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->scp.socketHandle)))) = storageHandle;
-    storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
-    storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
+    storageHandle->scp.oldSendCallback    = SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,scpSendCallback   );
+    storageHandle->scp.oldReceiveCallback = SCP_SET_RECEIVE_CALLBACK(&storageHandle->scp.socketHandle,scpReceiveCallback);
 
     // try to open file first with sftp-protocol, then scp-protocol
     error = ERROR_UNKNOWN;
@@ -1282,8 +1297,8 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
 
     if (error != ERROR_NONE)
     {
-      libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
-      libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
+      SCP_SET_RECEIVE_CALLBACK(&storageHandle->scp.socketHandle,storageHandle->scp.oldReceiveCallback);
+      SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,storageHandle->scp.oldSendCallback);
       Network_disconnect(&storageHandle->scp.socketHandle);
       free(storageHandle->scp.readAheadBuffer.data);
       String_delete(storageHandle->scp.archiveName);
@@ -1378,8 +1393,8 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
           break; /* not reached */
       #endif /* NDEBUG */
     }
-    libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
-    libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
+    SCP_SET_RECEIVE_CALLBACK(&storageHandle->scp.socketHandle,storageHandle->scp.oldReceiveCallback);
+    SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,storageHandle->scp.oldSendCallback);
     Network_disconnect(&storageHandle->scp.socketHandle);
     String_delete(storageHandle->scp.archiveName);
   #else /* not HAVE_SSH2 */

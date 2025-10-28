@@ -60,6 +60,21 @@
 
 /****************************** Macros *********************************/
 
+#ifdef HAVE_SSH2
+
+#define SFTP_SET_SEND_CALLBACK(socketHandle,new) \
+  (ssize_t(*)(libssh2_socket_t,const void *,size_t,int,void**))libssh2_session_callback_set2(Network_getSSHSession(socketHandle), \
+                                                                                             LIBSSH2_CALLBACK_SEND, \
+                                                                                             (libssh2_cb_generic *)(new) \
+                                                                                            )
+#define SFTP_SET_RECEIVE_CALLBACK(socketHandle,new) \
+  (ssize_t(*)(libssh2_socket_t,void *,size_t,int,void**))libssh2_session_callback_set2(Network_getSSHSession(socketHandle), \
+                                                                                       LIBSSH2_CALLBACK_RECV, \
+                                                                                       (libssh2_cb_generic *)(new) \
+                                                                                      )
+
+#endif /* HAVE_SSH2 */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -71,6 +86,7 @@
 // ----------------------------------------------------------------------
 
 #ifdef HAVE_SSH2
+
 /***********************************************************************\
 * Name   : sftpSendCallback
 * Purpose: sftp send callback: count total sent bytes and pass to
@@ -1082,8 +1098,8 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
 
     // install send/receive callback to track number of sent/received bytes
     (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->sftp.socketHandle)))) = storageHandle;
-    storageHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
-    storageHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
+    storageHandle->sftp.oldSendCallback    = SFTP_SET_SEND_CALLBACK   (&storageHandle->sftp.socketHandle,sftpSendCallback   );
+    storageHandle->sftp.oldReceiveCallback = SFTP_SET_RECEIVE_CALLBACK(&storageHandle->sftp.socketHandle,sftpReceiveCallback);
 
     // init SFTP session
     int ssh2ErrorCode = 0;
@@ -1261,8 +1277,8 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
 
     // install send/receive callback to track number of sent/received bytes
     (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->sftp.socketHandle)))) = storageHandle;
-    storageHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
-    storageHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
+    storageHandle->sftp.oldSendCallback    = SFTP_SET_SEND_CALLBACK   (&storageHandle->sftp.socketHandle,sftpSendCallback   );
+    storageHandle->sftp.oldReceiveCallback = SFTP_SET_RECEIVE_CALLBACK(&storageHandle->sftp.socketHandle,sftpReceiveCallback);
 
     // init SFTP session
     int ssh2ErrorCode = 0;
@@ -1286,6 +1302,8 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                       "%s",
                       ssh2ErrorText
                      );
+      SFTP_SET_RECEIVE_CALLBACK(&storageHandle->sftp.socketHandle,storageHandle->sftp.oldReceiveCallback);
+      SFTP_SET_SEND_CALLBACK   (&storageHandle->sftp.socketHandle,storageHandle->sftp.oldSendCallback   );
       Network_disconnect(&storageHandle->sftp.socketHandle);
       free(storageHandle->sftp.readAheadBuffer.data);
       return error;
@@ -1308,6 +1326,9 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                       ssh2ErrorText
                      );
       (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+      (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+      SFTP_SET_RECEIVE_CALLBACK(&storageHandle->sftp.socketHandle,storageHandle->sftp.oldReceiveCallback);
+      SFTP_SET_SEND_CALLBACK   (&storageHandle->sftp.socketHandle,storageHandle->sftp.oldSendCallback   );
       Network_disconnect(&storageHandle->sftp.socketHandle);
       free(storageHandle->sftp.readAheadBuffer.data);
       return error;
@@ -1328,8 +1349,10 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                       "%s",
                       ssh2ErrorText
                      );
-      (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
       (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
+      (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+      SFTP_SET_RECEIVE_CALLBACK(&storageHandle->sftp.socketHandle,storageHandle->sftp.oldReceiveCallback);
+      SFTP_SET_SEND_CALLBACK   (&storageHandle->sftp.socketHandle,storageHandle->sftp.oldSendCallback   );
       Network_disconnect(&storageHandle->sftp.socketHandle);
       free(storageHandle->sftp.readAheadBuffer.data);
       return error;
@@ -1364,11 +1387,15 @@ LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
     switch (storageHandle->mode)
     {
       case STORAGE_MODE_READ:
+        (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
         (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+        Network_disconnect(&storageHandle->sftp.socketHandle);
         free(storageHandle->sftp.readAheadBuffer.data);
         break;
       case STORAGE_MODE_WRITE:
+        (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
         (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+         Network_disconnect(&storageHandle->sftp.socketHandle);
         break;
       #ifndef NDEBUG
         default:
@@ -1376,8 +1403,6 @@ LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
           break; /* not reached */
       #endif /* NDEBUG */
     }
-    (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-    Network_disconnect(&storageHandle->sftp.socketHandle);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_SSH2 */
