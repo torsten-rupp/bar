@@ -22,6 +22,7 @@ PATCH="patch"
 RMF="rm -f"
 RMRF="rm -rf"
 TAR="tar"
+TOUCH="touch"
 UNZIP="unzip"
 XZ="xz"
 
@@ -2021,6 +2022,12 @@ if test $cleanFlag -eq 0; then
        (cd "$workingDirectory"; $LN -sfT $destinationDirectory/par2cmdline-$PAR2_VERSION par2cmdline)
        if test $? -ne 0; then
          fatalError "symbolic link"
+       fi
+
+       # fix missing file README
+       (cd $workingDirectory/par2cmdline; $TOUCH README) 1>/dev/null
+       if test $? -gt 1; then
+         fatalError "patch"
        fi
      fi
 
