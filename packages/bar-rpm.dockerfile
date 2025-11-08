@@ -47,6 +47,7 @@ RUN yum -y install \
   java-1.8.0-openjdk-devel \
   libblkid-devel \
   libtool \
+  libuuid-devel \
   m4 \
   make \
   mariadb \
@@ -67,6 +68,24 @@ RUN yum -y install \
 RUN yum -y install \
   cmake \
   ;
+
+# install autoconf 2.72
+RUN    cd /tmp \
+    && wget https://ftpmirror.gnu.org/gnu/autoconf/autoconf-2.72.tar.xz \
+         --no-check-certificate \
+         --quiet \
+         --output-document autoconf-2.72.tar.xz \
+    && tar xf autoconf-2.72.tar.xz \
+    && (cd autoconf-2.72; ./configure) \
+    && (cd autoconf-2.72; make) \
+    && (cd autoconf-2.72; make install) \
+    && rm -rf autoconf-2.72 autoconf-2.72.tar.xz
+
+# required perl modules for compilation
+RUN yum -y install \
+  perl-IPC-Cmd \
+  perl-Time-Piece \
+  perl-Pod-Html
 
 # add user for build process
 RUN    userdel `id -un $uid 2>/dev/null` 2>/dev/null || true \
@@ -111,5 +130,4 @@ VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]
 
-RUN yum -y install \
-  libuuid-devel \
+#RUN yum -y install \

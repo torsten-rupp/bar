@@ -46,9 +46,11 @@ def build()
             --disable-smbclient  \
             --disable-mariadb    \
             --disable-postgresql \
+            --disable-par2       \
             --disable-pcre       \
             --disable-burn       \
             --disable-isofs      \
+            --disable-mount      \
             --disable-bfd        \
           "
         }

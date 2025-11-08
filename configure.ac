@@ -3906,7 +3906,6 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               --prefix=$cwd/extern \
               --with-includes=$cwd/extern/include \
               --with-libraries=$cwd/extern/lib \
-              --enable-thread-safety \
               `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
               --without-readline \
               `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
@@ -3919,7 +3918,6 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               --prefix=$cwd/extern \
               --with-includes=$cwd/extern/include \
               --with-libraries=$cwd/extern/lib \
-              --enable-thread-safety \
               `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
               --without-readline \
               `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
@@ -3934,10 +3932,10 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd postgresql; \
-         make -C src/common -j$CPU_CORES; \
-         make -C src/port -j$CPU_CORES; \
-         make -C src/interfaces/libpq -j$CPU_CORES; \
-         make -C src/interfaces/ecpg -j$CPU_CORES; \
+         make -C src/common           MAKELEVEL=0 -j$CPU_CORES; \
+         make -C src/port             MAKELEVEL=0 -j$CPU_CORES; \
+         make -C src/interfaces/libpq MAKELEVEL=0 -j$CPU_CORES; \
+         make -C src/interfaces/ecpg  MAKELEVEL=0 -j$CPU_CORES; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
@@ -3947,11 +3945,11 @@ if test $ENABLE_POSTGRESQL = "yes"; then
       fi
       if test $result -eq 1; then
         (cd postgresql; \
-         make -C src/include install PREFIX=$cwd/extern; \
-         make -C src/common install PREFIX=$cwd/extern; \
-         make -C src/port install PREFIX=$cwd/extern; \
-         make -C src/interfaces/libpq install PREFIX=$cwd/extern; \
-         make -C src/interfaces/ecpg install PREFIX=$cwd/extern; \
+         make -C src/include          MAKELEVEL=0 install PREFIX=$cwd/extern; \
+         make -C src/common           MAKELEVEL=0 install PREFIX=$cwd/extern; \
+         make -C src/port             MAKELEVEL=0 install PREFIX=$cwd/extern; \
+         make -C src/interfaces/libpq MAKELEVEL=0 install PREFIX=$cwd/extern; \
+         make -C src/interfaces/ecpg  MAKELEVEL=0 install PREFIX=$cwd/extern; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
