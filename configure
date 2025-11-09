@@ -14742,7 +14742,7 @@ printf "%s\n" "fail (patch)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result=0
+          result2=0
         fi
       fi
       if test $result2 -eq 1; then
@@ -20480,9 +20480,9 @@ printf "%s\n" "fail (patch)" >&6; }
       if test $result2 -eq 1; then
         case $host_os in
           linux-* | sunos | solaris* | darwin*)
+            # Note: use configure, because with cmake the external Kerberos libraries are not used
             if test "$ENABLE_DEBUG" = "yes"; then
-              # Note: use configure, because with cmake the external Kerberos libraries are not used
-              (cd libsmb2; sh ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
+              (cd libsmb2; sh -x ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -20491,7 +20491,7 @@ printf "%s\n" "fail (patch)" >&6; }
                 --disable-werror \
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; sh ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
+              (cd libsmb2; sh -x ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -20508,7 +20508,7 @@ printf "%s\n" "fail (configure)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-              result=0
+              result2=0
             fi
             ;;
           windows*|mingw*)
@@ -20553,7 +20553,7 @@ printf "%s\n" "fail (configure)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-              result=0
+              result2=0
             fi
             ;;
         esac
@@ -20572,7 +20572,7 @@ printf "%s\n" "fail (make)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result=0
+          result2=0
         fi
       fi
       if test $result2 -eq 1; then
@@ -20588,7 +20588,7 @@ printf "%s\n" "fail (install)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-          result=0
+          result2=0
         fi
       fi
       if test $result2 -eq 1; then

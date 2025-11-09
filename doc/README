@@ -81,6 +81,8 @@ optional:
 * PostgreSQL 9.6.4 or newer
 * bison, flex, readline library (for PostgreSQL)
 * mtx library (http://sourceforge.net/projects/mtx)
+* PAR2
+* xfsprogs
 * bfd/binutils library (http://ftp.gnu.org/gnu/binutils)
 * launch4j
 

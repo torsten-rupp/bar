@@ -2582,7 +2582,7 @@ if test $ENABLE_GCRYPT = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (patch)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
+          result2=0
         fi
       fi
       if test $result2 -eq 1; then
@@ -4291,9 +4291,9 @@ if test $ENABLE_SMBCLIENT = "yes"; then
       if test $result2 -eq 1; then
         case $host_os in
           linux-* | sunos | solaris* | darwin*)
+            # Note: use configure, because with cmake the external Kerberos libraries are not used
             if test "$ENABLE_DEBUG" = "yes"; then
-              # Note: use configure, because with cmake the external Kerberos libraries are not used
-              (cd libsmb2; sh ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
+              (cd libsmb2; sh -x ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -4302,7 +4302,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
                 --disable-werror \
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; sh ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
+              (cd libsmb2; sh -x ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
                 --prefix=$cwd/extern \
                 --host=$host \
                 --build=$build \
@@ -4314,7 +4314,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
             if test $? -ne 0; then
               AC_MSG_RESULT([fail (configure)])
               AC_MSG_OUTPUT_LOG($tmpFile)
-              result=0
+              result2=0
             fi
             ;;
           windows*|mingw*)
@@ -4354,7 +4354,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
             if test $? -ne 0; then
               AC_MSG_RESULT([fail (configure)])
               AC_MSG_OUTPUT_LOG($tmpFile)
-              result=0
+              result2=0
             fi
             ;;
         esac
@@ -4368,7 +4368,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
+          result2=0
         fi
       fi
       if test $result2 -eq 1; then
@@ -4379,7 +4379,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
+          result2=0
         fi
       fi
       if test $result2 -eq 1; then

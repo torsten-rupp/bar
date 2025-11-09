@@ -1,4 +1,4 @@
-FROM debian:12
+FROM debian:11
 ENV container docker
 
 # variables
@@ -34,7 +34,6 @@ RUN apt-get -y install \
 
 # install packages (Note: ignore expired key with --force-yes)
 RUN apt-get -y install \
-  autoconf \
   autotools-dev \
   bison \
   bzip2 \
@@ -72,6 +71,19 @@ RUN apt-get -y install \
   xz-utils \
   ;
 
+# install autoconf 2.7x (only available from Debian > 11)
+RUN    cd /tmp \
+    && wget https://ftpmirror.gnu.org/gnu/autoconf/autoconf-2.72.tar.xz \
+         --no-check-certificate \
+         --quiet \
+         --output-document autoconf-2.72.tar.xz \
+    && tar xf autoconf-2.72.tar.xz \
+    && (cd autoconf-2.72; ./configure) \
+    && (cd autoconf-2.72; make) \
+    && (cd autoconf-2.72; make install) \
+    && rm -rf autoconf-2.72 autoconf-2.72.tar.xz
+ENV PATH=/usr/local/bin:$PATH
+
 # add user for build process
 RUN    userdel `id -un $uid 2>/dev/null` 2>/dev/null || true \
     && groupadd -g $gid jenkins || true \
@@ -86,7 +98,8 @@ RUN    /root/download-third-party-packages.sh --no-decompress --destination-dire
     && rm -f /root/download-third-party-packages.sh
 
 # mounts
-RUN install -d /media/home  && chown root /media/home
+RUN    install -d /media/home \
+    && chown root /media/home
 VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]

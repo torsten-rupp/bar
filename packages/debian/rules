@@ -8,6 +8,9 @@
 # This is the debhelper compatibility version to use.
 export DH_COMPAT=7
 
+# Note: deb package builder does not use /usr/local/bin in PATH
+export PATH := /usr/local/bin:$(PATH)
+
 CFLAGS = -g
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 CFLAGS += -O0
@@ -21,6 +24,7 @@ build-stamp:
 	dh_testdir
 
 	# --- begin custom part for compiling
+	env
 	./download-third-party-packages.sh \
           --local-directory /media/extern \
           --no-verbose \
@@ -32,7 +36,7 @@ build-stamp:
           --infodir=\$${prefix}/share/info \
           CFLAGS="$(CFLAGS)" \
           LDFLAGS="-Wl,-z,defs" \
-	        --enable-extern-check \
+          --enable-extern-check \
           --disable-epm \
           $(ADDITIONAL_CONFIGURE_FLAGS)
 	$(MAKE) -C bar -j8 all

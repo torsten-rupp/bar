@@ -8,8 +8,8 @@ DOCKER_IMAGE_NAME_WIN32     = "bar-win32"
 TEST_PACKAGES_ALMALINUX     = ["8.10","9.0","9.1","9.2","9.3","9.4","9.5"]
 TEST_PACKAGES_FEDORA        = ["37","38","39","40","41","42"]
 TEST_PACKAGES_OPENSUSE_LEAP = ["15.1","15.2","15.3","15.4","15.5","15.6"]
-TEST_PACKAGES_DEBIAN        = ["10","11","12"]
-TEST_PACKAGES_UBUNTU        = ["20.04","22.04","24.04","24.10","25.04"]
+TEST_PACKAGES_DEBIAN        = ["11","12","13"]
+TEST_PACKAGES_UBUNTU        = ["20.04","22.04","24.04","25.04","25.10"]
 
 // build
 def build()

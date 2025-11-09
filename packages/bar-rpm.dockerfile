@@ -31,7 +31,6 @@ RUN yum -y install --allowerasing \
   ;
 
 RUN yum -y install \
-  autoconf \
   automake \
   bison \
   bzip2 \
@@ -69,6 +68,22 @@ RUN yum -y install \
   cmake \
   ;
 
+# required perl modules for compilation
+RUN yum -y install \
+  perl-IPC-Cmd \
+  perl-Time-Piece \
+  perl-Pod-Html
+
+# work-around for missing package libinih-devel
+RUN    cd /tmp \
+    && rm -rf inih \
+    && git clone https://github.com/benhoyt/inih.git \
+    && (cd inih; gcc -c ini.c -o ini.o) \
+    && (cd inih; ar cr libinih.a ini.o) \
+    && (cd inih; install ini.h /usr/local/include) \
+    && (cd inih; install libinih.a /usr/local/lib) \
+    && rm -rf inih
+
 # install autoconf 2.72
 RUN    cd /tmp \
     && wget https://ftpmirror.gnu.org/gnu/autoconf/autoconf-2.72.tar.xz \
@@ -80,12 +95,7 @@ RUN    cd /tmp \
     && (cd autoconf-2.72; make) \
     && (cd autoconf-2.72; make install) \
     && rm -rf autoconf-2.72 autoconf-2.72.tar.xz
-
-# required perl modules for compilation
-RUN yum -y install \
-  perl-IPC-Cmd \
-  perl-Time-Piece \
-  perl-Pod-Html
+ENV PATH=/usr/local/bin:$PATH
 
 # add user for build process
 RUN    userdel `id -un $uid 2>/dev/null` 2>/dev/null || true \
@@ -109,25 +119,14 @@ RUN (cd /lib/systemd/system/sysinit.target.wants/; \
     rm -f /lib/systemd/system/anaconda.target.wants/*;
 VOLUME [ "/sys/fs/cgroup" ]
 
-# work-around for missing package libinih-devel
-RUN    cd /tmp \
-    && rm -rf inih \
-    && git clone https://github.com/benhoyt/inih.git \
-    && (cd inih; gcc -c ini.c -o ini.o) \
-    && (cd inih; ar cr libinih.a ini.o) \
-    && (cd inih; install ini.h /usr/local/include) \
-    && (cd inih; install libinih.a /usr/local/lib) \
-    && rm -rf inih
-
 # add external third-party packages
 COPY download-third-party-packages.sh /root
 RUN    /root/download-third-party-packages.sh --no-decompress --destination-directory /media/extern \
     && rm /root/download-third-party-packages.sh
 
 # mounts
-RUN install -d /media/home  && chown root /media/home
+RUN    install -d /media/home \
+    && chown root /media/home
 VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]
-
-#RUN yum -y install \
