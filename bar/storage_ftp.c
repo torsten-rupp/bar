@@ -2694,6 +2694,10 @@ LOCAL Errors StorageFTP_getFileInfo(FileInfo          *fileInfo,
 
     error = done ? ERROR_NONE : ERROR_FILE_NOT_FOUND_;
   #else /* not HAVE_CURL || HAVE_FTP */
+    UNUSED_VARIABLE(fileInfo);
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_CURL || HAVE_FTP */
   assert(error != ERROR_UNKNOWN);

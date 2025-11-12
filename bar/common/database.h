@@ -2076,7 +2076,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   Errors Database_endTransaction(DatabaseHandle *databaseHandle);
 #else /* not NDEBUG */
   Errors __Database_endTransaction(const char     *__fileName__,
-                                   uint           __lineNb__,
+                                   size_t         __lineNb__,
                                    DatabaseHandle *databaseHandle
                                   );
 #endif /* NDEBUG */

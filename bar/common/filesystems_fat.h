@@ -31,11 +31,11 @@ typedef struct
   uint32_t dataSectorsCount;
   uint32_t clustersCount;
 
-  uint   bitsPerFATEntry;
-  uint32 firstDataSector;
+  uint     bitsPerFATEntry;
+  uint32   firstDataSector;
 
-  int    clusterBaseIndex;
-  byte   clusterBitmap[CLUSTER_BITMAP_SIZE/8];
+  int      clusterBaseIndex;
+  byte     clusterBitmap[CLUSTER_BITMAP_SIZE/8];
 } FATHandle;
 
 /***************************** Variables *******************************/

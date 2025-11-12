@@ -774,7 +774,7 @@ RUNTIME_DIR
 CONFIG_DIR
 INSTALL_BIN_DIR
 INSTALL_DIR
-HAVE_USLEEP
+HAVE_STATIC_ASSERT
 HAVE_BFD
 HAVE_PTHREADS_W32
 HAVE_MOUNT
@@ -894,6 +894,7 @@ enable_debug
 enable_debug_thread_crash_handlers
 enable_link_static
 enable_link_dynamic
+enable_all
 enable_bz2
 enable_lzma
 enable_xz
@@ -1560,6 +1561,7 @@ Optional Features:
                           --enable-link-dynamic)
   --enable-link-dynamic   enable dynamic linkage (same as
                           --disable-link-static)
+  --disable-all           disable debug functions
   --disable-bz2           disable bzip2 support
   --disable-lzma          disable lzma/xz support
   --disable-xz            disable lzma/xz support
@@ -3300,6 +3302,7 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 
+                 #AC_SUBST(HAVE_USLEEP)                        dnl "1" if usleep() is avaiulable, "" otherwise
 
 
 
@@ -3542,6 +3545,35 @@ fi
 if test ${enable_link_dynamic+y}
 then :
   enableval=$enable_link_dynamic; ENABLE_LINK_DYNAMIC=$enableval
+
+fi
+
+# Check whether --enable-all was given.
+if test ${enable_all+y}
+then :
+  enableval=$enable_all; ENABLE_BZ2=$enableval
+   ENABLE_LZMA=$enableval
+   ENABLE_LZO=$enableval
+   ENABLE_LZ4=$enableval
+   ENABLE_ZSTD=$enableval
+   ENABLE_XDELTA3=$enableval
+   ENABLE_GCRYPT=$enableval
+   ENABLE_CURL=$enableval
+   ENABLE_SSH=$enableval
+   ENABLE_TLS=$enableval
+   ENABLE_ISO9660=$enableval
+   ENABLE_SMBCLIENT=$enableval
+   ENABLE_MARIADB=$enableval
+   ENABLE_POSTGRESQL=$enableval
+   ENABLE_PCRE=$enableval
+   ENABLE_PAR2=$enableval
+   ENABLE_ISOFS=$enableval
+   ENABLE_XFS=$enableval
+   ENABLE_BURN=$enableval
+   ENABLE_MOUNT=$enableval
+   ENABLE_GUI=$enableval
+   ENABLE_GUI_I18N=$enableval
+
 
 fi
 
@@ -24299,6 +24331,50 @@ printf "%s\n" "#define SIZEOF_SIZE_T $ac_cv_sizeof_size_t" >>confdefs.h
 
 
 
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if static_assert() is supported" >&5
+printf %s "checking if static_assert() is supported... " >&6; }
+if test ${ac_cv_static_assert+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z ""; then echo "#include <assert.h>"; fi`
+                                       static_assert(1 == 1,"test");
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_static_assert=yes
+else $as_nop
+  ac_cv_static_assert=no
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_static_assert" >&5
+printf "%s\n" "$ac_cv_static_assert" >&6; }
+  if test "$ac_cv_static_assert" != "no"
+then :
+
+printf "%s\n" "#define HAVE_STATIC_ASSERT 1" >>confdefs.h
+
+fi
+
+
 if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
@@ -30183,6 +30259,7 @@ then :
 
 fi
 
+#AC_CHECK_FUNCTION(usleep,     [HAVE_USLEEP=1; AC_DEFINE(HAVE_USLEEP,1,[usleep() available])])
 
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for usleep" >&5
@@ -30231,9 +30308,9 @@ fi
 printf "%s\n" "$ac_cv_func_usleep" >&6; }
   if test "$ac_cv_func_usleep" != no
 then :
-  HAVE_USLEEP=1;
-printf "%s\n" "#define HAVE_USLEEP 1" >>confdefs.h
 
+printf "%s\n" "#define HAVE_USLEEP 1" >>confdefs.h
+]
 elif :
 then :
 

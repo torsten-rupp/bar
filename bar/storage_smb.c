@@ -1935,6 +1935,10 @@ LOCAL Errors StorageSMB_getFileInfo(FileInfo          *fileInfo,
     }
     smb2DoneSharePath(shareName,path);
   #else /* not HAVE_SMB2 */
+    UNUSED_VARIABLE(fileInfo);
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SMB2 */
   assert(error != ERROR_UNKNOWN);

@@ -688,7 +688,11 @@ fprintf(stderr,"%s,%d: z=%d block=%ld used=%d\n",__FILE__,__LINE__,z,xfsHandle->
   sem_post(&libXFSInitLock);
 
   return TRUE;
-#else
+#else // not HAVE_XFS
+  UNUSED_VARIABLE(deviceHandle);
+  UNUSED_VARIABLE(fileSystemType);
+  UNUSED_VARIABLE(xfsHandle);
+
   return FALSE;
 #endif // HAVE_XFS
 }
@@ -707,6 +711,8 @@ LOCAL void XFS_done(XFSHandle *xfsHandle)
   assert(xfsHandle != NULL);
 
   BitSet_done(&xfsHandle->blocksBitSet);
+#else // not HAVE_XFS
+  UNUSED_VARIABLE(xfsHandle);
 #endif // HAVE_XFS
 }
 
@@ -731,6 +737,12 @@ LOCAL bool XFS_blockIsUsed(DeviceHandle *deviceHandle, const XFSHandle *xfsHandl
 #ifdef HAVE_XFS
   uint64 block = offset/xfsHandle->blockSize;
   return BitSet_isSet(&xfsHandle->blocksBitSet,block);
+#else // not HAVE_XFS
+  UNUSED_VARIABLE(deviceHandle);
+  UNUSED_VARIABLE(xfsHandle);
+  UNUSED_VARIABLE(offset);
+
+  return TRUE;
 #endif // HAVE_XFS
 }
 

@@ -307,7 +307,7 @@
 /* Define to 1 if you have the <libmount/libmount.h> header file. */
 #undef HAVE_LIBMOUNT_LIBMOUNT_H
 
-/* Define to 1 if you have the <libpar2.h> header file. */
+/* defined if header <libpar2.h> is available */
 #undef HAVE_LIBPAR2_H
 
 /* Define to 1 if you have the <libpq-fe.h> header file. */
@@ -588,6 +588,9 @@
 
 /* statfs() available */
 #undef HAVE_STATFS
+
+/* defined if static_assert() is available */
+#undef HAVE_STATIC_ASSERT
 
 /* statvfs() available */
 #undef HAVE_STATVFS

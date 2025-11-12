@@ -1374,6 +1374,11 @@ typedef byte* StaticBitSet;
     while (0)
 #endif /* not NDEBUG */
 
+// define empty static assert if not supported
+#ifndef HAVE_STATIC_ASSERT
+  #define static_assert(condition,message)
+#endif /* not HAVE_STATIC_ASSERT */
+
 /***********************************************************************\
 * Name   : __B
 * Purpose: breakpoint

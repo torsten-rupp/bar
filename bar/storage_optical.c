@@ -18,7 +18,7 @@
   #include <cdio/iso9660.h>
   #include <cdio/logging.h>
 #endif /* HAVE_ISO9660 */
-#if defined(HAVE_BURN)
+#if   defined(HAVE_BURN)
   #pragma GCC push_options  // Note: some prototypes have the syntax void foo() instead of void foo(void)
   #pragma GCC diagnostic ignored "-Wstrict-prototypes"
   #include "libisofs/libisofs.h"
@@ -486,19 +486,21 @@ LOCAL void executeIOgrowisofsStderr(ConstString line,
 
 LOCAL Errors StorageOptical_initAll(void)
 {
-  #ifdef HAVE_ISO9660
+  #ifdef HAVE_ISOFS
     (void)cdio_log_set_handler(libcdioLogCallback);
     int result = iso_init();
     if (result != ISO_SUCCESS)
     {
       return ERRORX_(INIT,result,"%s",iso_error_to_msg(result));
     }
-  #endif // HAVE_ISO9660
+  #endif // HAVE_ISOFS
 
   #ifdef HAVE_BURN
     if (burn_initialize() == 0)
     {
-      iso_finish();
+      #ifdef HAVE_ISOFS
+        iso_finish();
+      #endif // HAVE_ISOFS
       return ERROR_INIT;
     }
   #endif // HAVE_BURN

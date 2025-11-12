@@ -240,9 +240,9 @@ fi
     --disable-link-dynamic \
     --disable-debug-thread-crash-handlers \
     \
-    --disable-libburn \
-    --disable-libisofs \
-    --disable-libmount \
+    --disable-burn \
+    --disable-isofs \
+    --disable-mount \
     \
     --disable-bfd
   make

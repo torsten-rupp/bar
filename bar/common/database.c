@@ -6082,7 +6082,7 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, size_t __
                  )
 #else /* not NDEBUG */
   LOCAL bool __lock(const char        *__fileName__,
-                    ulong             __lineNb__,
+                    size_t            __lineNb__,
                     DatabaseHandle    *databaseHandle,
                     DatabaseLockTypes lockType,
                     long              timeout
@@ -6439,7 +6439,7 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, size_t __
                    )
 #else /* not NDEBUG */
   LOCAL void __unlock(const char        *__fileName__,
-                      ulong             __lineNb__,
+                      size_t            __lineNb__,
                       DatabaseHandle    *databaseHandle,
                       DatabaseLockTypes lockType
                      )
@@ -12401,16 +12401,16 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
   Errors Database_open(DatabaseHandle          *databaseHandle,
                        const DatabaseSpecifier *databaseSpecifier,
                        const char              *databaseName,
-                       DatabaseOpenModes       openDatabaseMode,
+                       DatabaseOpenModes       databaseOpenMode,
                        long                    timeout
                       )
 #else /* not NDEBUG */
   Errors __Database_open(const char              *__fileName__,
-                         ulong                   __lineNb__,
+                         size_t                  __lineNb__,
                          DatabaseHandle          *databaseHandle,
                          const DatabaseSpecifier *databaseSpecifier,
                          const char              *databaseName,
-                         DatabaseOpenModes       openDatabaseMode,
+                         DatabaseOpenModes       databaseOpenMode,
                          long                    timeout
                         )
 #endif /* NDEBUG */
@@ -12423,7 +12423,7 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
     error = openDatabase(databaseHandle,
                          databaseSpecifier,
                          databaseName,
-                         openDatabaseMode,
+                         databaseOpenMode,
                          timeout
                         );
   #else /* not NDEBUG */
@@ -12431,7 +12431,7 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
                            databaseHandle,
                            databaseSpecifier,
                            databaseName,
-                           openDatabaseMode,
+                           databaseOpenMode,
                            timeout
                           );
   #endif /* NDEBUG */
@@ -12487,7 +12487,7 @@ Errors Database_drop(const DatabaseSpecifier *databaseSpecifier,
   void Database_close(DatabaseHandle *databaseHandle)
 #else /* not NDEBUG */
   void __Database_close(const char     *__fileName__,
-                        ulong          __lineNb__,
+                        size_t         __lineNb__,
                         DatabaseHandle *databaseHandle
                        )
 #endif /* NDEBUG */
@@ -12933,7 +12933,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
                     )
 #else /* not NDEBUG */
   bool __Database_lock(const char        *__fileName__,
-                       ulong             __lineNb__,
+                       size_t            __lineNb__,
                        DatabaseHandle    *databaseHandle,
                        DatabaseLockTypes lockType,
                        long              timeout
@@ -12966,7 +12966,7 @@ Errors Database_getTriggerList(StringList     *triggerList,
                       )
 #else /* not NDEBUG */
   void __Database_unlock(const char        *__fileName__,
-                         ulong             __lineNb__,
+                         size_t            __lineNb__,
                          DatabaseHandle    *databaseHandle,
                          DatabaseLockTypes lockType
                         )
@@ -15416,7 +15416,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   Errors Database_endTransaction(DatabaseHandle *databaseHandle)
 #else /* not NDEBUG */
   Errors __Database_endTransaction(const char     *__fileName__,
-                                   uint           __lineNb__,
+                                   size_t         __lineNb__,
                                    DatabaseHandle *databaseHandle
                                   )
 #endif /* NDEBUG */
@@ -17009,7 +17009,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
                         )
 #else /* not NDEBUG */
   Errors __Database_select(const char              *__fileName__,
-                           ulong                   __lineNb__,
+                           size_t                  __lineNb__,
                            DatabaseStatementHandle *databaseStatementHandle,
                            DatabaseHandle          *databaseHandle,
 // TODO: use DatabaseTable
@@ -17360,7 +17360,7 @@ bool Database_getNextRow(DatabaseStatementHandle *databaseStatementHandle,
   void Database_finalize(DatabaseStatementHandle *databaseStatementHandle)
 #else /* not NDEBUG */
   void __Database_finalize(const char        *__fileName__,
-                           ulong             __lineNb__,
+                           size_t            __lineNb__,
                            DatabaseStatementHandle *databaseStatementHandle
                           )
 #endif /* NDEBUG */

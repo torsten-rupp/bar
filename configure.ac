@@ -186,7 +186,7 @@ AC_DEFUN([AC_CHECK_CXX_HEADER],
 [
   AC_REQUIRE([AC_PROG_CXX])
   AC_LANG_PUSH(C++)
-  AC_CHECK_HEADER($1,[AC_DEFINE(AS_TR_CPP(HAVE_$1),1,[Define to 1 if you have the <$1> header file.])])
+  AC_CHECK_HEADER($1,[AC_DEFINE(AS_TR_CPP(HAVE_$1),1,[defined if header <$1> is available])])
   AC_LANG_POP()
   AC_PROVIDE([$0])dnl
 ])
@@ -403,6 +403,29 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
   AS_VAR_COPY([ac_result],[ac_search_static_libraries])
   AS_IF([test "$ac_result" != no],[test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" $3],[$4])
   AS_VAR_POPDEF([ac_search_static_libraries])dnl
+])
+
+dnl --- check if C compiler support static_assert()
+dnl usage: AC_CHECK_STATIC_ASSERT(<if found>,<if not found>,<headers>)
+AC_DEFUN([AC_CHECK_STATIC_ASSERT],
+[
+  AC_CACHE_CHECK(
+    [if static_assert() is supported],
+    ac_cv_static_assert,
+    [
+      AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $3|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
+                                      [`if test -z "$3"; then echo "#include <assert.h>"; fi`
+                                       static_assert(1 == 1,"test");
+                                      ]
+                                     )
+                     ],
+                     [AS_VAR_SET([ac_cv_static_assert],[yes])],
+                     [AS_VAR_SET([ac_cv_static_assert],[no])]
+                    )
+    ]
+  )
+  AS_IF([test "$ac_cv_static_assert" != "no"],[AC_DEFINE(HAVE_STATIC_ASSERT,1,[defined if static_assert() is available])])
+  AC_PROVIDE([$0])dnl
 ])
 
 dnl --- check if C compiler long long data type available
@@ -854,7 +877,8 @@ AC_SUBST(HAVE_MOUNT)                         dnl "1" for mount support, "" other
 AC_SUBST(HAVE_PTHREADS_W32)                  dnl "1" for pthreads-w32 support, "" otherwise
 AC_SUBST(HAVE_BFD)                           dnl "1" for BFD support, "" otherwise
 
-AC_SUBST(HAVE_USLEEP)                        dnl "1" if usleep() is avaiulable, "" otherwise
+AC_SUBST(HAVE_STATIC_ASSERT)                 dnl "1" if static_assert() is supported, "" otherwise
+#AC_SUBST(HAVE_USLEEP)                        dnl "1" if usleep() is avaiulable, "" otherwise
 
 AC_SUBST(INSTALL_DIR)                        dnl installation directory
 AC_SUBST(INSTALL_BIN_DIR)                    dnl installation directory for binaries
@@ -1165,6 +1189,33 @@ AC_ARG_ENABLE(
   link-dynamic,
   AC_HELP_STRING([--enable-link-dynamic],[enable dynamic linkage (same as --disable-link-static)]),
   [ENABLE_LINK_DYNAMIC=$enableval]
+)
+AC_ARG_ENABLE(
+  all,
+  AC_HELP_STRING([--disable-all],[disable debug functions]),
+  [ENABLE_BZ2=$enableval
+   ENABLE_LZMA=$enableval
+   ENABLE_LZO=$enableval
+   ENABLE_LZ4=$enableval
+   ENABLE_ZSTD=$enableval
+   ENABLE_XDELTA3=$enableval
+   ENABLE_GCRYPT=$enableval
+   ENABLE_CURL=$enableval
+   ENABLE_SSH=$enableval
+   ENABLE_TLS=$enableval
+   ENABLE_ISO9660=$enableval
+   ENABLE_SMBCLIENT=$enableval
+   ENABLE_MARIADB=$enableval
+   ENABLE_POSTGRESQL=$enableval
+   ENABLE_PCRE=$enableval
+   ENABLE_PAR2=$enableval
+   ENABLE_ISOFS=$enableval
+   ENABLE_XFS=$enableval
+   ENABLE_BURN=$enableval
+   ENABLE_MOUNT=$enableval
+   ENABLE_GUI=$enableval
+   ENABLE_GUI_I18N=$enableval
+  ]
 )
 AC_ARG_ENABLE(
   bz2,
@@ -5546,11 +5597,12 @@ AC_TRY_COMPILE([#include <limits.h>],[long long int x=LLONG_MAX;],AC_DEFINE(HAVE
 AC_TRY_COMPILE([#include <limits.h>],[unsigned long long int x=ULLONG_MAX;],AC_DEFINE(HAVE_ULLONG_MAX,1,[defined if ULLONG_MAX is available]))
 AC_CHECK_VARIABLE_ATTRIBUTE(__thread,AC_DEFINE(HAVE___THREAD,1,[defined if __thread is available]))
 dnl Note: AC_SYS_LARGEFILE() does not work with gcc? Use my own implementation
-AC_CHECK_LARGEFILE_DEFINES
+AC_CHECK_LARGEFILE_DEFINES()
 AC_CHECK_SIZEOF(unsigned long)
 AC_CHECK_SIZEOF(unsigned long long)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(size_t)
+AC_CHECK_STATIC_ASSERT()
 
 if test $ENABLE_LINK_DYNAMIC = "yes"; then
   AC_SEARCH_LIBRARIES(uuid_generate,uuid,[LIBRARIES="$LIBRARIES uuid"],,uuid/uuid.h)
@@ -5733,7 +5785,8 @@ AC_CHECK_FUNCTION(inotify_rm_watch, AC_DEFINE(HAVE_INOTIFY_RM_WATCH, 1,[inotify_
 AC_CHECK_FUNCTION(gmtime_r,   AC_DEFINE(HAVE_GMTIME_R,   1,[gmtime_r() available]))
 AC_CHECK_FUNCTION(localtime_r,AC_DEFINE(HAVE_LOCALTIME_R,1,[localtime_r() available]))
 AC_CHECK_FUNCTION(getdate_r,  AC_DEFINE(HAVE_GETDATE_R,  1,[getdate_r() available]))
-AC_CHECK_FUNCTION(usleep,     [HAVE_USLEEP=1; AC_DEFINE(HAVE_USLEEP,1,[usleep() available])])
+#AC_CHECK_FUNCTION(usleep,     [HAVE_USLEEP=1; AC_DEFINE(HAVE_USLEEP,1,[usleep() available])])
+AC_CHECK_FUNCTION(usleep,     AC_DEFINE(HAVE_USLEEP,     1,[usleep() available])])
 AC_CHECK_FUNCTION(nanosleep,  AC_DEFINE(HAVE_NANOSLEEP,  1,[nanosleep() available]))
 AC_CHECK_FUNCTION(timegm,     AC_DEFINE(HAVE_TIMEGM,     1,[timegm() available]))
 AC_CHECK_FUNCTION(strptime,   AC_DEFINE(HAVE_STRPTIME,   1,[strptime() available]))
