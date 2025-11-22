@@ -460,6 +460,12 @@ fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x
       }
     }
 
+    extHandle->bitmapData = malloc(extHandle->blockSize);
+    if (extHandle->bitmapData == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+
 #if 0
 #warning debug only
 fprintf(stderr,"\n");
@@ -486,6 +492,7 @@ LOCAL void EXT_done(EXTHandle *extHandle)
   assert(extHandle != NULL);
   assert(extHandle->bitmapBlocks != NULL);
 
+  free(extHandle->bitmapData);
   free(extHandle->bitmapBlocks);
 }
 

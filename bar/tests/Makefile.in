@@ -5818,9 +5818,9 @@ ifeq (@HAVE_XDELTA3@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE)-B.bar $(DEVICE0) $(BAR_OPTIONS) --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --fragment-size=8M --verbose=2 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
-endif
 	@#
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(DEVICE1) $(LOG))
+endif
 	@#
 	@$(call functionCleanTestFiles)
 	@#
@@ -5830,9 +5830,9 @@ ifeq (@HAVE_XDELTA3@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -m $(BAR_STORAGE)/$(BAR_FILE)-B.bar $(DEVICE0) $(BAR_OPTIONS) --delta-source='$(BAR_STORAGE)/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --fragment-size=8M --verbose=2 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -t $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE0),$(IMAGE0_B) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -d $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG))
-endif
 	@#
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); DEBUG_EMULATE_BLOCK_DEVICE=$(DEVICE1),$(IMAGE1) $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(call functionExec,$(TEST_BAR)) -C $(SUB_DIR) -x $(BAR_STORAGE)/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) -! '*/character_device' -! '*/block_device' --destination $(DEVICE1) $(LOG))
+endif
 	@$(call functionInfoFooter)
 
 tests_image_operations_check:
