@@ -401,6 +401,7 @@ LOCAL void consoleOutputHandleDone(void *variable, void *userData)
 
   StringList_done(&consoleOutputHandle->nextLines);
   String_delete(consoleOutputHandle->line);
+  free(consoleOutputHandle);
 }
 
 /***********************************************************************\
