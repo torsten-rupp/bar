@@ -309,10 +309,12 @@ endif
 # additional options
 OPTIONS ?= $(O)
 
-# mount operations
+# mount operations: not inside docker and only if lsetup+mount+umount are available
+ifneq ($(CONTAINER),docker)
 ifeq (@HAVE_SUDO_COMMAND_LOSETUP@,1)
 ifeq (@HAVE_SUDO_COMMAND_MOUNT_UMOUNT@,1)
 TEST_MOUNT_OPERATIONS ?= yes
+endif
 endif
 endif
 
@@ -826,22 +828,25 @@ functionTestDeviceInitFilesystem = \
 
 # helper function to initialize file system on a test device
 # call functionInitFilesystem,<image file>,<loop device>,<mount point>,<mkfs options>[,<files>]
+# Note: inside dockere there are no loop-devices, thus skip copying files
 functionInitFilesystem = \
   ( \
     $(call functionTestDeviceInitFilesystem,$1,$4); \
-    $(if $5,$(ECHO) $(SUDO) -n $(LOSETUP) $2 $1; \
-            $(SUDO) -n $(LOSETUP) $2 $1; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-            $(ECHO) $(INSTALL) -d $3; \
-            $(INSTALL) -d $3; \
-            $(ECHO) $(SUDO) -n $(MOUNT) $(LOOP0) $3; \
-            $(SUDO) -n $(MOUNT) $(LOOP0) $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-            $(ECHO) $(SUDO) -n $(CP) -r -p $5 $3; \
-            $(SUDO) -n $(CP) -r -p $5 $3 1>/dev/null 2>/dev/null; \
-            $(SYNC); \
-            $(ECHO) $(SUDO) -n $(UMOUNT) $3; \
-            $(SUDO) -n $(UMOUNT) $3; \
-            $(ECHO) $(SUDO) -n $(LOSETUP) -d $2; \
-            $(SUDO) -n $(LOSETUP) -d $2; \
+    $(if $(findstring yes,($(TEST_MOUNT_OPERATIONS))), \
+			$(if $5,$(ECHO) $(SUDO) -n $(LOSETUP) $2 $1; \
+							$(SUDO) -n $(LOSETUP) $2 $1; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+							$(ECHO) $(INSTALL) -d $3; \
+							$(INSTALL) -d $3; \
+							$(ECHO) $(SUDO) -n $(MOUNT) $(LOOP0) $3; \
+							$(SUDO) -n $(MOUNT) $(LOOP0) $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+							$(ECHO) $(SUDO) -n $(CP) -r -p $5 $3; \
+							$(SUDO) -n $(CP) -r -p $5 $3 1>/dev/null 2>/dev/null; \
+							$(SYNC); \
+							$(ECHO) $(SUDO) -n $(UMOUNT) $3; \
+							$(SUDO) -n $(UMOUNT) $3; \
+							$(ECHO) $(SUDO) -n $(LOSETUP) -d $2; \
+							$(SUDO) -n $(LOSETUP) -d $2; \
+			) \
     ) \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
@@ -849,25 +854,29 @@ functionInitFilesystem = \
 # call functionDeviceMount,<loop device>,<image file>,<mount point>,<mount options>
 functionDeviceMount = \
   ( \
-    $(ECHO) $(SUDO) -n $(LOSETUP) $1 $2; \
-    $(SUDO) -n $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) -n $(CHMOD) o+rw $1; \
-    $(SUDO) -n $(CHMOD) o+rw $1; \
-    $(ECHO) $(INSTALL) -d $3; \
-    $(INSTALL) -d $3; \
-    $(ECHO) $(SUDO) -n $(MOUNT) $1 $3; \
-    $(SUDO) -n $(MOUNT) $4 $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(if $(findstring yes,($(TEST_MOUNT_OPERATIONS))), \
+			$(ECHO) $(SUDO) -n $(LOSETUP) $1 $2; \
+			$(SUDO) -n $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+			$(ECHO) $(SUDO) -n $(CHMOD) o+rw $1; \
+			$(SUDO) -n $(CHMOD) o+rw $1; \
+			$(ECHO) $(INSTALL) -d $3; \
+			$(INSTALL) -d $3; \
+			$(ECHO) $(SUDO) -n $(MOUNT) $1 $3; \
+			$(SUDO) -n $(MOUNT) $4 $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+		) \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to umount a test device
 # call functionDeviceUmount,<loop device>,<mount point>
 functionDeviceUmount = \
   ( \
-    $(ECHO) $(SUDO) -n $(UMOUNT) $2; \
-    $(SUDO) -n $(UMOUNT) $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(SYNC); \
-    $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
-    $(SUDO) -n $(LOSETUP) -d $1; \
+    $(if $(findstring yes,($(TEST_MOUNT_OPERATIONS))), \
+			$(ECHO) $(SUDO) -n $(UMOUNT) $2; \
+			$(SUDO) -n $(UMOUNT) $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+			$(SYNC); \
+			$(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
+			$(SUDO) -n $(LOSETUP) -d $1; \
+		) \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to wait for process, kill process
