@@ -2454,7 +2454,7 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   error = Archive_close(&convertInfo->destinationArchiveHandle,convertInfo->failError == ERROR_NONE);
   if (error != ERROR_NONE)
   {
-    if (!isPrintInfo(1)) printInfo(0,"FAIL\n");
+    printInfo(0,"FAIL\n");
     printError(_("cannot close archive '%s' (error: %s)"),
                String_cString(printableStorageName),
                Error_getText(error)
@@ -2483,12 +2483,12 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   (void)Storage_done(&convertInfo->sourceStorageInfo);
 
   // output info
-  if (!isPrintInfo(1)) printInfo(0,
-                                 "%s",
-                                 (convertInfo->failError == ERROR_NONE)
-                                   ? "OK\n"
-                                   : "FAIL!\n"
-                                );
+  printInfo(0,
+            "%s",
+            (convertInfo->failError == ERROR_NONE)
+              ? "OK\n"
+              : "FAIL!\n"
+           );
 
   // output signature error/warning
   if (!Crypt_isValidSignatureState(sourceAllCryptSignatureState))

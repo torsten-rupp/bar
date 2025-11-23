@@ -2213,15 +2213,15 @@ NULL, // masterSocketHandle
   (void)Storage_done(&storageInfo);
 
   // output info
-  if (!isPrintInfo(1)) printInfo(0,
-                                 "%s",
-                                    (compareInfo->failError == ERROR_NONE)
-                                 && (   compareInfo->jobOptions->skipVerifySignaturesFlag
-                                     || Crypt_isValidSignatureState(allCryptSignatureState)
-                                    )
-                                   ? "OK\n"
-                                   : "FAIL!\n"
-                                );
+  printInfo(0,
+            "%s",
+               (compareInfo->failError == ERROR_NONE)
+            && (   compareInfo->jobOptions->skipVerifySignaturesFlag
+                || Crypt_isValidSignatureState(allCryptSignatureState)
+               )
+              ? "OK\n"
+              : "FAIL!\n"
+           );
 
   // output signature error/warning
   if (!Crypt_isValidSignatureState(allCryptSignatureState))

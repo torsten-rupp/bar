@@ -1208,19 +1208,21 @@ void printWarning(const char *text, ...)
   vlogMessage(NULL,LOG_TYPE_WARNING,"Warning",text,arguments);
   va_end(arguments);
 
-  // output line
-  String line = String_new();
-  va_start(arguments,text);
-  String_appendCString(line,"Warning: ");
-  String_appendVFormat(line,text,arguments);
-  String_appendChar(line,'\n');
-  va_end(arguments);
-
-  SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  if (isPrintInfo(0))
   {
-    outputConsoleNext(stderr,line);
+    // output console line
+    String line = String_new();
+    va_start(arguments,text);
+    String_appendCString(line,"Warning: ");
+    String_appendVFormat(line,text,arguments);
+    String_appendChar(line,'\n');
+    va_end(arguments);
+    SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      outputConsoleNext(stderr,line);
+    }
+    String_delete(line);
   }
-  String_delete(line);
 }
 
 void printError(const char *text, ...)
@@ -1233,19 +1235,21 @@ void printError(const char *text, ...)
   vlogMessage(NULL,LOG_TYPE_ERROR,"ERROR",text,arguments);
   va_end(arguments);
 
-  // output line
-  String line = String_new();
-  va_start(arguments,text);
-  String_appendCString(line,"ERROR: ");
-  String_appendVFormat(line,text,arguments);
-  String_appendChar(line,'\n');
-  va_end(arguments);
-
-  SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  if (isPrintInfo(0))
   {
-    outputConsoleNext(stderr,line);
+    // output console line
+    String line = String_new();
+    va_start(arguments,text);
+    String_appendCString(line,"ERROR: ");
+    String_appendVFormat(line,text,arguments);
+    String_appendChar(line,'\n');
+    va_end(arguments);
+    SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      outputConsoleNext(stderr,line);
+    }
+    String_delete(line);
   }
-  String_delete(line);
 }
 
 void pprintInfo(uint verboseLevel, const char *prefix, const char *format, ...)

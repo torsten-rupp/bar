@@ -1596,7 +1596,7 @@ LOCAL void collector(CreateInfo     *createInfo,
               {
                 if (createInfo->jobOptions->skipUnreadableFlag)
                 {
-                  printWarning(_("cannot get info for '%s' (error: %s) - skipped"),String_cString(name),Error_getText(error));
+                  printWarning(_("XXXcannot get info for '%s' (error: %s) - skipped"),String_cString(name),Error_getText(error));
                 }
                 else
                 {
