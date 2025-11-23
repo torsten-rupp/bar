@@ -2519,7 +2519,7 @@ Errors __File_openCString(const char *__fileName__,
           // store atime
           if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
           {
-            if (fstat(fileDescriptor,&fileStat) == 0)
+            if (FSTAT(fileDescriptor,&fileStat) == 0)
             {
               fileHandle->atime.tv_sec  = fileStat.st_atime;
               #ifdef HAVE_STAT_ATIM_TV_NSEC
@@ -3539,7 +3539,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
         if (directoryListHandle->handle != -1)
         {
           // store atime
-          if (fstat(directoryListHandle->handle,&stat) == 0)
+          if (FSTAT(directoryListHandle->handle,&stat) == 0)
           {
             directoryListHandle->atime.tv_sec  = stat.st_atime;
             #ifdef HAVE_STAT_ATIM_TV_NSEC
@@ -4315,14 +4315,32 @@ bool File_isDirectoryCString(const char *fileName)
          );
 }
 
-bool File_isDevice(ConstString fileName)
+bool File_isCharacterDevice(ConstString fileName)
 {
   assert(fileName != NULL);
 
-  return File_isDeviceCString(String_cString(fileName));
+  return File_isCharacterDeviceCString(String_cString(fileName));
 }
 
-bool File_isDeviceCString(const char *fileName)
+bool File_isCharacterDeviceCString(const char *fileName)
+{
+  FileStat fileStat;
+
+  assert(fileName != NULL);
+
+  return (   (STAT(fileName,&fileStat) == 0)
+          && S_ISCHR(fileStat.st_mode)
+         );
+}
+
+bool File_isBlockDevice(ConstString fileName)
+{
+  assert(fileName != NULL);
+
+  return File_isBlockDeviceCString(String_cString(fileName));
+}
+
+bool File_isBlockDeviceCString(const char *fileName)
 {
   bool     isDevice;
   FileStat fileStat;
@@ -4350,7 +4368,7 @@ bool File_isDeviceCString(const char *fileName)
       {
         // use block device
         isDevice = (   (STAT(fileName,&fileStat) == 0)
-                    && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
+                    && S_ISBLK(fileStat.st_mode)
                    );
       }
       stringTokenizerDone(&stringTokenizer);
@@ -4358,12 +4376,12 @@ bool File_isDeviceCString(const char *fileName)
     else
     {
       isDevice = (   (STAT(fileName,&fileStat) == 0)
-                  && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
+                  && S_ISBLK(fileStat.st_mode)
                  );
     }
   #else /* NDEBUG */
     isDevice = (   (STAT(fileName,&fileStat) == 0)
-                && (S_ISCHR(fileStat.st_mode) || S_ISBLK(fileStat.st_mode))
+                && S_ISBLK(fileStat.st_mode)
               );
   #endif /* not NDEBUG */
 
@@ -5362,6 +5380,18 @@ Errors File_readLink(String      fileName,
                      bool        absolutePathFlag
                     )
 {
+  assert(linkName != NULL);
+  assert(!String_isEmpty(linkName));
+  assert(fileName != NULL);
+
+  return File_readLinkCString(fileName,String_cString(linkName),absolutePathFlag);
+}
+
+Errors File_readLinkCString(String     fileName,
+                            const char *linkName,
+                            bool       absolutePathFlag
+                           )
+{
   #define BUFFER_SIZE  256
   #define BUFFER_DELTA 128
 
@@ -5373,7 +5403,7 @@ Errors File_readLink(String      fileName,
   #endif /* HAVE_READLINK */
 
   assert(linkName != NULL);
-  assert(!String_isEmpty(linkName));
+  assert(!stringIsEmpty(linkName));
   assert(fileName != NULL);
 
   #ifdef HAVE_READLINK
@@ -5386,7 +5416,7 @@ Errors File_readLink(String      fileName,
     bufferSize = BUFFER_SIZE;
 
     // try to read link, increase buffer if needed
-    while ((result = readlink(String_cString(linkName),buffer,bufferSize)) == bufferSize)
+    while ((result = readlink(linkName,buffer,bufferSize)) == bufferSize)
     {
       bufferSize += BUFFER_DELTA;
       buffer = realloc(buffer,bufferSize);
@@ -5397,7 +5427,7 @@ Errors File_readLink(String      fileName,
     }
     if (result == -1)
     {
-      error = getLastError(ERROR_CODE_IO,String_cString(linkName));
+      error = getLastError(ERROR_CODE_IO,linkName);
       free(buffer);
       return error;
     }
@@ -5405,7 +5435,7 @@ Errors File_readLink(String      fileName,
     if (absolutePathFlag && !File_isAbsoluteFileName(fileName))
     {
       // absolute name
-      File_getDirectoryName(fileName,linkName);
+      File_getDirectoryNameCString(fileName,linkName);
       File_appendFileNameBuffer(fileName,buffer,result);
     }
     else
@@ -5421,7 +5451,7 @@ Errors File_readLink(String      fileName,
   #else /* not HAVE_READLINK */
     UNUSED_VARIABLE(absolutePathFlag);
 
-    String_set(fileName,linkName);
+    String_setCString(fileName,linkName);
 
     return ERROR_NONE;
   #endif /* HAVE_READLINK */

@@ -431,9 +431,9 @@ public class TabJobs
 
     /** compare file tree data
      * @param fileTreeData1, fileTreeData2 file tree data to compare
-     * @return -1 iff fileTreeData1 < fileTreeData2,
+     * @return <0 iff fileTreeData1 < fileTreeData2,
                 0 iff fileTreeData1 = fileTreeData2,
-                1 iff fileTreeData1 > fileTreeData2
+               >0 iff fileTreeData1 > fileTreeData2
      */
     @Override
     public int compare(FileTreeData fileTreeData1, FileTreeData fileTreeData2)
@@ -490,9 +490,9 @@ public class TabJobs
     /** compare file tree data without take care about type
      * @param sortMode sort mode
      * @param fileTreeData1, fileTreeData2 file tree data to compare
-     * @return -1 iff fileTreeData1 < fileTreeData2,
+     * @return <0 iff fileTreeData1 < fileTreeData2,
                 0 iff fileTreeData1 = fileTreeData2,
-                1 iff fileTreeData1 > fileTreeData2
+               >0 iff fileTreeData1 > fileTreeData2
      */
     private int compareWithoutType(SortModes sortMode, FileTreeData fileTreeData1, FileTreeData fileTreeData2)
     {
@@ -631,9 +631,9 @@ public class TabJobs
 
     /** compare device tree data without take care about type
      * @param deviceData1, deviceData2 device tree data to compare
-     * @return -1 iff deviceData1 < deviceData2,
+     * @return <0 iff deviceData1 < deviceData2,
                 0 iff deviceData1 = deviceData2,
-                1 iff deviceData1 > deviceData2
+               >0 iff deviceData1 > deviceData2
      */
     @Override
     public int compare(DeviceData deviceData1, DeviceData deviceData2)
@@ -1010,9 +1010,9 @@ public class TabJobs
 
     /** compare entry data
      * @param entryData1, entryData2 tree data to compare
-     * @return -1 iff entryData1 < entryData2,
+     * @return <0 iff entryData1 < entryData2,
                 0 iff entryData1 = entryData2,
-                1 iff entryData1 > entryData2
+               >0 iff entryData1 > entryData2
      */
     @Override
     public int compare(EntryData entryData1, EntryData entryData2)
@@ -1117,9 +1117,9 @@ public class TabJobs
 
     /** compare mount data
      * @param mountData1, mountData2 tree data to compare
-     * @return -1 iff mountData1 < mountData2,
+     * @return <0 iff mountData1 < mountData2,
                 0 iff mountData1 = mountData2,
-                1 iff mountData1 > mountData2
+               >0 iff mountData1 > mountData2
      */
     @Override
     public int compare(MountData mountData1, MountData mountData2)
@@ -1874,9 +1874,9 @@ public class TabJobs
 
     /** compare schedule data
      * @param scheduleData1, scheduleData2 data to compare
-     * @return -1 iff scheduleData1 < scheduleData2,
+     * @return <0 iff scheduleData1 < scheduleData2,
                 0 iff scheduleData1 = scheduleData2,
-                1 iff scheduleData1 > scheduleData2
+               >0 iff scheduleData1 > scheduleData2
      */
     @Override
     public int compare(ScheduleData scheduleData1, ScheduleData scheduleData2)
@@ -1923,9 +1923,9 @@ public class TabJobs
     /** compare schedule data
      * @param sortMode sort mode
      * @param scheduleData1, scheduleData2 data to compare
-     * @return -1 iff scheduleData1 < scheduleData2,
+     * @return <0 iff scheduleData1 < scheduleData2,
                 0 iff scheduleData1 = scheduleData2,
-                1 iff scheduleData1 > scheduleData2
+               >0 iff scheduleData1 > scheduleData2
      */
     private int compare(SortModes sortMode, ScheduleData scheduleData1, ScheduleData scheduleData2)
     {
@@ -2290,9 +2290,9 @@ public class TabJobs
     /** compare persistence data
      * @param sortMode sort mode
      * @param persistenceData1, persistenceData2 data to compare
-     * @return -1 iff persistenceData1 < persistenceData2,
+     * @return <0 iff persistenceData1 < persistenceData2,
                 0 iff persistenceData1 = persistenceData2,
-                1 iff persistenceData1 > persistenceData2
+               >0 iff persistenceData1 > persistenceData2
      */
     private int compare(SortModes sortMode, PersistenceData persistenceData1, PersistenceData persistenceData2)
     {
@@ -9539,9 +9539,9 @@ TODO: implement delete entity
           {
             /** compare job data
              * @param jobData1, jobData2 file tree data to compare
-             * @return -1 iff jobData2.name < jobData1.name,
+             * @return <0 iff jobData2.name < jobData1.name,
                         0 iff jobData2.name = jobData1.name,
-                        1 iff jobData2.name > jobData1.name
+                       >0 iff jobData2.name > jobData1.name
              */
             @Override
             public int compare(JobData jobData1, JobData jobData2)
@@ -11193,6 +11193,7 @@ throw new Error("NYI");
                                                                 deviceData.fileSystemType,
                                                                 Units.formatByteSize(deviceData.size)
                                                                );
+
             removeTableItems.remove(tableItem);
           }
 

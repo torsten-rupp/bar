@@ -9898,7 +9898,7 @@ LOCAL void doneAll(void)
 
 int main(int argc, const char *argv[])
 {
-  const uint MAX_LINE_LENGTH = 8192;
+  #define MAX_LINE_LENGTH 8192
 
   const char       *databaseURI;
   char             line[MAX_LINE_LENGTH];
@@ -10827,6 +10827,8 @@ int main(int argc, const char *argv[])
          && (!checkFlag || (integrityFlag && (orphanedEntriesCount == 0L) && (duplicatesCount == 0L)))
            ? EXITCODE_OK
            : EXITCODE_FAIL;
+
+  #undef MAX_LINE_LENGTH
 }
 
 #ifdef __cplusplus

@@ -1378,9 +1378,11 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                 getUniqName(destinationDeviceName);
                 break;
               case RESTORE_ENTRY_MODE_OVERWRITE:
-                if (!File_isDevice(destinationDeviceName))
+                if (   !File_isCharacterDevice(destinationDeviceName)
+                    && !File_isBlockDevice(destinationDeviceName)
+                   )
                 {
-                  // truncate to 0-file
+                  // create 0-file
                   FileHandle fileHandle;
                   error = File_open(&fileHandle,destinationDeviceName,FILE_OPEN_CREATE);
                   if (error != ERROR_NONE)
@@ -1462,7 +1464,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     FileHandle   fileHandle;
     if (!restoreInfo->jobOptions->dryRun)
     {
-      if (File_isDevice(destinationDeviceName))
+      if (File_isBlockDevice(destinationDeviceName))
       {
         // open device
         error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPEN_WRITE);

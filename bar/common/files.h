@@ -1436,16 +1436,28 @@ bool File_isDirectory(ConstString fileName);
 bool File_isDirectoryCString(const char *fileName);
 
 /***********************************************************************\
-* Name   : File_isDevice, File_isDeviceCString
-* Purpose: check if device (block, character)
+* Name   : File_isCharacterDevice, File_isCharacterDeviceCString
+* Purpose: check if character device
 * Input  : fileName - file name
 * Output : -
 * Return : TRUE if device, FALSE otherweise
 * Notes  : -
 \***********************************************************************/
 
-bool File_isDevice(ConstString fileName);
-bool File_isDeviceCString(const char *fileName);
+bool File_isCharacterDevice(ConstString fileName);
+bool File_isCharacterDeviceCString(const char *fileName);
+
+/***********************************************************************\
+* Name   : File_isBlockDevice, File_isBlockDeviceCString
+* Purpose: check if block device
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if device, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isBlockDevice(ConstString fileName);
+bool File_isBlockDeviceCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_isReadable, File_isReadableCString
@@ -1804,7 +1816,7 @@ Errors File_changeDirectoryCString(const char *pathName);
 String File_getCurrentDirectory(String pathName);
 
 /***********************************************************************\
-* Name   : File_readLink
+* Name   : File_readLink, File_readLinkCString
 * Purpose: read link
 * Input  : linkName         - link name
 *          absolutePathFlag - TRUE to get absolute path
@@ -1817,6 +1829,10 @@ Errors File_readLink(String      fileName,
                      ConstString linkName,
                      bool        absolutePathFlag
                     );
+Errors File_readLinkCString(String     fileName,
+                            const char *linkName,
+                            bool       absolutePathFlag
+                           );
 
 /***********************************************************************\
 * Name   : File_makeLink, File_makeLinkCString

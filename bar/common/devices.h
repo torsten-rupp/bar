@@ -49,7 +49,12 @@ typedef struct
 typedef struct
 {
   #if   defined(PLATFORM_LINUX)
-    DIR                 *dir;
+    struct
+    {
+      const char *prefix;
+      DIR        *dir;
+    } lists[2];
+    uint                listIndex;
     const struct dirent *entry;
   #elif defined(PLATFORM_WINDOWS)
     DWORD logicalDrives;

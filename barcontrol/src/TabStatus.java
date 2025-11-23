@@ -440,9 +440,9 @@ class JobDataComparator implements Comparator<JobData>
 
   /** compare job data
    * @param jobData1, jobData2 file tree data to compare
-   * @return -1 iff jobData1 < jobData2,
+   * @return <0 iff jobData1 < jobData2,
               0 iff jobData1 = jobData2,
-              1 iff jobData1 > jobData2
+             >0 iff jobData1 > jobData2
    */
   @Override
   public int compare(JobData jobData1, JobData jobData2)

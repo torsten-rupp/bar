@@ -30,6 +30,7 @@
   * BARControl: improved certificate validation
   * BARControl: show file system type of devices if possible
   * BARControl: check common name of SSL certificate
+  * BARControl: show also /dev/mapper devices in device list
 
 2025-06-29 26
   * automatic replace deprecated configuration values by new value

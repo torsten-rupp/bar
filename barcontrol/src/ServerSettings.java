@@ -547,9 +547,9 @@ public class ServerSettings
 
     /** compare maintenance data
      * @param maintenanceData1, maintenanceData2 index maintenance data to compare
-     * @return -1 iff maintenanceData1 < maintenanceData2,
+     * @return <0 iff maintenanceData1 < maintenanceData2,
                 0 iff maintenanceData1 = maintenanceData2,
-                1 iff maintenanceData1 > maintenanceData2
+               >0 iff maintenanceData1 > maintenanceData2
      */
     public int compare(MaintenanceData maintenanceData1, MaintenanceData maintenanceData2)
     {
@@ -753,9 +753,9 @@ public class ServerSettings
 
     /** compare server data
      * @param serverData1, serverData2 server data to compare
-     * @return -1 iff serverData1 < serverData2,
+     * @return <0 iff serverData1 < serverData2,
                 0 iff serverData1 = serverData2,
-                1 iff serverData1 > serverData2
+               >0 iff serverData1 > serverData2
      */
     public int compare(ServerData serverData1, ServerData serverData2)
     {

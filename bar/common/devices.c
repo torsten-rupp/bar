@@ -60,6 +60,13 @@
 /***************************** Constants *******************************/
 #if   defined(PLATFORM_LINUX)
   #define O_BINARY 0
+
+  const char *DEVICES_PREFIXES[] =
+  {
+    "/dev",
+    "/dev/mapper",
+  };
+
 #elif defined(PLATFORM_WINDOWS)
 #endif /* PLATFORM_... */
 
@@ -113,6 +120,63 @@ LOCAL_INLINE char *debugGetEmulateBlockDevice(void)
   return getenv(DEVICE_DEBUG_EMULATE_BLOCK_DEVICE);
 }
 #endif /* NDEBUG */
+
+#if   defined(PLATFORM_LINUX)
+
+/***********************************************************************\
+* Name   : readNextBlockDeviceEntry
+* Purpose: read next device entry
+* Input  : deviceListHandle - device list handle
+*          deviceName - device name variable (can be NULL)
+* Output : deviceName - device name
+* Return : dirent pointer or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const struct dirent *readNextBlockDeviceEntry(DeviceListHandle *deviceListHandle, String deviceName)
+{
+  assert(deviceListHandle != NULL);
+
+  String fileName = String_new();
+  while (   (deviceListHandle->entry == NULL)
+         && (deviceListHandle->listIndex < SIZE_OF_ARRAY(DEVICES_PREFIXES))
+        )
+  {
+    // try to read entry
+    if (deviceListHandle->lists[deviceListHandle->listIndex].dir != NULL)
+    {
+      deviceListHandle->entry = readdir(deviceListHandle->lists[deviceListHandle->listIndex].dir);
+    }
+
+    if (deviceListHandle->entry == NULL)
+    {
+      // next list
+      deviceListHandle->listIndex++;
+    }
+    else
+    {
+      // check if block device
+      String_setCString(fileName,deviceListHandle->lists[deviceListHandle->listIndex].prefix);
+      File_appendFileNameCString(fileName,deviceListHandle->entry->d_name);
+      if (!File_isBlockDevice(fileName))
+      {
+        deviceListHandle->entry = NULL;
+      }
+    }
+  }
+  String_delete(fileName);
+
+  if ((deviceListHandle->entry != NULL) && (deviceName != NULL))
+  {
+    String_setCString(deviceName,deviceListHandle->lists[deviceListHandle->listIndex].prefix);
+    File_appendFileNameCString(deviceName,deviceListHandle->entry->d_name);
+  }
+
+  return deviceListHandle->entry;
+}
+
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
 
 /***********************************************************************\
 * Name   : getDeviceInfo
@@ -1074,32 +1138,44 @@ Errors Device_openDeviceList(DeviceListHandle *deviceListHandle)
   assert(deviceListHandle != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    #ifdef HAVE_O_NOATIME
-      // open directory (try first with O_NOATIME)
-      int handle = open("/dev",O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
-      if (handle == -1)
-      {
-        handle = open("/dev",O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
-      }
-      if (handle != -1)
-      {
-        // create directory handle
-        deviceListHandle->dir = fdopendir(handle);
-      }
-      else
-      {
-        deviceListHandle->dir = NULL;
-      }
-    #else /* not HAVE_O_NOATIME */
-      // open directory
-      int handle = open("/dev",O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
-      if (handle != -1)
-      {
-        // create directory handle
-        deviceListHandle->dir = fdopendir(handle);
-      }
-    #endif /* HAVE_O_NOATIME */
-    deviceListHandle->entry = NULL;
+    for (size_t i = 0; i < SIZE_OF_ARRAY(DEVICES_PREFIXES); i++)
+    {
+      #ifdef HAVE_O_NOATIME
+        // open directory list (try first with O_NOATIME)
+        int handle = open(DEVICES_PREFIXES[i],O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
+        if (handle == -1)
+        {
+          handle = open(DEVICES_PREFIXES[i],O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
+        }
+        if (handle != -1)
+        {
+          // create directory handle
+          deviceListHandle->lists[i].prefix = DEVICES_PREFIXES[i];
+          deviceListHandle->lists[i].dir    = fdopendir(handle);
+        }
+        else
+        {
+          deviceListHandle->lists[i].prefix = NULL;
+          deviceListHandle->lists[i].dir    = NULL;
+        }
+      #else /* not HAVE_O_NOATIME */
+        // open directory
+        int handle = open(DEVICES_PREFIXES[i],O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
+        if (handle != -1)
+        {
+          // create directory handle
+          deviceListHandle->lists[i].prefix = DEVICES_PREFIXES[i];
+          deviceListHandle->lists[i].dir    = fdopendir(handle);
+        }
+        else
+        {
+          deviceListHandle->lists[i].prefix = NULL;
+          deviceListHandle->lists[i].dir    = NULL;
+        }
+      #endif /* HAVE_O_NOATIME */
+    }
+    deviceListHandle->listIndex = 0;
+    deviceListHandle->entry     = NULL;
   #elif defined(PLATFORM_WINDOWS)
     deviceListHandle->logicalDrives = GetLogicalDrives();
     if (deviceListHandle->logicalDrives == 0)
@@ -1117,9 +1193,13 @@ void Device_closeDeviceList(DeviceListHandle *deviceListHandle)
   assert(deviceListHandle != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    assert(deviceListHandle->dir != NULL);
-
-    closedir(deviceListHandle->dir);
+    for (size_t i = 0; i < SIZE_OF_ARRAY(DEVICES_PREFIXES); i++)
+    {
+      if (deviceListHandle->lists[i].dir != NULL)
+      {
+        closedir(deviceListHandle->lists[i].dir);
+      }
+    }
   #elif defined(PLATFORM_WINDOWS)
     UNUSED_VARIABLE(deviceListHandle);
   #endif /* PLATFORM_... */
@@ -1130,23 +1210,8 @@ bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
   assert(deviceListHandle != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    assert(deviceListHandle->dir != NULL);
-
-    // read entry iff not read
-    if (deviceListHandle->entry == NULL)
-    {
-      deviceListHandle->entry = readdir(deviceListHandle->dir);
-    }
-
-    // skip non-block devices
-    while (   (deviceListHandle->entry != NULL)
-           && (deviceListHandle->entry->d_type != DT_BLK)
-          )
-    {
-      deviceListHandle->entry = readdir(deviceListHandle->dir);
-    }
-
-    return deviceListHandle->entry == NULL;
+    // read next block device entry iff not read
+    return readNextBlockDeviceEntry(deviceListHandle,NULL) == NULL;
   #elif defined(PLATFORM_WINDOWS)
     return ((deviceListHandle->logicalDrives >> deviceListHandle->i) <= 0);
   #endif /* PLATFORM_... */
@@ -1157,37 +1222,15 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
                              DeviceInfo       *deviceInfo
                             )
 {
-  #define DEVICE_PREFIX "/dev/"
-
   assert(deviceListHandle != NULL);
   assert(deviceName != NULL);
 
-  String_clear(deviceName);
-
   #if   defined(PLATFORM_LINUX)
-    assert(deviceListHandle->dir != NULL);
-
-    // read entry iff not read
-    if (deviceListHandle->entry == NULL)
-    {
-      deviceListHandle->entry = readdir(deviceListHandle->dir);
-    }
-
-    // skip non-block devices
-    while (   (deviceListHandle->entry != NULL)
-           && (deviceListHandle->entry->d_type != DT_BLK)
-          )
-    {
-      deviceListHandle->entry = readdir(deviceListHandle->dir);
-    }
-    if (deviceListHandle->entry == NULL)
+    // read next block device entry
+    if (readNextBlockDeviceEntry(deviceListHandle,deviceName) == NULL)
     {
       return ERROR_DEVICE_NOT_FOUND;
     }
-
-    // get entry name
-    String_setCString(deviceName,"/dev/");
-    File_appendFileNameCString(deviceName,deviceListHandle->entry->d_name);
 
     // try to get device info
     if (deviceInfo != NULL)
@@ -1198,18 +1241,25 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
     // mark entry read
     deviceListHandle->entry = NULL;
   #elif defined(PLATFORM_WINDOWS)
-    while ((deviceListHandle->logicalDrives >> deviceListHandle->i) > 0)
+    bool found = FALSE;
+    while (   ((deviceListHandle->logicalDrives >> deviceListHandle->i) > 0)
+           && !found
+          )
     {
       if (((1UL << deviceListHandle->i) & deviceListHandle->logicalDrives) != 0)
       {
         String_format(deviceName,"%c:",'A'+deviceListHandle->i);
         deviceListHandle->i++;
-        break;
+        found = TRUE;
       }
       else
       {
         deviceListHandle->i++;
       }
+    }
+    if (!found)
+    {
+      return ERROR_DEVICE_NOT_FOUND;
     }
 
     // try to get device info
