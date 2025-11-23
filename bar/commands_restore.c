@@ -3771,15 +3771,18 @@ NULL, // masterIO
   (void)Storage_done(&storageInfo);
 
   // output info
-  printInfo(0,
-            "%s",
-               (restoreInfo->failError == ERROR_NONE)
-            && (   restoreInfo->jobOptions->skipVerifySignaturesFlag
-                || Crypt_isValidSignatureState(allCryptSignatureState)
-               )
-              ? "OK\n"
-              : "FAIL!\n"
-           );
+  if (!isPrintInfo(1))
+  {
+    printInfo(0,
+              "%s",
+                 (restoreInfo->failError == ERROR_NONE)
+              && (   restoreInfo->jobOptions->skipVerifySignaturesFlag
+                  || Crypt_isValidSignatureState(allCryptSignatureState)
+                 )
+                ? "OK\n"
+                : "FAIL!\n"
+             );
+  }
 
   // output signature error/warning
   if (!Crypt_isValidSignatureState(allCryptSignatureState))

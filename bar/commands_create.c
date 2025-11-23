@@ -5806,7 +5806,9 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                                   NULL,  // cryptKey
                                   archiveEntryName,
                                   deviceInfo,
-                                  isSupportedFileSystem ? fileSystemHandle.type : FILE_SYSTEM_TYPE_NONE,
+                                  (!createInfo->jobOptions->rawImagesFlag && isSupportedFileSystem)
+                                    ? fileSystemHandle.type
+                                    : FILE_SYSTEM_TYPE_NONE,
                                   fragmentOffset/(uint64)deviceInfo->blockSize,
                                   (fragmentSize+(uint64)deviceInfo->blockSize-1)/(uint64)deviceInfo->blockSize,
                                   archiveFlags
@@ -5854,7 +5856,8 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
              && (bufferBlockCount < maxBufferBlockCount)
             )
       {
-        if (   !isSupportedFileSystem
+        if (   createInfo->jobOptions->rawImagesFlag
+            || !isSupportedFileSystem
             || FileSystem_blockIsUsed(&fileSystemHandle,(blockOffset+(uint64)bufferBlockCount)*(uint64)deviceInfo->blockSize)
            )
         {
@@ -6062,7 +6065,9 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     if (!createInfo->jobOptions->dryRun)
     {
       printInfo(1,"OK (%s, %s bytes%s%s)\n",
-                isSupportedFileSystem ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+                (!createInfo->jobOptions->rawImagesFlag && isSupportedFileSystem)
+                  ? FileSystem_typeToString(fileSystemHandle.type,NULL)
+                  : "raw",
                 sizeString,
                 fragmentInfoString,
                 compressionRatioString
@@ -6071,7 +6076,9 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
                  LOG_TYPE_ENTRY_OK,
                  "Added image '%s' (%s, %"PRIu64" bytes%s%s)",
                  String_cString(deviceName),
-                 isSupportedFileSystem ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+                 (!createInfo->jobOptions->rawImagesFlag && isSupportedFileSystem)
+                   ? FileSystem_typeToString(fileSystemHandle.type,NULL)
+                   : "raw",
                  fragmentSize,
                  fragmentInfoString,
                  compressionRatioString
@@ -6080,7 +6087,9 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     else
     {
       printInfo(1,"OK (%s, %s bytes%s%s, dry-run)\n",
-                isSupportedFileSystem ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+                (!createInfo->jobOptions->rawImagesFlag && isSupportedFileSystem)
+                  ? FileSystem_typeToString(fileSystemHandle.type,NULL)
+                  : "raw",
                 sizeString,
                 fragmentInfoString,
                 compressionRatioString
@@ -6101,7 +6110,9 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
 
     double d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
     printInfo(1,"OK (%s, %/"PRIu64" bytes, not stored)\n",
-              isSupportedFileSystem ? FileSystem_typeToString(fileSystemHandle.type,NULL) : "raw",
+              (!createInfo->jobOptions->rawImagesFlag && isSupportedFileSystem)
+                ? FileSystem_typeToString(fileSystemHandle.type,NULL)
+                : "raw",
               (int)d,
               fragmentSize
              );
@@ -6127,7 +6138,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   }
 
   // free resources
-  if (isSupportedFileSystem)
+  if (!createInfo->jobOptions->rawImagesFlag && isSupportedFileSystem)
   {
     FileSystem_done(&fileSystemHandle);
   }

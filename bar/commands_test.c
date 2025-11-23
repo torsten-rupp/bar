@@ -1840,20 +1840,23 @@ LOCAL Errors testArchive(TestInfo         *testInfo,
   (void)Storage_done(&storageInfo);
 
   // output info
-  if (!isPrintInfo(1)) printInfo(0,
-                                 "%s",
-                                    (testInfo->failError == ERROR_NONE)
-                                 && (   testInfo->jobOptions->skipVerifySignaturesFlag
-                                     || Crypt_isValidSignatureState(allCryptSignatureState)
-                                    )
-                                   ? "OK\n"
-                                   : "FAIL!\n"
-                                );
-    logMessage(testInfo->logHandle,
-               LOG_TYPE_INFO,
-               "Tested storage '%s'",
-               String_cString(printableStorageName)
-              );
+  if (!isPrintInfo(1))
+  {
+    printInfo(0,
+              "%s",
+                 (testInfo->failError == ERROR_NONE)
+              && (   testInfo->jobOptions->skipVerifySignaturesFlag
+                  || Crypt_isValidSignatureState(allCryptSignatureState)
+                 )
+                ? "OK\n"
+                : "FAIL!\n"
+             );
+  }
+  logMessage(testInfo->logHandle,
+             LOG_TYPE_INFO,
+             "Tested storage '%s'",
+             String_cString(printableStorageName)
+            );
 
   // output signature error/warning
   if (!Crypt_isValidSignatureState(allCryptSignatureState))

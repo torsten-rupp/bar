@@ -2483,12 +2483,15 @@ LOCAL Errors convertArchive(ConvertInfo      *convertInfo,
   (void)Storage_done(&convertInfo->sourceStorageInfo);
 
   // output info
-  printInfo(0,
-            "%s",
-            (convertInfo->failError == ERROR_NONE)
-              ? "OK\n"
-              : "FAIL!\n"
-           );
+  if (!isPrintInfo(1))
+  {
+    printInfo(0,
+              "%s",
+              (convertInfo->failError == ERROR_NONE)
+                ? "OK\n"
+                : "FAIL!\n"
+             );
+  }
 
   // output signature error/warning
   if (!Crypt_isValidSignatureState(sourceAllCryptSignatureState))
