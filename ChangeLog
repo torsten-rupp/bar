@@ -4,6 +4,7 @@
   * added sd_notify() for systemd
   * support EXFAT file system
   * support XFS file system
+  * be really quiet on console if --quiet is set
   * bar-index: improved clean-orphaned: remove entities without
     entries or storages
   * upgrade xz 5.8.1

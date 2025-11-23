@@ -965,7 +965,14 @@ const char *Thread_getName(const ThreadId threadId)
 {
   #ifdef HAVE_PTHREAD_SETNAME_NP
     static char name[64];
-    (void)pthread_getname_np(threadId,name,sizeof(name));
+    if (threadId != THREAD_ID_NONE)
+    {
+      (void)pthread_getname_np(threadId,name,sizeof(name));
+    }
+    else
+    {
+      stringClear(name);
+    }
     return name;
   #else
     UNUSED_VARIABLE(threadId);
