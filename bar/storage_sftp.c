@@ -1326,7 +1326,6 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                       ssh2ErrorText
                      );
       (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
-      (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
       SFTP_SET_RECEIVE_CALLBACK(&storageHandle->sftp.socketHandle,storageHandle->sftp.oldReceiveCallback);
       SFTP_SET_SEND_CALLBACK   (&storageHandle->sftp.socketHandle,storageHandle->sftp.oldSendCallback   );
       Network_disconnect(&storageHandle->sftp.socketHandle);
@@ -1349,8 +1348,8 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
                       "%s",
                       ssh2ErrorText
                      );
-      (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
       (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+      (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
       SFTP_SET_RECEIVE_CALLBACK(&storageHandle->sftp.socketHandle,storageHandle->sftp.oldReceiveCallback);
       SFTP_SET_SEND_CALLBACK   (&storageHandle->sftp.socketHandle,storageHandle->sftp.oldSendCallback   );
       Network_disconnect(&storageHandle->sftp.socketHandle);
@@ -1387,14 +1386,14 @@ LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
     switch (storageHandle->mode)
     {
       case STORAGE_MODE_READ:
-        (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
         (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+        (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
         Network_disconnect(&storageHandle->sftp.socketHandle);
         free(storageHandle->sftp.readAheadBuffer.data);
         break;
       case STORAGE_MODE_WRITE:
-        (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
         (void)libssh2_sftp_close(storageHandle->sftp.sftpHandle);
+        (void)libssh2_sftp_shutdown(storageHandle->sftp.sftp);
          Network_disconnect(&storageHandle->sftp.socketHandle);
         break;
       #ifndef NDEBUG

@@ -1002,6 +1002,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                         "%s",
                         ssh2ErrorText
                        );
+        SCP_SET_RECEIVE_CALLBACK(&storageHandle->scp.socketHandle,storageHandle->scp.oldReceiveCallback);
+        SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,storageHandle->scp.oldSendCallback);
         Network_disconnect(&storageHandle->scp.socketHandle);
         return error;
       }
@@ -1050,6 +1052,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
       if (error != ERROR_NONE)
       {
         (void)libssh2_sftp_shutdown(storageHandle->scp.sftp);
+        SCP_SET_RECEIVE_CALLBACK(&storageHandle->scp.socketHandle,storageHandle->scp.oldReceiveCallback);
+        SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,storageHandle->scp.oldSendCallback);
         Network_disconnect(&storageHandle->scp.socketHandle);
         return error;
       }
@@ -1072,6 +1076,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                         ssh2ErrorText
                        );
         (void)libssh2_sftp_shutdown(storageHandle->scp.sftp);
+        SCP_SET_RECEIVE_CALLBACK(&storageHandle->scp.socketHandle,storageHandle->scp.oldReceiveCallback);
+        SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,storageHandle->scp.oldSendCallback);
         Network_disconnect(&storageHandle->scp.socketHandle);
         return error;
       }
@@ -1104,6 +1110,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                         "%s",
                         sshErrorText
                        );
+        (void)libssh2_sftp_close(storageHandle->scp.sftpHandle);
+        (void)libssh2_sftp_shutdown(storageHandle->scp.sftp);
         SCP_SET_RECEIVE_CALLBACK(&storageHandle->scp.socketHandle,storageHandle->scp.oldReceiveCallback);
         SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,storageHandle->scp.oldSendCallback);
         Network_disconnect(&storageHandle->scp.socketHandle);
