@@ -3293,6 +3293,7 @@ Errors File_dropCaches(FileHandle *fileHandle,
   #ifdef HAVE_FDATASYNC
     if (syncFlag)
     {
+      // Note: postgresql define fdatasync() on Windows!
       (void)fdatasync(handle);
     }
   #else
@@ -5416,6 +5417,7 @@ Errors File_readLinkCString(String     fileName,
     bufferSize = BUFFER_SIZE;
 
     // try to read link, increase buffer if needed
+    // Note: postgresql define readlink() on Windows!
     while ((result = readlink(linkName,buffer,bufferSize)) == bufferSize)
     {
       bufferSize += BUFFER_DELTA;
@@ -5578,6 +5580,7 @@ Errors File_makeHardLinkCString(const char *linkName,
 
   #ifdef HAVE_LINK
     unlink(linkName);
+    // Note: postgresql define link() on Windows!
     if (link(fileName,linkName) != 0)
     {
       return getLastError(ERROR_CODE_IO,fileName);

@@ -302,8 +302,8 @@ typedef bool(*ResourceDumpInfoFunction)(const char *variableName,
                                         const void *resource,
                                         const char *allocFileName,
                                         size_t     allocLineNb,
-                                        size_t     n,
-                                        size_t     count,
+                                        ulong      n,
+                                        ulong      count,
                                         void       *userData
                                        );
 

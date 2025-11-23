@@ -2714,8 +2714,6 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
                                           ServerConnectionPriorities serverConnectionPriority
                                          )
 {
-  Errors error;
-
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_FTP);
@@ -2729,6 +2727,8 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
 
   // open directory listing
   #if   defined(HAVE_CURL)
+    Errors error;
+
     AutoFreeList autoFreeList;
     AutoFree_init(&autoFreeList);
 

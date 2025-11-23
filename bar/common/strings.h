@@ -121,8 +121,8 @@ typedef struct
 typedef bool(*StringDumpInfoFunction)(ConstString string,
                                       const char  *allocFileName,
                                       size_t      allocLineNb,
-                                      size_t      n,
-                                      size_t      count,
+                                      ulong       n,
+                                      ulong       count,
                                       void        *userData
                                      );
 

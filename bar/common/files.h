@@ -386,8 +386,8 @@ typedef struct
 typedef bool(*FileDumpInfoFunction)(const FileHandle *fileHandle,
                                     const char       *fileName,
                                     size_t           lineNb,
-                                    size_t           n,
-                                    size_t           count,
+                                    ulong            n,
+                                    ulong            count,
                                     void             *userData
                                    );
 #endif /* not NDEBUG */

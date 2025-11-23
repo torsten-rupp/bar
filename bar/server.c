@@ -21916,7 +21916,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  Array_debugPrintInfo(CALLBACK_INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+  Array_debugPrintInfo(CALLBACK_INLINE(bool,(const Array *array, const char *fileName, size_t lineNb, ulong n, ulong count, void *userData),
                                        {
                                          UNUSED_VARIABLE(array);
                                          UNUSED_VARIABLE(fileName);
@@ -21930,7 +21930,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                        NULL
                                       )
                       );
-  String_debugPrintInfo(CALLBACK_INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+  String_debugPrintInfo(CALLBACK_INLINE(bool,(ConstString string, const char *fileName, size_t lineNb, ulong n, ulong count, void *userData),
                                         {
                                           UNUSED_VARIABLE(string);
                                           UNUSED_VARIABLE(fileName);
@@ -21945,7 +21945,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                        ),
                                        DUMP_INFO_TYPE_ALLOCATED|DUMP_INFO_TYPE_HISTOGRAM
                        );
-  File_debugPrintInfo(CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+  File_debugPrintInfo(CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, size_t lineNb, ulong n, ulong count, void *userData),
                                       {
                                         UNUSED_VARIABLE(fileHandle);
                                         UNUSED_VARIABLE(fileName);
@@ -21993,7 +21993,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
 
   // Note: no abort because debug functions may hold a lock while dumping information
   Array_debugDumpInfo(handle,
-                      CALLBACK_INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                      CALLBACK_INLINE(bool,(const Array *array, const char *fileName, size_t lineNb, ulong n, ulong count, void *userData),
                                       {
                                         UNUSED_VARIABLE(array);
                                         UNUSED_VARIABLE(fileName);
@@ -22008,7 +22008,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                      )
                      );
   String_debugDumpInfo(handle,
-                       CALLBACK_INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                       CALLBACK_INLINE(bool,(ConstString string, const char *fileName, size_t lineNb, ulong n, ulong count, void *userData),
                                        {
                                          UNUSED_VARIABLE(string);
                                          UNUSED_VARIABLE(fileName);
@@ -22024,7 +22024,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                       DUMP_INFO_TYPE_HISTOGRAM
                      );
   File_debugDumpInfo(handle,
-                     CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                     CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, size_t lineNb, ulong n, ulong count, void *userData),
                                      {
                                        UNUSED_VARIABLE(fileHandle);
                                        UNUSED_VARIABLE(fileName);
@@ -22039,7 +22039,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                     )
                     );
   debugResourceDumpInfo(handle,
-                        CALLBACK_INLINE(bool,(const char *variableName, const void *resource, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                        CALLBACK_INLINE(bool,(const char *variableName, const void *resource, const char *fileName, size_t lineNb, ulong n, ulong count, void *userData),
                                         {
                                           UNUSED_VARIABLE(variableName);
                                           UNUSED_VARIABLE(resource);
