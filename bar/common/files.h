@@ -253,7 +253,7 @@ typedef struct
 {
   String     name;
   FileModes  mode;
-  FILE       *file;
+  FILE       *file;  // Note: use streamed i/o because for sparse files/hardlinks small data chunks may be written.
   uint64     index;
   uint64     size;
   #if   defined(PLATFORM_LINUX)

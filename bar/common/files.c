@@ -483,7 +483,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       // seek to start and truncate
       if ((fileMode & FILE_STREAM) != FILE_STREAM)
       {
-        if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
+        if (FSEEK(fileHandle->file,0,SEEK_SET) == -1)
         {
           return getLastError(ERROR_CODE_CREATE_FILE,fileName);
         }
@@ -507,7 +507,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       // get file size
       if ((fileMode & FILE_STREAM) != FILE_STREAM)
       {
-        if (FSEEK(fileHandle->file,0,SEEK_END) != 0)
+        if (FSEEK(fileHandle->file,0,SEEK_END) == -1)
         {
           error = getLastError(ERROR_CODE_IO,fileName);
           fclose(fileHandle->file);
@@ -520,7 +520,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
           fclose(fileHandle->file);
           return error;
         }
-        if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
+        if (FSEEK(fileHandle->file,0,SEEK_SET) == -1)
         {
           error = getLastError(ERROR_CODE_IO,fileName);
           fclose(fileHandle->file);
@@ -546,7 +546,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       // seek to start
       if ((fileMode & FILE_STREAM) != FILE_STREAM)
       {
-        if (FSEEK(fileHandle->file,0,SEEK_SET) != 0)
+        if (FSEEK(fileHandle->file,0,SEEK_SET) == -1)
         {
           return getLastError(ERROR_CODE_CREATE_FILE,fileName);
         }
@@ -566,7 +566,7 @@ LOCAL Errors initFileHandle(const char *__fileName__,
       // get file size
       if ((fileMode & FILE_STREAM) != FILE_STREAM)
       {
-        if (FSEEK(fileHandle->file,0,SEEK_END) != 0)
+        if (FSEEK(fileHandle->file,0,SEEK_END) == -1)
         {
           return getLastError(ERROR_CODE_CREATE_FILE,fileName);
         }
@@ -1419,7 +1419,7 @@ String File_getDeviceNameCString(String deviceName, const char *fileName)
   if (fileName != NULL)
   {
     #if   defined(PLATFORM_LINUX)
-      handle = fopen(MOUNTS_FILENAME,"r");
+      handle = FOPEN(MOUNTS_FILENAME,"r");
       if (handle != NULL)
       {
         n0 = stringLength(fileName);
@@ -2871,20 +2871,19 @@ Errors File_write(FileHandle *fileHandle,
                   ulong      bufferLength
                  )
 {
-  ssize_t    n;
-  const byte *data;
-  size_t     m;
-
   FILE_CHECK_VALID(fileHandle);
   assert(buffer != NULL);
 
+  ssize_t n;
   if (IS_SET(fileHandle->mode,FILE_SPARSE))
   {
     // write sparse data
-    n    = 0;
-    data = (const byte*)buffer;
+    n = 0;
+    const byte *data = (const byte*)buffer;
     while (n < (ssize_t)bufferLength)
     {
+      size_t m;
+
       // seek over 0-bytes
       m = 0;
       while (((n+m) < (size_t)bufferLength) && (data[n+m] == 0))
@@ -3357,7 +3356,7 @@ Errors File_openRootList(RootListHandle *rootListHandle, bool allMountsFlag)
     if (allMountsFlag)
     {
       // get file system names
-      handle = fopen(FILESYSMTES_FILENAME,"r");
+      handle = FOPEN(FILESYSMTES_FILENAME,"r");
       if (handle != NULL)
       {
         while (fgets(line,sizeof(line),handle) != NULL)
@@ -3382,7 +3381,7 @@ Errors File_openRootList(RootListHandle *rootListHandle, bool allMountsFlag)
       }
 
       // open mount list
-      rootListHandle->mounts = fopen(MOUNTS_FILENAME,"r");
+      rootListHandle->mounts = FOPEN(MOUNTS_FILENAME,"r");
     }
   #elif defined(PLATFORM_WINDOWS)
     UNUSED_VARIABLE(allMountsFlag);

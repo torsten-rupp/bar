@@ -23,12 +23,19 @@
 
 /***************************** Constants *******************************/
 
+// device open mask
+#define DEVICE_OPEN_MASK_MODE  0x0000000F
+#define DEVICE_OPEN_MASK_FLAGS 0xFFFF0000
+
 // device open modes
 typedef enum
 {
   DEVICE_OPEN_READ,
   DEVICE_OPEN_WRITE
 } DeviceModes;
+
+// additional device open flags
+#define DEVICE_SPARSE (1 << 16)
 
 #ifndef NDEBUG
   #define DEVICE_DEBUG_EMULATE_BLOCK_DEVICE "DEBUG_EMULATE_BLOCK_DEVICE"
@@ -39,10 +46,11 @@ typedef enum
 // device i/o handle
 typedef struct
 {
-  String name;
-  int    handle;
-  uint64 index;
-  uint64 size;
+  String      name;
+  DeviceModes mode;
+  FILE        *file;  // Note: use streamed i/o because for sparse device images small data chunks may be written.
+  uint64      index;
+  uint64      size;
 } DeviceHandle;
 
 // device list read handle
@@ -153,7 +161,7 @@ INLINE bool Device_eof(DeviceHandle *deviceHandle);
 INLINE bool Device_eof(DeviceHandle *deviceHandle)
 {
   assert(deviceHandle != NULL);
-  assert(deviceHandle->handle != -1);
+  assert(deviceHandle->file != NULL);
 
   return deviceHandle->index >= deviceHandle->size;
 }
@@ -231,6 +239,25 @@ Errors Device_tell(DeviceHandle *deviceHandle,
 Errors Device_seek(DeviceHandle *deviceHandle,
                    uint64       offset
                   );
+
+/***********************************************************************\
+* Name   : Device_getDescriptor
+* Purpose: get device descriptor
+* Input  : deviceHandle - device handle
+* Output : -
+* Return : file descriptor
+* Notes  : -
+\***********************************************************************/
+
+INLINE int Device_getDescriptor(const DeviceHandle *deviceHandle);
+#if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
+INLINE int Device_getDescriptor(const DeviceHandle *deviceHandle)
+{
+  assert(deviceHandle != NULL);
+
+  return fileno(deviceHandle->file);
+}
+#endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Device_getUsedBlockBitmap

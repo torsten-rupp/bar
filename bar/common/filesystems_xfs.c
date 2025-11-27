@@ -614,9 +614,9 @@ LOCAL bool XFS_init(DeviceHandle *deviceHandle, FileSystemTypes *fileSystemType,
   sem_wait(&libXFSInitLock);
 
   // set device handles
-  libXFSInit.data.fd = deviceHandle->handle;
-  libXFSInit.log.fd  = deviceHandle->handle;
-  libXFSInit.rt.fd   = deviceHandle->handle;
+  libXFSInit.data.fd = Device_getDescriptor(deviceHandle);
+  libXFSInit.log.fd  = Device_getDescriptor(deviceHandle);
+  libXFSInit.rt.fd   = Device_getDescriptor(deviceHandle);
 
   // init XFS mount information
   xfs_mount_t xfsMount;
