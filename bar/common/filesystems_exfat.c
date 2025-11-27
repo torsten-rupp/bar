@@ -301,7 +301,7 @@ LOCAL bool EXFAT_readClusterBitmap(DeviceHandle *deviceHandle, EXFATHandle *exfa
   Errors error;
 
   // allocate cluster allocation bitmap
-  if (!BitSet_init(&exfatHandle->clusterBitmap,(exfatHandle->clusterCount+7)/8))
+  if (!BitSet_init(&exfatHandle->clusterBitmap,exfatHandle->clusterCount))
   {
     return FALSE;
   }
@@ -329,11 +329,10 @@ LOCAL bool EXFAT_readClusterBitmap(DeviceHandle *deviceHandle, EXFATHandle *exfa
               uint64_t offset = sectorToOffset( exfatHandle,exfatHandle->clusterHeapOffset
                                                +clusterToSector(exfatHandle,(EXFAT_READ_UINT32(exfatEntry.bitmap.startCluster)-CLUSTER_BASE_INDEX))
                                               );
-              uint64_t size   = EXFAT_READ_UINT64(exfatEntry.bitmap.size);
               error = Device_seek(deviceHandle,offset);
               if (error == ERROR_NONE)
               {
-                error = Device_read(deviceHandle,exfatHandle->clusterBitmap.data,size,NULL);
+                error = Device_read(deviceHandle,exfatHandle->clusterBitmap.data,(exfatEntry.bitmap.size+7)/8,NULL);
                 if (error == ERROR_NONE)
                 {
                   bitmapReadFlag = TRUE;
