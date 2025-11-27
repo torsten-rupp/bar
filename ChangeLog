@@ -7,6 +7,8 @@
   * be really quiet on console if --quiet is set
   * bar-index: improved clean-orphaned: remove entities without
     entries or storages
+  * added spare support for restoring images
+  * renamed option --sparse-files -> --sparse
   * upgrade xz 5.8.1
   * upgrade lz4 1.10.0
   * upgrade zstd 1.5.7

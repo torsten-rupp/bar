@@ -923,7 +923,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    FileModes  fileMode;
     FileHandle fileHandle;
     if (!restoreInfo->jobOptions->dryRun)
     {
@@ -932,8 +931,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       (void)File_setOwner(destinationFileName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
 
       // open file
-      fileMode = FILE_OPEN_WRITE;
-      if (restoreInfo->jobOptions->sparseFilesFlag) fileMode |= FILE_SPARSE;
+      FileModes fileMode = FILE_OPEN_WRITE;
+      if (restoreInfo->jobOptions->sparseFlag) fileMode |= FILE_SPARSE;
       error = File_open(&fileHandle,destinationFileName,fileMode);
       if (error != ERROR_NONE)
       {
@@ -949,7 +948,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
 
       // set file length for sparse files
-      if (restoreInfo->jobOptions->sparseFilesFlag)
+      if (restoreInfo->jobOptions->sparseFlag)
       {
         error = File_truncate(&fileHandle,fileInfo.size);
         if (error != ERROR_NONE)
@@ -1460,14 +1459,15 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       UNKNOWN
     }            type = UNKNOWN;
     DeviceHandle deviceHandle;
-    FileModes    fileMode;
     FileHandle   fileHandle;
     if (!restoreInfo->jobOptions->dryRun)
     {
       if (File_isBlockDevice(destinationDeviceName))
       {
         // open device
-        error = Device_open(&deviceHandle,destinationDeviceName,DEVICE_OPEN_WRITE);
+        DeviceModes deviceMode = DEVICE_OPEN_WRITE;
+        if (restoreInfo->jobOptions->sparseFlag) deviceMode |= DEVICE_SPARSE;
+        error = Device_open(&deviceHandle,destinationDeviceName,deviceMode);
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
@@ -1489,8 +1489,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         (void)File_setOwner(destinationDeviceName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
 
         // open file
-        fileMode = FILE_OPEN_WRITE;
-        if (restoreInfo->jobOptions->sparseFilesFlag) fileMode |= FILE_SPARSE;
+        FileModes fileMode = FILE_OPEN_WRITE;
+        if (restoreInfo->jobOptions->sparseFlag) fileMode |= FILE_SPARSE;
         error = File_open(&fileHandle,destinationDeviceName,fileMode);
         if (error != ERROR_NONE)
         {
@@ -1507,7 +1507,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
 
         // set file length for sparse files
-        if (restoreInfo->jobOptions->sparseFilesFlag)
+        if (restoreInfo->jobOptions->sparseFlag)
         {
           error = File_truncate(&fileHandle,deviceInfo.size);
           if (error != ERROR_NONE)
@@ -2620,7 +2620,6 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
       if (!restoredDataFlag)
       {
         // create file
-        FileModes  fileMode;
         FileHandle fileHandle;
         if (!restoreInfo->jobOptions->dryRun)
         {
@@ -2629,8 +2628,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           (void)File_setOwner(destinationFileName,FILE_OWN_USER_ID,FILE_OWN_GROUP_ID);
 
           // open file
-          fileMode = FILE_OPEN_WRITE;
-          if (restoreInfo->jobOptions->sparseFilesFlag) fileMode |= FILE_SPARSE;
+          FileModes fileMode = FILE_OPEN_WRITE;
+          if (restoreInfo->jobOptions->sparseFlag) fileMode |= FILE_SPARSE;
           error = File_open(&fileHandle,destinationFileName,fileMode);
           if (error != ERROR_NONE)
           {
@@ -2646,7 +2645,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           AUTOFREE_ADD(&autoFreeList,&fileHandle,{ (void)File_close(&fileHandle); });
 
           // set file length for sparse files
-          if (restoreInfo->jobOptions->sparseFilesFlag)
+          if (restoreInfo->jobOptions->sparseFlag)
           {
             error = File_truncate(&fileHandle,fileInfo.size);
             if (error != ERROR_NONE)

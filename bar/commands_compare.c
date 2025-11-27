@@ -700,15 +700,11 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
 
     // check if device contain a known file system or a raw image should be compared
+    bool             fileSystemFlag = FALSE;
     FileSystemHandle fileSystemHandle;
-    bool             fileSystemFlag;
     if (!archiveHandle->storageInfo->jobOptions->rawImagesFlag)
     {
       fileSystemFlag = (FileSystem_init(&fileSystemHandle,deviceName) == ERROR_NONE);
-    }
-    else
-    {
-      fileSystemFlag = FALSE;
     }
 
     // seek to fragment position

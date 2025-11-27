@@ -21462,8 +21462,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
   bool directoryContentFlag;
   StringMap_getBool(argumentMap,"directoryContent",&directoryContentFlag,FALSE);
-  bool sparseFilesFlag;
-  StringMap_getBool(argumentMap,"sparse",&sparseFilesFlag,FALSE);
+  bool sparseFlag;
+  StringMap_getBool(argumentMap,"sparse",&sparseFlag,FALSE);
   bool skipVerifySignaturesFlag;
   StringMap_getBool(argumentMap,"skipVerifySignatures",&skipVerifySignaturesFlag,FALSE);
   RestoreEntryModes restoreEntryMode;
@@ -21764,7 +21764,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     JobOptions jobOptions;
     Job_getOptions(jobName,&jobOptions,jobUUID);
     String_set(jobOptions.destination,destination);
-    jobOptions.sparseFilesFlag          = sparseFilesFlag;
+    jobOptions.sparseFlag          = sparseFlag;
     jobOptions.skipVerifySignaturesFlag = skipVerifySignaturesFlag;
     jobOptions.restoreEntryMode         = restoreEntryMode;
 

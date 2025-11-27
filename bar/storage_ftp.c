@@ -318,7 +318,7 @@ LOCAL Errors checkFTPLogin(ConstString hostName,
 #ifdef HAVE_CURL
 /***********************************************************************\
 * Name   : curlFTPReadDataCallback
-* Purpose: curl FTP read data callback: receive data from remote
+* Purpose: curl FTP read data callback: send data to remote
 * Input  : buffer   - buffer for data
 *          size     - size of an element
 *          n        - number of elements
@@ -355,14 +355,13 @@ LOCAL size_t curlFTPReadDataCallback(void   *buffer,
   {
     bytesSent = 0;
   }
-//fprintf(stderr,"%s, %d: bytesSent=%d\n",__FILE__,__LINE__,bytesSent);
 
   return bytesSent;
 }
 
 /***********************************************************************\
 * Name   : curlFTPWriteDataCallback
-* Purpose: curl FTP write data callback: send data to remote
+* Purpose: curl FTP write data callback: receive data from remote
 * Input  : buffer   - buffer with data
 *          size     - size of an element
 *          n        - number of elements

@@ -5752,20 +5752,23 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   // init file system
   bool isSupportedFileSystem = FALSE;
   FileSystemHandle fileSystemHandle;
-  if (FileSystem_init(&fileSystemHandle,deviceName) == ERROR_NONE)
+  if (!createInfo->jobOptions->rawImagesFlag)
   {
-    if (ARRAY_FIND(SUPPORTED_FILE_SYSTEM_TYPES,
-                   SIZE_OF_ARRAY(SUPPORTED_FILE_SYSTEM_TYPES),
-                   i,
-                   fileSystemHandle.type == SUPPORTED_FILE_SYSTEM_TYPES[i]
-                  )
-       )
+    if (FileSystem_init(&fileSystemHandle,deviceName) == ERROR_NONE)
     {
-      isSupportedFileSystem = TRUE;
-    }
-    else
-    {
-      FileSystem_done(&fileSystemHandle);
+      if (ARRAY_FIND(SUPPORTED_FILE_SYSTEM_TYPES,
+                     SIZE_OF_ARRAY(SUPPORTED_FILE_SYSTEM_TYPES),
+                     i,
+                     fileSystemHandle.type == SUPPORTED_FILE_SYSTEM_TYPES[i]
+                    )
+         )
+      {
+        isSupportedFileSystem = TRUE;
+      }
+      else
+      {
+        FileSystem_done(&fileSystemHandle);
+      }
     }
   }
 
@@ -5830,6 +5833,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       }
 
       String_delete(archiveEntryName);
+      if (isSupportedFileSystem) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
 
@@ -5950,8 +5954,10 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"ABORTED\n");
       (void)Archive_closeEntry(&archiveEntryInfo);
+      if (isSupportedFileSystem) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
+
       return error;
     }
     if (error != ERROR_NONE)
@@ -5969,6 +5975,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
+        if (isSupportedFileSystem) FileSystem_done(&fileSystemHandle);
         Device_close(&deviceHandle);
         fragmentDone(createInfo,deviceName);
 
@@ -5990,6 +5997,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
         }
 
         (void)Archive_closeEntry(&archiveEntryInfo);
+        if (isSupportedFileSystem) FileSystem_done(&fileSystemHandle);
         Device_close(&deviceHandle);
         fragmentDone(createInfo,deviceName);
 
@@ -6015,6 +6023,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
         createInfo->runningInfo.progress.done.size += fragmentSize;
       }
 
+      if (isSupportedFileSystem) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
 
@@ -6138,7 +6147,7 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   }
 
   // free resources
-  if (!createInfo->jobOptions->rawImagesFlag && isSupportedFileSystem)
+  if (isSupportedFileSystem)
   {
     FileSystem_done(&fileSystemHandle);
   }

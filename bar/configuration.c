@@ -2019,7 +2019,7 @@ LOCAL void initGlobalOptions(void)
 
   globalOptions.archiveFileMode                                 = ARCHIVE_FILE_MODE_STOP;
   globalOptions.restoreEntryMode                                = RESTORE_ENTRY_MODE_STOP;
-  globalOptions.sparseFilesFlag                                 = FALSE;
+  globalOptions.sparseFlag                                      = FALSE;
 
   globalOptions.testCreatedArchivesFlag                         = FALSE;
 
@@ -3048,6 +3048,47 @@ LOCAL bool cmdOptionParseDeprecatedStopOnError(void *variable, const char *name,
 }
 
 /***********************************************************************\
+* Name   : cmdOptionParseDeprecatedSparseFiles
+* Purpose: command line option call back for deprecated option
+*          stop-on-error
+* Input  : variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          defaultValue          - default config value
+*          maxErrorMessageLength - max. length of error message text
+*          userData              - user data
+* Output : errorMessage - error message text
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseDeprecatedSparseFiles(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
+{
+  assert(variable != NULL);
+
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+  UNUSED_VARIABLE(userData);
+
+  if (value != NULL)
+  {
+    (*(bool*)variable) = !(   (stringEqualsIgnoreCase(value,"1") == 0)
+                           || (stringEqualsIgnoreCase(value,"true") == 0)
+                           || (stringEqualsIgnoreCase(value,"on") == 0)
+                           || (stringEqualsIgnoreCase(value,"yes") == 0)
+                          );
+  }
+  else
+  {
+    (*(bool*)variable) = FALSE;
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : configValueParseConfigFile
 * Purpose: command line option call back for parsing configuration
 *          filename
@@ -3862,46 +3903,6 @@ LOCAL bool configValueDeprecatedMountDeviceParse(void *variable, const char *nam
 
   // free resources
   String_delete(string);
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueDeprecatedStopOnErrorParse
-* Purpose: config value option call back for deprecated stop-on-error
-* Input  : variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-*          userData              - user data
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueDeprecatedStopOnErrorParse(void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize, void *userData)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-  UNUSED_VARIABLE(userData);
-
-  if (value != NULL)
-  {
-    (*(bool*)variable) = !(   (stringEqualsIgnoreCase(value,"1") == 0)
-                           || (stringEqualsIgnoreCase(value,"true") == 0)
-                           || (stringEqualsIgnoreCase(value,"on") == 0)
-                           || (stringEqualsIgnoreCase(value,"yes") == 0)
-                          );
-  }
-  else
-  {
-    (*(bool*)variable) = FALSE;
-  }
 
   return TRUE;
 }
@@ -8389,7 +8390,7 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_SELECT       ("restore-entry-mode",                0,  1,2,globalOptions.restoreEntryMode,                      BAR_COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES,                "restore entry mode","mode","(default)"                                    ),
   // Note: shortcut for --restore-entry-mode=overwrite
   CMD_OPTION_SPECIAL      ("overwrite-files",                   0,  0,2,&globalOptions.restoreEntryMode,                     cmdOptionParseRestoreEntryModeOverwrite,NULL,0,              "overwrite existing entries on restore",""                                 ),
-  CMD_OPTION_BOOLEAN      ("sparse-files",                      0,  1,2,globalOptions.sparseFilesFlag,                                                                                    "create sparse files"                                                      ),
+  CMD_OPTION_BOOLEAN      ("sparse",                            0,  1,2,globalOptions.sparseFlag,                                                                                         "create sparse files/images/hardlinks"                                     ),
   CMD_OPTION_BOOLEAN      ("wait-first-volume",                 0,  1,2,globalOptions.waitFirstVolumeFlag,                                                                                "wait for first volume"                                                    ),
   CMD_OPTION_BOOLEAN      ("no-signature",                      0  ,1,2,globalOptions.noSignatureFlag,                                                                                    "do not create signatures"                                                 ),
   CMD_OPTION_BOOLEAN      ("skip-verify-signatures",            0,  0,2,globalOptions.skipVerifySignaturesFlag,                                                                           "do not verify signatures of archives"                                     ),
@@ -8425,6 +8426,7 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_DEPRECATED   ("server-jobs-directory",             0,  1,1,&globalOptions.jobsDirectory,                        CmdOption_parseDeprecatedStringOption,NULL,1,                "jobs-directory"                                                           ),
   CMD_OPTION_DEPRECATED   ("mount-device",                      0,  1,2,&globalOptions.mountList,                            cmdOptionParseDeprecatedMountDevice,NULL,1,                  "device to mount/unmount"                                                  ),
   CMD_OPTION_DEPRECATED   ("stop-on-error",                     0,  1,2,&globalOptions.noStopOnErrorFlag,                    cmdOptionParseDeprecatedStopOnError,NULL,0,                  "no-stop-on-error"                                                         ),
+  CMD_OPTION_DEPRECATED   ("sparse-files",                      0,  1,2,&globalOptions.sparseFlag,                           cmdOptionParseDeprecatedSparseFiles,NULL,0,                  "create sparse files/images/hardlinks"                                     ),
 
   // only for debugging/testing
   #ifndef NDEBUG
@@ -8962,7 +8964,7 @@ const ConfigValue BAR_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_BOOLEAN           ("no-fragments-check",               &globalOptions.noFragmentsCheckFlag,-1,                        "yes|no"),
   CONFIG_VALUE_SELECT            ("archive-file-mode",                &globalOptions.archiveFileMode,-1,                             CONFIG_VALUE_ARCHIVE_FILE_MODES,"<mode>"),
   CONFIG_VALUE_SELECT            ("restore-entry-mode",               &globalOptions.restoreEntryMode,-1,                            CONFIG_VALUE_RESTORE_ENTRY_MODES,"<mode>"),
-  CONFIG_VALUE_BOOLEAN           ("sparse-files",                     &globalOptions.sparseFilesFlag,-1,                             "yes|no"),
+  CONFIG_VALUE_BOOLEAN           ("sparse",                           &globalOptions.sparseFlag,-1,                                  "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("wait-first-volume",                &globalOptions.waitFirstVolumeFlag,-1,                         "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("no-signature",                     &globalOptions.noSignatureFlag,-1,                             "yes|no"),
   CONFIG_VALUE_BOOLEAN           ("skip-verify-signatures",           &globalOptions.skipVerifySignaturesFlag,-1,                    "yes|no"),
@@ -8993,7 +8995,8 @@ const ConfigValue BAR_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_DEPRECATED        ("overwrite-files",                  &globalOptions.restoreEntryMode,-1,                            configValueDeprecatedRestoreEntryModeOverwriteParse,NULL,"restore-entry-mode=overwrite",TRUE),
   CONFIG_VALUE_DEPRECATED        ("mount-device",                     &globalOptions.mountList,-1,                                   configValueDeprecatedMountDeviceParse,NULL,"mount",TRUE),
   CONFIG_VALUE_DEPRECATED        ("schedule",                         NULL,-1,                                                       NULL,NULL,NULL,TRUE),
-  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                    &globalOptions.noStopOnErrorFlag,-1,                           configValueDeprecatedStopOnErrorParse,NULL,"no-stop-on-error",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                    &globalOptions.noStopOnErrorFlag,-1,                           ConfigValue_parseDeprecatedBoolean,NULL,"no-stop-on-error",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("sparse-files",                     &globalOptions.sparseFlag,-1,                                  ConfigValue_parseDeprecatedBoolean,NULL,"sparse",TRUE),
 
   // ignored
 );
@@ -9161,7 +9164,8 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   // Note: restore-entry-mode=overwrite
   CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",           JobNode,job.options.restoreEntryMode,            configValueDeprecatedRestoreEntryModeOverwriteParse,NULL,"restore-entry-mode=overwrite",TRUE),
   CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",              JobNode,job.options.mountList,                   configValueDeprecatedMountDeviceParse,NULL,"mount",TRUE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           configValueDeprecatedStopOnErrorParse,NULL,"no-stop-on-error",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           ConfigValue_parseDeprecatedBoolean,NULL,"no-stop-on-error",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("sparse-files",              JobNode,job.options.noStopOnErrorFlag,           ConfigValue_parseDeprecatedBoolean,NULL,"sparse",TRUE),
 
   // ignored
   CONFIG_VALUE_IGNORE             ("schedule",                                                                   NULL,TRUE),
