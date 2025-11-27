@@ -47,6 +47,8 @@ RUN yum -y install \
   libblkid-devel \
   libtool \
   libuuid-devel \
+  systemd-devel \
+  libcap-devel \
   m4 \
   make \
   mariadb \

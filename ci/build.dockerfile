@@ -69,6 +69,7 @@ RUN apt-get -y --fix-missing install \
   libpq-dev \
   libinih-dev \
   libsystemd-dev \
+  libcap-dev \
   openjdk-8-jdk \
   openjdk-8-jre \
   cmake \

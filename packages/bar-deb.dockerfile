@@ -53,6 +53,8 @@ RUN apt-get -y install \
   libc6 \
   libc6-dev \
   libinih-dev \
+  libsystemd-dev \
+  libcap-dev \
   m4 \
   make \
   mariadb-client \
