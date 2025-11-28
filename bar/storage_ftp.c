@@ -45,7 +45,6 @@
 // different timeouts [ms]
 #define FTP_TIMEOUT (30*1000)
 
-
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
@@ -390,8 +389,6 @@ LOCAL size_t curlFTPWriteDataCallback(const void *buffer,
     bytesReceived = n*size;
 
     memCopyFast(storageHandle->ftp.buffer,bytesReceived,buffer,bytesReceived);
-//fprintf(stderr,"%s, %d: curlFTPWriteDataCallback size=%d n=%d bytesReceived=%d %x\n",__FILE__,__LINE__,size,n,bytesReceived,bytesReceived);
-//debugDumpMemory(storageHandle->ftp.buffer,128,0);
     storageHandle->ftp.buffer          = (byte*)storageHandle->ftp.buffer+bytesReceived;
     storageHandle->ftp.transferedBytes += (ulong)bytesReceived;
   }
@@ -1592,6 +1589,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     }
     if (curlCode == CURLE_OK)
     {
+      // Note: curl buffer size _must_ not exceed BUFFER_SIZE
+      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_BUFFERSIZE,BUFFER_SIZE);
+    }
+    if (curlCode == CURLE_OK)
+    {
       curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_UPLOAD,1L);
     }
     if (curlCode == CURLE_OK)
@@ -1772,6 +1774,11 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_WRITEDATA,storageHandle);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      // Note: curl buffer size _must_ not exceed BUFFER_SIZE
+      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_BUFFERSIZE,BUFFER_SIZE);
     }
     if (curlCode != CURLE_OK)
     {
@@ -1956,6 +1963,9 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
                && (runningHandles > 0)
               )
         {
+          // unpause (ignore possible errors)
+          (void)curl_easy_pause(storageHandle->ftp.curlHandle, CURLPAUSE_CONT);
+
           // wait for socket
           error = waitCurlSocketRead(storageHandle->ftp.curlMultiHandle);
           if (error != ERROR_NONE)
@@ -1969,7 +1979,8 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           {
             curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
           }
-          while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+          while (   (storageHandle->ftp.transferedBytes == 0L)
+                 && (curlmCode == CURLM_CALL_MULTI_PERFORM)
                  && (runningHandles > 0)
                 );
           if (curlmCode != CURLM_OK)
@@ -2002,6 +2013,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           }
           break;
         }
+
         storageHandle->ftp.readAheadBuffer.offset = storageHandle->ftp.index;
         storageHandle->ftp.readAheadBuffer.length = storageHandle->ftp.transferedBytes;
 
@@ -2026,6 +2038,9 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
                && (runningHandles > 0)
               )
         {
+          // unpause (ignore possible errors)
+          (void)curl_easy_pause(storageHandle->ftp.curlHandle, CURLPAUSE_CONT);
+
           // wait for socket
           error = waitCurlSocketRead(storageHandle->ftp.curlMultiHandle);
           if (error != ERROR_NONE)
@@ -2039,7 +2054,8 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           {
             curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
           }
-          while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+          while (   (storageHandle->ftp.transferedBytes == 0L)
+                 && (curlmCode == CURLM_CALL_MULTI_PERFORM)
                  && (runningHandles > 0)
                 );
           if (curlmCode != CURLM_OK)
@@ -2072,6 +2088,7 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
           }
           break;
         }
+
         bytesAvail = storageHandle->ftp.transferedBytes;
 
         // adjust buffer, bufferSize, bytes read, index

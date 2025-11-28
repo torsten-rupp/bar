@@ -259,12 +259,6 @@ LOCAL Errors waitCurlSocketRead(CURLM *curlMultiHandle)
   long curlTimeout;
   curl_multi_timeout(curlMultiHandle,&curlTimeout);
 
-#if 0
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
-CURLcode c = curl_easy_pause(curlMultiHandle,CURLPAUSE_RECV|CURLPAUSE_CONT);
-fprintf(stderr,"%s:%d: c=%d\n",__FILE__,__LINE__,c);
-#endif
-
   // wait
   int fdCount = 0;
   CURLMcode curlmCode = curl_multi_poll(curlMultiHandle,
