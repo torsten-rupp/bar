@@ -6770,11 +6770,11 @@ ifeq ($(call functionHasDebugFunctions,$(TEST_BAR)),1)
     $(call functionServerCommandBatch,ENTRY_LIST_CLEAR); \
     \
     $(call functionServerCommandBatch,INDEX_STORAGE_ADD name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
-    $(call functionServerCommandBatch,INDEX_REMOVE state=* storageId=1); \
+    $(call functionServerCommandBatch,INDEX_REMOVE state=* storageId=`$(ECHO) 1*16+3|$(BC)`); \
     $(call functionServerCommandBatch,INDEX_STORAGE_ADD name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
     $(call functionServerCommandBatch,INDEX_REMOVE state=* name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
     $(call functionServerCommandBatch,INDEX_STORAGE_ADD name=$(BAR_STORAGE)/$(BAR_FILE).bar); \
-    $(call functionServerCommandBatch,STORAGE_DELETE storageId=3); \
+    $(call functionServerCommandBatch,STORAGE_DELETE storageId=`$(ECHO) 3*16+3|$(BC)`); \
     $(SLEEP) 2; \
     $(call functionServerCommandBatch,INDEX_INFO); \
     \
