@@ -444,7 +444,7 @@ typedef struct
       // scp storage
       struct
       {
-        String              archiveName;
+        String              fileName;
         SocketHandle        socketHandle;
         LIBSSH2_SEND_FUNC((*oldSendCallback));                // libssh2 callback to send data (used to track sent bytes)
         LIBSSH2_RECV_FUNC((*oldReceiveCallback));             // libssh2 callback to receive data (used to track received bytes)
@@ -460,7 +460,7 @@ typedef struct
           byte   *data;
           uint64 offset;
           ulong  length;
-        }               readAheadBuffer;
+        }                   readAheadBuffer;
       } scp;
     #endif /* HAVE_SSH2 */
 

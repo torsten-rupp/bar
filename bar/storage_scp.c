@@ -931,6 +931,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
 
   #ifdef HAVE_SSH2
     // init variables
+    storageHandle->scp.fileName               = String_duplicate(fileName);
     storageHandle->scp.channel                = NULL;
     storageHandle->scp.oldSendCallback        = NULL;
     storageHandle->scp.oldReceiveCallback     = NULL;
@@ -1132,17 +1133,17 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
 }
 
 LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
-                             ConstString   archiveName
+                             ConstString   fileName
                             )
 {
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP);
-  assert(!String_isEmpty(archiveName));
+  assert(!String_isEmpty(fileName));
 
   #ifdef HAVE_SSH2
     // init variables
-    storageHandle->scp.archiveName            = String_duplicate(archiveName);
+    storageHandle->scp.fileName               = String_duplicate(fileName);
     storageHandle->scp.oldSendCallback        = NULL;
     storageHandle->scp.oldReceiveCallback     = NULL;
     storageHandle->scp.totalSentBytes         = 0LL;
@@ -1187,7 +1188,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
     if (error != ERROR_NONE)
     {
       free(storageHandle->scp.readAheadBuffer.data);
-      String_delete(storageHandle->scp.archiveName);
+      String_delete(storageHandle->scp.fileName);
       return error;
     }
     libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->scp.socketHandle),READ_TIMEOUT);
@@ -1224,7 +1225,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
       if (ssh2ErrorCode == 0)
       {
         storageHandle->scp.sftpHandle = libssh2_sftp_open(storageHandle->scp.sftp,
-                                                          String_cString(archiveName),
+                                                          String_cString(fileName),
                                                           LIBSSH2_FXF_READ,
                                                           0
                                                          );
@@ -1276,7 +1277,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
       // open channel and file for reading, get file size
       struct stat fileInfo;
       storageHandle->scp.channel = libssh2_scp_recv2(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                     String_cString(archiveName),
+                                                     String_cString(fileName),
                                                      &fileInfo
                                                     );
       if (storageHandle->scp.channel != NULL)
@@ -1309,7 +1310,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
       SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,storageHandle->scp.oldSendCallback);
       Network_disconnect(&storageHandle->scp.socketHandle);
       free(storageHandle->scp.readAheadBuffer.data);
-      String_delete(storageHandle->scp.archiveName);
+      String_delete(storageHandle->scp.fileName);
       return error;
     }
 
@@ -1404,7 +1405,7 @@ LOCAL void StorageSCP_close(StorageHandle *storageHandle)
     SCP_SET_RECEIVE_CALLBACK(&storageHandle->scp.socketHandle,storageHandle->scp.oldReceiveCallback);
     SCP_SET_SEND_CALLBACK   (&storageHandle->scp.socketHandle,storageHandle->scp.oldSendCallback);
     Network_disconnect(&storageHandle->scp.socketHandle);
-    String_delete(storageHandle->scp.archiveName);
+    String_delete(storageHandle->scp.fileName);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_SSH2 */
@@ -2035,7 +2036,7 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
 
         // reopen channel
         storageHandle->scp.channel = libssh2_scp_recv2(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                       String_cString(storageHandle->scp.archiveName),
+                                                       String_cString(storageHandle->scp.fileName),
                                                        NULL  // fileInfo
                                                       );
         if (storageHandle->scp.channel == NULL)

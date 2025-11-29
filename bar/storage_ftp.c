@@ -1590,7 +1590,8 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
     if (curlCode == CURLE_OK)
     {
       // Note: curl buffer size _must_ not exceed BUFFER_SIZE
-      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_BUFFERSIZE,BUFFER_SIZE);
+      long n = BUFFER_SIZE;
+      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_BUFFERSIZE,n);
     }
     if (curlCode == CURLE_OK)
     {
@@ -1778,7 +1779,8 @@ LOCAL Errors StorageFTP_open(StorageHandle *storageHandle,
     if (curlCode == CURLE_OK)
     {
       // Note: curl buffer size _must_ not exceed BUFFER_SIZE
-      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_BUFFERSIZE,BUFFER_SIZE);
+      long n = BUFFER_SIZE;
+      curlCode = curl_easy_setopt(storageHandle->ftp.curlHandle,CURLOPT_BUFFERSIZE,n);
     }
     if (curlCode != CURLE_OK)
     {
