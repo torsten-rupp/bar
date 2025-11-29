@@ -2080,18 +2080,40 @@ CALLBACK_(NULL,NULL)//                         CALLBACK_(storageDirectoryListHan
     Password_set(&defaultSMBPassword,&storageDirectoryListHandle->storageSpecifier.password);
 
     // connect share
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+storageDirectoryListHandle->smb.context=NULL;
     error = smb2ConnectShare(&storageDirectoryListHandle->smb.context,
                              storageDirectoryListHandle->storageSpecifier.hostName,
                              storageDirectoryListHandle->storageSpecifier.userName,
                              &storageDirectoryListHandle->storageSpecifier.password,
                              shareName
                             );
+fprintf(stderr,"%s:%d: error=%s %p\n",__FILE__,__LINE__,Error_getText(error),storageDirectoryListHandle->smb.context);
     if (error != ERROR_NONE)
     {
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->smb.context,{ smb2DisconnectShare(storageDirectoryListHandle->smb.context); });
+
+    // check if directory exists (Note: needed, because smb2_opendir() cannot handle not existing entries?)
+    struct smb2_stat_64 smbStatus;
+    int smbErrorCode = smb2_stat(storageDirectoryListHandle->smb.context,
+                                 String_cString(path),
+                                 &smbStatus
+                                );
+    if (smbErrorCode != 0)
+    {
+      error = ERRORX_(SMB,(uint)(-smbErrorCode),"%s",strerror(-smbErrorCode));
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    if (smbStatus.smb2_type != SMB2_TYPE_DIRECTORY)
+    {
+      error = ERRORX_(SMB,0,"not a directory");
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
 
     // open directory for reading
 	  storageDirectoryListHandle->smb.directory = smb2_opendir(storageDirectoryListHandle->smb.context,
