@@ -977,13 +977,13 @@ LOCAL Errors loadOpticalVolume(const StorageInfo *storageInfo)
   Errors error = ERROR_NONE;
 
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-  const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-  if (debugEmulateBlockDevice != NULL)
-  {
-    deviceName = debugEmulateBlockDevice;
-  }
-#endif
+  #ifndef NDEBUG
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
+    {
+      deviceName = debugEmulateBlockDevice;
+    }
+  #endif
 
   if (String_isEmpty(storageInfo->opticalDisk.write.loadVolumeCommand))
   {
@@ -1083,13 +1083,13 @@ LOCAL Errors unloadOpticalVolume(const StorageInfo *storageInfo)
   Errors error = ERROR_NONE;
 
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-  const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-  if (debugEmulateBlockDevice != NULL)
-  {
-    deviceName = debugEmulateBlockDevice;
-  }
-#endif
+  #ifndef NDEBUG
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
+    {
+      deviceName = debugEmulateBlockDevice;
+    }
+  #endif
 
   if (String_isEmpty(storageInfo->opticalDisk.write.unloadVolumeCommand))
   {
@@ -1189,13 +1189,13 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
                                     )
 {
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-  const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-  if (debugEmulateBlockDevice != NULL)
-  {
-    deviceName = debugEmulateBlockDevice;
-  }
-#endif
+  #ifndef NDEBUG
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
+    {
+      deviceName = debugEmulateBlockDevice;
+    }
+  #endif
 
   if (   (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
       || (storageInfo->volumeState == STORAGE_VOLUME_STATE_LOADED)
@@ -1371,18 +1371,18 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
     (void)loadOpticalVolume(storageInfo);
 
     const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-    if (debugEmulateBlockDevice != NULL)
-    {
-      deviceName = debugEmulateBlockDevice;
-    }
-#endif
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        deviceName = debugEmulateBlockDevice;
+      }
+    #endif
 
     printInfo(1,"Blank volume #%u...",storageInfo->opticalDisk.write.number);
     if (String_isEmpty(storageInfo->opticalDisk.write.blankCommand))
     {
-#ifdef HAVE_BURN
+      #ifdef HAVE_BURN
         #ifndef NDEBUG
         if (debugEmulateBlockDevice == NULL)
         {
@@ -1544,13 +1544,13 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
   Errors error = ERROR_NONE;
 
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-  const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-  if (debugEmulateBlockDevice != NULL)
-  {
-    deviceName = debugEmulateBlockDevice;
-  }
-#endif
+  #ifndef NDEBUG
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
+    {
+      deviceName = debugEmulateBlockDevice;
+    }
+  #endif
 
   // init macros
   uint j = Thread_getNumberOfCores();
@@ -2104,13 +2104,13 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
   (void)loadOpticalVolume(storageInfo);
 
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-  const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-  if (debugEmulateBlockDevice != NULL)
-  {
-    deviceName = debugEmulateBlockDevice;
-  }
-#endif
+  #ifndef NDEBUG
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
+    {
+      deviceName = debugEmulateBlockDevice;
+    }
+  #endif
 
   printInfo(1,"Write image to volume #%u...",storageInfo->opticalDisk.write.number);
   if (String_isEmpty(storageInfo->opticalDisk.write.writeImageCommand))
@@ -2290,13 +2290,13 @@ LOCAL Errors writeDirectory(StorageInfo *storageInfo, ConstString archiveName)
   (void)loadOpticalVolume(storageInfo);
 
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-  const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-  if (debugEmulateBlockDevice != NULL)
-  {
-    deviceName = debugEmulateBlockDevice;
-  }
-#endif
+  #ifndef NDEBUG
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
+    {
+      deviceName = debugEmulateBlockDevice;
+    }
+  #endif
 
   printInfo(1,"Write volume #%u with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
   if (String_isEmpty(storageInfo->opticalDisk.write.writeCommand))
@@ -2523,13 +2523,13 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
     if (error == ERROR_NONE)
     {
       const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-      if (debugEmulateBlockDevice != NULL)
-      {
-        deviceName = debugEmulateBlockDevice;
-      }
-#endif
+      #ifndef NDEBUG
+        const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+        if (debugEmulateBlockDevice != NULL)
+        {
+          deviceName = debugEmulateBlockDevice;
+        }
+      #endif
       TimeoutInfo timeoutInfo;
       iso9660_t   *iso9660Handle;
       Misc_initTimeout(&timeoutInfo,60*MS_PER_SECOND);
@@ -2667,7 +2667,7 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
     free(buffer1);
     free(buffer0);
   #else
-    error == ERROR_FUNCTION_NOT_SUPPORTED;
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif
 
   updateVolumeDone(storageInfo,1,0.0);
@@ -2725,13 +2725,13 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
     printInfo(1,"Write pre-processing...");
 
     const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-    if (debugEmulateBlockDevice != NULL)
-    {
-      deviceName = debugEmulateBlockDevice;
-    }
-#endif
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        deviceName = debugEmulateBlockDevice;
+      }
+    #endif
 
     // init macros
     uint j = Thread_getNumberOfCores();
@@ -2984,13 +2984,13 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     printInfo(1,"Write post-processing...");
 
     const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-    if (debugEmulateBlockDevice != NULL)
-    {
-      deviceName = debugEmulateBlockDevice;
-    }
-#endif
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        deviceName = debugEmulateBlockDevice;
+      }
+    #endif
 
     // init macros
     uint j = Thread_getNumberOfCores();
@@ -3085,13 +3085,13 @@ LOCAL bool StorageOptical_isFile(const StorageInfo *storageInfo, ConstString arc
 
   #ifdef HAVE_ISO9660
     const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-    if (debugEmulateBlockDevice != NULL)
-    {
-      deviceName = debugEmulateBlockDevice;
-    }
-#endif
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        deviceName = debugEmulateBlockDevice;
+      }
+    #endif
 
     // check if device exists
     if (stringIsEmpty(deviceName))
@@ -3123,6 +3123,9 @@ LOCAL bool StorageOptical_isFile(const StorageInfo *storageInfo, ConstString arc
 
     return isFile;
   #else /* not HAVE_ISO9660 */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
     return FALSE;
   #endif /* HAVE_ISO9660 */
 }
@@ -3135,13 +3138,13 @@ LOCAL bool StorageOptical_isDirectory(const StorageInfo *storageInfo, ConstStrin
 
   #ifdef HAVE_ISO9660
     const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
-#ifndef NDEBUG
-    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-    if (debugEmulateBlockDevice != NULL)
-    {
-      deviceName = debugEmulateBlockDevice;
-    }
-#endif
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        deviceName = debugEmulateBlockDevice;
+      }
+    #endif
 
     // check if device exists
     if (stringIsEmpty(deviceName))
@@ -3173,6 +3176,9 @@ LOCAL bool StorageOptical_isDirectory(const StorageInfo *storageInfo, ConstStrin
 
     return isFile;
   #else /* not HAVE_ISO9660 */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
     return FALSE;
   #endif /* HAVE_ISO9660 */
 }

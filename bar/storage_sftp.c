@@ -2060,6 +2060,10 @@ LOCAL Errors StorageSFTP_getFileInfo(FileInfo    *fileInfo,
       }
     }
   #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(fileInfo);
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif /* HAVE_SSH2 */
   assert(error != ERROR_UNKNOWN);

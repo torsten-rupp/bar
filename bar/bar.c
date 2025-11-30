@@ -1034,36 +1034,6 @@ LOCAL void outputConsoleNext(FILE *file, ConstString string)
 }
 
 /***********************************************************************\
-* Name   : lockConsole
-* Purpose: lock console
-* Input  : -
-* Output : -
-* Return : TRUE iff locked
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool lockConsole(void)
-{
-  return Semaphore_lock(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-}
-
-/***********************************************************************\
-* Name   : unlockConsole
-* Purpose: unlock console
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void unlockConsole(void)
-{
-  assert(Semaphore_isLocked(&consoleLock));
-
-  Semaphore_unlock(&consoleLock);
-}
-
-/***********************************************************************\
 * Name   : saveConsole
 * Purpose: save and clear current console line
 * Input  : file - stdout or stderr

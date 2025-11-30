@@ -647,15 +647,12 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle          *passwordH
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
-  SEMAPHORE_LOCKED_DO(&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    passwordHandle->archiveHandle           = archiveHandle;
-    passwordHandle->jobCryptPassword        = &jobOptions->cryptPassword;
-    passwordHandle->passwordMode            = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
-    passwordHandle->passwordNode            = decryptPasswordList.head;
-    passwordHandle->getNamePasswordFunction = getNamePasswordFunction;
-    passwordHandle->getNamePasswordUserData = getNamePasswordUserData;
-  }
+  passwordHandle->archiveHandle           = archiveHandle;
+  passwordHandle->jobCryptPassword        = &jobOptions->cryptPassword;
+  passwordHandle->passwordMode            = (passwordMode != PASSWORD_MODE_DEFAULT) ? passwordMode : jobOptions->cryptPasswordMode;
+  passwordHandle->passwordNode            = decryptPasswordList.head;
+  passwordHandle->getNamePasswordFunction = getNamePasswordFunction;
+  passwordHandle->getNamePasswordUserData = getNamePasswordUserData;
 
   return getNextDecryptPassword(passwordHandle);
 }
