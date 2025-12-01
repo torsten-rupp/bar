@@ -169,22 +169,23 @@ LOCAL int lz4CompressBlock(CompressInfo *compressInfo,
   if (isHC(compressInfo->lz4.compressionLevel))
   {
     #ifdef LZ4_STREAM
-      result = LZ4_compressHC_limitedOutput_continue(compressInfo->stream.compressHC,
-                                                     (const char*)inputBuffer,
-                                                     (char*)outputBuffer,
-                                                     (int)inputBufferLength,
-                                                     (int)outputBufferSize
-                                                    );
+      result = LZ4_compress_HC_continue(compressInfo->stream.compressHC,
+                                        (const char*)inputBuffer,
+                                        (char*)outputBuffer,
+                                        (int)inputBufferLength,
+                                        (int)outputBufferSize
+                                       );
       if (result <= 0)
       {
         return LZ4_FAIL;
       }
     #else /* not LZ4_STREAM */
-      result = LZ4_compressHC_limitedOutput((const char*)inputBuffer,
-                                            (char*)outputBuffer,
-                                            (int)inputBufferLength,
-                                            (int)outputBufferSize
-                                           );
+      result = LZ4_compress_HC((const char*)inputBuffer,
+                               (char*)outputBuffer,
+                               (int)inputBufferLength,
+                               (int)outputBufferSize,
+                               compressInfo->lz4.compressionLevel
+                              );
       if (result <= 0)
       {
         return LZ4_FAIL;
@@ -194,12 +195,13 @@ LOCAL int lz4CompressBlock(CompressInfo *compressInfo,
   else
   {
     #ifdef LZ4_STREAM
-      result = LZ4_compress_limitedOutput_continue(compressInfo->stream.compress,
-                                                   (const char*)inputBuffer,
-                                                   (char*)outputBuffer,
-                                                   (int)inputBufferLength,
-                                                   (int)outputBufferSize
-                                                  );
+      result = LZ4_compress_fast_continue(compressInfo->stream.compress,
+                                          (const char*)inputBuffer,
+                                          (char*)outputBuffer,
+                                          (int)inputBufferLength,
+                                          (int)outputBufferSize,
+                                          LZ4_ACCELERATION_DEFAULT
+                                         );
       if (result <= 0)
       {
        return LZ4_FAIL;
@@ -210,11 +212,11 @@ LOCAL int lz4CompressBlock(CompressInfo *compressInfo,
       */
       LZ4_saveDict((LZ4_stream_t*)handle,(char*)dictionaryBuffer,LZ4_DICTIONARY_BUFFER_SIZE);
     #else /* not LZ4_STREAM */
-      result = LZ4_compress_limitedOutput((const char*)inputBuffer,
-                                          (char*)outputBuffer,
-                                          (int)inputBufferLength,
-                                          (int)outputBufferSize
-                                         );
+      result = LZ4_compress_default((const char*)inputBuffer,
+                                    (char*)outputBuffer,
+                                    (int)inputBufferLength,
+                                    (int)outputBufferSize
+                                   );
       if (result <= 0)
       {
        return LZ4_FAIL;
