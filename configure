@@ -10471,9 +10471,9 @@ fi
 
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing sd_id128_get_machine" >&5
-printf %s "checking for static library containing sd_id128_get_machine... " >&6; }
-if test ${ac_cv_search_static_sd_id128_get_machine+y}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing sd_notify" >&5
+printf %s "checking for static library containing sd_notify... " >&6; }
+if test ${ac_cv_search_static_sd_notify+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
@@ -10482,22 +10482,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in systemd ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in systemd cap; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
-`if test -z ""; then echo "extern void sd_id128_get_machine();"; fi`
-                                         return (int)sd_id128_get_machine;
+`if test -z ""; then echo "extern void sd_notify();"; fi`
+                                       return (int)sd_notify;
 
 
   ;
@@ -10507,17 +10513,16 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_static_sd_id128_get_machine=$ac_result; break
+  ac_cv_search_static_sd_notify=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_static_sd_id128_get_machine+y}
+      if test ${ac_cv_search_static_sd_notify+y}
 then :
 
 else $as_nop
-  ac_cv_search_static_sd_id128_get_machine=no
+  ac_cv_search_static_sd_notify=no
 fi
 
             LIBS=$ac_func_search_static_libraries_save_LIBS
@@ -10525,76 +10530,14 @@ fi
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_sd_id128_get_machine" >&5
-printf "%s\n" "$ac_cv_search_static_sd_id128_get_machine" >&6; }
-  ac_result=$ac_cv_search_static_sd_id128_get_machine
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_sd_notify" >&5
+printf "%s\n" "$ac_cv_search_static_sd_notify" >&6; }
+  ac_result=$ac_cv_search_static_sd_notify
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES systemd"
-fi
-
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing cap_get_flag" >&5
-printf %s "checking for static library containing cap_get_flag... " >&6; }
-if test ${ac_cv_search_static_cap_get_flag+y}
-then :
-  printf %s "(cached) " >&6
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES systemd cap"
 else $as_nop
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      for ac_library in cap ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void cap_get_flag();"; fi`
-                                         return (int)cap_get_flag;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_static_cap_get_flag=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_static_cap_get_flag+y}
-then :
-
-else $as_nop
-  ac_cv_search_static_cap_get_flag=no
-fi
-
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_cap_get_flag" >&5
-printf "%s\n" "$ac_cv_search_static_cap_get_flag" >&6; }
-  ac_result=$ac_cv_search_static_cap_get_flag
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES cap"
+  as_fn_error $? "systemd/cap library not found" "$LINENO" 5
 fi
 
     ;;
@@ -10928,22 +10871,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in systemd ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in systemd; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void sd_id128_get_machine();"; fi`
-                                         return (int)sd_id128_get_machine;
+                                       return (int)sd_id128_get_machine;
 
 
   ;
@@ -10958,7 +10907,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_sd_id128_get_machine+y}
 then :
 
@@ -10977,70 +10925,6 @@ printf "%s\n" "$ac_cv_search_static_sd_id128_get_machine" >&6; }
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES systemd"
-fi
-
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing cap_get_flag" >&5
-printf %s "checking for static library containing cap_get_flag... " >&6; }
-if test ${ac_cv_search_static_cap_get_flag+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      for ac_library in cap ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void cap_get_flag();"; fi`
-                                         return (int)cap_get_flag;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_static_cap_get_flag=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_static_cap_get_flag+y}
-then :
-
-else $as_nop
-  ac_cv_search_static_cap_get_flag=no
-fi
-
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_cap_get_flag" >&5
-printf "%s\n" "$ac_cv_search_static_cap_get_flag" >&6; }
-  ac_result=$ac_cv_search_static_cap_get_flag
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES cap"
 fi
 
     ;;
@@ -11374,22 +11258,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in systemd ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in systemd; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void sd_id128_get_machine();"; fi`
-                                         return (int)sd_id128_get_machine;
+                                       return (int)sd_id128_get_machine;
 
 
   ;
@@ -11404,7 +11294,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_sd_id128_get_machine+y}
 then :
 
@@ -11425,70 +11314,6 @@ then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES systemd"
 fi
 
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing cap_get_flag" >&5
-printf %s "checking for static library containing cap_get_flag... " >&6; }
-if test ${ac_cv_search_static_cap_get_flag+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      for ac_library in cap ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
-        else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-        fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void cap_get_flag();"; fi`
-                                         return (int)cap_get_flag;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_static_cap_get_flag=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_static_cap_get_flag+y}
-then :
-
-else $as_nop
-  ac_cv_search_static_cap_get_flag=no
-fi
-
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_cap_get_flag" >&5
-printf "%s\n" "$ac_cv_search_static_cap_get_flag" >&6; }
-  ac_result=$ac_cv_search_static_cap_get_flag
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES cap"
-fi
-
     ;;
   windows*|mingw*)
 
@@ -11504,22 +11329,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in pthreadGC2 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in pthreadGC2; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo pthread.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "pthread.h"; then echo "extern void pthread_create();"; fi`
-                                         return (int)pthread_create;
+                                       return (int)pthread_create;
 
 
   ;
@@ -11534,7 +11365,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_pthread_create+y}
 then :
 
@@ -11568,22 +11398,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in wsock32 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in wsock32; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo winsock2.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "winsock2.h"; then echo "extern void WSAStartup();"; fi`
-                                         return (int)WSAStartup;
+                                       return (int)WSAStartup;
 
 
   ;
@@ -11598,7 +11434,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_WSAStartup+y}
 then :
 
@@ -11632,22 +11467,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in ws2_32 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in ws2_32; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo ws2tcpip.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "ws2tcpip.h"; then echo "extern void getaddrinfo();"; fi`
-                                         return (int)getaddrinfo;
+                                       return (int)getaddrinfo;
 
 
   ;
@@ -11662,7 +11503,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_getaddrinfo+y}
 then :
 
@@ -11696,22 +11536,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in rpcrt4 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in rpcrt4; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo windows.h rpcdce.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "windows.h rpcdce.h"; then echo "extern void UuidCreate();"; fi`
-                                         return (int)UuidCreate;
+                                       return (int)UuidCreate;
 
 
   ;
@@ -11726,7 +11572,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_UuidCreate+y}
 then :
 
@@ -11760,22 +11605,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in shell32 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in shell32; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo shlobj.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "shlobj.h"; then echo "extern void SHGetFolderPath();"; fi`
-                                         return (int)SHGetFolderPath;
+                                       return (int)SHGetFolderPath;
 
 
   ;
@@ -11790,7 +11641,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_SHGetFolderPath+y}
 then :
 
@@ -11824,22 +11674,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in ole32 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in ole32; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo combaseapi.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "combaseapi.h"; then echo "extern void CoTaskMemFree();"; fi`
-                                         return (int)CoTaskMemFree;
+                                       return (int)CoTaskMemFree;
 
 
   ;
@@ -11854,7 +11710,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_CoTaskMemFree+y}
 then :
 
@@ -11888,22 +11743,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in uuid ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in uuid; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void FOLDERID_LocalAppData();"; fi`
-                                         return (int)FOLDERID_LocalAppData;
+                                       return (int)FOLDERID_LocalAppData;
 
 
   ;
@@ -11918,7 +11779,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_FOLDERID_LocalAppData+y}
 then :
 
@@ -11952,22 +11812,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in shlwapi ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in shlwapi; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo shlwapi.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "shlwapi.h"; then echo "extern void PathRemoveFileSpec();"; fi`
-                                         return (int)PathRemoveFileSpec;
+                                       return (int)PathRemoveFileSpec;
 
 
   ;
@@ -11982,7 +11848,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_PathRemoveFileSpec+y}
 then :
 
@@ -12016,22 +11881,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in iphlpapi ssp ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in iphlpapi ssp; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo winsock2.h netioapi.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "winsock2.h netioapi.h"; then echo "extern void GetUnicastIpAddressTable();"; fi`
-                                         return (int)GetUnicastIpAddressTable;
+                                       return (int)GetUnicastIpAddressTable;
 
 
   ;
@@ -12046,7 +11917,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_GetUnicastIpAddressTable+y}
 then :
 
@@ -12080,22 +11950,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in ncrypt ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in ncrypt; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo windows.h ncrypt.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "windows.h ncrypt.h"; then echo "extern void NCryptOpenKey();"; fi`
-                                         return (int)NCryptOpenKey;
+                                       return (int)NCryptOpenKey;
 
 
   ;
@@ -12110,7 +11986,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_NCryptOpenKey+y}
 then :
 
@@ -12497,22 +12372,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in icuuc ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in icuuc; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void u_strToUpper();"; fi`
-                                         return (int)u_strToUpper;
+                                       return (int)u_strToUpper;
 
 
   ;
@@ -12527,7 +12408,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_u_strToUpper+y}
 then :
 
@@ -12698,22 +12578,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in icui18n ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in icui18n; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void uregex_open();"; fi`
-                                         return (int)uregex_open;
+                                       return (int)uregex_open;
 
 
   ;
@@ -12728,7 +12614,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_uregex_open+y}
 then :
 
@@ -12899,22 +12784,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in icudata ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in icudata; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void icudt();"; fi`
-                                         return (int)icudt;
+                                       return (int)icudt;
 
 
   ;
@@ -12929,7 +12820,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_icudt+y}
 then :
 
@@ -13174,22 +13064,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in z ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in z; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void zlibVersion();"; fi`
-                                         return (int)zlibVersion;
+                                       return (int)zlibVersion;
 
 
   ;
@@ -13204,7 +13100,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_zlibVersion+y}
 then :
 
@@ -13461,22 +13356,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in bz2 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in bz2; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void BZ2_bzCompressInit();"; fi`
-                                         return (int)BZ2_bzCompressInit;
+                                       return (int)BZ2_bzCompressInit;
 
 
   ;
@@ -13491,7 +13392,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_BZ2_bzCompressInit+y}
 then :
 
@@ -13789,22 +13689,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in lzma ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in lzma; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void lzma_easy_encoder();"; fi`
-                                         return (int)lzma_easy_encoder;
+                                       return (int)lzma_easy_encoder;
 
 
   ;
@@ -13819,7 +13725,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_lzma_easy_encoder+y}
 then :
 
@@ -14111,22 +14016,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in lzo ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in lzo; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void lzo1x_1_compress();"; fi`
-                                         return (int)lzo1x_1_compress;
+                                       return (int)lzo1x_1_compress;
 
 
   ;
@@ -14141,7 +14052,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_lzo1x_1_compress+y}
 then :
 
@@ -14398,22 +14308,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in lz4 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in lz4; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void LZ4_compress();"; fi`
-                                         return (int)LZ4_compress;
+                                       return (int)LZ4_compress;
 
 
   ;
@@ -14428,7 +14344,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_LZ4_compress+y}
 then :
 
@@ -14694,22 +14609,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in zstd ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in zstd; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void ZSTD_compress();"; fi`
-                                         return (int)ZSTD_compress;
+                                       return (int)ZSTD_compress;
 
 
   ;
@@ -14724,7 +14645,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_ZSTD_compress+y}
 then :
 
@@ -15226,22 +15146,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in gpg-error ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in gpg-error; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void gpg_strerror();"; fi`
-                                         return (int)gpg_strerror;
+                                       return (int)gpg_strerror;
 
 
   ;
@@ -15256,7 +15182,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_gpg_strerror+y}
 then :
 
@@ -15360,22 +15285,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in gcrypt ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in gcrypt; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void gcry_check_version();"; fi`
-                                         return (int)gcry_check_version;
+                                       return (int)gcry_check_version;
 
 
   ;
@@ -15390,7 +15321,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_gcry_check_version+y}
 then :
 
@@ -15856,22 +15786,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in ssh2 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in ssh2; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void libssh2_session_init_ex();"; fi`
-                                         return (int)libssh2_session_init_ex;
+                                       return (int)libssh2_session_init_ex;
 
 
   ;
@@ -15886,7 +15822,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_libssh2_session_init_ex+y}
 then :
 
@@ -16061,22 +15996,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in crypto ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in crypto; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void MD5_Init();"; fi`
-                                         return (int)MD5_Init;
+                                       return (int)MD5_Init;
 
 
   ;
@@ -16091,7 +16032,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_MD5_Init+y}
 then :
 
@@ -16325,22 +16265,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in crypt32 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in crypt32; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo windows.h wincrypt.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "windows.h wincrypt.h"; then echo "extern void CertGetCertificateContextProperty();"; fi`
-                                         return (int)CertGetCertificateContextProperty;
+                                       return (int)CertGetCertificateContextProperty;
 
 
   ;
@@ -16355,7 +16301,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_CertGetCertificateContextProperty+y}
 then :
 
@@ -16390,22 +16335,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in crypto ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in crypto; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void MD5_Init();"; fi`
-                                         return (int)MD5_Init;
+                                       return (int)MD5_Init;
 
 
   ;
@@ -16420,7 +16371,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_MD5_Init+y}
 then :
 
@@ -16686,22 +16636,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in idn2 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in idn2; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void idn2_check_version();"; fi`
-                                         return (int)idn2_check_version;
+                                       return (int)idn2_check_version;
 
 
   ;
@@ -16716,7 +16672,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_idn2_check_version+y}
 then :
 
@@ -17160,22 +17115,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in gnutls ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in gnutls; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void gnutls_global_init();"; fi`
-                                         return (int)gnutls_global_init;
+                                       return (int)gnutls_global_init;
 
 
   ;
@@ -17190,7 +17151,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_gnutls_global_init+y}
 then :
 
@@ -17295,22 +17255,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in tasn1 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in tasn1; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void asn1_length_der();"; fi`
-                                         return (int)asn1_length_der;
+                                       return (int)asn1_length_der;
 
 
   ;
@@ -17325,7 +17291,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_asn1_length_der+y}
 then :
 
@@ -18067,22 +18032,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in curl ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in curl; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void curl_global_init();"; fi`
-                                         return (int)curl_global_init;
+                                       return (int)curl_global_init;
 
 
   ;
@@ -18097,7 +18068,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_curl_global_init+y}
 then :
 
@@ -18201,22 +18171,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in cares ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in cares; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void ares_library_init();"; fi`
-                                         return (int)ares_library_init;
+                                       return (int)ares_library_init;
 
 
   ;
@@ -18231,7 +18207,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_ares_library_init+y}
 then :
 
@@ -18335,22 +18310,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in mxml ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in mxml; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void mxmlNewXML();"; fi`
-                                         return (int)mxmlNewXML;
+                                       return (int)mxmlNewXML;
 
 
   ;
@@ -18365,7 +18346,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_mxmlNewXML+y}
 then :
 
@@ -18574,22 +18554,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in ssl ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in ssl; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void SSL_new();"; fi`
-                                         return (int)SSL_new;
+                                       return (int)SSL_new;
 
 
   ;
@@ -18604,7 +18590,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_SSL_new+y}
 then :
 
@@ -18900,22 +18885,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in mariadb ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in mariadb; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void mysql_init();"; fi`
-                                         return (int)mysql_init;
+                                       return (int)mysql_init;
 
 
   ;
@@ -18930,7 +18921,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_mysql_init+y}
 then :
 
@@ -19488,22 +19478,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in pq ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in pq; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void pq_init();"; fi`
-                                         return (int)pq_init;
+                                       return (int)pq_init;
 
 
   ;
@@ -19518,7 +19514,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_pq_init+y}
 then :
 
@@ -19554,22 +19549,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in pgport ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in pgport; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void pg_printf();"; fi`
-                                         return (int)pg_printf;
+                                       return (int)pg_printf;
 
 
   ;
@@ -19584,7 +19585,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_pg_printf+y}
 then :
 
@@ -19620,22 +19620,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in pgcommon ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in pgcommon; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void scram_HMAC_init();"; fi`
-                                         return (int)scram_HMAC_init;
+                                       return (int)scram_HMAC_init;
 
 
   ;
@@ -19650,7 +19656,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_scram_HMAC_init+y}
 then :
 
@@ -19686,22 +19691,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in pgcommon_shlib ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in pgcommon_shlib; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void pg_encoding_to_char();"; fi`
-                                         return (int)pg_encoding_to_char;
+                                       return (int)pg_encoding_to_char;
 
 
   ;
@@ -19716,7 +19727,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_pg_encoding_to_char+y}
 then :
 
@@ -19752,22 +19762,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in pgtypes ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in pgtypes; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void PGTYPESnumeric_to_long();"; fi`
-                                         return (int)PGTYPESnumeric_to_long;
+                                       return (int)PGTYPESnumeric_to_long;
 
 
   ;
@@ -19782,7 +19798,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_PGTYPESnumeric_to_long+y}
 then :
 
@@ -20420,22 +20435,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in iso9660 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in iso9660; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void iso9660_open();"; fi`
-                                         return (int)iso9660_open;
+                                       return (int)iso9660_open;
 
 
   ;
@@ -20450,7 +20471,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_iso9660_open+y}
 then :
 
@@ -20937,22 +20957,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in smb2 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in smb2; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void smb2_init_context();"; fi`
-                                         return (int)smb2_init_context;
+                                       return (int)smb2_init_context;
 
 
   ;
@@ -20967,7 +20993,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_smb2_init_context+y}
 then :
 
@@ -21286,22 +21311,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in pcre_compile ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in pcre_compile; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void pcre();"; fi`
-                                         return (int)pcre;
+                                       return (int)pcre;
 
 
   ;
@@ -21316,7 +21347,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_pcre+y}
 then :
 
@@ -21613,22 +21643,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in par2 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in par2; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void par2create();"; fi`
-                                         return (int)par2create;
+                                       return (int)par2create;
 
 
   ;
@@ -21643,7 +21679,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_par2create+y}
 then :
 
@@ -21935,22 +21970,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in isofs ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in isofs; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void iso_image_new();"; fi`
-                                         return (int)iso_image_new;
+                                       return (int)iso_image_new;
 
 
   ;
@@ -21965,7 +22006,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_iso_image_new+y}
 then :
 
@@ -22442,22 +22482,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in xfs ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in xfs; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void libxfs_init();"; fi`
-                                         return (int)libxfs_init;
+                                       return (int)libxfs_init;
 
 
   ;
@@ -22472,7 +22518,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_libxfs_init+y}
 then :
 
@@ -22772,22 +22817,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in burn ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in burn; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void burn_disc_write();"; fi`
-                                         return (int)burn_disc_write;
+                                       return (int)burn_disc_write;
 
 
   ;
@@ -22802,7 +22853,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_burn_disc_write+y}
 then :
 
@@ -23090,22 +23140,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in mount ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in mount; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void mnt_new_table_from_file();"; fi`
-                                         return (int)mnt_new_table_from_file;
+                                       return (int)mnt_new_table_from_file;
 
 
   ;
@@ -23120,7 +23176,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_mnt_new_table_from_file+y}
 then :
 
@@ -23556,22 +23611,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in bfd ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in bfd; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void bfd_init();"; fi`
-                                         return (int)bfd_init;
+                                       return (int)bfd_init;
 
 
   ;
@@ -23586,7 +23647,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_bfd_init+y}
 then :
 
@@ -24650,22 +24710,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in uuid ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in uuid; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo uuid/uuid.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "uuid/uuid.h"; then echo "extern void uuid_generate();"; fi`
-                                         return (int)uuid_generate;
+                                       return (int)uuid_generate;
 
 
   ;
@@ -24680,7 +24746,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_uuid_generate+y}
 then :
 
@@ -24781,22 +24846,28 @@ else $as_nop
       ac_func_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
-      for ac_library in idn2 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in idn2; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo idn-free.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "idn-free.h"; then echo "extern void idn_free();"; fi`
-                                         return (int)idn_free;
+                                       return (int)idn_free;
 
 
   ;
@@ -24811,7 +24882,6 @@ then :
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      done
       if test ${ac_cv_search_static_idn_free+y}
 then :
 

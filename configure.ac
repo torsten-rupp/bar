@@ -376,23 +376,28 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
 
       dnl test static linkage
       CFLAGS="$CFLAGS"
-      for ac_library in $2 ""; do
-        if test -z "$ac_library"; then
-          ac_result="none required"
+      ac_libraries=""
+      for ac_library in $2; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
         else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+          ac_libraries="-l$ac_library"
         fi
-
-        AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
-                                        [`if test -z "$5"; then echo "extern void $1();"; fi`
-                                         return (int)$1;
-                                        ]
-                                       )
-                       ],
-                       [AS_VAR_SET([ac_search_static_libraries],[$ac_result]); break]
-                      )
       done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
+                                      [`if test -z "$5"; then echo "extern void $1();"; fi`
+                                       return (int)$1;
+                                      ]
+                                     )
+                     ],
+                     [AS_VAR_SET([ac_search_static_libraries],[$ac_result]); break]
+                    )
       AS_VAR_SET_IF([ac_search_static_libraries],,[AS_VAR_SET([ac_search_static_libraries],[no])])
 
       dnl restore C compiler settings
@@ -1764,8 +1769,7 @@ case $host_os in
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
-    AC_SEARCH_STATIC_LIBRARIES(sd_id128_get_machine,systemd,[STATIC_LIBRARIES="$STATIC_LIBRARIES systemd"])
-    AC_SEARCH_STATIC_LIBRARIES(cap_get_flag,cap,[STATIC_LIBRARIES="$STATIC_LIBRARIES cap"])
+    AC_SEARCH_STATIC_LIBRARIES(sd_notify,systemd cap,[STATIC_LIBRARIES="$STATIC_LIBRARIES systemd cap"],AC_ERROR([systemd/cap library not found]))
     ;;
   sunos | solaris*)
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
@@ -1774,7 +1778,6 @@ case $host_os in
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     AC_SEARCH_STATIC_LIBRARIES(sd_id128_get_machine,systemd,[STATIC_LIBRARIES="$STATIC_LIBRARIES systemd"])
-    AC_SEARCH_STATIC_LIBRARIES(cap_get_flag,cap,[STATIC_LIBRARIES="$STATIC_LIBRARIES cap"])
     ;;
   darwin*)
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
@@ -1783,7 +1786,6 @@ case $host_os in
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     AC_SEARCH_STATIC_LIBRARIES(sd_id128_get_machine,systemd,[STATIC_LIBRARIES="$STATIC_LIBRARIES systemd"])
-    AC_SEARCH_STATIC_LIBRARIES(cap_get_flag,cap,[STATIC_LIBRARIES="$STATIC_LIBRARIES cap"])
     ;;
   windows*|mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
