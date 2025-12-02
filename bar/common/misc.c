@@ -38,6 +38,12 @@
 #ifdef HAVE_GRP_H
   #include <grp.h>
 #endif
+#ifdef HAVE_DLFCN_H
+  #include <dlfcn.h>
+#endif
+#ifdef HAVE_SYSTEMD_SD_DAEMON_H
+  #include <systemd/sd-daemon.h>
+#endif
 #ifdef HAVE_SYSTEMD_SD_ID128_H
   #include <systemd/sd-id128.h>
 #endif
@@ -82,7 +88,18 @@ typedef struct
 } ServiceInfo;
 
 /***************************** Variables *******************************/
-LOCAL byte        machineId[MISC_MACHINE_ID_LENGTH] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+// Note: avoid a direct dipendency to libsystemd. Load library and bin functions dynamic if possible
+#ifdef HAVE_DLFCN_H
+LOCAL void                                      *libSystemdHandle;
+LOCAL typeof(sd_notify                        ) *sd_notify_ptr                         = NULL;
+LOCAL typeof(sd_notifyf                       ) *sd_notifyf_ptr                        = NULL;
+LOCAL typeof(sd_notify_barrier                ) *sd_notify_barrier_ptr                 = NULL;
+LOCAL typeof(sd_id128_get_machine             ) *sd_id128_get_machine_ptr              = NULL;
+LOCAL typeof(sd_id128_get_machine_app_specific) *sd_id128_get_machine_app_specific_ptr = NULL;
+#endif // HAVE_DLFCN_H*
+
+LOCAL byte                                      machineId[MISC_MACHINE_ID_LENGTH] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 #ifdef PLATFORM_WINDOWS
 LOCAL ServiceInfo serviceInfo;
 #endif
@@ -114,38 +131,49 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
   if (state != COMPLETE)
   {
     #if   defined(PLATFORM_LINUX)
-      #ifdef HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC
-        if (state == NONE)
+      #ifdef HAVE_DLFCN_H
+        if (sd_id128_get_machine_app_specific_ptr != NULL)
         {
-          sd_id128_t sdApplicationId128;
-          memCopyFast(sdApplicationId128.bytes,sizeof(sdApplicationId128.bytes),&SD_ID128_NULL,sizeof(SD_ID128_NULL));
-          if (applicationIdData != NULL)
+          if (state == NONE)
           {
-            memCopyFast(sdApplicationId128.bytes,sizeof(sdApplicationId128.bytes),applicationIdData,applicationIdDataLength);
-          }
-          sd_id128_t sdId128;
-          if (sd_id128_get_machine_app_specific(sdApplicationId128,&sdId128) == 0)
-          {
-            memCopyFast(machineId,MISC_MACHINE_ID_LENGTH,sdId128.bytes,sizeof(sdId128));
-            state = COMPLETE;
+            sd_id128_t sdApplicationId128;
+            memCopyFast(sdApplicationId128.bytes,sizeof(sdApplicationId128.bytes),&SD_ID128_NULL,sizeof(SD_ID128_NULL));
+            if (applicationIdData != NULL)
+            {
+              memCopyFast(sdApplicationId128.bytes,sizeof(sdApplicationId128.bytes),applicationIdData,applicationIdDataLength);
+            }
+            sd_id128_t sdId128;
+            if (sd_id128_get_machine_app_specific_ptr(sdApplicationId128,&sdId128) == 0)
+            {
+              memCopyFast(machineId,MISC_MACHINE_ID_LENGTH,sdId128.bytes,sizeof(sdId128));
+              state = COMPLETE;
+            }
           }
         }
-      #else
+        else
+        {
+          UNUSED_VARIABLE(applicationIdData);
+          UNUSED_VARIABLE(applicationIdDataLength);
+        }
+      #else // not HAVE_DLFCN_H
         UNUSED_VARIABLE(applicationIdData);
         UNUSED_VARIABLE(applicationIdDataLength);
-      #endif
+      #endif // HAVE_DLFCN_H
 
-      #ifdef HAVE_SD_ID128_GET_MACHINE
-        if (state == NONE)
+      #ifdef HAVE_DLFCN_H
+        if (sd_id128_get_machine_ptr != NULL)
         {
-          sd_id128_t sdId128;
-          if (sd_id128_get_machine(&sdId128) == 0)
+          if (state == NONE)
           {
-            memCopyFast(machineId,MISC_MACHINE_ID_LENGTH,sdId128.bytes,sizeof(sd_id128_t));
-            state = BASE;
+            sd_id128_t sdId128;
+            if (sd_id128_get_machine_ptr(&sdId128) == 0)
+            {
+              memCopyFast(machineId,MISC_MACHINE_ID_LENGTH,sdId128.bytes,sizeof(sd_id128_t));
+              state = BASE;
+            }
           }
         }
-      #endif
+      #endif // HAVE_DLFCN_H
 
       if (state == NONE)
       {
@@ -936,6 +964,36 @@ LOCAL bool hexDecode(byte *data, uint *dataLength, const char *s, ulong n, uint 
 }
 
 /*---------------------------------------------------------------------*/
+
+Errors Misc_initAll(void)
+{
+  /* Note: avoid a direct dipendency to libsystemd. Load library and bin
+           functions dynamic if possible.
+  */
+  #ifdef HAVE_DLFCN_H
+    libSystemdHandle = dlopen("libsystemd.so",RTLD_LAZY);
+    if (libSystemdHandle != NULL)
+    {
+      sd_notify_ptr                         = (typeof(sd_notify)*)dlsym(libSystemdHandle,"sd_notify");
+      sd_notifyf_ptr                        = (typeof(sd_notifyf)*)dlsym(libSystemdHandle,"sd_notifyf");
+      sd_notify_barrier_ptr                 = (typeof(sd_notify_barrier)*)dlsym(libSystemdHandle,"sd_notify_barrier");
+      sd_id128_get_machine_ptr              = (typeof(sd_id128_get_machine)*)dlsym(libSystemdHandle,"sd_id128_get_machine");
+      sd_id128_get_machine_app_specific_ptr = (typeof(sd_id128_get_machine_app_specific)*)dlsym(libSystemdHandle,"sd_id128_get_machine_app_specific");
+    }
+  #endif // HAVE_DLFCN_H
+
+  return ERROR_NONE;
+}
+
+void Misc_doneAll(void)
+{
+  #ifdef HAVE_DLFCN_H
+    if (libSystemdHandle != NULL)
+    {
+      dlclose(libSystemdHandle);
+    }
+  #endif // HAVE_DLFCN_H
+}
 
 uint64 Misc_getRandom(uint64 min, uint64 max)
 {
@@ -3237,6 +3295,54 @@ char *Misc_translate(const char *format, ...)
 
   return text;
 #endif
+}
+
+bool Misc_systemNotify(Misc_SystemNotifyTypes systemNotifyType, int errorNumber, const char *message, ...)
+{
+  bool result = FALSE;
+
+  #if HAVE_DLFCN_H
+    switch (systemNotifyType)
+    {
+      case MISC_SYSTEM_NOTIFY_TYPE_STARTED:
+        if ((sd_notify_ptr != NULL) && (sd_notify_barrier_ptr != NULL))
+        {
+          sd_notify_ptr(0,"READY=1");
+          sd_notify_barrier_ptr(0, 5*1000000);
+
+          result = TRUE;
+        }
+        break;
+      case MISC_SYSTEM_NOTIFY_TYPE_STOPPING:
+        if ((sd_notify_ptr != NULL) && (sd_notify_barrier_ptr != NULL))
+        {
+          sd_notify_ptr(0,"STOPPING=1");
+          sd_notify_barrier_ptr(0, 5*1000000);
+
+          result = TRUE;
+        }
+        break;
+      case MISC_SYSTEM_NOTIFY_TYPE_ERROR:
+        if (sd_notifyf_ptr != NULL)
+        {
+          va_list arguments;
+          va_start(arguments,message);
+          char buffer[128];
+          vsnprintf(buffer,sizeof(buffer),message,arguments);
+          sd_notifyf_ptr(0,"STATUS=Failed to start up: %s\nERRNO=%d\n",buffer,errorNumber);
+          va_end(arguments);
+
+          result = TRUE;
+        }
+        break;
+    }
+  #else
+    UNUSED_VARIABLE(systemNotifyType);
+    UNUSED_VARIABLE(errorNumber);
+    UNUSED_VARIABLE(message);
+  #endif
+
+  return result;
 }
 
 #ifdef __cplusplus

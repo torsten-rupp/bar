@@ -112,6 +112,9 @@
 /* Define to 1 if you have the <demangle.h> header file. */
 #undef HAVE_DEMANGLE_H
 
+/* Define to 1 if you have the <dlfcn.h> header file. */
+#undef HAVE_DLFCN_H
+
 /* Define to 1 if you have the <elf.h> header file. */
 #undef HAVE_ELF_H
 
@@ -486,15 +489,6 @@
 
 /* Define to 1 if you have the <regex.h> header file. */
 #undef HAVE_REGEX_H
-
-/* sd_id128_get_machine() available */
-#undef HAVE_SD_ID128_GET_MACHINE
-
-/* sd_id128_get_machine_app_specific() available */
-#undef HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC
-
-/* sd_notify() available */
-#undef HAVE_SD_NOTIFY
 
 /* select() available */
 #undef HAVE_SELECT

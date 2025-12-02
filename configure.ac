@@ -1769,7 +1769,6 @@ case $host_os in
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
-    AC_SEARCH_STATIC_LIBRARIES(sd_notify,systemd cap,[STATIC_LIBRARIES="$STATIC_LIBRARIES systemd cap"],AC_ERROR([systemd/cap library not found]))
     ;;
   sunos | solaris*)
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
@@ -1777,7 +1776,6 @@ case $host_os in
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
-    AC_SEARCH_STATIC_LIBRARIES(sd_id128_get_machine,systemd,[STATIC_LIBRARIES="$STATIC_LIBRARIES systemd"])
     ;;
   darwin*)
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
@@ -1785,7 +1783,6 @@ case $host_os in
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
     AC_SEARCH_LIBRARIES(pthread_create,pthread,[LIBRARIES="$LIBRARIES pthread"],AC_ERROR([pthread library not found]))
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
-    AC_SEARCH_STATIC_LIBRARIES(sd_id128_get_machine,systemd,[STATIC_LIBRARIES="$STATIC_LIBRARIES systemd"])
     ;;
   windows*|mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
@@ -5546,6 +5543,7 @@ AC_CHECK_HEADERS(\
                  bfd.h \
                  blkid/blkid.h \
                  demangle.h \
+                 dlfcn.h \
                  elf.h \
                  execinfo.h \
                  grp.h \
@@ -5846,9 +5844,10 @@ AC_CHECK_FUNCTION(textdomain,    AC_DEFINE(HAVE_TEXTDOMAIN,    1,[textdomain() a
 AC_CHECK_FUNCTION(bindtextdomain,AC_DEFINE(HAVE_BINDTEXTDOMAIN,1,[bindtextdomain() available]))
 AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() available]))
 
-AC_CHECK_FUNCTION(sd_notify,                        AC_DEFINE(HAVE_SD_NOTIFY,                        1,[sd_notify() available]),,systemd/sd-daemon.h)
-AC_CHECK_FUNCTION(sd_id128_get_machine,             AC_DEFINE(HAVE_SD_ID128_GET_MACHINE,             1,[sd_id128_get_machine() available]),,systemd/sd-id128.h)
-AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC,1,[sd_id128_get_machine_app_specific() available]),,systemd/sd-id128.h)
+# Note: these functions around bound by daynmic lazy loading to avoid dependency to libsystemd.so
+#AC_CHECK_FUNCTION(sd_notify,                        AC_DEFINE(HAVE_SD_NOTIFY,                        1,[sd_notify() available]),,systemd/sd-daemon.h)
+#AC_CHECK_FUNCTION(sd_id128_get_machine,             AC_DEFINE(HAVE_SD_ID128_GET_MACHINE,             1,[sd_id128_get_machine() available]),,systemd/sd-id128.h)
+#AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC,1,[sd_id128_get_machine_app_specific() available]),,systemd/sd-id128.h)
 
 AC_CHECK_FUNCTION(mnt_new_table_from_file,AC_DEFINE(HAVE_MNT_NEW_TABLE_FROM_FILE,1,[mnt_new_table_from_file() available]),,libmount.h)
 AC_CHECK_FUNCTION(mnt_context_mount,AC_DEFINE(HAVE_MNT_CONTEXT_MOUNT,1,[mnt_context_mount() available]),,libmount.h)

@@ -581,6 +581,15 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE() { Configuration_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Configuration_initAll,{ Configuration_doneAll(); });
 
+  error = Misc_initAll();
+  if (error != ERROR_NONE)
+  {
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  DEBUG_TESTCODE() { Misc_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+  AUTOFREE_ADD(&autoFreeList,Misc_initAll,{ Misc_doneAll(); });
+
   error = Thread_initAll();
   if (error != ERROR_NONE)
   {
@@ -782,6 +791,7 @@ LOCAL void doneAll(void)
   Password_doneAll();
   ThreadPool_doneAll();
   Thread_doneAll();
+  Misc_doneAll();
   Configuration_doneAll();
   Common_doneAll();
 

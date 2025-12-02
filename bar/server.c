@@ -110,14 +110,6 @@
 
 /***************************** Datatypes *******************************/
 
-// system notify types
-typedef enum
-{
-  SYSTEM_NOTIFY_TYPE_STARTED,
-  SYSTEM_NOTIFY_TYPE_STOPPING,
-  SYSTEM_NOTIFY_TYPE_ERROR
-} NotifyTypes;
-
 // server states
 typedef enum
 {
@@ -436,49 +428,6 @@ LOCAL void deleteClient(ClientNode *clientNode);
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-/***********************************************************************\
-* Name   : systemNotify
-* Purpose: send system notification (systemd)
-* Input  : notifyType  - notify type
-*          errorNumber - error number or 0
-*          message     - error message printf-like
-*          ...         - optional arguments for formating error message
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void systemNotify(NotifyTypes notifyType, int errorNumber, const char *message, ...)
-{
-  #ifdef HAVE_SD_NOTIFY
-    switch (notifyType)
-    {
-      case SYSTEM_NOTIFY_TYPE_STARTED:
-        sd_notify(0,"READY=1");
-        sd_notify_barrier(0, 5*1000000);
-        break;
-      case SYSTEM_NOTIFY_TYPE_STOPPING:
-        sd_notify(0,"STOPPING=1");
-        sd_notify_barrier(0, 5*1000000);
-        break;
-      case SYSTEM_NOTIFY_TYPE_ERROR:
-        {
-          va_list arguments;
-          va_start(arguments,message);
-          char buffer[128];
-          vsnprintf(buffer,sizeof(buffer),message,arguments);
-          sd_notifyf(0,"STATUS=Failed to start up: %s\nERRNO=%d\n",buffer,errorNumber);
-          va_end(arguments);
-        }
-        break;
-    }
-  #else
-    UNUSED_VARIABLE(notifyType);
-    UNUSED_VARIABLE(errorNumber);
-    UNUSED_VARIABLE(message);
-  #endif
-}
 
 /***********************************************************************\
 * Name   : setQuit
@@ -23320,7 +23269,7 @@ Errors Server_socket(void)
                    String_cString(globalOptions.jobsDirectory),
                    Error_getText(error)
                   );
-        systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
+        Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -23329,7 +23278,7 @@ Errors Server_socket(void)
     {
       error = ERRORX_(NOT_A_DIRECTORY,ENOTDIR,"%s",String_cString(globalOptions.jobsDirectory));
       printError(_("'%s' is not a directory!"),String_cString(globalOptions.jobsDirectory));
-      systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
+      Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -23345,7 +23294,7 @@ Errors Server_socket(void)
     if (error != ERROR_NONE)
     {
       printError(_("no valid database URI '%s'"),String_cString(globalOptions.indexDatabaseURI));
-      systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
+      Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -23358,7 +23307,7 @@ Errors Server_socket(void)
                  String_cString(printableDatabaseURI),
                  Error_getText(error)
                 );
-      systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
+      Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       String_delete(printableDatabaseURI);
       Database_doneSpecifier(&databaseSpecifier);
       AutoFree_cleanup(&autoFreeList);
@@ -23379,7 +23328,7 @@ Errors Server_socket(void)
       printError(_("cannot open index database (error: %s)!"),
                  Error_getText(error)
                 );
-      systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
+      Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -23414,7 +23363,7 @@ Errors Server_socket(void)
                  globalOptions.serverPort,
                  Error_getText(error)
                 );
-      systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
+      Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
@@ -23449,7 +23398,7 @@ Errors Server_socket(void)
                      globalOptions.serverTLSPort,
                      Error_getText(error)
                     );
-          systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
+          Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_ERROR,Error_getErrno(error),"%s",Error_getText(error));
           AutoFree_cleanup(&autoFreeList);
           return error;
         }
@@ -23473,7 +23422,7 @@ Errors Server_socket(void)
     {
       printError(_("cannot start any server!"));
     }
-    systemNotify(SYSTEM_NOTIFY_TYPE_ERROR,EINVAL,"cannot start any server");
+    Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_ERROR,EINVAL,"cannot start any server");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_ARGUMENT;
   }
@@ -23622,7 +23571,10 @@ Errors Server_socket(void)
   #endif /* HAVE_SIGALRM */
 
   // signal systemd
-  systemNotify(SYSTEM_NOTIFY_TYPE_STARTED,0,NULL);
+  if (!Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_STARTED,0,NULL))
+  {
+    printWarning("start notification of systemd fail");
+  }
 
   // process client requests
   WaitHandle waitHandle;
@@ -24061,7 +24013,10 @@ Errors Server_socket(void)
   Misc_doneWait(&waitHandle);
 
   // signal systemd
-  systemNotify(SYSTEM_NOTIFY_TYPE_STOPPING,0,NULL);
+  if (!Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_STOPPING,0,NULL))
+  {
+    printWarning("stop notification of systemd fail");
+  }
 
   // delete all clients
   while (!List_isEmpty(&clientList))

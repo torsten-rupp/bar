@@ -10469,77 +10469,6 @@ then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES resolv"
 fi
 
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing sd_notify" >&5
-printf %s "checking for static library containing sd_notify... " >&6; }
-if test ${ac_cv_search_static_sd_notify+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in systemd cap; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
-        fi
-      done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void sd_notify();"; fi`
-                                       return (int)sd_notify;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_static_sd_notify=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_sd_notify+y}
-then :
-
-else $as_nop
-  ac_cv_search_static_sd_notify=no
-fi
-
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_sd_notify" >&5
-printf "%s\n" "$ac_cv_search_static_sd_notify" >&6; }
-  ac_result=$ac_cv_search_static_sd_notify
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES systemd cap"
-else $as_nop
-  as_fn_error $? "systemd/cap library not found" "$LINENO" 5
-fi
-
     ;;
   sunos | solaris*)
 
@@ -10858,75 +10787,6 @@ then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES resolv"
 fi
 
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing sd_id128_get_machine" >&5
-printf %s "checking for static library containing sd_id128_get_machine... " >&6; }
-if test ${ac_cv_search_static_sd_id128_get_machine+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in systemd; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
-        fi
-      done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void sd_id128_get_machine();"; fi`
-                                       return (int)sd_id128_get_machine;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_static_sd_id128_get_machine=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_sd_id128_get_machine+y}
-then :
-
-else $as_nop
-  ac_cv_search_static_sd_id128_get_machine=no
-fi
-
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_sd_id128_get_machine" >&5
-printf "%s\n" "$ac_cv_search_static_sd_id128_get_machine" >&6; }
-  ac_result=$ac_cv_search_static_sd_id128_get_machine
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES systemd"
-fi
-
     ;;
   darwin*)
 
@@ -11243,75 +11103,6 @@ printf "%s\n" "$ac_cv_search_libraries_ns_initparse" >&6; }
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES resolv"
-fi
-
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing sd_id128_get_machine" >&5
-printf %s "checking for static library containing sd_id128_get_machine... " >&6; }
-if test ${ac_cv_search_static_sd_id128_get_machine+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in systemd; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
-        fi
-      done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void sd_id128_get_machine();"; fi`
-                                       return (int)sd_id128_get_machine;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_static_sd_id128_get_machine=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_sd_id128_get_machine+y}
-then :
-
-else $as_nop
-  ac_cv_search_static_sd_id128_get_machine=no
-fi
-
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_sd_id128_get_machine" >&5
-printf "%s\n" "$ac_cv_search_static_sd_id128_get_machine" >&6; }
-  ac_result=$ac_cv_search_static_sd_id128_get_machine
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES systemd"
 fi
 
     ;;
@@ -24011,6 +23802,12 @@ then :
   printf "%s\n" "#define HAVE_DEMANGLE_H 1" >>confdefs.h
 
 fi
+ac_fn_c_check_header_compile "$LINENO" "dlfcn.h" "ac_cv_header_dlfcn_h" "$ac_includes_default"
+if test "x$ac_cv_header_dlfcn_h" = xyes
+then :
+  printf "%s\n" "#define HAVE_DLFCN_H 1" >>confdefs.h
+
+fi
 ac_fn_c_check_header_compile "$LINENO" "elf.h" "ac_cv_header_elf_h" "$ac_includes_default"
 if test "x$ac_cv_header_elf_h" = xyes
 then :
@@ -32946,174 +32743,10 @@ then :
 fi
 
 
-
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for sd_notify" >&5
-printf %s "checking for sd_notify... " >&6; }
-if test ${ac_cv_func_sd_notify+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-      ac_cv_func_sd_notify="no"
-      echo > conftest.log
-
-      for ac_headers in systemd/sd-daemon.h ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdint.h>
-                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-
-int
-main (void)
-{
-`if test -z "$ac_headers"; then echo "extern void sd_notify();"; fi`
-                                         #ifdef sd_notify
-                                         #else
-                                           return (intptr_t)sd_notify;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_func_sd_notify=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_sd_notify" >&5
-printf "%s\n" "$ac_cv_func_sd_notify" >&6; }
-  if test "$ac_cv_func_sd_notify" != no
-then :
-
-printf "%s\n" "#define HAVE_SD_NOTIFY 1" >>confdefs.h
-
-elif :
-then :
-
-fi
-
-
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for sd_id128_get_machine" >&5
-printf %s "checking for sd_id128_get_machine... " >&6; }
-if test ${ac_cv_func_sd_id128_get_machine+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-      ac_cv_func_sd_id128_get_machine="no"
-      echo > conftest.log
-
-      for ac_headers in systemd/sd-id128.h ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdint.h>
-                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-
-int
-main (void)
-{
-`if test -z "$ac_headers"; then echo "extern void sd_id128_get_machine();"; fi`
-                                         #ifdef sd_id128_get_machine
-                                         #else
-                                           return (intptr_t)sd_id128_get_machine;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_func_sd_id128_get_machine=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_sd_id128_get_machine" >&5
-printf "%s\n" "$ac_cv_func_sd_id128_get_machine" >&6; }
-  if test "$ac_cv_func_sd_id128_get_machine" != no
-then :
-
-printf "%s\n" "#define HAVE_SD_ID128_GET_MACHINE 1" >>confdefs.h
-
-elif :
-then :
-
-fi
-
-
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for sd_id128_get_machine_app_specific" >&5
-printf %s "checking for sd_id128_get_machine_app_specific... " >&6; }
-if test ${ac_cv_func_sd_id128_get_machine_app_specific+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-      ac_cv_func_sd_id128_get_machine_app_specific="no"
-      echo > conftest.log
-
-      for ac_headers in systemd/sd-id128.h ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdint.h>
-                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-
-int
-main (void)
-{
-`if test -z "$ac_headers"; then echo "extern void sd_id128_get_machine_app_specific();"; fi`
-                                         #ifdef sd_id128_get_machine_app_specific
-                                         #else
-                                           return (intptr_t)sd_id128_get_machine_app_specific;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_func_sd_id128_get_machine_app_specific=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_sd_id128_get_machine_app_specific" >&5
-printf "%s\n" "$ac_cv_func_sd_id128_get_machine_app_specific" >&6; }
-  if test "$ac_cv_func_sd_id128_get_machine_app_specific" != no
-then :
-
-printf "%s\n" "#define HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC 1" >>confdefs.h
-
-elif :
-then :
-
-fi
-
+# Note: these functions around bound by daynmic lazy loading to avoid dependency to libsystemd.so
+#AC_CHECK_FUNCTION(sd_notify,                        AC_DEFINE(HAVE_SD_NOTIFY,                        1,[sd_notify() available]),,systemd/sd-daemon.h)
+#AC_CHECK_FUNCTION(sd_id128_get_machine,             AC_DEFINE(HAVE_SD_ID128_GET_MACHINE,             1,[sd_id128_get_machine() available]),,systemd/sd-id128.h)
+#AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC,1,[sd_id128_get_machine_app_specific() available]),,systemd/sd-id128.h)
 
 
 
