@@ -5846,6 +5846,8 @@ AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() avai
 
 # Note: these functions around bound by daynmic lazy loading to avoid dependency to libsystemd.so
 #AC_CHECK_FUNCTION(sd_notify,                        AC_DEFINE(HAVE_SD_NOTIFY,                        1,[sd_notify() available]),,systemd/sd-daemon.h)
+#AC_CHECK_FUNCTION(sd_notifyf,                       AC_DEFINE(HAVE_SD_NOTIFYF,                       1,[sd_notifyf() available]),,systemd/sd-daemon.h)
+#AC_CHECK_FUNCTION(sd_notify_barrier,                AC_DEFINE(HAVE_SD_NOTIFY_BARRIER,                1,[sd_notify_barrier() available]),,systemd/sd-daemon.h)
 #AC_CHECK_FUNCTION(sd_id128_get_machine,             AC_DEFINE(HAVE_SD_ID128_GET_MACHINE,             1,[sd_id128_get_machine() available]),,systemd/sd-id128.h)
 #AC_CHECK_FUNCTION(sd_id128_get_machine_app_specific,AC_DEFINE(HAVE_SD_ID128_GET_MACHINE_APP_SPECIFIC,1,[sd_id128_get_machine_app_specific() available]),,systemd/sd-id128.h)
 

@@ -1,4 +1,4 @@
-FROM almalinux:8
+FROM almalinux:9
 ENV container docker
 
 # variables
@@ -30,12 +30,11 @@ RUN yum -y install --allowerasing \
   sudo \
   ;
 
-RUN yum -y install \
+RUN yum -y install --allowerasing \
   automake \
   bison \
   bzip2 \
   curl \
-  gcc-toolset-9-valgrind-devel \
   e2fsprogs \
   flex \
   gcc \
@@ -62,6 +61,7 @@ RUN yum -y install \
   tcl \
   unzip \
   valgrind \
+  valgrind-devel \
   wget \
   xz \
   ;
@@ -74,7 +74,9 @@ RUN yum -y install \
 RUN yum -y install \
   perl-IPC-Cmd \
   perl-Time-Piece \
-  perl-Pod-Html
+  perl-Pod-Html \
+  perl-FindBin \
+  perl-English
 
 # work-around for missing package libinih-devel
 RUN    cd /tmp \

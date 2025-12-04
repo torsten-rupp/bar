@@ -1,4 +1,4 @@
-2025-11-30 27
+2025-12-07 27
   * added option --commmand-timeout
   * fixed command timeout (bug #31)
   * added sd_notify() for systemd
@@ -30,6 +30,7 @@
   * upgarde util-linux 2.41.1
   * upgrade binutils 2.45
   * upgrade PAR2 1.0.0
+  * dropped support for AlmaLinux 8.10
   * BARControl: improved certificate validation
   * BARControl: show file system type of devices if possible
   * BARControl: check common name of SSL certificate
