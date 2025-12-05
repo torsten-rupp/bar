@@ -5,8 +5,9 @@ DOCKER_IMAGE_NAME_RPM       = "bar-rpm"
 DOCKER_IMAGE_NAME_DEB       = "bar-deb"
 DOCKER_IMAGE_NAME_WIN32     = "bar-win32"
 
-// see also Makefile.in
-TEST_PACKAGES_ALMALINUX     = ["9.0","9.1","9.2","9.3","9.4","9.5","9.6","10.0"]
+// Notes: see also Makefile.in
+//        AlmaLinux 10.0 does not run on CPU without AVX2
+TEST_PACKAGES_ALMALINUX     = ["9.0","9.1","9.2","9.3","9.4","9.5","9.6"]
 TEST_PACKAGES_FEDORA        = ["37","38","39","40","41","42"]
 TEST_PACKAGES_OPENSUSE_LEAP = ["15.1","15.2","15.3","15.4","15.5","15.6"]
 TEST_PACKAGES_DEBIAN        = ["11","12","13"]
