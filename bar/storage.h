@@ -667,6 +667,8 @@ typedef struct
       struct
       {
         uint                serverId;                         // id of allocated server
+        String              pathName;                         // directory name
+
         struct smb2_context *context;
         struct smb2dir      *directory;
         struct smb2dirent   *directoryEntry;

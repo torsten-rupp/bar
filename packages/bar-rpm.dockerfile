@@ -55,7 +55,6 @@ RUN yum -y install --allowerasing \
   pkg-config \
   postgresql \
   rpm-build \
-  rpm-build \
   sqlite \
   tar \
   tcl \
