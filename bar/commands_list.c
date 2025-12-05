@@ -3687,7 +3687,7 @@ Errors Command_list(StringList              *storageNameList,
             }
           }
 
-          // test archive content
+          // list archive content
           if (   (fileInfo.type == FILE_TYPE_FILE)
               || (fileInfo.type == FILE_TYPE_LINK)
               || (fileInfo.type == FILE_TYPE_HARDLINK)
