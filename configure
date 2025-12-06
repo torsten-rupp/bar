@@ -780,6 +780,8 @@ HAVE_PTHREADS_W32
 HAVE_MOUNT
 HAVE_BURN
 HAVE_XFS
+HAVE_RCU
+HAVE_UUID
 HAVE_ISOFS
 HAVE_PAR2
 HAVE_POSTGRESQL
@@ -22185,6 +22187,8 @@ printf "%s\n" "done" >&6; }
       else
         STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu uuid blkid"
       fi
+      HAVE_UUID=1
+      HAVE_RCU=1
       HAVE_XFS=1
 
 printf "%s\n" "#define HAVE_XFS 1" >>confdefs.h
@@ -34379,14 +34383,13 @@ fi
 if test "$HAVE_XDELTA3"; then
   # Note: xdelta3 does not have a define for version
 # TODO: version
-
-printf "%s\n" "#define VERSION_XDELTA3 \"3.0.11\"" >>confdefs.h
-
+  VERSION_XDELTA3="3.0.11"
 else
-
-printf "%s\n" "#define VERSION_XDELTA3 \"\"" >>confdefs.h
-
+  VERSION_XDELTA3=""
 fi
+
+printf "%s\n" "#define VERSION_XDELTA3 \"$VERSION_XDELTA3\"" >>confdefs.h
+
 
 if test "$HAVE_GCRYPT"; then
 
