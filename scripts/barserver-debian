@@ -3,7 +3,7 @@
 #	/etc/rc.d/init.d/barserver
 #
 #	BAR server start script
-#	Copyright 2007-2019 Torsten Rupp
+#	Copyright 2007-2025 Torsten Rupp
 #
 
 ### BEGIN INIT INFO
@@ -18,7 +18,7 @@
 # Description:       Backup ARchiver server for backup/restore
 ### END INIT INFO
 
-# Author: Matthias Albert <matthias@linux4experts.de>
+# Original author: Matthias Albert <matthias@linux4experts.de>
 
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 NAME=bar
