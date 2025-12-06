@@ -1,4 +1,4 @@
-FROM almalinux:9
+FROM almalinux:9.0
 ENV container docker
 
 # variables

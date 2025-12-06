@@ -112,22 +112,26 @@ if test -d /lib/systemd; then
   fi
 fi
 
-# install init.d script
-install -d %{_sysconfdir}/init.d;
-if   test -f %{_sysconfdir}/SuSE-release -o -d %{_sysconfdir}/SuSEconfig; then
-  install -m 755 /var/lib/bar/install/barserver-SuSE %{_sysconfdir}/init.d/barserver
-elif test -f %{_sysconfdir}/fedora-release; then
-  install -m 755 /var/lib/bar/install/barserver-Fedora %{_sysconfdir}/init.d/barserver
-elif test -f %{_sysconfdir}/redhat-release -a -n "`grep 'Red Hat' %{_sysconfdir}/redhat-release 2>/dev/null`"; then
-  install -m 755 /var/lib/bar/install/barserver-RedHat %{_sysconfdir}/init.d/barserver
-elif test -f %{_sysconfdir}/redhat-release -a -n "`grep 'CentOS' %{_sysconfdir}/redhat-release 2>/dev/null`"; then
-  install -m 755 /var/lib/bar/install/barserver-CentOS %{_sysconfdir}/init.d/barserver
-elif test -f %{_sysconfdir}/lsb-release; then
-  install -m 755 /var/lib/bar/install/barserver-debian %{_sysconfdir}/init.d/barserver
-elif test -f %{_sysconfdir}/debian_release; then
-  install -m 755 /var/lib/bar/install/barserver-debian %{_sysconfdir}/init.d/barserver
-else
-  install -m 755 /var/lib/bar/install/barserver-debian %{_sysconfdir}/init.d/barserver
+# install init.d script (not systemd)
+if test ! -d /lib/systemd; then
+  install -d %{_sysconfdir}/init.d;
+  if   test -f %{_sysconfdir}/SuSE-release -o -d %{_sysconfdir}/SuSEconfig; then
+    install -m 755 /var/lib/bar/install/barserver-SuSE %{_sysconfdir}/init.d/barserver
+  elif test -f %{_sysconfdir}/fedora-release; then
+    install -m 755 /var/lib/bar/install/barserver-Fedora %{_sysconfdir}/init.d/barserver
+  elif test -f %{_sysconfdir}/redhat-release -a -n "`grep 'AlmaLinux' %{_sysconfdir}/redhat-release 2>/dev/null`"; then
+    install -m 755 /var/lib/bar/install/barserver-AlmaLinux %{_sysconfdir}/init.d/barserver
+  elif test -f %{_sysconfdir}/redhat-release -a -n "`grep 'Red Hat' %{_sysconfdir}/redhat-release 2>/dev/null`"; then
+    install -m 755 /var/lib/bar/install/barserver-RedHat %{_sysconfdir}/init.d/barserver
+  elif test -f %{_sysconfdir}/redhat-release -a -n "`grep 'CentOS' %{_sysconfdir}/redhat-release 2>/dev/null`"; then
+    install -m 755 /var/lib/bar/install/barserver-CentOS %{_sysconfdir}/init.d/barserver
+  elif test -f %{_sysconfdir}/lsb-release; then
+    install -m 755 /var/lib/bar/install/barserver-debian %{_sysconfdir}/init.d/barserver
+  elif test -f %{_sysconfdir}/debian_release; then
+    install -m 755 /var/lib/bar/install/barserver-debian %{_sysconfdir}/init.d/barserver
+  else
+    install -m 755 /var/lib/bar/install/barserver-debian %{_sysconfdir}/init.d/barserver
+  fi
 fi
 
 # info to start BAR server service
@@ -135,7 +139,7 @@ if test -d /lib/systemd; then
   if test -n "`ps -p1|grep systemd`"; then
     systemctl daemon-reload
     systemctl enable barserver
-    echo "Please start BAR server with 'service barserver start'"
+    echo "Please start BAR server with 'systemctl start barserver'"
   else
     echo >&2 "Warning: systemd not available or not started with systemd"
   fi

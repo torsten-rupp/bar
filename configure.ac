@@ -876,6 +876,8 @@ AC_SUBST(HAVE_MARIADB)                       dnl "1" for MariaDB support, "" oth
 AC_SUBST(HAVE_POSTGRESQL)                    dnl "1" for PostgreSQL support, "" otherwise
 AC_SUBST(HAVE_PAR2)                          dnl "1" for PAR2 support, "" otherwise
 AC_SUBST(HAVE_ISOFS)                         dnl "1" for isofs support, "" otherwise
+AC_SUBST(HAVE_UUID)                          dnl "1" for uuid support, "" otherwise
+AC_SUBST(HAVE_RCU)                           dnl "1" for rcu support, "" otherwise
 AC_SUBST(HAVE_XFS)                           dnl "1" for xfs support, "" otherwise
 AC_SUBST(HAVE_BURN)                          dnl "1" for burn support, "" otherwise
 AC_SUBST(HAVE_MOUNT)                         dnl "1" for mount support, "" otherwise
@@ -5061,6 +5063,8 @@ if test $ENABLE_XFS = "yes"; then
       else
         STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu uuid blkid"
       fi
+      HAVE_UUID=1
+      HAVE_RCU=1
       HAVE_XFS=1
       AC_DEFINE(HAVE_XFS,1,[xfs installed (local)])
     fi
@@ -6012,10 +6016,11 @@ fi
 if test "$HAVE_XDELTA3"; then
   # Note: xdelta3 does not have a define for version
 # TODO: version
-  AC_DEFINE_UNQUOTED(VERSION_XDELTA3,"3.0.11",[xdelta3 version])
+  VERSION_XDELTA3="3.0.11"
 else
-  AC_DEFINE_UNQUOTED(VERSION_XDELTA3,"",[xdelta3 version])
+  VERSION_XDELTA3=""
 fi
+AC_DEFINE_UNQUOTED(VERSION_XDELTA3,"$VERSION_XDELTA3",[xdelta3 version])
 
 if test "$HAVE_GCRYPT"; then
   AC_CONSTANT_VALUE([gcrypt version],

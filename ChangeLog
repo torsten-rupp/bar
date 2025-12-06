@@ -1,4 +1,4 @@
-2025-12-07 27
+2025-12-06 27
   * added option --commmand-timeout
   * fixed command timeout (bug #31)
   * added sd_notify() for systemd
@@ -26,7 +26,7 @@
   * upgrade MariaDB client 3.4.7
   * upgrade PostgreSQL connector 18.0
   * upgrade Kerberos 1.22.1
-  * upgrade SMB2 6.0.0
+  * upgrade SMB2 2.6.2
   * upgarde util-linux 2.41.1
   * upgrade binutils 2.45
   * upgrade PAR2 1.0.0

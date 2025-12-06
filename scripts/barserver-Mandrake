@@ -3,7 +3,7 @@
 #	/etc/rc.d/init.d/barserver
 #
 #	BAR server start script
-#	Copyright 2007-2019 Torsten Rupp
+#	Copyright 2007-2025 Torsten Rupp
 #
 
 ### BEGIN INIT INFO

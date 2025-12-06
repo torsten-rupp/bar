@@ -61,12 +61,6 @@ type yum 1>/dev/null 2>/dev/null
 if test $? -eq 0; then
   echo -n "Update packages..."
 
-  # fix CentOS repositories
-  if test -n "`find /etc/yum.repos.d -name 'CentOS-*'`"; then
-    sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
-    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
-  fi
-
   yum -y update 1>/dev/null 2>/dev/null
   yum -y install \
     initscripts \

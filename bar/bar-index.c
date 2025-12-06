@@ -9242,6 +9242,10 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array *entity
 
                          DatabaseId uuidId              = values[27].id;
 
+                         // get job name
+                         String jobName = String_new();
+// TODO:
+
                          char buffer[64];
                          printf("  Id             : %"PRIi64"\n",entityId);
                          printf("    Type         : %s\n",
@@ -9249,7 +9253,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array *entity
                                   ? TYPE_NAMES[type]
                                   : stringFormat(buffer,sizeof(buffer),"unknown (%d)",type)
                                );
-                         printf("    Job UUID     : %s\n",String_cString(values[ 2].string));
+                         printf("    Job          : %s\n",String_cString(jobName));
+                         printf("           UUID  : %s\n",String_cString(values[ 2].string));
                          printf("    Entity UUID  : %s\n",String_cString(values[ 3].string));
                          printf("    Created      : %s\n",(createdDateTime > 0LL) ? Misc_formatDateTimeCString(buffer,sizeof(buffer),createdDateTime,TIME_TYPE_LOCAL,NULL) : "-");
                          printf("\n");
@@ -9263,6 +9268,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array *entity
                          printf("    Special      : %lu\n",totalSpecialCount);
                          printf("\n");
                          printf("    UUID id      : %"PRIi64"\n",uuidId);
+
+                         String_delete(jobName);
 
                          uint       i       = 0;
                          const char *prefix = "    Storage ids  : ";
@@ -9279,7 +9286,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array *entity
                                         {
                                           putchar('\n');
                                           i      = 0;
-                                          prefix = "                    ";
+                                          prefix = "                   ";
                                         }
 
                                         if      (i == 0) printf("%s",prefix);
@@ -9355,7 +9362,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array *entity
                          DATABASE_COLUMN_UINT64  ("totalHardlinkSizeNewest"),
                          DATABASE_COLUMN_UINT    ("totalSpecialCountNewest"),
 
-                         DATABASE_COLUMN_KEY   ("uuidId")
+                         DATABASE_COLUMN_KEY     ("uuidId")
                        ),
                        stringFormat(filterString,sizeof(filterString),
                                     "    (? OR id IN (%s)) \
@@ -9460,7 +9467,11 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array *storag
                                                 ulong      totalLinkCount      = values[21].u64;
                                                 ulong      totalHardlinkCount  = values[22].u;
                                                 uint64     totalHardlinkSize   = values[23].u64;
-                                                ulong       totalSpecialCount   = values[24].u;
+                                                ulong      totalSpecialCount   = values[24].u;
+
+                                                // get job name
+                                                String jobName = String_new();
+// TODO:
 
                                                 char buffer[64];
                                                 printf("  Id             : %"PRIi64"\n",id);
@@ -9493,8 +9504,11 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array *storag
                                                 printf("\n");
                                                 printf("    UUID id      : %"PRIi64"\n",uuidId);
                                                 printf("    Entity id    : %"PRIi64"\n",entityId);
-                                                printf("    Job UUID     : %s\n",String_cString(jobUUID));
+                                                printf("    Job          : %s\n",String_cString(jobName));
+                                                printf("           UUID  : %s\n",String_cString(jobUUID));
                                                 printf("    Entity UUID  : %s\n",String_cString(entityUUID));
+
+                                                String_delete(jobName);
 
                                                 return ERROR_NONE;
                                               },NULL),
