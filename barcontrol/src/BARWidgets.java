@@ -1608,7 +1608,7 @@ public class BARWidgets
                                     text.getText(),
                                     fileExtensions,
                                     defaultFileExtension,
-                                    Dialogs.FILE_NONE,
+                                    Dialogs.FILE_SHOW_HIDDEN,
                                     BARServer.remoteListDirectory
                                    );
           }
@@ -2956,7 +2956,7 @@ public class BARWidgets
                                                    BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
-                                      Dialogs.FILE_NONE,
+                                      Dialogs.FILE_SHOW_HIDDEN,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory
                                         : BARControl.listDirectory
@@ -3071,7 +3071,7 @@ public class BARWidgets
                                       new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
-                                      Dialogs.FILE_NONE,
+                                      Dialogs.FILE_SHOW_HIDDEN,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory
                                         : BARControl.listDirectory
@@ -4197,7 +4197,7 @@ public class BARWidgets
                                                    BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
-                                      Dialogs.FILE_NONE,
+                                      Dialogs.FILE_SHOW_HIDDEN,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory
                                         : BARControl.listDirectory
@@ -4312,7 +4312,7 @@ public class BARWidgets
                                       new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
-                                      Dialogs.FILE_NONE,
+                                      Dialogs.FILE_SHOW_HIDDEN,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory
                                         : BARControl.listDirectory
@@ -4657,7 +4657,7 @@ public class BARWidgets
                                     new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                 },
                                     "*",
-                                    Dialogs.FILE_NONE,
+                                    Dialogs.FILE_SHOW_HIDDEN,
 
                                     ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                       ? BARServer.remoteListDirectory
@@ -5030,7 +5030,7 @@ public class BARWidgets
                                     new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                 },
                                     "*",
-                                    Dialogs.FILE_NONE,
+                                    Dialogs.FILE_SHOW_HIDDEN,
                                     ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                       ? BARServer.remoteListDirectory
                                       : BARControl.listDirectory

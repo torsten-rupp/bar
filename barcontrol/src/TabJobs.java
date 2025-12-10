@@ -5462,7 +5462,7 @@ public class TabJobs
                                                    BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
-                                      Dialogs.FILE_NONE,
+                                      Dialogs.FILE_SHOW_HIDDEN,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory(selectedJobData.uuid)
                                         : BARControl.listDirectory
@@ -6026,7 +6026,7 @@ public class TabJobs
                                                    BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
-                                      Dialogs.FILE_NONE,
+                                      Dialogs.FILE_SHOW_HIDDEN,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory(selectedJobData.uuid)
                                         : BARControl.listDirectory
@@ -6676,7 +6676,7 @@ public class TabJobs
                                                      BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                     },
                                         "*",
-                                        Dialogs.FILE_NONE,
+                                        Dialogs.FILE_SHOW_HIDDEN,
                                         ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                           ? BARServer.remoteListDirectory(selectedJobData.uuid)
                                           : BARControl.listDirectory
@@ -6793,7 +6793,7 @@ public class TabJobs
                                                    BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
-                                      Dialogs.FILE_NONE,
+                                      Dialogs.FILE_SHOW_HIDDEN,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory(selectedJobData.uuid)
                                         : BARControl.listDirectory
@@ -6944,7 +6944,7 @@ public class TabJobs
                                                  new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                              },
                                                  "*",
-                                                 Dialogs.FILE_NONE,
+                                                 Dialogs.FILE_SHOW_HIDDEN,
                                                  ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                                    ? BARServer.remoteListDirectory(selectedJobData.uuid)
                                                    : BARControl.listDirectory
@@ -11358,7 +11358,7 @@ throw new Error("NYI");
                                     new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                 },
                                     "*",
-                                    Dialogs.FILE_NONE,
+                                    Dialogs.FILE_SHOW_HIDDEN,
                                     ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                       ? BARServer.remoteListDirectory(selectedJobData.uuid)
                                       : BARControl.listDirectory
@@ -11826,7 +11826,7 @@ throw new Error("NYI");
                                   new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                               },
                                   "*",
-                                  Dialogs.FILE_NONE,
+                                  Dialogs.FILE_SHOW_HIDDEN,
                                   ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                     ? BARServer.remoteListDirectory(selectedJobData.uuid)
                                     : BARControl.listDirectory
@@ -12964,7 +12964,7 @@ throw new Error("NYI");
                                   new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                               },
                                   "*",
-                                  Dialogs.FILE_NONE,
+                                  Dialogs.FILE_SHOW_HIDDEN,
                                   ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                     ? BARServer.remoteListDirectory(selectedJobData.uuid)
                                     : BARControl.listDirectory
@@ -13694,7 +13694,7 @@ throw new Error("NYI");
                                                    BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                   },
                                       "*",
-                                      Dialogs.FILE_NONE,
+                                      Dialogs.FILE_SHOW_HIDDEN,
                                       ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                         ? BARServer.remoteListDirectory(selectedJobData.uuid)
                                         : BARControl.listDirectory

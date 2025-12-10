@@ -8622,7 +8622,7 @@ widgetStorageTableToolTip.layout();
                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
                                                        },
                                            "*",
-                                           Dialogs.FILE_NONE,
+                                           Dialogs.FILE_SHOW_HIDDEN,
                                            BARServer.remoteListDirectory(selectedEntityIndexData.jobUUID)
                                           );
           if (moveToPath != null)
@@ -8775,6 +8775,11 @@ widgetStorageTableToolTip.layout();
                                          Dialogs.FileDialogTypes.ENTRY,
                                          BARControl.tr("Select storage"),
                                          widgetArchiveName.getText(),
+                                         new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                      BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                     },
+                                         "*",
+                                         Dialogs.FILE_SHOW_HIDDEN,
                                          ((selectionEvent.stateMask & SWT.CTRL) == 0)
                                            ? BARServer.remoteListDirectory(widgetArchiveName.getText())
                                            : BARControl.listDirectory
