@@ -1861,6 +1861,7 @@ if test -d icu -o -d "`readlink icu`"; then
         --enable-static \
         --disable-tests \
         --disable-samples \
+        --with-package-data=static \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure host)])
@@ -1888,6 +1889,7 @@ if test -d icu -o -d "`readlink icu`"; then
           --enable-static \
           --disable-tests \
           --disable-samples \
+          --with-package-data=static \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure target)])
@@ -1921,7 +1923,7 @@ if test -d icu -o -d "`readlink icu`"; then
           #       https://unicode-org.atlassian.net/browse/ICU-13138
           (cd extern/lib; ln -s libsicuuc.a libicuuc.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsicuin.a libicui18n.a) 1>/dev/null 2>/dev/null
-          (cd extern/lib; ln -s libsicudt.a libicudata.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s sicudt.a libicudata.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsicuio.a libicuio.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsicutu.a libicutu.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsiculx.a libiculx.a) 1>/dev/null 2>/dev/null
