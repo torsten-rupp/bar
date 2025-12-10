@@ -11968,6 +11968,7 @@ printf "%s\n" "fail (patch)" >&6; }
         --enable-static \
         --disable-tests \
         --disable-samples \
+        --with-package-data=static \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure host)" >&5
@@ -12005,6 +12006,7 @@ printf "%s\n" "fail (make host)" >&6; }
           --enable-static \
           --disable-tests \
           --disable-samples \
+          --with-package-data=static \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (configure target)" >&5
@@ -12048,7 +12050,7 @@ printf "%s\n" "fail (make target)" >&6; }
           #       https://unicode-org.atlassian.net/browse/ICU-13138
           (cd extern/lib; ln -s libsicuuc.a libicuuc.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsicuin.a libicui18n.a) 1>/dev/null 2>/dev/null
-          (cd extern/lib; ln -s libsicudt.a libicudata.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s sicudt.a libicudata.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsicuio.a libicuio.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsicutu.a libicutu.a) 1>/dev/null 2>/dev/null
           (cd extern/lib; ln -s libsiculx.a libiculx.a) 1>/dev/null 2>/dev/null
