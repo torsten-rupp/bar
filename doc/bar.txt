@@ -310,7 +310,7 @@ OPTIONS
                                                                       overwrite    : overwrite entries
                                                                       skip-existing: skip existing entries
          --overwrite-files                                          overwrite existing entries on restore
-         --sparse-files                                             create sparse files
+         --sparse                                                   create sparse files/images/hardlinks
          --wait-first-volume                                        wait for first volume
          --no-signature                                             do not create signatures
          --skip-verify-signatures                                   do not verify signatures of archives
