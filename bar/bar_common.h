@@ -85,7 +85,7 @@
 #define DEFAULT_JOBS_SUB_DIRECTORY                CONFIG_SUB_DIR "/jobs"
 #define DEFAULT_INCREMENTAL_DATA_SUB_DIRECTORY    CONFIG_SUB_DIR
 #define DEFAULT_PAIRING_MASTER_FILE_NAME          CONFIG_SUB_DIR "/pairing"
-#define DEFAULT_PID_FILE_NAME                     "/run/bar.pid"
+#define DEFAULT_PID_FILE_NAME                     "bar.pid"
 #define DEFAULT_INDEX_DATABASE_URI_TYPE           "sqlite3:"
 #define DEFAULT_INDEX_DATABASE_URI_NAME           "index.db"
 
@@ -1043,7 +1043,7 @@ typedef struct
   const char                  *logFormat;
   const char                  *logPostCommand;
 
-  const char                  *pidFileName;
+  String                      pidFileName;
 
   uint                        commandTimeout;
 

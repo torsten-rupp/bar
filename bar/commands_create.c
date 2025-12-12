@@ -5404,6 +5404,8 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
                         );
             }
 
+
+
             if (isPrintInfo(2))
             {
               uint percentageDone = 0;

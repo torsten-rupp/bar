@@ -1167,6 +1167,17 @@ void Misc_setApplicationIdCString(const char *data);
 
 MachineId Misc_getMachineId(void);
 
+/***********************************************************************\
+* Name   : Misc_getPID
+* Purpose: get process id
+* Input  : -
+* Output : -
+* Return : process id (PID)
+* Notes  : -
+\***********************************************************************/
+
+size_t Misc_getPID(void);
+
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\

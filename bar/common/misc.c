@@ -1867,6 +1867,19 @@ MachineId Misc_getMachineId(void)
   return machineId;
 }
 
+size_t Misc_getPID(void)
+{
+  size_t pid;
+
+  #if   defined(PLATFORM_LINUX)
+    pid = (size_t)getpid();
+  #elif defined(PLATFORM_WINDOWS)
+    pid = (size_t)_getpid();
+  #endif /* PLATFORM_... */
+
+  return pid;
+}
+
 /*---------------------------------------------------------------------*/
 
 bool Misc_hasMacros(ConstString templateString)
@@ -3301,46 +3314,55 @@ bool Misc_systemNotify(Misc_SystemNotifyTypes systemNotifyType, int errorNumber,
 {
   bool result = FALSE;
 
-  #if HAVE_DLFCN_H
-    switch (systemNotifyType)
-    {
-      case MISC_SYSTEM_NOTIFY_TYPE_STARTED:
-        if ((sd_notify_ptr != NULL) && (sd_notify_barrier_ptr != NULL))
-        {
-          sd_notify_ptr(0,"READY=1");
-          sd_notify_barrier_ptr(0, 5*1000000);
+  #if   defined(PLATFORM_LINUX)
+    #if HAVE_DLFCN_H
+      switch (systemNotifyType)
+      {
+        case MISC_SYSTEM_NOTIFY_TYPE_STARTED:
+          if ((sd_notify_ptr != NULL) && (sd_notify_barrier_ptr != NULL))
+          {
+            sd_notify_ptr(0,"READY=1");
+            sd_notify_barrier_ptr(0, 5*1000000);
 
-          result = TRUE;
-        }
-        break;
-      case MISC_SYSTEM_NOTIFY_TYPE_STOPPING:
-        if ((sd_notify_ptr != NULL) && (sd_notify_barrier_ptr != NULL))
-        {
-          sd_notify_ptr(0,"STOPPING=1");
-          sd_notify_barrier_ptr(0, 5*1000000);
+            result = TRUE;
+          }
+          break;
+        case MISC_SYSTEM_NOTIFY_TYPE_STOPPING:
+          if ((sd_notify_ptr != NULL) && (sd_notify_barrier_ptr != NULL))
+          {
+            sd_notify_ptr(0,"STOPPING=1");
+            sd_notify_barrier_ptr(0, 5*1000000);
 
-          result = TRUE;
-        }
-        break;
-      case MISC_SYSTEM_NOTIFY_TYPE_ERROR:
-        if (sd_notifyf_ptr != NULL)
-        {
-          va_list arguments;
-          va_start(arguments,message);
-          char buffer[128];
-          vsnprintf(buffer,sizeof(buffer),message,arguments);
-          sd_notifyf_ptr(0,"STATUS=Failed to start up: %s\nERRNO=%d\n",buffer,errorNumber);
-          va_end(arguments);
+            result = TRUE;
+          }
+          break;
+        case MISC_SYSTEM_NOTIFY_TYPE_ERROR:
+          if (sd_notifyf_ptr != NULL)
+          {
+            va_list arguments;
+            va_start(arguments,message);
+            char buffer[128];
+            vsnprintf(buffer,sizeof(buffer),message,arguments);
+            sd_notifyf_ptr(0,"STATUS=Failed to start up: %s\nERRNO=%d\n",buffer,errorNumber);
+            va_end(arguments);
 
-          result = TRUE;
-        }
-        break;
-    }
-  #else
+            result = TRUE;
+          }
+          break;
+      }
+    #else
+      UNUSED_VARIABLE(systemNotifyType);
+      UNUSED_VARIABLE(errorNumber);
+      UNUSED_VARIABLE(message);
+    #endif
+  #elif defined(PLATFORM_WINDOWS)
+    // ignored on Windows
     UNUSED_VARIABLE(systemNotifyType);
     UNUSED_VARIABLE(errorNumber);
     UNUSED_VARIABLE(message);
-  #endif
+
+    result = TRUE;
+  #endif /* PLATFORM_... */
 
   return result;
 }

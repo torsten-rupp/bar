@@ -1849,7 +1849,10 @@ LOCAL void initGlobalOptions(void)
   globalOptions.logFormat                                       = DEFAULT_LOG_FORMAT;
   globalOptions.logPostCommand                                  = NULL;
 
-  globalOptions.pidFileName                                     = DEFAULT_PID_FILE_NAME;
+  globalOptions.pidFileName                                     = File_getSystemDirectoryCString(String_new(),
+                                                                                                 FILE_SYSTEM_PATH_RUN,
+                                                                                                 DEFAULT_PID_FILE_NAME
+                                                                                                );
 
   globalOptions.commandTimeout                                  = DEFAULT_COMMND_TIMEOUT;
 
@@ -2183,6 +2186,7 @@ LOCAL void doneGlobalOptions(void)
   doneCertificate(&globalOptions.serverCert);
   doneCertificate(&globalOptions.serverCA);
 
+  String_delete(globalOptions.pidFileName);
   String_delete(globalOptions.logFileName);
 
   PatternList_done(&globalOptions.excludePatternList);
@@ -8360,7 +8364,7 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_CSTRING      ("log-format",                        0,  1,1,globalOptions.logFormat,                                                                                          "log format (default: %default%)","format"                                 ),
   CMD_OPTION_CSTRING      ("log-post-command",                  0,  1,1,globalOptions.logPostCommand,                                                                                     "log file post-process command","command"                                  ),
 
-  CMD_OPTION_CSTRING      ("pid-file",                          0,  1,1,globalOptions.pidFileName,                                                                                        "process id file name (default: %default%)","file name"                    ),
+  CMD_OPTION_STRING       ("pid-file",                          0,  1,1,globalOptions.pidFileName,                                                                                        "process id file name (default: %default%)","file name"                    ),
 
   CMD_OPTION_STRING       ("pairing-master-file",               0,  1,1,globalOptions.masterInfo.pairingFileName,                                                                         "pairing master enable file name (default: %default%)","file name"         ),
 
@@ -8978,8 +8982,8 @@ const ConfigValue BAR_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPACE(),
 
   CONFIG_VALUE_COMMENT           ("process id file"),
-  CONFIG_VALUE_CSTRING           ("pid-file",                         &globalOptions.pidFileName,-1,                                 "<file name>"),
-  CONFIG_VALUE_COMMENT("remote BAR executable"),
+  CONFIG_VALUE_STRING            ("pid-file",                         &globalOptions.pidFileName,-1,                                 "<file name>"),
+  CONFIG_VALUE_COMMENT           ("remote BAR executable"),
   CONFIG_VALUE_STRING            ("remote-bar-executable",            &globalOptions.remoteBARExecutable,-1,                         "<executable>"),
   CONFIG_VALUE_SPACE(),
 

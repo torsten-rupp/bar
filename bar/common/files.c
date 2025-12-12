@@ -1715,6 +1715,9 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
       case FILE_SYSTEM_PATH_RUNTIME:
         String_setCString(path,RUNTIME_DIR);
         break;
+      case FILE_SYSTEM_PATH_RUN:
+        String_setCString(path,RUN_DIR);
+        break;
       case FILE_SYSTEM_PATH_TLS:
         String_setCString(path,TLS_DIR);
         break;
@@ -1762,6 +1765,7 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
         break;
       case FILE_SYSTEM_PATH_CONFIGURATION:
       case FILE_SYSTEM_PATH_RUNTIME:
+      case FILE_SYSTEM_PATH_RUN:
       case FILE_SYSTEM_PATH_TLS:
       case FILE_SYSTEM_PATH_LOG:
       case FILE_SYSTEM_PATH_USER_CONFIGURATION:
