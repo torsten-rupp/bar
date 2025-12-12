@@ -158,25 +158,31 @@ LOCAL const struct
   #define FTELL(handle) ftell(handle)
 #endif
 
-#if defined(HAVE_STAT64) && defined(HAVE_LSTAT64) && defined(HAVE_STRUCT_STAT64)
-  #define STAT(fileName,fileState)  stat64(fileName,fileState)
-  #define LSTAT(fileName,fileState) lstat64(fileName,fileState)
-  typedef struct stat64 FileStat;
-#elif defined(HAVE___STAT64) && defined(HAVE___LSTAT64) && defined(HAVE_STRUCT___STAT64)
-  #define STAT(fileName,fileState)  __stat64(fileName,fileState)
-  #define LSTAT(fileName,fileState) __lstat64(fileName,fileState)
-  typedef struct __stat64 FileStat;
-#elif defined(HAVE_STAT) && defined(HAVE_LSTAT) && defined(HAVE_STRUCT_STAT)
-  #define STAT(fileName,fileState)  stat(fileName,fileState)
-  #define LSTAT(fileName,fileState) lstat(fileName,fileState)
-  typedef struct stat FileStat;
-#elif defined(HAVE__STATI64) && defined(HAVE_STRUCT__STATI64)
-  #define STAT(fileName,fileState)  _stati64(fileName,fileState)
-  #define LSTAT(fileName,fileState) _stati64(fileName,fileState)
-  typedef struct _stati64 FileStat;
-#else
-  #error No struct stat, lstat, or struct stat64
-#endif
+#if   defined(PLATFORM_LINUX)
+  #if defined(HAVE_STAT64) && defined(HAVE_LSTAT64) && defined(HAVE_STRUCT_STAT64)
+    #define STAT(fileName,fileState)  stat64(fileName,fileState)
+    #define LSTAT(fileName,fileState) lstat64(fileName,fileState)
+    typedef struct stat64 FileStat;
+  #elif defined(HAVE___STAT64) && defined(HAVE___LSTAT64) && defined(HAVE_STRUCT___STAT64)
+    #define STAT(fileName,fileState)  __stat64(fileName,fileState)
+    #define LSTAT(fileName,fileState) __lstat64(fileName,fileState)
+    typedef struct __stat64 FileStat;
+  #elif defined(HAVE_STAT) && defined(HAVE_LSTAT) && defined(HAVE_STRUCT_STAT)
+    #define STAT(fileName,fileState)  stat(fileName,fileState)
+    #define LSTAT(fileName,fileState) lstat(fileName,fileState)
+    typedef struct stat FileStat;
+  #elif defined(HAVE__STATI64) && defined(HAVE_STRUCT__STATI64)
+    #define STAT(fileName,fileState)  _stati64(fileName,fileState)
+    #define LSTAT(fileName,fileState) _stati64(fileName,fileState)
+    typedef struct _stati64 FileStat;
+  #else
+    #error No struct stat, lstat, or struct stat64
+  #endif
+#elif defined(PLATFORM_WINDOWS)
+  #define STAT(fileName,fileState)  _stat(fileName,fileState)
+  #define LSTAT(fileName,fileState) _stat(fileName,fileState)
+  typedef struct _stat FileStat;
+#endif /* PLATFORM_... */
 
 #ifndef NDEBUG
   typedef struct DebugFileNode
@@ -983,6 +989,7 @@ LOCAL Errors getFileInfo(FileInfo   *fileInfo,
   fileInfo->userId          = fileStat.st_uid;
   fileInfo->groupId         = fileStat.st_gid;
   fileInfo->permissions     = (FilePermissions)fileStat.st_mode;
+
   #ifdef HAVE_MAJOR
     fileInfo->major         = major(fileStat.st_rdev);
   #else
