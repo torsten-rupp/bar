@@ -1039,6 +1039,15 @@ LOCAL Errors connectDescriptor(SocketHandle *socketHandle,
 
 Errors Network_initAll(void)
 {
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2,2),&wsaData) != 0)
+    {
+      return ERRORX_(INIT,WSAGetLastError(),"init network");
+    }
+  #endif /* PLATFORM_... */
+
   #ifdef HAVE_SSH2
     // initialize crypto multi-thread support
     cryptoMaxLocks = (uint)CRYPTO_num_locks();
@@ -1106,6 +1115,11 @@ void Network_doneAll(void)
     OPENSSL_free(cryptoLockCounters);
     OPENSSL_free(cryptoLocks);
   #endif /* HAVE_SSH2 */
+
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    WSACleanup();
+  #endif /* PLATFORM_... */
 }
 
 String Network_getHostName(String hostName)
