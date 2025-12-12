@@ -2551,20 +2551,16 @@ LOCAL Errors createPIDFile(void)
 {
   Errors error;
 
-  if (!stringIsEmpty(globalOptions.pidFileName))
+  if (!String_isEmpty(globalOptions.pidFileName))
   {
-    String     fileName = String_new();
     FileHandle fileHandle;
-    error = File_open(&fileHandle,File_setFileNameCString(fileName,globalOptions.pidFileName),FILE_OPEN_CREATE);
+    error = File_open(&fileHandle,globalOptions.pidFileName,FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
-      String_delete(fileName);
-      printError(_("cannot create process id file '%s' (error: %s)"),globalOptions.pidFileName,Error_getText(error));
       return error;
     }
-    File_printLine(&fileHandle,"%d",(int)getpid());
+    File_printLine(&fileHandle,"%u",Misc_getPID());
     (void)File_close(&fileHandle);
-    String_delete(fileName);
   }
 
   return ERROR_NONE;
@@ -2581,9 +2577,9 @@ LOCAL Errors createPIDFile(void)
 
 LOCAL void deletePIDFile(void)
 {
-  if (globalOptions.pidFileName != NULL)
+  if (!String_isEmpty(globalOptions.pidFileName))
   {
-    (void)File_deleteCString(globalOptions.pidFileName,FALSE);
+    (void)File_delete(globalOptions.pidFileName,FALSE);
   }
 }
 
@@ -3065,7 +3061,7 @@ LOCAL Errors runServer(void)
   error = createPIDFile();
   if (error != ERROR_NONE)
   {
-    printError(_("cannot create PID file"),Error_getText(error));
+    printError(_("cannot create PID file '%s'"),Error_getText(error),String_cString(globalOptions.pidFileName));
     closeLog();
     return error;
   }

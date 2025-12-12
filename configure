@@ -770,6 +770,7 @@ CPP
 LOCALE_DIR
 MAN_DIR
 TLS_DIR
+RUN_DIR
 RUNTIME_DIR
 CONFIG_DIR
 INSTALL_BIN_DIR
@@ -888,6 +889,7 @@ enable_option_checking
 with_toolchain_prefix
 with_config_dir
 with_runtime_dir
+with_run_dir
 with_tls_dir
 with_swt_dir
 with_launch4j_dir
@@ -1601,6 +1603,7 @@ Optional Packages:
                           configuration directory (default: /etc)
   --with-runtime-dir=<path>
                           runtime directory (default: /var/lib)
+  --with-run-dir=<path>   run directory (default: /run)
   --with-tls-dir=<path>   TLS/SLL configuration and certificate directory
                           (default: /etc/ssl)
   --with-swt-dir=<path>   SWT directory
@@ -3482,6 +3485,16 @@ then :
   withval=$with_runtime_dir; RUNTIME_DIR=$withval
 else $as_nop
   RUNTIME_DIR=/var/lib
+
+fi
+
+
+# Check whether --with-run-dir was given.
+if test ${with_run_dir+y}
+then :
+  withval=$with_run_dir; RUN_DIR=$withval
+else $as_nop
+  RUN_DIR=/run
 
 fi
 
@@ -33402,6 +33415,9 @@ printf "%s\n" "#define CONFIG_DIR \"$CONFIG_DIR\"" >>confdefs.h
 printf "%s\n" "#define RUNTIME_DIR \"$RUNTIME_DIR\"" >>confdefs.h
 
 
+printf "%s\n" "#define RUN_DIR \"$RUN_DIR\"" >>confdefs.h
+
+
 printf "%s\n" "#define TLS_DIR \"$TLS_DIR\"" >>confdefs.h
 
 
@@ -36796,6 +36812,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    INSTALL_BIN_DIR="$INSTALL_BIN_DIR"
                    CONFIG_DIR="$CONFIG_DIR"
                    RUNTIME_DIR="$RUNTIME_DIR"
+                   RUN_DIR="$RUN_DIR"
                    TLS_DIR="$TLS_DIR"
                    HEAPVIEW_DIR="$HEAPVIEW_DIR"
 
@@ -37442,6 +37459,7 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                     echo "  Binary directory     : $INSTALL_BIN_DIR"
                     echo "  Config directory     : $CONFIG_DIR"
                     echo "  Runtime directory    : $RUNTIME_DIR"
+                    echo "  Run directory        : $RUN_DIR"
                     echo "  TLS directory        : $TLS_DIR"
                     echo ""
                     echo "  Heapview directory   : $HEAPVIEW_DIR"
