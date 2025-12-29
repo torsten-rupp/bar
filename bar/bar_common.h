@@ -1294,10 +1294,10 @@ extern String tmpDirectory;           // global temporary directory
 * Notes  : -
 \***********************************************************************/
 
-#define BYTES_SHORT(n) (((n)>(1024LL*1024LL*1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL*1024LL): \
-                        ((n)>(       1024LL*1024LL*1024LL))?(double)(n)/(double)(       1024LL*1024LL*1024LL): \
-                        ((n)>(              1024LL*1024LL))?(double)(n)/(double)(              1024LL*1024LL): \
-                        ((n)>                      1024LL )?(double)(n)/(double)(                     1024LL): \
+#define BYTES_SHORT(n) (((n)>=(1024LL*1024LL*1024LL*1024LL))?(double)(n)/(double)(1024LL*1024LL*1024LL*1024LL): \
+                        ((n)>=(       1024LL*1024LL*1024LL))?(double)(n)/(double)(       1024LL*1024LL*1024LL): \
+                        ((n)>=(              1024LL*1024LL))?(double)(n)/(double)(              1024LL*1024LL): \
+                        ((n)>=                      1024LL )?(double)(n)/(double)(                     1024LL): \
                         (double)(n) \
                        )
 
@@ -1310,10 +1310,10 @@ extern String tmpDirectory;           // global temporary directory
 * Notes  : -
 \***********************************************************************/
 
-#define BYTES_UNIT(n) (((n)>(1024LL*1024LL*1024LL*1024LL))?"TiB": \
-                       ((n)>(       1024LL*1024LL*1024LL))?"GiB": \
-                       ((n)>(              1024LL*1024LL))?"MiB": \
-                       ((n)>                      1024LL )?"KiB": \
+#define BYTES_UNIT(n) (((n)>=(1024LL*1024LL*1024LL*1024LL))?"TiB": \
+                       ((n)>=(       1024LL*1024LL*1024LL))?"GiB": \
+                       ((n)>=(              1024LL*1024LL))?"MiB": \
+                       ((n)>=                      1024LL )?"KiB": \
                        "bytes" \
                       )
 
