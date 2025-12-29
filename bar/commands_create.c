@@ -3724,9 +3724,11 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
     Storage_initSpecifier(&storageSpecifier);
     String           dateTime          = String_new();
     uint64           totalStorageSize  = 0LL;
-    IndexId          oldestStorageId   = INDEX_ID_NONE;
+    IndexId          oldestStorageId;
     do
     {
+      oldestStorageId  = INDEX_ID_NONE;
+
       Errors error;
 
       // get total storage size, find oldest storage entry
@@ -3810,7 +3812,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
       Index_doneList(&indexQueryHandle);
 
 //fprintf(stderr,"%s, %d: totalStorageSize=%"PRIu64" limit=%"PRIu64" oldestStorageId=%"PRIu64"\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
-      if ((totalStorageSize > limit) && !INDEX_ID_IS_NONE((oldestStorageId)))
+      if (!INDEX_ID_IS_NONE((oldestStorageId)) && (totalStorageSize > limit))
       {
         // delete oldest storage entry
         error = Storage_parseName(&storageSpecifier,oldestStorageName);
@@ -3840,6 +3842,8 @@ NULL, // masterIO
 
             // prune empty directories
             (void)Storage_pruneDirectories(&storageInfo,oldestStorageName);
+
+            Storage_done(&storageInfo);
           }
           else
           {
@@ -3853,7 +3857,6 @@ NULL, // masterIO
                        Error_getText(error)
                       );
           }
-          Storage_done(&storageInfo);
         }
 
         // purge index of storage
@@ -3871,8 +3874,14 @@ NULL, // masterIO
                     );
           break;
         }
-        (void)IndexEntity_prune(indexHandle,NULL,NULL,oldestEntityId);
-        (void)IndexUUID_prune(indexHandle,NULL,NULL,oldestUUIDId);
+        if (!INDEX_ID_IS_NONE(oldestEntityId))
+        {
+          (void)IndexEntity_prune(indexHandle,NULL,NULL,oldestEntityId);
+        }
+        if (!INDEX_ID_IS_NONE(oldestUUIDId))
+        {
+          (void)IndexUUID_prune(indexHandle,NULL,NULL,oldestUUIDId);
+        }
 
         // log
         Misc_formatDateTime(String_clear(dateTime),oldestCreatedDateTime,TIME_TYPE_LOCAL,NULL);
@@ -3887,8 +3896,8 @@ NULL, // masterIO
                   );
       }
     }
-    while (   (totalStorageSize > limit)
-           && !INDEX_ID_IS_NONE(oldestStorageId)
+    while (   !INDEX_ID_IS_NONE(oldestStorageId)
+           && (totalStorageSize > limit)
           );
 
     // free resources
