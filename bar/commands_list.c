@@ -3667,46 +3667,63 @@ Errors Command_list(StringList              *storageNameList,
                                    ) == ERROR_NONE
          )
       {
-        String fileName = String_new();
-        while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
+        if (String_isEmpty(storageSpecifier.archivePatternString))
         {
-          // read next directory entry
-          FileInfo fileInfo;
-          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
-          if (error != ERROR_NONE)
+          // list directory
+          error = listDirectoryContent(&storageDirectoryListHandle,
+                                       &storageSpecifier,
+                                       includeEntryList,
+                                       excludePatternList
+                                      );
+          if (error == ERROR_NONE)
           {
-            continue;
+            someFileFound = TRUE;
           }
-
-          // match pattern
-          if (!String_isEmpty(storageSpecifier.archivePatternString))
+        }
+        else
+        {
+          // list content of matching archives
+          String fileName = String_new();
+          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
           {
-            if (!Pattern_match(&storageSpecifier.archivePattern,fileName,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
+            // read next directory entry
+            FileInfo fileInfo;
+            error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
+            if (error != ERROR_NONE)
             {
               continue;
             }
-          }
 
-          // list archive content
-          if (   (fileInfo.type == FILE_TYPE_FILE)
-              || (fileInfo.type == FILE_TYPE_LINK)
-              || (fileInfo.type == FILE_TYPE_HARDLINK)
-             )
-          {
-            error = listArchiveContent(&storageSpecifier,
-                                       fileName,
-                                       includeEntryList,
-                                       excludePatternList,
-                                       showEntriesFlag,
-                                       jobOptions,
-                                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                                       logHandle
-                                      );
-          }
+            // match pattern
+            if (!String_isEmpty(storageSpecifier.archivePatternString))
+            {
+              if (!Pattern_match(&storageSpecifier.archivePattern,fileName,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
+              {
+                continue;
+              }
+            }
 
-          someFileFound = TRUE;
+            // list archive content
+            if (   (fileInfo.type == FILE_TYPE_FILE)
+                || (fileInfo.type == FILE_TYPE_LINK)
+                || (fileInfo.type == FILE_TYPE_HARDLINK)
+               )
+            {
+              error = listArchiveContent(&storageSpecifier,
+                                         fileName,
+                                         includeEntryList,
+                                         excludePatternList,
+                                         showEntriesFlag,
+                                         jobOptions,
+                                         CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
+                                         logHandle
+                                        );
+            }
+
+            someFileFound = TRUE;
+          }
+          String_delete(fileName);
         }
-        String_delete(fileName);
 
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
@@ -3740,7 +3757,7 @@ Errors Command_list(StringList              *storageNameList,
         }
         else
         {
-          // list archive content of matching files
+          // list content of matching archives
           String fileName = String_new();
           while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
           {
