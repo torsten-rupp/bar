@@ -1509,8 +1509,8 @@ fprintf(stderr,"\n");
                     && ((uuidNode->date.day   == DATE_ANY       ) || (uuidNode->date.day   == (int)day)  )
                     && ((uuidNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(uuidNode->weekDaySet,weekDay))
                     && isInTimeRange(currentHour,currentMinute,
-                                     uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                     uuidNode->endTime.hour,uuidNode->endTime.hour
+                                     uuidNode->beginTime.hour,uuidNode->beginTime.minute,
+                                     uuidNode->endTime.hour,uuidNode->endTime.minute
                                     )
 
                    )
@@ -1572,8 +1572,8 @@ fprintf(stderr,"\n");
                     && ((uuidNode->date.day   == DATE_ANY       ) || (uuidNode->date.day   == (int)day)  )
                     && ((uuidNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(uuidNode->weekDaySet,weekDay))
                     && isInTimeRange(currentHour,currentMinute,
-                                     uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                     uuidNode->endTime.hour,uuidNode->endTime.hour
+                                     uuidNode->beginTime.hour,uuidNode->beginTime.minute,
+                                     uuidNode->endTime.hour,uuidNode->endTime.minute
                                     )
 
                    )
@@ -1624,8 +1624,8 @@ fprintf(stderr,"\n");
                     && ((uuidNode->date.day   == DATE_ANY       ) || (uuidNode->date.day   == (int)day)  )
                     && ((uuidNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(uuidNode->weekDaySet,weekDay))
                     && isInTimeRange(currentHour,currentMinute,
-                                     uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                     uuidNode->endTime.hour,uuidNode->endTime.hour
+                                     uuidNode->beginTime.hour,uuidNode->beginTime.minute,
+                                     uuidNode->endTime.hour,uuidNode->endTime.minute
                                     )
 
                    )
@@ -1677,8 +1677,8 @@ fprintf(stderr,"\n");
                     && ((uuidNode->date.day   == DATE_ANY       ) || (uuidNode->date.day   == (int)day)  )
                     && ((uuidNode->weekDaySet == WEEKDAY_SET_ANY) || IN_SET(uuidNode->weekDaySet,weekDay))
                     && isInTimeRange(currentHour,currentMinute,
-                                     uuidNode->beginTime.hour,uuidNode->beginTime.hour,
-                                     uuidNode->endTime.hour,uuidNode->endTime.hour
+                                     uuidNode->beginTime.hour,uuidNode->beginTime.minute,
+                                     uuidNode->endTime.hour,uuidNode->endTime.minute
                                     )
 
                    )
@@ -2100,8 +2100,8 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
   if (   (beginTime == NULL)
       || (endTime == NULL)
       || isInTimeRange(currentHour,currentMinute,
-                       beginTime->hour,beginTime->hour,
-                       endTime->hour,endTime->hour
+                       beginTime->hour,beginTime->minute,
+                       endTime->hour,endTime->minute
                       )
      )
   {
