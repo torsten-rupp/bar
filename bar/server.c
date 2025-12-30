@@ -1797,6 +1797,7 @@ LOCAL uint64 getJobSchedule(const JobScheduleNode *jobScheduleNode,
 
                       if (scheduleDateTime > jobScheduleNode->lastExecutedDateTime)
                       {
+//fprintf(stderr,"%s:%d: scheduleDateTime=%lu jobScheduleNode->lastExecutedDateTime=%lu\n",__FILE__,__LINE__,scheduleDateTime,jobScheduleNode->lastExecutedDateTime);
                         if      (   (jobScheduleNode->archiveType == ARCHIVE_TYPE_FULL)
                                  && (jobScheduleDateTime == MAX_UINT64)
                                 )

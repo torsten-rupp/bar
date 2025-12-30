@@ -14813,7 +14813,7 @@ throw new Error("NYI");
         widgetMinute = Widgets.newOptionMenu(subComposite);
         widgetMinute.setEnabled(scheduleData.archiveType != ArchiveTypes.CONTINUOUS);
         widgetMinute.setToolTipText(BARControl.tr("Minute to execute job. Leave to '*' for every minute."));
-        widgetMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
+        widgetMinute.setItems(new String[]{"*","00","05","10","15","20","25","30","35","40","45","50","55"});
         widgetMinute.setText(scheduleData.getMinute()); if (widgetMinute.getText().isEmpty()) widgetMinute.setText("*");
         Widgets.layout(widgetMinute,0,1,TableLayoutData.W);
       }
@@ -14854,7 +14854,7 @@ throw new Error("NYI");
         widgetBeginMinute = Widgets.newOptionMenu(subComposite);
         widgetBeginMinute.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetBeginMinute.setToolTipText(BARControl.tr("Begin minute where continuous storage is active."));
-        widgetBeginMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
+        widgetBeginMinute.setItems(new String[]{"*","00","05","10","15","20","25","30","35","40","45","50","55"});
         widgetBeginMinute.setText(scheduleData.getBeginMinute()); if (widgetBeginMinute.getText().isEmpty()) widgetBeginMinute.setText("*");
         Widgets.layout(widgetBeginMinute,0,3,TableLayoutData.W);
 
@@ -14871,7 +14871,7 @@ throw new Error("NYI");
         widgetEndMinute = Widgets.newOptionMenu(subComposite);
         widgetEndMinute.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
         widgetEndMinute.setToolTipText(BARControl.tr("End minute where continuous storage is active."));
-        widgetEndMinute.setItems(new String[]{"*","00","05","10","15","20","30","35","40","45","50","55"});
+        widgetEndMinute.setItems(new String[]{"*","00","05","10","15","20","25","30","35","40","45","50","55"});
         widgetEndMinute.setText(scheduleData.getEndMinute()); if (widgetEndMinute.getText().isEmpty()) widgetEndMinute.setText("*");
         Widgets.layout(widgetEndMinute,0,6,TableLayoutData.W);
       }

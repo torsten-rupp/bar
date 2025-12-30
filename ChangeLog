@@ -1,5 +1,8 @@
 2025-12-23 27a
   * fix ICU data (bug #33)
+  * fix auto-purge if job size limit is exceeded (bug #35)
+  * fix store begin time minute (bug #36)
+  * fix fixed check minute in continous active time range (bug #37)
   * BARControl: add show hidden button (feature #23)
 
 2025-12-06 27
