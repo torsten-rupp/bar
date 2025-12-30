@@ -1627,9 +1627,9 @@ public class TabJobs
      */
     String getBeginMinute()
     {
-      assert (endMinute == ANY) || ((endMinute >= 0) && (endMinute <= 59)) : endMinute;
+      assert (beginMinute == ANY) || ((beginMinute >= 0) && (beginMinute <= 59)) : beginMinute;
 
-      return (endMinute != ANY) ? String.format("%02d",endMinute) : "*";
+      return (beginMinute != ANY) ? String.format("%02d",beginMinute) : "*";
     }
 
     /** get begin time value
@@ -1796,7 +1796,7 @@ public class TabJobs
      */
     public String toString()
     {
-      return "ScheduleData {"+uuid+", "+getDate()+", "+getWeekDays()+", "+getTime()+", "+archiveType+", "+noStorage+", "+enabled+"}";
+      return "ScheduleData {"+uuid+", "+getDate()+", "+getWeekDays()+", "+getTime()+", "+archiveType+", "+beginHour+":"+beginMinute+", "+endHour+":"+endMinute+", "+noStorage+", "+enabled+"}";
     }
 
     /** get valid string
@@ -14984,7 +14984,6 @@ throw new Error("NYI");
         scheduleData.testCreatedArchives = widgetTestCreatedArchives.getSelection();
         scheduleData.noStorage           = widgetNoStorage.getSelection();
         scheduleData.enabled             = widgetEnabled.getSelection();
-
         if ((scheduleData.archiveType != ArchiveTypes.CONTINUOUS) && (scheduleData.minute == ScheduleData.ANY))
         {
           if (!Dialogs.confirm(dialog,BARControl.tr("No specific time set. Really execute job every minute?")))
