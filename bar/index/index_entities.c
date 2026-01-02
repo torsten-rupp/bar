@@ -2465,21 +2465,24 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      // purge entity (mark as deleted)
-      error = Database_update(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
-                              "entities",
-                              DATABASE_FLAG_NONE,
-                              DATABASE_VALUES
-                              (
-                                DATABASE_VALUE_BOOL("deletedFlag", TRUE),
-                              ),
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                              )
-                             );
+      DATABASE_TRANSACTION_DO(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+      {
+        // purge entity (mark as deleted)
+        error = Database_update(&indexHandle->databaseHandle,
+                                NULL,  // changedRowCount
+                                "entities",
+                                DATABASE_FLAG_NONE,
+                                DATABASE_VALUES
+                                (
+                                  DATABASE_VALUE_BOOL("deletedFlag", TRUE),
+                                ),
+                                "id=?",
+                                DATABASE_FILTERS
+                                (
+                                  DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
+                                )
+                               );
+      }
       if (error == ERROR_NONE)
       {
         return error;

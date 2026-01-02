@@ -5354,6 +5354,7 @@ UNUSED_VARIABLE(progressInfo);
                           );
       if (error != ERROR_NONE)
       {
+        Array_done(&entryIds);
         return error;
       }
 
@@ -5378,21 +5379,17 @@ UNUSED_VARIABLE(progressInfo);
                            NULL,  // changedRowCount
                            DATABASE_TABLES
                            (
-                             "entries \
-                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                             "
+                             "directoryEntries"
                            ),
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id")
+                             DATABASE_COLUMN_KEY   ("entryId")
                            ),
-                           "    entries.type=? \
-                            AND directoryEntries.storageId=? \
+                           "storageId=? \
                            ",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_DIRECTORY),
                              DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(storageId))
                            ),
                            NULL,  // groupBy
@@ -5402,6 +5399,7 @@ UNUSED_VARIABLE(progressInfo);
                           );
       if (error != ERROR_NONE)
       {
+        Array_done(&entryIds);
         return error;
       }
 
@@ -5426,21 +5424,17 @@ UNUSED_VARIABLE(progressInfo);
                            NULL,  // changedRowCount
                            DATABASE_TABLES
                            (
-                             "entries \
-                                LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
-                             "
+                             "linkEntries"
                            ),
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id")
+                             DATABASE_COLUMN_KEY   ("entryId")
                            ),
-                           "    entries.type=? \
-                            AND linkEntries.storageId=? \
+                           "storageId=? \
                            ",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_LINK),
                              DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(storageId))
                            ),
                            NULL,  // groupBy
@@ -5450,6 +5444,7 @@ UNUSED_VARIABLE(progressInfo);
                           );
       if (error != ERROR_NONE)
       {
+        Array_done(&entryIds);
         return error;
       }
 
@@ -5474,21 +5469,17 @@ UNUSED_VARIABLE(progressInfo);
                            NULL,  // changedRowCount
                            DATABASE_TABLES
                            (
-                             "entries \
-                                LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
-                             "
+                             "specialEntries"
                            ),
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id")
+                             DATABASE_COLUMN_KEY   ("entryId")
                            ),
-                           "    entries.type=? \
-                            AND specialEntries.storageId=? \
+                           "storageId=? \
                            ",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_SPECIAL),
                              DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(storageId))
                            ),
                            NULL,  // groupBy
@@ -5498,100 +5489,107 @@ UNUSED_VARIABLE(progressInfo);
                           );
       if (error != ERROR_NONE)
       {
+        Array_done(&entryIds);
         return error;
       }
 
-      // purge entries (mark as deleted)
-      String entryIdsString = String_new();
-      String filterString   = String_new();
-      ArraySegmentIterator arraySegmentIterator;
-      ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,1024,error == ERROR_NONE)
+      DATABASE_TRANSACTION_DO(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
       {
-        String_clear(entryIdsString);
-        ArrayIterator arrayIterator;
-        IndexId       entryId;
-        ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
+        if (error == ERROR_NONE)
         {
-          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_appendFormat(entryIdsString,"%"PRIi64,entryId);
+          // purge entries (mark as deleted)
+          String entryIdsString = String_new();
+          String filterString   = String_new();
+          ArraySegmentIterator arraySegmentIterator;
+          ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,1024,error == ERROR_NONE)
+          {
+            String_clear(entryIdsString);
+            ArrayIterator arrayIterator;
+            IndexId       entryId;
+            ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
+            {
+              if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
+              String_appendFormat(entryIdsString,"%"PRIi64,entryId);
+            }
+
+            error = Database_update(&indexHandle->databaseHandle,
+                                    NULL,  // changedRowCount
+                                    "entries",
+                                    DATABASE_FLAG_NONE,
+                                    DATABASE_VALUES
+                                    (
+                                      DATABASE_VALUE_BOOL  ("deletedFlag",TRUE)
+                                    ),
+                                    String_cString(String_format(filterString,
+                                                                 "id IN (%S)",
+                                                                 entryIdsString
+                                                                )
+                                                  ),
+                                    DATABASE_FILTERS
+                                    (
+                                    )
+                                   );
+          }
+          String_delete(filterString);
+          String_delete(entryIdsString);
         }
 
-        DATABASE_TRANSACTION_DO(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+        if (error == ERROR_NONE)
         {
+          // purge storage (mark as deleted)
           error = Database_update(&indexHandle->databaseHandle,
                                   NULL,  // changedRowCount
-                                  "entries",
+                                  "storages",
                                   DATABASE_FLAG_NONE,
                                   DATABASE_VALUES
                                   (
-                                    DATABASE_VALUE_BOOL  ("deletedFlag",TRUE)
+                                    DATABASE_VALUE_BOOL("deletedFlag", TRUE),
                                   ),
-                                  String_cString(String_format(filterString,
-                                                               "id IN (%S)",
-                                                               entryIdsString
-                                                              )
-                                                ),
+                                  "id=?",
                                   DATABASE_FILTERS
                                   (
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
+                                  )
+                                 );
+        }
+
+        if (error == ERROR_NONE)
+        {
+          // update aggregates
+          error = Database_update(&indexHandle->databaseHandle,
+                                  NULL,  // changedRowCount
+                                  "entities",
+                                  DATABASE_FLAG_NONE,
+                                  DATABASE_VALUES
+                                  (
+                                    DATABASE_VALUE_UINT  ("totalEntryCount",      "totalEntryCount-?",     totalEntryCount),
+                                    DATABASE_VALUE_UINT64("totalEntrySize",       "totalEntrySize-?",      totalEntrySize),
+                                    DATABASE_VALUE_UINT  ("totalFileCount",       "totalFileCount-?",      totalFileCount),
+                                    DATABASE_VALUE_UINT64("totalFileSize",        "totalFileSize-?",       totalFileSize),
+                                    DATABASE_VALUE_UINT  ("totalImageCount",      "totalImageCount-?",     totalImageCount),
+
+                                    DATABASE_VALUE_UINT64("totalImageSize",       "totalImageSize-?",      totalImageSize),
+                                    DATABASE_VALUE_UINT  ("totalDirectoryCount",  "totalDirectoryCount-?", totalDirectoryCount),
+                                    DATABASE_VALUE_UINT  ("totalLinkCount",       "totalLinkCount-?",      totalLinkCount),
+                                    DATABASE_VALUE_UINT  ("totalHardlinkCount",   "totalHardlinkCount-?",  totalHardlinkCount),
+                                    DATABASE_VALUE_UINT64("totalHardlinkSize",    "totalHardlinkSize-?",   totalHardlinkSize),
+                                    DATABASE_VALUE_UINT  ("totalSpecialCount",    "totalSpecialCount-?",   totalSpecialCount),
+                                  ),
+                                  "id=?",
+                                  DATABASE_FILTERS
+                                  (
+                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
                                   )
                                  );
         }
       }
-      String_delete(filterString);
-      String_delete(entryIdsString);
+      if (error != ERROR_NONE)
+      {
+        Array_done(&entryIds);
+        return error;
+      }
 
       Array_done(&entryIds);
-
-      // purge storage (mark as deleted)
-      error = Database_update(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
-                              "storages",
-                              DATABASE_FLAG_NONE,
-                              DATABASE_VALUES
-                              (
-                                DATABASE_VALUE_BOOL("deletedFlag", TRUE),
-                              ),
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(INDEX_DATABASE_ID(storageId))
-                              )
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // update aggregates
-      error = Database_update(&indexHandle->databaseHandle,
-                              NULL,  // changedRowCount
-                              "entities",
-                              DATABASE_FLAG_NONE,
-                              DATABASE_VALUES
-                              (
-                                DATABASE_VALUE_UINT  ("totalEntryCount",      "totalEntryCount-?",     totalEntryCount),
-                                DATABASE_VALUE_UINT64("totalEntrySize",       "totalEntrySize-?",      totalEntrySize),
-                                DATABASE_VALUE_UINT  ("totalFileCount",       "totalFileCount-?",      totalFileCount),
-                                DATABASE_VALUE_UINT64("totalFileSize",        "totalFileSize-?",       totalFileSize),
-                                DATABASE_VALUE_UINT  ("totalImageCount",      "totalImageCount-?",     totalImageCount),
-
-                                DATABASE_VALUE_UINT64("totalImageSize",       "totalImageSize-?",      totalImageSize),
-                                DATABASE_VALUE_UINT  ("totalDirectoryCount",  "totalDirectoryCount-?", totalDirectoryCount),
-                                DATABASE_VALUE_UINT  ("totalLinkCount",       "totalLinkCount-?",      totalLinkCount),
-                                DATABASE_VALUE_UINT  ("totalHardlinkCount",   "totalHardlinkCount-?",  totalHardlinkCount),
-                                DATABASE_VALUE_UINT64("totalHardlinkSize",    "totalHardlinkSize-?",   totalHardlinkSize),
-                                DATABASE_VALUE_UINT  ("totalSpecialCount",    "totalSpecialCount-?",   totalSpecialCount),
-                              ),
-                              "id=?",
-                              DATABASE_FILTERS
-                              (
-                                DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                              )
-                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
 
       // prune entity
       error = IndexEntity_prune(indexHandle,

@@ -2988,23 +2988,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                            CALLBACK_(NULL,NULL),  // isAborted
                            NULL  // logHandle
                           );
-      if (error !=  ERROR_NONE)
-      {
-        // init storage with job settings
-        error = Storage_init(&storageInfo,
-                             NULL,  // masterIO
-                             &storageSpecifier,
-                             &jobOptions,
-                             &globalOptions.indexDatabaseMaxBandWidthList,
-                             SERVER_CONNECTION_PRIORITY_HIGH,
-                             CALLBACK_(NULL,NULL),  // storageUpdateProgress
-                             CALLBACK_(NULL,NULL),  // getNamePassword
-                             CALLBACK_(NULL,NULL),  // requestVolume
-                             CALLBACK_(NULL,NULL),  // isPause
-                             CALLBACK_(NULL,NULL),  // isAborted
-                             NULL  // logHandle
-                            );
-      }
 
       // delete storage file
       if (error == ERROR_NONE)
@@ -3081,7 +3064,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
     }
 
     // purge index
-// TODO: this is very slow 8s
     error = IndexStorage_purge(indexHandle,
                                storageId,
                                NULL  // progressInfo
@@ -3258,19 +3240,22 @@ LOCAL Errors deleteEntity(IndexHandle  *indexHandle,
     // delete storage
     error = deleteStorage(indexHandle,storageId);
 
-    // update progreses
-    doneCount++;
-    if (clientInfo != NULL)
+    if (error == ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,
-                          commandId,
-                          FALSE,
-                          ERROR_NONE,
-                          "storageDoneCount=%lu storageTotalCount=%lu storageName=%'S",
-                          doneCount,
-                          Array_length(&storageIdArray),
-                          storageName
-                         );
+      // update progress
+      doneCount++;
+      if (clientInfo != NULL)
+      {
+        ServerIO_sendResult(&clientInfo->io,
+                            commandId,
+                            FALSE,
+                            ERROR_NONE,
+                            "storageDoneCount=%lu storageTotalCount=%lu storageName=%'S",
+                            doneCount,
+                            Array_length(&storageIdArray),
+                            storageName
+                           );
+      }
     }
   }
   String_delete(storageName);

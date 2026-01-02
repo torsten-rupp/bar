@@ -30,6 +30,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
+#include <sys/time.h>
 #ifdef HAVE_LIBINTL_H
   #include <libintl.h>
 #endif
@@ -2895,6 +2896,20 @@ void debugPrintStackTrace(void);
 \***********************************************************************/
 
 void debugDumpMemory(const void *address, uint length, bool printAddress);
+
+/***********************************************************************\
+* Name   : debugPrintDelta
+* Purpose: print debug message with delta time
+* Input  : timestamp - last timestamp [us]
+*          message   - message (printf-like format)
+*          ...       - optional arguments for messages
+* Output : -
+* Return : new timestamp
+* Notes  : -
+\***********************************************************************/
+
+uint64_t debugPrintDelta(uint64_t timestamp, const char *message, ...);
+
 #endif /* NDEBUG */
 
 /* profiling with valgrind:

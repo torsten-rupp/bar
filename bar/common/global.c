@@ -1455,6 +1455,30 @@ void debugDumpMemory(const void *address, uint length, bool printAddress)
     z += 16;
   }
 }
+
+uint64_t debugPrintDelta(uint64_t timestamp, const char *message, ...)
+{
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  uint64_t newTimestamp = (uint64_t)tv.tv_usec+((uint64_t)tv.tv_sec)*US_PER_S;
+
+  uint64_t deltaTime = (timestamp > 0) ? newTimestamp - timestamp : 0;
+  fprintf(stderr,
+          "DEBUG: %02u:%02u %03u.%03us ",
+          (deltaTime % US_PER_HOUR)/US_PER_MINUTE,
+          (deltaTime % US_PER_MINUTE)/US_PER_SECOND,
+          (deltaTime % US_PER_SECOND)/US_PER_MS,
+          (deltaTime % US_PER_MS)
+         );
+  va_list arguments;
+  va_start(arguments,message);
+  vfprintf(stderr,message,arguments);
+  va_end(arguments);
+  fprintf(stderr,"\n");
+
+  return newTimestamp;
+}
+
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

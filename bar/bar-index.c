@@ -2073,7 +2073,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   totalCount += (size_t)n;
 
   // check entities without storages
-  printInfo("  entities without entries... ");
+  printInfo("  entities without entries...          ");
   error = Database_getUInt(databaseHandle,
                            &n,
                            "entities \
@@ -2103,7 +2103,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
   }
   totalCount += (size_t)n;
 
-  printInfo("  entities without storages... ");
+  printInfo("  entities without storages...         ");
   error = Database_getUInt(databaseHandle,
                            &n,
                            "entities \
