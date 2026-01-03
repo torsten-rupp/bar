@@ -911,6 +911,7 @@ Errors IndexEntry_addImage(IndexHandle     *indexHandle,
                                   DATABASE_COLUMNS_NONE,
                                   DATABASE_FILTERS_NONE
                                  );
+          entryId = INDEX_ID_ENTRY(databaseId);
 
           // add FTS entry
           if (error == ERROR_NONE)

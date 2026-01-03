@@ -1461,7 +1461,7 @@ Errors IndexUUID_delete(IndexHandle *indexHandle,
   {
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
-    // delete entities
+    // remove entities from index
     error = Database_get(&indexHandle->databaseHandle,
                          CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
                          {
@@ -1501,7 +1501,7 @@ Errors IndexUUID_delete(IndexHandle *indexHandle,
       return error;
     }
 
-    // delete UUID index
+    // remove UUID index
     error = Database_delete(&indexHandle->databaseHandle,
                             NULL,  // changedRowCount
                             "uuids",

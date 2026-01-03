@@ -51,34 +51,34 @@
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_PREFIX    "%storageName"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_GROUP_PREFIX     "%storageName"
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_TITLE            "%type:-12 %user:-12 %group:-12 %permission:-10 %size:-12 %dateTime:-32 %{part                 :-32} %compress:-15 %ratio:  -7  %crypt:-10 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_FILE             "%type:-12 %user:-12 %group:-12 %permission:-10 %size: 12 %dateTime:-32 %{partFrom:15}..%{partTo:15} %compress:-15 %ratio: 7.1%% %crypt:-10 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_IMAGE            "%type:-12 %    :-12 %     :-12 %          :-10 %size: 12 %        :-32 %{partFrom:15}..%{partTo:15} %compress:-15 %ratio: 7.1%% %crypt:-10 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_DIR              "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %dateTime:-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_LINK             "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %dateTime:-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name -> %destinationName"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_HARDLINK         "%type:-12 %user:-12 %group:-12 %permission:-10 %size: 12 %dateTime:-32 %{partFrom:15}..%{partTo:15} %compress:-15 %ratio: 7.1%% %crypt:-10 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_CHAR     "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name, %major %minor"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_BLOCK    "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name, %major %minor"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_FIFO     "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_SOCKET   "%type:-12 %user:-12 %group:-12 %permission:-10 %    : 12 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_TITLE            "%type:-14 %user:-14 %group:-14 %permission:-10 %size:-14 %dateTime:-32 %{part                 :-32} %compress:-15 %ratio:  -7  %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_FILE             "%type:-14 %user:-14 %group:-14 %permission:-10 %size: 14 %dateTime:-32 %{partFrom:15}..%{partTo:15} %compress:-15 %ratio: 7.1%% %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_IMAGE            "%type:-14 %    :-14 %     :-14 %          :-10 %size: 14 %        :-32 %{partFrom:15}..%{partTo:15} %compress:-15 %ratio: 7.1%% %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_DIR              "%type:-14 %user:-14 %group:-14 %permission:-10 %    : 14 %dateTime:-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_LINK             "%type:-14 %user:-14 %group:-14 %permission:-10 %    : 14 %dateTime:-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name -> %destinationName"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_HARDLINK         "%type:-14 %user:-14 %group:-14 %permission:-10 %size: 14 %dateTime:-32 %{partFrom:15}..%{partTo:15} %compress:-15 %ratio: 7.1%% %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_CHAR     "%type:-14 %user:-14 %group:-14 %permission:-10 %    : 14 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name, %major %minor"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_BLOCK    "%type:-14 %user:-14 %group:-14 %permission:-10 %    : 14 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name, %major %minor"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_FIFO     "%type:-14 %user:-14 %group:-14 %permission:-10 %    : 14 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_LONG_SPECIAL_SOCKET   "%type:-14 %user:-14 %group:-14 %permission:-10 %    : 14 %        :-32 %{        :15}  %{      :15} %        :-15 %     :   7  %crypt:-10 %name"
 
 // TODO: normal/long
 #define DEFAULT_ARCHIVE_LIST_FORMAT_DELTA_SOURCE          "  delta source: %deltaSourceName, %deltaSourceSize"
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_TITLE          "%type:-12 %size:-12 %dateTime:-32 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE           "%type:-12 %size: 12 %dateTime:-32 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE          "%type:-12 %size: 12 %        :-32 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR            "%type:-12 %    : 12 %dateTime:-32 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK           "%type:-12 %    : 12 %dateTime:-32 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK       "%type:-12 %size: 12 %dateTime:-32 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR   "%type:-12 %    : 12 %        :-32 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK  "%type:-12 %    : 12 %        :-32 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO   "%type:-12 %    : 12 %        :-32 %name"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET "%type:-12 %    : 12 %        :-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_TITLE          "%type:-14 %size:-14 %dateTime:-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE           "%type:-14 %size: 14 %dateTime:-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE          "%type:-14 %size: 14 %        :-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR            "%type:-14 %    : 14 %dateTime:-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK           "%type:-14 %    : 14 %dateTime:-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK       "%type:-14 %size: 14 %dateTime:-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR   "%type:-14 %    : 14 %        :-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK  "%type:-14 %    : 14 %        :-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO   "%type:-14 %    : 14 %        :-32 %name"
+#define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET "%type:-14 %    : 14 %        :-32 %name"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE               "%type:-12 %size:-12 %dateTime:-32 %name"
+#define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE               "%type:-14 %size:-14 %dateTime:-32 %name"
 
-#define DEFAULT_DIRECTORY_LIST_FORMAT                     "%type:-12 %size: 12 %dateTime:-32 %name"
+#define DEFAULT_DIRECTORY_LIST_FORMAT                     "%type:-14 %size: 14 %dateTime:-32 %name"
 
 /***************************** Datatypes *******************************/
 
@@ -328,7 +328,7 @@ LOCAL void printMetaInfo(ConstString          hostName,
       #endif /* NDEBUG */
       break; /* not reached */
   }
-  printConsole(stdout,0,"Comment      :");
+  printConsole(stdout,0,"Comment    :");
   StringTokenizer stringTokenizer;
   String_initTokenizer(&stringTokenizer,comment,STRING_BEGIN,"\n",STRING_QUOTES,FALSE);
   ConstString     token;

@@ -2227,8 +2227,47 @@ Errors IndexEntity_delete(IndexHandle *indexHandle,
     {
       if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
       {
-        // get uuid id, job UUID, created date/time, archive type
-        IndexId      uuidId;
+        // remove storages from index
+        error = Database_get(&indexHandle->databaseHandle,
+                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
+                             {
+                               assert(values != NULL);
+                               assert(valueCount == 1);
+
+                               UNUSED_VARIABLE(userData);
+                               UNUSED_VARIABLE(valueCount);
+
+                               return IndexStorage_delete(indexHandle,INDEX_ID_STORAGE(values[0].id),NULL);
+                             },NULL),
+                             NULL,  // changedRowCount
+                             DATABASE_TABLES
+                             (
+                               "storages \
+                               "
+                             ),
+                             DATABASE_FLAG_NONE,
+                             DATABASE_COLUMNS
+                             (
+                               DATABASE_COLUMN_KEY  ("id")
+                             ),
+                             "entityId=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
+                             ),
+                             NULL,  // groupBy
+                             NULL,  // orderBy
+                             0,
+                             DATABASE_UNLIMITED
+                            );
+        if (error != ERROR_NONE)
+        {
+          (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+          return error;
+        }
+
+        // get uuid id, job UUID
+        IndexId      uuidId = INDEX_ID_NONE;
         StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
         error = Database_get(&indexHandle->databaseHandle,
                              CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
@@ -2273,7 +2312,7 @@ Errors IndexEntity_delete(IndexHandle *indexHandle,
           String_clear(jobUUID);
         }
 
-        // delete entity from index
+        // remove entity from index
         error = Database_delete(&indexHandle->databaseHandle,
                                 NULL,  // changedRowCount
                                 "entities",
@@ -2292,15 +2331,15 @@ Errors IndexEntity_delete(IndexHandle *indexHandle,
 
         // purge skipped entries of entity
         error = IndexCommon_delete(indexHandle,
-                                  doneFlag,
-                                  deletedCounter,
-                                  "skippedEntries",
-                                  "entityId=?",
-                                  DATABASE_FILTERS
-                                  (
-                                    DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                                  )
-                                 );
+                                   doneFlag,
+                                   deletedCounter,
+                                   "skippedEntries",
+                                   "entityId=?",
+                                   DATABASE_FILTERS
+                                   (
+                                     DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
+                                   )
+                                  );
         if (error != ERROR_NONE)
         {
           return error;
@@ -2546,7 +2585,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
       if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
       {
         // get locked count
-    // TODO: implement isLockedEntity
+// TODO: implement isLockedEntity
         uint lockedCount;
         error = Database_getUInt(&indexHandle->databaseHandle,
                                  &lockedCount,
