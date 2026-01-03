@@ -7291,21 +7291,21 @@ widgetStorageTableToolTip.layout();
         case 1:
           // table view
           {
-            final int     storageCount[] = {0};
-            final boolean doit[]         = {false};
+            final int     totalStorageCount[] = {0};
+            final boolean doit[]              = {false};
 
             if (checked)
             {
               try
               {
-                storageCount[0] = BARServer.getInt(StringParser.format("INDEX_STORAGES_LIST_INFO indexStateSet=%s indexModeSet=* name=%'S",
-                                                                       updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
-                                                                       updateStorageTreeTableThread.getStorageName()
-                                                                      ),
+                totalStorageCount[0] = BARServer.getInt(StringParser.format("INDEX_STORAGE_LIST_INFO indexStateSet=%s indexModeSet=* name=%'S",
+                                                                            updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
+                                                                            updateStorageTreeTableThread.getStorageName()
+                                                                           ),
                                                    1,  // debugLevel
-                                                   "storageCount"
+                                                   "totalStorageCount"
                                                   );
-                if (storageCount[0] > MAX_CONFIRM_ENTRIES)
+                if (totalStorageCount[0] > MAX_CONFIRM_ENTRIES)
                 {
                   display.syncExec(new Runnable()
                   {
@@ -7314,7 +7314,7 @@ widgetStorageTableToolTip.layout();
                       doit[0] = Dialogs.confirm(shell,
                                                 Dialogs.booleanFieldUpdater(Settings.class,"showEntriesMarkInfo"),
                                                 BARControl.tr("There are {0} entries. Really mark all entries?",
-                                                              storageCount[0]
+                                                              totalStorageCount[0]
                                                              ),
                                                 true
                                                );
@@ -7354,7 +7354,7 @@ widgetStorageTableToolTip.layout();
                 {
                   final IndexIdSet indexIdSet = new IndexIdSet();
                   final int        n[]        = new int[]{0};
-                  busyDialog.setMaximum(storageCount[0]);
+                  busyDialog.setMaximum(totalStorageCount[0]);
 
                   BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=%s indexModeSet=* name=%'S",
                                                                updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
