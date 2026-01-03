@@ -14718,7 +14718,7 @@ throw new Error("NYI");
       {
         widgetYear = Widgets.newOptionMenu(subComposite);
         widgetYear.setToolTipText(BARControl.tr("Year to execute job. Leave to '*' for each year."));
-        widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020","2021","2022","2023","2024","2025"});
+        widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020","2021","2022","2023","2024","2025","2026","2027","2028","2029","2030"});
         widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().isEmpty()) widgetYear.setText("*");
         if (widgetYear.getText().isEmpty()) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);

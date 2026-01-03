@@ -6,7 +6,8 @@
   * fix foreign key constrain error when creating/indexing image
     archive with multiple parts (bug #39)
   * BARControl: add show hidden button (feature #23)
-  * BARControl: fix mark/unmark all storage entries
+  * BARControl: fix mark/unmark all storage entries (bug #40)
+  * BARControl: date year selector until 2030 (bug #41)
 
 2025-12-06 27
   * added option --commmand-timeout
