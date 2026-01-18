@@ -5,6 +5,7 @@
   * fix fixed check minute in continous active time range (bug #37)
   * fix foreign key constrain error when creating/indexing image
     archive with multiple parts (bug #39)
+  * fix concurrent access to CD/DVD/BD device (bug #43)
   * BARControl: add show hidden button (feature #23)
   * BARControl: fix mark/unmark all storage entries (bug #40)
   * BARControl: date year selector until 2030 (bug #41)

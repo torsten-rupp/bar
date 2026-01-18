@@ -9759,7 +9759,10 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
 
         if (deviceInfo.type == DEVICE_TYPE_BLOCK)
         {
-          FileSystemTypes fileSystemType = FileSystem_getType(deviceName);
+          // Note: only check file system for non-removable devices to avoid long delays
+          FileSystemTypes fileSystemType = !deviceInfo.removable
+                                             ? FileSystem_getType(deviceName)
+                                             : FILE_SYSTEM_TYPE_NONE;
           ServerIO_sendResult(&clientInfo->io,
                               id,FALSE,ERROR_NONE,
                               "name=%'S size=%"PRIu64" fileSystemType=%s mounted=%y",
