@@ -361,7 +361,8 @@ bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle);
 *          deviceName       - device name variable
 *          deviceInfo       - device info variable (can be NULL)
 * Output : deviceName - next device name
-*          deviceInfo - next device info
+*          deviceInfo - next device info (partially for removable
+*                       devices)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -391,7 +392,7 @@ bool Device_existsCString(const char *deviceName);
 * Input  : deviceInfo - device info variable to fill
 *          deviceName - device name
 *          sizesFlag  - TRUE to detect block size+device size
-* Output : deviceInfo - device info
+* Output : deviceInfo - device info (partially for removable devices)
 * Return : ERROR_NONE or error code
 * Notes  : only in debug version: if environment variable
 *          DEBUG_EMULATE_BLOCK_DEVICE is set to a file name a device of

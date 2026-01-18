@@ -4326,6 +4326,64 @@ bool File_isDirectoryCString(const char *fileName)
          );
 }
 
+bool File_isLink(ConstString fileName)
+{
+  assert(fileName != NULL);
+
+  return File_isLinkCString(String_cString(fileName));
+}
+
+bool File_isLinkCString(const char *fileName)
+{
+  FileStat fileStat;
+
+  assert(fileName != NULL);
+
+  return    (LSTAT(fileName,&fileStat) == 0)
+         && (   S_ISLNK(fileStat.st_mode)
+             || (   S_ISREG(fileStat.st_mode)
+                 && (fileStat.st_nlink > 1)
+                )
+            );
+}
+
+bool File_isSymbolicLink(ConstString fileName)
+{
+  assert(fileName != NULL);
+
+  return File_isSymbolicLinkCString(String_cString(fileName));
+}
+
+bool File_isSymbolicLinkCString(const char *fileName)
+{
+  FileStat fileStat;
+
+  assert(fileName != NULL);
+
+  return (   (LSTAT(fileName,&fileStat) == 0)
+          && S_ISLNK(fileStat.st_mode)
+         );
+}
+
+bool File_isHardLink(ConstString fileName)
+{
+  assert(fileName != NULL);
+
+  return File_isHardLinkCString(String_cString(fileName));
+}
+
+bool File_isHardLinkCString(const char *fileName)
+{
+  FileStat fileStat;
+
+  assert(fileName != NULL);
+
+  return (   (STAT(fileName,&fileStat) == 0)
+          && S_ISREG(fileStat.st_mode)
+          && (fileStat.st_nlink > 1)
+         );
+}
+
 bool File_isCharacterDevice(ConstString fileName)
 {
   assert(fileName != NULL);

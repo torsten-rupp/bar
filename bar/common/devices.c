@@ -234,38 +234,130 @@ LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
   deviceInfo->mounted         = FALSE;
   deviceInfo->removable       = FALSE;
 
+  // check if removable
   #if   defined(PLATFORM_LINUX)
-    // check if character or block device
-    FileStat fileStat;
+    // check /sys/block/<name>/removable
+    String fileName = String_new();
+    if (File_isSymbolicLinkCString(deviceName))
+    {
+      File_readLinkCString(fileName,deviceName,TRUE);
+    }
+    else
+    {
+      String_setCString(fileName,deviceName);
+    }
+
+    String baseName = File_getBaseName(String_new(),fileName,TRUE);
+    String_setCString(fileName,"/sys/block");
+    File_appendFileName(fileName,baseName);
+    File_appendFileNameCString(fileName,"removable");
+
+    FILE *file = fopen(String_cString(fileName),"r");
+    if (file != NULL)
+    {
+      deviceInfo->removable = (fgetc(file) == '1');
+      fclose(file);
+    }
+    String_delete(fileName);
+    String_delete(baseName);
+// TODO: use libudev?
+#if 0
+#include <libudev.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+int is_removable_libudev(const char *devnode) {
+    struct udev *udev = udev_new();
+    if (!udev) return -1;
+
+    struct udev_device *dev = udev_device_new_from_devnum(udev, 'b', major, minor);  // or udev_device_new_from_syspath
+    // Extract major/minor from devnode like /dev/sdb, or use udev_device_new_from_subsystem_sysname(udev, "block", "sdb")
+
+    if (!dev) {
+        udev_unref(udev);
+        return -1;
+    }
+
+    // Check for USB parent (common for removable)
+    struct udev_device *parent = udev_device_get_parent_with_subsystem_devtype(dev, "usb", "usb_device");
+    if (parent) {
+        udev_device_unref(dev);
+        udev_unref(udev);
+        return 1;  // USB → likely removable
+    }
+
+    // Fallback: check sysattr for removable flag
+    const char *removable = udev_device_get_sysattr_value(dev, "removable");
+    int ret = removable && strcmp(removable, "1") == 0 ? 1 : 0;
+
+    udev_device_unref(dev);
+    udev_unref(udev);
+    return ret;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Usage: %s /dev/sdb\n", argv[0]);
+        return 1;
+    }
+    printf("%s: %s\n", argv[1], is_removable_libudev(argv[1]) ? "removable" : "fixed");
+    return 0;
+}
+#endif
+  #elif defined(PLATFORM_WINDOWS)
+// TODO: NYI
     #ifndef NDEBUG
-      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-      if (debugEmulateBlockDevice != NULL)
-      {
-        CStringTokenizer stringTokenizer;
-        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-        const char *emulateDeviceName,*emulateFileName;
-        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-            && stringEquals(deviceName,emulateDeviceName))
+    #endif
+  #endif /* PLATFORM_... */
+
+  // get device info (only for not removable to avoid file stat on CD/DVD/BD and USB devices
+  #if   defined(PLATFORM_LINUX)
+    if (!deviceInfo->removable)
+    {
+      FileStat fileStat;
+      #ifndef NDEBUG
+        const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+        if (debugEmulateBlockDevice != NULL)
         {
-          // emulate block device
-          if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+          CStringTokenizer stringTokenizer;
+          stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+          const char *emulateDeviceName,*emulateFileName;
+          if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+              && stringEquals(deviceName,emulateDeviceName))
           {
-            if (STAT(emulateFileName,&fileStat) != 0)
+            // emulate block device
+            if (stringGetNextToken(&stringTokenizer,&emulateFileName))
             {
-              return ERRORX_(IO,errno,"%E",errno);
+              if (STAT(emulateFileName,&fileStat) != 0)
+              {
+                return ERRORX_(IO,errno,"%E",errno);
+              }
+            }
+            else
+            {
+              if (STAT(emulateDeviceName,&fileStat) != 0)
+              {
+                return ERRORX_(IO,errno,"%E",errno);
+              }
             }
           }
           else
           {
-            if (STAT(emulateDeviceName,&fileStat) != 0)
+            // use block device
+            if (STAT(deviceName,&fileStat) != 0)
             {
               return ERRORX_(IO,errno,"%E",errno);
             }
+            if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
+            {
+              return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
+            }
           }
+          stringTokenizerDone(&stringTokenizer);
         }
         else
         {
-          // use block device
           if (STAT(deviceName,&fileStat) != 0)
           {
             return ERRORX_(IO,errno,"%E",errno);
@@ -275,10 +367,7 @@ LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
             return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
           }
         }
-        stringTokenizerDone(&stringTokenizer);
-      }
-      else
-      {
+      #else /* NDEBUG */
         if (STAT(deviceName,&fileStat) != 0)
         {
           return ERRORX_(IO,errno,"%E",errno);
@@ -287,123 +376,140 @@ LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
         {
           return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
         }
-      }
-    #else /* NDEBUG */
-      if (STAT(deviceName,&fileStat) != 0)
-      {
-        return ERRORX_(IO,errno,"%E",errno);
-      }
-      if (!S_ISCHR(fileStat.st_mode) && !S_ISBLK(fileStat.st_mode))
-      {
-        return ERRORX_(NOT_A_DEVICE,0,"%s",deviceName);
-      }
-    #endif /* not NDEBUG */
+      #endif /* not NDEBUG */
 
-    // init device info
-    deviceInfo->timeLastAccess  = fileStat.st_atime;
-    deviceInfo->timeModified    = fileStat.st_mtime;
-    deviceInfo->timeLastChanged = fileStat.st_ctime;
-    deviceInfo->userId          = fileStat.st_uid;
-    deviceInfo->groupId         = fileStat.st_gid;
-    deviceInfo->permission      = (DevicePermission)fileStat.st_mode;
-    #ifdef HAVE_MAJOR
-      deviceInfo->major         = major(fileStat.st_rdev);
-    #else
-      deviceInfo->major         = 0;
-    #endif
-    #ifdef HAVE_MINOR
-      deviceInfo->minor         = minor(fileStat.st_rdev);
-    #else
-      deviceInfo->minor         = 0;
-    #endif
-    deviceInfo->id              = (uint64)fileStat.st_ino;
+      // init device info
+      deviceInfo->timeLastAccess  = fileStat.st_atime;
+      deviceInfo->timeModified    = fileStat.st_mtime;
+      deviceInfo->timeLastChanged = fileStat.st_ctime;
+      deviceInfo->userId          = fileStat.st_uid;
+      deviceInfo->groupId         = fileStat.st_gid;
+      deviceInfo->permission      = (DevicePermission)fileStat.st_mode;
+      #ifdef HAVE_MAJOR
+        deviceInfo->major         = major(fileStat.st_rdev);
+      #else
+        deviceInfo->major         = 0;
+      #endif
+      #ifdef HAVE_MINOR
+        deviceInfo->minor         = minor(fileStat.st_rdev);
+      #else
+        deviceInfo->minor         = 0;
+      #endif
+      deviceInfo->id              = (uint64)fileStat.st_ino;
 
-    // get device type
-    #ifndef NDEBUG
-      debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-      if (debugEmulateBlockDevice != NULL)
-      {
-        CStringTokenizer stringTokenizer;
-        stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-        const char *emulateDeviceName;
-        if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
-            && stringEquals(deviceName,emulateDeviceName)
-           )
-        {
-          // emulate block device
-          deviceInfo->type = DEVICE_TYPE_BLOCK;
-        }
-        else
-        {
-          // use block device
-          if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
-          else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
-        }
-        stringTokenizerDone(&stringTokenizer);
-      }
-      else
-      {
-        if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
-        else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
-      }
-    #else /* NDEBUG */
-      if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
-      else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
-    #endif /* not NDEBUG */
-
-    if (deviceInfo->type == DEVICE_TYPE_BLOCK)
-    {
-      // get block size, total size
+      // get device type
       #ifndef NDEBUG
-        const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+        debugEmulateBlockDevice = debugGetEmulateBlockDevice();
         if (debugEmulateBlockDevice != NULL)
         {
           CStringTokenizer stringTokenizer;
           stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
-          const char *emulateDeviceName,*emulateFileName;
+          const char *emulateDeviceName;
           if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
               && stringEquals(deviceName,emulateDeviceName)
              )
           {
             // emulate block device
-            if (stringGetNextToken(&stringTokenizer,&emulateFileName))
-            {
-              if      (STAT(emulateFileName,&fileStat) == 0)
-              {
-                deviceInfo->blockSize = 512;
-                deviceInfo->size      = fileStat.st_size;
-              }
-              else if (!sizesFlag)
-              {
-                deviceInfo->blockSize = 0;
-                deviceInfo->size      = 0LL;
-              }
-              else
-              {
-                return ERRORX_(IO,errno,"%E",errno);
-              }
-            }
-            else
-            {
-              if      (STAT(deviceName,&fileStat) == 0)
-              {
-                deviceInfo->blockSize = 512;
-                deviceInfo->size      = fileStat.st_size;
-              }
-              else if (!sizesFlag)
-              {
-                deviceInfo->blockSize = 0;
-                deviceInfo->size      = 0LL;
-              }
-              else
-              {
-                return ERRORX_(IO,errno,"%E",errno);
-              }
-            }
+            deviceInfo->type = DEVICE_TYPE_BLOCK;
           }
           else
           {
             // use block device
+            if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
+            else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
+          }
+          stringTokenizerDone(&stringTokenizer);
+        }
+        else
+        {
+          if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
+          else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
+        }
+      #else /* NDEBUG */
+        if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
+        else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
+      #endif /* not NDEBUG */
+
+      if (deviceInfo->type == DEVICE_TYPE_BLOCK)
+      {
+        // get block size, total size
+        #ifndef NDEBUG
+          const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+          if (debugEmulateBlockDevice != NULL)
+          {
+            CStringTokenizer stringTokenizer;
+            stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
+            const char *emulateDeviceName,*emulateFileName;
+            if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
+                && stringEquals(deviceName,emulateDeviceName)
+               )
+            {
+              // emulate block device
+              if (stringGetNextToken(&stringTokenizer,&emulateFileName))
+              {
+                if      (STAT(emulateFileName,&fileStat) == 0)
+                {
+                  deviceInfo->blockSize = 512;
+                  deviceInfo->size      = fileStat.st_size;
+                }
+                else if (!sizesFlag)
+                {
+                  deviceInfo->blockSize = 0;
+                  deviceInfo->size      = 0LL;
+                }
+                else
+                {
+                  return ERRORX_(IO,errno,"%E",errno);
+                }
+              }
+              else
+              {
+                if      (STAT(deviceName,&fileStat) == 0)
+                {
+                  deviceInfo->blockSize = 512;
+                  deviceInfo->size      = fileStat.st_size;
+                }
+                else if (!sizesFlag)
+                {
+                  deviceInfo->blockSize = 0;
+                  deviceInfo->size      = 0LL;
+                }
+                else
+                {
+                  return ERRORX_(IO,errno,"%E",errno);
+                }
+              }
+            }
+            else
+            {
+              // use block device
+              int handle = open(deviceName,O_RDONLY);
+              if      (handle != -1)
+              {
+                #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+                  int i;
+                  if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
+                #endif
+                #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+                  long l;
+                  if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
+                #endif
+                close(handle);
+              }
+              else if (!sizesFlag)
+              {
+                deviceInfo->blockSize = 0;
+                deviceInfo->size      = 0LL;
+              }
+              else
+              {
+                return ERRORX_(IO,errno,"%E",errno);
+              }
+            }
+            stringTokenizerDone(&stringTokenizer);
+          }
+          else
+          {
             int handle = open(deviceName,O_RDONLY);
             if      (handle != -1)
             {
@@ -427,10 +533,7 @@ LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
               return ERRORX_(IO,errno,"%E",errno);
             }
           }
-          stringTokenizerDone(&stringTokenizer);
-        }
-        else
-        {
+        #else /* NDEBUG */
           int handle = open(deviceName,O_RDONLY);
           if      (handle != -1)
           {
@@ -453,31 +556,13 @@ LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
           {
             return ERRORX_(IO,errno,"%E",errno);
           }
-        }
-      #else /* NDEBUG */
-        int handle = open(deviceName,O_RDONLY);
-        if      (handle != -1)
-        {
-          #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
-            int i;
-            if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
-          #endif
-          #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
-            long l;
-            if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
-          #endif
-          close(handle);
-        }
-        else if (!sizesFlag)
-        {
-          deviceInfo->blockSize = 0;
-          deviceInfo->size      = 0LL;
-        }
-        else
-        {
-          return ERRORX_(IO,errno,"%E",errno);
-        }
-      #endif /* not NDEBUG */
+        #endif /* not NDEBUG */
+      }
+    }
+    else
+    {
+      // assume block device if removable
+      deviceInfo->type = DEVICE_TYPE_BLOCK;
     }
   #elif defined(PLATFORM_WINDOWS)
     deviceInfo->type            = DEVICE_TYPE_BLOCK;
@@ -531,85 +616,6 @@ LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
     #ifndef NDEBUG
     #endif
     deviceInfo->mounted = TRUE;
-  #endif /* PLATFORM_... */
-
-  // check if removable
-  #if   defined(PLATFORM_LINUX)
-    // check /sys/block/<name>/removable
-    String fileName = String_new();
-    if (File_readLinkCString(fileName,deviceName,TRUE) != ERROR_NONE)
-    {
-      String_setCString(fileName,deviceName);
-    }
-
-    String baseName = File_getBaseName(String_new(),fileName,TRUE);
-    String_setCString(fileName,"/sys/block");
-    File_appendFileName(fileName,baseName);
-    File_appendFileNameCString(fileName,"removable");
-
-    FileHandle fileHandle;
-    if (File_open(&fileHandle,fileName,FILE_OPEN_READ) == ERROR_NONE)
-    {
-      String line = String_new();
-      if (File_readLine(&fileHandle,line) == ERROR_NONE)
-      {
-        deviceInfo->removable = String_equalsCString(line,"1");
-      }
-      String_delete(line);
-      File_close(&fileHandle);
-    }
-    String_delete(fileName);
-    String_delete(baseName);
-// TODO: use libudev?
-#if 0
-#include <libudev.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
-int is_removable_libudev(const char *devnode) {
-    struct udev *udev = udev_new();
-    if (!udev) return -1;
-
-    struct udev_device *dev = udev_device_new_from_devnum(udev, 'b', major, minor);  // or udev_device_new_from_syspath
-    // Extract major/minor from devnode like /dev/sdb, or use udev_device_new_from_subsystem_sysname(udev, "block", "sdb")
-
-    if (!dev) {
-        udev_unref(udev);
-        return -1;
-    }
-
-    // Check for USB parent (common for removable)
-    struct udev_device *parent = udev_device_get_parent_with_subsystem_devtype(dev, "usb", "usb_device");
-    if (parent) {
-        udev_device_unref(dev);
-        udev_unref(udev);
-        return 1;  // USB → likely removable
-    }
-
-    // Fallback: check sysattr for removable flag
-    const char *removable = udev_device_get_sysattr_value(dev, "removable");
-    int ret = removable && strcmp(removable, "1") == 0 ? 1 : 0;
-
-    udev_device_unref(dev);
-    udev_unref(udev);
-    return ret;
-}
-
-int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("Usage: %s /dev/sdb\n", argv[0]);
-        return 1;
-    }
-    printf("%s: %s\n", argv[1], is_removable_libudev(argv[1]) ? "removable" : "fixed");
-    return 0;
-}
-#endif
-
-  #elif defined(PLATFORM_WINDOWS)
-// TODO: NYI
-    #ifndef NDEBUG
-    #endif
   #endif /* PLATFORM_... */
 
   return ERROR_NONE;
