@@ -1425,6 +1425,42 @@ bool File_isFile(ConstString fileName);
 bool File_isFileCString(const char *fileName);
 
 /***********************************************************************\
+* Name   : File_isLink, File_isLinkCString
+* Purpose: check if symbolic link or hard link
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if symbolic link or hard link, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isLink(ConstString fileName);
+bool File_isLinkCString(const char *fileName);
+
+/***********************************************************************\
+* Name   : File_isSymbolicLink, File_isSymbolicLinkCString
+* Purpose: check if symbolic link
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if symbolic link, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isSymbolicLink(ConstString fileName);
+bool File_isSymbolicLinkCString(const char *fileName);
+
+/***********************************************************************\
+* Name   : File_isHardLink, File_isHardLinkCString
+* Purpose: check if hard link
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if hard link, FALSE otherweise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isHardLink(ConstString fileName);
+bool File_isHardLinkCString(const char *fileName);
+
+/***********************************************************************\
 * Name   : File_isDirectory, File_isDirectoryCString
 * Purpose: check if directory
 * Input  : fileName - file name
