@@ -232,6 +232,7 @@ LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
   deviceInfo->minor           = 0L;
   deviceInfo->id              = 0L;
   deviceInfo->mounted         = FALSE;
+  deviceInfo->removable       = FALSE;
 
   #if   defined(PLATFORM_LINUX)
     // check if character or block device
@@ -530,6 +531,85 @@ LOCAL Errors getDeviceInfo(DeviceInfo *deviceInfo,
     #ifndef NDEBUG
     #endif
     deviceInfo->mounted = TRUE;
+  #endif /* PLATFORM_... */
+
+  // check if removable
+  #if   defined(PLATFORM_LINUX)
+    // check /sys/block/<name>/removable
+    String fileName = String_new();
+    if (File_readLinkCString(fileName,deviceName,TRUE) != ERROR_NONE)
+    {
+      String_setCString(fileName,deviceName);
+    }
+
+    String baseName = File_getBaseName(String_new(),fileName,TRUE);
+    String_setCString(fileName,"/sys/block");
+    File_appendFileName(fileName,baseName);
+    File_appendFileNameCString(fileName,"removable");
+
+    FileHandle fileHandle;
+    if (File_open(&fileHandle,fileName,FILE_OPEN_READ) == ERROR_NONE)
+    {
+      String line = String_new();
+      if (File_readLine(&fileHandle,line) == ERROR_NONE)
+      {
+        deviceInfo->removable = String_equalsCString(line,"1");
+      }
+      String_delete(line);
+      File_close(&fileHandle);
+    }
+    String_delete(fileName);
+    String_delete(baseName);
+// TODO: use libudev?
+#if 0
+#include <libudev.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+int is_removable_libudev(const char *devnode) {
+    struct udev *udev = udev_new();
+    if (!udev) return -1;
+
+    struct udev_device *dev = udev_device_new_from_devnum(udev, 'b', major, minor);  // or udev_device_new_from_syspath
+    // Extract major/minor from devnode like /dev/sdb, or use udev_device_new_from_subsystem_sysname(udev, "block", "sdb")
+
+    if (!dev) {
+        udev_unref(udev);
+        return -1;
+    }
+
+    // Check for USB parent (common for removable)
+    struct udev_device *parent = udev_device_get_parent_with_subsystem_devtype(dev, "usb", "usb_device");
+    if (parent) {
+        udev_device_unref(dev);
+        udev_unref(udev);
+        return 1;  // USB → likely removable
+    }
+
+    // Fallback: check sysattr for removable flag
+    const char *removable = udev_device_get_sysattr_value(dev, "removable");
+    int ret = removable && strcmp(removable, "1") == 0 ? 1 : 0;
+
+    udev_device_unref(dev);
+    udev_unref(udev);
+    return ret;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Usage: %s /dev/sdb\n", argv[0]);
+        return 1;
+    }
+    printf("%s: %s\n", argv[1], is_removable_libudev(argv[1]) ? "removable" : "fixed");
+    return 0;
+}
+#endif
+
+  #elif defined(PLATFORM_WINDOWS)
+// TODO: NYI
+    #ifndef NDEBUG
+    #endif
   #endif /* PLATFORM_... */
 
   return ERROR_NONE;

@@ -102,6 +102,7 @@ typedef struct
   uint32           major,minor;              // special type major/minor number
   uint64           id;                       // unique id (e. g. inode number)
   bool             mounted;                  // TRUE iff device is currently mounted
+  bool             removable;                // TRUE iff device is removable
 } DeviceInfo;
 
 /***************************** Variables *******************************/
