@@ -144,7 +144,7 @@ public class TabRestore
         default:               return "ok";
       }
     }
-  };
+  }
 
   /** entity states
    */
@@ -153,7 +153,7 @@ public class TabRestore
     NONE,
     OK,
     ANY;
-  };
+  }
 
   /** index state set
    */
@@ -251,7 +251,7 @@ public class TabRestore
         default:     return "manual";
       }
     }
-  };
+  }
 
   /** index data
    */
@@ -461,7 +461,7 @@ public class TabRestore
     {
       return "Index {"+id+"}";
     }
-  };
+  }
 
   /** index data comparator
    */
@@ -1605,7 +1605,7 @@ Dprintf.dprintf("");
     {
       return "StorageIndexData {"+id+", hostName="+hostName+", name="+name+", createdDateTime="+createdDateTime+", size="+size+" bytes, state="+indexState+", last checked="+lastCheckedDateTime+", totalEntryCount="+totalEntryCount+" bytes, totalEntrySize="+totalEntrySize+" bytes}";
     }
-  };
+  }
 
   /** assign-to data
    */
@@ -1653,7 +1653,7 @@ Dprintf.dprintf("");
     {
       this(jobUUID,(String)null,(String)null,(String)null,(String)null,(String)null,false);
     }
-  };
+  }
 
   /** restore types
    */
@@ -1661,7 +1661,7 @@ Dprintf.dprintf("");
   {
     ARCHIVES,
     ENTRIES;
-  };
+  }
 
   /** restore entry modes
    */
@@ -1671,7 +1671,7 @@ Dprintf.dprintf("");
     RENAME,
     OVERWRITE,
     SKIP_EXISTING
-  };
+  }
 
   /** find index for insert of item in sorted storage item list
    * @param indexData index data
@@ -3210,7 +3210,7 @@ Dprintf.dprintf("");
         default:        return "*";
       }
     }
-  };
+  }
 
   /** restore states
    */
@@ -3374,7 +3374,7 @@ Dprintf.dprintf("");
     {
       return "Entry {"+id+", jobName="+jobName+", hostName="+hostName+", name="+name+", entryType="+entryType+", dateTime="+dateTime+", size="+size+"}";
     }
-  };
+  }
 
   /** update entry table thread
    */
@@ -4202,6 +4202,32 @@ Dprintf.dprintf("");
     }
   }
 
+  /** add storage to index dialog data
+   */
+  class AddStorageData
+  {
+    StorageTypes storageType;
+    String       hostName;
+    int          hostPort;
+    String       loginName;
+    String       loginPassword;
+    String       shareName;
+    String       deviceName;
+    String       archiveName;
+
+    AddStorageData()
+    {
+      this.storageType   = StorageTypes.FILESYSTEM;
+      this.hostName      = "";
+      this.hostPort      = 0;
+      this.loginName     = "";
+      this.loginPassword = "";
+      this.shareName     = "";
+      this.deviceName    = "";
+      this.archiveName   = "*.bar";
+    }
+  };
+
   // -------------------------- constants -------------------------------
   // colors
   private final Color COLOR_MODIFIED;
@@ -4284,6 +4310,8 @@ Dprintf.dprintf("");
   private Object                                      assignToLock               = new Object();
   private java.util.List<UUIDIndexData>               assignToUUIDIndexDataList  = null;
   private Map<String,java.util.List<EntityIndexData>> assignToEntityIndexDataMap = null;
+
+  private AddStorageData                              lastAddStorageData = new AddStorageData();
 
   private UpdateEntryTableThread                      updateEntryTableThread = new UpdateEntryTableThread();
 
@@ -8701,37 +8729,11 @@ widgetStorageTableToolTip.layout();
    */
   private void addStoragesToIndex()
   {
-    /** dialog data
-     */
-    class Data
-    {
-      StorageTypes storageType;
-      String       hostName;
-      int          hostPort;
-      String       loginName;
-      String       loginPassword;
-      String       shareName;
-      String       deviceName;
-      String       archiveName;
-
-      Data()
-      {
-        this.storageType   = StorageTypes.FILESYSTEM;
-        this.hostName      = "";
-        this.hostPort      = 0;
-        this.loginName     = "";
-        this.loginPassword = "";
-        this.shareName     = "";
-        this.deviceName    = "";
-        this.archiveName   = "";
-      }
-    };
-
     Label     label;
     Composite composite,subComposite;
     Button    button;
 
-    final Data data = new Data();
+    final AddStorageData data = lastAddStorageData;
 
     // create dialog
     final Shell dialog = Dialogs.openModal(shell,BARControl.tr("Add storage to index database"),400,SWT.DEFAULT,new double[]{1.0,0.0},1.0);
@@ -8755,6 +8757,7 @@ widgetStorageTableToolTip.layout();
 
       widgetArchiveName = Widgets.newText(composite);
       widgetArchiveName.setToolTipText(BARControl.tr("Enter local or remote storage path."));
+      widgetArchiveName.setText(data.archiveName);
       Widgets.layout(widgetArchiveName,0,1,TableLayoutData.WE,0,0,0,0,300,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,IMAGE_DIRECTORY);
@@ -8824,38 +8827,56 @@ widgetStorageTableToolTip.layout();
                                          BARControl.tr("device"),     StorageTypes.DEVICE
                                         }
                       );
-      Widgets.setSelectedComboItem(widgetStorageType,0);
+      Widgets.setSelectedComboItem(widgetStorageType,data.storageType);
       Widgets.layout(widgetStorageType,1,1,TableLayoutData.W,0,2);
 
       // destination file system
       widgetFile = new BARWidgets.File(composite);
       Widgets.layout(widgetFile,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
-      Widgets.setVisible(widgetFile,true);
+      Widgets.setVisible(widgetFile,data.storageType == StorageTypes.FILESYSTEM);
 
       // destination ftp
       widgetFTP = new BARWidgets.FTP(composite);
+      widgetFTP.hostName.setText(data.hostName);
+      widgetFTP.loginName.setText(data.loginName);
+      widgetFTP.loginPassword.setText(data.loginPassword);
       Widgets.layout(widgetFTP,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
-      Widgets.setVisible(widgetFTP,false);
+      Widgets.setVisible(widgetFTP,data.storageType == StorageTypes.FTP);
 
       // destination scp/sftp
       widgetSFTP = new BARWidgets.SFTP(composite);
+      widgetSFTP.hostName.setText(data.hostName);
+      widgetSFTP.hostPort.setSelection(data.hostPort);
+      widgetSFTP.loginName.setText(data.loginName);
+      widgetSFTP.loginPassword.setText(data.loginPassword);
       Widgets.layout(widgetSFTP,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
-      Widgets.setVisible(widgetSFTP,false);
+      Widgets.setVisible(widgetSFTP,data.storageType == StorageTypes.SFTP);
 
       // destination WebDAV
       widgetWebDAV = new BARWidgets.WebDAV(composite);
+      widgetWebDAV.hostName.setText(data.hostName);
+      widgetWebDAV.hostPort.setSelection(data.hostPort);
+      widgetWebDAV.loginName.setText(data.loginName);
+      widgetWebDAV.loginPassword.setText(data.loginPassword);
       Widgets.layout(widgetWebDAV,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
-      Widgets.setVisible(widgetWebDAV,false);
+      Widgets.setVisible(widgetWebDAV,    (data.storageType == StorageTypes.WEBDAV)
+                                       || (data.storageType == StorageTypes.WEBDAVS)
+                        );
 
       // destination cd/dvd/bd
       widgetOptical = new BARWidgets.Optical(composite);
+      widgetOptical.deviceName.setText(data.deviceName);
       Widgets.layout(widgetOptical,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
-      Widgets.setVisible(widgetOptical,false);
+      Widgets.setVisible(widgetOptical,   (data.storageType == StorageTypes.CD )
+                                       || (data.storageType == StorageTypes.DVD)
+                                       || (data.storageType == StorageTypes.BD )
+                        );
 
       // destination device
       widgetDevice = new BARWidgets.Device(composite);
+      widgetDevice.deviceName.setText(data.deviceName);
       Widgets.layout(widgetDevice,2,1,TableLayoutData.WE|TableLayoutData.N,0,3);
-      Widgets.setVisible(widgetDevice,false);
+      Widgets.setVisible(widgetDevice,data.storageType == StorageTypes.DEVICE);
     }
 
     // buttons
@@ -8864,7 +8885,7 @@ widgetStorageTableToolTip.layout();
     Widgets.layout(composite,2,0,TableLayoutData.WE,0,0,2);
     {
       widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
-      widgetAdd.setEnabled(false);
+      widgetAdd.setEnabled(!data.archiveName.isEmpty());
       Widgets.layout(widgetAdd,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
