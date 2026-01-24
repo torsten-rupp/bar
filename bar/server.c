@@ -75,9 +75,7 @@
 #define SESSION_KEY_SIZE                         1024                     // number of session key bits
 
 #define MAX_NETWORK_CLIENT_THREADS               3                        // number of threads for a client
-// TODO:
-//#define LOCK_TIMEOUT                             (10L*60L*MS_PER_SECOND)  // general lock timeout [ms]
-#define LOCK_TIMEOUT                             (30L*MS_PER_SECOND)  // general lock timeout [ms]
+#define LOCK_TIMEOUT                             (10L*60L*MS_PER_SECOND)  // general lock timeout [ms]
 #define CLIENT_TIMEOUT                           (30L*MS_PER_SECOND)      // client timeout [ms]
 
 #define SLAVE_DEBUG_LEVEL                        1
@@ -6329,7 +6327,16 @@ LOCAL void jobThreadCode(void)
         }
 
         // if no job to execute -> wait
-        if (!isQuit() && (jobNode == NULL)) Job_listWaitModifed(LOCK_TIMEOUT);
+        if (jobNode == NULL)
+        {
+          TimeoutInfo timeoutInfo;
+          Misc_initTimeout(&timeoutInfo,LOCK_TIMEOUT);
+          while (!isQuit() && !Misc_isTimeout(&timeoutInfo))
+          {
+            if (Job_listWaitModifed(10*MS_PER_SECOND)) break;
+          }
+          Misc_doneTimeout(&timeoutInfo);
+        }
       }
       while (!isQuit() && (jobNode == NULL));
       if (isQuit())
@@ -23470,26 +23477,33 @@ Errors Server_socket(void)
 
   // start threads
   Semaphore_init(&delayThreadTrigger,SEMAPHORE_TYPE_BINARY);
+  AUTOFREE_ADD(&autoFreeList,&delayThreadTrigger,{ Semaphore_done(&delayThreadTrigger); });
   if (!Thread_init(&jobThread,"BAR job",globalOptions.niceLevel,jobThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize job thread!");
   }
+  AUTOFREE_ADD(&autoFreeList,&jobThread,{ Thread_join(&jobThread); Thread_done(&jobThread); });
   if (!Thread_init(&pauseThread,"BAR pause",globalOptions.niceLevel,pauseThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize pause thread!");
   }
+  AUTOFREE_ADD(&autoFreeList,&pauseThread,{ Thread_join(&pauseThread); Thread_done(&pauseThread); });
   if (globalOptions.serverMode == SERVER_MODE_MASTER)
   {
     Semaphore_init(&schedulerThreadTrigger,SEMAPHORE_TYPE_BINARY);
+    AUTOFREE_ADD(&autoFreeList,&schedulerThreadTrigger,{ Semaphore_done(&schedulerThreadTrigger); });
     if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
     }
+    AUTOFREE_ADD(&autoFreeList,&schedulerThread,{ Thread_join(&schedulerThread); Thread_done(&schedulerThread); });
     Semaphore_init(&pairingThreadTrigger,SEMAPHORE_TYPE_BINARY);
+    AUTOFREE_ADD(&autoFreeList,&pairingThreadTrigger,{ Semaphore_done(&pairingThreadTrigger); });
     if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize pause thread!");
     }
+    AUTOFREE_ADD(&autoFreeList,&pairingThread,{ Thread_join(&pairingThread); Thread_done(&pairingThread); });
 
     if (Index_isAvailable())
     {
@@ -23498,20 +23512,26 @@ Errors Server_socket(void)
       Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
       Semaphore_init(&updateIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+      AUTOFREE_ADD(&autoFreeList,&updateIndexThreadTrigger,{ Semaphore_done(&updateIndexThreadTrigger); });
       if (!Thread_init(&updateIndexThread,"BAR update index",globalOptions.niceLevel,updateIndexThreadCode,NULL))
       {
         HALT_FATAL_ERROR("Cannot initialize index thread!");
       }
+      AUTOFREE_ADD(&autoFreeList,&updateIndexThread,{ Thread_join(&updateIndexThread); Thread_done(&updateIndexThread); });
       Semaphore_init(&autoIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+      AUTOFREE_ADD(&autoFreeList,&autoIndexThreadTrigger,{ Semaphore_done(&autoIndexThreadTrigger); });
       if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
       {
         HALT_FATAL_ERROR("Cannot initialize index update thread!");
       }
+      AUTOFREE_ADD(&autoFreeList,&autoIndexThread,{ Thread_join(&autoIndexThread); Thread_done(&autoIndexThread); });
       Semaphore_init(&persistenceThreadTrigger,SEMAPHORE_TYPE_BINARY);
+      AUTOFREE_ADD(&autoFreeList,&persistenceThreadTrigger,{ Semaphore_done(&persistenceThreadTrigger); });
       if (!Thread_init(&persistenceThread,"BAR persistence",globalOptions.niceLevel,persistenceThreadCode,NULL))
       {
         HALT_FATAL_ERROR("Cannot initialize persistence thread!");
       }
+      AUTOFREE_ADD(&autoFreeList,&persistenceThread,{ Thread_join(&persistenceThread); Thread_done(&persistenceThread); });
     }
   }
 
@@ -23562,14 +23582,36 @@ Errors Server_socket(void)
   // signal systemd
   if (!Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_STARTED,0,NULL))
   {
-    printWarning("start notification of systemd fail");
+    #ifndef NDEBUG
+      if (globalOptions.debug.systemd)
+      {
+        printError("start notification of systemd fail");
+        setQuit();
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_INIT;
+      }
+      else
+      {
+        printWarning("start notification of systemd fail");
+      }
+    #else
+      printWarning("start notification of systemd fail");
+    #endif
   }
 
   // process client requests
+  #ifndef NDEBUG
+    TimeoutInfo timeoutInfo;
+    Misc_initTimeout(&timeoutInfo,globalOptions.debug.runTime*MS_PER_SECOND);
+    AUTOFREE_ADD(&autoFreeList,&serverTLSSocketHandle,{ Network_doneServer(&serverTLSSocketHandle); });
+  #endif
   WaitHandle waitHandle;
   Misc_initWait(&waitHandle,64);
+  AUTOFREE_ADD(&autoFreeList,&waitHandle,{ Misc_doneWait(&waitHandle); });
   String    name        = String_new();
+  AUTOFREE_ADD(&autoFreeList,name,{ String_delete(name); });
   StringMap argumentMap = StringMap_new();
+  AUTOFREE_ADD(&autoFreeList,argumentMap,{ StringMap_delete(argumentMap); });
   while (!isQuit())
   {
     // get active sockets to wait for
@@ -23625,6 +23667,12 @@ Errors Server_socket(void)
     }
 
     // wait for connect, disconnect, command, or result
+    #ifndef NDEBUG
+      if (globalOptions.debug.runTime > 0)
+      {
+        waitTimeout = Misc_getRestTimeout(&timeoutInfo,waitTimeout);
+      }
+    #endif
     (void)Misc_waitHandles(&waitHandle,&signalMask,waitTimeout);
 
     int  handle;
@@ -23996,6 +24044,13 @@ Errors Server_socket(void)
         }
       }
     }
+
+    #ifndef NDEBUG
+      if (globalOptions.debug.runTime > 0)
+      {
+        if (Misc_isTimeout(&timeoutInfo)) setQuit();
+      }
+    #endif
   }
   StringMap_delete(argumentMap);
   String_delete(name);
@@ -24004,7 +24059,20 @@ Errors Server_socket(void)
   // signal systemd
   if (!Misc_systemNotify(MISC_SYSTEM_NOTIFY_TYPE_STOPPING,0,NULL))
   {
-    printWarning("stop notification of systemd fail");
+    #ifndef NDEBUG
+      if (globalOptions.debug.systemd)
+      {
+        printError("stop notification of systemd fail");
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_INIT;
+      }
+      else
+      {
+        printWarning("stop notification of systemd fail");
+      }
+    #else
+      printWarning("stop notification of systemd fail");
+    #endif
   }
 
   // delete all clients
@@ -24024,20 +24092,26 @@ Errors Server_socket(void)
       {
         HALT_INTERNAL_ERROR("Cannot stop purge expired entities thread!");
       }
+      AUTOFREE_REMOVE(&autoFreeList,&persistenceThread);
       Thread_done(&persistenceThread);
+      AUTOFREE_REMOVE(&autoFreeList,&persistenceThreadTrigger);
       Semaphore_done(&persistenceThreadTrigger);
 
       if (!Thread_join(&autoIndexThread))
       {
         HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
       }
+      AUTOFREE_REMOVE(&autoFreeList,&autoIndexThread);
       Thread_done(&autoIndexThread);
+      AUTOFREE_REMOVE(&autoFreeList,&autoIndexThreadTrigger);
       Semaphore_done(&autoIndexThreadTrigger);
       if (!Thread_join(&updateIndexThread))
       {
         HALT_INTERNAL_ERROR("Cannot stop index thread!");
       }
+      AUTOFREE_REMOVE(&autoFreeList,&updateIndexThread);
       Thread_done(&updateIndexThread);
+      AUTOFREE_REMOVE(&autoFreeList,&updateIndexThreadTrigger);
       Semaphore_done(&updateIndexThreadTrigger);
 
       // done database pause callbacks
@@ -24048,34 +24122,50 @@ Errors Server_socket(void)
     {
       HALT_INTERNAL_ERROR("Cannot stop pairing thread!");
     }
+    AUTOFREE_REMOVE(&autoFreeList,&pairingThread);
     Thread_done(&pairingThread);
+    AUTOFREE_REMOVE(&autoFreeList,&pairingThreadTrigger);
     Semaphore_done(&pairingThreadTrigger);
     if (!Thread_join(&schedulerThread))
     {
       HALT_INTERNAL_ERROR("Cannot stop scheduler thread!");
     }
+    AUTOFREE_REMOVE(&autoFreeList,&schedulerThread);
     Thread_done(&schedulerThread);
+    AUTOFREE_REMOVE(&autoFreeList,&schedulerThreadTrigger);
     Semaphore_done(&schedulerThreadTrigger);
   }
   if (!Thread_join(&pauseThread))
   {
     HALT_INTERNAL_ERROR("Cannot stop pause thread!");
   }
+  AUTOFREE_REMOVE(&autoFreeList,&pauseThread);
   Thread_done(&pauseThread);
   if (!Thread_join(&jobThread))
   {
     HALT_INTERNAL_ERROR("Cannot stop job thread!");
   }
+  AUTOFREE_REMOVE(&autoFreeList,&jobThread);
   Thread_done(&jobThread);
+  AUTOFREE_REMOVE(&autoFreeList,&delayThreadTrigger);
   Semaphore_done(&delayThreadTrigger);
 
   // done server
-  if (serverFlag   ) Network_doneServer(&serverSocketHandle);
-  if (serverTLSFlag) Network_doneServer(&serverTLSSocketHandle);
+  if (serverFlag)
+  {
+    AUTOFREE_REMOVE(&autoFreeList,&serverSocketHandle);
+    Network_doneServer(&serverSocketHandle);
+  }
+  if (serverTLSFlag)
+  {
+    AUTOFREE_REMOVE(&autoFreeList,&serverTLSSocketHandle);
+    Network_doneServer(&serverTLSSocketHandle);
+  }
 
   // done index
   if (Index_isAvailable())
   {
+    AUTOFREE_REMOVE(&autoFreeList,&indexHandle);
     Index_close(&indexHandle);
   }
 

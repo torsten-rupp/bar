@@ -91,7 +91,7 @@ typedef struct
 
 // Note: avoid a direct dipendency to libsystemd. Load library and bin functions dynamic if possible
 #ifdef HAVE_DLFCN_H
-LOCAL void                                      *libSystemdHandle;
+LOCAL void                                      *libSystemdHandle                      = NULL;
 LOCAL typeof(sd_notify                        ) *sd_notify_ptr                         = NULL;
 LOCAL typeof(sd_notifyf                       ) *sd_notifyf_ptr                        = NULL;
 LOCAL typeof(sd_notify_barrier                ) *sd_notify_barrier_ptr                 = NULL;
@@ -971,7 +971,8 @@ Errors Misc_initAll(void)
            functions dynamic if possible.
   */
   #ifdef HAVE_DLFCN_H
-    libSystemdHandle = dlopen("libsystemd.so",RTLD_LAZY);
+    if (libSystemdHandle == NULL) libSystemdHandle = dlopen("libsystemd.so.0",RTLD_LAZY);
+    if (libSystemdHandle == NULL) libSystemdHandle = dlopen("libsystemd.so",  RTLD_LAZY);
     if (libSystemdHandle != NULL)
     {
       sd_notify_ptr                         = (typeof(sd_notify)*)dlsym(libSystemdHandle,"sd_notify");
