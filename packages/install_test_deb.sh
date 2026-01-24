@@ -76,6 +76,12 @@ fi
 trap /bin/bash ERR
 set -e
 
+# install/upgrade packages
+apt update
+apt -y upgrade --fix-missing
+apt -y install --fix-missing \
+  procps
+
 # install deb
 dpkg -i $debFiles
 
@@ -86,11 +92,13 @@ barcontrol --help 1>/dev/null
 
 # simple server test (Note: kill existing instance; systemd may not work inside docker)
 (killall bar 2>/dev/null || true)
-bar --daemon
+bar-debug --server --debug-systemd --debug-run-time=60
+bar --server &
+pid=$!
 sleep 20
 barcontrol --ping
 barcontrol --list
-(killall bar 2>/dev/null || true)
+(kill $pid 2>/dev/null || true)
 
 # debug
 if test $debugFlag -eq 1; then

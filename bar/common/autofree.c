@@ -9,6 +9,7 @@
 #include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
+#include <inttypes.h>
 #include <pthread.h>
 #ifdef HAVE_EXECINFO_H
   #include <execinfo.h>
@@ -251,7 +252,7 @@ void AutoFree_freeAll(AutoFreeList *autoFreeList)
       // free resource
       if (autoFreeNode->autoFreeFunction != NULL)
       {
-#if 0
+#if 1
         #ifndef NDEBUG
           fprintf(stderr,
                   "DEBUG: call auto free %p at %s, line %zu with auto resource 0x%"PRIx64"\n",

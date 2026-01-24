@@ -4339,12 +4339,16 @@ bool File_isLinkCString(const char *fileName)
 
   assert(fileName != NULL);
 
-  return    (LSTAT(fileName,&fileStat) == 0)
-         && (   S_ISLNK(fileStat.st_mode)
-             || (   S_ISREG(fileStat.st_mode)
-                 && (fileStat.st_nlink > 1)
-                )
-            );
+  #ifdef S_ISLNK
+    return    (LSTAT(fileName,&fileStat) == 0)
+           && (   S_ISLNK(fileStat.st_mode)
+               || (   S_ISREG(fileStat.st_mode)
+                   && (fileStat.st_nlink > 1)
+                  )
+              );
+  #else
+    return FALSE;
+  #endif
 }
 
 bool File_isSymbolicLink(ConstString fileName)
@@ -4360,9 +4364,13 @@ bool File_isSymbolicLinkCString(const char *fileName)
 
   assert(fileName != NULL);
 
-  return (   (LSTAT(fileName,&fileStat) == 0)
-          && S_ISLNK(fileStat.st_mode)
-         );
+  #ifdef S_ISLNK
+    return (   (LSTAT(fileName,&fileStat) == 0)
+            && S_ISLNK(fileStat.st_mode)
+           );
+  #else
+    return FALSE;
+  #endif
 }
 
 bool File_isHardLink(ConstString fileName)

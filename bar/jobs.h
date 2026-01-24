@@ -932,27 +932,27 @@ INLINE void Job_listSignalModifed(void)
 \***********************************************************************/
 
 #ifdef NDEBUG
-INLINE void Job_listWaitModifed(long timeout);
+INLINE bool Job_listWaitModifed(long timeout);
 #else /* not NDEBUG */
-INLINE void __Job_listWaitModifed(const char *__fileName__,
+INLINE bool __Job_listWaitModifed(const char *__fileName__,
                                   ulong      __lineNb__,
                                   long timeout
                                  );
 #endif /* NDEBUG */
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
 #ifdef NDEBUG
-INLINE void Job_listWaitModifed(long timeout)
+INLINE bool Job_listWaitModifed(long timeout)
 #else /* not NDEBUG */
-INLINE void __Job_listWaitModifed(const char *__fileName__,
+INLINE bool __Job_listWaitModifed(const char *__fileName__,
                                   ulong      __lineNb__,
                                   long timeout
                                  )
 #endif /* NDEBUG */
 {
   #ifndef NDEBUG
-    __Semaphore_waitModified(__fileName__,__lineNb__,&jobList.lock,timeout);
+    return __Semaphore_waitModified(__fileName__,__lineNb__,&jobList.lock,timeout);
   #else /* not NDEBUG */
-    Semaphore_waitModified(&jobList.lock,timeout);
+    return Semaphore_waitModified(&jobList.lock,timeout);
   #endif /* NDEBUG */
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
