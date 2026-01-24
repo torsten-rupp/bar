@@ -101,6 +101,12 @@ fi
 trap /bin/bash ERR
 set -e
 
+# install/upgrade packages
+yum -y update
+yum -y upgrade
+yum -y install \
+  procps
+
 # install rpm
 rpm -i $rpmFiles
 
@@ -111,7 +117,8 @@ barcontrol --help 1>/dev/null
 
 # simple server test (Note: kill existing instance; systemd may not work inside docker)
 (killall bar 2>/dev/null || true)
-bar --daemon
+bar-debug --server --debug-systemd --debug-run-time=60
+bar --server &
 sleep 20
 barcontrol --ping
 barcontrol --list

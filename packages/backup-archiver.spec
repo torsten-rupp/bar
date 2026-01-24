@@ -31,7 +31,7 @@ BuildRequires: initscripts
 
 # Note: no JRE; installation without JRE should be possible
 # Requires: jre
-Requires: openssl
+# Requires: openssl
 
 %description
 BAR is backup archiver program. It can create compressed, encrypted
