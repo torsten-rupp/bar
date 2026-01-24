@@ -1198,8 +1198,11 @@ typedef struct
     String                    indexRemoveStorage;             // remove storage from index
     String                    indexRefreshStorage;            // refresh storage index
     StringList                continuousNameList;             // continuous names list
+    bool                      systemd;                        // force systemd functions
 
     bool                      printConfigurationSHA256;
+
+    ulong                     runTime;                        // total server runtime [s]
   } debug;
   #endif /* NDEBUG */
 } GlobalOptions;

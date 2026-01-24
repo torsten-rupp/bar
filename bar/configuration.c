@@ -2047,6 +2047,7 @@ LOCAL void initGlobalOptions(void)
     globalOptions.debug.indexAddStorage                         = NULL;
     globalOptions.debug.indexRemoveStorage                      = NULL;
     globalOptions.debug.indexRefreshStorage                     = NULL;
+    globalOptions.debug.runTime                                 = 0;
     StringList_init(&globalOptions.debug.continuousNameList);
   #endif
 }
@@ -8451,8 +8452,11 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_STRING       ("debug-index-remove-storage",        0,  2,0,globalOptions.debug.indexRemoveStorage,                                                                           "remove storage from index database","file name"                           ),
   CMD_OPTION_STRING       ("debug-index-refresh-storage",       0,  2,0,globalOptions.debug.indexRefreshStorage,                                                                          "refresh storage in index database","file name"                            ),
   CMD_OPTION_SPECIAL      ("debug-continuous-name",             0,  2,3,&globalOptions.debug.continuousNameList,             cmdOptionParseStringList,NULL,1,                             "continupus name","name"                                                   ),
+  CMD_OPTION_BOOLEAN      ("debug-systemd",                     0,  2,0,globalOptions.debug.systemd,                                                                                      "force systemd"                                                            ),
 
   CMD_OPTION_BOOLEAN      ("debug-print-configuration-sha256",  0,  2,0,globalOptions.debug.printConfigurationSHA256,                                                                     "fixed server ids"                                                         ),
+
+  CMD_OPTION_INTEGER      ("debug-run-time",                    0,  2,0,globalOptions.debug.runTime,                         0LL,MAX_INT,NULL,                                            "run time"                                                                 ),
   #endif
 );
 
