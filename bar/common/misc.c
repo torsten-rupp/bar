@@ -3320,19 +3320,25 @@ bool Misc_systemNotify(Misc_SystemNotifyTypes systemNotifyType, int errorNumber,
       switch (systemNotifyType)
       {
         case MISC_SYSTEM_NOTIFY_TYPE_STARTED:
-          if ((sd_notify_ptr != NULL) && (sd_notify_barrier_ptr != NULL))
+          if (sd_notify_ptr != NULL)
           {
             sd_notify_ptr(0,"READY=1");
-            sd_notify_barrier_ptr(0, 5*1000000);
+            if (sd_notify_barrier_ptr != NULL)
+            {
+              sd_notify_barrier_ptr(0, 5*1000000);
+            }
 
             result = TRUE;
           }
           break;
         case MISC_SYSTEM_NOTIFY_TYPE_STOPPING:
-          if ((sd_notify_ptr != NULL) && (sd_notify_barrier_ptr != NULL))
+          if (sd_notify_ptr != NULL)
           {
             sd_notify_ptr(0,"STOPPING=1");
-            sd_notify_barrier_ptr(0, 5*1000000);
+            if (sd_notify_barrier_ptr != NULL)
+            {
+              sd_notify_barrier_ptr(0, 5*1000000);
+            }
 
             result = TRUE;
           }
