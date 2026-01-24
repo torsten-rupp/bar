@@ -117,8 +117,8 @@ barcontrol --help 1>/dev/null
 
 # simple server test (Note: kill existing instance; systemd may not work inside docker)
 (killall bar 2>/dev/null || true)
-bar --server --debug-run-time=60
-bar --server --debug-systemd
+bar-debug --server --debug-systemd --debug-run-time=60
+bar --server
 sleep 20
 barcontrol --ping
 barcontrol --list
