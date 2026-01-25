@@ -113,12 +113,7 @@ void __Array_init(const char           *__fileName__,
   array->data = (byte*)malloc(length*elementSize);
   if (array->data == NULL)
   {
-    free(array);
-    #ifdef HALT_ON_INSUFFICIENT_MEMORY
-      HALT_INSUFFICIENT_MEMORY();
-    #else /* not HALT_ON_INSUFFICIENT_MEMORY */
-      return NULL;
-    #endif /* HALT_ON_INSUFFICIENT_MEMORY */
+    HALT_INSUFFICIENT_MEMORY();
   }
 
   array->elementSize          = elementSize;
