@@ -3659,13 +3659,13 @@ Errors Command_list(StringList              *storageNameList,
     if (error != ERROR_NONE)
     {
       StorageDirectoryListHandle storageDirectoryListHandle;
-      if (Storage_openDirectoryList(&storageDirectoryListHandle,
-                                    &storageSpecifier,
-                                    NULL,  // fileName
-                                    jobOptions,
-                                    SERVER_CONNECTION_PRIORITY_HIGH
-                                   ) == ERROR_NONE
-         )
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        NULL,  // fileName
+                                        jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_HIGH
+                                       );
+      if (error == ERROR_NONE)
       {
         String fileName = String_new();
         while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
@@ -3717,13 +3717,13 @@ Errors Command_list(StringList              *storageNameList,
     {
       // open directory list
       StorageDirectoryListHandle storageDirectoryListHandle;
-      if (Storage_openDirectoryList(&storageDirectoryListHandle,
-                                    &storageSpecifier,
-                                    NULL,  // fileName
-                                    jobOptions,
-                                    SERVER_CONNECTION_PRIORITY_HIGH
-                                   ) == ERROR_NONE
-         )
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        NULL,  // fileName
+                                        jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_HIGH
+                                       );
+      if (error == ERROR_NONE)
       {
         if (String_isEmpty(storageSpecifier.archivePatternString))
         {
