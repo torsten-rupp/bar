@@ -1658,13 +1658,17 @@ Errors IndexUUID_pruneAll(IndexHandle *indexHandle,
   Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   // get all UUIDs
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &uuidIds,
-                          "uuids",
-                          "id",
-                          DATABASE_FILTERS_NONE,
-                          DATABASE_UNLIMITED
-                         );
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    return Database_getIds(&indexHandle->databaseHandle,
+                           &uuidIds,
+                           "uuids",
+                           "id",
+                           DATABASE_FILTERS_NONE,
+                           DATABASE_UNLIMITED
+                          );
+  });
   if (error != ERROR_NONE)
   {
     Array_done(&uuidIds);
