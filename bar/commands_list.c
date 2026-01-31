@@ -3659,13 +3659,71 @@ Errors Command_list(StringList              *storageNameList,
     if (error != ERROR_NONE)
     {
       StorageDirectoryListHandle storageDirectoryListHandle;
-      if (Storage_openDirectoryList(&storageDirectoryListHandle,
-                                    &storageSpecifier,
-                                    NULL,  // fileName
-                                    jobOptions,
-                                    SERVER_CONNECTION_PRIORITY_HIGH
-                                   ) == ERROR_NONE
-         )
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        NULL,  // fileName
+                                        jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_HIGH
+                                       );
+      if (error == ERROR_NONE)
+      {
+        String fileName = String_new();
+        while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
+        {
+          // read next directory entry
+          FileInfo fileInfo;
+          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
+          if (error != ERROR_NONE)
+          {
+            continue;
+          }
+
+          // match pattern
+          if (!String_isEmpty(storageSpecifier.archivePatternString))
+          {
+            if (!Pattern_match(&storageSpecifier.archivePattern,fileName,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
+            {
+              continue;
+            }
+          }
+
+          // list archive content
+          if (   (fileInfo.type == FILE_TYPE_FILE)
+              || (fileInfo.type == FILE_TYPE_LINK)
+              || (fileInfo.type == FILE_TYPE_HARDLINK)
+             )
+          {
+            error = listArchiveContent(&storageSpecifier,
+                                       fileName,
+                                       includeEntryList,
+                                       excludePatternList,
+                                       showEntriesFlag,
+                                       jobOptions,
+                                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
+                                       logHandle
+                                      );
+          }
+
+          someFileFound = TRUE;
+        }
+        String_delete(fileName);
+
+        Storage_closeDirectoryList(&storageDirectoryListHandle);
+      }
+    }
+
+    // try list directory content
+    if (!someFileFound)
+    {
+      // open directory list
+      StorageDirectoryListHandle storageDirectoryListHandle;
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        NULL,  // fileName
+                                        jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_HIGH
+                                       );
+      if (error == ERROR_NONE)
       {
         if (String_isEmpty(storageSpecifier.archivePatternString))
         {
@@ -3734,13 +3792,13 @@ Errors Command_list(StringList              *storageNameList,
     {
       // open directory list
       StorageDirectoryListHandle storageDirectoryListHandle;
-      if (Storage_openDirectoryList(&storageDirectoryListHandle,
-                                    &storageSpecifier,
-                                    NULL,  // fileName
-                                    jobOptions,
-                                    SERVER_CONNECTION_PRIORITY_HIGH
-                                   ) == ERROR_NONE
-         )
+      error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                        &storageSpecifier,
+                                        NULL,  // fileName
+                                        jobOptions,
+                                        SERVER_CONNECTION_PRIORITY_HIGH
+                                       );
+      if (error == ERROR_NONE)
       {
         if (String_isEmpty(storageSpecifier.archivePatternString))
         {
