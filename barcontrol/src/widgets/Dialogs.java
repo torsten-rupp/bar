@@ -1603,8 +1603,6 @@ class Dialogs
                            String                    message
                           )
   {
-    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"error.png");
-
     Composite composite;
     Label     label;
     Button    button;
@@ -1614,6 +1612,8 @@ class Dialogs
     {
       if (!parentShell.isDisposed())
       {
+        final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"error.png");
+
         final Shell dialog = openModal(parentShell,Dialogs.tr("Error"),300,70);
         dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
@@ -1898,8 +1898,6 @@ class Dialogs
                       String                    message
                      )
   {
-    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"warning.png");
-
     Composite composite;
     Label     label;
     Button    button;
@@ -1909,6 +1907,8 @@ class Dialogs
     {
       if (!parentShell.isDisposed())
       {
+        final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"warning.png");
+
         final Shell dialog = openModal(parentShell,Dialogs.tr("Warning"),200,70);
         dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
@@ -2734,8 +2734,6 @@ class Dialogs
    */
   public static <T> T value(Shell parentShell, String title, String name, final Object[] values, String helpText, String okText, String cancelText, T defaultValue)
   {
-    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
-
     Composite composite,subComposite;
     Label     label;
     Combo     combo;
@@ -2743,6 +2741,8 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
+      final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
       final Object[] result = new Object[]{defaultValue};
 
       final Shell dialog = openModal(parentShell,title);
@@ -3812,14 +3812,14 @@ class Dialogs
                                    BitSet                    defaultValue
                                   )
   {
-    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
-
     Composite composite,subComposite;
     Label     label;
     Button    button;
 
     if (!parentShell.isDisposed())
     {
+      final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"question.png");
+
       final BitSet value = new BitSet(texts.length);
 
       final Shell dialog = openModal(parentShell,title);
@@ -6747,8 +6747,6 @@ class Dialogs
                             String toolTipText
                            )
   {
-    final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"directory.png");
-
     String    result;
     int       row;
     Composite composite;
@@ -6757,6 +6755,8 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
+      final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"directory.png");
+
       final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
