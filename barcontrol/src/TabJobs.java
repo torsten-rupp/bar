@@ -10189,8 +10189,6 @@ throw new Error("NYI");
     {
       try
       {
-        // update root/device lists
-        updateRootList();
         updateDevicesList();
 
         // update persistence tree
@@ -10337,7 +10335,6 @@ throw new Error("NYI");
     clearScheduleTable();
     clearPersistenceTable();
 
-    // update root/device lists
     updateRootList();
     updateDevicesList();
 
