@@ -4091,8 +4091,14 @@ NULL, // masterIO
                     );
           break;
         }
-        (void)IndexEntity_prune(indexHandle,NULL,NULL,oldestEntityId);
-        (void)IndexUUID_prune(indexHandle,NULL,NULL,oldestUUIDId);
+        if (!INDEX_ID_IS_NONE(oldestEntityId))
+        {
+          (void)IndexEntity_prune(indexHandle,NULL,NULL,oldestEntityId);
+        }
+        if (!INDEX_ID_IS_NONE(oldestUUIDId))
+        {
+          (void)IndexUUID_prune(indexHandle,NULL,NULL,oldestUUIDId);
+        }
 
         // log
         Misc_formatDateTime(dateTime,oldestCreatedDateTime,TIME_TYPE_LOCAL,NULL);
