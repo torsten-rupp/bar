@@ -5022,9 +5022,7 @@ Errors IndexEntry_deleteAllWithoutFragments(IndexHandle *indexHandle,
   Array databaseIds;
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
-  bool indexInUse = IndexCommon_isIndexInUse();
-
-  if (!indexInUse)
+  if (!IndexCommon_isIndexInUse())
   {
     // get all file entries without fragments
     static uint64 offsetFileEntries = 0LL;
@@ -5076,11 +5074,9 @@ Errors IndexEntry_deleteAllWithoutFragments(IndexHandle *indexHandle,
                            INCREMENT
                           );
       offsetFileEntries += INCREMENT;
-
-      indexInUse = IndexCommon_isIndexInUse();
     }
     while (   (count > 0)
-           && !indexInUse
+           && !IndexCommon_isIndexInUse()
            && (error == ERROR_NONE)
           );
     if (count == 0) offsetFileEntries = 0LL;
@@ -5112,7 +5108,7 @@ Errors IndexEntry_deleteAllWithoutFragments(IndexHandle *indexHandle,
     return ERROR_NONE;
   }
 
-  if (!indexInUse)
+  if (!IndexCommon_isIndexInUse())
   {
     // get all image entries without fragments
     Array_clear(&databaseIds);
@@ -5164,11 +5160,9 @@ Errors IndexEntry_deleteAllWithoutFragments(IndexHandle *indexHandle,
                            INCREMENT
                           );
       offsetImageEntries += INCREMENT;
-
-      indexInUse = IndexCommon_isIndexInUse();
     }
     while (   (count > 0)
-           && !indexInUse
+           && !IndexCommon_isIndexInUse()
            && (error == ERROR_NONE)
           );
     if (count == 0) offsetImageEntries = 0LL;
@@ -5199,7 +5193,7 @@ Errors IndexEntry_deleteAllWithoutFragments(IndexHandle *indexHandle,
     return ERROR_NONE;
   }
 
-  if (!indexInUse)
+  if (!IndexCommon_isIndexInUse())
   {
     // get all hardlink entries without fragments
     Array_clear(&databaseIds);
@@ -5251,11 +5245,9 @@ Errors IndexEntry_deleteAllWithoutFragments(IndexHandle *indexHandle,
                            INCREMENT
                           );
       offsetHardlinkEntries += INCREMENT;
-
-      indexInUse = IndexCommon_isIndexInUse();
     }
     while (   (count > 0)
-           && !indexInUse
+           && !IndexCommon_isIndexInUse()
            && (error == ERROR_NONE)
           );
     if (count == 0) offsetHardlinkEntries = 0LL;
