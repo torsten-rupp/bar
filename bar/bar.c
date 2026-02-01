@@ -353,7 +353,7 @@ LOCAL void signalHandler(int signalNumber)
   #if !defined(NDEBUG) || !defined(HAVE_KILL)
     exit(128+signalNumber);
   #else
-    kill(0,signalNumber);
+    kill(getpid(),signalNumber);
   #endif
 }
 
