@@ -115,7 +115,6 @@ bar --version 1>/dev/null
 bar --help 1>/dev/null
 barcontrol --help 1>/dev/null
 
-if false; then
 # simple server test (Note: kill existing instance and ignore SIGTERM; systemd may not work inside docker)
 trap '' SIGTERM
 (killall bar 2>/dev/null || true)
@@ -128,7 +127,6 @@ barcontrol --list
 trap '' SIGTERM
 (killall bar 2>/dev/null || true)
 trap - SIGTERM
-fi
 
 # debug
 if test $debugFlag -eq 1; then

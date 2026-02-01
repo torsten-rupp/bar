@@ -56,40 +56,6 @@ def build()
         }
       }
     }
-
-    stage("DEB package")
-    {
-      if (params.PACKAGE_DEB)
-      {
-        if (params.TEST_PACKAGES)
-        {
-          stage("Test DEB packages")
-          {
-            for(String item : TEST_PACKAGES_DEBIAN)
-            {
-              docker.image("debian:"+item).inside('-u root --privileged -v/tmp:/tmp2')
-              {
-                script
-                {
-                  sh "packages/install_test_deb.sh /tmp2/*.deb"
-                }
-              }
-            }
-            for(String item : TEST_PACKAGES_UBUNTU)
-            {
-              docker.image("ubuntu:"+item).inside('-u root --privileged -v/tmp:/tmp2')
-              {
-                script
-                {
-                  sh "packages/install_test_deb.sh /tmp2/*.deb"
-                }
-              }
-            }
-//TODO: call            sh "make install_test_deb"
-          }
-        }
-      }
-    }
   }
   finally
   {
