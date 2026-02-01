@@ -43,11 +43,11 @@ def build()
             }
             for(String item : TEST_PACKAGES_FEDORA)
             {
-              docker.image("fedora:"+item).inside('-u root --privileged')
+              docker.image("fedora:"+item).inside('-u root --privileged -v/tmp:/tmp2')
               {
                 script
                 {
-                  sh "packages/install_test_rpm.sh *.rpm"
+                  sh "packages/install_test_rpm.sh /tmp2/*.rpm"
                 }
               }
             }
@@ -61,83 +61,31 @@ def build()
     {
       if (params.PACKAGE_DEB)
       {
-        docker.image(DOCKER_IMAGE_NAME_DEB).inside('-u root --privileged')
-        {
-          script
-          {
-            sh "make build_deb"
-          }
-        }
-
         if (params.TEST_PACKAGES)
         {
           stage("Test DEB packages")
           {
             for(String item : TEST_PACKAGES_DEBIAN)
             {
-              docker.image("debian:"+item).inside('-u root --privileged')
+              docker.image("debian:"+item).inside('-u root --privileged -v/tmp:/tmp2')
               {
                 script
                 {
-                  sh "packages/install_test_deb.sh *.deb"
+                  sh "packages/install_test_deb.sh /tmp2/*.deb"
                 }
               }
             }
             for(String item : TEST_PACKAGES_UBUNTU)
             {
-              docker.image("ubuntu:"+item).inside('-u root --privileged')
+              docker.image("ubuntu:"+item).inside('-u root --privileged -v/tmp:/tmp2')
               {
                 script
                 {
-                  sh "packages/install_test_deb.sh *.deb"
+                  sh "packages/install_test_deb.sh /tmp2/*.deb"
                 }
               }
             }
 //TODO: call            sh "make install_test_deb"
-          }
-        }
-      }
-    }
-
-    stage("Win32 package")
-    {
-      if (params.PACKAGE_WIN32)
-      {
-        docker.image(DOCKER_IMAGE_NAME_WIN32).inside
-        {
-          script
-          {
-            sh "make build_win32"
-          }
-        }
-
-        if (params.TEST_PACKAGES)
-        {
-          stage("Test Win32 packages")
-          {
-            docker.image("ubuntu:22.04").inside('-u root --privileged')
-//            docker.image("bar-mingw32").inside('-u root --privileged -v /tmp:/tmpX')
-            {
-              script
-              {
-                sh "packages/install_test_win32.sh *.exe"
-//                sh "bash -x packages/install_test_win32.sh /tmpX/backup-archiver-23-setup.exe"
-              }
-            }
-          }
-        }
-      }
-    }
-
-    stage("GUI package")
-    {
-      if (params.PACKAGE_GUI)
-      {
-        docker.image(DOCKER_IMAGE_NAME).inside
-        {
-          script
-          {
-            sh "make gui"
           }
         }
       }
