@@ -187,14 +187,14 @@ LOCAL const char *getDeviceName(const StorageSpecifier *storageSpecifier)
 * Notes  : -
 \***********************************************************************/
 
-#ifdef HAVE_ISO9660
+#ifdef HAVE_ISOFS
 LOCAL void libcdioLogCallback(cdio_log_level_t level, const char *message)
 {
   UNUSED_VARIABLE(level);
 
   printInfo(5,"libcdio: %s\n",message);
 }
-#endif /* HAVE_ISO9660 */
+#endif /* HAVE_ISOFS */
 
 /***********************************************************************\
 * Name   : executeIOmkisofsOutput
