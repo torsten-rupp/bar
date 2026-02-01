@@ -1,0 +1,177 @@
+#!groovy
+
+DOCKER_IMAGE_NAME           = "bar"
+DOCKER_IMAGE_NAME_RPM       = "bar-rpm"
+DOCKER_IMAGE_NAME_DEB       = "bar-deb"
+DOCKER_IMAGE_NAME_WIN32     = "bar-win32"
+
+// Notes: see also Makefile.in
+//        AlmaLinux 10.0 does not run on CPU without AVX3
+TEST_PACKAGES_ALMALINUX     = ["9.0","9.1","9.2","9.3","9.4","9.5","9.6"]
+TEST_PACKAGES_FEDORA        = ["37","38","39","40","41","42"]
+TEST_PACKAGES_OPENSUSE_LEAP = ["15.1","15.2","15.3","15.4","15.5","15.6"]
+TEST_PACKAGES_DEBIAN        = ["11","12","13"]
+TEST_PACKAGES_UBUNTU        = ["20.04","22.04","24.04","25.04","25.10"]
+
+// build
+def build()
+{
+  try
+  {
+    stage("Checkout")
+    {
+      checkout scm
+    }
+
+    stage("RPM package")
+    {
+      if (params.PACKAGE_RPM)
+      {
+        if (params.TEST_PACKAGES)
+        {
+          stage("Test RPM packages")
+          {
+            for(String item : TEST_PACKAGES_ALMALINUX)
+            {
+              docker.image("almalinux:${item}").inside('-u root --privileged -v/tmp:/tmp2')
+              {
+                script
+                {
+                  sh "packages/install_test_rpm.sh /tmp2/*.rpm"
+                }
+              }
+            }
+            for(String item : TEST_PACKAGES_FEDORA)
+            {
+              docker.image("fedora:"+item).inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_rpm.sh *.rpm"
+                }
+              }
+            }
+//TODO: call            sh "make install_test_rpm"
+          }
+        }
+      }
+    }
+
+    stage("DEB package")
+    {
+      if (params.PACKAGE_DEB)
+      {
+        docker.image(DOCKER_IMAGE_NAME_DEB).inside('-u root --privileged')
+        {
+          script
+          {
+            sh "make build_deb"
+          }
+        }
+
+        if (params.TEST_PACKAGES)
+        {
+          stage("Test DEB packages")
+          {
+            for(String item : TEST_PACKAGES_DEBIAN)
+            {
+              docker.image("debian:"+item).inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_deb.sh *.deb"
+                }
+              }
+            }
+            for(String item : TEST_PACKAGES_UBUNTU)
+            {
+              docker.image("ubuntu:"+item).inside('-u root --privileged')
+              {
+                script
+                {
+                  sh "packages/install_test_deb.sh *.deb"
+                }
+              }
+            }
+//TODO: call            sh "make install_test_deb"
+          }
+        }
+      }
+    }
+
+    stage("Win32 package")
+    {
+      if (params.PACKAGE_WIN32)
+      {
+        docker.image(DOCKER_IMAGE_NAME_WIN32).inside
+        {
+          script
+          {
+            sh "make build_win32"
+          }
+        }
+
+        if (params.TEST_PACKAGES)
+        {
+          stage("Test Win32 packages")
+          {
+            docker.image("ubuntu:22.04").inside('-u root --privileged')
+//            docker.image("bar-mingw32").inside('-u root --privileged -v /tmp:/tmpX')
+            {
+              script
+              {
+                sh "packages/install_test_win32.sh *.exe"
+//                sh "bash -x packages/install_test_win32.sh /tmpX/backup-archiver-23-setup.exe"
+              }
+            }
+          }
+        }
+      }
+    }
+
+    stage("GUI package")
+    {
+      if (params.PACKAGE_GUI)
+      {
+        docker.image(DOCKER_IMAGE_NAME).inside
+        {
+          script
+          {
+            sh "make gui"
+          }
+        }
+      }
+    }
+  }
+  finally
+  {
+    script
+    {
+      archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb, *.exe, *.zip', allowEmptyArchive: true
+    }
+    cleanWs notFailBuild: true
+  }
+}
+
+// main
+properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '',
+                                      artifactNumToKeepStr: '',
+                                      daysToKeepStr: '3',
+                                      numToKeepStr: '3'
+                                     )
+                          )
+           ]
+          )
+
+try
+{
+  node('docker')
+  {
+    build()
+  }
+}
+catch (error)
+{
+  echo "ERROR: ${error.message}"
+  currentBuild.result = 'FAILED'
+}
