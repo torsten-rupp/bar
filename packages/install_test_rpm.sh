@@ -81,7 +81,7 @@ type zypper 1>/dev/null 2>/dev/null
 if test $? -eq 0; then
   echo -n "Update packages..."
 
-  zypper -q update -y  1>/dev/null 2>/dev/null
+  zypper -q update -y 1>/dev/null 2>/dev/null
   zypper -q install -y \
     openssl \
     jre \
@@ -102,10 +102,10 @@ trap /bin/bash ERR
 set -e
 
 # install/upgrade packages
-yum -y update
-yum -y upgrade
+yum -y update 1>/dev/null 2>/dev/null
+yum -y upgrade 1>/dev/null 2>/dev/null
 yum -y install \
-  procps
+  procps 1>/dev/null 2>/dev/null
 
 # install rpm
 rpm -i $rpmFiles
@@ -115,8 +115,10 @@ bar --version 1>/dev/null
 bar --help 1>/dev/null
 barcontrol --help 1>/dev/null
 
-# simple server test (Note: kill existing instance; systemd may not work inside docker)
+# simple server test (Note: kill existing instance and ignore SIGTERM; systemd may not work inside docker)
+trap '' SIGTERM
 (killall bar 2>/dev/null || true)
+trap - SIGTERM
 bar-debug --server --debug-systemd --debug-run-time=60
 bar --server &
 pid=$!

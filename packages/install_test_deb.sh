@@ -77,10 +77,10 @@ trap /bin/bash ERR
 set -e
 
 # install/upgrade packages
-apt update
-apt -y upgrade --fix-missing
+apt update 1>/dev/null 2>/dev/null
+apt -y upgrade --fix-missing 1>/dev/null 2>/dev/null
 apt -y install --fix-missing \
-  procps
+  procps 1>/dev/null 2>/dev/null
 
 # install deb
 dpkg -i $debFiles
@@ -90,8 +90,10 @@ bar --version 1>/dev/null
 bar --help 1>/dev/null
 barcontrol --help 1>/dev/null
 
-# simple server test (Note: kill existing instance; systemd may not work inside docker)
+# simple server test (Note: kill existing instance and ignore SIGTERM; systemd may not work inside docker)
+trap '' SIGTERM
 (killall bar 2>/dev/null || true)
+trap - SIGTERM
 bar-debug --server --debug-systemd --debug-run-time=60
 bar --server &
 pid=$!
