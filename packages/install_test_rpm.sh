@@ -123,6 +123,7 @@ sleep 20
 barcontrol --ping
 barcontrol --list
 #(trap '' SIGTERM; killall bar || true)
+(killall bar -q || true)
 
 # debug
 if test $debugFlag -eq 1; then
