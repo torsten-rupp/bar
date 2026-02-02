@@ -41,17 +41,6 @@ def build()
                 }
               }
             }
-            for(String item : TEST_PACKAGES_FEDORA)
-            {
-              docker.image("fedora:"+item).inside('-u root --privileged -v/tmp:/tmp2')
-              {
-                script
-                {
-                  sh "packages/install_test_rpm.sh /tmp2/*.rpm"
-                }
-              }
-            }
-//TODO: call            sh "make install_test_rpm"
           }
         }
       }
