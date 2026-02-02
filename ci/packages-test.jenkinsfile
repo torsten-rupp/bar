@@ -57,14 +57,6 @@ def build()
       }
     }
   }
-  finally
-  {
-    script
-    {
-      archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb, *.exe, *.zip', allowEmptyArchive: true
-    }
-    cleanWs notFailBuild: true
-  }
 }
 
 // main
