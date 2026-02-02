@@ -133,6 +133,6 @@ if test $debugFlag -eq 1; then
 fi
 
 # free resources
-rm -f $tmpFile
+#rm -f $tmpFile
 
 exit 0
