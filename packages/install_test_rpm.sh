@@ -125,7 +125,7 @@ barcontrol --ping
 barcontrol --list
 #(trap '' SIGTERM; killall bar || true)
 #(killall bar -q || true)
-(kill -s TERM $pid || true)
+(kill $pid || true)
 
 # debug
 if test $debugFlag -eq 1; then
