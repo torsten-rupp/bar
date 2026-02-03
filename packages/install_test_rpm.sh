@@ -123,6 +123,7 @@ pid=$!
 sleep 20
 netstat -tupeln
 barcontrol --ping
+netstat -tupeln
 ##barcontrol --list
 ###(trap '' SIGTERM; killall bar || true)
 ###(killall bar -q || true)

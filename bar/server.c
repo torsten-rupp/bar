@@ -3979,7 +3979,7 @@ LOCAL Errors purgeExpiredEntities(IndexHandle  *indexHandle,
                 totalEntityCount++;
               }
 
-              // get age
+              // get age [days]
               uint age = (now-jobEntityNode->createdDateTime)/S_PER_DAY;
 
               // check if expired and not "in-transit"
