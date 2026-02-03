@@ -105,7 +105,7 @@ set -e
 yum -y update 1>/dev/null 2>/dev/null
 yum -y upgrade 1>/dev/null 2>/dev/null
 yum -y install \
-  procps 1>/dev/null 2>/dev/null
+  procps net-tools 1>/dev/null 2>/dev/null
 
 # install rpm
 rpm -i $rpmFiles
@@ -126,6 +126,7 @@ barcontrol --ping
 ###(trap '' SIGTERM; killall bar || true)
 ###(killall bar -q || true)
 (kill $pid || true)
+netstat -tupeln
 
 # debug
 if test $debugFlag -eq 1; then
