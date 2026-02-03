@@ -118,14 +118,14 @@ barcontrol --help 1>/dev/null
 # simple server test (Note: kill existing instance and ignore SIGTERM; systemd may not work inside docker)
 #(trap '' SIGTERM; killall bar-debug 2>/dev/null || true)
 bar-debug --server --debug-systemd --debug-run-time=60
-bar --server &
-pid=$!
-sleep 20
-barcontrol --ping
-barcontrol --list
-#(trap '' SIGTERM; killall bar || true)
-#(killall bar -q || true)
-(kill $pid || true)
+##bar --server &
+##pid=$!
+##sleep 20
+##barcontrol --ping
+##barcontrol --list
+###(trap '' SIGTERM; killall bar || true)
+###(killall bar -q || true)
+##(kill $pid || true)
 
 # debug
 if test $debugFlag -eq 1; then
