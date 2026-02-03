@@ -48,7 +48,10 @@ def build()
   }
   finally
   {
-    cleanWs notFailBuild: true
+    cleanWs(deleteDirs: true,
+            disableDeferredWipeout: true,
+            notFailBuild: true
+           )
   }
 }
 
