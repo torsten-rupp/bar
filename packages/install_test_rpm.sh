@@ -121,6 +121,7 @@ bar-debug --server --debug-systemd --debug-run-time=60
 bar --server &
 pid=$!
 sleep 20
+netstat -tupeln
 barcontrol --ping
 ##barcontrol --list
 ###(trap '' SIGTERM; killall bar || true)
