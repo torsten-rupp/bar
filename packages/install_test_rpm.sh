@@ -120,8 +120,8 @@ barcontrol --help 1>/dev/null
 bar-debug --server --debug-systemd --debug-run-time=60
 bar --server &
 pid=$!
-##sleep 20
-##barcontrol --ping
+sleep 20
+barcontrol --ping
 ##barcontrol --list
 ###(trap '' SIGTERM; killall bar || true)
 ###(killall bar -q || true)
