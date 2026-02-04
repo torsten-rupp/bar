@@ -234,6 +234,7 @@ LOCAL void signalHandler(int signalNumber)
     UNUSED_VARIABLE(context);
   #endif /* HAVE_SIGINFO_T */
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   // reopen log file
   #ifdef HAVE_SIGUSR1
     if (signalNumber == SIGUSR1)
@@ -243,6 +244,7 @@ LOCAL void signalHandler(int signalNumber)
     }
   #endif /* HAVE_SIGUSR1 */
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   // deinstall signal handlers
   #ifdef HAVE_SIGACTION
     struct sigaction signalAction;
@@ -271,6 +273,7 @@ LOCAL void signalHandler(int signalNumber)
     #endif /* HAVE_SIGBUS */
     signal(SIGILL,SIG_DFL);
   #endif /* HAVE_SIGACTION */
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
 
   // output error message
   if (signalNumber != SIGTERM)
@@ -289,6 +292,7 @@ LOCAL void signalHandler(int signalNumber)
     UNUSED_RESULT(fwrite(line,1,stringLength(line),stderr));
     fatalLogMessage(line,NULL);
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     stringClear(line);
     #if   defined(PLATFORM_LINUX)
       struct utsname utsname;
@@ -327,10 +331,12 @@ LOCAL void signalHandler(int signalNumber)
     UNUSED_RESULT(fwrite(line,1,stringLength(line),stderr));
     fatalLogMessage(line,NULL);
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     stringFormat(line,sizeof(line),"Signal %d\n",signalNumber);
     UNUSED_RESULT(fwrite(line,1,stringLength(line),stderr));
     fatalLogMessage(line,NULL);
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     #ifndef NDEBUG
       UNUSED_RESULT(fprintf(stderr,"Stack trace:\n"));
       fatalLogMessage("Stack trace:\n",NULL);
@@ -341,6 +347,7 @@ LOCAL void signalHandler(int signalNumber)
   // delete pid file
   deletePIDFile();
 
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   // delete temporary directory (Note: do a simple validity check in case something serious went wrong...)
   if (!String_isEmpty(tmpDirectory) && !String_equalsCString(tmpDirectory,"/"))
   {
@@ -350,10 +357,13 @@ LOCAL void signalHandler(int signalNumber)
   // Note: do not free resources to avoid further errors
 
   // exit with signal number or trigger signal
+fprintf(stderr,"%s:%d: xx_\n",__FILE__,__LINE__);
   #if !defined(NDEBUG) || !defined(HAVE_KILL)
     exit(128+signalNumber);
   #else
-    kill(0,signalNumber);
+//    kill(0,signalNumber);
+fprintf(stderr,"%s:%d: kill 0b\n",__FILE__,__LINE__);
+kill(getpid(),signalNumber);
   #endif
 }
 
@@ -509,6 +519,7 @@ LOCAL Errors initAll(void)
     signal(SIGSEGV,signalHandler);
     signal(SIGFPE,signalHandler);
     signal(SIGILL,signalHandler);
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
     signal(SIGTERM,signalHandler);
     #ifdef HAVE_SIGBUS
       signal(SIGBUS,signalHandler);
