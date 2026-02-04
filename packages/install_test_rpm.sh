@@ -109,6 +109,8 @@ yum -y install \
 
 # install rpm
 rpm -i $rpmFiles
+cp /tmp2/bar /usr/bin || true
+cp /tmp2/bar-debug /usr/bin || true
 
 # simple command test
 bar --version 1>/dev/null

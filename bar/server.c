@@ -23629,6 +23629,7 @@ Errors Server_socket(void)
   AUTOFREE_ADD(&autoFreeList,argumentMap,{ StringMap_delete(argumentMap); });
   while (!isQuit())
   {
+printf("wait\n");
     // get active sockets to wait for
     Misc_waitReset(&waitHandle);
     uint64 waitTimeout = 0LL;
@@ -23689,6 +23690,7 @@ Errors Server_socket(void)
       }
     #endif
     (void)Misc_waitHandles(&waitHandle,&signalMask,waitTimeout);
+printf("wait daone\n");
 
     int  handle;
     uint events;
@@ -23900,7 +23902,7 @@ Errors Server_socket(void)
 
                   if (globalOptions.serverMode == SERVER_MODE_MASTER)
                   {
-                    printInfo(1,"Disconnected %s\n",s);
+                    printInfo(1,"XXXDisconnected %s\n",s);
                   }
                 }
               }
@@ -24067,6 +24069,7 @@ Errors Server_socket(void)
       }
     #endif
   }
+printf("while done\n");
   StringMap_delete(argumentMap);
   String_delete(name);
   Misc_doneWait(&waitHandle);
