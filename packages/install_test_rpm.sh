@@ -98,8 +98,8 @@ if test $? -eq 0; then
 fi
 
 # set error handler: execute bash shell
-trap /bin/bash ERR
-set -e
+#trap /bin/bash ERR
+#set -e
 
 # install/upgrade packages
 yum -y update 1>/dev/null 2>/dev/null
