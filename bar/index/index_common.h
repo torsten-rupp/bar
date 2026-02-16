@@ -640,6 +640,8 @@ Errors IndexCommon_deleteByIds(IndexHandle      *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
+#ifndef NDEBUG
+
 void IndexCommon_verify(IndexHandle *indexHandle,
                         const char  *tableName,
                         const char  *columnName,
@@ -647,6 +649,19 @@ void IndexCommon_verify(IndexHandle *indexHandle,
                         const char  *condition,
                         ...
                        );
+
+/***********************************************************************\
+* Name   : IndexCommon_printIndexInUseThreadInfo
+* Purpose: print index in use thread info
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void IndexCommon_printIndexInUseThreadInfo(void);
+
+#endif /* not NDEBUG */
 
 #ifdef __cplusplus
   }
