@@ -784,6 +784,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
 #endif
 
 #ifndef NDEBUG
+
 void IndexCommon_verify(IndexHandle *indexHandle,
                         const char  *tableName,
                         const char  *columnName,
@@ -817,6 +818,16 @@ UNUSED_VARIABLE(value);
   va_end(arguments);
 #endif
 }
+
+void IndexCommon_printIndexInUseThreadInfo(void)
+{
+  ThreadInfo threadInfo;
+  ARRAY_ITERATE(&indexUsedBy,threadInfo)
+  {
+    fprintf(stderr,"%s:%d: index use thread %lx at %s, %lu\n",__FILE__,__LINE__,(uint64)threadInfo.threadId,threadInfo.fileName,threadInfo.lineNumber);
+  }
+}
+
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

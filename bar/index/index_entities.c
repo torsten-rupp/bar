@@ -1006,30 +1006,37 @@ Errors IndexEntity_lock(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    error = Database_update(&indexHandle->databaseHandle,
-                            NULL,  // changedRowCount
-                            "entities",
-                            DATABASE_FLAG_NONE,
-                            DATABASE_VALUES
-                            (
-                              DATABASE_VALUE("lockedCount", "lockedCount+1"),
-                            ),
-                            "id=?",
-                            DATABASE_FILTERS
-                            (
-                              DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
-                            )
-                           );
-    if (error != ERROR_NONE)
+    INDEX_DOX(error,
+              indexHandle,
     {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
+      return Database_update(&indexHandle->databaseHandle,
+                             NULL,  // changedRowCount
+                             "entities",
+                             DATABASE_FLAG_NONE,
+                             DATABASE_VALUES
+                             (
+                               DATABASE_VALUE("lockedCount", "lockedCount+1"),
+                             ),
+                             "id=?",
+                             DATABASE_FILTERS
+                             (
+                               DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
+                             )
+                            );
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_ENTITY_LOCK entityId=%"PRIi64"",
+                                    entityId
+                                   );
+  }
 
   return error;
 }
@@ -2228,38 +2235,29 @@ Errors IndexEntity_delete(IndexHandle *indexHandle,
       if (!INDEX_ID_IS_DEFAULT_ENTITY(entityId))
       {
         // remove storages from index
-        error = Database_get(&indexHandle->databaseHandle,
-                             CALLBACK_INLINE(Errors,(const DatabaseValue values[], uint valueCount, void *userData),
-                             {
-                               assert(values != NULL);
-                               assert(valueCount == 1);
-
-                               UNUSED_VARIABLE(userData);
-                               UNUSED_VARIABLE(valueCount);
-
-                               return IndexStorage_delete(indexHandle,INDEX_ID_STORAGE(values[0].id),NULL);
-                             },NULL),
-                             NULL,  // changedRowCount
-                             DATABASE_TABLES
-                             (
-                               "storages \
-                               "
-                             ),
-                             DATABASE_FLAG_NONE,
-                             DATABASE_COLUMNS
-                             (
-                               DATABASE_COLUMN_KEY  ("id")
-                             ),
-                             "entityId=?",
-                             DATABASE_FILTERS
-                             (
-                               DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
-                             ),
-                             NULL,  // groupBy
-                             NULL,  // orderBy
-                             0,
-                             DATABASE_UNLIMITED
-                            );
+        Array databaseIds;
+        Array_init(&databaseIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+        INDEX_DOX(error,
+                  indexHandle,
+        {
+          return Database_getIds(&indexHandle->databaseHandle,
+                                 &databaseIds,
+                                 "storages",
+                                 "id",
+                                 "entityId=?",
+                                 DATABASE_FILTERS
+                                 (
+                                   DATABASE_FILTER_KEY (INDEX_DATABASE_ID(entityId))
+                                 ),
+                                 DATABASE_UNLIMITED
+                                );
+        });
+        DatabaseId databaseId;
+        ARRAY_ITERATEX(&databaseIds,databaseId,error == ERROR_NONE)
+        {
+          error =  IndexStorage_delete(indexHandle,INDEX_ID_STORAGE(databaseId),NULL);
+        }
+        Array_done(&databaseIds);
         if (error != ERROR_NONE)
         {
           (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
