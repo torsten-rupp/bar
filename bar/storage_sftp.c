@@ -1664,20 +1664,23 @@ LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
         uint64 endTotalSentBytes = storageHandle->sftp.totalSentBytes;
         assert(endTotalSentBytes >= startTotalSentBytes);
 
-        /* limit used band width if requested (note: when the system time is
-           changing endTimestamp may become smaller than startTimestamp;
-           thus do not check this with an assert())
-        */
-        if (endTimestamp >= startTimestamp)
+        if (storageHandle->storageInfo->sftp.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          /* limit used band width if requested (note: when the system time is
+             changing endTimestamp may become smaller than startTimestamp;
+             thus do not check this with an assert())
+          */
+          if (endTimestamp >= startTimestamp)
           {
-            limitBandWidth(&storageHandle->storageInfo->sftp.bandWidthLimiter,
-                           endTotalSentBytes-startTotalSentBytes,
-                           endTimestamp-startTimestamp
-                          );
+            SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+            {
+              limitBandWidth(&storageHandle->storageInfo->sftp.bandWidthLimiter,
+                             endTotalSentBytes-startTotalSentBytes,
+                             endTimestamp-startTimestamp
+                            );
+            }
           }
-        }
+      }
       }
       storageHandle->sftp.size += writtenBytes;
     }
