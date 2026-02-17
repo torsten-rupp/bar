@@ -1006,8 +1006,7 @@ Errors IndexEntity_lock(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,
               indexHandle,
@@ -1077,6 +1076,7 @@ Errors IndexEntity_unlock(IndexHandle *indexHandle,
                              )
                             );
     });
+if (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT) IndexCommon_printIndexInUseThreadInfo();
   }
   else
   {
@@ -2458,11 +2458,10 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
       // get storages to purge
       error = Database_getIds(&indexHandle->databaseHandle,
                               &storageIds,
-                              "entities \
-                                 LEFT JOIN storages ON storages.entityId=entities.id \
+                              "storages \
                               ",
-                              "storages.id",
-                              "entities.id=?",
+                              "id",
+                              "storages.entityId=?",
                               DATABASE_FILTERS
                               (
                                 DATABASE_FILTER_KEY(INDEX_DATABASE_ID(entityId))
@@ -2653,18 +2652,22 @@ Errors IndexEntity_pruneAll(IndexHandle *indexHandle,
   Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   // get all entity ids (Note: skip default entity!)
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &entityIds,
-                          "entities",
-                          "id",
-                          "id!=? \
-                          ",
-                          DATABASE_FILTERS
-                          (
-                            DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
-                          ),
-                          DATABASE_UNLIMITED
-                         );
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    return Database_getIds(&indexHandle->databaseHandle,
+                           &entityIds,
+                           "entities",
+                           "id",
+                           "id!=? \
+                           ",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_KEY(INDEX_DEFAULT_ENTITY_DATABASE_ID)
+                           ),
+                           DATABASE_UNLIMITED
+                          );
+  });
   if (error != ERROR_NONE)
   {
     Array_done(&entityIds);
