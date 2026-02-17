@@ -252,7 +252,7 @@ void AutoFree_freeAll(AutoFreeList *autoFreeList)
       // free resource
       if (autoFreeNode->autoFreeFunction != NULL)
       {
-#if 1
+#if 0
         #ifndef NDEBUG
           fprintf(stderr,
                   "DEBUG: call auto free %p at %s, line %zu with auto resource 0x%"PRIx64"\n",

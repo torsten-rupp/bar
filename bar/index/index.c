@@ -257,13 +257,13 @@ typedef struct
 //  const char *fileName;
 //  uint       lineNb;
 //  uint64     cycleCounter;
-  #ifdef INDEX_DEBUG_LOCK
+  #ifdef INDEX_DEBUG_LOCKING
     ThreadLWPId threadLWPId;
     #ifndef HAVE_BACKTRACE
       void const *stackTrace[16];
       uint       stackTraceSize;
     #endif /* NDEBUG */
-  #endif /* INDEX_DEBUG_LOCK */
+  #endif /* INDEX_DEBUG_LOCKING */
 } ThreadInfo;
 
 // progress info data
@@ -289,9 +289,9 @@ LOCAL void                       *indexPauseCallbackUserData;
 LOCAL char outputProgressBuffer[128];
 LOCAL uint outputProgressBufferLength;
 
-#ifdef INDEX_DEBUG_LOCK
+#ifdef INDEX_DEBUG_LOCKING
   LOCAL ThreadLWPId indexUseCountLPWIds[32];
-#endif /* INDEX_DEBUG_LOCK */
+#endif /* INDEX_DEBUG_LOCKING */
 
 #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
   LOCAL FILE *logImportIndexHandle;
@@ -2670,7 +2670,7 @@ LOCAL void indexThreadCode(void)
       #endif /* INDEX_SUPPORT_DELETE */
 
       if (!indexQuitFlag) (void)IndexStorage_pruneAll(&indexHandle,NULL,NULL);
-      if (!indexQuitFlag) (void)IndexEntry_deleteAllWithoutFragments(&indexHandle,NULL,NULL);
+//      if (!indexQuitFlag) (void)IndexEntry_deleteAllWithoutFragments(&indexHandle,NULL,NULL);
       if (!indexQuitFlag) (void)IndexEntity_pruneAll(&indexHandle,NULL,NULL);
       if (!indexQuitFlag) (void)IndexUUID_pruneAll(&indexHandle,NULL,NULL);
     }
@@ -2709,13 +2709,11 @@ Errors Index_initAll(void)
   Semaphore_init(&indexOpenLock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&indexPauseLock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
-  Semaphore_init(&indexClearStorageLock,SEMAPHORE_TYPE_BINARY);
 
   // init database
   error = Database_initAll();
   if (error != ERROR_NONE)
   {
-    Semaphore_done(&indexClearStorageLock);
     Semaphore_done(&indexThreadTrigger);
     Semaphore_done(&indexPauseLock);
     Semaphore_done(&indexOpenLock);
@@ -2724,9 +2722,9 @@ Errors Index_initAll(void)
     return error;
   }
 
-  #ifdef INDEX_DEBUG_LOCK
+  #ifdef INDEX_DEBUG_LOCKING
     memClear(indexUseCountLPWIds,sizeof(indexUseCountLPWIds));
-  #endif /* INDEX_DEBUG_LOCK */
+  #endif /* INDEX_DEBUG_LOCKING */
 
   return ERROR_NONE;
 }
@@ -2735,7 +2733,6 @@ void Index_doneAll(void)
 {
   Database_doneAll();
 
-  Semaphore_done(&indexClearStorageLock);
   Semaphore_done(&indexThreadTrigger);
   Semaphore_done(&indexPauseLock);
   Semaphore_done(&indexOpenLock);
@@ -3368,6 +3365,7 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
   }
 }
 
+#if 0
 void Index_beginInUse(void)
 {
   IndexCommon_addIndexInUseThreadInfo();
@@ -3377,25 +3375,26 @@ void Index_endInUse(void)
 {
   IndexCommon_removeIndexInUseThreadInfo();
 }
+#endif
 
 bool Index_isIndexInUse(void)
 {
   return IndexCommon_isIndexInUse();
 }
 
-#ifdef NDEBUG
+#if defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL)
 Errors Index_open(IndexHandle *indexHandle,
                   ServerIO    *masterIO,
                   long        timeout
                  )
-#else /* not NDEBUG */
+#else /* not defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL) */
 Errors __Index_open(const char   *__fileName__,
                     ulong        __lineNb__,
                     IndexHandle *indexHandle,
                     ServerIO     *masterIO,
                     long         timeout
                    )
-#endif /* NDEBUG */
+#endif /* defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL) */
 {
   Errors error;
 
@@ -3473,15 +3472,15 @@ void Index_interrupt(IndexHandle *indexHandle)
   Database_interrupt(&indexHandle->databaseHandle);
 }
 
-#ifdef NDEBUG
+#if defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL)
 Errors Index_beginTransaction(IndexHandle *indexHandle, ulong timeout)
-#else /* not NDEBUG */
+#else /* not defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL) */
 Errors __Index_beginTransaction(const char  *__fileName__,
                                 ulong       __lineNb__,
                                 IndexHandle *indexHandle,
                                 ulong       timeout
                                )
-#endif /* NDEBUG */
+#endif /* defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL) */
 {
   Errors error;
 
@@ -3490,11 +3489,11 @@ Errors __Index_beginTransaction(const char  *__fileName__,
   if (indexHandle->masterIO == NULL)
   {
     // begin transaction
-    #ifdef NDEBUG
+    #if defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL)
       error = Database_beginTransaction(&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
-    #else /* not NDEBUG */
+    #else /* not defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL) */
       error = __Database_beginTransaction(__fileName__,__lineNb__,&indexHandle->databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,timeout);
-    #endif /* NDEBUG */
+    #endif /* defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL) */
   }
   else
   {
@@ -4099,7 +4098,7 @@ bool StringMap_getIndexId(const StringMap stringMap, const char *name, IndexId *
   return result;
 }
 
-#ifdef INDEX_DEBUG_LOCK
+#ifdef INDEX_DEBUG_LOCKING
 void Index_debugPrintInUseInfo(void)
 {
   ArrayIterator arrayIterator;
@@ -4111,7 +4110,7 @@ void Index_debugPrintInUseInfo(void)
             "Index in use by: %lu threads\n",
             Array_length(&indexUsedBy)
            );
-    ARRAY_ITERATE(&indexUsedBy,arrayIterator,threadInfo)
+    ARRAY_ITERATE(&indexUsedBy,threadInfo)
     {
       fprintf(stderr,
               "  %s: %s\n",
@@ -4131,7 +4130,7 @@ void Index_debugPrintInUseInfo(void)
     }
   }
 }
-#endif /* not INDEX_DEBUG_LOCK */
+#endif /* not INDEX_DEBUG_LOCKING */
 
 #ifdef __cplusplus
   }

@@ -31,7 +31,7 @@
 
 /****************** Conditional compilation switches *******************/
 // switch on for debugging only!
-#define _INDEX_DEBUG_LOCK
+#define _INDEX_DEBUG_LOCKING
 #define _INDEX_DEBUG_IMPORT_OLD_DATABASE
 
 #ifndef NDEBUG
@@ -306,11 +306,11 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
 
 #define INDEX_DEFAULT_ENTITY_ID INDEX_ID_ENTITY(INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID)
 
-#ifndef NDEBUG
-  #define Index_lock(...)             __Index_lock            (__FILE__,__LINE__, ## __VA_ARGS__)
+#if !defined(NDEBUG) || (DATABASE_DEBUG_LOCK == DATABASE_DEBUG_LOCK_FULL)
+//  #define Index_lock(...)             __Index_lock            (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Index_open(...)             __Index_open            (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Index_beginTransaction(...) __Index_beginTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
-#endif /* not NDEBUG */
+#endif /* !defined(NDEBUG) || (DATABASE_DEBUG_LOCK == DATABASE_DEBUG_LOCK_FULL) */
 
 /***************************** Forwards ********************************/
 
@@ -527,6 +527,7 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
                             void                       *pauseCallbackUserData
                            );
 
+#if 0
 /***********************************************************************\
 * Name   : Index_beginInUse, Index_endInUse
 * Purpose: mark begin/end in-use
@@ -538,6 +539,7 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
 
 void Index_beginInUse(void);
 void Index_endInUse(void);
+#endif
 
 /***********************************************************************\
 * Name   : Index_isIndexInUse
@@ -562,19 +564,19 @@ bool Index_isIndexInUse(void);
 * Notes  : -
 \***********************************************************************/
 
-#ifdef NDEBUG
+#if defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL)
 Errors Index_open(IndexHandle *indexHandle,
                   ServerIO    *masterIO,
                   long        timeout
                  );
-#else /* not NDEBUG */
+#else /* not defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL) */
 Errors __Index_open(const char  *__fileName__,
                     ulong       __lineNb__,
                     IndexHandle *indexHandle,
                     ServerIO    *masterIO,
                     long        timeout
                    );
-#endif /* NDEBUG */
+#endif /* defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL) */
 
 /***********************************************************************\
 * Name   : Index_close
@@ -636,15 +638,15 @@ void Index_interrupt(IndexHandle *indexHandle);
 * Notes  : -
 \***********************************************************************/
 
-#ifdef NDEBUG
+#if defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL)
 Errors Index_beginTransaction(IndexHandle *indexHandle, ulong timeout);
-#else /* not NDEBUG */
+#else /* not defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL) */
 Errors __Index_beginTransaction(const char  *__fileName__,
                                 ulong       __lineNb__,
                                 IndexHandle *indexHandle,
                                 ulong       timeout
                                );
-#endif /* NDEBUG */
+#endif /* defined(NDEBUG) && (DATABASE_DEBUG_LOCK != DATABASE_DEBUG_LOCK_FULL) */
 
 /***********************************************************************\
 * Name   : Index_endTransaction
@@ -900,7 +902,7 @@ INLINE bool Index_getIndexId(StringMap stringMap, const char *name, IndexId *ind
 
 bool StringMap_getIndexId(const StringMap stringMap, const char *name, IndexId *data, IndexTypes indexType, IndexId defaultValue);
 
-#ifdef INDEX_DEBUG_LOCK
+#ifdef INDEX_DEBUG_LOCKING
 /***********************************************************************\
 * Name   : Index_debugPrintInUseInfo
 * Purpose: print debug in-use info
@@ -911,7 +913,7 @@ bool StringMap_getIndexId(const StringMap stringMap, const char *name, IndexId *
 \***********************************************************************/
 
 void Index_debugPrintInUseInfo(void);
-#endif /* INDEX_DEBUG_LOCK */
+#endif /* INDEX_DEBUG_LOCKING */
 
 #ifdef __cplusplus
   }

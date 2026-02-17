@@ -42,6 +42,8 @@
 
 /****************** Conditional compilation switches *******************/
 
+#define _INDEX_DEBUG_LOCKING   // define to enable debugging of locking
+
 /***************************** Constants *******************************/
 #define DEFAULT_DATABASE_NAME "bar"
 
@@ -138,18 +140,15 @@ typedef enum
 typedef struct
 {
   ThreadId   threadId;
-//TODO: remove
-//  uint       count;
-//  const char *fileName;
-//  uint       lineNb;
-//  uint64     cycleCounter;
-  #ifdef INDEX_DEBUG_LOCK
+  const char *fileName;
+  size_t     lineNumber;
+  #ifdef INDEX_DEBUG_LOCKING
     ThreadLWPId threadLWPId;
     #if !defined(NDEBUG) && defined(HAVE_BACKTRACE)
       void const *stackTrace[16];
       uint       stackTraceSize;
     #endif /* defined(NDEBUG) && defined(HAVE_BACKTRACE) */
-  #endif /* INDEX_DEBUG_LOCK */
+  #endif /* INDEX_DEBUG_LOCKING */
 } ThreadInfo;
 
 /***************************** Variables *******************************/
@@ -162,7 +161,6 @@ extern Array                      indexUsedBy;
 extern Thread                     indexThread;    // upgrade/clean-up thread
 extern Semaphore                  indexThreadTrigger;
 extern IndexHandle                *indexThreadIndexHandle;
-extern Semaphore                  indexClearStorageLock;
 extern bool                       indexQuitFlag;
 
 /****************************** Macros *********************************/
@@ -180,7 +178,7 @@ extern bool                       indexQuitFlag;
 #define INDEX_DO(indexHandle,block) \
   do \
   { \
-    IndexCommon_addIndexInUseThreadInfo(); \
+    IndexCommon_addIndexInUseThreadInfo(__FILE__,__LINE__); \
     if (!Thread_isCurrentThread(Thread_getId(&indexThread))) \
     { \
       IndexCommon_indexThreadInterrupt(); \
@@ -207,7 +205,7 @@ extern bool                       indexQuitFlag;
 #define INDEX_DOX(result,indexHandle,block) \
   do \
   { \
-    IndexCommon_addIndexInUseThreadInfo(); \
+    IndexCommon_addIndexInUseThreadInfo(__FILE__,__LINE__); \
     if (!Thread_isCurrentThread(Thread_getId(&indexThread))) \
     { \
       IndexCommon_indexThreadInterrupt(); \
@@ -311,19 +309,21 @@ extern bool                       indexQuitFlag;
 * Notes  : -
 \***********************************************************************/
 
-INLINE void IndexCommon_addIndexInUseThreadInfo(void);
+INLINE void IndexCommon_addIndexInUseThreadInfo(const char *fileName, size_t lineNumber);
 #if defined(NDEBUG) || defined(__INDEX_COMMON_IMPLEMENTATION__)
-INLINE void IndexCommon_addIndexInUseThreadInfo(void)
+INLINE void IndexCommon_addIndexInUseThreadInfo(const char *fileName, size_t lineNumber)
 {
   ThreadInfo threadInfo;
 
-  threadInfo.threadId = Thread_getCurrentId();
-  #ifdef INDEX_DEBUG_LOCK
+  threadInfo.threadId   = Thread_getCurrentId();
+  threadInfo.fileName   = fileName;
+  threadInfo.lineNumber = lineNumber;
+  #ifdef INDEX_DEBUG_LOCKING
     threadInfo.threadLWPId = Thread_getCurrentLWPId();
     #if defined(NDEBUG) && defined(HAVE_BACKTRACE)
       BACKTRACE(threadInfo.stackTrace,threadInfo.stackTraceSize);
     #endif /* defined(NDEBUG) && defined(HAVE_BACKTRACE) */
-  #endif /* INDEX_DEBUG_LOCK */
+  #endif /* INDEX_DEBUG_LOCKING */
 
   SEMAPHORE_LOCKED_DO(&indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
@@ -332,6 +332,8 @@ INLINE void IndexCommon_addIndexInUseThreadInfo(void)
 //Index_debugPrintInUseInfo();
 }
 #endif /* NDEBUG || __INDEX_IMPLEMENTATION__ */
+
+void IndexCommon_printIndexInUseThreadInfo(void);
 
 /***********************************************************************\
 * Name   : IndexCommon_removeIndexInUseThreadInfo

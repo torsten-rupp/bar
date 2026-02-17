@@ -1367,16 +1367,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  // lock
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: clear storage #%"PRIi64"\n",__FILE__,__LINE__,storageId);
-  #endif
-  Semaphore_lock(&indexClearStorageLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: clear storage locked\n",__FILE__,__LINE__);
-  #endif
-
-  // init variables
+ // init variables
   Array entryIds;
   Array_init(&entryIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
@@ -1620,7 +1611,7 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
             (Misc_getTimestamp()-t0)/US_PER_MS
            );
   #endif
-#endif
+#endif // 0
 
   // collect file/image/directory/link/hardlink/special entries to delete
   if (error == ERROR_NONE)
@@ -1728,12 +1719,6 @@ LOCAL Errors clearStorage(IndexHandle  *indexHandle,
                                    progressInfo
                                   );
   }
-
-  // unlock
-  Semaphore_unlock(&indexClearStorageLock);
-  #ifdef INDEX_DEBUG_PURGE
-    fprintf(stderr,"%s, %d: clear storage unlocked\n",__FILE__,__LINE__);
-  #endif
 
   // free resources
   Array_done(&entryIds);
@@ -2911,15 +2896,14 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_TABLES
                        (
                          "directoryEntries \
-                            LEFT JOIN entries ON entries.id=directoryEntries.entryId \
                          "
                        ),
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)")
+                         DATABASE_COLUMN_UINT("COUNT(DISTINCT directoryEntries.entryId)")
                        ),
-                       "directoryEntries.storageId=?",
+                       "storageId=?",
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_KEY (INDEX_DATABASE_ID(storageId)),
@@ -2953,15 +2937,14 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_TABLES
                        (
                          "linkEntries \
-                            LEFT JOIN entries ON entries.id=linkEntries.entryId \
                          "
                        ),
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)"),
+                         DATABASE_COLUMN_UINT("COUNT(DISTINCT linkEntries.entryId)"),
                        ),
-                       "linkEntries.storageId=?",
+                       "storageId=?",
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_KEY (INDEX_DATABASE_ID(storageId)),
@@ -3043,15 +3026,14 @@ Errors IndexStorage_updateAggregates(IndexHandle *indexHandle,
                        DATABASE_TABLES
                        (
                          "specialEntries \
-                            LEFT JOIN entries ON entries.id=specialEntries.entryId \
                          "
                        ),
                        DATABASE_FLAG_NONE,
                        DATABASE_COLUMNS
                        (
-                         DATABASE_COLUMN_UINT("COUNT(DISTINCT entries.id)"),
+                         DATABASE_COLUMN_UINT("COUNT(DISTINCT specialEntries.entryId)"),
                        ),
-                       "specialEntries.storageId=?",
+                       "storageId=?",
                        DATABASE_FILTERS
                        (
                          DATABASE_FILTER_KEY (INDEX_DATABASE_ID(storageId)),
@@ -3505,8 +3487,8 @@ bool IndexStorage_findById(IndexHandle *indexHandle,
                         DATABASE_TABLES
                         (
                           "storages \
-                               LEFT JOIN entities ON storages.entityId=entities.id \
-                               LEFT JOIN uuids ON entities.jobUUID=uuids.jobUUID \
+                             LEFT JOIN entities ON storages.entityId=entities.id \
+                             LEFT JOIN uuids ON entities.jobUUID=uuids.jobUUID \
                           "
                         ),
                         DATABASE_FLAG_NONE,
@@ -5130,6 +5112,7 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
         break;
     }
   }
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   // delete storage
   if (error == ERROR_NONE)
@@ -5146,6 +5129,7 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
                             DATABASE_UNLIMITED
                            );
   }
+fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   if (error != ERROR_NONE)
   {
@@ -5378,21 +5362,18 @@ UNUSED_VARIABLE(progressInfo);
                            NULL,  // changedRowCount
                            DATABASE_TABLES
                            (
-                             "entries \
-                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                             "directoryEntries \
                              "
                            ),
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id")
+                             DATABASE_COLUMN_KEY   ("directoryEntries.entryId")
                            ),
-                           "    entries.type=? \
-                            AND directoryEntries.storageId=? \
+                           "storageId=? \
                            ",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_DIRECTORY),
                              DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(storageId))
                            ),
                            NULL,  // groupBy
@@ -5426,21 +5407,18 @@ UNUSED_VARIABLE(progressInfo);
                            NULL,  // changedRowCount
                            DATABASE_TABLES
                            (
-                             "entries \
-                                LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
+                             "linkEntries \
                              "
                            ),
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id")
+                             DATABASE_COLUMN_KEY   ("linkEntries.entryId")
                            ),
-                           "    entries.type=? \
-                            AND linkEntries.storageId=? \
+                           "storageId=? \
                            ",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_LINK),
                              DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(storageId))
                            ),
                            NULL,  // groupBy
@@ -5474,21 +5452,18 @@ UNUSED_VARIABLE(progressInfo);
                            NULL,  // changedRowCount
                            DATABASE_TABLES
                            (
-                             "entries \
-                                LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
+                             "specialEntries \
                              "
                            ),
                            DATABASE_FLAG_NONE,
                            DATABASE_COLUMNS
                            (
-                             DATABASE_COLUMN_KEY   ("entries.id")
+                             DATABASE_COLUMN_KEY   ("specialEntries.entryId")
                            ),
-                           "    entries.type=? \
-                            AND specialEntries.storageId=? \
+                           "storageId=? \
                            ",
                            DATABASE_FILTERS
                            (
-                             DATABASE_FILTER_UINT  (INDEX_CONST_TYPE_SPECIAL),
                              DATABASE_FILTER_KEY   (INDEX_DATABASE_ID(storageId))
                            ),
                            NULL,  // groupBy
@@ -6018,18 +5993,22 @@ Errors IndexStorage_pruneAll(IndexHandle *indexHandle,
   Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   // get all storage ids
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &storageIds,
-                          "storages",
-                          "id",
-                          "state IN (?,?)",
-                          DATABASE_FILTERS
-                          (
-                            DATABASE_FILTER_UINT(INDEX_STATE_OK),
-                            DATABASE_FILTER_UINT(INDEX_STATE_ERROR)
-                          ),
-                          DATABASE_UNLIMITED
-                         );
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    return Database_getIds(&indexHandle->databaseHandle,
+                           &storageIds,
+                           "storages",
+                           "id",
+                           "state IN (?,?)",
+                           DATABASE_FILTERS
+                           (
+                             DATABASE_FILTER_UINT(INDEX_STATE_OK),
+                             DATABASE_FILTER_UINT(INDEX_STATE_ERROR)
+                           ),
+                           DATABASE_UNLIMITED
+                          );
+  });
   if (error != ERROR_NONE)
   {
     Array_done(&storageIds);

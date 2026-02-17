@@ -161,6 +161,7 @@ rest time
 - BARControl: menu entries for Debian, XFCE
 - incremental/differential backup: save/show base backup UUIDs
 - sqlite3 recover -DSQLITE_ENABLE_DBPAGE_VTAB
+- BARControl: show writing speed for CD/DVD/BD
 
 
 
