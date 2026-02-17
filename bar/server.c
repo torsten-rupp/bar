@@ -6023,29 +6023,29 @@ LOCAL void autoIndexThreadCode(void)
     {
       if (isMaintenanceTime(Misc_getCurrentDateTime(),NULL))
       {
-      // pause
-      pauseIndexUpdate();
-      if (isQuit())
-      {
-        break;
-      }
-
-      if (   Index_isInitialized()
-          && globalOptions.indexDatabaseAutoUpdateFlag
-         )
-      {
-        autoAddUpdateIndex(&indexHandle);
+        // pause
+        pauseIndexUpdate();
         if (isQuit())
         {
           break;
         }
 
-        autoCleanIndex(&indexHandle);
-        if (isQuit())
+        if (   Index_isInitialized()
+            && globalOptions.indexDatabaseAutoUpdateFlag
+           )
         {
-          break;
+          autoAddUpdateIndex(&indexHandle);
+          if (isQuit())
+          {
+            break;
+          }
+
+          autoCleanIndex(&indexHandle);
+          if (isQuit())
+          {
+            break;
+          }
         }
-      }
       }
       if (isQuit())
       {
