@@ -5002,81 +5002,88 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   #ifdef HAVE_LLISTXATTR
     // allocate buffer for attribute names (Note: it is possible a value > 0 is returned here, but later 0 is returned)
     n = llistxattr(String_cString(fileName),NULL,0);
-    if (n < 0)
+    if (n >= 0)
     {
-      error = getLastError(ERROR_CODE_IO,String_cString(fileName));
-      List_done(fileExtendedAttributeList);
-      return error;
-    }
-    names = (char*)malloc(n);
-    if (names == NULL)
-    {
-      List_done(fileExtendedAttributeList);
-      return ERROR_INSUFFICIENT_MEMORY;
-    }
+      names = (char*)malloc(n);
+      if (names == NULL)
+      {
+        List_done(fileExtendedAttributeList);
+        return ERROR_INSUFFICIENT_MEMORY;
+      }
 
-    // get attribute names
-    namesLength = llistxattr(String_cString(fileName),names,n);
-    if (namesLength < 0)
-    {
-      error = getLastError(ERROR_CODE_IO,String_cString(fileName));
+      // get attribute names
+      namesLength = llistxattr(String_cString(fileName),names,n);
+      if (namesLength < 0)
+      {
+        error = getLastError(ERROR_CODE_IO,String_cString(fileName));
+        free(names);
+        List_done(fileExtendedAttributeList);
+        return error;
+      }
+
+      // get attributes
+      name = names;
+      while ((name-names) < namesLength)
+      {
+        // allocate buffer for data
+        n = lgetxattr(String_cString(fileName),name,NULL,0);
+        if (n < 0)
+        {
+          error = getLastError(ERROR_CODE_IO,String_cString(fileName));
+          free(names);
+          List_done(fileExtendedAttributeList);
+          return error;
+        }
+        data = malloc(n);
+        if (data == NULL)
+        {
+          free(names);
+          List_done(fileExtendedAttributeList);
+          return ERROR_INSUFFICIENT_MEMORY;
+        }
+
+        // get extended attribute
+        dataLength = lgetxattr(String_cString(fileName),name,data,n);
+        if (dataLength < 0)
+        {
+          error = getLastError(ERROR_CODE_IO,String_cString(fileName));
+          free(data);
+          free(names);
+          List_done(fileExtendedAttributeList);
+          return error;
+        }
+
+        // store in attribute list
+        fileExtendedAttributeNode = LIST_NEW_NODE(FileExtendedAttributeNode);
+        if (fileExtendedAttributeNode == NULL)
+        {
+          free(data);
+          free(names);
+          List_done(fileExtendedAttributeList);
+          return ERROR_INSUFFICIENT_MEMORY;
+        }
+        fileExtendedAttributeNode->name       = String_newCString(name);
+        fileExtendedAttributeNode->data       = data;
+        fileExtendedAttributeNode->dataLength = (uint)dataLength;
+        List_append(fileExtendedAttributeList,fileExtendedAttributeNode);
+
+        // next attribute
+        name += stringLength(name)+1;
+      }
+
+      // free resources
       free(names);
+    }
+    else if (errno == ENOTSUP)
+    {
+      // not supported -> nothing to do
+    }
+    else
+    {
+      error = getLastError(ERROR_CODE_IO,String_cString(fileName));
       List_done(fileExtendedAttributeList);
       return error;
     }
-
-    // get attributes
-    name = names;
-    while ((name-names) < namesLength)
-    {
-      // allocate buffer for data
-      n = lgetxattr(String_cString(fileName),name,NULL,0);
-      if (n < 0)
-      {
-        error = getLastError(ERROR_CODE_IO,String_cString(fileName));
-        free(names);
-        List_done(fileExtendedAttributeList);
-        return error;
-      }
-      data = malloc(n);
-      if (data == NULL)
-      {
-        free(names);
-        List_done(fileExtendedAttributeList);
-        return ERROR_INSUFFICIENT_MEMORY;
-      }
-
-      // get extended attribute
-      dataLength = lgetxattr(String_cString(fileName),name,data,n);
-      if (dataLength < 0)
-      {
-        error = getLastError(ERROR_CODE_IO,String_cString(fileName));
-        free(data);
-        free(names);
-        List_done(fileExtendedAttributeList);
-        return error;
-      }
-
-      // store in attribute list
-      fileExtendedAttributeNode = LIST_NEW_NODE(FileExtendedAttributeNode);
-      if (fileExtendedAttributeNode == NULL)
-      {
-        free(data);
-        free(names);
-        List_done(fileExtendedAttributeList);
-        return ERROR_INSUFFICIENT_MEMORY;
-      }
-      fileExtendedAttributeNode->name       = String_newCString(name);
-      fileExtendedAttributeNode->data       = data;
-      fileExtendedAttributeNode->dataLength = (uint)dataLength;
-      List_append(fileExtendedAttributeList,fileExtendedAttributeNode);
-
-      // next attribute
-      name += stringLength(name)+1;
-    }
-
-    // free resources
-    free(names);
   #else /* not HAVE_LLISTXATTR */
     UNUSED_VARIABLE(fileExtendedAttributeList);
     UNUSED_VARIABLE(fileName);
