@@ -1,4 +1,4 @@
-2025-12-23 27a
+2025-02-22 27a
   * fix ICU data (bug #33)
   * fix auto-purge if job size limit is exceeded (bug #35)
   * fix store begin time minute (bug #36)

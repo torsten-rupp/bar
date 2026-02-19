@@ -1076,7 +1076,6 @@ Errors IndexEntity_unlock(IndexHandle *indexHandle,
                              )
                             );
     });
-if (Error_getCode(error) == ERROR_CODE_DATABASE_TIMEOUT) IndexCommon_printIndexInUseThreadInfo();
   }
   else
   {

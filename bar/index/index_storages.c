@@ -5112,7 +5112,6 @@ Errors IndexStorage_delete(IndexHandle  *indexHandle,
         break;
     }
   }
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   // delete storage
   if (error == ERROR_NONE)
@@ -5129,7 +5128,6 @@ fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
                             DATABASE_UNLIMITED
                            );
   }
-fprintf(stderr,"%s:%d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 
   if (error != ERROR_NONE)
   {
