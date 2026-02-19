@@ -823,21 +823,17 @@ void IndexCommon_printIndexInUseThreadInfo(void)
   ThreadInfo threadInfo;
   ARRAY_ITERATE(&indexUsedBy,threadInfo)
   {
-    fprintf(stderr,"%s:%d: index use thread %lx at %s, %lu\n",__FILE__,__LINE__,(uint64)threadInfo.threadId,threadInfo.fileName,threadInfo.lineNumber);
+    fprintf(stderr,
+            "%s:%d: index use thread %s at %s, %lu\n",
+            __FILE__,__LINE__,
+            Thread_getIdString(threadInfo.threadId),
+            threadInfo.fileName,
+            threadInfo.lineNumber
+           );
   }
 }
 
 #endif /* not NDEBUG */
-
-void IndexCommon_printIndexInUseThreadInfo(void)
-{
-  ThreadInfo threadInfo;
-  ARRAY_ITERATE(&indexUsedBy,threadInfo)
-  {
-    fprintf(stderr,"%s:%d: index use thread %lx at %s, %lu\n",__FILE__,__LINE__,(uint64)threadInfo.threadId,threadInfo.fileName,threadInfo.lineNumber);
-  }
-if (Array_length(&indexUsedBy) > 0) { fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3"); }
-}
 
 #ifdef __cplusplus
   }
