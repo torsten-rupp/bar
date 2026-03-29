@@ -8,6 +8,7 @@
   * fix concurrent access to CD/DVD/BD device (bug #43)
   * fix possible timeout when execution SQLite statement (bug #46)
   * fix install BAR as systemd service for OpenSuse 15.6 (bug #47)
+  * fix obsolete locking (bug #42)
   * BARControl: add show hidden button (feature #23)
   * BARControl: fix mark/unmark all storage entries (bug #40)
   * BARControl: date year selector until 2030 (bug #41)
