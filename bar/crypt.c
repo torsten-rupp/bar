@@ -160,8 +160,8 @@ typedef struct ATTRIBUTE_PACKED
 } KeyImportExportInfo;
 
 /***************************** Variables *******************************/
-uint cryptKeyLengths[CRYPT_ALGORITHM_MAX];
-uint cryptBlockLengths[CRYPT_ALGORITHM_MAX];
+uint cryptKeyLengths[CRYPT_ALGORITHM_MAX+1];
+uint cryptBlockLengths[CRYPT_ALGORITHM_MAX+1];
 
 /****************************** Macros *********************************/
 
