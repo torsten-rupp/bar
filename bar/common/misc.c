@@ -1157,6 +1157,61 @@ bool Misc_isDayLightSaving(uint64 dateTime)
   return (tm->tm_isdst > 0);;
 }
 
+bool Misc_isValidDateTime(TimeTypes           timeType,
+                          uint                year,
+                          uint                month,
+                          uint                day,
+                          uint                hour,
+                          uint                minute,
+                          uint                second,
+                          DayLightSavingModes dayLightSavingMode
+                         )
+{
+  /* Note: convert to dateTime and get probably modified tm struct
+           values to detect if date/time is valid
+  */
+
+  struct tm tm;
+  memClear(&tm,sizeof(tm));
+  tm.tm_year = year - 1900;
+  tm.tm_mon  = month - 1;
+  tm.tm_mday = day;
+  tm.tm_hour = hour;
+  tm.tm_min  = minute;
+  tm.tm_sec  = second;
+  switch (dayLightSavingMode)
+  {
+    case DAY_LIGHT_SAVING_MODE_AUTO: tm.tm_isdst = -1; break;
+    case DAY_LIGHT_SAVING_MODE_OFF : tm.tm_isdst =  0; break;
+    case DAY_LIGHT_SAVING_MODE_ON  : tm.tm_isdst =  1; break;
+  }
+
+  switch (timeType)
+  {
+    case TIME_TYPE_GMT  :
+      #if   defined(PLATFORM_LINUX)
+        (void)timegm(&tm);
+      #elif defined(PLATFORM_WINDOWS)
+        (void)_mkgmtime(&tm);
+      #endif /* PLATFORM_... */
+      break;
+    case TIME_TYPE_LOCAL:
+      #if   defined(PLATFORM_LINUX)
+        (void)mktime(&tm);
+      #elif defined(PLATFORM_WINDOWS)
+        (void)mktime(&tm);
+      #endif /* PLATFORM_... */
+      break;
+  }
+
+  return    (tm.tm_year == (int)(year - 1900))
+         && (tm.tm_mon  == (int)(month - 1)  )
+         && (tm.tm_mday == (int)day          )
+         && (tm.tm_hour == (int)hour         )
+         && (tm.tm_min  == (int)minute       )
+         && (tm.tm_sec  == (int)second       );
+}
+
 uint64 Misc_makeDateTime(TimeTypes           timeType,
                          uint                year,
                          uint                month,

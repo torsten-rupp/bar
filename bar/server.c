@@ -1834,6 +1834,24 @@ LOCAL uint64 getJobSchedule(const JobScheduleNode *jobScheduleNode,
                 if (jobScheduleDateTime != MAX_UINT64) break;
                 checkHour--;
                 checkMinute = 59;
+                /* Note: next check time may be invalid if time is in the
+                         'missing hour' of day light saving. Go back one
+                         more hour and skip the 'missing hour'.
+                */
+                if (   (checkHour > 0)
+                    && !Misc_isValidDateTime(TIME_TYPE_LOCAL,
+                                             (uint)checkYear,
+                                             (uint)checkMonth,
+                                             (uint)checkDay,
+                                             (uint)checkHour,
+                                             (uint)checkMinute,
+                                             0,  // second
+                                             DAY_LIGHT_SAVING_MODE_AUTO
+                                            )
+                   )
+                {
+                  checkHour--;
+                }
               } // hour
               if (jobScheduleDateTime != MAX_UINT64) break;
             }

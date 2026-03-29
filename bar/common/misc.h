@@ -925,6 +925,34 @@ INLINE bool Misc_isLeapYear(uint year)
 bool Misc_isDayLightSaving(uint64 dateTime);
 
 /***********************************************************************\
+* Name   : Misc_isValidDateTime
+* Purpose: check if date/time parts are a valid date/time
+* Input  : timeType           - time type; see TimeTypes
+*          year               - year [1970..]
+*          month              - month [1..12]
+*          day                - day [1..31]
+*          hour               - hour [0..23]
+*          minute             - minute [0..59]
+*          second             - second [0..59]
+*          dayLightSavingMode - day light saving mode; see
+*                               DayLightSavingModes
+* Return : TRUE iff date/time parts are a valid date/time
+* Notes  : date/time parts may be invalid if the time is in the\
+*          'missing hour' of day light saving, e. g. 2026-03-29 from
+*          02:00 to 03:00 oclock
+\***********************************************************************/
+
+bool Misc_isValidDateTime(TimeTypes           timeType,
+                          uint                year,
+                          uint                month,
+                          uint                day,
+                          uint                hour,
+                          uint                minute,
+                          uint                second,
+                          DayLightSavingModes dayLightSavingMode
+                         );
+
+/***********************************************************************\
 * Name   : Misc_extractDate
 * Purpose: extract date from date/time
 * Input  : dateTime - date/time (seconds since 1970-1-1 00:00:00)
@@ -971,7 +999,9 @@ INLINE uint32 Misc_extractTime(uint64 dateTime)
 *          dayLightSavingMode - day light saving mode; see
 *                               DayLightSavingModes
 * Return : date/time (seconds since 1970-1-1 00:00:00) or 0
-* Notes  : -
+* Notes  : if given date/time values are invalid, e. g. a time in the
+*          "missing hour" of day light saving the date/time is adjusted
+*          automatically
 \***********************************************************************/
 
 uint64 Misc_makeDateTime(TimeTypes           timeType,
