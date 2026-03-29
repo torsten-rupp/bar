@@ -323,7 +323,7 @@ int __wrap_pthread_create(pthread_t *thread,
 * Notes  : -
 \***********************************************************************/
 
-#if STACKTRACE_ON_SIGNAL
+#ifdef STACKTRACE_ON_SIGNAL
 LOCAL void debugThreadDumpStackTrace(ThreadId                       threadId,
                                      DebugDumpStackTraceOutputTypes type,
                                      uint                           skipFrameCount,
