@@ -1,3 +1,6 @@
+2026-06-01 28
+  * fix clean-up index with invalid states (bug #48)
+
 2026-03-08 27a
   * fix ICU data (bug #33)
   * fix auto-purge if job size limit is exceeded (bug #35)
