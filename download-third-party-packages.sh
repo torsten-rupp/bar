@@ -33,7 +33,7 @@ LZO_VERSION=2.10
 LZ4_VERSION=v1.10.0
 ZSTD_VERSION=1.5.7
 XDELTA3_VERSION=3.0.11
-MXML_VERSION=3.3
+MXML_VERSION=4.0.4
 GPG_ERROR_VERSION=1.56
 GCRYPT_VERSION=1.11.2
 NETTLE_VERSION=3.9.1
@@ -1066,7 +1066,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/mxml-$MXML_VERSION.zip $fileName
          result=1
        else
-         url="https://github.com/michaelrsweet/mxml/archive/v$MXML_VERSION.zip"
+         url="https://github.com/michaelrsweet/mxml/releases/download/v$MXML_VERSION/mxml-$MXML_VERSION.zip"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
