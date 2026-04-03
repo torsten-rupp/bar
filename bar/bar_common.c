@@ -119,6 +119,9 @@ LOCAL int32_t convertToUnicode(UConverter *converter, ConstString source)
 
     return unicodeLength;
   #else
+    UNUSED_VARIABLE(converter);
+    UNUSED_VARIABLE(source);
+
     return -1;
   #endif
 }
@@ -173,6 +176,11 @@ LOCAL int32_t convertFromUnicode(String destination, UConverter *converter, int3
 
     return length;
   #else
+    UNUSED_VARIABLE(destination);
+    UNUSED_VARIABLE(converter);
+    UNUSED_VARIABLE(unicodeLength);
+    UNUSED_VARIABLE(maxCharSize);
+
     return -1;
   #endif
 }
@@ -903,6 +911,9 @@ Errors initEncodingConverter(const char *systemEncoding, const char *consoleEnco
       }
     }
   #else
+    UNUSED_VARIABLE(systemEncoding);
+    UNUSED_VARIABLE(consoleEncoding);
+
     encodingConverter.isUTF8System = TRUE;
   #endif // HAVE_ICU
 

@@ -8437,6 +8437,10 @@ CommandLineOption BAR_COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   #ifndef NDEBUG
   CMD_OPTION_BOOLEAN      ("debug",                             0,  2,0,globalOptions.debugFlag,                                                                                          "run in debug mode"                                                        ),
 
+  #if    defined(__SANITIZE_ADDRESS__) \
+      || defined(__SANITIZE_THREAD__)
+  CMD_OPTION_BOOLEAN      ("debug-sanitizer",                   0,  2,0,globalOptions.debug.sanitizerFlag,                                                                                "has sanitizers"                                                           ),
+  #endif
   CMD_OPTION_BOOLEAN      ("debug-show-chunks",                 0,  2,0,globalOptions.debug.showChunkIdsFlag,                                                                             "show chunk ids"                                                           ),
   CMD_OPTION_INCREMENT    ("debug-create-archive-errors",       0,  2,0,globalOptions.debug.createArchiveErrors,             0,MAX_INT,                                                   "create error in archives"                                                 ),
   CMD_OPTION_INTEGER      ("debug-create-signal",               0,  2,0,globalOptions.debug.createSignal,                    0,MAX_INT,NULL,                                              "create signal"                                                            ),

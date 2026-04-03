@@ -5773,11 +5773,10 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
   {
     if (FileSystem_init(&fileSystemHandle,deviceName) == ERROR_NONE)
     {
-      if (ARRAY_FIND(SUPPORTED_FILE_SYSTEM_TYPES,
-                     SIZE_OF_ARRAY(SUPPORTED_FILE_SYSTEM_TYPES),
-                     i,
-                     fileSystemHandle.type == SUPPORTED_FILE_SYSTEM_TYPES[i]
-                    )
+      if (ARRAY_CONTAINS(SUPPORTED_FILE_SYSTEM_TYPES,
+                         SIZE_OF_ARRAY(SUPPORTED_FILE_SYSTEM_TYPES),
+                         fileSystemHandle.type == SUPPORTED_FILE_SYSTEM_TYPES[i]
+                        )
          )
       {
         isSupportedFileSystem = TRUE;

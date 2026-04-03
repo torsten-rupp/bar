@@ -14,7 +14,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
-#if defined(HAVE_PCRE)
+// Note: sanitizer intercept regex functions; must use libc regex
+#if defined(HAVE_PCRE) && !defined(__SANITIZE_ADDRESS__)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>

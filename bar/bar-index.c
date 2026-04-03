@@ -16,9 +16,12 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <unistd.h>
-#ifdef HAVE_PCRE
+// Note: sanitizer intercept regex functions; must use libc regex
+#if defined(HAVE_PCRE) && !defined(__SANITIZE_ADDRESS__)
   #include <pcreposix.h>
-#endif
+#elif defined(HAVE_REGEX_H)
+  #include <regex.h>
+#endif /* HAVE_PCRE || HAVE_REGEX_H */
 #include <assert.h>
 
 #include "common/global.h"

@@ -1984,8 +1984,6 @@ bool Misc_hasMacrosCString(const char *templateString)
   return macroFlag;
 }
 
-bool Misc_hasMacrosCString(const char *templateString);
-
 String Misc_expandMacros(String           string,
                          const char       *templateString,
                          ExpandMacroModes expandMacroMode,
@@ -2112,7 +2110,6 @@ String Misc_expandMacros(String           string,
               );
       }
       name[nameLength] = NUL;
-//fprintf(stderr,"%s, %d: name='%s'\n",__FILE__,__LINE__,name);
 
       // get format width with '%' (if any)
       char   format[128];
@@ -2169,7 +2166,6 @@ String Misc_expandMacros(String           string,
           i++;
         }
       }
-//fprintf(stderr,"%s, %d: format=%s\n",__FILE__,__LINE__,format);
 
       if (hasCurlyBrace)
       {
@@ -2191,7 +2187,6 @@ String Misc_expandMacros(String           string,
         size_t k = ARRAY_FIND(macros,macroCount,k,stringEquals(name,macros[k].name));
         if (k < macroCount)
         {
-//fprintf(stderr,"%s, %d: name=%s -> %d\n",__FILE__,__LINE__,name,k);
           switch (expandMacroMode)
           {
             case EXPAND_MACRO_MODE_STRING:

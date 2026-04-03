@@ -3769,6 +3769,27 @@ LOCAL Errors runDebug(int argc, const char *argv[])
   }
 #endif
 
+  #ifdef __SANITIZE_ADDRESS__
+    if (   globalOptions.debugFlag
+        && globalOptions.debug.sanitizerFlag
+       )
+    {
+      printInfo(0,"Sanitizer: address\n");
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NONE;
+    }
+  #endif
+  #ifdef __SANITIZE_THREAD__
+    if (   globalOptions.debugFlag
+        && globalOptions.debug.sanitizerFlag
+       )
+    {
+      printInfo(0,"Sanitizer: thread\n");
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NONE;
+    }
+  #endif
+
   JobOptions        jobOptions;
   DatabaseSpecifier databaseSpecifier;
   String            printableDatabaseURI;

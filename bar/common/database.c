@@ -30,7 +30,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
-#if defined(HAVE_PCRE)
+// Note: sanitizer intercept regex functions; must use libc regex
+#if defined(HAVE_PCRE) && !defined(__SANITIZE_ADDRESS__)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>
@@ -1358,7 +1359,7 @@ LOCAL void debugPrintLockInfo(const DatabaseHandle *databaseHandle)
       if (!Thread_isNone(databaseHandle->databaseNode->debug.reads[i].threadId))
       {
         fprintf(stderr,
-                "    #%2u r  '%s' (%s) at %s, %zu\n",
+                "    #%2zu r  '%s' (%s) at %s, %zu\n",
                 i,
                 Thread_getName(databaseHandle->databaseNode->debug.reads[i].threadId),
                 Thread_getIdString(databaseHandle->databaseNode->debug.reads[i].threadId),
@@ -1386,7 +1387,7 @@ LOCAL void debugPrintLockInfo(const DatabaseHandle *databaseHandle)
       if (!Thread_isNone(databaseHandle->databaseNode->debug.readWrites[i].threadId))
       {
         fprintf(stderr,
-                "    #%2u rw '%s' (%s) at %s, %zu\n",
+                "    #%2zu rw '%s' (%s) at %s, %zu\n",
                 i,
                 Thread_getName(databaseHandle->databaseNode->debug.readWrites[i].threadId),
                 Thread_getIdString(databaseHandle->databaseNode->debug.readWrites[i].threadId),
@@ -6710,7 +6711,6 @@ LOCAL String appendName(String string, const DatabaseHandle *databaseHandle, con
 
           if (ARRAY_CONTAINS(RESERVED_KEYWORDS,
                              SIZE_OF_ARRAY(RESERVED_KEYWORDS),
-                             i,
                              stringEquals(RESERVED_KEYWORDS[i],name)
                             )
              )
@@ -6735,7 +6735,6 @@ LOCAL String appendName(String string, const DatabaseHandle *databaseHandle, con
 
           if (ARRAY_CONTAINS(RESERVED_KEYWORDS,
                              SIZE_OF_ARRAY(RESERVED_KEYWORDS),
-                             i,
                              stringEquals(RESERVED_KEYWORDS[i],name)
                             )
              )
@@ -13689,7 +13688,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
   STRINGLIST_ITERATEX(&referenceTableNameList,tableName,error == ERROR_NONE)
   {
     if (   (tableNames == NULL)
-        || ARRAY_CONTAINS(tableNames,tableNameCount,i,String_equalsCString(tableName,tableNames[i]))
+        || ARRAY_CONTAINS(tableNames,tableNameCount,String_equalsCString(tableName,tableNames[i]))
        )
     {
       if (StringList_contains(&tableNameList,tableName))

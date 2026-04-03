@@ -20,7 +20,8 @@
 #include <inttypes.h>
 #include <unistd.h>
 #include <pthread.h>
-#if defined(HAVE_PCRE)
+// Note: sanitizer intercept regex functions; must use libc regex
+#if defined(HAVE_PCRE) && !defined(__SANITIZE_ADDRESS__)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>
@@ -1465,10 +1466,10 @@ uint64_t debugPrintDelta(uint64_t timestamp, const char *message, ...)
   uint64_t deltaTime = (timestamp > 0) ? newTimestamp - timestamp : 0;
   fprintf(stderr,
           "DEBUG: %02u:%02u %03u.%03us ",
-          (deltaTime % US_PER_HOUR)/US_PER_MINUTE,
-          (deltaTime % US_PER_MINUTE)/US_PER_SECOND,
-          (deltaTime % US_PER_SECOND)/US_PER_MS,
-          (deltaTime % US_PER_MS)
+          (uint)((deltaTime % US_PER_HOUR)/US_PER_MINUTE),
+          (uint)((deltaTime % US_PER_MINUTE)/US_PER_SECOND),
+          (uint)((deltaTime % US_PER_SECOND)/US_PER_MS),
+          (uint)((deltaTime % US_PER_MS))
          );
   va_list arguments;
   va_start(arguments,message);

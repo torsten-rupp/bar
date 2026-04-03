@@ -114,21 +114,21 @@ endif
 ifneq ($(SANITIZER),)
   CC_FLAGS_DEBUG += -fno-sanitize-recover=all -fstack-protector-all
   ifeq ($(SANITIZER),address)
-    CC_FLAGS_DEBUG += -fsanitize=address
-    LD_FLAGS       += -static-libasan
-    LD_LIBRARIES   += asan
+    CC_FLAGS_DEBUG         += -fsanitize=address
+    LD_FLAGS               += -static-libasan
+    LD_SANITIZER_LIBRARIES = asan
   else ifeq ($(SANITIZER),leak)
-    CC_FLAGS_DEBUG += -fsanitize=leak
-    LD_FLAGS       += -static-liblsan
-    LD_LIBRARIES   += lsan
+    CC_FLAGS_DEBUG         += -fsanitize=leak
+    LD_FLAGS               += -static-liblsan
+    LD_SANITIZER_LIBRARIES = lsan
   else ifeq ($(SANITIZER),thread)
-    CC_FLAGS_DEBUG += -fsanitize=thread
-    LD_FLAGS       += -static-libtsan
-    LD_LIBRARIES   += tsan
+    CC_FLAGS_DEBUG         += -fsanitize=thread
+    LD_FLAGS               += -static-libtsan
+    LD_SANITIZER_LIBRARIES = tsan
   else ifeq ($(SANITIZER),undefined)
-    CC_FLAGS_DEBUG += -fsanitize=undefined
-    LD_FLAGS       += -static-libubsan
-    LD_LIBRARIES   += ubsan
+    CC_FLAGS_DEBUG         += -fsanitize=undefined
+    LD_FLAGS               += -static-libubsan
+    LD_SANITIZER_LIBRARIES = ubsan
   else ifeq ($(SANITIZER),help)
     $(error available sanitizers: address, leak, thread, undefined)
   else
@@ -815,6 +815,12 @@ help:
 	@$(ECHO) "  crashdump MINIDUMP=<file name>"
 	@$(ECHO) ""
 	@$(ECHO) "  dist"
+	@$(ECHO) ""
+	@$(ECHO) "Variables:"
+	@$(ECHO) ""
+	@$(ECHO) "  SANITIZER=address|leak|thread|undefined"
+	@$(ECHO) ""
+	@$(MAKE) -C tests -j1 --no-print-directory -s help_variables
 
 # create dependencies
 .PHONY: depend
@@ -941,8 +947,10 @@ bar-debug@EXEEXT@: \
   $(BAR_OBJECTS_DEBUG) \
   $(EXTERN_OBJECTS_DEBUG)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_SANITIZER_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_SANITIZER_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_SANITIZER_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_SANITIZER_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
 ifeq ($(PLATFORM),WINDOWS)
@@ -956,8 +964,10 @@ bar-gcov@EXEEXT@: \
   $(BAR_OBJECTS_GCOV) \
   $(EXTERN_OBJECTS_GCOV)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_GCOV) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_SANITIZER_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_SANITIZER_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_SANITIZER_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_SANITIZER_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
 ifeq ($(PLATFORM),WINDOWS)
@@ -968,8 +978,10 @@ bar-gprof@EXEEXT@: \
   $(BAR_OBJECTS_GPROF) \
   $(EXTERN_OBJECTS_GPROF)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_GPROF) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_SANITIZER_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_SANITIZER_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_SANITIZER_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_SANITIZER_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
 ifeq ($(PLATFORM),WINDOWS)
@@ -983,8 +995,10 @@ bar-valgrind@EXEEXT@: \
   $(BAR_OBJECTS_VALGRIND) \
   $(EXTERN_OBJECTS_VALGRIND)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_VALGRIND) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_SANITIZER_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_SANITIZER_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) \
+          $(if $(LD_SANITIZER_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_SANITIZER_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z)
 ifeq ($(PLATFORM),WINDOWS)

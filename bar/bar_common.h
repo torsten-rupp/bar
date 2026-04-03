@@ -1181,6 +1181,8 @@ typedef struct
   bool                        debugFlag;                      // run in debug mode
   struct
   {
+    bool                      sanitizerFlag;                  // TRUE iff sanitizer used
+
     bool                      showChunkIdsFlag;               // TRUE to show chunk ids only
 
     uint                      createArchiveErrors;            // number of errors in created archive

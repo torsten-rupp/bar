@@ -34,7 +34,8 @@
 #ifdef HAVE_LIBINTL_H
   #include <libintl.h>
 #endif
-#if defined(HAVE_PCRE)
+// Note: sanitizer intercept regex functions; must use libc regex
+#if defined(HAVE_PCRE) && !defined(__SANITIZE_ADDRESS__)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>
@@ -640,9 +641,6 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
     auto uint __closure__ (void); \
     uint __closure__ (void) \
     { \
-      uint i; \
-      \
-      i = 0; \
       while ((i) < (size) && !(condition)) \
       { \
         (i)++; \
@@ -658,27 +656,24 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Purpose: check if value is in array
 * Input  : array     - array
 *          size      - size of array (number of elements)
-*          i         - iterator
 *          condition - condition
 * Output : -
 * Return : TURE iff in array
 * Notes  : -
 \***********************************************************************/
 
-#define ARRAY_CONTAINS(array,size,i,condition) \
+#define ARRAY_CONTAINS(array,size,condition) \
   ({ \
     auto bool __closure__ (void); \
     bool __closure__ (void) \
     { \
-      uint i; \
-      \
-      i = 0; \
-      while ((i) < (size) && !(condition)) \
+      uint i = 0; \
+      while (i < (size) && !(condition)) \
       { \
-        (i)++; \
+        i++; \
       } \
       \
-      return (i) < (size); \
+      return i < (size); \
     }; \
     __closure__; \
   })()
