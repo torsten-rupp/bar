@@ -169,7 +169,7 @@ LOCAL bool vmatchString(const char *string,
         {
           assert(subMatches[i].rm_eo >= subMatches[i].rm_so);
           if (matchedSubString     != STRING_NO_ASSIGN) (*matchedSubString    ) = &string[subMatches[i].rm_so];
-          if (matchedSubStringSize != STRING_NO_ASSIGN) (*matchedSubStringSize) = subMatches[i].rm_eo-subMatches[i].rm_so;
+          if (matchedSubStringSize != STRING_NO_ASSIGN) (*matchedSubStringSize) = (size_t)(subMatches[i].rm_eo-subMatches[i].rm_so);
         }
       }
       va_end(arguments);
@@ -199,39 +199,52 @@ char* stringReplace(char *string, size_t stringSize, size_t index, size_t replac
 
   if ((string != NULL) && (replaceLength > 0))
   {
-    size_t n = strlen(string);
-    if (index < n)
+    size_t length = strlen(string);
+    assert(length < stringSize);
+    if (index < length)
     {
       if (replaceString != NULL)
       {
         // replace sub-string
+        if (replaceLength > (length - index)) replaceLength = length - index;
+
         size_t insertLength = strlen(replaceString);
-        if (insertLength > (stringSize - index - 1)) { insertLength = stringSize - index - 1; }
-        if ((index + replaceLength) > n) n = replaceLength - index;
-        if ((index + replaceLength) < n)
+        if (insertLength > (stringSize - index - 1)) insertLength = stringSize - index - 1;
+        if ((index + replaceLength) > length) length = index + replaceLength;
+        if ((index + insertLength) < stringSize)
         {
           // some characters after replacement index have to be moved
-          size_t m = MIN(stringSize - (index + insertLength),
-                         stringSize - (index + replaceLength)
-                        );
           memmove(&string[index + insertLength],
                   &string[index + replaceLength],
-                  MIN(m,
-                      stringSize - (index + insertLength - replaceLength) - 1
+                  MIN(length - (index + replaceLength),
+                      stringSize - (index + insertLength) - 1
                      )
                  );
         }
         memcpy(&string[index], replaceString, insertLength);
-        string[MIN(n + insertLength - replaceLength, stringSize - 1)] = NUL;
+        assert((length + insertLength) >= replaceLength);
+        string[MIN(length + insertLength - replaceLength, stringSize - 1)] = NUL;
       }
       else
       {
         // just remove sub-string
-        if ((index+replaceLength) < n)
+        if ((index+replaceLength) < length)
         {
-          memmove(&string[index],&string[index+replaceLength],n-(index+replaceLength));
+          memmove(&string[index],&string[index+replaceLength],length - (index + replaceLength));
         }
-        string[n-replaceLength] = NUL;
+        assert(length >= replaceLength);
+        string[length - replaceLength] = NUL;
+      }
+    }
+    else if (index == length)
+    {
+      // replace at end of string -> append replace string
+      if (replaceString != NULL)
+      {
+        size_t insertLength = strlen(replaceString);
+        if (insertLength > (stringSize - index - 1)) insertLength = stringSize - index - 1;
+        memcpy(&string[index], replaceString, insertLength);
+        string[length + insertLength] = NUL;
       }
     }
   }
