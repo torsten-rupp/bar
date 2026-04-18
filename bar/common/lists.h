@@ -763,7 +763,8 @@ void *List_remove(void *list,
                  );
 
 /***********************************************************************\
-* Name   : List_removeAndFree
+* Name   : List_removeAndFreePrev,List_removeAndFreeNext,
+*          List_removeAndFree
 * Purpose: remove a node from a list and free
 * Input  : list - list
 *          node - node to remove
@@ -772,9 +773,24 @@ void *List_remove(void *list,
 * Notes  : -
 \***********************************************************************/
 
-void *List_removeAndFree(void *list,
-                         void *node
-                        );
+void *List_removeAndFreePrev(void *list,
+                             void *node
+                            );
+void *List_removeAndFreeNext(void *list,
+                             void *node
+                            );
+
+INLINE void *List_removeAndFree(void *list,
+                                void *node
+                               );
+#if defined(NDEBUG) || defined(__LISTS_IMPLEMENTATION__)
+INLINE void *List_removeAndFree(void *list,
+                                void *node
+                               )
+{
+  return List_removeAndFreeNext(list, node);
+}
+#endif /* NDEBUG || __LISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : List_first

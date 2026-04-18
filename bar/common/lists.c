@@ -906,9 +906,27 @@ void *List_remove(void *list,
   return nextNode;
 }
 
-void *List_removeAndFree(void *list,
-                         void *node
-                        )
+void *List_removeAndFreePrev(void *list,
+                             void *node
+                            )
+{
+  assert(list != NULL);
+  assert(node != NULL);
+
+  void *prevNode = ((Node*)node)->prev;
+  listRemove(list,node);
+  if (((List*)list)->freeFunction != NULL)
+  {
+    ((List*)list)->freeFunction(node,((List*)list)->freeUserData);
+  }
+  LIST_DELETE_NODE(node);
+
+  return prevNode;
+}
+
+void *List_removeAndFreeNext(void *list,
+                             void *node
+                            )
 {
   assert(list != NULL);
   assert(node != NULL);
