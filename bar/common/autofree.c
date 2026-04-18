@@ -23,7 +23,6 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-#define DEBUG_MAX_FREE_LIST 4000
 
 /**************************** Datatypes ********************************/
 
@@ -170,12 +169,12 @@ void __AutoFree_remove(const char   *__fileName__,
     // remove resources from list
     bool         foundFlag     = FALSE;
     AutoFreeNode *autoFreeNode = autoFreeList->tail;
-    while (autoFreeNode != NULL)
+    while ((autoFreeNode != NULL) && !foundFlag)
     {
       if (autoFreeNode->resource == resource)
       {
         // remove from list
-        autoFreeNode = List_removeAndFree(autoFreeList,autoFreeNode);
+        autoFreeNode = List_removeAndFreePrev(autoFreeList,autoFreeNode);
         foundFlag = TRUE;
       }
       else
