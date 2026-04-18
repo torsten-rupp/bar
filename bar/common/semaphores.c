@@ -45,7 +45,6 @@
 /***************************** Constants *******************************/
 
 #ifndef NDEBUG
-  #define DEBUG_MAX_THREADS     64
   #define DEBUG_MAX_SEMAPHORES  256
 
   #define DEBUG_FLAG_READ       FALSE
