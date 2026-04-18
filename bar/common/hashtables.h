@@ -67,7 +67,7 @@ typedef bool(*HashTableEqualsFunction)(const void *data0, const void *data1, ulo
 typedef void(*HashTableFreeFunction)(const void *data, ulong length, void *userData);
 
 // hash entry
-typedef struct HashTablEntry
+typedef struct HashTableEntry
 {
   #if HASH_TABLE_COLLISION_ALGORITHM == HASH_TABLE_COLLISION_ALGORITHM_NONE
     struct HashTablEntry *next;
@@ -347,7 +347,7 @@ HashTableEntry *HashTable_find(HashTable  *hashTable,
                               );
 
 /***********************************************************************\
-* Name   : HashTable_containss
+* Name   : HashTable_contains
 * Purpose: check if entry is in hash table
 * Input  : hashTable - hash table
 *          keyData   - key data

@@ -289,7 +289,7 @@ LOCAL bool findEntry(HashTable      *hashTable,
     {
       hashTableEntry = &hashTable->entries[(tableIndex+i)%hashTable->size];
       foundFlag = hashTable->equalsFunction(keyData,
-                                            hashTableEntry->data,
+                                            hashTableEntry->keyData,
                                             keyLength,
                                             hashTable->equalsUserData
                                            );
@@ -585,14 +585,14 @@ void HashTable_clear(HashTable *hashTable)
                                   hashTable->freeUserData
                                  );
         }
-        if (hashTableEntry->data != NULL) free(hashTableEntry->data);;
+        if (hashTableEntry->data != NULL) free(hashTableEntry->data);
         free(hashTableEntry->keyData);
 
         hashTable->entries[i] = hashTableEntry->next;
         free(hashTableEntry);
       }
     #else
-      if (hashTableEntry->keyData != NULL)
+      if (hashTable->entries[i]->keyData != NULL)
       {
         if (hashTable->freeFunction != NULL)
         {
@@ -604,7 +604,7 @@ void HashTable_clear(HashTable *hashTable)
         free(hashTable->entries[i].data);
         free(hashTable->entries[i].keyData);
 
-        hashTableEntry->keyData = NULL;
+        hashTable->entries[i]->keyData = NULL;
       }
     #endif
   }
@@ -721,7 +721,7 @@ void HashTable_remove(HashTable  *hashTable,
                               hashTable->freeUserData
                              );
     }
-    if (hashTableEntry->data != NULL) free(hashTableEntry->data);;
+    if (hashTableEntry->data != NULL) free(hashTableEntry->data);
     free(hashTableEntry->keyData);
 
     #if HASH_TABLE_COLLISION_ALGORITHM == HASH_TABLE_COLLISION_ALGORITHM_NONE

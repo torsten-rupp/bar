@@ -161,18 +161,22 @@ LOCAL const struct
 #if   defined(PLATFORM_LINUX)
   #if defined(HAVE_STAT64) && defined(HAVE_LSTAT64) && defined(HAVE_STRUCT_STAT64)
     #define STAT(fileName,fileState)  stat64(fileName,fileState)
+    #define FSTAT(fileDescriptor,fileState) fstat64(fileDescriptor,fileState)
     #define LSTAT(fileName,fileState) lstat64(fileName,fileState)
     typedef struct stat64 FileStat;
   #elif defined(HAVE___STAT64) && defined(HAVE___LSTAT64) && defined(HAVE_STRUCT___STAT64)
     #define STAT(fileName,fileState)  __stat64(fileName,fileState)
+    #define FSTAT(fileDescriptor,fileState) fstat64(fileDescriptor,fileState)
     #define LSTAT(fileName,fileState) __lstat64(fileName,fileState)
     typedef struct __stat64 FileStat;
   #elif defined(HAVE_STAT) && defined(HAVE_LSTAT) && defined(HAVE_STRUCT_STAT)
     #define STAT(fileName,fileState)  stat(fileName,fileState)
+    #define FSTAT(fileDescriptor,fileState) fstat(fileDescriptor,fileState)
     #define LSTAT(fileName,fileState) lstat(fileName,fileState)
     typedef struct stat FileStat;
   #elif defined(HAVE__STATI64) && defined(HAVE_STRUCT__STATI64)
     #define STAT(fileName,fileState)  _stati64(fileName,fileState)
+    #define FSTAT(fileDescriptor,fileState) _fstati64(fileDescriptor,fileState)
     #define LSTAT(fileName,fileState) _stati64(fileName,fileState)
     typedef struct _stati64 FileStat;
   #else
@@ -180,6 +184,7 @@ LOCAL const struct
   #endif
 #elif defined(PLATFORM_WINDOWS)
   #define STAT(fileName,fileState)  _stat(fileName,fileState)
+  #define FSTAT(fileDescriptor,fileState)  _fstat(fileDescriptor,fileState)
   #define LSTAT(fileName,fileState) _stat(fileName,fileState)
   typedef struct _stat FileStat;
 #endif /* PLATFORM_... */
@@ -2430,7 +2435,7 @@ Errors __File_openCString(const char *__fileName__,
   String directoryName;
   #if   defined(PLATFORM_LINUX)
     #ifndef HAVE_O_NOATIME
-      struct stat fileStat;
+      FileStat fileStat;
     #endif /* not HAVE_O_NOATIME */
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
@@ -3550,7 +3555,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
         if (directoryListHandle->handle != -1)
         {
           // store atime
-          if (FSTAT(directoryListHandle->handle,&stat) == 0)
+          if (STAT(directoryListHandle->handle,&stat) == 0)
           {
             directoryListHandle->atime.tv_sec  = stat.st_atime;
             #ifdef HAVE_STAT_ATIM_TV_NSEC

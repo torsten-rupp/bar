@@ -121,7 +121,7 @@ void AutoFree_init(AutoFreeList *autoFreeList);
 
 /***********************************************************************\
 * Name   : AutoFree_done
-* Purpose: done auto-free list
+* Purpose: done auto-free list (without free resources)
 * Input  : autoFreeList - auto-free list
 * Output : -
 * Return : -
