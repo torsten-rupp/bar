@@ -24,12 +24,12 @@
 // ring buffer handle
 typedef struct
 {
-  uint  elementSize;                 // size of element
-  ulong size;                        // size of ring buffer (max. number of elements+1)
-  ulong length;                      // number of elements currently in ringbuffer
-  ulong nextIn;                      // index of next in-element
-  ulong nextOut;                     // index of next out-element
-  byte *data;                        // ring buffer data
+  uint   elementSize;                 // size of element
+  size_t size;                        // size of ring buffer (max. number of elements+1)
+  size_t length;                      // number of elements currently in ringbuffer
+  size_t nextIn;                      // index of next in-element
+  size_t nextOut;                     // index of next out-element
+  byte   *data;                       // ring buffer data
 } RingBuffer;
 
 // delete ring bufferelement function
@@ -120,9 +120,9 @@ typedef void(*RingBufferElementFreeFunction)(void *data, void *userData);
 \***********************************************************************/
 
 #define RINGBUFFER_ITERATE(ringBuffer,variable) \
-  for ((variable) =  (typeof(variable))((ringBuffer)->data+(ulong)(ringBuffer)->nextOut*(ulong)(ringBuffer)->elementSize); \
-       (variable) != (typeof(variable))((ringBuffer)->data+(ulong)(ringBuffer)->nextIn *(ulong)(ringBuffer)->elementSize); \
-       (variable) =  (typeof(variable))((ringBuffer)->data+(((((byte*)variable)-(ringBuffer)->data)+(ulong)(ringBuffer)->elementSize)%((ulong)(ringBuffer)->elementSize*(ulong)(ringBuffer)->size))) \
+  for ((variable) =  (typeof(variable))((ringBuffer)->data + (ringBuffer)->nextOut *(ringBuffer)->elementSize); \
+       (variable) != (typeof(variable))((ringBuffer)->data + (ringBuffer)->nextIn  *(ringBuffer)->elementSize); \
+       (variable) =  (typeof(variable))((ringBuffer)->data+(((((byte*)variable)-(ringBuffer)->data) + (ringBuffer)->elementSize) % ((ringBuffer)->elementSize*(ulong)(ringBuffer)->size))) \
       )
 
 /***********************************************************************\
@@ -142,9 +142,9 @@ typedef void(*RingBufferElementFreeFunction)(void *data, void *userData);
 \***********************************************************************/
 
 #define RINGBUFFER_ITERATEX(ringBuffer,variable,condition) \
-  for ((variable) =  (typeof(variable))((ringBuffer)->data+(ulong)(ringBuffer)->nextOut*(ulong)(ringBuffer)->elementSize); \
-       ((variable) != (typeof(variable))((ringBuffer)->data+(ulong)(ringBuffer)->nextIn *(ulong)(ringBuffer)->elementSize)) && (condition); \
-       (variable) =  (typeof(variable))((ringBuffer)->data+(((((byte*)variable)-(ringBuffer)->data)+(ulong)(ringBuffer)->elementSize)%((ulong)(ringBuffer)->elementSize*(ulong)(ringBuffer)->size))) \
+  for ((variable) =  (typeof(variable))((ringBuffer)->data + (ringBuffer)->nextOut * (ringBuffer)->elementSize); \
+       ((variable) != (typeof(variable))((ringBuffer)->data + (ringBuffer)->nextIn * (ringBuffer)->elementSize)) && (condition); \
+       (variable) =  (typeof(variable))((ringBuffer)->data+(((((byte*)variable)-(ringBuffer)->data) + (ringBuffer)->elementSize) % ((ringBuffer)->elementSize * (ringBuffer)->size))) \
       )
 
 // check if ring buffer is valid (debug only)
@@ -153,7 +153,7 @@ typedef void(*RingBufferElementFreeFunction)(void *data, void *userData);
     #define RINGBUFFER_CHECK_VALID(ringBuffer) \
       do \
       { \
-        ulong __n; \
+        size_t __n; \
         \
         if ((ringBuffer) != NULL) \
         { \
@@ -176,7 +176,7 @@ typedef void(*RingBufferElementFreeFunction)(void *data, void *userData);
     #define RINGBUFFER_CHECK_VALID(ringBuffer) \
       do \
       { \
-        ulong __n; \
+        size_t __n; \
         \
         if ((ringBuffer) != NULL) \
         { \
@@ -223,9 +223,9 @@ typedef void(*RingBufferElementFreeFunction)(void *data, void *userData);
 \***********************************************************************/
 
 #ifdef NDEBUG
-bool RingBuffer_init(RingBuffer *ringBuffer, uint elementSize, ulong size);
+bool RingBuffer_init(RingBuffer *ringBuffer, uint elementSize, size_t size);
 #else /* not NDEBUG */
-bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *ringBuffer, uint elementSize, ulong size);
+bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *ringBuffer, uint elementSize, size_t size);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -257,9 +257,9 @@ void __RingBuffer_done(const char *__fileName__, ulong __lineNb__, RingBuffer *r
 \***********************************************************************/
 
 #ifdef NDEBUG
-RingBuffer* RingBuffer_new(uint elementSize, ulong size);
+RingBuffer* RingBuffer_new(uint elementSize, size_t size);
 #else /* not NDEBUG */
-RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint elementSize, ulong size);
+RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint elementSize, size_t count);
 #endif /* NDEBUG */
 
 /***********************************************************************\
@@ -274,6 +274,7 @@ RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint el
 * Notes  : -
 \***********************************************************************/
 
+// TODO: move callback to init
 #ifdef NDEBUG
 void RingBuffer_delete(RingBuffer *ringBuffer, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData);
 #else /* not NDEBUG */
@@ -289,9 +290,9 @@ void __RingBuffer_delete(const char *__fileName__, ulong __lineNb__, RingBuffer 
 * Notes  : -
 \***********************************************************************/
 
-INLINE ulong RingBuffer_getSize(const RingBuffer *ringBuffer);
+INLINE size_t RingBuffer_getSize(const RingBuffer *ringBuffer);
 #if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENTATION__)
-INLINE ulong RingBuffer_getSize(const RingBuffer *ringBuffer)
+INLINE size_t RingBuffer_getSize(const RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
@@ -308,7 +309,7 @@ INLINE ulong RingBuffer_getSize(const RingBuffer *ringBuffer)
 * Notes  : -
 \***********************************************************************/
 
-bool RingBuffer_resize(RingBuffer *ringBuffer, ulong newSize);
+bool RingBuffer_resize(RingBuffer *ringBuffer, size_t newSize);
 
 /***********************************************************************\
 * Name   : RingBuffer_clear
@@ -333,9 +334,9 @@ void RingBuffer_clear(RingBuffer *ringBuffer, RingBufferElementFreeFunction ring
 * Notes  : -
 \***********************************************************************/
 
-INLINE ulong RingBuffer_getFree(const RingBuffer *ringBuffer);
+INLINE size_t RingBuffer_getFree(const RingBuffer *ringBuffer);
 #if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENTATION__)
-INLINE ulong RingBuffer_getFree(const RingBuffer *ringBuffer)
+INLINE size_t RingBuffer_getFree(const RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
@@ -352,9 +353,9 @@ INLINE ulong RingBuffer_getFree(const RingBuffer *ringBuffer)
 * Notes  : -
 \***********************************************************************/
 
-INLINE ulong RingBuffer_getAvailable(const RingBuffer *ringBuffer);
+INLINE size_t RingBuffer_getAvailable(const RingBuffer *ringBuffer);
 #if defined(NDEBUG) || defined(__RINGBUFFER_IMPLEMENTATION__)
-INLINE ulong RingBuffer_getAvailable(const RingBuffer *ringBuffer)
+INLINE size_t RingBuffer_getAvailable(const RingBuffer *ringBuffer)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
@@ -412,7 +413,7 @@ INLINE bool RingBuffer_isFull(const RingBuffer *ringBuffer)
 * Notes  : -
 \***********************************************************************/
 
-bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, ulong n);
+bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, size_t n);
 
 /***********************************************************************\
 * Name   : RingBuffer_get
@@ -426,7 +427,7 @@ bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, ulong n);
 *          data element in the ring buffer is returned
 \***********************************************************************/
 
-void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n);
+void *RingBuffer_get(RingBuffer *ringBuffer, void *data, size_t n);
 
 /***********************************************************************\
 * Name   : RingBuffer_first
@@ -452,7 +453,7 @@ void *RingBuffer_first(RingBuffer *ringBuffer, void *data);
 * Notes  : -
 \***********************************************************************/
 
-bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBuffer, ulong n);
+bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBuffer, size_t n);
 
 /***********************************************************************\
 * Name   : RingBuffer_discard
@@ -501,7 +502,7 @@ const void *RingBuffer_cArrayOut(RingBuffer *ringBuffer);
 * Notes  : used to directly put elements into ring buffer via C-array
 \***********************************************************************/
 
-void RingBuffer_increment(RingBuffer *ringBuffer, ulong n);
+void RingBuffer_increment(RingBuffer *ringBuffer, size_t n);
 
 /***********************************************************************\
 * Name   : RingBuffer_decrement
@@ -513,7 +514,7 @@ void RingBuffer_increment(RingBuffer *ringBuffer, ulong n);
 * Notes  : used to directly get elements from ring buffer via C-array
 \***********************************************************************/
 
-void RingBuffer_decrement(RingBuffer *ringBuffer, ulong n);
+void RingBuffer_decrement(RingBuffer *ringBuffer, size_t n);
 
 /***********************************************************************\
 * Name   : RingBuffer_toCArray

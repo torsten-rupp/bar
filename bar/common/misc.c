@@ -128,6 +128,8 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
 {
   static enum {NONE,BASE,COMPLETE} state = NONE;
 
+  assert(applicationIdDataLength > 0);
+
   if (state != COMPLETE)
   {
     #if   defined(PLATFORM_LINUX)
@@ -184,7 +186,7 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
           char buffer[64];
           if (read(handle,buffer,2*16) == (2*16))
           {
-            for (uint i = 0; i < MISC_MACHINE_ID_LENGTH; i++)
+            for (size_t i = 0; i < MISC_MACHINE_ID_LENGTH; i++)
             {
               char s[2+1];
               s[0] = buffer[2*i+0];
@@ -226,9 +228,9 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
       {
         if (applicationIdData != NULL)
         {
-          for (uint i = 0; i < MISC_MACHINE_ID_LENGTH; i++)
+          for (size_t i = 0; i < MISC_MACHINE_ID_LENGTH; i++)
           {
-            machineId[i] = machineId[i] ^ applicationIdData[i];
+            machineId[i] = machineId[i] ^ applicationIdData[i % applicationIdDataLength];
           }
         }
         state = COMPLETE;
@@ -967,6 +969,12 @@ LOCAL bool hexDecode(byte *data, uint *dataLength, const char *s, ulong n, uint 
 
 Errors Misc_initAll(void)
 {
+  #if   defined(PLATFORM_LINUX)
+    srandom((unsigned int)time(NULL));
+  #elif defined(PLATFORM_WINDOWS)
+    srand((unsigned int)time(NULL));
+  #endif /* PLATFORM_... */
+
   /* Note: avoid a direct dipendency to libsystemd. Load library and bin
            functions dynamic if possible.
   */
@@ -998,7 +1006,7 @@ void Misc_doneAll(void)
 
 uint64 Misc_getRandom(uint64 min, uint64 max)
 {
-  srand(time(NULL));
+  assert(max > min);
 
   uint n = max-min;
 
@@ -1006,7 +1014,7 @@ uint64 Misc_getRandom(uint64 min, uint64 max)
               | (((uint64)(rand() & 0xFFFF)) << 32)
               | (((uint64)(rand() & 0xFFFF)) << 16)
               | (((uint64)(rand() & 0xFFFF)) <<  0)
-             )%n;
+             ) % n;
 }
 
 uint64 Misc_getTimestamp(void)
@@ -1392,13 +1400,15 @@ String Misc_formatDateTime(String string, uint64 dateTime, TimeTypes timeType, c
   assert(string != NULL);
 
   time_t n  = (time_t)dateTime;
+  #ifdef HAVE_GMTIME_R
+    struct tm tmBuffer;
+  #endif /* HAVE_GMTIME_R */
   struct tm * tm = NULL;
   switch (timeType)
   {
     case TIME_TYPE_GMT:
       {
         #ifdef HAVE_GMTIME_R
-          struct tm tmBuffer;
           tm = gmtime_r(&n,&tmBuffer);
         #else /* not HAVE_GMTIME_R */
           tm = gmtime(&n);
@@ -1408,7 +1418,6 @@ String Misc_formatDateTime(String string, uint64 dateTime, TimeTypes timeType, c
     case TIME_TYPE_LOCAL:
       {
         #ifdef HAVE_LOCALTIME_R
-          struct tm tmBuffer;
           tm = localtime_r(&n,&tmBuffer);
         #else /* not HAVE_LOCALTIME_R */
           tm = localtime(&n);
@@ -2946,7 +2955,7 @@ void Misc_performanceFilterInit(PerformanceFilter *performanceFilter,
   }
   performanceFilter->performanceValues[0].timeStamp = Misc_getTimestamp()/US_PER_MS;
   performanceFilter->performanceValues[0].value     = 0.0;
-  for (uint i = 1; i < maxSeconds; i++)
+  for (size_t i = 1; i < maxSeconds; i++)
   {
     performanceFilter->performanceValues[i].timeStamp = 0;
     performanceFilter->performanceValues[i].value     = 0.0;
@@ -2973,7 +2982,7 @@ void Misc_performanceFilterClear(PerformanceFilter *performanceFilter)
 
   performanceFilter->performanceValues[0].timeStamp = Misc_getTimestamp()/US_PER_MS;
   performanceFilter->performanceValues[0].value     = 0.0;
-  for (uint i = 1; i < performanceFilter->maxSeconds; i++)
+  for (size_t i = 1; i < performanceFilter->maxSeconds; i++)
   {
     performanceFilter->performanceValues[i].timeStamp = 0;
     performanceFilter->performanceValues[i].value     = 0.0;
@@ -3150,7 +3159,7 @@ String Misc_hexEncode(String string, const void *data, uint dataLength)
 {
   assert(string != NULL);
 
-  for (uint i = 0; i < dataLength; i++)
+  for (size_t i = 0; i < dataLength; i++)
   {
     String_appendFormat(string,"%02x",((byte*)data)[i]);
   }

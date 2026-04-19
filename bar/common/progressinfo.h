@@ -51,8 +51,8 @@ typedef void(*ProgressInitFunction)(const char *text,
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*ProgressDoneFunction)(ulong totalTime,
-                                    void  *userData
+typedef void(*ProgressDoneFunction)(size_t totalTime,
+                                    void   *userData
                                    );
 
 /***********************************************************************\
@@ -67,10 +67,10 @@ typedef void(*ProgressDoneFunction)(ulong totalTime,
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*ProgressInfoFunction)(uint  progress,
-                                    ulong estimatedTotalTime,
-                                    ulong estimatedRestTime,
-                                    void  *userData
+typedef void(*ProgressInfoFunction)(uint64 progress,
+                                    size_t estimatedTotalTime,
+                                    size_t estimatedRestTime,
+                                    void   *userData
                                    );
 
 // progress info data
@@ -78,28 +78,28 @@ typedef struct ProgressInfo
 {
   struct ProgressInfo  *parent;
   uint64               *filterTimes;
-  uint                 filterWindowSize;
+  size_t               filterWindowSize;
   ProgressInitFunction initFunction;
   void                 *initUserData;
   ProgressDoneFunction doneFunction;
   void                 *doneUserData;
   ProgressInfoFunction infoFunction;
   void                 *infoUserData;
-  uint                 reportTime;
+  size_t               reportTime;
   uint64               stepCount;
   String               text;
 
   uint64               startTimestamp;
   uint64               step;
 
-  uint                 filterTimeIndex;
-  uint                 filterTimeCount;
+  size_t               filterTimeIndex;
+  size_t               filterTimeCount;
   uint64               filterTimeSum;
 
   uint64               lastTimestamp;
 
   ulong                lastProgressSum;  // last progress sum [1/1000]
-  uint                 lastProgressCount;
+  size_t               lastProgressCount;
   uint64               lastProgressTimestamp;
 } ProgressInfo;
 
@@ -134,8 +134,8 @@ typedef struct ProgressInfo
 
 void ProgressInfo_init(ProgressInfo         *progressInfo,
                        ProgressInfo         *parentProgressInfo,
-                       uint                 filterWindowSize,
-                       uint                 reportTime,
+                       size_t               filterWindowSize,
+                       size_t               reportTime,
                        uint64               stepCount,
                        ProgressInitFunction progressInitFunction,
                        void                 *progressInitUserData,

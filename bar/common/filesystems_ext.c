@@ -71,7 +71,6 @@
                                            | EXT3_FEATURE_COMPAT_HAS_JOURNAL \
                                            | EXT3_FEATURE_COMPAT_EXT_ATTR \
                                            | EXT3_FEATURE_COMPAT_RESIZE_INODE \
-                                           | EXT2_FEATURE_COMPAT_EXT_ATTR \
                                            | EXT3_FEATURE_COMPAT_DIR_INDEX \
                                           )
 #define EXT3_FEATURE_INCOMPAT_SUPP        (  EXT3_FEATURE_INCOMPAT_FILETYPE \
@@ -268,7 +267,7 @@ static_assert(sizeof(EXT4GroupDescriptor) == 64,"sizeof(EXT4GroupDescriptor) == 
 * Notes  : -
 \***********************************************************************/
 
-#define EXT_BLOCK_TO_OFFSET(fileSystemHandle,block) ((block)*extHandle->blockSize)
+#define EXT_BLOCK_TO_OFFSET(extHandle,block) ((block)*extHandle->blockSize)
 
 /***************************** Forwards ********************************/
 
@@ -403,6 +402,7 @@ fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x
     if (   !((extHandle->groupDescriptorSize > 0) && (extHandle->groupDescriptorSize <= EXT4_MAX_GROUP_DESCRIPTOR_SIZE))
         || !(extHandle->blocksPerGroup > 0)
         || !(extHandle->totalBlocks > 0)
+        || !((extHandle->totalBlocks+extHandle->blocksPerGroup) > 1)
         || !(   ((extHandle->blockSize <= 1024) && (extHandle->firstDataBlock == 1))
              || ((extHandle->blockSize >  1024) && (extHandle->firstDataBlock == 0))
             )
@@ -412,7 +412,8 @@ fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x
     }
 
     // read group descriptors and detect bitmap block numbers
-    extHandle->bitmapBlocksCount = (extHandle->totalBlocks+extHandle->blocksPerGroup-1)/extHandle->blocksPerGroup;;
+    assert(extHandle->totalBlocks+extHandle->blocksPerGroup > 1);
+    extHandle->bitmapBlocksCount = (extHandle->totalBlocks+extHandle->blocksPerGroup-1)/extHandle->blocksPerGroup;
     extHandle->bitmapBlocks = (uint64*)malloc(extHandle->bitmapBlocksCount*sizeof(uint64));
     if (extHandle->bitmapBlocks == NULL)
     {
@@ -420,7 +421,7 @@ fprintf(stderr,"%s, %d: featureInCompatible & ~EXT4_FEATURE_INCOMPAT_SUPP = 0x%x
     }
     for (size_t i = 0; i < extHandle->bitmapBlocksCount; i++)
     {
-      if (Device_seek(deviceHandle,EXT_BLOCK_TO_OFFSET(fileSystemHandle,extHandle->firstDataBlock+1)+(uint64)i*(uint64)extHandle->groupDescriptorSize) != ERROR_NONE)
+      if (Device_seek(deviceHandle,EXT_BLOCK_TO_OFFSET(extHandle,extHandle->firstDataBlock+1)+(uint64)i*(uint64)extHandle->groupDescriptorSize) != ERROR_NONE)
       {
         free(extHandle->bitmapBlocks);
         return FALSE;
@@ -521,7 +522,6 @@ LOCAL bool EXT_blockIsUsed(DeviceHandle *deviceHandle, FileSystemTypes fileSyste
 
   // calculate block
   uint64 block = offset/extHandle->blockSize;
-
   if (block >= 1)
   {
 //fprintf(stderr,"%s, %d: extHandle->firstDataBlock=%d extHandle->blockSize=%d\n",__FILE__,__LINE__,extHandle->firstDataBlock,extHandle->blockSize);
@@ -532,20 +532,21 @@ assert((extHandle->firstDataBlock ==0) || (extHandle->blockSize <= 1024));
     // calculate used block bitmap index
     assert(extHandle->blocksPerGroup != 0);
     uint bitmapIndex = blockOffset/extHandle->blocksPerGroup;
-    assert(bitmapIndex < extHandle->bitmapBlocksCount);
 
-    // read correct used block bitmap if not already read
-    if (extHandle->bitmapIndex != (int)bitmapIndex)
+    if (bitmapIndex < extHandle->bitmapBlocksCount)
     {
-      if (Device_seek(deviceHandle,EXT_BLOCK_TO_OFFSET(fileSystemHandle,extHandle->bitmapBlocks[bitmapIndex])) != ERROR_NONE)
+      // read correct used block bitmap if not already read
+      if ((uint)extHandle->bitmapIndex != bitmapIndex)
       {
-        return TRUE;
-      }
-      if (Device_read(deviceHandle,extHandle->bitmapData,extHandle->blockSize,NULL) != ERROR_NONE)
-      {
-        return TRUE;
-      }
-      extHandle->bitmapIndex = bitmapIndex;
+        if (Device_seek(deviceHandle,EXT_BLOCK_TO_OFFSET(extHandle,extHandle->bitmapBlocks[bitmapIndex])) != ERROR_NONE)
+        {
+          return TRUE;
+        }
+        if (Device_read(deviceHandle,extHandle->bitmapData,extHandle->blockSize,NULL) != ERROR_NONE)
+        {
+          return TRUE;
+        }
+        extHandle->bitmapIndex = bitmapIndex;
 #if 0
 #warning debug only
 fprintf(stderr,"%s, %d: bitmapIndex=%d\n",__FILE__,__LINE__,bitmapIndex);
@@ -574,11 +575,11 @@ fprintf(stderr,"%s, %d: bitmapIndex=%d\n",__FILE__,__LINE__,bitmapIndex);
   }
 }
 #endif /* 0 */
-    }
+      }
 
-    // check if block is used
-    assert(blockOffset >= bitmapIndex*extHandle->blocksPerGroup);
-    uint index = blockOffset-bitmapIndex*extHandle->blocksPerGroup;
+      // check if block is used
+      assert(blockOffset >= bitmapIndex*extHandle->blocksPerGroup);
+      uint index = blockOffset-bitmapIndex*extHandle->blocksPerGroup;
 #if 0
 #warning debug only
 if ((extHandle->bitmapData[index/8] & (1 << index%8)) == 0)
@@ -590,7 +591,13 @@ write(h,s,strlen(s));
 close(h);
 }
 #endif /* 0 */
-    return ((extHandle->bitmapData[index / 8] & (1 << (index % 8))) != 0);
+      return ((extHandle->bitmapData[index / 8] & (1 << (index % 8))) != 0);
+    }
+    else
+    {
+      // out of bonds is always "used"
+      return TRUE;
+    }
   }
   else
   {

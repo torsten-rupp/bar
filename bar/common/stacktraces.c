@@ -70,7 +70,7 @@ typedef struct
   bool                  symbolFound;
   const char            *fileName;
   const char            *symbolName;
-  uint                  lineNb;
+  size_t                lineNb;
 } AddressInfo;
 
 // file match info
@@ -89,7 +89,7 @@ typedef struct
 #if   defined(PLATFORM_LINUX)
   LOCAL stack_t                 oldSignalHandlerStackInfo;
   LOCAL const SignalHandlerInfo *signalHandlerInfo;
-  LOCAL uint                    signalHandlerInfoCount;
+  LOCAL size_t                  signalHandlerInfoCount;
   LOCAL SignalHandlerFunction   signalHandlerFunction;
   LOCAL void                    *signalHandlerUserData;
   LOCAL void const              *stackTrace[MAX_STACKTRACE_SIZE+SKIP_STACK_FRAME_COUNT];
@@ -119,7 +119,7 @@ LOCAL bool readSymbolTable(bfd           *abfd,
                            const asymbol **symbols[],
                            ulong         *symbolCount,
                            char          *errorMessage,
-                           uint          errorMessageSize
+                           size_t        errorMessageSize
                           )
 {
   assert(symbols != NULL);
@@ -134,7 +134,7 @@ LOCAL bool readSymbolTable(bfd           *abfd,
 
   // read mini-symbols
   (*symbols) = NULL;
-  uint size;
+  size_t size;
   long n = bfd_read_minisymbols(abfd,
                                 FALSE,  // not dynamic
                                 (void**)symbols,
@@ -199,7 +199,7 @@ LOCAL void freeSymbolTable(const asymbol *symbols[],
 \***********************************************************************/
 
 LOCAL bool demangleSymbolName(char       *demangledSymbolName,
-                              uint       demangledSymbolNameSize,
+                              size_t     demangledSymbolNameSize,
                               const char *symbolName
                              )
 {
@@ -313,7 +313,7 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
                                SymbolFunction        symbolFunction,
                                void                  *symbolUserData,
                                char                  *errorMessage,
-                               uint                  errorMessageSize
+                               size_t                errorMessageSize
                               )
 {
   // initialize variables
@@ -414,7 +414,7 @@ LOCAL bfd* openBFD(const char    *fileName,
                    const asymbol **symbols[],
                    ulong         *symbolCount,
                    char          *errorMessage,
-                   uint          errorMessageSize
+                   size_t        errorMessageSize
                   )
 {
   assert(fileName != NULL);
@@ -494,7 +494,7 @@ LOCAL bool getSymbolInfoFromFile(const char     *fileName,
                                  SymbolFunction symbolFunction,
                                  void           *symbolUserData,
                                  char           *errorMessage,
-                                 uint           errorMessageSize
+                                 size_t         errorMessageSize
                                 )
 {
   assert(fileName != NULL);
@@ -620,7 +620,7 @@ LOCAL void sigActionHandler(int signalNumber, siginfo_t *sigInfo, void *context)
 
    // get signal name
    const char *signalName = NULL;
-   uint       i           = 0;
+   size_t     i           = 0;
    while ((i < signalHandlerInfoCount) && (NULL == signalName))
    {
       if (signalHandlerInfo[i].signalNumber == signalNumber)
@@ -640,7 +640,7 @@ LOCAL void sigActionHandler(int signalNumber, siginfo_t *sigInfo, void *context)
       signalHandlerFunction(signalNumber,
                             signalName,
                             (void const**)&stackTrace[SKIP_STACK_FRAME_COUNT],
-                            (uint)stackTraceSize-SKIP_STACK_FRAME_COUNT,
+                            stackTraceSize - SKIP_STACK_FRAME_COUNT,
                             signalHandlerUserData
                            );
    }
@@ -650,10 +650,10 @@ LOCAL void sigActionHandler(int signalNumber, siginfo_t *sigInfo, void *context)
 
 // ---------------------------------------------------------------------
 
-void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
-                     uint                    signalHandlerInfoCount,
-                     SignalHandlerFunction   signalHandlerFunction,
-                     void                    *signalHandlerUserData
+void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo_,
+                     size_t                  signalHandlerInfoCount_,
+                     SignalHandlerFunction   signalHandlerFunction_,
+                     void                    *signalHandlerUserData_
                     )
 {
   assert(signalHandlerInfo != NULL);
@@ -672,11 +672,11 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
     }
 
     // add signal handlers
-    signalHandlerInfo      = signalHandlerInfo;
-    signalHandlerInfoCount = signalHandlerInfoCount;
-    signalHandlerFunction  = signalHandlerFunction;
-    signalHandlerUserData  = signalHandlerUserData;
-    for (uint i = 0; i < signalHandlerInfoCount; i++)
+    signalHandlerInfo      = signalHandlerInfo_;
+    signalHandlerInfoCount = signalHandlerInfoCount_;
+    signalHandlerFunction  = signalHandlerFunction_;
+    signalHandlerUserData  = signalHandlerUserData_;
+    for (size_t i = 0; i < signalHandlerInfoCount; i++)
     {
        struct sigaction signalActionInfo;
        signalActionInfo.sa_handler   = NULL;
@@ -697,7 +697,7 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
 void Stacktrace_done(void)
 {
   #if   defined(PLATFORM_LINUX)
-    for (uint i = 0; i < signalHandlerInfoCount; i++)
+    for (size_t i = 0; i < signalHandlerInfoCount; i++)
     {
        struct sigaction signalActionInfo;
        signalActionInfo.sa_handler   = SIG_DFL;
@@ -714,7 +714,7 @@ void Stacktrace_done(void)
 
 void Stacktrace_getSymbols(const char         *executableFileName,
                            const void * const addresses[],
-                           uint               addressCount,
+                           size_t             addressCount,
                            SymbolInfo         *symbolInfo
                           )
 {
@@ -724,7 +724,7 @@ void Stacktrace_getSymbols(const char         *executableFileName,
 
   #if   defined(PLATFORM_LINUX)
     #if defined(HAVE_BFD_INIT) && defined(HAVE_BFD_H) && defined(HAVE_LINK_H)
-      for (uint i = 0; i < addressCount; i++)
+      for (size_t i = 0; i < addressCount; i++)
       {
         bool symbolFound;
 
@@ -863,7 +863,7 @@ void Stacktrace_getSymbols(const char         *executableFileName,
 }
 
 void Stacktrace_freeSymbols(SymbolInfo *symbolInfo,
-                            uint       symbolInfoCount
+                            size_t     symbolInfoCount
                            )
 {
   assert(symbolInfo != NULL);
@@ -877,7 +877,7 @@ void Stacktrace_freeSymbols(SymbolInfo *symbolInfo,
 
 void Stacktrace_getSymbolInfo(const char         *executableFileName,
                               const void * const addresses[],
-                              uint               addressCount,
+                              size_t             addressCount,
                               SymbolFunction     symbolFunction,
                               void               *symbolUserData,
                               bool               printErrorMessagesFlag

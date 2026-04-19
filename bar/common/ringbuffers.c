@@ -51,7 +51,7 @@
   typedef struct
   {
     LIST_HEADER(DebugRingBufferNode);
-    ulong allocatedMemory;
+    size_t allocatedMemory;
   } DebugRingBufferList;
 #endif /* not NDEBUG */
 
@@ -100,7 +100,7 @@ LOCAL void debugRingBufferInit(void)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE bool inIsContiguous(const RingBuffer *ringBuffer, ulong n)
+LOCAL_INLINE bool inIsContiguous(const RingBuffer *ringBuffer, size_t n)
 {
   assert(ringBuffer != NULL);
 
@@ -120,7 +120,7 @@ LOCAL_INLINE bool inIsContiguous(const RingBuffer *ringBuffer, ulong n)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE bool outIsContiguous(const RingBuffer *ringBuffer, ulong n)
+LOCAL_INLINE bool outIsContiguous(const RingBuffer *ringBuffer, size_t n)
 {
   assert(ringBuffer != NULL);
 
@@ -169,14 +169,14 @@ LOCAL void normalizeIn(RingBuffer *ringBuffer)
         ^next out      ^next in
 
     */
-    ulong n = ringBuffer->nextIn-ringBuffer->nextOut;
+    size_t n = ringBuffer->nextIn-ringBuffer->nextOut;
 
     // move output data to beginning
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
     memmove(ringBuffer->data,
-            ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize,
-            n
+            ringBuffer->data + ringBuffer->nextOut * ringBuffer->elementSize,
+            n  * ringBuffer->elementSize
            );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
@@ -226,23 +226,23 @@ LOCAL void normalizeOut(RingBuffer *ringBuffer)
         ^next out      ^next in
 
     */
-    ulong n0 = ringBuffer->nextIn;
-    ulong n1 = ringBuffer->size-ringBuffer->nextOut;
+    size_t n0 = ringBuffer->nextIn;
+    size_t n1 = ringBuffer->size-ringBuffer->nextOut;
 
     // move lower part up
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
-    memmove(ringBuffer->data+(ulong)n1*(ulong)ringBuffer->elementSize,
+    memmove(ringBuffer->data + n1 * ringBuffer->elementSize,
             ringBuffer->data,
-            n0
+            n0 * ringBuffer->elementSize
            );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
 
     // copy upper part down
     memcpy(ringBuffer->data,
-           ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize,
-           n1
+           ringBuffer->data + ringBuffer->nextOut * ringBuffer->elementSize,
+           n1 * ringBuffer->elementSize
           );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
@@ -256,9 +256,9 @@ LOCAL void normalizeOut(RingBuffer *ringBuffer)
 // ----------------------------------------------------------------------
 
 #ifdef NDEBUG
-bool RingBuffer_init(RingBuffer *ringBuffer, uint elementSize, ulong size)
+bool RingBuffer_init(RingBuffer *ringBuffer, uint elementSize, size_t count)
 #else /* not NDEBUG */
-bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *ringBuffer, uint elementSize, ulong size)
+bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *ringBuffer, uint elementSize, size_t count)
 #endif /* NDEBUG */
 {
   #ifndef NDEBUG
@@ -266,19 +266,19 @@ bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *r
   #endif /* not NDEBUG */
 
   assert(elementSize > 0);
-  assert(size > 0);
+  assert(count > 0);
 
-  /* initialize ring buffer structure. Note: size
+  /* initialize ring buffer structure. Note: count
      is n+1 elements to be able to store n elements.
   */
   ringBuffer->elementSize = elementSize;
-  ringBuffer->size        = size+1;
+  ringBuffer->size        = count+1;
   ringBuffer->length      = 0L;
   ringBuffer->nextIn      = 0L;
   ringBuffer->nextOut     = 0L;
 
   // allocate ring buffer data
-  ringBuffer->data = (byte*)malloc((size+1)*(ulong)elementSize);
+  ringBuffer->data = (byte*)malloc((count + 1) * elementSize);
   if (ringBuffer->data == NULL)
   {
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
@@ -305,7 +305,7 @@ bool __RingBuffer_init(const char *__fileName__, ulong __lineNb__, RingBuffer *r
       #endif /* HAVE_BACKTRACE */
       debugRingBufferNode->ringBuffer = ringBuffer;
       List_append(&debugRingBufferList,debugRingBufferNode);
-      debugRingBufferList.allocatedMemory += sizeof(DebugRingBufferNode)+sizeof(RingBuffer)+(ulong)ringBuffer->size*(ulong)ringBuffer->elementSize;
+      debugRingBufferList.allocatedMemory += sizeof(DebugRingBufferNode)+sizeof(RingBuffer) + ringBuffer->size * ringBuffer->elementSize;
     }
     pthread_mutex_unlock(&debugRingBufferLock);
   #endif /* not NDEBUG */
@@ -345,8 +345,8 @@ void __RingBuffer_done(const char *__fileName__, ulong __lineNb__, RingBuffer *r
         if (debugRingBufferNode != NULL)
         {
           List_remove(&debugRingBufferList,debugRingBufferNode);
-          assert(debugRingBufferList.allocatedMemory >= sizeof(DebugRingBufferNode)+sizeof(RingBuffer)+(ulong)ringBuffer->size*(ulong)ringBuffer->elementSize);
-          debugRingBufferList.allocatedMemory -= sizeof(DebugRingBufferNode)+sizeof(RingBuffer)+(ulong)ringBuffer->size*(ulong)ringBuffer->elementSize;
+          assert(debugRingBufferList.allocatedMemory >= sizeof(DebugRingBufferNode) + sizeof(RingBuffer) + ringBuffer->size * ringBuffer->elementSize);
+          debugRingBufferList.allocatedMemory -= sizeof(DebugRingBufferNode)+sizeof(RingBuffer) + ringBuffer->size * ringBuffer->elementSize;
           LIST_DELETE_NODE(debugRingBufferNode);
         }
         else
@@ -370,13 +370,13 @@ void __RingBuffer_done(const char *__fileName__, ulong __lineNb__, RingBuffer *r
 }
 
 #ifdef NDEBUG
-RingBuffer* RingBuffer_new(uint elementSize, ulong size)
+RingBuffer* RingBuffer_new(uint elementSize, size_t count)
 #else /* not NDEBUG */
-RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint elementSize, ulong size)
+RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint elementSize, size_t count)
 #endif /* NDEBUG */
 {
   assert(elementSize > 0);
-  assert(size > 0);
+  assert(count > 0);
 
   // allocate ring buffer structure
   RingBuffer *ringBuffer = (RingBuffer*)malloc(sizeof(RingBuffer));
@@ -391,7 +391,7 @@ RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint el
 
   // init ring buffer
   #ifndef NDEBUG
-    if (!__RingBuffer_init(__fileName__,__lineNb__,ringBuffer,elementSize,size))
+    if (!__RingBuffer_init(__fileName__,__lineNb__,ringBuffer,elementSize,count))
     {
       #ifdef HALT_ON_INSUFFICIENT_MEMORY
         HALT_INSUFFICIENT_MEMORY();
@@ -436,7 +436,7 @@ void __RingBuffer_delete(const char *__fileName__, ulong __lineNb__, RingBuffer 
   }
 }
 
-bool RingBuffer_resize(RingBuffer *ringBuffer, ulong newSize)
+bool RingBuffer_resize(RingBuffer *ringBuffer, size_t newSize)
 {
   assert(newSize > 0);
 //fprintf(stderr,"%s, %d: RingBuffer_resize %ld %ld\n",__FILE__,__LINE__,ringBuffer->size,newSize);
@@ -444,7 +444,7 @@ bool RingBuffer_resize(RingBuffer *ringBuffer, ulong newSize)
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
   // allocate new ring buffer data memory
-  void *newData = (byte*)malloc((newSize+1)*(ulong)ringBuffer->elementSize);
+  void *newData = (byte*)malloc((newSize + 1) * ringBuffer->elementSize);
   if (newData == NULL)
   {
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
@@ -454,17 +454,17 @@ bool RingBuffer_resize(RingBuffer *ringBuffer, ulong newSize)
     #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
   #ifndef NDEBUG
-    debugRingBufferList.allocatedMemory += (ulong)((newSize+1)-ringBuffer->size)*(ulong)ringBuffer->elementSize;
+    debugRingBufferList.allocatedMemory += ((newSize + 1) - ringBuffer->size) * ringBuffer->elementSize;
   #endif /* not NDEBUG */
 
   // normalize ring buffer output
   normalizeOut(ringBuffer);
 
   // move data
-  ulong n = MIN(RingBuffer_getAvailable(ringBuffer),newSize);
+  size_t n = MIN(RingBuffer_getAvailable(ringBuffer),newSize);
   memcpy(newData,
-         ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize,
-         n*(ulong)ringBuffer->elementSize
+         ringBuffer->data + ringBuffer->nextOut * ringBuffer->elementSize,
+         n * ringBuffer->elementSize
         );
 
   // set new data, adjust size/length
@@ -500,7 +500,7 @@ void RingBuffer_clear(RingBuffer *ringBuffer, RingBufferElementFreeFunction ring
   }
 }
 
-bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, ulong n)
+bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, size_t n)
 {
   assert(data != NULL);
 
@@ -514,7 +514,7 @@ bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, ulong n)
 
     if (n > 0)
     {
-      ulong n0,n1;
+      size_t n0,n1;
       if (inIsContiguous(ringBuffer,n))
       {
         /* continuous space -> copy to nextIn..nextIn+n0
@@ -546,17 +546,17 @@ bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, ulong n)
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
       assert(n0 > 0);
-      memcpy(ringBuffer->data+(ulong)ringBuffer->nextIn*(ulong)ringBuffer->elementSize,
-             (byte*)data+(ulong)0,
-             (ulong)n0*(ulong)ringBuffer->elementSize
+      memcpy(ringBuffer->data + ringBuffer->nextIn * ringBuffer->elementSize,
+             (byte*)data + 0,
+             n0 * ringBuffer->elementSize
             );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
       if (n1 > 0)
       {
         memcpy(ringBuffer->data,
-               (byte*)data+(ulong)n0*(ulong)ringBuffer->elementSize,
-               (ulong)n1*(ulong)ringBuffer->elementSize
+               (byte*)data + n0 * ringBuffer->elementSize,
+               n1 * ringBuffer->elementSize
               );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
@@ -577,7 +577,7 @@ bool RingBuffer_put(RingBuffer *ringBuffer, const void *data, ulong n)
   }
 }
 
-void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n)
+void *RingBuffer_get(RingBuffer *ringBuffer, void *data, size_t n)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
@@ -592,7 +592,7 @@ void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n)
       if (data != NULL)
       {
         // copy data from ring buffer
-        ulong n0,n1;
+        size_t n0,n1;
         if (outIsContiguous(ringBuffer,n))
         {
           /* continuous space -> copy from nextOut..nextOut+n0
@@ -626,16 +626,16 @@ void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n)
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
         assert(n0 > 0);
         memcpy((byte*)data+0,
-               ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize,
-               (ulong)n0*(ulong)ringBuffer->elementSize
+               ringBuffer->data + ringBuffer->nextOut * ringBuffer->elementSize,
+               n0 * ringBuffer->elementSize
               );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
         if (n1 > 0)
         {
-          memcpy((byte*)data+(ulong)n0*(ulong)ringBuffer->elementSize,
-                 ringBuffer->data+0,
-                 (ulong)n1*(ulong)ringBuffer->elementSize
+          memcpy((byte*)data + n0 * ringBuffer->elementSize,
+                 ringBuffer->data + 0,
+                 n1 * ringBuffer->elementSize
                 );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
@@ -649,7 +649,7 @@ void *RingBuffer_get(RingBuffer *ringBuffer, void *data, ulong n)
         normalizeOut(ringBuffer);
 
         // get pointer to data
-        data = ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize;
+        data = ringBuffer->data + ringBuffer->nextOut * ringBuffer->elementSize;
       }
 
       // remove elements from ring buffer
@@ -686,14 +686,14 @@ void *RingBuffer_first(RingBuffer *ringBuffer, void *data)
     {
       // copy data
       memcpy((byte*)data,
-             ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize,
-             (ulong)ringBuffer->elementSize
+             ringBuffer->data + ringBuffer->nextOut * ringBuffer->elementSize,
+             ringBuffer->elementSize
             );
     }
     else
     {
       // get pointer to data
-      data = ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize;
+      data = ringBuffer->data + ringBuffer->nextOut * ringBuffer->elementSize;
     }
   }
   else
@@ -704,7 +704,7 @@ void *RingBuffer_first(RingBuffer *ringBuffer, void *data)
   return data;
 }
 
-bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBuffer, ulong n)
+bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBuffer, size_t n)
 {
   RINGBUFFER_CHECK_VALID(sourceRingBuffer);
   RINGBUFFER_CHECK_VALID(destinationRingBuffer);
@@ -718,7 +718,7 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
     if (n > 0L)
     {
       // copy data into ring buffer
-      ulong n0,n1;
+      size_t n0,n1;
       if (outIsContiguous(sourceRingBuffer,n))
       {
         /* continuous space -> copy from nextOut..nextOut+n0
@@ -753,8 +753,8 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
       assert(n0 > 0);
       RingBuffer_put(destinationRingBuffer,
-                     sourceRingBuffer->data+(ulong)sourceRingBuffer->nextOut*(ulong)sourceRingBuffer->elementSize,
-                     (ulong)n0*(ulong)sourceRingBuffer->elementSize
+                     sourceRingBuffer->data + sourceRingBuffer->nextOut * sourceRingBuffer->elementSize,
+                     n0
                     );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
@@ -762,7 +762,7 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
       {
         RingBuffer_put(destinationRingBuffer,
                        sourceRingBuffer->data+0,
-                       (ulong)n1*(ulong)sourceRingBuffer->elementSize
+                       n1
                       );
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //dumpMemory(ringBuffer->data,ringBuffer->size*ringBuffer->elementSize);
@@ -788,7 +788,7 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
   }
 }
 
-void RingBuffer_discard(RingBuffer *ringBuffer, ulong n, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData)
+void RingBuffer_discard(RingBuffer *ringBuffer, size_t n, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
@@ -801,7 +801,7 @@ void RingBuffer_discard(RingBuffer *ringBuffer, ulong n, RingBufferElementFreeFu
     {
       while (n > 0L)
       {
-        ringBufferElementFreeFunction(ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize,
+        ringBufferElementFreeFunction(ringBuffer->data + ringBuffer->nextOut * ringBuffer->elementSize,
                                       ringBufferElementFreeUserData
                                      );
         ringBuffer->length--;
@@ -837,7 +837,7 @@ void *RingBuffer_cArrayIn(RingBuffer *ringBuffer)
 
   // get pointer to data
   return (ringBuffer != NULL)
-    ? ringBuffer->data+(ulong)ringBuffer->nextIn*(ulong)ringBuffer->elementSize
+    ? ringBuffer->data + ringBuffer->nextIn * ringBuffer->elementSize
     : NULL;
 }
 
@@ -853,11 +853,11 @@ const void *RingBuffer_cArrayOut(RingBuffer *ringBuffer)
 
   // get pointer to data
   return (ringBuffer != NULL)
-    ? ringBuffer->data+(ulong)ringBuffer->nextOut*(ulong)ringBuffer->elementSize
+    ? ringBuffer->data + ringBuffer->nextOut * ringBuffer->elementSize
     : NULL;
 }
 
-void RingBuffer_increment(RingBuffer *ringBuffer, ulong n)
+void RingBuffer_increment(RingBuffer *ringBuffer, size_t n)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 
@@ -875,7 +875,7 @@ void RingBuffer_increment(RingBuffer *ringBuffer, ulong n)
   }
 }
 
-void RingBuffer_decrement(RingBuffer *ringBuffer, ulong n)
+void RingBuffer_decrement(RingBuffer *ringBuffer, size_t n)
 {
   RINGBUFFER_CHECK_VALID(ringBuffer);
 

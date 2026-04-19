@@ -87,14 +87,14 @@ typedef struct
 {
   char            namePrefix[32];
   int             niceLevel;
-  uint            maxSize;
+  size_t          maxSize;
 
   pthread_mutex_t lock;
   pthread_cond_t  modified;
 
   ThreadPoolList  idle;
   ThreadPoolList  running;
-  uint            size;
+  size_t          size;
 
   bool            quitFlag;
 } ThreadPool;
@@ -158,8 +158,8 @@ void ThreadPool_doneAll(void);
 bool ThreadPool_init(ThreadPool *threadPool,
                      const char *namePrefix,
                      int        niceLevel,
-                     uint       size,
-                     uint       maxSize
+                     size_t     size,
+                     size_t     maxSize
                     );
 
 /***********************************************************************\
@@ -270,9 +270,9 @@ bool ThreadPool_joinAll(ThreadPool *threadPool);
 \***********************************************************************/
 
 #ifndef NDEBUG
-INLINE uint ThreadPool_idleCount(ThreadPool *threadPool);
+INLINE size_t ThreadPool_idleCount(ThreadPool *threadPool);
 #if defined(NDEBUG) || defined(__THREADPOOLS_IMPLEMENTATION__)
-INLINE uint ThreadPool_idleCount(ThreadPool *threadPool)
+INLINE size_t ThreadPool_idleCount(ThreadPool *threadPool)
 {
   assert(threadPool != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(threadPool);
@@ -292,9 +292,9 @@ INLINE uint ThreadPool_idleCount(ThreadPool *threadPool)
 \***********************************************************************/
 
 #ifndef NDEBUG
-INLINE uint ThreadPool_runningCount(ThreadPool *threadPool);
+INLINE size_t ThreadPool_runningCount(ThreadPool *threadPool);
 #if defined(NDEBUG) || defined(__THREADPOOLS_IMPLEMENTATION__)
-INLINE uint ThreadPool_runningCount(ThreadPool *threadPool)
+INLINE size_t ThreadPool_runningCount(ThreadPool *threadPool)
 {
   assert(threadPool != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(threadPool);

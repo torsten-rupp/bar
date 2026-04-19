@@ -307,7 +307,7 @@ void Password_setString(Password *password, const String string)
   #ifdef HAVE_GCRYPT
     memcpy(password->data,String_cString(string),length);
   #else /* not HAVE_GCRYPT */
-    for (uint i = 0; i < length; i++)
+    for (size_t i = 0; i < length; i++)
     {
       password->data[i] = String_index(string,i)^obfuscator[i];
     }
@@ -324,7 +324,7 @@ void Password_setCString(Password *password, const char *s)
   #ifdef HAVE_GCRYPT
     memcpy(password->data,s,length);
   #else /* not HAVE_GCRYPT */
-    for (uint i = 0; i < length; i++)
+    for (size_t i = 0; i < length; i++)
     {
       password->data[i] = s[i]^obfuscator[i];
     }
@@ -342,7 +342,7 @@ void Password_setBuffer(Password *password, const void *buffer, uint length)
     memmove(password->data,buffer,length);
   #else /* not HAVE_GCRYPT */
     char * p = (char*)buffer;
-    for (uint i = 0; i < length; i++)
+    for (size_t i = 0; i < length; i++)
     {
       password->data[i] = p[i]^obfuscator[i];
     }
@@ -375,12 +375,7 @@ void Password_random(Password *password, uint length)
   #ifdef HAVE_GCRYPT
     gcry_create_nonce((unsigned char*)password->data,password->dataLength);
   #else /* not HAVE_GCRYPT */
-    #if   defined(PLATFORM_LINUX)
-      srandom((unsigned int)time(NULL));
-    #elif defined(PLATFORM_WINDOWS)
-      srand((unsigned int)time(NULL));
-    #endif /* PLATFORM_... */
-    for (uint i = 0; i < password->dataLength; i++)
+    for (size_t i = 0; i < password->dataLength; i++)
     {
       #if   defined(PLATFORM_LINUX)
         password->data[i] = (char)(random()%256)^obfuscator[i];
@@ -433,38 +428,42 @@ double Password_getQualityLevel(const Password *password)
   // length >= 8
   CHECK(password->dataLength >= 8);
 
-  bool flag0,flag1;
-
-  // contain numbers
-  flag0 = FALSE;
-  for (uint i = 0; i < password->dataLength; i++)
+  bool flag0 = FALSE;
+  bool flag1 = FALSE;
+  PASSWORD_DEPLOY_DO(plainPassword, password)
   {
-    flag0 |= isdigit(password->data[i]);
+    // contain numbers
+    flag0 = FALSE;
+    for (size_t i = 0; i < password->dataLength; i++)
+    {
+      flag0 |= isdigit(plainPassword[i]);
+    }
+    CHECK(flag0);
+
+    // contain special characters
+    flag0 = FALSE;
+    for (size_t i = 0; i < password->dataLength; i++)
+    {
+      flag0 |= (strchr(" !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",plainPassword[i]) != NULL);
+    }
+    CHECK(flag0);
+
+    // capital/non-capital letters
+    flag0 = FALSE;
+    flag1 = FALSE;
+    for (size_t i = 0; i < password->dataLength; i++)
+    {
+      flag0 |= (toupper(plainPassword[i]) != plainPassword[i]);
+      flag1 |= (tolower(plainPassword[i]) != plainPassword[i]);
+    }
+    CHECK(flag0 && flag1);
+
+    // estimate entropie by compression
+// TODO:
   }
-  CHECK(flag0);
 
-  // contain special characters
-  flag0 = FALSE;
-  for (uint i = 0; i < password->dataLength; i++)
-  {
-    flag0 |= (strchr(" !\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",password->data[i]) != NULL);
-  }
-  CHECK(flag0);
-
-  // capital/non-capital letters
-  flag0 = FALSE;
-  flag1 = FALSE;
-  for (uint i = 0; i < password->dataLength; i++)
-  {
-    flag0 |= (toupper(password->data[i]) != password->data[i]);
-    flag1 |= (tolower(password->data[i]) != password->data[i]);
-  }
-  CHECK(flag0 && flag1);
-
-  // estimate entropie by compression
-// ToDo
-
-  return (double)browniePoints/(double)maxBrowniePoints;
+  assert(maxBrowniePoints > 0);
+  return (double)browniePoints / (double)maxBrowniePoints;
 
   #undef CHECK
 }
@@ -483,7 +482,7 @@ const char *Password_deploy(const Password *password)
       {
         return NULL;
       }
-      for (uint i = 0; i < password->dataLength; i++)
+      for (size_t i = 0; i < password->dataLength; i++)
       {
         plain[i] = password->data[i]^obfuscator[i];
       }
@@ -521,7 +520,7 @@ bool Password_equals(const Password *password0, const Password *password1)
     #ifdef HAVE_GCRYPT
       return memcmp(password0->data,password1->data,password0->dataLength) == 0;
     #else /* not HAVE_GCRYPT */
-      for (uint i = 0; i < password0->dataLength; i++)
+      for (size_t i = 0; i < password0->dataLength; i++)
       {
         if ((password0->data[i]^obfuscator[i]) != (password1->data[i]^obfuscator[i])) return FALSE;
       }
@@ -761,7 +760,7 @@ void Password_dump(const Password *password)
   assert(password != NULL);
 
   fprintf(stderr,"Password:\n");
-  for (uint i = 0; i < password->dataLength; i++)
+  for (size_t i = 0; i < password->dataLength; i++)
   {
     #ifdef HAVE_GCRYPT
       fprintf(stderr,"%02x",(byte)password->data[i]);
@@ -770,7 +769,7 @@ void Password_dump(const Password *password)
     #endif /* HAVE_GCRYPT */
   }
   fputs("\n",stderr);
-  for (uint i = 0; i < password->dataLength; i++)
+  for (size_t i = 0; i < password->dataLength; i++)
   {
     #ifdef HAVE_GCRYPT
       fprintf(stderr,"%c ",isprint(password->data[i]) ? password->data[i] : '.');

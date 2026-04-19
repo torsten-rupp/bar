@@ -54,7 +54,7 @@ typedef struct
 typedef void(*SignalHandlerFunction)(int        signalNumber,
                                      const char *signalName,
                                      void const *stackTrace[],
-                                     uint       stackTraceSize,
+                                     size_t     stackTraceSize,
                                      void       *userData
                                     );
 
@@ -102,7 +102,7 @@ typedef void(*SymbolFunction)(const void *address,
 \***********************************************************************/
 
 void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
-                     uint                    signalHandlerInfoCount,
+                     size_t                  signalHandlerInfoCount,
                      SignalHandlerFunction   signalHandlerFunction,
                      void                    *signalHandlerUserData
                     );
@@ -132,7 +132,7 @@ void Stacktrace_done(void);
 
 void Stacktrace_getSymbols(const char         *executableFileName,
                            const void * const addresses[],
-                           uint               addressCount,
+                           size_t             addressCount,
                            SymbolInfo         *symbolInfo
                           );
 
@@ -147,7 +147,7 @@ void Stacktrace_getSymbols(const char         *executableFileName,
 \***********************************************************************/
 
 void Stacktrace_freeSymbols(SymbolInfo *symbolInfo,
-                            uint       symbolInfoCount
+                            size_t     symbolInfoCount
                            );
 
 
@@ -168,7 +168,7 @@ void Stacktrace_freeSymbols(SymbolInfo *symbolInfo,
 
 void Stacktrace_getSymbolInfo(const char         *executableFileName,
                               const void * const addresses[],
-                              uint               addressCount,
+                              size_t             addressCount,
                               SymbolFunction     symbolFunction,
                               void               *symbolUserData,
                               bool               printErrorMessagesFlag

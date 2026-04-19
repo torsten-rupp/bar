@@ -411,9 +411,9 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
                 nextFragmentRangeNode->offset,I1(offset,length)
                );
         #endif /* FRAGMENTLISTS_DEBUG */
-        fragmentNode->rangeListSum += F1(nextFragmentRangeNode)+1-I0(offset,lenght)-L(nextFragmentRangeNode);
+        fragmentNode->rangeListSum += F1(nextFragmentRangeNode)+1-I0(offset,length)-L(nextFragmentRangeNode);
         nextFragmentRangeNode->length = F1(nextFragmentRangeNode)+1-I0(offset,length);
-        nextFragmentRangeNode->offset = I0(offset,lenght);
+        nextFragmentRangeNode->offset = I0(offset,length);
 
         assert((F1(nextFragmentRangeNode)-F0(nextFragmentRangeNode)+1) == nextFragmentRangeNode->length);
       }

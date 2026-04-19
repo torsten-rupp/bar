@@ -2862,7 +2862,6 @@ Errors File_read(FileHandle *fileHandle,
         else
         {
           return ERROR_END_OF_FILE;
-          return getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));
         }
       }
       buffer = (byte*)buffer+n;
@@ -3949,8 +3948,8 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag)
           emptyFlag = TRUE;
           while (((entry = readdir(dir)) != NULL) && (error == ERROR_NONE))
           {
-            if (   (stringEquals(entry->d_name,"." ))
-                && (stringEquals(entry->d_name,".."))
+            if (   !stringEquals(entry->d_name,"." )
+                && !stringEquals(entry->d_name,"..")
                )
             {
               String_set(name,directoryName);

@@ -21,10 +21,10 @@
 
 typedef struct
 {
-  uint     bytesPerSector;
-  uint     sectorsPerCluster;
+  uint16_t bytesPerSector;
+  uint16_t sectorsPerCluster;
   uint64_t totalSectorsCount;
-  uint     fatCount;
+  uint8_t  fatCount;
   uint32_t clusterHeapOffset;
   uint32_t clusterCount;
   uint32_t rootDirectoryCluster;

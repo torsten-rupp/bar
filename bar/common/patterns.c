@@ -176,10 +176,12 @@ LOCAL Errors compilePattern(ConstString regexString,
   // init variables
   String string = String_new();
 
+  int error;
+
   // compile regular expression
   String_set(string,regexString);
-  if (String_index(string,STRING_BEGIN) != '^') String_insertChar(string,STRING_BEGIN,'^');
-  int error = regcomp(regexBegin,String_cString(string),regexFlags);
+  if (!String_startsWithChar(string,'^')) String_insertChar(string,STRING_BEGIN,'^');
+  error = regcomp(regexBegin,String_cString(string),regexFlags);
   if (error != 0)
   {
     char buffer[256];
@@ -189,8 +191,9 @@ LOCAL Errors compilePattern(ConstString regexString,
   }
 
   String_set(string,regexString);
-  if (String_index(string,STRING_END) != '$') String_insertChar(string,STRING_BEGIN,'$');
-  if (regcomp(regexEnd,String_cString(string),regexFlags) != 0)
+  if (!String_endsWithChar(string,'$')) String_appendChar(string,'$');
+  error = regcomp(regexEnd,String_cString(string),regexFlags);
+  if (error != 0)
   {
     char buffer[256];
     regerror(error,regexEnd,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = NUL;
@@ -200,9 +203,10 @@ LOCAL Errors compilePattern(ConstString regexString,
   }
 
   String_set(string,regexString);
-  if (String_index(string,STRING_BEGIN) != '^') String_insertChar(string,STRING_BEGIN,'^');
-  if (String_index(string,STRING_END) != '$') String_insertChar(string,STRING_END,'$');
-  if (regcomp(regexExact,String_cString(string),regexFlags) != 0)
+  if (!String_startsWithChar(string,'^')) String_insertChar(string,STRING_BEGIN,'^');
+  if (!String_endsWithChar(string,'$')) String_appendChar(string,'$');
+  error = regcomp(regexExact,String_cString(string),regexFlags);
+  if (error != 0)
   {
     char buffer[256];
     regerror(error,regexExact,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = NUL;
@@ -213,7 +217,8 @@ LOCAL Errors compilePattern(ConstString regexString,
   }
 
   String_set(string,regexString);
-  if (regcomp(regexAny,String_cString(string),regexFlags) != 0)
+  error = regcomp(regexAny,String_cString(string),regexFlags);
+  if (error != 0)
   {
     char buffer[256];
     regerror(error,regexAny,buffer,sizeof(buffer)-1); buffer[sizeof(buffer)-1] = NUL;
@@ -573,17 +578,13 @@ bool Pattern_checkIsPattern(const ConstString string)
 
 bool Pattern_isValid(const ConstString string, PatternTypes patternType)
 {
-  bool    isValid;
-  String  regexString;
-  int     regexFlags;
-  regex_t regex;
-
   assert(string != NULL);
 
-  // init variables
-  regexString = String_new();
+  bool isValid = FALSE;
 
   // get regular expression
+  String regexString = String_new();
+  int    regexFlags;
   getRegularExpression(regexString,
                        &regexFlags,
                        String_cString(string),
@@ -592,14 +593,11 @@ bool Pattern_isValid(const ConstString string, PatternTypes patternType)
                       );
 
   // compile pattern
-  if (regcomp(&regex,String_cString(string),regexFlags) == 0)
+  regex_t regex;
+  if (regcomp(&regex,String_cString(regexString),regexFlags) == 0)
   {
     regfree(&regex);
     isValid = TRUE;
-  }
-  else
-  {
-    isValid = FALSE;
   }
 
   // free resources

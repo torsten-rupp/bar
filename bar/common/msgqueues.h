@@ -39,7 +39,7 @@ typedef struct
   #elif defined(PLATFORM_WINDOWS)
     HANDLE                  lock;
   #endif /* PLATFORM_... */
-  uint                    lockCount;
+  size_t                  lockCount;
   pthread_cond_t          modified;
   bool                    modifiedFlag;
   bool                    endOfMsgFlag;
@@ -72,7 +72,7 @@ typedef struct
 \***********************************************************************/
 
 bool MsgQueue_init(MsgQueue                *msgQueue,
-                   ulong                   maxMsgs,
+                   size_t                  maxMsgs,
                    MsgQueueMsgFreeFunction msgQueueMsgFreeFunction,
                    void                    *msgQueueMsgFreeUserData
                   );
@@ -102,7 +102,7 @@ void MsgQueue_done(MsgQueue *msgQueue);
 * Notes  : -
 \***********************************************************************/
 
-MsgQueue *MsgQueue_new(ulong                   maxMsgs,
+MsgQueue *MsgQueue_new(size_t                  maxMsgs,
                        MsgQueueMsgFreeFunction msgQueueMsgFreeFunction,
                        void                    *msgQueueMsgFreeUserData
                       );
@@ -179,7 +179,7 @@ void MsgQueue_unlock(MsgQueue *msgQueue);
 * Notes  : -
 \***********************************************************************/
 
-bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, long timeout);
+bool MsgQueue_get(MsgQueue *msgQueue, void *msg, size_t *size, size_t maxSize, long timeout);
 
 /***********************************************************************\
 * Name   : MsgQueue_put
@@ -192,7 +192,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
 * Notes  : -
 \***********************************************************************/
 
-bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size);
+bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, size_t size);
 
 /***********************************************************************\
 * Name   : MsgQueue_isEmpty
@@ -222,9 +222,9 @@ INLINE bool MsgQueue_isEmpty(const MsgQueue *msgQueue)
 * Notes  : -
 \***********************************************************************/
 
-INLINE ulong MsgQueue_count(const MsgQueue *msgQueue);
+INLINE size_t MsgQueue_count(const MsgQueue *msgQueue);
 #if defined(NDEBUG) || defined(__MSGQUEUES_IMPLEMENATION__)
-INLINE ulong MsgQueue_count(const MsgQueue *msgQueue)
+INLINE size_t MsgQueue_count(const MsgQueue *msgQueue)
 {
   assert(msgQueue != NULL);
 

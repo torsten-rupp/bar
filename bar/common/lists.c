@@ -747,7 +747,7 @@ void List_delete(void *list)
 {
   assert(list != NULL);
 
-  List_done(list);\
+  List_done(list);
   free(list);
 }
 
@@ -797,13 +797,19 @@ void List_copy(void       *toList,
   while (node != fromListToNode)
   {
     Node *newNode = ((List*)toList)->duplicateFunction(node,((List*)toList)->duplicateUserData);
-    List_insert(toList,newNode,toListNextNode);
+    if (newNode != NULL)
+    {
+      List_insert(toList,newNode,toListNextNode);
+    }
     node = node->next;
   }
   if (node != NULL)
   {
     Node *newNode = ((List*)toList)->duplicateFunction(node,((List*)toList)->duplicateUserData);
-    List_insert(toList,newNode,toListNextNode);
+    if (newNode != NULL)
+    {
+      List_insert(toList,newNode,toListNextNode);
+    }
   }
 }
 
@@ -1107,8 +1113,9 @@ void List_sort(void                    *list,
   do
   {
     List sortedList;
-    sortedList.head = NULL;
-    sortedList.tail = NULL;
+    sortedList.head  = NULL;
+    sortedList.tail  = NULL;
+    sortedList.count = 0;
 
     mergedFlag = FALSE;
     void *node1 = ((List*)list)->head;
@@ -1195,9 +1202,9 @@ void List_debugDone(void)
     {
       free(List_removeFirst(&debugListFreeNodeList));
     }
-    while (!List_isEmpty(&debugListFreeNodeList))
+    while (!List_isEmpty(&debugListAllocNodeList))
     {
-      free(List_removeFirst(&debugListFreeNodeList));
+      free(List_removeFirst(&debugListAllocNodeList));
     }
   }
   pthread_mutex_unlock(&debugListLock);

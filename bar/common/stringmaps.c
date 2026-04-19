@@ -87,26 +87,26 @@ const char *STRING_MAP_TYPE_NAMES[] =
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint calculateHash(const char *name)
+LOCAL size_t calculateHash(const char *name)
 {
   assert(name != NULL);
 
-  uint n = strlen(name);
+  size_t n = strlen(name);
 
   byte hashBytes[4];
   hashBytes[0] = (n > 0) ? name[0] : 0;
   hashBytes[1] = (n > 1) ? name[1] : 0;
   hashBytes[2] = (n > 2) ? name[2] : 0;
   hashBytes[3] = (n > 3) ? name[3] : 0;
-  for (uint i = 4; i < n; i++)
+  for (size_t i = 4; i < n; i++)
   {
     hashBytes[i%4] ^= name[i];
   }
 
-  return (uint)(hashBytes[3] << 24) |
-         (uint)(hashBytes[2] << 16) |
-         (uint)(hashBytes[1] <<  8) |
-         (uint)(hashBytes[0] <<  0);
+  return (size_t)(hashBytes[3] << 24) |
+         (size_t)(hashBytes[2] << 16) |
+         (size_t)(hashBytes[1] <<  8) |
+         (size_t)(hashBytes[0] <<  0);
 }
 
 /***********************************************************************\
@@ -130,8 +130,8 @@ LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, size_t __lineN
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  uint hashIndex = calculateHash(name) % stringMap->size;
-  uint n         = 0;
+  size_t hashIndex = calculateHash(name) % stringMap->size;
+  size_t n         = 0;
   while (   (stringMap->entries[hashIndex].name != NULL)
          && (n < stringMap->size)
         )
@@ -143,7 +143,7 @@ LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, size_t __lineN
   if (n >= stringMap->size)
   {
     // re-allocate new entries
-    uint           newStringMapSize = stringMap->size+STRINGMAP_DELTA_SIZE;
+    size_t         newStringMapSize = stringMap->size+STRINGMAP_DELTA_SIZE;
     StringMapEntry *newEntries      = (StringMapEntry*)malloc(sizeof(StringMapEntry)*newStringMapSize);
     if (newEntries == NULL)
     {
@@ -151,7 +151,7 @@ LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, size_t __lineN
     }
 
     // init new entries
-    for (uint i = 0; i < newStringMapSize; i++)
+    for (size_t i = 0; i < newStringMapSize; i++)
     {
       newEntries[i].name             = NULL;
       newEntries[i].type             = STRINGMAP_TYPE_NONE;
@@ -165,12 +165,12 @@ LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, size_t __lineN
     }
 
     // rehash existing entries
-    for (uint i = 0; i < stringMap->size; i++)
+    for (size_t i = 0; i < stringMap->size; i++)
     {
       assert(stringMap->entries[i].name != NULL);
 
       hashIndex = calculateHash(stringMap->entries[i].name)%newStringMapSize;
-      uint n = 0;
+      size_t n = 0;
       while (   (newEntries[hashIndex].name != NULL)
              && (n < newStringMapSize)
             )
@@ -269,13 +269,13 @@ LOCAL StringMapEntry *findStringMapEntry(const StringMap stringMap, const char *
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  uint i = calculateHash(name)%stringMap->size;
-  uint n = 0;
+  size_t i = calculateHash(name)%stringMap->size;
+  size_t n = 0;
   while (   ((stringMap->entries[i].name == NULL) || !stringEquals(stringMap->entries[i].name,name))
          && (n < stringMap->size)
         )
   {
-    i = (i+1)%stringMap->size;
+    i = (i + 1) % stringMap->size;
     n++;
   }
 
@@ -315,7 +315,7 @@ StringMap __StringMap_new(const char *__fileName__,
       return NULL;
     #endif /* HALT_ON_INSUFFICIENT_MEMORY */
   }
-  for (uint i = 0; i < STRINGMAP_START_SIZE; i++)
+  for (size_t i = 0; i < STRINGMAP_START_SIZE; i++)
   {
     stringMap->entries[i].name = NULL;
   }
@@ -381,7 +381,7 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
   stringMap->entries = newEntries;
 
   // copy entries
-  for (uint i = 0; i < fromStringMap->size; i++)
+  for (size_t i = 0; i < fromStringMap->size; i++)
   {
     if (fromStringMap->entries[i].name != NULL)
     {
@@ -432,7 +432,7 @@ StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
 
   // allocate new entries
   StringMap_clear(stringMap);
-  StringMapEntry *newEntries = (StringMapEntry*)realloc(stringMap->entries,sizeof(StringMapEntry)*fromStringMap->size);
+  StringMapEntry *newEntries = (StringMapEntry*)realloc(stringMap->entries, sizeof(StringMapEntry)*fromStringMap->size);
   if (newEntries == NULL)
   {
     #ifdef HALT_ON_INSUFFICIENT_MEMORY
@@ -445,38 +445,47 @@ StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
   stringMap->entries = newEntries;
 
   // move entries
-  for (uint i = 0; i < fromStringMap->size; i++)
+  for (size_t i = 0; i < fromStringMap->size; i++)
   {
-    stringMap->entries[i].name             = fromStringMap->entries[i].name;
-    stringMap->entries[i].type             = fromStringMap->entries[i].type;
-    stringMap->entries[i].value.text       = fromStringMap->entries[i].value.text;
-    stringMap->entries[i].value.quotedFlag = fromStringMap->entries[i].value.quotedFlag;
-    switch (fromStringMap->entries[i].type)
+    if (fromStringMap->entries[i].name != NULL)
     {
-      case STRINGMAP_TYPE_NONE:                                                                                           break;
-      case STRINGMAP_TYPE_INT:     stringMap->entries[i].value.data.i      = fromStringMap->entries[i].value.data.i;      break;
-      case STRINGMAP_TYPE_INT64:   stringMap->entries[i].value.data.l      = fromStringMap->entries[i].value.data.l;      break;
-      case STRINGMAP_TYPE_UINT:    stringMap->entries[i].value.data.ui     = fromStringMap->entries[i].value.data.ui;     break;
-      case STRINGMAP_TYPE_UINT64:  stringMap->entries[i].value.data.ul     = fromStringMap->entries[i].value.data.ul;     break;
-      case STRINGMAP_TYPE_DOUBLE:  stringMap->entries[i].value.data.d      = fromStringMap->entries[i].value.data.d;      break;
-      case STRINGMAP_TYPE_BOOL:    stringMap->entries[i].value.data.b      = fromStringMap->entries[i].value.data.b;      break;
-      case STRINGMAP_TYPE_FLAG:    stringMap->entries[i].value.data.flag   = fromStringMap->entries[i].value.data.flag;   break;
-      case STRINGMAP_TYPE_CHAR:    stringMap->entries[i].value.data.c      = fromStringMap->entries[i].value.data.c;      break;
-      case STRINGMAP_TYPE_CSTRING: stringMap->entries[i].value.data.s      = fromStringMap->entries[i].value.data.s;      break;
-      case STRINGMAP_TYPE_STRING:  stringMap->entries[i].value.data.string = fromStringMap->entries[i].value.data.string; break;
-      case STRINGMAP_TYPE_DATA:    stringMap->entries[i].value.data.p      = fromStringMap->entries[i].value.data.p;      break;
-      #ifndef NDEBUG
-        default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-          break;
-      #endif /* NDEBUG */
-    }
-    #ifndef NDEBUG
-      stringMap->entries[i].fileName = fromStringMap->entries[i].fileName;
-      stringMap->entries[i].lineNb   = fromStringMap->entries[i].lineNb;
-    #endif /* NDEBUG */
+      stringMap->entries[i].name             = fromStringMap->entries[i].name;
+      stringMap->entries[i].type             = fromStringMap->entries[i].type;
+      stringMap->entries[i].value.text       = fromStringMap->entries[i].value.text;
+      stringMap->entries[i].value.quotedFlag = fromStringMap->entries[i].value.quotedFlag;
+      switch (fromStringMap->entries[i].type)
+      {
+        case STRINGMAP_TYPE_NONE:                                                                                           break;
+        case STRINGMAP_TYPE_INT:     stringMap->entries[i].value.data.i      = fromStringMap->entries[i].value.data.i;      break;
+        case STRINGMAP_TYPE_INT64:   stringMap->entries[i].value.data.l      = fromStringMap->entries[i].value.data.l;      break;
+        case STRINGMAP_TYPE_UINT:    stringMap->entries[i].value.data.ui     = fromStringMap->entries[i].value.data.ui;     break;
+        case STRINGMAP_TYPE_UINT64:  stringMap->entries[i].value.data.ul     = fromStringMap->entries[i].value.data.ul;     break;
+        case STRINGMAP_TYPE_DOUBLE:  stringMap->entries[i].value.data.d      = fromStringMap->entries[i].value.data.d;      break;
+        case STRINGMAP_TYPE_BOOL:    stringMap->entries[i].value.data.b      = fromStringMap->entries[i].value.data.b;      break;
+        case STRINGMAP_TYPE_FLAG:    stringMap->entries[i].value.data.flag   = fromStringMap->entries[i].value.data.flag;   break;
+        case STRINGMAP_TYPE_CHAR:    stringMap->entries[i].value.data.c      = fromStringMap->entries[i].value.data.c;      break;
+        case STRINGMAP_TYPE_CSTRING: stringMap->entries[i].value.data.s      = fromStringMap->entries[i].value.data.s;      break;
+        case STRINGMAP_TYPE_STRING:  stringMap->entries[i].value.data.string = fromStringMap->entries[i].value.data.string; break;
+        case STRINGMAP_TYPE_DATA:    stringMap->entries[i].value.data.p      = fromStringMap->entries[i].value.data.p;      break;
+        #ifndef NDEBUG
+          default:
+          fprintf(stderr,"%s:%d: %d fromStringMap->entries[i].name=%s fromStringMap->entries[i].type=%d\n",__FILE__,__LINE__,fromStringMap->size,fromStringMap->entries[i].name,fromStringMap->entries[i].type);
 
-    fromStringMap->entries[i].name = NULL;
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            break;
+        #endif /* NDEBUG */
+      }
+      #ifndef NDEBUG
+        stringMap->entries[i].fileName = fromStringMap->entries[i].fileName;
+        stringMap->entries[i].lineNb   = fromStringMap->entries[i].lineNb;
+      #endif /* NDEBUG */
+
+      fromStringMap->entries[i].name = NULL;
+    }
+    else
+    {
+      stringMap->entries[i].name = NULL;
+    }
   }
 
   return stringMap;
@@ -497,7 +506,7 @@ void __StringMap_delete(const char *__fileName__, size_t __lineNb__, StringMap s
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,stringMap,StringMap);
   #endif /* NDEBUG */
 
-  for (uint i = 0; i < stringMap->size; i++)
+  for (size_t i = 0; i < stringMap->size; i++)
   {
     if (stringMap->entries[i].name != NULL)
     {
@@ -513,7 +522,7 @@ StringMap StringMap_clear(StringMap stringMap)
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  for (uint i = 0; i < stringMap->size; i++)
+  for (size_t i = 0; i < stringMap->size; i++)
   {
     if (stringMap->entries[i].name != NULL)
     {
@@ -525,13 +534,13 @@ StringMap StringMap_clear(StringMap stringMap)
   return stringMap;
 }
 
-uint StringMap_count(const StringMap stringMap)
+size_t StringMap_count(const StringMap stringMap)
 {
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  uint count = 0L;
-  for (uint i = 0; i < stringMap->size; i++)
+  size_t count = 0L;
+  for (size_t i = 0; i < stringMap->size; i++)
   {
     if (stringMap->entries[i].name != NULL)
     {
@@ -542,13 +551,13 @@ uint StringMap_count(const StringMap stringMap)
   return count;
 }
 
-const StringMapEntry *StringMap_index(const StringMap stringMap, uint index)
+const StringMapEntry *StringMap_index(const StringMap stringMap, size_t index)
 {
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
   StringMapEntry *stringMapEntry = NULL;
-  for (uint i = 0; i < stringMap->size; i++)
+  for (size_t i = 0; i < stringMap->size; i++)
   {
     if (stringMap->entries[i].name != NULL)
     {
@@ -567,7 +576,7 @@ const StringMapEntry *StringMap_index(const StringMap stringMap, uint index)
   return stringMapEntry;
 }
 
-const char *StringMap_indexName(const StringMap stringMap, uint index)
+const char *StringMap_indexName(const StringMap stringMap, size_t index)
 {
   assert(stringMap != NULL);
 
@@ -575,7 +584,7 @@ const char *StringMap_indexName(const StringMap stringMap, uint index)
   return (stringMapEntry != NULL) ? stringMapEntry->name : NULL;
 }
 
-StringMapTypes StringMap_indexType(const StringMap stringMap, uint index)
+StringMapTypes StringMap_indexType(const StringMap stringMap, size_t index)
 {
   assert(stringMap != NULL);
 
@@ -583,7 +592,7 @@ StringMapTypes StringMap_indexType(const StringMap stringMap, uint index)
   return (stringMapEntry != NULL) ? stringMapEntry->type : STRINGMAP_TYPE_NONE;
 }
 
-StringMapValue StringMap_indexValue(const StringMap stringMap, uint index)
+StringMapValue StringMap_indexValue(const StringMap stringMap, size_t index)
 {
   assert(stringMap != NULL);
 
@@ -961,6 +970,7 @@ void __StringMap_putData(const char *__fileName__, size_t __lineNb__, StringMap 
 {
   assert(stringMap != NULL);
   assert(name != NULL);
+  assert(stringMapFormatFunction != NULL);
 
   StringMapEntry *stringMapEntry;
   #ifdef NDEBUG
@@ -1214,18 +1224,15 @@ bool StringMap_getDouble(const StringMap stringMap, const char *name, double *da
 
 bool StringMap_getBool(const StringMap stringMap, const char *name, bool *data, bool defaultValue)
 {
-  StringMapEntry *stringMapEntry;
-  uint           i;
-
   assert(stringMap != NULL);
   assert(name != NULL);
   assert(data != NULL);
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
     (*data) = FALSE;
-    for (i = 0; i < SIZE_OF_ARRAY(TRUE_STRINGS); i++)
+    for (size_t i = 0; i < SIZE_OF_ARRAY(TRUE_STRINGS); i++)
     {
       if (String_equalsIgnoreCaseCString(stringMapEntry->value.text,TRUE_STRINGS[i]))
       {
@@ -1244,19 +1251,16 @@ bool StringMap_getBool(const StringMap stringMap, const char *name, bool *data, 
 
 bool StringMap_getFlag(const StringMap stringMap, const char *name, ulong *data, ulong value)
 {
-  StringMapEntry *stringMapEntry;
-  uint           i;
-
   assert(stringMap != NULL);
   assert(name != NULL);
   assert(data != NULL);
 
 
-  stringMapEntry = findStringMapEntry(stringMap,name);
+  StringMapEntry *stringMapEntry = findStringMapEntry(stringMap,name);
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
     (*data) &= ~value ;
-    for (i = 0; i < SIZE_OF_ARRAY(TRUE_STRINGS); i++)
+    for (size_t i = 0; i < SIZE_OF_ARRAY(TRUE_STRINGS); i++)
     {
       if (String_equalsIgnoreCaseCString(stringMapEntry->value.text,TRUE_STRINGS[i]))
       {
@@ -1368,7 +1372,7 @@ bool StringMap_getChar(const StringMap stringMap, const char *name, char *data, 
   }
 }
 
-bool StringMap_getCString(const StringMap stringMap, const char *name, char *data, uint maxLength, const char *defaultValue)
+bool StringMap_getCString(const StringMap stringMap, const char *name, char *data, size_t maxLength, const char *defaultValue)
 {
   StringMapEntry *stringMapEntry;
 
@@ -1458,6 +1462,31 @@ void __StringMap_remove(const char *__fileName__, size_t __lineNb__, StringMap s
   stringMapEntry = findStringMapEntry(stringMap,name);
   if (stringMapEntry != NULL)
   {
+    fprintf(stderr,"%s:%d: stringMapEntry->type=%d\n",__FILE__,__LINE__,stringMapEntry->type);
+    switch (stringMapEntry->type)
+    {
+      case STRINGMAP_TYPE_NONE:
+      case STRINGMAP_TYPE_INT:
+      case STRINGMAP_TYPE_INT64:
+      case STRINGMAP_TYPE_UINT:
+      case STRINGMAP_TYPE_UINT64:
+      case STRINGMAP_TYPE_DOUBLE:
+      case STRINGMAP_TYPE_BOOL:
+      case STRINGMAP_TYPE_FLAG:
+      case STRINGMAP_TYPE_CHAR:
+      case STRINGMAP_TYPE_CSTRING:
+        break;
+      case STRINGMAP_TYPE_STRING:
+        String_delete(stringMapEntry->value.data.string);
+        break;
+      case STRINGMAP_TYPE_DATA:
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break;
+      #endif /* NDEBUG */
+    }
+    String_delete(stringMapEntry->value.text);
     free(stringMapEntry->name); stringMapEntry->name = NULL;
     #ifndef NDEBUG
       stringMapEntry->fileName = __fileName__;
@@ -1492,7 +1521,7 @@ bool StringMap_parse(StringMap stringMap, ConstString string, const char *assign
 bool StringMap_parseCString(StringMap stringMap, const char *s, const char *assignChars, const char *quoteChars, const char *separatorChars, ulong index, long *nextIndex)
 {
   const char *quoteChar;
-  uint       length;
+  size_t     length;
   String     name;
   String     value;
   int        i;
@@ -1651,20 +1680,16 @@ bool StringMap_parseCString(StringMap stringMap, const char *s, const char *assi
 
 void* const *StringMap_valueArray(const StringMap stringMap)
 {
-  uint count;
-  void **valueArray;
-  uint n,i;
-
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  count = StringMap_count(stringMap);
+  size_t count = StringMap_count(stringMap);
 
-  valueArray = (void**)malloc(count*sizeof(char*));
+  void **valueArray = (void**)malloc(count*sizeof(char*));
   if (valueArray != NULL)
   {
-    n = 0;
-    for (i = 0; i < stringMap->size; i++)
+    size_t n = 0;
+    for (size_t i = 0; i < stringMap->size; i++)
     {
       if (stringMap->entries[i].name != NULL)
       {
@@ -1692,14 +1717,12 @@ bool StringMap_parseEnumNumber(const char *name, uint *value, void *userData)
 #ifndef NDEBUG
 String StringMap_debugToString(String string, const StringMap stringMap)
 {
-  uint i;
-
   assert(string != NULL);
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
   String_clear(string);
-  for (i = 0; i < stringMap->size; i++)
+  for (size_t i = 0; i < stringMap->size; i++)
   {
     if (stringMap->entries[i].name != NULL)
     {
@@ -1717,21 +1740,19 @@ String StringMap_debugToString(String string, const StringMap stringMap)
   return string;
 }
 
-void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap)
+void StringMap_debugDump(FILE *handle, size_t indent, const StringMap stringMap)
 {
-  uint i,j;
-
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
 
-  for (i = 0; i < stringMap->size; i++)
+  for (size_t i = 0; i < stringMap->size; i++)
   {
     if (stringMap->entries[i].name != NULL)
     {
       assert(stringMap->entries[i].type < SIZE_OF_ARRAY(STRING_MAP_TYPE_NAMES));
-      for (j = 0; j < indent; j++) fputc(' ',handle);
+      for (size_t j = 0; j < indent; j++) fputc(' ',handle);
       fprintf(handle,
-              "#%3u (%-8s): %s = '%s' (0x%"PRIuPTR")\n",
+              "#%3u (%-8s): %s = '%s' (%"PRIuPTR")\n",
               i,
               STRING_MAP_TYPE_NAMES[stringMap->entries[i].type],
               stringMap->entries[i].name,
@@ -1742,7 +1763,7 @@ void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap)
   }
 }
 
-void StringMap_debugPrint(uint indent, const StringMap stringMap)
+void StringMap_debugPrint(size_t indent, const StringMap stringMap)
 {
   StringMap_debugDump(stderr,indent,stringMap);
 }

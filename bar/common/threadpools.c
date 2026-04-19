@@ -37,7 +37,7 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-const uint MAX_POOL_RUN_MSG_QUEUE = 8;
+const size_t MAX_POOL_RUN_MSG_QUEUE = 8;
 
 #ifndef NDEBUG
 #endif /* NDEBUG */
@@ -77,9 +77,7 @@ typedef struct
 
 LOCAL void threadPoolTerminated(void *userData)
 {
-  Thread *thread = (Thread*)userData;
-  assert(thread != NULL);
-  thread->terminatedFlag = TRUE;
+  UNUSED_VARIABLE(userData);
 }
 
 /***********************************************************************\
@@ -100,7 +98,7 @@ LOCAL void *threadPoolStartCode(void *userData)
 
   ThreadPool     *threadPool     = startInfo->threadPool;
   ThreadPoolNode *threadPoolNode = startInfo->threadPoolNode;
-  pthread_cleanup_push(threadPoolTerminated,&startInfo->threadPoolNode->thread);
+  pthread_cleanup_push(threadPoolTerminated,&threadPoolNode->thread);
   {
     // try to set thread name
     #ifdef HAVE_PTHREAD_SETNAME_NP
@@ -360,8 +358,8 @@ void ThreadPool_doneAll(void)
 bool ThreadPool_init(ThreadPool *threadPool,
                      const char *namePrefix,
                      int        niceLevel,
-                     uint       size,
-                     uint       maxSize
+                     size_t     size,
+                     size_t     maxSize
                     )
 {
   assert(threadPool != NULL);
@@ -377,7 +375,7 @@ bool ThreadPool_init(ThreadPool *threadPool,
   threadPool->size      = 0;
   threadPool->quitFlag  = FALSE;
 
-  for (uint i = 0; i < size; i++)
+  for (size_t i = 0; i < size; i++)
   {
     ThreadPoolNode *threadPoolNode = newThread(threadPool);
     if (threadPoolNode != NULL)
@@ -530,6 +528,8 @@ ThreadPoolNode *ThreadPool_run(ThreadPool *threadPool,
 
     // signal thread running
     pthread_cond_signal(&threadPoolNode->trigger);
+
+    assert((List_count(&threadPool->idle) + List_count(&threadPool->running)) == threadPool->size);
   }
   pthread_mutex_unlock(&threadPool->lock);
 

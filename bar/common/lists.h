@@ -121,9 +121,9 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define LIST_STATIC_INIT {NULL,NULL,0L,NULL,0}
+  #define LIST_STATIC_INIT {NULL,NULL,0L,NULL,NULL,NULL,NULL,NULL,0}
 #else /* NDEBUG */
-  #define LIST_STATIC_INIT {NULL,NULL,0L}
+  #define LIST_STATIC_INIT {NULL,NULL,0L,NULL,NULL,NULL,NULL}
 #endif /* not NDEBUG */
 
 #define LIST_NEW_NODE(type) (type*)List_newNode(sizeof(type))

@@ -1048,7 +1048,7 @@ Errors Device_tell(DeviceHandle *deviceHandle, uint64 *offset)
   assert(deviceHandle->index <= deviceHandle->size);
   assert(offset != NULL);
 
-  off_t n = FSEEK(deviceHandle->file,(off_t)0,SEEK_CUR);
+  off_t n = FTELL(deviceHandle->file);
   if (n == (off_t)(-1))
   {
     return ERRORX_(IO,errno,"%s",String_cString(deviceHandle->name));

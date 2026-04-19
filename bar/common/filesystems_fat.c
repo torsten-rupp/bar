@@ -41,21 +41,24 @@
 
 /****************************** Macros *********************************/
 
-// read int8/int16/int32 from arbitary memory position
+/* read int8/int16/int32 from arbitary memory position
+   Note: read as little endian value byte by byte and implicit converted
+         to host by compiler
+*/
 #define FAT_READ_INT8(data,offset)  (*((uint8*)(data)+offset))
-#define FAT_READ_INT16(data,offset) (LE16_TO_HOST(  (((uint16)(*((uint8*)(data)+(offset)+0)))<< 0) \
-                                                  | (((uint16)(*((uint8*)(data)+(offset)+1)))<< 8) \
-                                                 ) & 0xFFFF \
+#define FAT_READ_INT16(data,offset) ((  (((uint16)(*((uint8*)(data)+(offset)+0)))<< 0) \
+                                      | (((uint16)(*((uint8*)(data)+(offset)+1)))<< 8) \
+                                     ) & 0xFFFF \
                                     )
-#define FAT_READ_INT24(data,offset) LE32_TO_HOST(  (((uint32)(*((uint8*)(data)+(offset)+0)))<< 0) \
-                                                 | (((uint32)(*((uint8*)(data)+(offset)+1)))<< 8) \
-                                                 | (((uint32)(*((uint8*)(data)+(offset)+2)))<<16) \
-                                                )
-#define FAT_READ_INT32(data,offset) LE32_TO_HOST(  (((uint32)(*((uint8*)(data)+(offset)+0)))<< 0) \
-                                                 | (((uint32)(*((uint8*)(data)+(offset)+1)))<< 8) \
-                                                 | (((uint32)(*((uint8*)(data)+(offset)+2)))<<16) \
-                                                 | (((uint32)(*((uint8*)(data)+(offset)+3)))<<24) \
-                                                )
+#define FAT_READ_INT24(data,offset) (  (((uint32)(*((uint8*)(data)+(offset)+0)))<< 0) \
+                                     | (((uint32)(*((uint8*)(data)+(offset)+1)))<< 8) \
+                                     | (((uint32)(*((uint8*)(data)+(offset)+2)))<<16) \
+                                    )
+#define FAT_READ_INT32(data,offset) (  (((uint32)(*((uint8*)(data)+(offset)+0)))<< 0) \
+                                     | (((uint32)(*((uint8*)(data)+(offset)+1)))<< 8) \
+                                     | (((uint32)(*((uint8*)(data)+(offset)+2)))<<16) \
+                                     | (((uint32)(*((uint8*)(data)+(offset)+3)))<<24) \
+                                    )
 
 // convert from little endian to host system format
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -100,8 +103,11 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FileSystemTypes fileSys
                             );
   assert(fatSectorsCount > 0);
 
-  // allocate sectors buffer
-  byte *buffer = (byte*)malloc(fatSectorsCount*fatHandle->bytesPerSector);
+  /* allocate sectors buffer
+     Note: +2 bytes for 12bit FAT: the last cluster bit may be read from
+           last byte+2 bytes as 24bit value
+  */
+  byte *buffer = (byte*)malloc(fatSectorsCount*fatHandle->bytesPerSector + 2);
   if (buffer == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -117,6 +123,8 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FileSystemTypes fileSys
   {
     return FALSE;
   }
+  buffer[fatSectorsCount*fatHandle->bytesPerSector + 0] = 0;
+  buffer[fatSectorsCount*fatHandle->bytesPerSector + 1] = 0;
 
   // calculate cluster base index, number of clusters
   assert(fatHandle->bitsPerFATEntry != 0);
@@ -250,15 +258,15 @@ LOCAL bool FAT_init(DeviceHandle *deviceHandle, FileSystemTypes *fileSystemType,
   }
 
   // get file system info
-  int16  bytesPerSector    = FAT_READ_INT16(bootSector,0x0B);
-  int8   sectorsPerCluster = FAT_READ_INT8 (bootSector,0x0D);
-  int16  reservedSectors   = FAT_READ_INT16(bootSector,0x0E);
-  int8   fatCount          = FAT_READ_INT8 (bootSector,0x10);
+  uint16 bytesPerSector    = FAT_READ_INT16(bootSector,0x0B);
+  uint8  sectorsPerCluster = FAT_READ_INT8 (bootSector,0x0D);
+  uint16 reservedSectors   = FAT_READ_INT16(bootSector,0x0E);
+  uint8  fatCount          = FAT_READ_INT8 (bootSector,0x10);
   uint32 totalSectorsCount = (FAT_READ_INT16(bootSector,0x13) != 0)
                                ? (uint32)FAT_READ_INT16(bootSector,0x13)
                                : (uint32)FAT_READ_INT32(bootSector,0x20);
-  int16  maxRootEntries    = FAT_READ_INT16(bootSector,0x11);
-  int16  sectorsPerFAT     = (FAT_READ_INT16(bootSector,0x16) != 0)
+  uint16 maxRootEntries    = FAT_READ_INT16(bootSector,0x11);
+  uint32 sectorsPerFAT     = (FAT_READ_INT16(bootSector,0x16) != 0)
                                ? FAT_READ_INT16(bootSector,0x16)
                                : FAT_READ_INT32(bootSector,0x24);
 
@@ -269,6 +277,11 @@ LOCAL bool FAT_init(DeviceHandle *deviceHandle, FileSystemTypes *fileSystemType,
       || !(reservedSectors > 0)
       || !(fatCount > 0)
       || !(totalSectorsCount < 0x0FFFFFFF)
+      || !(totalSectorsCount >= (  (uint32)reservedSectors
+                                 + (uint32)fatCount*(uint32)sectorsPerFAT
+                                 + ((uint32)maxRootEntries*32+(uint32)bytesPerSector-1)/(uint32)bytesPerSector
+                                )
+          )
      )
   {
     return FALSE;
@@ -413,7 +426,7 @@ LOCAL bool FAT_blockIsUsed(DeviceHandle *deviceHandle, FileSystemTypes fileSyste
 
     // check if sector is used
     assert((cluster >= (uint32)fatHandle->clusterBaseIndex) && (cluster < (uint32)fatHandle->clusterBaseIndex+CLUSTER_BITMAP_SIZE));
-    assert(cluster < fatHandle->clusterBaseIndex+2+fatHandle->clustersCount);
+    assert(cluster < fatHandle->clusterBaseIndex+fatHandle->clustersCount);
     uint index = cluster-fatHandle->clusterBaseIndex;
     blockIsUsed = BITSET_IS_SET(fatHandle->clusterBitmap,CLUSTER_BITMAP_SIZE,index);
 

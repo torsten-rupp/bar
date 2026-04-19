@@ -31,8 +31,8 @@ typedef struct MsgNode
 {
   LIST_NODE_HEADER(struct MsgNode);
 
-  ulong size;
-  byte  data[0];
+  size_t size;
+  byte   data[0];
 } MsgNode;
 
 typedef bool MsgQueueLock;
@@ -165,7 +165,7 @@ LOCAL void unlock(MsgQueue *msgQueue)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initTimespec(struct timespec *timespec, ulong timeout)
+LOCAL void initTimespec(struct timespec *timespec, size_t timeout)
 {
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
@@ -197,14 +197,14 @@ LOCAL void initTimespec(struct timespec *timespec, ulong timeout)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool waitModified(MsgQueue *msgQueue, ulong timeout)
+LOCAL bool waitModified(MsgQueue *msgQueue, size_t timeout)
 {
   assert(msgQueue != NULL);
   assert(msgQueue->lockCount > 0);
 
   // temporary revert lock count > 1
-  uint lockCount = msgQueue->lockCount;
-  for (uint i = 1; i < lockCount; i++)
+  size_t lockCount = msgQueue->lockCount;
+  for (size_t i = 1; i < lockCount; i++)
   {
     pthread_mutex_unlock(&msgQueue->lock);
   }
@@ -217,7 +217,7 @@ LOCAL bool waitModified(MsgQueue *msgQueue, ulong timeout)
 
   // restore lock count > 1
   msgQueue->lockCount  = lockCount;
-  for (uint i = 1; i < lockCount; i++)
+  for (size_t i = 1; i < lockCount; i++)
   {
     pthread_mutex_lock(&msgQueue->lock);
   }
@@ -228,7 +228,7 @@ LOCAL bool waitModified(MsgQueue *msgQueue, ulong timeout)
 /*---------------------------------------------------------------------*/
 
 bool MsgQueue_init(MsgQueue                *msgQueue,
-                   ulong                   maxMsgs,
+                   size_t                  maxMsgs,
                    MsgQueueMsgFreeFunction msgQueueMsgFreeFunction,
                    void                    *msgQueueMsgFreeUserData
                   )
@@ -298,7 +298,7 @@ xxx
   #endif /* PLATFORM_... */
 }
 
-MsgQueue *MsgQueue_new(ulong                   maxMsgs,
+MsgQueue *MsgQueue_new(size_t                  maxMsgs,
                        MsgQueueMsgFreeFunction msgQueueMsgFreeFunction,
                        void                    *msgQueueMsgFreeUserData
                       )
@@ -365,7 +365,7 @@ void MsgQueue_unlock(MsgQueue *msgQueue)
   unlock(msgQueue);
 }
 
-bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, long timeout)
+bool MsgQueue_get(MsgQueue *msgQueue, void *msg, size_t *size, size_t maxSize, long timeout)
 {
   assert(msgQueue != NULL);
 
@@ -382,7 +382,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
           )
     {
       // work-around: wait with timeout to handle lost wake-ups
-      (void)waitModified(msgQueue,(ulong)Misc_getRestTimeout(&timeoutInfo,5000));
+      (void)waitModified(msgQueue,(size_t)Misc_getRestTimeout(&timeoutInfo,5000));
     }
     if (   msgQueue->terminatedFlag
         || List_isEmpty(&msgQueue->list)
@@ -406,7 +406,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
   {
     return FALSE;
   }
-  ulong n = MIN(msgNode->size,maxSize);
+  size_t n = MIN(msgNode->size,maxSize);
   memcpy(msg,msgNode->data,n);
   if (size != NULL) (*size) = n;
   free(msgNode);
@@ -414,7 +414,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
   return TRUE;
 }
 
-bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
+bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, size_t size)
 {
   assert(msgQueue != NULL);
 
@@ -445,7 +445,7 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
             )
       {
         // work-around: wait with timeout to handle lost wake-ups
-        (void)waitModified(msgQueue,5000);
+        (void)waitModified(msgQueue, 5000);
       }
       assert(msgQueue->endOfMsgFlag || List_count(&msgQueue->list) < msgQueue->maxMsgs);
     }
@@ -469,7 +469,7 @@ void MsgQueue_wait(MsgQueue *msgQueue)
     if (!msgQueue->endOfMsgFlag)
     {
       // work-around: wait with timeout to handle lost wake-ups
-      while (!waitModified(msgQueue,5000))
+      while (!waitModified(msgQueue, 5000))
       {
       }
     }

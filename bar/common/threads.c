@@ -420,7 +420,7 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                 timeout.tv_sec += 60;
                 if (pthread_cond_timedwait(&debugThreadStackTraceDone,&debugThreadStackTraceLock,&timeout) != 0)
                 {
-                  // wait for done fail
+                  // wait for done fail -> print info
                   const char *name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
 
                   pthread_mutex_lock(&debugConsoleLock);
@@ -697,6 +697,7 @@ LOCAL void *threadStartCode(void *userData)
   StartInfo *startInfo = (StartInfo*)userData;
   assert(startInfo != NULL);
   assert(startInfo->thread != NULL);
+
   pthread_cleanup_push(threadTerminated,startInfo->thread);
   {
     // try to set thread name

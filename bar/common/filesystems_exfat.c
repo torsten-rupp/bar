@@ -166,30 +166,33 @@ static_assert(sizeof(EXFATEntry) == 32,"sizeof(EXFATEntry) == 32");
 
 /****************************** Macros *********************************/
 
-// read int8/int16/int32 from arbitary memory position
+/* read int8/int16/int32 from arbitary memory position
+   Note: read as little endian value byte by byte and implicit converted
+         to host by compiler
+*/
 #define EXFAT_READ_UINT8(data)  (*((uint8*)(&data)))
-#define EXFAT_READ_UINT16(data) (LE16_TO_HOST(  (((uint16_t)(*((uint8_t*)(&data)+0))) << 0) \
-                                              | (((uint16_t)(*((uint8_t*)(&data)+1))) << 8) \
-                                             ) & 0xFFFF \
-                               )
-#define EXFAT_READ_UINT24(data) LE32_TO_HOST(  (((uint32_t)(*((uint8_t*)(&data)+0))) <<  0) \
-                                             | (((uint32_t)(*((uint8_t*)(&data)+1))) <<  8) \
-                                             | (((uint32_t)(*((uint8_t*)(&data)+2))) << 16) \
-                                            )
-#define EXFAT_READ_UINT32(data) LE32_TO_HOST(  (((uint32_t)(*((uint8_t*)(&data)+0))) <<  0) \
-                                             | (((uint32_t)(*((uint8_t*)(&data)+1))) <<  8) \
-                                             | (((uint32_t)(*((uint8_t*)(&data)+2))) << 16) \
-                                             | (((uint32_t)(*((uint8_t*)(&data)+3))) << 24) \
-                                            )
-#define EXFAT_READ_UINT64(data) LE64_TO_HOST(  (((uint64_t)(*((uint8_t*)(&data)+0))) <<  0) \
-                                             | (((uint64_t)(*((uint8_t*)(&data)+1))) <<  8) \
-                                             | (((uint64_t)(*((uint8_t*)(&data)+2))) << 16) \
-                                             | (((uint64_t)(*((uint8_t*)(&data)+3))) << 24) \
-                                             | (((uint64_t)(*((uint8_t*)(&data)+4))) << 32) \
-                                             | (((uint64_t)(*((uint8_t*)(&data)+5))) << 40) \
-                                             | (((uint64_t)(*((uint8_t*)(&data)+6))) << 48) \
-                                             | (((uint64_t)(*((uint8_t*)(&data)+7))) << 56) \
-                                            )
+#define EXFAT_READ_UINT16(data) ((  (((uint16_t)(*((uint8_t*)(&data)+0))) << 0) \
+                                  | (((uint16_t)(*((uint8_t*)(&data)+1))) << 8) \
+                                 ) & 0xFFFF \
+                                )
+#define EXFAT_READ_UINT24(data) (  (((uint32_t)(*((uint8_t*)(&data)+0))) <<  0) \
+                                 | (((uint32_t)(*((uint8_t*)(&data)+1))) <<  8) \
+                                 | (((uint32_t)(*((uint8_t*)(&data)+2))) << 16) \
+                                )
+#define EXFAT_READ_UINT32(data) (  (((uint32_t)(*((uint8_t*)(&data)+0))) <<  0) \
+                                 | (((uint32_t)(*((uint8_t*)(&data)+1))) <<  8) \
+                                 | (((uint32_t)(*((uint8_t*)(&data)+2))) << 16) \
+                                 | (((uint32_t)(*((uint8_t*)(&data)+3))) << 24) \
+                                )
+#define EXFAT_READ_UINT64(data) (  (((uint64_t)(*((uint8_t*)(&data)+0))) <<  0) \
+                                 | (((uint64_t)(*((uint8_t*)(&data)+1))) <<  8) \
+                                 | (((uint64_t)(*((uint8_t*)(&data)+2))) << 16) \
+                                 | (((uint64_t)(*((uint8_t*)(&data)+3))) << 24) \
+                                 | (((uint64_t)(*((uint8_t*)(&data)+4))) << 32) \
+                                 | (((uint64_t)(*((uint8_t*)(&data)+5))) << 40) \
+                                 | (((uint64_t)(*((uint8_t*)(&data)+6))) << 48) \
+                                 | (((uint64_t)(*((uint8_t*)(&data)+7))) << 56) \
+                                )
 
 // convert from little endian to host system format
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -315,56 +318,60 @@ LOCAL bool EXFAT_readClusterBitmap(DeviceHandle *deviceHandle, EXFATHandle *exfa
   if (error == ERROR_NONE)
   {
     EXFATEntry exfatEntry;
-    uint8      entryType = ENTRY_TYPE_NONE;
+    uint8_t    type = 0;
     do
     {
       error = Device_read(deviceHandle,&exfatEntry,sizeof(exfatEntry),NULL);
       if (error == ERROR_NONE)
       {
-        entryType = EXFAT_READ_UINT8(exfatEntry.type) & ENTRY_TYPE_MASK;
-        switch (entryType)
+        type = EXFAT_READ_UINT8(exfatEntry.type);
+        if ((type & ENTRY_TYPE_IN_USE) == ENTRY_TYPE_IN_USE)
         {
-          case ENTRY_TYPE_BITMAP:
-            {
-              uint64_t offset = sectorToOffset( exfatHandle,exfatHandle->clusterHeapOffset
-                                               +clusterToSector(exfatHandle,(EXFAT_READ_UINT32(exfatEntry.bitmap.startCluster)-CLUSTER_BASE_INDEX))
-                                              );
-              error = Device_seek(deviceHandle,offset);
-              if (error == ERROR_NONE)
+          switch (type & ENTRY_TYPE_MASK)
+          {
+            case ENTRY_TYPE_BITMAP:
               {
-                error = Device_read(deviceHandle,exfatHandle->clusterBitmap.data,(exfatEntry.bitmap.size+7)/8,NULL);
+                uint64_t offset = sectorToOffset( exfatHandle,exfatHandle->clusterHeapOffset
+                                                 +clusterToSector(exfatHandle,(EXFAT_READ_UINT32(exfatEntry.bitmap.startCluster)-CLUSTER_BASE_INDEX))
+                                                );
+                error = Device_seek(deviceHandle,offset);
                 if (error == ERROR_NONE)
                 {
-                  bitmapReadFlag = TRUE;
+                  uint64_t size = MIN(EXFAT_READ_UINT64(exfatEntry.bitmap.size), (uint64_t)exfatHandle->clusterCount);
+                  error = Device_read(deviceHandle,exfatHandle->clusterBitmap.data,(ulong)((size + 7) / 8),NULL);
+                  if (error == ERROR_NONE)
+                  {
+                    bitmapReadFlag = TRUE;
+                  }
                 }
               }
-            }
-            break;
-          case ENTRY_TYPE_UPCASE:
-            break;
-          case ENTRY_TYPE_VOLUME_LABEL:
-            break;
-          case ENTRY_TYPE_FILE_DIRECTORY:
-            break;
-          case ENTRY_TYPE_STREAM_EXTENSION:
-            break;
-          case ENTRY_TYPE_FILE_NAME:
-            break;
-          case ENTRY_TYPE_WINDOWS_CE_ACCESS_CONTROL_LIST:
-            break;
-          case ENTRY_TYPE_VOLUME_GUID:
-            break;
-          case ENTRY_TYPE_TEX_FAT_PADDING:
-            break;
-          case ENTRY_TYPE_WINDWOS_CE_ACCESS_CONTROL_TABLE:
-            break;
-          default:
-            // ignore unknown
-            break;
+              break;
+            case ENTRY_TYPE_UPCASE:
+              break;
+            case ENTRY_TYPE_VOLUME_LABEL:
+              break;
+            case ENTRY_TYPE_FILE_DIRECTORY:
+              break;
+            case ENTRY_TYPE_STREAM_EXTENSION:
+              break;
+            case ENTRY_TYPE_FILE_NAME:
+              break;
+            case ENTRY_TYPE_WINDOWS_CE_ACCESS_CONTROL_LIST:
+              break;
+            case ENTRY_TYPE_VOLUME_GUID:
+              break;
+            case ENTRY_TYPE_TEX_FAT_PADDING:
+              break;
+            case ENTRY_TYPE_WINDWOS_CE_ACCESS_CONTROL_TABLE:
+              break;
+            default:
+              // ignore unknown
+              break;
+          }
         }
       }
     }
-    while ((error == ERROR_NONE) && (exfatEntry.type != 0));
+    while ((error == ERROR_NONE) && (type != 0));
   }
   if ((error != ERROR_NONE) || !bitmapReadFlag)
   {
@@ -435,7 +442,7 @@ LOCAL bool EXFAT_init(DeviceHandle *deviceHandle, FileSystemTypes *fileSystemTyp
 
   // get file system info
   uint16_t bytesPerSector       = 1 << EXFAT_READ_UINT8(exfatBootSector.bytesPerSectorShift);
-  uint8_t  sectorsPerCluster    = 1 << EXFAT_READ_UINT8(exfatBootSector.sectorsPerClusterShift);
+  uint16_t sectorsPerCluster    = 1 << EXFAT_READ_UINT8(exfatBootSector.sectorsPerClusterShift);
   uint64_t totalSectorsCount    = EXFAT_READ_UINT64(exfatBootSector.partitionLength);
   uint32_t clusterHeapOffset    = EXFAT_READ_UINT32(exfatBootSector.clusterHeapOffset);
   uint32_t clusterCount         = EXFAT_READ_UINT32(exfatBootSector.clusterCount);
@@ -522,7 +529,7 @@ LOCAL bool EXFAT_blockIsUsed(DeviceHandle *deviceHandle, EXFATHandle *exfatHandl
   {
     uint32_t cluster = CLUSTER_BASE_INDEX+sectorToCluster(exfatHandle,sector-exfatHandle->clusterHeapOffset);
 //fprintf(stderr,"%s:%d: sector=%llu cluster=%lu clusterHeapOffset=%lu\n",__FILE__,__LINE__,sector,cluster,exfatHandle->clusterHeapOffset);
-    if (cluster <= exfatHandle->clusterCount)
+    if (cluster < (CLUSTER_BASE_INDEX + exfatHandle->clusterCount))
     {
       blockIsUsed = BitSet_isSet(&exfatHandle->clusterBitmap,cluster-CLUSTER_BASE_INDEX);
 #if 0

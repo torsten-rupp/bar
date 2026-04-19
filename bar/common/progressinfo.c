@@ -16,6 +16,7 @@
 #include <assert.h>
 
 #include "common/global.h"
+#include "common/misc.h"
 
 #include "progressinfo.h"
 
@@ -39,8 +40,8 @@
 
 void ProgressInfo_init(ProgressInfo         *progressInfo,
                        ProgressInfo         *parentProgressInfo,
-                       uint                 filterWindowSize,
-                       uint                 reportTime,
+                       size_t               filterWindowSize,
+                       size_t               reportTime,
                        uint64               stepCount,
                        ProgressInitFunction progressInitFunction,
                        void                 *progressInitUserData,
@@ -57,7 +58,7 @@ void ProgressInfo_init(ProgressInfo         *progressInfo,
   progressInfo->parent           = parentProgressInfo;
   if (filterWindowSize > 0)
   {
-    progressInfo->filterTimes = (uint64*)malloc(filterWindowSize*sizeof(uint64));;
+    progressInfo->filterTimes = (uint64*)malloc(filterWindowSize * sizeof(uint64));;
     if (progressInfo->filterTimes == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
@@ -184,10 +185,10 @@ void ProgressInfo_step(void *userData)
         progressInfo->filterTimeSum += estimatedTotalTime;
       }
 
-      uint progress     = (progressInfo->step*1000)/progressInfo->stepCount;
-      uint lastProgress = (progressInfo->lastProgressCount > 0)
-                            ? (uint)(progressInfo->lastProgressSum/(ulong)progressInfo->lastProgressCount)
-                            : 0;
+      size_t progress     = (progressInfo->step * 1000) / progressInfo->stepCount;
+      size_t lastProgress = (progressInfo->lastProgressCount > 0)
+                              ? (size_t)(progressInfo->lastProgressSum/(ulong)progressInfo->lastProgressCount)
+                              : 0;
       if (progress >= (lastProgress+1))
       {
         progressInfo->lastProgressSum   += progress;

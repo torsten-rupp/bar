@@ -92,11 +92,11 @@ typedef struct __StringMap* StringMap;
 
 struct __StringMap
 {
-  uint           size;
+  size_t         size;
   StringMapEntry *entries;
 };
 
-typedef uint StringMapIterator;
+typedef size_t StringMapIterator;
 
 // format/convert value
 typedef String(*StringMapFormatFunction)(void *value, void *userData);
@@ -297,7 +297,7 @@ StringMap StringMap_clear(StringMap stringMap);
 * Notes  : -
 \***********************************************************************/
 
-uint StringMap_count(const StringMap stringMap);
+size_t StringMap_count(const StringMap stringMap);
 
 /***********************************************************************\
 * Name   : StringMap_isEmpty
@@ -309,7 +309,7 @@ uint StringMap_count(const StringMap stringMap);
 \***********************************************************************/
 
 INLINE bool StringMap_isEmpty(const StringMap stringMap);
-#if defined(NDEBUG) || defined(__STRINGLISTS_IMPLEMENTATION__)
+#if defined(NDEBUG) || defined(__STRINGMAPS_IMPLEMENTATION__)
 INLINE bool StringMap_isEmpty(const StringMap stringMap)
 {
   assert(stringMap != NULL);
@@ -328,7 +328,7 @@ INLINE bool StringMap_isEmpty(const StringMap stringMap)
 * Notes  : -
 \***********************************************************************/
 
-const StringMapEntry *StringMap_index(const StringMap stringMap, uint index);
+const StringMapEntry *StringMap_index(const StringMap stringMap, size_t index);
 
 /***********************************************************************\
 * Name   : StringMap_indexName
@@ -340,7 +340,7 @@ const StringMapEntry *StringMap_index(const StringMap stringMap, uint index);
 * Notes  : -
 \***********************************************************************/
 
-const char *StringMap_indexName(const StringMap stringMap, uint index);
+const char *StringMap_indexName(const StringMap stringMap, size_t index);
 
 /***********************************************************************\
 * Name   : StringMap_indexType
@@ -352,7 +352,7 @@ const char *StringMap_indexName(const StringMap stringMap, uint index);
 * Notes  : -
 \***********************************************************************/
 
-StringMapTypes StringMap_indexType(const StringMap stringMap, uint index);
+StringMapTypes StringMap_indexType(const StringMap stringMap, size_t index);
 
 /***********************************************************************\
 * Name   : StringMap_indexValue
@@ -364,7 +364,7 @@ StringMapTypes StringMap_indexType(const StringMap stringMap, uint index);
 * Notes  : -
 \***********************************************************************/
 
-StringMapValue StringMap_indexValue(const StringMap stringMap, uint index);
+StringMapValue StringMap_indexValue(const StringMap stringMap, size_t index);
 
 /***********************************************************************\
 * Name   : StringMap_putText, StringMap_putTextCString
@@ -498,7 +498,7 @@ bool StringMap_getFlag(const StringMap stringMap, const char *name, ulong *data,
 bool StringMap_getEnum(const StringMap stringMap, const char *name, void *data, StringMapParseEnumFunction stringMapParseEnumFunction, void *stringMapParseEnumUserData, uint defaultValue);
 bool StringMap_getEnumSet(const StringMap stringMap, const char *name, uint64 *data, StringMapParseEnumFunction stringMapParseEnumFunction, void *stringMapParseEnumUserData, uint64 allValue, const char *separatorChars, uint64 defaultValue);
 bool StringMap_getChar(const StringMap stringMap, const char *name, char *data, char defaultValue);
-bool StringMap_getCString(const StringMap stringMap, const char *name, char *data, uint maxLength, const char *defaultValue);
+bool StringMap_getCString(const StringMap stringMap, const char *name, char *data, size_t maxLength, const char *defaultValue);
 bool StringMap_getString(const StringMap stringMap, const char *name, String data, const char *defaultValue);
 bool StringMap_getData(const StringMap stringMap, const char *name, void *data, StringMapParseFunction stringMapParseFunction, void *stringMapParseUserData);
 
@@ -636,7 +636,7 @@ String StringMap_debugToString(String string, const StringMap stringMap);
 * Notes  : debug only
 \***********************************************************************/
 
-void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap);
+void StringMap_debugDump(FILE *handle, size_t indent, const StringMap stringMap);
 
 /***********************************************************************\
 * Name   : StringMap_debugPrint
@@ -648,7 +648,7 @@ void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap);
 * Notes  : debug onlyn
 \***********************************************************************/
 
-void StringMap_debugPrint(uint indent, const StringMap stringMap);
+void StringMap_debugPrint(size_t indent, const StringMap stringMap);
 
 #endif /* not NDEBUG */
 
