@@ -418,9 +418,9 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                 struct timespec timeout;
                 clock_gettime(CLOCK_REALTIME,&timeout);
                 timeout.tv_sec += 30;
-                if (pthread_cond_timedwait(&debugThreadStackTraceDone,&debugThreadStackTraceLock,&timeout) == 0)
+                if (pthread_cond_timedwait(&debugThreadStackTraceDone,&debugThreadStackTraceLock,&timeout) != 0)
                 {
-                  // wait for done fail
+                  // wait for done fail -> print info
                   const char *name = debugThreadStackTraceGetThreadName(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id);
 
                   pthread_mutex_lock(&debugConsoleLock);
@@ -437,15 +437,6 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                     debugDumpStackTraceOutput(stderr,0,type,"  not available (terminate failed)\n");
                   }
                   pthread_mutex_unlock(&debugConsoleLock);
-                }
-                else
-                {
-                  fprintf(stderr,
-                          "Warning: process signal QUIT by thread %s failed (error %d: %s)",
-                          Thread_getIdString(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id),
-                          errno,
-                          strerror(errno)
-                         );
                 }
               }
               else
