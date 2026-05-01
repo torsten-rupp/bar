@@ -1850,25 +1850,22 @@ bool CmdOption_parseDeprecatedBooleanOption(void       *variable,
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  if (variable != NULL)
+  if      (   (value == NULL)
+           || stringEquals(value,"1")
+           || stringEqualsIgnoreCase(value,"true")
+           || stringEqualsIgnoreCase(value,"on")
+           || stringEqualsIgnoreCase(value,"yes")
+          )
   {
-    if      (   (value == NULL)
-             || stringEquals(value,"1")
-             || stringEqualsIgnoreCase(value,"true")
-             || stringEqualsIgnoreCase(value,"on")
-             || stringEqualsIgnoreCase(value,"yes")
-            )
-    {
-      (*((bool*)variable)) = TRUE;
-    }
-    else if (   stringEquals(value,"0")
-             || stringEqualsIgnoreCase(value,"false")
-             || stringEqualsIgnoreCase(value,"off")
-             || stringEqualsIgnoreCase(value,"no")
-            )
-    {
-      (*((bool*)variable)) = FALSE;
-    }
+    (*((bool*)variable)) = TRUE;
+  }
+  else if (   stringEquals(value,"0")
+           || stringEqualsIgnoreCase(value,"false")
+           || stringEqualsIgnoreCase(value,"off")
+           || stringEqualsIgnoreCase(value,"no")
+          )
+  {
+    (*((bool*)variable)) = FALSE;
   }
 
   return TRUE;
