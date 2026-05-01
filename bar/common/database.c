@@ -2668,21 +2668,24 @@ LOCAL Errors mariaDBConnect(MYSQL          **handle,
   {
     bool b;
     uint u;
-  }      optionValue;
+  } optionValue;
   optionValue.b = TRUE;
   mysql_options(*handle,MYSQL_OPT_RECONNECT,&optionValue);
   optionValue.u = MARIADB_TIMEOUT;
   mysql_options(*handle,MYSQL_OPT_READ_TIMEOUT,&optionValue);
   mysql_options(*handle,MYSQL_OPT_WRITE_TIMEOUT,&optionValue);
+  optionValue.u = 0;
+  mysql_options(*handle, MYSQL_OPT_SSL_ENFORCE, &optionValue);
+  mysql_options(*handle, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &optionValue);
 
   // connect
   error = ERROR_UNKNOWN;
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
-    if (error != ERROR_NONE)
+    if ((error == ERROR_UNKNOWN) || (Error_getCode(error) == ERROR_CODE_CONNECT_FAIL))
     {
       if (mysql_real_connect(*handle,
-                             serverName,
+NULL,//                             serverName,
                              userName,
                              plainPassword,
                              NULL,  // databaseName
@@ -2694,8 +2697,42 @@ LOCAL Errors mariaDBConnect(MYSQL          **handle,
       {
         error = ERROR_NONE;
       }
+      else
+      {
+        uint errorCode = mysql_errno(*handle);
+fprintf(stderr,"%s:%d: errorCode=%d\n",__FILE__,__LINE__,errorCode);
+        switch (errorCode)
+        {
+          case ER_DBACCESS_DENIED_ERROR:
+          case ER_ACCESS_DENIED_ERROR:
+          case CR_SECURE_AUTH:
+            error = ERRORX_(INVALID_PASSWORD_,
+                            errorCode,
+                            "%s",
+                            mysql_error(*handle)
+                           );
+            break;
+          case CR_SOCKET_CREATE_ERROR:
+          case CR_CONNECTION_ERROR:
+          case CR_CONN_HOST_ERROR:
+          case CR_UNKNOWN_HOST:
+            error = ERRORX_(CONNECT_FAIL,
+                            errorCode,
+                            "%s",
+                            mysql_error(*handle)
+                           );
+            break;
+          default:
+            error = ERRORX_(DATABASE,
+                            errorCode,
+                            "%s",
+                            mysql_error(*handle)
+                           );
+            break;
+        }
+      }
     }
-    if (error != ERROR_NONE)
+    if ((error == ERROR_UNKNOWN) || (Error_getCode(error) == ERROR_CODE_CONNECT_FAIL))
     {
       if (mysql_real_connect(*handle,
                              serverName,
@@ -2709,6 +2746,39 @@ LOCAL Errors mariaDBConnect(MYSQL          **handle,
          )
       {
         error = ERROR_NONE;
+      }
+      else
+      {
+        uint errorCode = mysql_errno(*handle);
+        switch (errorCode)
+        {
+          case ER_DBACCESS_DENIED_ERROR:
+          case ER_ACCESS_DENIED_ERROR:
+          case CR_SECURE_AUTH:
+            error = ERRORX_(INVALID_PASSWORD_,
+                            errorCode,
+                            "%s",
+                            mysql_error(*handle)
+                           );
+            break;
+          case CR_SOCKET_CREATE_ERROR:
+          case CR_CONNECTION_ERROR:
+          case CR_CONN_HOST_ERROR:
+          case CR_UNKNOWN_HOST:
+            error = ERRORX_(CONNECT_FAIL,
+                            errorCode,
+                            "%s",
+                            mysql_error(*handle)
+                           );
+            break;
+          default:
+            error = ERRORX_(DATABASE,
+                            errorCode,
+                            "%s",
+                            mysql_error(*handle)
+                           );
+            break;
+        }
       }
     }
     if (error != ERROR_NONE)
