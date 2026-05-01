@@ -148,14 +148,15 @@ LOCAL bool       xhelpFlag                            = FALSE;
 
 LOCAL bool cmdOptionParseJobsUUIDIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(variable);
+  assert(variable != NULL);
+
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  infoUUIDsFlag = TRUE;
+  (*(bool*)variable) = TRUE;
 
   if (value != NULL)
   {
@@ -191,14 +192,15 @@ LOCAL bool cmdOptionParseJobsUUIDIds(void *variable, const char *name, const cha
 
 LOCAL bool cmdOptionParseEntityIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(variable);
+  assert(variable != NULL);
+
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  infoEntitiesFlag = TRUE;
+  (*(bool*)variable) = TRUE;
 
   if (value != NULL)
   {
@@ -230,14 +232,15 @@ LOCAL bool cmdOptionParseEntityIds(void *variable, const char *name, const char 
 
 LOCAL bool cmdOptionParseEntryIdsName(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(variable);
+  assert(variable != NULL);
+
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  infoEntriesFlag = TRUE;
+  (*(bool*)variable) = TRUE;
 
   if (value != NULL)
   {
@@ -273,14 +276,15 @@ LOCAL bool cmdOptionParseEntryIdsName(void *variable, const char *name, const ch
 
 LOCAL bool cmdOptionParseLostEntryIdsName(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(variable);
+  assert(variable != NULL);
+
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  infoLostEntriesFlag = TRUE;
+  (*(bool*)variable) = TRUE;
 
   if (value != NULL)
   {
@@ -316,14 +320,15 @@ LOCAL bool cmdOptionParseLostEntryIdsName(void *variable, const char *name, cons
 
 LOCAL bool cmdOptionParseStorageIdsName(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(variable);
+  assert(variable != NULL);
+
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  infoStoragesFlag = TRUE;
+  (*(bool*)variable) = TRUE;
 
   if (value != NULL)
   {
@@ -359,14 +364,15 @@ LOCAL bool cmdOptionParseStorageIdsName(void *variable, const char *name, const 
 
 LOCAL bool cmdOptionParseCreateNewestIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(variable);
+  assert(variable != NULL);
+
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  createNewestFlag = TRUE;
+  (*(bool*)variable) = TRUE;
 
   if (value != NULL)
   {
@@ -398,14 +404,15 @@ LOCAL bool cmdOptionParseCreateNewestIds(void *variable, const char *name, const
 
 LOCAL bool cmdOptionParseCreateAggregateEntityIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(variable);
+  assert(variable != NULL);
+
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  createAggregatesEntitiesFlag = TRUE;
+  (*(bool*)variable) = TRUE;
 
   if (value != NULL)
   {
@@ -437,14 +444,15 @@ LOCAL bool cmdOptionParseCreateAggregateEntityIds(void *variable, const char *na
 
 LOCAL bool cmdOptionParseCreateAggregateStorageIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(variable);
+  assert(variable != NULL);
+
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  createAggregatesStoragesFlag = TRUE;
+  (*(bool*)variable) = TRUE;
 
   if (value != NULL)
   {
@@ -476,14 +484,15 @@ LOCAL bool cmdOptionParseCreateAggregateStorageIds(void *variable, const char *n
 
 LOCAL bool cmdOptionParseCreateAggregateIds(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(variable);
+  assert(variable != NULL);
+
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(defaultValue);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  createAggregatesFlag = TRUE;
+  (*(bool*)variable) = TRUE;
 
   if (value != NULL)
   {
@@ -515,7 +524,8 @@ LOCAL bool cmdOptionParseCreateAggregateIds(void *variable, const char *name, co
 
 LOCAL bool cmdOptionParseVerbose(void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize, void *userData)
 {
-  UNUSED_VARIABLE(variable);
+  assert(variable != NULL);
+
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(value);
   UNUSED_VARIABLE(defaultValue);
@@ -523,7 +533,7 @@ LOCAL bool cmdOptionParseVerbose(void *variable, const char *name, const char *v
   UNUSED_VARIABLE(errorMessageSize);
   UNUSED_VARIABLE(userData);
 
-  quietFlag = FALSE;
+  (*(bool*)variable) = FALSE;
 
   return TRUE;
 }
@@ -561,7 +571,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("create-triggers",                   0,  0,0,createTriggersFlag,                                                                      "re-create triggers"                                              ),
   CMD_OPTION_BOOLEAN      ("create-indices",                    0,  0,0,createIndicesFlag,                                                                       "re-create indices"                                               ),
   CMD_OPTION_BOOLEAN      ("create-fts-indices",                0,  0,0,createFTSIndicesFlag,                                                                    "re-create FTS indices (full text search)"                        ),
-  CMD_OPTION_SPECIAL      ("create-newest",                     0,  0,1,&uuidIds,                        cmdOptionParseCreateNewestIds,NULL,0,                   "re-create newest data","id"                                      ),
+  CMD_OPTION_SPECIAL      ("create-newest",                     0,  0,1,&createNewestFlag,               cmdOptionParseCreateNewestIds,NULL,0,                   "re-create newest data","id"                                      ),
   CMD_OPTION_SPECIAL      ("create-aggregates-entities",        0,  0,1,&createAggregatesEntitiesFlag,   cmdOptionParseCreateAggregateEntityIds,NULL,0,          "re-create aggregated data entities","entity id"                  ),
   CMD_OPTION_SPECIAL      ("create-aggregates-storages",        0,  0,1,&createAggregatesStoragesFlag,   cmdOptionParseCreateAggregateStorageIds,NULL,0,         "re-create aggregated data storages","storage id"                 ),
   CMD_OPTION_SPECIAL      ("create-aggregates",                 0,  0,1,&createAggregatesFlag,           cmdOptionParseCreateAggregateIds,NULL,0,                "re-create aggregated data","id"                                  ),
@@ -598,10 +608,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] = CMD_VALUE_ARRAY
   CMD_OPTION_BOOLEAN      ("help",                              'h',0,0,helpFlag,                                                                                "print this help"                                                 ),
   CMD_OPTION_BOOLEAN      ("xhelp",                             0,  0,0,xhelpFlag,                                                                               "print help to extended options"                                  ),
 
-  CMD_OPTION_DEPRECATED   ("verbose",                           0,  0,0,&verboseFlag,                        cmdOptionParseVerbose,NULL,1,                       "quiet"                                                           ),
-  CMD_OPTION_DEPRECATED   ("create-indizes",                    0,  0,0,&createIndicesFlag,                  CmdOption_parseDeprecatedBooleanOption,NULL,1,      "create-indices"                                                  ),
-  CMD_OPTION_DEPRECATED   ("create-fts-indizes",                0,  0,0,&createFTSIndicesFlag,               CmdOption_parseDeprecatedBooleanOption,NULL,1,      "create-fts-indices"                                              ),
-  CMD_OPTION_DEPRECATED   ("drop-indizes",                      0,  1,0,&dropIndicesFlag,                    CmdOption_parseDeprecatedBooleanOption,NULL,1,      "drop-indices"                                                    ),
+  CMD_OPTION_DEPRECATED   ("verbose",                           0,  0,0,&verboseFlag,                    cmdOptionParseVerbose,NULL,1,                       "quiet"                                                           ),
+  CMD_OPTION_DEPRECATED   ("create-indizes",                    0,  0,0,&createIndicesFlag,              CmdOption_parseDeprecatedBooleanOption,NULL,1,      "create-indices"                                                  ),
+  CMD_OPTION_DEPRECATED   ("create-fts-indizes",                0,  0,0,&createFTSIndicesFlag,           CmdOption_parseDeprecatedBooleanOption,NULL,1,      "create-fts-indices"                                              ),
+  CMD_OPTION_DEPRECATED   ("drop-indizes",                      0,  1,0,&dropIndicesFlag,                CmdOption_parseDeprecatedBooleanOption,NULL,1,      "drop-indices"                                                    ),
 );
 
 LOCAL ulong outputProgressCount;
@@ -1356,10 +1366,10 @@ LOCAL void outputProgressDone(ulong totalTime,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void outputProgressInfo(uint  progress,
-                              ulong estimatedTotalTime,
-                              ulong estimatedRestTime,
-                              void  *userData
+LOCAL void outputProgressInfo(uint64 progress,
+                              ulong  estimatedTotalTime,
+                              ulong  estimatedRestTime,
+                              void   *userData
                              )
 {
   const char *WHEEL = "|/-\\";
@@ -1417,10 +1427,10 @@ LOCAL void outputProgressInfo(uint  progress,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void formatProgressInfo(uint  progress,
-                              ulong estimatedTotalTime,
-                              ulong estimatedRestTime,
-                              void  *userData
+LOCAL void formatProgressInfo(uint64 progress,
+                              ulong  estimatedTotalTime,
+                              ulong  estimatedRestTime,
+                              void   *userData
                              )
 {
   UNUSED_VARIABLE(estimatedTotalTime);
@@ -1777,7 +1787,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned file entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (ulong)n;
+  totalCount += (size_t)n;
   printInfo("  image entries without fragments...   ");
   error = Database_getUInt(databaseHandle,
                            &n,
@@ -1803,7 +1813,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError(_("orphaned image entries check fail (error: %s)!"),Error_getText(error));
   }
-  totalCount += (uint64)n;
+  totalCount += (size_t)n;
   printInfo("  hardlink entries without fragments...");
   error = Database_getUInt(databaseHandle,
                            &n,
@@ -1822,7 +1832,7 @@ LOCAL ulong checkOrphanedEntries(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    printInfo("%"PRIi64"\n",n);
+    printInfo("%u\n",n);
   }
   else
   {
@@ -3096,33 +3106,33 @@ LOCAL Errors createFTSIndices(DatabaseHandle *databaseHandle)
         if (error == ERROR_NONE)
         {
             error = Database_insertSelect(databaseHandle,
-                                        NULL,  // changedRowCount
-                                        "FTS_storages",
-                                        DATABASE_FLAG_IGNORE,
-                                        DATABASE_COLUMNS
-                                        (
-                                          DATABASE_COLUMN_KEY   ("storageId"),
-                                          DATABASE_COLUMN_STRING("name")
-                                        ),
-                                        DATABASE_TABLES
-                                        (
-                                          "storages"
-                                        ),
-                                        DATABASE_COLUMNS
-                                        (
-                                          DATABASE_COLUMN_KEY   ("id"),
-                                          DATABASE_COLUMN_STRING("name")
-                                        ),
-                                        "storages.deletedFlag!=TRUE \
-                                        ",
-                                        DATABASE_FILTERS
-                                        (
-                                        ),
-                                        NULL,  // groupBy
-                                        NULL,  // orderBy
-                                        0LL,
-                                        DATABASE_UNLIMITED
-                                       );
+                                          NULL,  // changedRowCount
+                                          "FTS_storages",
+                                          DATABASE_FLAG_IGNORE,
+                                          DATABASE_COLUMNS
+                                          (
+                                            DATABASE_COLUMN_KEY   ("storageId"),
+                                            DATABASE_COLUMN_STRING("name")
+                                          ),
+                                          DATABASE_TABLES
+                                          (
+                                            "storages"
+                                          ),
+                                          DATABASE_COLUMNS
+                                          (
+                                            DATABASE_COLUMN_KEY   ("id"),
+                                            DATABASE_COLUMN_STRING("name")
+                                          ),
+                                          "storages.deletedFlag!=TRUE \
+                                          ",
+                                          DATABASE_FILTERS
+                                          (
+                                          ),
+                                          NULL,  // groupBy
+                                          NULL,  // orderBy
+                                          0LL,
+                                          DATABASE_UNLIMITED
+                                         );
           ProgressInfo_step(&progressInfo);
         }
         if (error == ERROR_NONE)
@@ -3972,6 +3982,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                            (
                              DATABASE_COLUMN_KEY     ("entries.id"),
                              DATABASE_COLUMN_KEY     ("entries.uuidId"),
+                             DATABASE_COLUMN_KEY     ("entries.entityId"),
                              DATABASE_COLUMN_UINT    ("entries.type"),
                              DATABASE_COLUMN_DATETIME("entries.timeLastChanged"),
                              DATABASE_COLUMN_UINT    ("entries.userId"),
@@ -4021,7 +4032,7 @@ LOCAL Errors removeFromNewest(DatabaseHandle *databaseHandle,
                               DATABASE_FLAG_REPLACE,
                               DATABASE_VALUES
                               (
-                                DATABASE_VALUE_STRING("entryId",        entryNode->newest.entryId),
+                                DATABASE_VALUE_KEY   ("entryId",        entryNode->newest.entryId),
                                 DATABASE_VALUE_KEY   ("uuidId",         entryNode->newest.uuidId),
                                 DATABASE_VALUE_KEY   ("entityId",       entryNode->newest.entityId),
                                 DATABASE_VALUE_UINT  ("type",           entryNode->newest.indexType),
@@ -4941,7 +4952,7 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
                                                 "directoryEntries.storageId=?",
                                                 DATABASE_FILTERS
                                                 (
-                                                  DATABASE_FILTER_KEY (storageId),
+                                                  DATABASE_FILTER_KEY (storageId)
                                                 ),
                                                 NULL,  // groupBy
                                                 NULL,  // orderBy
@@ -4982,7 +4993,7 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
                                                 "linkEntries.storageId=?",
                                                 DATABASE_FILTERS
                                                 (
-                                                  DATABASE_FILTER_KEY (storageId),
+                                                  DATABASE_FILTER_KEY (storageId)
                                                 ),
                                                 NULL,  // groupBy
                                                 NULL,  // orderBy
@@ -5069,7 +5080,7 @@ LOCAL Errors createAggregatesStorages(DatabaseHandle *databaseHandle, const Arra
                                                 "specialEntries.storageId=?",
                                                 DATABASE_FILTERS
                                                 (
-                                                  DATABASE_FILTER_KEY (storageId),
+                                                  DATABASE_FILTER_KEY (storageId)
                                                 ),
                                                 NULL,  // groupBy
                                                 NULL,  // orderBy
@@ -6188,8 +6199,6 @@ LOCAL Errors cleanOrphanedEntries(DatabaseHandle *databaseHandle)
                               DATABASE_FILTER_KEY(entryNode->entryId)
                             )
                            );
-
-                           n++;
   }
   List_done(&entryList);
   if (error != ERROR_NONE)
@@ -7993,7 +8002,6 @@ LOCAL Errors getColumnWidths(const DatabaseValue values[], uint valueCount, void
 LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userData)
 {
   PrintRowData *printRowData = (PrintRowData*)userData;
-  uint         i;
 
   assert(values != NULL);
 
@@ -8001,12 +8009,10 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
 
   if ((printRowData != NULL) && printRowData->showHeaderFlag && !printRowData->printedHeaderFlag)
   {
-    uint n;
-
     assert(printRowData->widths != NULL);
 
-    n = 0;
-    for (i = 0; i < valueCount; i++)
+    uint n = 0;
+    for (size_t i = 0; i < valueCount; i++)
     {
       if (i > 0)
       {
@@ -8022,13 +8028,11 @@ LOCAL Errors printRow(const DatabaseValue values[], uint valueCount, void *userD
     printRowData->printedHeaderFlag = TRUE;
   }
 
-  for (i = 0; i < valueCount; i++)
+  for (size_t i = 0; i < valueCount; i++)
   {
+    const char *s = NULL;
     char       buffer[64];
-    const char *s;
     size_t     n;
-
-    s = NULL;
     switch (values[i].type)
     {
       case DATABASE_DATATYPE_NONE:        break;
@@ -9408,10 +9412,6 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array *storag
   const char *STATE_TEXT[] = {"","OK","create","update requested","update","error"};
   const char *MODE_TEXT [] = {"manual","auto"};
 
-// TODO:
-#define INDEX_CONST_MODE_MANUAL 0
-#define INDEX_CONST_MODE_AUTO 1
-
   Errors error;
 
   String     storageIdsString = String_new();
@@ -9467,7 +9467,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array *storag
                                                 ulong      totalImageCount     = values[18].u;
                                                 uint64     totalImageSize      = values[19].u64;
                                                 ulong      totalDirectoryCount = values[20].u;
-                                                ulong      totalLinkCount      = values[21].u64;
+                                                ulong      totalLinkCount      = values[21].u;
                                                 ulong      totalHardlinkCount  = values[22].u;
                                                 uint64     totalHardlinkSize   = values[23].u64;
                                                 ulong      totalSpecialCount   = values[24].u;
