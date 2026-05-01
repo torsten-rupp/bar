@@ -903,10 +903,10 @@ LOCAL void outputProgressDone(ulong totalTime,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void outputProgressInfo(uint  progress,
-                              ulong estimatedTotalTime,
-                              ulong estimatedRestTime,
-                              void  *userData
+LOCAL void outputProgressInfo(uint64 progress,
+                              ulong  estimatedTotalTime,
+                              ulong  estimatedRestTime,
+                              void   *userData
                              )
 {
   const char *WHEEL = "|/-\\";
@@ -954,10 +954,10 @@ LOCAL void outputProgressInfo(uint  progress,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void formatProgressInfo(uint  progress,
-                              ulong estimatedTotalTime,
-                              ulong estimatedRestTime,
-                              void  *userData
+LOCAL void formatProgressInfo(uint64 progress,
+                              ulong  estimatedTotalTime,
+                              ulong  estimatedRestTime,
+                              void   *userData
                              )
 {
   UNUSED_VARIABLE(estimatedTotalTime);
@@ -1100,7 +1100,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseURI)
                     maxSteps,
                     CALLBACK_(NULL,NULL),
                     CALLBACK_(NULL,NULL),
-                    CALLBACK_INLINE(void,(uint progress, ulong estimatedTotalTime, ulong estimatedRestTime, void *userData),
+                    CALLBACK_INLINE(void,(uint64 progress, ulong estimatedTotalTime, ulong estimatedRestTime, void *userData),
                     {
                        UNUSED_VARIABLE(estimatedTotalTime);
                        UNUSED_VARIABLE(userData);
