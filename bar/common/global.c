@@ -1282,25 +1282,22 @@ void debugDumpStackTraceOutput(FILE                           *handle,
                                ...
                               )
 {
-  static va_list arguments;
-  static uint    i;
-  static char    buffer[1024];
-  static uint    n;
-
-  assert(indent < sizeof(buffer));
   assert(format != NULL);
 
   // get indention
+  static char buffer[1024];
+  assert(indent < sizeof(buffer));
   memset(buffer,' ',indent);
 
   // format string
+  static va_list arguments;
   va_start(arguments,format);
-  n = indent+(uint)vsnprintf(&buffer[indent],sizeof(buffer)-indent,format,arguments);
+  size_t n = indent+(uint)vsnprintf(&buffer[indent],sizeof(buffer)-indent,format,arguments);
   va_end(arguments);
 
   // output
   fwrite(buffer,n,1,handle);
-  for (i = 0; i < debugDumpStackTraceOutputHandlerCount; i++)
+  for (size_t i = 0; i < debugDumpStackTraceOutputHandlerCount; i++)
   {
     if (type >= debugDumpStackTraceOutputHandlers[i].type)
     {
@@ -1317,22 +1314,13 @@ void debugDumpStackTrace(FILE                           *handle,
                          uint                           skipFrameCount
                         )
 {
-  #ifdef HAVE_BFD_INIT
-    char                 executableName[PATH_MAX];
-    ssize_t              n;
-    StackTraceOutputInfo stackTraceOutputInfo;
-  #elif HAVE_BACKTRACE_SYMBOLS
-    const char **functionNames;
-    uint       i;
-  #else /* not HAVE_... */
-  #endif /* HAVE_... */
-
   assert(handle != NULL);
   assert(stackTrace != NULL);
 
   #ifdef HAVE_BFD_INIT
     // get executable name
-    n = readlink("/proc/self/exe",executableName,sizeof(executableName)-1);
+    char executableName[PATH_MAX];
+    ssize_t n = readlink("/proc/self/exe",executableName,sizeof(executableName)-1);
     if ((n == -1) || ((size_t)n >= sizeof(executableName)))
     {
       return;
@@ -1340,6 +1328,7 @@ void debugDumpStackTrace(FILE                           *handle,
     executableName[n] = '\0';
 
     // output stack trace
+    StackTraceOutputInfo stackTraceOutputInfo;
     stackTraceOutputInfo.handle         = handle;
     stackTraceOutputInfo.indent         = indent;
     stackTraceOutputInfo.type           = type;
@@ -1354,14 +1343,14 @@ void debugDumpStackTrace(FILE                           *handle,
                             );
   #elif HAVE_BACKTRACE_SYMBOLS
     // get function names
-    functionNames = (const char **)backtrace_symbols((void *const*)stackTrace,stackTraceSize);
+    const char **functionNames = (const char **)backtrace_symbols((void *const*)stackTrace,stackTraceSize);
     if (functionNames == NULL)
     {
       return;
     }
 
     // output stack trace
-    for (i = 1+skipFrameCount; i < stackTraceSize; i++)
+    for (size_t i = 1+skipFrameCount; i < stackTraceSize; i++)
     {
       debugDumpStackTraceOutput(handle,indent,type,"  %2d 0x%016"PRIxPTR": %s\n",i,(uintptr_t)stackTrace[i],functionNames[i]);
     }
@@ -1380,29 +1369,21 @@ void debugDumpCurrentStackTrace(FILE                           *handle,
                                 uint                           skipFrameCount
                                )
 {
-  #if defined(HAVE_BACKTRACE)
-    const int MAX_STACK_TRACE_SIZE = 256;
-
-    void const** currentStackTrace;
-    int          currentStackTraceSize;
-  #else /* not defined(HAVE_BACKTRACE) */
-    uint i;
-  #endif /* defined(HAVE_BACKTRACE) */
-
   assert(handle != NULL);
 
   #if defined(HAVE_BACKTRACE)
-    currentStackTrace = (void const**)malloc(sizeof(void*)*MAX_STACK_TRACE_SIZE);
+    const int MAX_STACK_TRACE_SIZE = 256;
+    void const** currentStackTrace = (void const**)malloc(sizeof(void*)*MAX_STACK_TRACE_SIZE);
     if (currentStackTrace == NULL) return;
 
-    currentStackTraceSize = getStackTrace(currentStackTrace,MAX_STACK_TRACE_SIZE);
+    size_t currentStackTraceSize = getStackTrace(currentStackTrace,MAX_STACK_TRACE_SIZE);
     debugDumpStackTrace(handle,indent,type,currentStackTrace,currentStackTraceSize,1+skipFrameCount);
 
     free(currentStackTrace);
   #else /* not defined(HAVE_BACKTRACE) */
     UNUSED_VARIABLE(skipFrameCount);
 
-    for (i = 0; i < indent; i++) fputc(' ',handle);
+    for (size_t i = 0; i < indent; i++) fputc(' ',handle);
     debugDumpStackTraceOutput(handle,indent,type,"  not available\n");
   #endif /* defined(HAVE_BACKTRACE) */
 }
@@ -1414,23 +1395,20 @@ void debugPrintStackTrace(void)
 
 void debugDumpMemory(const void *address, uint length, bool printAddress)
 {
-  const byte *p;
-  uint       z,j;
-
   assert(address != NULL);
 
-  z = 0;
-  while (z < length)
+  size_t i = 0;
+  while (i < length)
   {
-    p = (const byte*)address+z;
+    const byte *p = (const byte*)address+i;
     if (printAddress) fprintf(stderr,"%08lx:",(intptr_t)p);
     fprintf(stderr,"%08lx  ",(unsigned long)(p-(byte*)address));
 
-    for (j = 0; j < 16; j++)
+    for (size_t j = 0; j < 16; j++)
     {
-      if ((z+j) < length)
+      if ((i+j) < length)
       {
-        p = (const byte*)address+z+j;
+        p = (const byte*)address+i+j;
         fprintf(stderr,"%02x ",((uint)(*p)) & 0xFF);
       }
       else
@@ -1440,12 +1418,12 @@ void debugDumpMemory(const void *address, uint length, bool printAddress)
     }
     fprintf(stderr,"  ");
 
-    for (j = 0; j < 16; j++)
+    for (size_t j = 0; j < 16; j++)
     {
-      if ((z+j) < length)
+      if ((i+j) < length)
       {
-        p = (const byte*)address+z+j;
-        fprintf(stderr,"%c",isprint((int)(*p))?(*p):'.');
+        p = (const byte*)address+i+j;
+        fprintf(stderr,"%c",isprint((int)(*p)) ? (*p) : '.');
       }
       else
       {
@@ -1453,7 +1431,7 @@ void debugDumpMemory(const void *address, uint length, bool printAddress)
     }
     fprintf(stderr,"\n");
 
-    z += 16;
+    i += 16;
   }
 }
 
