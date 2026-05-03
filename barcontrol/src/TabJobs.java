@@ -5209,7 +5209,7 @@ public class TabJobs
           widgetByteCompressAlgorithmLevel.setEnabled(true);
           widgetByteCompressAlgorithmLevel.setToolTipText(BARControl.tr("Byte compression level to use."));
           Widgets.setComboItems(widgetByteCompressAlgorithmLevel,new String[]{" ","none"});
-          Widgets.layout(widgetByteCompressAlgorithmLevel,0,3,TableLayoutData.W);
+          Widgets.layout(widgetByteCompressAlgorithmLevel,0,3,TableLayoutData.W,0,0,0,0,50,SWT.DEFAULT);
           widgetByteCompressAlgorithmLevel.addSelectionListener(new SelectionListener()
           {
             @Override
