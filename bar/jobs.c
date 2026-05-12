@@ -101,57 +101,57 @@ LOCAL bool equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleN
       || (scheduleNode1->date.day   != scheduleNode2->date.day  )
      )
   {
-    return 0;
+    return FALSE;
   }
 
   if (scheduleNode1->weekDaySet != scheduleNode2->weekDaySet)
   {
-    return 0;
+    return FALSE;
   }
 
   if (   (scheduleNode1->time.hour   != scheduleNode2->time.hour )
       || (scheduleNode1->time.minute != scheduleNode2->time.minute)
      )
   {
-    return 0;
+    return FALSE;
   }
 
   if (scheduleNode1->archiveType != scheduleNode2->archiveType)
   {
-    return 0;
+    return FALSE;
   }
 
   if (scheduleNode1->interval != scheduleNode2->interval)
   {
-    return 0;
+    return FALSE;
   }
 
   if (!String_equals(scheduleNode1->customText,scheduleNode2->customText))
   {
-    return 0;
+    return FALSE;
   }
 
   if (scheduleNode1->minKeep != scheduleNode2->minKeep)
   {
-    return 0;
+    return FALSE;
   }
 
   if (scheduleNode1->maxKeep != scheduleNode2->maxKeep)
   {
-    return 0;
+    return FALSE;
   }
 
   if (scheduleNode1->maxAge != scheduleNode2->maxAge)
   {
-    return 0;
+    return FALSE;
   }
 
   if (scheduleNode1->noStorage != scheduleNode2->noStorage)
   {
-    return 0;
+    return FALSE;
   }
 
-  return 1;
+  return TRUE;
 }
 #endif
 
@@ -1362,6 +1362,10 @@ JobNode *Job_copy(const JobNode *jobNode,
   newJobNode->jobType                          = jobNode->jobType;
 
   newJobNode->modifiedFlag                     = TRUE;
+  newJobNode->includeExcludeModifiedFlag       = FALSE;
+  newJobNode->mountModifiedFlag                = FALSE;
+  newJobNode->scheduleModifiedFlag             = FALSE;
+  newJobNode->persistenceModifiedFlag          = FALSE;
 
   newJobNode->lastScheduleCheckDateTime        = 0LL;
 
@@ -1446,8 +1450,6 @@ bool Job_isSomeRunning(void)
 
 bool Job_parseState(const char *name, JobStates *jobState, bool *noStorage, bool *dryRun)
 {
-  assert(name != NULL);
-
   assert(name != NULL);
   assert(jobState != NULL);
 
@@ -1771,12 +1773,6 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
 
     // close file
     File_close(&fileHandle);
-
-    if (error != ERROR_NONE)
-    {
-      String_delete(fileName);
-      return error;
-    }
   }
 
   // set max. last schedule check date/time
@@ -2253,7 +2249,7 @@ bool Job_read(JobNode *jobNode)
                           &commentList
                          );
 
-        hasDeprecated = (JOB_CONFIG_VALUES[i].type == CONFIG_VALUE_TYPE_DEPRECATED);
+        hasDeprecated |= (JOB_CONFIG_VALUES[i].type == CONFIG_VALUE_TYPE_DEPRECATED);
       }
       else
       {
@@ -2603,7 +2599,6 @@ void Job_trigger(JobNode      *jobNode,
     String_clear(jobNode->abortedByInfo);
     jobNode->volumeNumber          = 0;
     jobNode->volumeUnloadFlag      = FALSE;
-    Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
     // reset running info
     resetRunningInfo(&jobNode->runningInfo);
@@ -2697,6 +2692,7 @@ void Job_abort(JobNode *jobNode, const char *abortedByInfo)
   {
     jobNode->jobState = JOB_STATE_NONE;
   }
+  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 }
 
 void Job_reset(JobNode *jobNode)
@@ -2793,14 +2789,12 @@ void Job_initOptions(JobOptions *jobOptions)
 
   jobOptions->fragmentSize                              = globalOptions.fragmentSize;
   jobOptions->maxStorageSize                            = globalOptions.maxStorageSize;
-  jobOptions->skipUnreadableFlag                        = globalOptions.skipUnreadableFlag;
-
-  jobOptions->testCreatedArchivesFlag                   = globalOptions.testCreatedArchivesFlag;
 
   jobOptions->volumeSize                                = globalOptions.volumeSize;
 
   jobOptions->comment                                   = String_duplicate(globalOptions.comment);
 
+  jobOptions->testCreatedArchivesFlag                   = globalOptions.testCreatedArchivesFlag;
   jobOptions->skipUnreadableFlag                        = globalOptions.skipUnreadableFlag;
   jobOptions->forceDeltaCompressionFlag                 = globalOptions.forceDeltaCompressionFlag;
   jobOptions->ignoreNoDumpAttributeFlag                 = globalOptions.ignoreNoDumpAttributeFlag;
@@ -2897,11 +2891,7 @@ void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   {
     jobOptions->cryptAlgorithms[i] = fromJobOptions->cryptAlgorithms[i];
   }
-  #ifdef HAVE_GCRYPT
-    jobOptions->cryptType                               = fromJobOptions->cryptType;
-  #else /* not HAVE_GCRYPT */
-    jobOptions->cryptType                               = fromJobOptions->cryptType;
-  #endif /* HAVE_GCRYPT */
+  jobOptions->cryptType                                 = fromJobOptions->cryptType;
   jobOptions->cryptPasswordMode                         = fromJobOptions->cryptPasswordMode;
   Password_initDuplicate(&jobOptions->cryptPassword,&fromJobOptions->cryptPassword);
   Configuration_duplicateKey(&jobOptions->cryptPublicKey,&fromJobOptions->cryptPublicKey);
@@ -3169,11 +3159,13 @@ void Job_updateNotifies(const JobNode *jobNode)
 
 void Job_updateAllNotifies(void)
 {
-  const JobNode *jobNode;
-
-  JOB_LIST_ITERATE(jobNode)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    Job_updateNotifies(jobNode);
+    const JobNode *jobNode;
+    JOB_LIST_ITERATE(jobNode)
+    {
+      Job_updateNotifies(jobNode);
+    }
   }
 }
 
