@@ -25,7 +25,6 @@
 #include "common/network.h"
 #include "common/patternlists.h"
 #include "common/semaphores.h"
-#include "common/semaphores.h"
 #include "common/stringmaps.h"
 #include "common/strings.h"
 
@@ -917,6 +916,7 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   if (!Misc_base64Decode(buffer,length,NULL,data,STRING_BEGIN))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"decode base64 data fail");
+    free(buffer);
     String_delete(data);
     return;
   }
@@ -1028,6 +1028,7 @@ LOCAL void connectorCommand_storageExists(ConnectorInfo *connectorInfo, IndexHan
   if (!connectorInfo->storageInitFlag)
   {
     sendResult(connectorInfo,id,TRUE,ERROR_INIT_STORAGE,"storage exists");
+    String_delete(archiveName);
     return;
   }
 
@@ -1268,12 +1269,14 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo   *connectorInfo,
   if (!StringMap_getString(argumentMap,"hostName",hostName,NULL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<name>");
+    String_delete(hostName);
     return;
   }
   String userName = String_new();
   if (!StringMap_getString(argumentMap,"userName",userName,NULL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"userName=<name>");
+    String_delete(userName);
     String_delete(hostName);
     return;
   }
@@ -3007,6 +3010,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageSize=<n>");
     String_delete(storageName);
     String_delete(userName);
+    String_delete(hostName);
     return;
   }
   String comment = String_new();
@@ -3049,6 +3053,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   String_delete(comment);
   String_delete(storageName);
   String_delete(userName);
+  String_delete(hostName);
 }
 
 /***********************************************************************\
@@ -3119,7 +3124,6 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
 * Return : -
 * Notes  : Arguments:
 *            storageId=<n>
-*            storageName=<name>
 *          Result:
 \***********************************************************************/
 
@@ -3141,26 +3145,6 @@ LOCAL void connectorCommand_indexStoragePurge(ConnectorInfo *connectorInfo, Inde
     sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %"PRIx64,storageId);
     return;
   }
-  String storageName = String_new();
-  if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
-  {
-    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
-    String_delete(storageName);
-    return;
-  }
-
-  Errors error;
-
-  StorageSpecifier storageSpecifier;
-  Storage_initSpecifier(&storageSpecifier);
-  error = Storage_parseName(&storageSpecifier,storageName);
-  if (error != ERROR_NONE)
-  {
-    sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
-    Storage_doneSpecifier(&storageSpecifier);
-    String_delete(storageName);
-    return;
-  }
 
   if (indexHandle != NULL)
   {
@@ -3172,8 +3156,6 @@ LOCAL void connectorCommand_indexStoragePurge(ConnectorInfo *connectorInfo, Inde
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
-      Storage_doneSpecifier(&storageSpecifier);
-      String_delete(storageName);
       return;
     }
 
@@ -3187,8 +3169,6 @@ LOCAL void connectorCommand_indexStoragePurge(ConnectorInfo *connectorInfo, Inde
   }
 
   // free resources
-  Storage_doneSpecifier(&storageSpecifier);
-  String_delete(storageName);
 }
 
 /***********************************************************************\
@@ -3360,7 +3340,7 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
   String errorMessage = String_new();
   if (!StringMap_getString(argumentMap,"errorMessage",errorMessage,NULL))
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorMessage=<text>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
@@ -3571,112 +3551,115 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
     // nothing to do
   }
 
-  // process client requests
-  while (   !Thread_isQuit(&connectorInfo->thread)
-         && Connector_isConnected(connectorInfo)
-        )
+  if (!Thread_isQuit(&connectorInfo->thread))
   {
-    // process server i/o commands
-    uint id;
-    while (ServerIO_getCommand(&connectorInfo->io,
-                               &id,
-                               name,
-                               argumentMap
-                              )
+    // process client requests
+    while (   !Thread_isQuit(&connectorInfo->thread)
+           && Connector_isConnected(connectorInfo)
           )
     {
-      // find command
-      #if   defined(CONNECTOR_DEBUG)
-//TODO: enable
-        fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
-        #ifndef NDEBUG
-          StringMap_debugPrint(2,argumentMap);
-        #endif
-      #elif !defined(NDEBUG)
-        if (globalOptions.debug.serverLevel >= 1)
-        {
-          fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
-        }
-      #endif
-      ConnectorCommandFunction connectorCommandFunction;
-      if (!findConnectorCommand(name,&connectorCommandFunction))
+      // process server i/o commands
+      uint id;
+      while (ServerIO_getCommand(&connectorInfo->io,
+                                 &id,
+                                 name,
+                                 argumentMap
+                                )
+            )
       {
-        sendResult(connectorInfo,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
-        continue;
-      }
-      assert(connectorCommandFunction != NULL);
-
-      // process command
-      connectorCommandFunction(connectorInfo,&indexHandle,id,argumentMap);
-    }
-
-    // wait for disconnect, data, or result
-    uint events = Misc_waitHandle(Network_getSocket(&connectorInfo->io.network.socketHandle),
-                                  &signalMask,
-                                  HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_HANGUP|HANDLE_EVENT_INVALID,
-                                  TIMEOUT
-                                 );
-    if (events != 0)
-    {
-      if      (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
-      {
-        if (ServerIO_receiveData(&connectorInfo->io))
-        {
-          // process server i/o commands
-          while (ServerIO_getCommand(&connectorInfo->io,
-                                     &id,
-                                     name,
-                                     argumentMap
-                                    )
-                )
+        // find command
+        #if   defined(CONNECTOR_DEBUG)
+  //TODO: enable
+          fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
+          #ifndef NDEBUG
+            StringMap_debugPrint(2,argumentMap);
+          #endif
+        #elif !defined(NDEBUG)
+          if (globalOptions.debug.serverLevel >= 1)
           {
-            // find command
-            #if   defined(CONNECTOR_DEBUG)
-//TODO: enable
-              fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
-              #ifndef NDEBUG
-                StringMap_debugPrint(2,argumentMap);
-              #endif
-            #elif !defined(NDEBUG)
-              if (globalOptions.debug.serverLevel >= 1)
-              {
-                fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
-              }
-            #endif
-            ConnectorCommandFunction connectorCommandFunction;
-            if (!findConnectorCommand(name,&connectorCommandFunction))
-            {
-              sendResult(connectorInfo,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
-              continue;
-            }
-            assert(connectorCommandFunction != NULL);
+            fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+          }
+        #endif
+        ConnectorCommandFunction connectorCommandFunction;
+        if (!findConnectorCommand(name,&connectorCommandFunction))
+        {
+          sendResult(connectorInfo,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
+          continue;
+        }
+        assert(connectorCommandFunction != NULL);
 
-            // process command
-            connectorCommandFunction(connectorInfo,&indexHandle,id,argumentMap);
+        // process command
+        connectorCommandFunction(connectorInfo,&indexHandle,id,argumentMap);
+      }
+
+      // wait for disconnect, data, or result
+      uint events = Misc_waitHandle(Network_getSocket(&connectorInfo->io.network.socketHandle),
+                                    &signalMask,
+                                    HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_HANGUP|HANDLE_EVENT_INVALID,
+                                    TIMEOUT
+                                   );
+      if (events != 0)
+      {
+        if      (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
+        {
+          if (ServerIO_receiveData(&connectorInfo->io))
+          {
+            // process server i/o commands
+            while (ServerIO_getCommand(&connectorInfo->io,
+                                       &id,
+                                       name,
+                                       argumentMap
+                                      )
+                  )
+            {
+              // find command
+              #if   defined(CONNECTOR_DEBUG)
+  //TODO: enable
+                fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
+                #ifndef NDEBUG
+                  StringMap_debugPrint(2,argumentMap);
+                #endif
+              #elif !defined(NDEBUG)
+                if (globalOptions.debug.serverLevel >= 1)
+                {
+                  fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
+                }
+              #endif
+              ConnectorCommandFunction connectorCommandFunction;
+              if (!findConnectorCommand(name,&connectorCommandFunction))
+              {
+                sendResult(connectorInfo,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
+                continue;
+              }
+              assert(connectorCommandFunction != NULL);
+
+              // process command
+              connectorCommandFunction(connectorInfo,&indexHandle,id,argumentMap);
+            }
+          }
+          else
+          {
+            // no data -> shut down
+            setConnectorState(connectorInfo,CONNECTOR_STATE_SHUTDOWN);
           }
         }
-        else
+        else if ((events & (HANDLE_EVENT_ERROR|HANDLE_EVENT_HANGUP|HANDLE_EVENT_INVALID)) != 0)
         {
-          // no data -> shut down
+          // error/hang-up/invalid -> shut down
           setConnectorState(connectorInfo,CONNECTOR_STATE_SHUTDOWN);
         }
+        #ifndef NDEBUG
+          else
+          {
+            HALT_INTERNAL_ERROR("unknown event in 0x%x",events);
+          }
+        #endif /* NDEBUG */
       }
-      else if ((events & (HANDLE_EVENT_ERROR|HANDLE_EVENT_HANGUP|HANDLE_EVENT_INVALID)) != 0)
-      {
-        // error/hang-up/invalid -> shut down
-        setConnectorState(connectorInfo,CONNECTOR_STATE_SHUTDOWN);
-      }
-      #ifndef NDEBUG
-        else
-        {
-          HALT_INTERNAL_ERROR("unknown event in 0x%x",events);
-        }
-      #endif /* NDEBUG */
     }
-  }
 
-  // done index
-  Index_close(&indexHandle);
+    // done index
+    Index_close(&indexHandle);
+  }
 
   // free resources
   StringMap_delete(argumentMap);
@@ -4171,7 +4154,7 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
     else if (stringEquals(text,"ADD_ERROR_CORRECTION_CODES")) (*messageCode) = MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES;
     else if (stringEquals(text,"WRITE_VOLUME"              )) (*messageCode) = MESSAGE_CODE_WRITE_VOLUME;
     else if (stringEquals(text,"VERIFY_VOLUME"             )) (*messageCode) = MESSAGE_CODE_VERIFY_VOLUME;
-                                                              (*messageCode) = MESSAGE_CODE_NONE;
+    else                                                      (*messageCode) = MESSAGE_CODE_NONE;
 
     return TRUE;
   }
@@ -4228,7 +4211,7 @@ UNUSED_VARIABLE(storageVolumeRequestUserData);
                                    "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S archiveType=%s testCreatedArchives=no noStorage=%y dryRun=%y",
                                    jobUUID,
                                    scheduleUUID,
-                                   NULL,  // scheduleCustomText
+                                   scheduleCustomText,
                                    Archive_archiveTypeToString(archiveType),
                                    jobOptions->dryRun,
                                    jobOptions->noStorage
