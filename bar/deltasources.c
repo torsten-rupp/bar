@@ -200,6 +200,8 @@ NULL, // masterIO
                String_cString(printableStorageName),
                Error_getText(error)
               );
+    String_delete(printableStorageName);
+    free(buffer);
     return error;
   }
 
@@ -216,6 +218,8 @@ NULL, // masterIO
   if (error != ERROR_NONE)
   {
     (void)Storage_done(&storageInfo);
+    String_delete(printableStorageName);
+    free(buffer);
     return error;
   }
 
@@ -223,9 +227,9 @@ NULL, // masterIO
   bool   restoredFlag = FALSE;
   Errors failError    = ERROR_NONE;
   while (   !restoredFlag
+         && (failError == ERROR_NONE)
          && ((requestedAbortFlag == NULL) || !(*requestedAbortFlag))
          && !Archive_eof(&archiveHandle)
-         && (failError == ERROR_NONE)
         )
   {
     // pause
@@ -279,7 +283,7 @@ NULL, // masterIO
           {
             String_delete(fileName);
             if (failError == ERROR_NONE) failError = error;
-            continue;
+            break;
           }
 
           if (String_equals(name,fileName))
@@ -297,8 +301,8 @@ NULL, // masterIO
                         );
               Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              failError = error;
-              continue;
+              if (failError == ERROR_NONE) failError = error;
+              break;
             }
 
             // seek to fragment position
@@ -312,8 +316,8 @@ NULL, // masterIO
               File_close(&fileHandle);
               Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              failError = error;
-              continue;
+              if (failError == ERROR_NONE) failError = error;
+              break;
             }
 
             // write file data
@@ -346,7 +350,7 @@ NULL, // masterIO
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
-                failError = error;
+                if (failError == ERROR_NONE) failError = error;
                 break;
               }
 //              abortFlag = !updateStatusInfo(&restoreInfo);
@@ -358,14 +362,14 @@ NULL, // masterIO
               File_close(&fileHandle);
               Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              continue;
+              break;
             }
             else if ((requestedAbortFlag != NULL) && (*requestedAbortFlag))
             {
               File_close(&fileHandle);
               Archive_closeEntry(&archiveEntryInfo);
               String_delete(fileName);
-              continue;
+              break;
             }
 
             // close file
@@ -395,7 +399,7 @@ NULL, // masterIO
         {
           // read image
           ArchiveEntryInfo archiveEntryInfo;
-          String           imageName         = String_new();
+          String           imageName = String_new();
           DeviceInfo       deviceInfo;
           uint64           blockOffset,blockCount;
           error = Archive_readImageEntry(&archiveEntryInfo,
@@ -443,8 +447,8 @@ NULL, // masterIO
                         );
               Archive_closeEntry(&archiveEntryInfo);
               String_delete(imageName);
-              failError = error;
-              continue;
+              if (failError == ERROR_NONE) failError = error;
+              break;
             }
 
             // seek to fragment position
@@ -458,8 +462,8 @@ NULL, // masterIO
               File_close(&fileHandle);
               Archive_closeEntry(&archiveEntryInfo);
               String_delete(imageName);
-              failError = error;
-              continue;
+              if (failError == ERROR_NONE) failError = error;
+              break;
             }
 
             // write image data to file
@@ -492,12 +496,26 @@ NULL, // masterIO
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
-                failError = error;
+                if (failError == ERROR_NONE) failError = error;
                 break;
               }
 //              abortFlag = !updateStatusInfo(&restoreInfo);
 
               block += (uint64)bufferBlockCount;
+            }
+            if      (failError != ERROR_NONE)
+            {
+              File_close(&fileHandle);
+              Archive_closeEntry(&archiveEntryInfo);
+              String_delete(imageName);
+              break;
+            }
+            else if ((requestedAbortFlag != NULL) && (*requestedAbortFlag))
+            {
+              File_close(&fileHandle);
+              Archive_closeEntry(&archiveEntryInfo);
+              String_delete(imageName);
+              break;
             }
 
             // close file
@@ -550,7 +568,7 @@ NULL, // masterIO
           {
             StringList_done(&fileNameList);
             if (failError == ERROR_NONE) failError = error;
-            continue;
+            break;
           }
 
           if (StringList_contains(&fileNameList,name))
@@ -568,8 +586,8 @@ NULL, // masterIO
                         );
               Archive_closeEntry(&archiveEntryInfo);
               StringList_done(&fileNameList);
-              failError = error;
-              continue;
+              if (failError == ERROR_NONE) failError = error;
+              break;
             }
 
             // seek to fragment position
@@ -583,8 +601,8 @@ NULL, // masterIO
               File_close(&fileHandle);
               Archive_closeEntry(&archiveEntryInfo);
               StringList_done(&fileNameList);
-              failError = error;
-              continue;
+              if (failError == ERROR_NONE) failError = error;
+              break;
             }
 
             // write file data
@@ -605,7 +623,7 @@ NULL, // masterIO
               error = Archive_readData(&archiveEntryInfo,buffer,bufferLength);
               if (error != ERROR_NONE)
               {
-                failError = error;
+                if (failError == ERROR_NONE) failError = error;
                 break;
               }
 
@@ -617,7 +635,7 @@ NULL, // masterIO
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
-                failError = error;
+                if (failError == ERROR_NONE) failError = error;
                 break;
               }
 //                  abortFlag = !updateStatusInfo(&restoreInfo);
@@ -627,11 +645,15 @@ NULL, // masterIO
             if      (failError != ERROR_NONE)
             {
               File_close(&fileHandle);
+              Archive_closeEntry(&archiveEntryInfo);
+              StringList_done(&fileNameList);
               break;
             }
             else if ((requestedAbortFlag != NULL) && (*requestedAbortFlag))
             {
               File_close(&fileHandle);
+              Archive_closeEntry(&archiveEntryInfo);
+              StringList_done(&fileNameList);
               break;
             }
 
@@ -650,12 +672,6 @@ NULL, // masterIO
             // entry restored
             restoredFlag = TRUE;
           }
-          if (failError != ERROR_NONE)
-          {
-            Archive_closeEntry(&archiveEntryInfo);
-            StringList_done(&fileNameList);
-            continue;
-          }
 
           // close archive file, free resources
           Archive_closeEntry(&archiveEntryInfo);
@@ -672,6 +688,7 @@ NULL, // masterIO
         if (error != ERROR_NONE)
         {
           if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_SALT:
@@ -680,6 +697,11 @@ NULL, // masterIO
           HALT_INTERNAL_ERROR_UNREACHABLE();
         #else
           error = Archive_skipNextEntry(&archiveHandle);
+          if (error != ERROR_NONE)
+          {
+            if (failError == ERROR_NONE) failError = error;
+            break;
+          }
         #endif /* NDEBUG */
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
@@ -687,6 +709,7 @@ NULL, // masterIO
         if (error != ERROR_NONE)
         {
           if (failError == ERROR_NONE) failError = error;
+          break;
         }
         break;
       case ARCHIVE_ENTRY_TYPE_UNKNOWN:
@@ -748,7 +771,6 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
 
   // init variables
   deltaSourceHandle->name        = NULL;
-  deltaSourceHandle->size        = 0LL;
   deltaSourceHandle->tmpFileName = NULL;
   deltaSourceHandle->baseOffset  = 0LL;
   StorageSpecifier storageSpecifier;
@@ -757,7 +779,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
   Storage_initSpecifier(&localStorageSpecifier);
 
   bool restoredFlag = FALSE;
-  error        = ERROR_UNKNOWN;
+  error             = ERROR_UNKNOWN;
 
 //fprintf(stderr,"%s, %d: name=%s storage=%s\n",__FILE__,__LINE__,String_cString(name),String_cString(sourceStorageName));
 //if (deltaSourceList!= NULL) { DeltaSourceNode *n=deltaSourceList->head; fprintf(stderr,"%s, %d: count=%d\n",__FILE__,__LINE__,deltaSourceList->count);while (n != NULL) { fprintf(stderr,"%s, %d: n=%p: %s\n",__FILE__,__LINE__,n,String_cString(n->storageName)); n=n->next;} }
@@ -1123,6 +1145,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
   }
   else if (error != ERROR_NONE)
   {
+    assert(error != ERROR_UNKNOWN);
     return error;
   }
   else

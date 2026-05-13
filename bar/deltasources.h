@@ -42,8 +42,6 @@ typedef struct
 {
 // NYI: is there a list of names required?
   ConstString name;             // source name
-//  StringList nameList;
-  uint64      size;             // size of source
   String      tmpFileName;      // temporary file name
   FileHandle  tmpFileHandle;    // temporary file handle
   uint64      baseOffset;       // block read base offset in source
@@ -82,28 +80,6 @@ Errors DeltaSource_initAll(void);
 \***********************************************************************/
 
 void DeltaSource_doneAll(void);
-
-/***********************************************************************\
-* Name   : DeltaSource_addSource
-* Purpose: add source
-* Input  : sourcePattern - source pattern
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors DeltaSource_add(ConstString sourcePattern, PatternTypes patternType);
-
-/***********************************************************************\
-* Name   : DeltaSource_addSourceList
-* Purpose: add source list
-* Input  : sourcePatternList - source pattern list
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-//Errors DeltaSource_addSourceList(const PatternList *sourcePatternList);
 
 /***********************************************************************\
 * Name   : DeltaSource_openEntry
@@ -162,8 +138,8 @@ ConstString DeltaSource_getName(const DeltaSourceHandle *sourceHandle);
 uint64 DeltaSource_getSize(const DeltaSourceHandle *sourceHandle);
 
 /***********************************************************************\
-* Name   : DeltaSource_getName
-* Purpose: get source name
+* Name   : DeltaSource_setBaseOffset
+* Purpose: set read base offset
 * Input  : sourceHandle - source handle
 *          offset       - base offset for read blocks
 * Output : -
