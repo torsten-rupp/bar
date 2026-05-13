@@ -1199,6 +1199,7 @@ bool Dictionary_getNext(DictionaryIterator *dictionaryIterator,
                        )
 {
   assert(dictionaryIterator != NULL);
+  assert(dictionaryIterator->dictionary != NULL);
 
   if (key         != NULL) (*key)         = NULL;
   if (keyLength   != NULL) (*keyLength)   = 0;
