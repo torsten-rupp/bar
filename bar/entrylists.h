@@ -109,7 +109,7 @@ const char *EntryList_entryStoreTypeToString(EntryStoreTypes entryStoreType, con
 
 /***********************************************************************\
 * Name   : EntryList_parseEntryStoreType
-* Purpose: get entry stpre type
+* Purpose: get entry store type
 * Input  : name     - name of entry type
 *          userData - user data (not used)
 * Output : entryStoreType - entry store type
@@ -131,7 +131,7 @@ bool EntryList_parseEntryStoreType(const char *name, EntryStoreTypes *entryStore
 void EntryList_init(EntryList *entryList);
 
 /***********************************************************************\
-* Name   : EntryList_initDuplicaet
+* Name   : EntryList_initDuplicate
 * Purpose: init duplicated entry list
 * Input  : entryList             - entry list
 *          fromEntryList         - from entry list (source)
@@ -161,7 +161,7 @@ void EntryList_done(EntryList *entryList);
 
 /***********************************************************************\
 * Name   : EntryList_clear
-* Purpose: remove all entrys in list
+* Purpose: remove all entries in list
 * Input  : entryList - entry list
 * Output : -
 * Return : entry list
@@ -171,8 +171,8 @@ void EntryList_done(EntryList *entryList);
 EntryList *EntryList_clear(EntryList *entryList);
 
 /***********************************************************************\
-* Name   : Entry_copyList
-* Purpose: copy all entrys from source list to destination list
+* Name   : EntryList_copy
+* Purpose: copy all entries from source list to destination list
 * Input  : toEntryList           - to entry list (destination)
 *          fromEntryList         - from entry list (source)
 *          fromEntryListFromNode - from node (could be NULL)
@@ -190,7 +190,7 @@ void EntryList_copy(EntryList       *toEntryList,
 
 /***********************************************************************\
 * Name   : EntryList_move
-* Purpose: move all entrys from source list to destination list
+* Purpose: move all entries from source list to destination list
 * Input  : toEntryList           - to entry list (destination)
 *          fromEntryList         - from entry list (source)
 *          fromEntryListFromNode - from node (could be NULL)
@@ -291,7 +291,7 @@ bool EntryList_remove(EntryList *entryList,
 
 /***********************************************************************\
 * Name   : EntryList_match, EntryList_matchStringList
-* Purpose: patch string/string list with all entrys of list
+* Purpose: match string/string list with all entries of list
 * Input  : entryList        - entry list
 *          string           - string
 *          stringList       - string list
