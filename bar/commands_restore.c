@@ -1360,7 +1360,6 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                 // stop
                 printInfo(1,
                           "stopped (image part %"PRIu64"..%"PRIu64" exists)\n",
-                          String_cString(destinationDeviceName),
                           blockOffset*(uint64)deviceInfo.blockSize,
                           ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
                          );
@@ -1387,7 +1386,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                   if (error != ERROR_NONE)
                   {
                     error = handleError(restoreInfo,archiveHandle->printableStorageName,destinationDeviceName,error);
-                    Semaphore_unlock(&restoreInfo->namesDictionaryLock);
+                    Semaphore_unlock(&restoreInfo->fragmentListLock);
                     AutoFree_cleanup(&autoFreeList);
                     return error;
                   }
@@ -2178,8 +2177,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
             case RESTORE_ENTRY_MODE_STOP:
               // stop
               printInfo(1,
-                        "stopped (link exists)\n",
-                        String_cString(destinationFileName)
+                        "stopped (link exists)\n"
                        );
               error = handleError(restoreInfo,
                                   archiveHandle->printableStorageName,
@@ -2190,7 +2188,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
               AutoFree_cleanup(&autoFreeList);
               return !restoreInfo->jobOptions->noStopOnErrorFlag
                         ? error
-                        : ERROR_NONE;;
+                        : ERROR_NONE;
             case RESTORE_ENTRY_MODE_RENAME:
               // rename new entry
               getUniqName(destinationFileName);
@@ -2485,7 +2483,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                 AutoFree_cleanup(&autoFreeList);
                 return !restoreInfo->jobOptions->noStopOnErrorFlag
                           ? error
-                          : ERROR_NONE;;
+                          : ERROR_NONE;
               case RESTORE_ENTRY_MODE_RENAME:
                 // rename new entry
                 getUniqName(destinationFileName);
@@ -3072,7 +3070,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
             AutoFree_cleanup(&autoFreeList);
             return !restoreInfo->jobOptions->noStopOnErrorFlag
                       ? error
-                      : ERROR_NONE;;
+                      : ERROR_NONE;
             break;
           case RESTORE_ENTRY_MODE_RENAME:
             // rename new entry
@@ -3088,14 +3086,14 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
             AutoFree_cleanup(&autoFreeList);
             return ERROR_NONE;
         }
-
-        Dictionary_add(&restoreInfo->namesDictionary,
-                       String_cString(destinationFileName),
-                       String_length(destinationFileName),
-                       NULL,
-                       0
-                      );
       }
+
+      Dictionary_add(&restoreInfo->namesDictionary,
+                     String_cString(destinationFileName),
+                     String_length(destinationFileName),
+                     NULL,
+                     0
+                    );
     }
 
     // create parent directories if not existing
@@ -3642,7 +3640,7 @@ NULL, // masterIO
   }
 
   // read archive entries
-  error                  = ERROR_NONE;
+  error = ERROR_NONE;
   CryptSignatureStates allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
   uint64               lastSignatureOffset    = Archive_tell(&archiveHandle);
   while (   ((restoreInfo->failError == ERROR_NONE) || restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -3764,9 +3762,11 @@ NULL, // masterIO
   }
 
   // close archive
+  AUTOFREE_REMOVE(&autoFreeList,&archiveHandle);
   Archive_close(&archiveHandle,FALSE);
 
   // done storage
+  AUTOFREE_REMOVE(&autoFreeList,&storageInfo);
   (void)Storage_done(&storageInfo);
 
   // output info
@@ -4050,7 +4050,7 @@ Errors Command_restore(const StringList           *storageNameList,
                            String_cString(fragmentNode->name),
                            Error_getText(error)
                           );
-                return error;
+                if (restoreInfo.failError == ERROR_NONE) restoreInfo.failError = error;
               }
               else
               {
