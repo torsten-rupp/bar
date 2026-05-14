@@ -438,13 +438,9 @@ LOCAL void printArchiveContentListFooter(ulong fileCount)
 {
   if (!globalOptions.noHeaderFooterFlag)
   {
-    String line = String_new();
-
     printSeparator('-');
     printConsole(stdout,0,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
     printConsole(stdout,0,"\n");
-
-    String_delete(line);
   }
 }
 
@@ -2133,7 +2129,8 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
             #endif /* NDEBUG */
             break; /* not reached */
           case ARCHIVE_ENTRY_TYPE_FILE:
-            if (   (archiveEntryType != ARCHIVE_ENTRY_TYPE_FILE)
+            if (   globalOptions.allFlag
+                || (archiveEntryType != ARCHIVE_ENTRY_TYPE_FILE)
                 || !String_equals(name,nextArchiveContentNode->file.name)
                )
             {
@@ -2223,7 +2220,10 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
         }
 
         // next entry
-        nextArchiveContentNode = nextArchiveContentNode->next;
+        if (!newFlag)
+        {
+          nextArchiveContentNode = nextArchiveContentNode->next;
+        }
       }
     }
 
@@ -2574,9 +2574,9 @@ NULL, // masterSocketHandle
                                       fileName,
                                       fileInfo.size,
                                       fileInfo.timeModified,
-                                      fileInfo.permissions,
                                       fileInfo.userId,
                                       fileInfo.groupId,
+                                      fileInfo.permissions,
                                       archiveEntryInfo.file.chunkFileData.info.size,
                                       deltaCompressAlgorithm,
                                       byteCompressAlgorithm,
@@ -3557,8 +3557,8 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       TEXT_MACRO_X_CSTRING("dateTime",   dateTimeString,              NULL);
       TEXT_MACRO_X_CSTRING("user",       userName,                    NULL);
       TEXT_MACRO_X_CSTRING("group",      groupName,                   NULL);
-      TEXT_MACRO_X_STRING ("permission" ,permissionsString,           NULL);
-      TEXT_MACRO_X_STRING ("permissions",permissionsString,           NULL);
+      TEXT_MACRO_X_CSTRING("permission" ,permissionsString,           NULL);
+      TEXT_MACRO_X_CSTRING("permissions",permissionsString,           NULL);
       TEXT_MACRO_X_STRING ("name",       directoryEntryNode->fileName,NULL);
     }
 
@@ -3783,75 +3783,6 @@ Errors Command_list(StringList              *storageNameList,
           String_delete(fileName);
         }
 
-        Storage_closeDirectoryList(&storageDirectoryListHandle);
-      }
-    }
-
-    // try list directory content
-    if (!someFileFound)
-    {
-      // open directory list
-      StorageDirectoryListHandle storageDirectoryListHandle;
-      error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                        &storageSpecifier,
-                                        NULL,  // fileName
-                                        jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_HIGH
-                                       );
-      if (error == ERROR_NONE)
-      {
-        if (String_isEmpty(storageSpecifier.archivePatternString))
-        {
-          // list directory
-          error = listDirectoryContent(&storageDirectoryListHandle,
-                                       &storageSpecifier,
-                                       includeEntryList,
-                                       excludePatternList
-                                      );
-          if (error == ERROR_NONE)
-          {
-            someFileFound = TRUE;
-          }
-        }
-        else
-        {
-          // list content of matching archives
-          String fileName = String_new();
-          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
-          {
-            // read next directory entry
-            error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
-            if (error != ERROR_NONE)
-            {
-              continue;
-            }
-
-            // match pattern
-            if (!String_isEmpty(storageSpecifier.archivePatternString))
-            {
-              if (!Pattern_match(&storageSpecifier.archivePattern,fileName,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
-              {
-                continue;
-              }
-            }
-
-            // list archive content
-            error = listArchiveContent(&storageSpecifier,
-                                       fileName,
-                                       includeEntryList,
-                                       excludePatternList,
-                                       showEntriesFlag,
-                                       jobOptions,
-                                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                                       logHandle
-                                      );
-            if (error == ERROR_NONE)
-            {
-              someFileFound = TRUE;
-            }
-          }
-          String_delete(fileName);
-        }
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
     }
