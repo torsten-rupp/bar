@@ -914,7 +914,7 @@ LOCAL Errors testLinkEntry(TestInfo          *testInfo,
     // update running info
     SEMAPHORE_LOCKED_DO(&testInfo->runningInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      String_set(testInfo->runningInfo.progress.entry.name,fileName);
+      String_set(testInfo->runningInfo.progress.entry.name,linkName);
       testInfo->runningInfo.progress.entry.doneSize  = 0LL;
       testInfo->runningInfo.progress.entry.totalSize = 0LL;
       updateRunningInfo(testInfo,TRUE);
@@ -1456,13 +1456,13 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     assert(entryMsg.archiveHandle != NULL);
     assert(entryMsg.archiveCryptInfo != NULL);
 
-    if (   ((testInfo->failError == ERROR_NONE) || !testInfo->jobOptions->noStopOnErrorFlag)
+    if (   ((testInfo->failError == ERROR_NONE) || testInfo->jobOptions->noStopOnErrorFlag)
 // TODO:
 //        && !isAborted(testInfo)
        )
     {
       // open archive (only if new archive)
-      if (archiveIndex < entryMsg.archiveIndex)
+      if (archiveIndex != entryMsg.archiveIndex)
       {
         // close previous archive
         if (archiveIndex != 0)
@@ -2097,7 +2097,7 @@ error = testInfo.failError;
   // output info
   if (error != ERROR_NONE)
   {
-    printInfo(1,tr("Test fail: {0}\n",Error_getText(error)));
+    printInfo(1,tr("Test fail: %s\n"),Error_getText(error));
   }
 
   return error;
