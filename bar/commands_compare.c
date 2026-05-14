@@ -311,7 +311,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
       printError(_("file '%s' not found!"),String_cString(fileName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
-      return ERROR_FILE_NOT_FOUND_;
+      return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
     }
     if (File_getType(fileName) != FILE_TYPE_FILE)
     {
@@ -625,7 +625,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       printError(_("device '%s' not found!"),String_cString(deviceName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(deviceName);
-      return error;
+      return ERRORX_(DEVICE_NOT_FOUND,0,String_cString(deviceName));
     }
 
     // get device info
@@ -967,7 +967,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
       printError(_("directory '%s' does not exists!"),String_cString(directoryName));
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(directoryName);
-      return error;
+      return ERRORX_(DIRECTORY_NOT_FOUND_,0,"%s",String_cString(directoryName));
     }
     if (File_getType(directoryName) != FILE_TYPE_DIRECTORY)
     {
@@ -977,7 +977,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
                 );
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(directoryName);
-      return error;
+      return ERROR_WRONG_ENTRY_TYPE;
     }
 
 #if 0
@@ -1095,7 +1095,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       String_delete(linkName);
-      return error;
+      return ERRORX_(FILE_NOT_FOUND_,0,String_cString(linkName));
     }
     if (File_getType(linkName) != FILE_TYPE_LINK)
     {
@@ -1106,7 +1106,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       String_delete(linkName);
-      return error;
+      return ERROR_WRONG_ENTRY_TYPE;
     }
 
     // check link
@@ -1136,7 +1136,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
       String_delete(linkName);
-      return error;
+      return ERROR_ENTRIES_DIFFER;
     }
     String_delete(localFileName);
 
@@ -1258,7 +1258,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         printError(_("file '%s' not found!"),String_cString(fileName));
         if (!archiveHandle->storageInfo->jobOptions->noStopOnErrorFlag)
         {
-          error = ERROR_FILE_NOT_FOUND_;
+          error = ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
           break;
         }
         else
@@ -1606,7 +1606,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
                 );
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
-      return error;
+      return ERRORX_(FILE_NOT_FOUND_,0,String_cString(fileName));
     }
     if (File_getType(fileName) != FILE_TYPE_SPECIAL)
     {
@@ -1616,7 +1616,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
                 );
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
-      return error;
+      return ERROR_WRONG_ENTRY_TYPE;
     }
 
     // check special settings
@@ -1640,7 +1640,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
                 );
       (void)Archive_closeEntry(&archiveEntryInfo);
       String_delete(fileName);
-      return error;
+      return ERROR_ENTRIES_DIFFER;
     }
     if (   (fileInfo.specialType == FILE_SPECIAL_TYPE_CHARACTER_DEVICE)
         || (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
@@ -1653,7 +1653,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
                   );
         (void)Archive_closeEntry(&archiveEntryInfo);
         String_delete(fileName);
-        return error;
+        return ERROR_ENTRIES_DIFFER;
       }
       if (fileInfo.minor != localFileInfo.minor)
       {
@@ -1662,7 +1662,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
                   );
         (void)Archive_closeEntry(&archiveEntryInfo);
         String_delete(fileName);
-        return error;
+        return ERROR_ENTRIES_DIFFER;
       }
     }
 
@@ -1841,13 +1841,13 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     assert(entryMsg.archiveHandle != NULL);
     assert(entryMsg.archiveCryptInfo != NULL);
 
-    if (   ((compareInfo->failError == ERROR_NONE) || !compareInfo->jobOptions->noStopOnErrorFlag)
+    if (   ((compareInfo->failError == ERROR_NONE) || compareInfo->jobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(compareInfo)
        )
     {
       // open archive (only if new archive)
-      if (archiveIndex < entryMsg.archiveIndex)
+      if (archiveIndex != entryMsg.archiveIndex)
       {
         // close previous archive
         if (archiveIndex != 0)
