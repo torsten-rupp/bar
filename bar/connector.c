@@ -414,14 +414,10 @@ LOCAL Errors setJobOptionPassword(ConnectorInfo *connectorInfo, ConstString jobU
 * Input  : connectorInfo      - connector info
 *          name               - job name
 *          jobUUID            - job UUID
-*          scheduleUUID       - schedule UUID
 *          storageName        - storage name
 *          includeEntryList   - include entry list
 *          excludePatternList - exclude pattern list
 *          jobOptions         - job options
-*          archiveType        - archive type
-*          scheduleTitle      - schedule title
-*          scheduleCustomText - schedule custom text
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -430,14 +426,10 @@ LOCAL Errors setJobOptionPassword(ConnectorInfo *connectorInfo, ConstString jobU
 LOCAL Errors transmitJob(ConnectorInfo     *connectorInfo,
                          ConstString       name,
                          ConstString       jobUUID,
-                         ConstString       scheduleUUID,
                          ConstString       storageName,
                          const EntryList   *includeEntryList,
                          const PatternList *excludePatternList,
-                         const JobOptions  *jobOptions,
-                         ArchiveTypes      archiveType,
-                         ConstString       scheduleTitle,
-                         ConstString       scheduleCustomText
+                         const JobOptions  *jobOptions
                         )
 {
   #define SET_OPTION_STRING(name,value) \
@@ -503,11 +495,6 @@ LOCAL Errors transmitJob(ConnectorInfo     *connectorInfo,
 
   Errors error;
 
-UNUSED_VARIABLE(scheduleUUID);
-UNUSED_VARIABLE(archiveType);
-UNUSED_VARIABLE(scheduleTitle);
-UNUSED_VARIABLE(scheduleCustomText);
-
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(jobUUID != NULL);
@@ -520,10 +507,9 @@ UNUSED_VARIABLE(scheduleCustomText);
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    CALLBACK_(NULL,NULL),
-                                   "JOB_NEW name=%'S jobUUID=%S scheduleUUID=%S master=%'S",
+                                   "JOB_NEW name=%'S jobUUID=%S master=%'S",
                                    name,
                                    jobUUID,
-                                   scheduleUUID,
                                    Network_getHostName(s)
                                   );
   if (error != ERROR_NONE)
@@ -967,6 +953,8 @@ LOCAL void connectorCommand_storageClose(ConnectorInfo *connectorInfo, IndexHand
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
+  UNUSED_VARIABLE(argumentMap);
+
   // check if storage initialized
   if (!connectorInfo->storageInitFlag)
   {
@@ -974,20 +962,12 @@ LOCAL void connectorCommand_storageClose(ConnectorInfo *connectorInfo, IndexHand
     return;
   }
 
-  // get archive size
-  uint64 archiveSize = Storage_getSize(&connectorInfo->storageHandle);
-UNUSED_VARIABLE(archiveSize);
-UNUSED_VARIABLE(indexHandle);
-UNUSED_VARIABLE(argumentMap);
-
   // close storage
   if (connectorInfo->storageOpenFlag)
   {
     Storage_close(&connectorInfo->storageHandle);
     connectorInfo->storageOpenFlag = FALSE;
   }
-
-//TODO: index
 
   // send result
   sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
@@ -1082,12 +1062,8 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
-// TODO: replace
-//  if (!StringMap_getString(argumentMap,"entityUUID",entityUUUID,NULL))
   StaticString (entityUUUID,MISC_UUID_STRING_LENGTH);
-  if (!StringMap_getString(argumentMap,"entityUUID",entityUUUID,NULL)
-&& !StringMap_getString(argumentMap,"scheduleUUID",entityUUUID,NULL)
-)
+  if (!StringMap_getString(argumentMap,"entityUUID",entityUUUID,NULL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityUUID=<text>");
     return;
@@ -2860,7 +2836,6 @@ LOCAL void connectorCommand_indexEntityUnlock(ConnectorInfo *connectorInfo, Inde
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
   // get entityId
-// TODO: StringMap_getINdexId?
   IndexId entityId;
   if (!StringMap_getUInt64(argumentMap,"entityId",&entityId.data,INDEX_ID_NONE.data))
   {
@@ -2875,7 +2850,7 @@ LOCAL void connectorCommand_indexEntityUnlock(ConnectorInfo *connectorInfo, Inde
 
   if (indexHandle != NULL)
   {
-    // updunlockate entity
+    // unlock entity
     Errors error = IndexEntity_unlock(indexHandle,
                                       entityId
                                      );
@@ -3196,6 +3171,11 @@ LOCAL void connectorCommand_indexStoragePurgeAll(ConnectorInfo *connectorInfo, I
   // get entity id, storage name, keep storage id
   IndexId entityId;
   StringMap_getUInt64(argumentMap,"entityId",&entityId.data,INDEX_ID_NONE.data);
+  if (!INDEX_ID_IS_NONE(entityId) && (INDEX_TYPE(entityId) != INDEX_TYPE_ENTITY))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not an entity index id %"PRIx64,entityId);
+    return;
+  }
   String storageName = String_new();
   StringMap_getString(argumentMap,"storageName",storageName,NULL);
   IndexId keepStorageId;
@@ -3558,40 +3538,6 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
            && Connector_isConnected(connectorInfo)
           )
     {
-      // process server i/o commands
-      uint id;
-      while (ServerIO_getCommand(&connectorInfo->io,
-                                 &id,
-                                 name,
-                                 argumentMap
-                                )
-            )
-      {
-        // find command
-        #if   defined(CONNECTOR_DEBUG)
-  //TODO: enable
-          fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
-          #ifndef NDEBUG
-            StringMap_debugPrint(2,argumentMap);
-          #endif
-        #elif !defined(NDEBUG)
-          if (globalOptions.debug.serverLevel >= 1)
-          {
-            fprintf(stderr,"DEBUG: received command #%u %s\n",id,String_cString(name));
-          }
-        #endif
-        ConnectorCommandFunction connectorCommandFunction;
-        if (!findConnectorCommand(name,&connectorCommandFunction))
-        {
-          sendResult(connectorInfo,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
-          continue;
-        }
-        assert(connectorCommandFunction != NULL);
-
-        // process command
-        connectorCommandFunction(connectorInfo,&indexHandle,id,argumentMap);
-      }
-
       // wait for disconnect, data, or result
       uint events = Misc_waitHandle(Network_getSocket(&connectorInfo->io.network.socketHandle),
                                     &signalMask,
@@ -3605,6 +3551,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
           if (ServerIO_receiveData(&connectorInfo->io))
           {
             // process server i/o commands
+            uint id;
             while (ServerIO_getCommand(&connectorInfo->io,
                                        &id,
                                        name,
@@ -4177,14 +4124,10 @@ UNUSED_VARIABLE(storageVolumeRequestUserData);
   error = transmitJob(connectorInfo,
                       jobName,
                       jobUUID,
-                      scheduleUUID,
                       storageName,
                       includeEntryList,
                       excludePatternList,
-                      jobOptions,
-                      archiveType,
-                      scheduleTitle,
-                      scheduleCustomText
+                      jobOptions
                      );
   if (error != ERROR_NONE)
   {
@@ -4208,9 +4151,10 @@ UNUSED_VARIABLE(storageVolumeRequestUserData);
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    CALLBACK_(NULL,NULL),
-                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S archiveType=%s testCreatedArchives=no noStorage=%y dryRun=%y",
+                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleTitle=%'S scheduleCustomText=%'S archiveType=%s testCreatedArchives=no noStorage=%y dryRun=%y",
                                    jobUUID,
                                    scheduleUUID,
+                                   scheduleTitle,
                                    scheduleCustomText,
                                    Archive_archiveTypeToString(archiveType),
                                    jobOptions->dryRun,

@@ -56,7 +56,7 @@
 *          storageName                  - storage name
 *          includeEntryList             - include entry list
 *          excludePatternList           - exclude pattern list
-*          customText                   - custome text or NULL
+*          scheduleCustomText           - schedule custome text or NULL
 *          jobOptions                   - job options
 *          createdDateTime              - date/time of created [s]
 *          getNamePasswordFunction      - get password callback (can
@@ -95,7 +95,7 @@ Errors Command_create(ServerIO                     *masterIO,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
-                      const char                   *customText,
+                      const char                   *scheduleCustomText,
                       JobOptions                   *jobOptions,
                       uint64                       createdDateTime,
                       GetNamePasswordFunction      getNamePasswordFunction,

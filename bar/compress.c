@@ -298,7 +298,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #ifdef HAVE_BZ2
         error = CompressBZ2_compressData(compressInfo);
       #else /* not HAVE_BZ2 */
-        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_BZ2 */
       break;
     case COMPRESS_ALGORITHM_LZMA_1:
@@ -314,7 +314,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #ifdef HAVE_LZMA
         error = CompressLZMA_compressData(compressInfo);
       #else /* not HAVE_LZMA */
-        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZMA */
       break;
     case COMPRESS_ALGORITHM_LZO_1:
@@ -326,7 +326,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #ifdef HAVE_LZO
         error = CompressLZO_compressData(compressInfo);
       #else /* not HAVE_LZO */
-        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_LZO */
       break;
     case COMPRESS_ALGORITHM_LZ4_0:
@@ -380,7 +380,6 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
         error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_ZSTD */
       break;
-      break;
     case COMPRESS_ALGORITHM_XDELTA_1:
     case COMPRESS_ALGORITHM_XDELTA_2:
     case COMPRESS_ALGORITHM_XDELTA_3:
@@ -394,7 +393,7 @@ LOCAL Errors compressData(CompressInfo *compressInfo)
       #ifdef HAVE_XDELTA3
         error = CompressXD3_compressData(compressInfo);
       #else /* not HAVE_XDELTA3 */
-        return ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
+        error = ERROR_COMPRESS_ALGORITHM_NOT_SUPPORTED;
       #endif /* HAVE_XDELTA3 */
       break;
     default:
@@ -1010,7 +1009,6 @@ bool Compress_isValidAlgorithm(uint16 n)
       #ifdef HAVE_XDELTA3
         CompressXD3_done(compressInfo);
       #else /* not HAVE_XDELTA3 */
-        return;
       #endif /* HAVE_XDELTA3 */
       break;
     default:

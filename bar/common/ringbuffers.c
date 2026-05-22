@@ -401,7 +401,7 @@ RingBuffer* __RingBuffer_new(const char *__fileName__, ulong __lineNb__, uint el
       #endif /* HALT_ON_INSUFFICIENT_MEMORY */
     }
   #else  /* NDEBUG */
-    if (!RingBuffer_init(ringBuffer,elementSize,size))
+    if (!RingBuffer_init(ringBuffer,elementSize,count))
     {
       #ifdef HALT_ON_INSUFFICIENT_MEMORY
         HALT_INSUFFICIENT_MEMORY();

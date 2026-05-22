@@ -113,7 +113,7 @@ LOCAL Errors loadDeviceVolume(const StorageInfo *storageInfo)
 
     logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
     logMessage(storageInfo->logHandle,
-               LOG_TYPE_ERROR,
+               LOG_TYPE_INFO,
                "Loaded medium"
               );
   }
@@ -185,7 +185,7 @@ LOCAL Errors unloadDeviceVolume(const StorageInfo *storageInfo)
   {
     logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
     logMessage(storageInfo->logHandle,
-               LOG_TYPE_ERROR,
+               LOG_TYPE_INFO,
                "Unloaded medium"
               );
   }
@@ -679,7 +679,7 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
   }
 
   // init macros
-  uint j = Thread_getNumberOfCores();
+  size_t j = Thread_getNumberOfCores();
   TextMacros (textMacros,5);
   TEXT_MACROS_INIT(textMacros)
   {
@@ -760,11 +760,12 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     error = File_getTmpFileName(imageFileName,NULL,tmpDirectory);
     if (error != ERROR_NONE)
     {
+      String_delete(imageFileName);
       return error;
     }
 
     // init macros
-    uint j = Thread_getNumberOfCores();
+    size_t j = Thread_getNumberOfCores();
     TextMacros (textMacros,7);
     TEXT_MACROS_INIT(textMacros)
     {
@@ -1081,7 +1082,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     if (error == ERROR_NONE)
     {
       String commandLine = String_new();
-      uint   retryCount  = 3;
+      size_t retryCount  = 3;
       bool   retryFlag   = TRUE;
       do
       {
@@ -1132,7 +1133,6 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         }
       }
       while ((error != ERROR_NONE) && (retryCount > 0) && retryFlag);
-      String_delete(commandLine);
       if (error == ERROR_NONE)
       {
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written image volume #%u",storageInfo->volumeNumber);
@@ -1140,6 +1140,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         updateVolumeDone(storageInfo,1,0);
         updateStorageRunningInfo(storageInfo);
       }
+      String_delete(commandLine);
     }
 
     // delete image
@@ -1158,6 +1159,9 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       error = File_delete(fileName,FALSE);
       if (error != ERROR_NONE)
       {
+        String_delete(fileName);
+        StringList_done(&storageInfo->device.write.fileNameList);
+        StringList_done(&executeIOInfo.stderrList);
         return error;
       }
     }
@@ -1180,20 +1184,16 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     // write post-processing
     if (!String_isEmpty(storageInfo->device.write.writePostProcessCommand))
     {
-      // write post-processing
-      if (!String_isEmpty(storageInfo->device.write.writePostProcessCommand))
-      {
-        // get script
-        printInfo(1,"Write device post-processing of volume #%u...",storageInfo->volumeNumber);
-        error = executeTemplate(String_cString(storageInfo->device.write.writePostProcessCommand),
-                                timestamp,
-                                textMacros.data,
-                                textMacros.count,
-                                CALLBACK_(executeIOOutput,NULL),
-                                globalOptions.commandTimeout
-                               );
-        printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
-      }
+      // get script
+      printInfo(1,"Write device post-processing of volume #%u...",storageInfo->volumeNumber);
+      error = executeTemplate(String_cString(storageInfo->device.write.writePostProcessCommand),
+                              timestamp,
+                              textMacros.data,
+                              textMacros.count,
+                              CALLBACK_(executeIOOutput,NULL),
+                              globalOptions.commandTimeout
+                             );
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
   }
 
@@ -1359,7 +1359,7 @@ UNUSED_VARIABLE(archiveName);
 #warning TODO still not implemented
 #endif
 #if 0
-  error = File_open(&storageHandle->fileSystem.fileHandle,
+  error = File_open(&storageHandle->device.write.fileHandle,
                     archiveName,
                     FILE_OPEN_READ
                    );
@@ -1370,8 +1370,6 @@ UNUSED_VARIABLE(archiveName);
 
   DEBUG_ADD_RESOURCE_TRACE(&storageHandle->device,StorageHandleDevice);
 #endif /* 0 */
-
-  return ERROR_FUNCTION_NOT_SUPPORTED;
 
   return ERROR_NONE;
 }
@@ -1388,7 +1386,6 @@ LOCAL void StorageDevice_close(StorageHandle *storageHandle)
   switch (storageHandle->mode)
   {
     case STORAGE_MODE_READ:
-      File_close(&storageHandle->device.write.fileHandle);
       break;
     case STORAGE_MODE_WRITE:
       SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -1494,7 +1491,7 @@ LOCAL Errors StorageDevice_rename(const StorageInfo *storageInfo,
                                  )
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(fromArchiveName);
@@ -1512,7 +1509,7 @@ LOCAL Errors StorageDevice_makeDirectory(const StorageInfo *storageInfo,
                                         )
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(!String_isEmpty(directoryName));
 
   UNUSED_VARIABLE(storageInfo);

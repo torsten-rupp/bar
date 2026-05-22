@@ -970,7 +970,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
                bufferSize
               );
     String_delete(deviceName);
-    return error;
+    return ERROR_INVALID_DEVICE_BLOCK_SIZE;
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
   assert(deviceInfo.blockSize > 0);
@@ -1963,6 +1963,7 @@ LOCAL Errors convertEntry(ArchiveHandle     *sourceArchiveHandle,
       #endif /* NDEBUG */
       break; /* not reached */
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -1989,19 +1990,27 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
   ArchiveHandle sourceArchiveHandle;
   uint          archiveIndex = 0;
   EntryMsg      entryMsg;
-  while (MsgQueue_get(&convertInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
+  while (//TODO ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
+         MsgQueue_get(&convertInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
+        )
   {
     assert(entryMsg.archiveHandle != NULL);
     assert(entryMsg.archiveCryptInfo != NULL);
-    if (   ((convertInfo->failError == ERROR_NONE) || !convertInfo->newJobOptions->noStopOnErrorFlag)
+    if (   ((convertInfo->failError == ERROR_NONE) || convertInfo->newJobOptions->noStopOnErrorFlag)
 //TODO
 //         && !isAborted(convertInfo)
        )
     {
       Errors error;
 
-      if (archiveIndex < entryMsg.archiveIndex)
+      if (archiveIndex != entryMsg.archiveIndex)
       {
+        // close previous archive
+        if (archiveIndex != 0)
+        {
+          Archive_close(&sourceArchiveHandle,FALSE);
+        }
+
         // open source archive
         error = Archive_openHandle(&sourceArchiveHandle,
                                    entryMsg.archiveHandle

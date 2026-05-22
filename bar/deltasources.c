@@ -788,7 +788,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
   {
     if (deltaSourceList != NULL)
     {
-      SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
       {
         DeltaSourceNode *deltaSourceNode;
         LIST_ITERATE(deltaSourceList,deltaSourceNode)
@@ -832,7 +832,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
         FragmentNode fragmentNode;
         FragmentList_initNode(&fragmentNode,name,size,NULL,0,0);
 
-        SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
         {
           DeltaSourceNode *deltaSourceNode;
           LIST_ITERATE(deltaSourceList,deltaSourceNode)
@@ -923,7 +923,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
         FragmentNode fragmentNode;
         FragmentList_initNode(&fragmentNode,name,size,NULL,0,0);
 
-        SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
         {
           DeltaSourceNode *deltaSourceNode;
           LIST_ITERATE(deltaSourceList,deltaSourceNode)

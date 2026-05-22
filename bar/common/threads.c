@@ -751,11 +751,11 @@ void Thread_doneAll(void)
 {
 }
 
-uint Thread_getNumberOfCores(void)
+size_t Thread_getNumberOfCores(void)
 {
   #if   defined(PLATFORM_LINUX)
     #if defined(HAVE_SYSCONF) && defined(HAVE__SC_NPROCESSORS_CONF)
-      return (uint)sysconf(_SC_NPROCESSORS_CONF);
+      return (size_t)sysconf(_SC_NPROCESSORS_CONF);
     #else
       return 1;
     #endif

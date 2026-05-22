@@ -190,10 +190,9 @@ void DeltaSourceList_copy(DeltaSourceList       *toDeltaSourceList,
 /***********************************************************************\
 * Name   : DeltaSourceList_append
 * Purpose: add entry to delta source list
-* Input  : entryList   - delta source list
-+          type        - entry type; see ENTRY_TYPE_*
-*          pattern     - pattern
-*          patternType - pattern type; see PATTERN_TYPE_*
+* Input  : deltaSourceList - delta source list
++          storageName     - storage name
+*          patternType     - pattern type; see PATTERN_TYPE_*
 * Output : id - id (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -207,11 +206,11 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
 
 /***********************************************************************\
 * Name   : DeltaSourceList_append
-* Purpose: add entry to delta source list
-* Input  : entryList   - delta source list
-+          type        - entry type; see ENTRY_TYPE_*
-*          pattern     - pattern
-*          patternType - pattern type; see PATTERN_TYPE_*
+* Purpose: update entry in delta source list
+* Input  : deltaSourceList - delta source list
++          id              - id
++          storageName     - storage name
+*          patternType     - pattern type; see PATTERN_TYPE_*
 * Output : id - id (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -226,35 +225,18 @@ Errors DeltaSourceList_update(DeltaSourceList *deltaSourceList,
 /***********************************************************************\
 * Name   : DeltaSourceList_remove
 * Purpose: remove entry from delta source list
-* Input  : entryList   - delta source list
+* Input  : deltaSourceList - delta source list
 +          type        - entry type; see ENTRY_TYPE_*
 *          pattern     - pattern
 *          patternType - pattern type; see PATTERN_TYPE_*
 * Output : id - id (can be NULL)
-* Return : ERROR_NONE or error code
+* Return : TRUE iff removed
 * Notes  : -
 \***********************************************************************/
 
 bool DeltaSourceList_remove(DeltaSourceList *deltaSourceList,
                             uint            id
                            );
-
-/***********************************************************************\
-* Name   : DeltaSourceList_match, DeltaSourceList_matchStringList
-* Purpose: patch string/string list with all entrys of list
-* Input  : entryList        - delta source list
-*          string           - string
-*          stringList       - string list
-*          patternMatchMode - pattern match mode; see PatternMatchModes
-* Output : -
-* Return : TRUE if entry match, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool DeltaSourceList_match(const DeltaSourceList *entryList,
-                           ConstString           string,
-                           PatternMatchModes     patternMatchMode
-                         );
 
 #ifdef __cplusplus
   }

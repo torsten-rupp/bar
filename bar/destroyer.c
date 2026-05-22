@@ -128,7 +128,7 @@ LOCAL void initRandom(int64 seed)
 
 LOCAL byte getRandomByte(uint max)
 {
-  return (byte)rand()%max;
+  return (byte)(rand() % max);
 }
 
 /***********************************************************************\
@@ -204,25 +204,22 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
 
   // get type
   ConstString w;
-  if (String_getNextToken(&stringTokenizer,&w,NULL))
-  {
-    if      (String_equalsCString(w,"m")) definition->type = DEFINITION_TYPE_MODIFY;
-    else if (String_equalsCString(w,"r")) definition->type = DEFINITION_TYPE_RANDOMIZE;
-    else if (String_equalsCString(w,"i")) definition->type = DEFINITION_TYPE_INSERT;
-    else if (String_equalsCString(w,"d")) definition->type = DEFINITION_TYPE_DELETE;
-    else
-    {
-      String_doneTokenizer(&stringTokenizer);
-      String_delete(t);
-      fprintf(stderr,"ERROR: Invalid definition '%s': expected m,i,d!\n",s);
-      return FALSE;
-    }
-  }
-  else
+  if (!String_getNextToken(&stringTokenizer,&w,NULL))
   {
     String_doneTokenizer(&stringTokenizer);
     String_delete(t);
     fprintf(stderr,"ERROR: Invalid definition '%s'!\n",s);
+    return FALSE;
+  }
+  if      (String_equalsCString(w,"m")) definition->type = DEFINITION_TYPE_MODIFY;
+  else if (String_equalsCString(w,"r")) definition->type = DEFINITION_TYPE_RANDOMIZE;
+  else if (String_equalsCString(w,"i")) definition->type = DEFINITION_TYPE_INSERT;
+  else if (String_equalsCString(w,"d")) definition->type = DEFINITION_TYPE_DELETE;
+  else
+  {
+    String_doneTokenizer(&stringTokenizer);
+    String_delete(t);
+    fprintf(stderr,"ERROR: Invalid definition '%s': expected m,i,d!\n",s);
     return FALSE;
   }
 
@@ -326,23 +323,9 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
         break;
       case DEFINITION_TYPE_INSERT:
         definition->value = String_new();
-        if (!String_scan(w,STRING_BEGIN,"%S",&definition->value))
-        {
-          String_delete(definition->value);
-          String_doneTokenizer(&stringTokenizer);
-          String_delete(t);
-          fprintf(stderr,"ERROR: Invalid value in definition '%s'!\n",s);
-          return FALSE;
-        }
         break;
       case DEFINITION_TYPE_DELETE:
-        if (!String_scan(w,STRING_BEGIN,"%u",&definition->length))
-        {
-          String_doneTokenizer(&stringTokenizer);
-          String_delete(t);
-          fprintf(stderr,"ERROR: Invalid length in definition '%s'!\n",s);
-          return FALSE;
-        }
+        definition->value = NULL;
         break;
     }
   }
@@ -416,16 +399,19 @@ int main(int argc, const char *argv[])
     {
       exit(1);
     }
-    if (definitionCount >= MAX_DEFINITIONS)
+    if (definitionCount < MAX_DEFINITIONS)
     {
-      fprintf(stderr,"ERROR: to many definitions! Max. %d possible.\n",MAX_DEFINITIONS);
+      definitions[definitionCount] = definition;
+      definitionCount++;
     }
-    definitions[definitionCount] = definition;
-    definitionCount++;
+    else
+    {
+      fprintf(stderr,"ERROR: to many definitions! Max. %d possible - skipped\n",MAX_DEFINITIONS);
+    }
   }
 
   // open input file
-  FILE *inputHandle = fopen(inputFileName,"r");
+  FILE *inputHandle = fopen(inputFileName,"rb");
   if (inputHandle == NULL)
   {
     fprintf(stderr,"ERROR: Cannot open file '%s' (error: %s)\n",
@@ -438,6 +424,7 @@ int main(int argc, const char *argv[])
   // destroy and write to stdout
   uint deleteCount = 0;
   uint findLength  = 0;
+  byte find[MAX_FIND_LENGTH];
   for (uint64 n = 0; n < size; n++)
   {
     // read byte
@@ -445,7 +432,6 @@ int main(int argc, const char *argv[])
 
     if (deleteCount == 0)
     {
-      byte find[MAX_FIND_LENGTH];
       memCopy(&find[0],sizeof(find),&find[1],sizeof(find)-1);
       find[sizeof(find)-1] = data;
       if (findLength < MAX_FIND_LENGTH) findLength++;
@@ -453,8 +439,7 @@ int main(int argc, const char *argv[])
       // find matching definition
       uint i = 0;
       while (   (i < definitionCount)
-//TODO: NYI
-             && (   ((definitions[i].findLength >  0) && memEquals(find,sizeof(find),definitions[i].find,definitions[i].findLength))
+             && (   ((definitions[i].findLength >  0) && !memEquals(find,sizeof(find),definitions[i].find,definitions[i].findLength))
                  || ((definitions[i].findLength == 0) && (n != (uint64)definitions[i].position))
                 )
             )

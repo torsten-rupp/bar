@@ -374,7 +374,7 @@ LOCAL Errors CompressLZMA_reset(CompressInfo *compressInfo)
       lzmalibResult = lzma_easy_encoder(&compressInfo->lzmalib.stream,compressInfo->lzmalib.compressionLevel,LZMA_CHECK_NONE);
       if (lzmalibResult != LZMA_OK)
       {
-        return ERROR_(DEFLATE,lzmalibResult);;
+        return ERROR_(DEFLATE,lzmalibResult);
       }
       break;
     case COMPRESS_MODE_INFLATE:

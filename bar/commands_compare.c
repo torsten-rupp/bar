@@ -607,7 +607,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
                bufferSize
               );
     String_delete(deviceName);
-    return error;
+    return ERROR_INVALID_DEVICE_BLOCK_SIZE;
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
   assert(deviceInfo.blockSize > 0);
@@ -1836,7 +1836,9 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
   ArchiveHandle archiveHandle;
   uint          archiveIndex = 0;
   EntryMsg      entryMsg;
-  while (MsgQueue_get(&compareInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER))
+  while (//TODO ((testInfo->isAbortedFunction == NULL) || !testInfo->isAbortedFunction(testInfo->isAbortedUserData))
+         MsgQueue_get(&compareInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
+        )
   {
     assert(entryMsg.archiveHandle != NULL);
     assert(entryMsg.archiveCryptInfo != NULL);

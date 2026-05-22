@@ -120,7 +120,7 @@ void Thread_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-uint Thread_getNumberOfCores(void);
+size_t Thread_getNumberOfCores(void);
 
 /***********************************************************************\
 * Name   : Thread_init

@@ -1163,7 +1163,7 @@ bool CmdOption_parseDeprecatedCStringOption(void       *variable,
 
 const CommandLineOption *CmdOption_find(const char              *name,
                                         const CommandLineOption commandLineOptions[],
-                                        uint                    commandLineOptionCount
+                                        size_t                  commandLineOptionCount
                                        );
 
 /***********************************************************************

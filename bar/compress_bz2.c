@@ -299,23 +299,26 @@ LOCAL Errors CompressBZ2_reset(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
-  int bzlibResult = BZ_PARAM_ERROR;
   switch (compressInfo->compressMode)
   {
     case COMPRESS_MODE_DEFLATE:
-      BZ2_bzCompressEnd(&compressInfo->bzlib.stream);
-      bzlibResult = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
-      if (bzlibResult != BZ_OK)
       {
-        return ERROR_(DEFLATE,bzlibResult);
+        BZ2_bzCompressEnd(&compressInfo->bzlib.stream);
+        int bzlibResult = BZ2_bzCompressInit(&compressInfo->bzlib.stream,compressInfo->bzlib.compressionLevel,0,0);
+        if (bzlibResult != BZ_OK)
+        {
+          return ERROR_(DEFLATE,bzlibResult);
+        }
       }
       break;
     case COMPRESS_MODE_INFLATE:
-      BZ2_bzDecompressEnd(&compressInfo->bzlib.stream);
-      int bzlibResult = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
-      if (bzlibResult != BZ_OK)
       {
-        return ERROR_(INFLATE,bzlibResult);
+        BZ2_bzDecompressEnd(&compressInfo->bzlib.stream);
+        int bzlibResult = BZ2_bzDecompressInit(&compressInfo->bzlib.stream,0,0);
+        if (bzlibResult != BZ_OK)
+        {
+          return ERROR_(INFLATE,bzlibResult);
+        }
       }
       break;
     #ifndef NDEBUG
@@ -339,7 +342,7 @@ LOCAL uint64 CompressBZ2_getOutputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
-  return ((uint64)compressInfo->bzlib.stream.total_out_hi32) | ((uint64)compressInfo->bzlib.stream.total_out_lo32 << 0);
+  return ((uint64)compressInfo->bzlib.stream.total_out_hi32 << 32) | ((uint64)compressInfo->bzlib.stream.total_out_lo32 << 0);
 }
 
 #ifdef __cplusplus

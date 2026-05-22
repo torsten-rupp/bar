@@ -362,7 +362,7 @@ LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle, ConstString archiveName)
         break;
       case HTTP_CODE_UNAUTHORIZED:
       case HTTP_CODE_FORBITTEN:
-        error = ERRORX_(FILE_ACCESS_DENIED,curlCode,"%s",String_cString(archiveName));
+        error = ERRORX_(FILE_ACCESS_DENIED,responseCode,"%s",String_cString(archiveName));
         break;
       case HTTP_CODE_NOT_FOUND:
         error = ERROR_FILE_NOT_FOUND_;
@@ -793,7 +793,7 @@ LOCAL Errors sftpRead(SocketHandle        *socketHandle,
         // should not happen in blocking-mode: bug? libssh2 API changed somewhere between 0.18 and 1.2.4? => wait for data
         if (!waitSSHSessionSocket(socketHandle))
         {
-          error = ERROR_NETWORK_SEND;
+          error = ERROR_NETWORK_RECEIVE;
         }
       }
       else if (n == LIBSSH2_ERROR_EAGAIN)
@@ -1031,7 +1031,7 @@ LOCAL Errors sftpStat(SocketHandle *socketHandle,
         char *ssh2ErrorText;
 
         libssh2_session_last_error(Network_getSSHSession(socketHandle),&ssh2ErrorText,NULL,0);
-        error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",ssh2ErrorText);
+        error = ERRORX_(IO,ssh2ErrorCode,"%s",ssh2ErrorText);
       }
       else
       {
@@ -1134,7 +1134,7 @@ LOCAL Errors sftpMakeDirectory(SocketHandle *socketHandle,
         char *ssh2ErrorText;
 
         libssh2_session_last_error(Network_getSSHSession(socketHandle),&ssh2ErrorText,NULL,0);
-        error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",ssh2ErrorText);
+        error = ERRORX_(IO,ssh2ErrorCode,"%s",ssh2ErrorText);
       }
       else
       {
@@ -1252,7 +1252,7 @@ LOCAL Errors sftpUnlink(SocketHandle *socketHandle,
         char *ssh2ErrorText;
 
         libssh2_session_last_error(Network_getSSHSession(socketHandle),&ssh2ErrorText,NULL,0);
-        error = ERRORX_(IO,libssh2_sftp_last_error(sftp),"%s",ssh2ErrorText);
+        error = ERRORX_(IO,ssh2ErrorCode,"%s",ssh2ErrorText);
       }
       else
       {
@@ -1381,6 +1381,21 @@ LOCAL Errors transferFileToStorage(FileHandle                  *fileHandle,
 
     // pause storage (if requested)
     Storage_pause(storageHandle->storageInfo);
+  }
+  if (   (   (isAbortedFunction != NULL)
+          && isAbortedFunction(isAbortedUserData)
+         )
+// TODO: remove
+      || Storage_isAborted(storageHandle->storageInfo)
+     )
+  {
+    free(buffer);
+    return ERROR_ABORTED;
+  }
+  if (!updateStorageRunningInfo(storageHandle->storageInfo))
+  {
+    free(buffer);
+    return ERROR_ABORTED;
   }
 
   // free resources
@@ -1585,14 +1600,14 @@ Errors Storage_initAll(void)
   while ((i < SIZE_OF_ARRAY(INIT_DONE)) && (error == ERROR_NONE))
   {
     error = INIT_DONE[i].initAll();
-    i++;
+    if (error == ERROR_NONE) i++;
   }
   if (error != ERROR_NONE)
   {
     while (i > 0)
     {
-      i--;
       INIT_DONE[i].doneAll();
+      i--;
     }
   }
 
@@ -1609,10 +1624,11 @@ void Storage_doneAll(void)
   StorageSFTP_doneAll();
   StorageSCP_doneAll();
   StorageFTP_doneAll();
+  StorageFile_doneAll();
+
   #if   defined(HAVE_CURL)
     curl_global_cleanup();
   #endif /* HAVE_CURL */
-  StorageFile_doneAll();
 
   #if defined(HAVE_SSH2)
     Password_done(&defaultSSHPassword);
@@ -3367,7 +3383,7 @@ bool Storage_isFile(StorageInfo *storageInfo, ConstString archiveName)
   if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
+    return FALSE;
   }
 
   isFileFlag = FALSE;
@@ -3434,7 +3450,7 @@ bool Storage_isDirectory(StorageInfo *storageInfo, ConstString archiveName)
   if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
+    return FALSE;
   }
 
   isDirectoryFlag = FALSE;
@@ -3501,7 +3517,7 @@ bool Storage_isReadable(StorageInfo *storageInfo, ConstString archiveName)
   if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
+    return FALSE;
   }
 
   isReadableFlag = FALSE;
@@ -3568,7 +3584,7 @@ bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName)
   if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
+    return FALSE;
   }
 
   isWritableFlag = FALSE;
@@ -4722,8 +4738,6 @@ Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName)
 
   error                = ERROR_NONE;
   String directoryName = String_new();
-  JobOptions jobOptions;
-  Job_initOptions(&jobOptions);
   StringTokenizer stringTokenizer;
   File_initSplitFileName(&stringTokenizer,pathName);
   ConstString name;
@@ -4775,7 +4789,6 @@ Errors Storage_makeDirectory(StorageInfo *storageInfo, ConstString pathName)
     }
   }
   File_doneSplitFileName(&stringTokenizer);
-  Job_doneOptions(&jobOptions);
   String_delete(directoryName);
 
   return error;
@@ -5275,12 +5288,6 @@ Errors Storage_forAll(const StorageSpecifier  *storageSpecifier,
 {
   assert(storageSpecifier != NULL);
   assert(storageFunction != NULL);
-
-// TODO:
-#ifndef WERROR
-#warning skipUnreadableFlag
-#endif
-UNUSED_VARIABLE(skipUnreadableFlag);
 
   Errors error;
 

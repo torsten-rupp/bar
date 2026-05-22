@@ -196,7 +196,12 @@ DeltaSourceList *DeltaSourceList_clear(DeltaSourceList *deltaSourceList)
 {
   assert(deltaSourceList != NULL);
 
-  return (DeltaSourceList*)List_clear(deltaSourceList);
+  SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    List_clear(deltaSourceList);
+  }
+
+  return deltaSourceList;
 }
 
 void DeltaSourceList_copy(DeltaSourceList       *toDeltaSourceList,
@@ -208,7 +213,13 @@ void DeltaSourceList_copy(DeltaSourceList       *toDeltaSourceList,
   assert(toDeltaSourceList != NULL);
   assert(fromDeltaSourceList != NULL);
 
-  List_copy(toDeltaSourceList,NULL,fromDeltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode);
+  SEMAPHORE_LOCKED_DO(&toDeltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    SEMAPHORE_LOCKED_DO(&fromDeltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    {
+      List_copy(toDeltaSourceList,NULL,fromDeltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode);
+    }
+  }
 }
 
 Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
@@ -254,7 +265,10 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     deltaSourceNode->locked      = FALSE;
 
     // add to list
-    List_append(deltaSourceList,deltaSourceNode);
+    SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      List_append(deltaSourceList,deltaSourceNode);
+    }
   }
   else
   {
@@ -262,7 +276,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     JobOptions jobOptions;
     Job_initOptions(&jobOptions);
 
-    //open directory list
+    // open directory list
     StorageDirectoryListHandle storageDirectoryListHandle;
     error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                       &storageSpecifier,
@@ -287,7 +301,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
           error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
           if (error != ERROR_NONE)
           {
-            continue;
+            break;
           }
 
          // match pattern
@@ -311,7 +325,10 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
           deltaSourceNode->patternType = patternType;
           deltaSourceNode->locked      = FALSE;
 
-          List_append(deltaSourceList,deltaSourceNode);
+          SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          {
+            List_append(deltaSourceList,deltaSourceNode);
+          }
         }
         String_delete(fileName);
         Pattern_done(&pattern);
@@ -319,6 +336,12 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
       Storage_closeDirectoryList(&storageDirectoryListHandle);
     }
     Job_doneOptions(&jobOptions);
+    if (error != ERROR_NONE)
+    {
+      Storage_doneSpecifier(&storageSpecifier);
+      String_delete(printableStorageName);
+      return error;
+    }
   }
 
   // add file entry directly if no matching entry found in directory
@@ -365,136 +388,15 @@ Errors DeltaSourceList_update(DeltaSourceList *deltaSourceList,
   assert(deltaSourceList != NULL);
   assert(storageName != NULL);
 
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-UNUSED_VARIABLE(id);
-
-  // parse storage name
-  StorageSpecifier storageSpecifier;
-  Storage_initSpecifier(&storageSpecifier);
-  error = Storage_parseName(&storageSpecifier,storageName);
-  if (error != ERROR_NONE)
+  SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    Storage_doneSpecifier(&storageSpecifier);
-    return error;
-  }
-
-  // get printable storage name
-  String printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,NULL);
-
-  DeltaSourceNode *deltaSourceNode = NULL;
-
-  if (String_isEmpty(storageSpecifier.archivePatternString))
-  {
-    // add file entry
-    deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
-    if (deltaSourceNode == NULL)
+    DeltaSourceNode *deltaSourceNode = LIST_FIND(deltaSourceList,deltaSourceNode,deltaSourceNode->id == id);
+    if (deltaSourceNode != NULL)
     {
-      HALT_INSUFFICIENT_MEMORY();
+      String_set(deltaSourceNode->storageName,storageName);
+      deltaSourceNode->patternType = patternType;
     }
-    #ifndef NDEBUG
-      deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
-    #else
-      deltaSourceNode->id          = Misc_getId();
-    #endif
-    deltaSourceNode->storageName = String_duplicate(storageName);
-    deltaSourceNode->patternType = patternType;
-    deltaSourceNode->locked      = FALSE;
-
-    // add to list
-    List_append(deltaSourceList,deltaSourceNode);
   }
-  else
-  {
-    // add matching files
-    JobOptions jobOptions;
-    Job_initOptions(&jobOptions);
-
-    //open directory list
-    StorageDirectoryListHandle storageDirectoryListHandle;
-    error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                      &storageSpecifier,
-                                      NULL,  // archiveName
-                                      &jobOptions,
-                                      SERVER_CONNECTION_PRIORITY_LOW
-                                     );
-    if (error == ERROR_NONE)
-    {
-      Pattern pattern;
-      error = Pattern_init(&pattern,
-                           storageSpecifier.archivePatternString,
-                           patternType,
-                           PATTERN_FLAG_NONE
-                          );
-      if (error == ERROR_NONE)
-      {
-        String fileName = String_new();
-        while (!Storage_endOfDirectoryList(&storageDirectoryListHandle) && (error == ERROR_NONE))
-        {
-          // read next directory entry
-          error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,NULL);
-          if (error != ERROR_NONE)
-          {
-            continue;
-          }
-
-         // match pattern
-          if (!Pattern_match(&pattern,fileName,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
-          {
-            continue;
-          }
-
-          // add file entry
-          deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
-          if (deltaSourceNode == NULL)
-          {
-            HALT_INSUFFICIENT_MEMORY();
-          }
-          #ifndef NDEBUG
-            deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
-          #else
-            deltaSourceNode->id          = Misc_getId();
-          #endif
-          deltaSourceNode->storageName = String_duplicate(fileName);
-          deltaSourceNode->patternType = patternType;
-          deltaSourceNode->locked      = FALSE;
-
-          List_append(deltaSourceList,deltaSourceNode);
-        }
-        String_delete(fileName);
-        Pattern_done(&pattern);
-      }
-      Storage_closeDirectoryList(&storageDirectoryListHandle);
-    }
-    Job_doneOptions(&jobOptions);
-  }
-
-  // add file entry directly if no matching entry found in directory
-  if (deltaSourceNode == NULL)
-  {
-    printWarning(_("no matching entry for delta source '%s' found"),
-                 String_cString(printableStorageName)
-                );
-
-    deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
-    if (deltaSourceNode == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    #ifndef NDEBUG
-      deltaSourceNode->id          = !globalOptions.debug.serverFixedIdsFlag ? Misc_getId() : 1;
-    #else
-      deltaSourceNode->id          = Misc_getId();
-    #endif
-    deltaSourceNode->storageName = String_duplicate(storageName);
-    deltaSourceNode->patternType = patternType;
-    deltaSourceNode->locked      = FALSE;
-
-    List_append(deltaSourceList,deltaSourceNode);
-  }
-
-  // free resources
-  Storage_doneSpecifier(&storageSpecifier);
-  String_delete(printableStorageName);
 
   return ERROR_NONE;
 }
@@ -505,16 +407,19 @@ bool DeltaSourceList_remove(DeltaSourceList *deltaSourceList,
 {
   assert(deltaSourceList != NULL);
 
-  DeltaSourceNode *deltaSourceNode = (DeltaSourceNode*)LIST_FIND(deltaSourceList,deltaSourceNode,deltaSourceNode->id == id);
-  if (deltaSourceNode != NULL)
+  bool result = FALSE;
+
+  SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    List_removeAndFree(deltaSourceList,deltaSourceNode);
-    return TRUE;
+    DeltaSourceNode *deltaSourceNode = (DeltaSourceNode*)LIST_FIND(deltaSourceList,deltaSourceNode,deltaSourceNode->id == id);
+    if (deltaSourceNode != NULL)
+    {
+      List_removeAndFree(deltaSourceList,deltaSourceNode);
+      result = TRUE;
+    }
   }
-  else
-  {
-    return FALSE;
-  }
+
+  return result;
 }
 
 #ifdef __cplusplus

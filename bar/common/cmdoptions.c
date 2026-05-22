@@ -51,10 +51,6 @@ Array cmdSetOptions;
 
 /***************************** Functions ******************************/
 
-#ifdef __GNUG__
-extern "C" {
-#endif
-
 /***********************************************************************\
 * Name   : findUnit
 * Purpose: find unit by name
@@ -160,7 +156,7 @@ LOCAL const CommandLineUnit *findDoubleUnitByValue(const CommandLineUnit *units,
   {
     const CommandLineUnit *unit = units;
     while (   (unit->name != NULL)
-           && (fmod(value,units->factor) != 0.0)
+           && (fmod(value,unit->factor) != 0.0)
           )
     {
       unit++;
@@ -327,7 +323,7 @@ LOCAL bool getIntegerOption(int                   *value,
 
   // split number, unit
   char number[128],unitName[32];
-  uint i = stringLength(string);
+  size_t i = stringLength(string);
   if (i > 0)
   {
     while ((i > 0) && !isdigit(string[i-1])) { i--; }
@@ -402,7 +398,7 @@ LOCAL bool getIntegerOption(int                   *value,
   }
 
   // calculate value
-  (*value) = (int)(strtol(number,NULL,0)*factor);
+  (*value) = (int)(strtol(number,NULL,0) * (long)factor);
 
   return TRUE;
 }
@@ -439,7 +435,7 @@ LOCAL bool getInteger64Option(int64                 *value,
 
   // split number, unit
   char number[128],unitName[32];
-  uint i = stringLength(string);
+  size_t i = stringLength(string);
   if (i > 0)
   {
     while ((i > 0) && !isdigit(string[i-1])) { i--; }
@@ -513,7 +509,7 @@ LOCAL bool getInteger64Option(int64                 *value,
   }
 
   // calculate value
-  (*value) = strtoll(number,NULL,0)*factor;
+  (*value) = strtoll(number,NULL,0) * (long long)factor;
 
   return TRUE;
 }
@@ -617,15 +613,12 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       break;
     case CMD_OPTION_TYPE_DOUBLE:
       {
-        uint                  i,n;
-        char                  number[128],unitName[32];
-        const CommandLineUnit *unit;
-        ulong                 factor;
-
         assert(commandLineOption->variable.d != NULL);
 
         // split number, unit
-        i = stringLength(value);
+        uint   n;
+        char   number[128],unitName[32];
+        size_t i = stringLength(value);
         if (i > 0)
         {
           while ((i > 0) && !isdigit(value[i-1])) { i--; }
@@ -653,11 +646,12 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         }
 
         // find unit factor
+        ulong factor;
         if (unitName[0] != '\0')
         {
           if (commandLineOption->doubleOption.units != NULL)
           {
-            unit = findUnit(commandLineOption->doubleOption.units,unitName);
+            const CommandLineUnit *unit = findUnit(commandLineOption->doubleOption.units,unitName);
             if (unit == NULL)
             {
               if (outputHandle != NULL)
@@ -667,7 +661,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                         (errorPrefix != NULL)?errorPrefix:"",
                         value
                        );
-                ITERATE_UNITS(unit,commandLineOption->integerOption.units)
+                ITERATE_UNITS(unit,commandLineOption->doubleOption.units)
                 {
                   fprintf(outputHandle," %s",unit->name);
                 }
@@ -763,7 +757,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
                || stringEqualsIgnoreCase(value,"no")
               )
       {
-        (*commandLineOption->variable.b) &= ~commandLineOption->flagOption.value;
+        (*commandLineOption->variable.flags) &= ~commandLineOption->flagOption.value;
       }
       else
       {
@@ -836,7 +830,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
     case CMD_OPTION_TYPE_SET:
       {
         assert(commandLineOption->variable.set != NULL);
-        uint i = 0;
+        size_t i = 0;
         while (value[i] != '\0')
         {
           // skip spaces
@@ -844,7 +838,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
 
           // get name
           char setName[128];
-          uint j = 0;
+          size_t j = 0;
           while ((value[i] != '\0') && !isspace(value[i]) && (value[i] != ','))
           {
             if (j < sizeof(setName)-1) { setName[j] = value[i]; j++; }
@@ -1039,14 +1033,14 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printSpaces(FILE *outputHandle, uint n)
+LOCAL void printSpaces(FILE *outputHandle, size_t n)
 {
   const char *SPACES8 = "        ";
 
   assert(outputHandle != NULL);
 
-  uint i = 0;
-  while ((i+8) < n)
+  size_t i = 0;
+  while ((i+8) <= n)
   {
     size_t bytesWritten = fwrite(SPACES8,1,8,outputHandle);
     UNUSED_VARIABLE(bytesWritten);
@@ -1073,7 +1067,7 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void expandMacros(char *line, uint lineSize, const char *template, uint templateLength, const CommandLineOption *commandLineOption)
+LOCAL void expandMacros(char *line, uint lineSize, const char *template, size_t templateLength, const CommandLineOption *commandLineOption)
 {
   #define APPEND(s,length,i,ch) \
     do \
@@ -1090,8 +1084,8 @@ LOCAL void expandMacros(char *line, uint lineSize, const char *template, uint te
   assert(template != NULL);
   assert(commandLineOption != NULL);
 
-  uint i = 0;
-  uint j = 0;
+  size_t i = 0;
+  size_t j = 0;
   while (i < templateLength)
   {
     if (template[i] == '%')
@@ -1109,13 +1103,13 @@ LOCAL void expandMacros(char *line, uint lineSize, const char *template, uint te
 
         // get macro name
         char macro[64];
-        uint k = 0;
+        size_t k = 0;
         while ((i < templateLength) && (template[i] != '%'))
         {
           APPEND(macro,sizeof(macro),k,template[i]);
           i++;
         }
-        i++;
+        if (i < templateLength) i++;
 
         // expand macro
         if (stringEquals(macro,"default"))
@@ -1221,9 +1215,9 @@ LOCAL void expandMacros(char *line, uint lineSize, const char *template, uint te
 
   #ifndef NDEBUG
     // check for duplicate names
-    for (uint i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
+    for (size_t i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
     {
-      for (uint j = 0; commandLineOptions[j].type != CMD_OPTION_TYPE_END; j++)
+      for (size_t j = 0; commandLineOptions[j].type != CMD_OPTION_TYPE_END; j++)
       {
         if (i != j)
         {
@@ -1243,7 +1237,7 @@ LOCAL void expandMacros(char *line, uint lineSize, const char *template, uint te
   /* get default values from initial settings of variables
      Note: strings are always new allocated and reallocated in CmdOption_parse() resp. freed in CmdOption_init()
   */
-  for (uint i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
+  for (size_t i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
     assert(commandLineOptions[i].variable.pointer != NULL);
     switch (commandLineOptions[i].type)
@@ -1366,7 +1360,7 @@ LOCAL void expandMacros(char *line, uint lineSize, const char *template, uint te
   Array_done(&cmdSetOptions);
 
   // free values and restore from default values
-  for (uint i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
+  for (size_t i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
     switch (commandLineOptions[i].type)
     {
@@ -1393,16 +1387,16 @@ LOCAL void expandMacros(char *line, uint lineSize, const char *template, uint te
         if ((*commandLineOptions[i].variable.cString) != NULL)
         {
           free(*commandLineOptions[i].variable.cString);
-          (*commandLineOptions[i].variable.cString) = commandLineOptions[i].defaultValue.cString;
         }
+        (*commandLineOptions[i].variable.cString) = commandLineOptions[i].defaultValue.cString;
         break;
       case CMD_OPTION_TYPE_STRING:
         assert(commandLineOptions[i].variable.string != NULL);
         if ((*commandLineOptions[i].variable.string) != NULL)
         {
           String_delete(*commandLineOptions[i].variable.string);
-          (*commandLineOptions[i].variable.string) = commandLineOptions[i].defaultValue.string;
         }
+        (*commandLineOptions[i].variable.string) = commandLineOptions[i].defaultValue.string;
         break;
       case CMD_OPTION_TYPE_SPECIAL:
         break;
@@ -1439,7 +1433,7 @@ bool CmdOption_parse(const char              *argv[],
   if (minPriority == CMD_PRIORITY_ANY)
   {
     minPriority = MAX_UINT;
-    for (uint i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
+    for (size_t i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
     {
       minPriority = MIN(minPriority,commandLineOptions[i].priority);
     }
@@ -1447,7 +1441,7 @@ bool CmdOption_parse(const char              *argv[],
   if (maxPriority == CMD_PRIORITY_ANY)
   {
     maxPriority = 0;
-    for (uint i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
+    for (size_t i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
     {
       maxPriority = MAX(maxPriority,commandLineOptions[i].priority);
     }
@@ -1458,9 +1452,9 @@ bool CmdOption_parse(const char              *argv[],
   int argumentsCount = 1;
   for (uint priority = minPriority; priority <= maxPriority; priority++)
   {
-    bool endOfOptionsFlag = FALSE;
-    uint i                = 1;
-    while (i < (uint)(*argc))
+    bool   endOfOptionsFlag = FALSE;
+    size_t i                = 1;
+    while (i < (size_t)(*argc))
     {
       char       name[128];
       char       option[128];
@@ -1487,7 +1481,7 @@ bool CmdOption_parse(const char              *argv[],
         }
 
         // find option
-        uint j = 0;
+        size_t j = 0;
         while ((commandLineOptions[j].type != CMD_OPTION_TYPE_END) && !stringEquals(commandLineOptions[j].name,name))
         {
           j++;
@@ -1672,7 +1666,7 @@ bool CmdOption_parse(const char              *argv[],
           name[1] = '\0';
 
           // find option
-          uint j = 0;
+          size_t j = 0;
           while ((commandLineOptions[j].type != CMD_OPTION_TYPE_END) && (commandLineOptions[j].shortName != name[0]))
           {
             j++;
@@ -1926,12 +1920,12 @@ bool CmdOption_parseDeprecatedCStringOption(void       *variable,
 
 const CommandLineOption *CmdOption_find(const char              *name,
                                         const CommandLineOption commandLineOptions[],
-                                        uint                    commandLineOptionCount
+                                        size_t                  commandLineOptionCount
                                        )
 {
   assert(commandLineOptions != NULL);
 
-  uint i = 0;
+  size_t i = 0;
   while ((i < commandLineOptionCount) && !stringEquals(commandLineOptions[i].name,name))
   {
     i++;
@@ -2002,7 +1996,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
 
   // get max. width of name column
   uint maxNameLength = 0;
-  for (uint i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
+  for (size_t i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
     assert(commandLineOptions[i].name != NULL);
 
@@ -2148,7 +2142,7 @@ void CmdOption_printHelp(FILE                    *outputHandle,
   }
 
   // output help
-  for (uint i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
+  for (size_t i = 0; commandLineOptions[i].type != CMD_OPTION_TYPE_END; i++)
   {
     if (   (commandLineOptions[i].type != CMD_OPTION_TYPE_DEPRECATED)
         && ((helpLevel == CMD_HELP_LEVEL_ALL) || (helpLevel >= (int)commandLineOptions[i].helpLevel))
@@ -2507,9 +2501,5 @@ void CmdOption_printHelp(FILE                    *outputHandle,
 #ifdef __GNUC__
 #pragma GCC pop_options
 #endif /* __GNUC__ */
-
-#ifdef __GNUG__
-}
-#endif
 
 /* end of file */

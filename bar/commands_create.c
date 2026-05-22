@@ -102,7 +102,7 @@ typedef struct
   const char                  *scheduleTitle;                        // schedule title or NULL
   const char                  *entityUUID;                           // entity UUID to store or NULL
   ArchiveTypes                archiveType;                           // archive type to create
-  const char                  *customText;                           // custom text or NULL
+  const char                  *scheduleCustomText;                   // schedule custom text or NULL
   const EntryList             *includeEntryList;                     // list of included entries
   const PatternList           *excludePatternList;                   // list of exclude patterns
 // TODO: already in storageInfo
@@ -350,7 +350,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *                                       (normal/full/incremental)
 *          includeEntryList           - include entry list
 *          excludePatternList         - exclude pattern list
-*          customText                 - custome text or NULL
+*          scheduleCustomText         - schedule custome text or NULL
 *          jobOptions                 - job options
 *          createdDateTime            - date/time of created [s]
 *          storageFlags               - storage flags; see STORAGE_FLAGS_...
@@ -380,7 +380,7 @@ LOCAL void initCreateInfo(CreateInfo          *createInfo,
                           ArchiveTypes        archiveType,
                           const EntryList     *includeEntryList,
                           const PatternList   *excludePatternList,
-                          const char          *customText,
+                          const char          *scheduleCustomText,
                           JobOptions          *jobOptions,
                           uint64              createdDateTime,
                           IsPauseFunction     isPauseCreateFunction,
@@ -403,7 +403,7 @@ LOCAL void initCreateInfo(CreateInfo          *createInfo,
   createInfo->entityUUID                            = entityUUID;
   createInfo->includeEntryList                      = includeEntryList;
   createInfo->excludePatternList                    = excludePatternList;
-  createInfo->customText                            = customText;
+  createInfo->scheduleCustomText                    = scheduleCustomText;
   createInfo->jobOptions                            = jobOptions;
   createInfo->createdDateTime                       = createdDateTime;
 
@@ -778,7 +778,6 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   File_close(&fileHandle);
   if (error != ERROR_NONE)
   {
-    File_delete(tmpFileName,FALSE);
     File_delete(tmpFileName,FALSE);
     String_delete(tmpFileName);
     String_delete(directoryName);
@@ -1729,7 +1728,6 @@ LOCAL void collector(CreateInfo     *createInfo,
                           STATUS_INFO_UPDATE(createInfo,NULL,NULL)
                           {
                             createInfo->runningInfo.progress.skipped.count++;
-                            createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                           }
                         }
                       }
@@ -1776,7 +1774,6 @@ LOCAL void collector(CreateInfo     *createInfo,
                           STATUS_INFO_UPDATE(createInfo,NULL,NULL)
                           {
                             createInfo->runningInfo.progress.skipped.count++;
-                            createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                           }
                         }
                       }
@@ -1795,91 +1792,100 @@ LOCAL void collector(CreateInfo     *createInfo,
 
                       if (!isInExcludedList(createInfo->excludePatternList,name))
                       {
-                        if (collectorType == COLLECTOR_TYPE_ENTRIES)
+                        switch (collectorType)
                         {
-                          if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
-                          {
-                            union { void *value; HardLinkInfo *hardLinkInfo; } data;
-                            HardLinkInfo                                       hardLinkInfo;
-                            if (Dictionary_find(&hardLinksDictionary,
-                                                &fileInfo.id,
-                                                sizeof(fileInfo.id),
-                                                &data.value,
-                                                NULL
-                                               )
-                                )
+                          case COLLECTOR_TYPE_ENTRIES:
+                            if ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                             {
-                              // append name to hard link name list
-                              StringList_append(&data.hardLinkInfo->nameList,name);
-
-                              if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
+                              union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                              HardLinkInfo                                       hardLinkInfo;
+                              if (Dictionary_find(&hardLinksDictionary,
+                                                  &fileInfo.id,
+                                                  sizeof(fileInfo.id),
+                                                  &data.value,
+                                                  NULL
+                                                 )
+                                  )
                               {
-                                // found last hardlink
+                                // append name to hard link name list
+                                StringList_append(&data.hardLinkInfo->nameList,name);
 
-                                switch (collectorType)
+                                if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
                                 {
-                                  case COLLECTOR_TYPE_ENTRIES:
-                                    // add to entry list
-                                    appendHardLinkToEntryList(createInfo,
-                                                              &data.hardLinkInfo->nameList,
-                                                              &data.hardLinkInfo->fileInfo,
-                                                              !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
-                                                             );
-                                    break;
-                                  case COLLECTOR_TYPE_SUM:
-                                    // update status
-                                    STATUS_INFO_UPDATE(createInfo,NULL,NULL)
-                                    {
-                                      createInfo->runningInfo.progress.total.count++;
-                                      createInfo->runningInfo.progress.total.size += fileInfo.size;
-                                    }
+                                  // found last hardlink
+
+                                  switch (collectorType)
+                                  {
+                                    case COLLECTOR_TYPE_ENTRIES:
+                                      // add to entry list
+                                      appendHardLinkToEntryList(createInfo,
+                                                                &data.hardLinkInfo->nameList,
+                                                                &data.hardLinkInfo->fileInfo,
+                                                                !createInfo->jobOptions->noStorage ? globalOptions.fragmentSize : 0LL
+                                                               );
+                                      break;
+                                    case COLLECTOR_TYPE_SUM:
+                                      // update status
+                                      STATUS_INFO_UPDATE(createInfo,NULL,NULL)
+                                      {
+                                        createInfo->runningInfo.progress.total.count++;
+                                        createInfo->runningInfo.progress.total.size += fileInfo.size;
+                                      }
+                                  }
+
+                                  // clear entry
+                                  Dictionary_remove(&hardLinksDictionary,
+                                                    &fileInfo.id,
+                                                    sizeof(fileInfo.id)
+                                                   );
+                                }
+                              }
+                              else
+                              {
+                                // create hard link name list
+                                if (isPrintInfo(2))
+                                {
+                                  printIncrementalInfo(&createInfo->namesDictionary,
+                                                       name,
+                                                       &fileInfo.cast
+                                                      );
                                 }
 
-                                // clear entry
-                                Dictionary_remove(&hardLinksDictionary,
-                                                  &fileInfo.id,
-                                                  sizeof(fileInfo.id)
-                                                 );
+                                hardLinkInfo.count = fileInfo.linkCount;
+                                StringList_init(&hardLinkInfo.nameList);
+                                StringList_append(&hardLinkInfo.nameList,name);
+                                memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
+
+                                if (!Dictionary_add(&hardLinksDictionary,
+                                                    &fileInfo.id,
+                                                    sizeof(fileInfo.id),
+                                                    &hardLinkInfo,
+                                                    sizeof(hardLinkInfo)
+                                                   )
+                                    )
+                                {
+                                  HALT_INSUFFICIENT_MEMORY();
+                                }
                               }
                             }
                             else
                             {
-                              // create hard link name list
-                              if (isPrintInfo(2))
-                              {
-                                printIncrementalInfo(&createInfo->namesDictionary,
-                                                     name,
-                                                     &fileInfo.cast
-                                                    );
-                              }
+                              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'",String_cString(name));
 
-                              hardLinkInfo.count = fileInfo.linkCount;
-                              StringList_init(&hardLinkInfo.nameList);
-                              StringList_append(&hardLinkInfo.nameList,name);
-                              memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
-
-                              if (!Dictionary_add(&hardLinksDictionary,
-                                                  &fileInfo.id,
-                                                  sizeof(fileInfo.id),
-                                                  &hardLinkInfo,
-                                                  sizeof(hardLinkInfo)
-                                                 )
-                                  )
+                              STATUS_INFO_UPDATE(createInfo,NULL,NULL)
                               {
-                                HALT_INSUFFICIENT_MEMORY();
+                                createInfo->runningInfo.progress.skipped.count++;
+                                createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                               }
                             }
-                          }
-                          else
-                          {
-                            logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'",String_cString(name));
-
+                            break;
+                          case COLLECTOR_TYPE_SUM:
                             STATUS_INFO_UPDATE(createInfo,NULL,NULL)
                             {
-                              createInfo->runningInfo.progress.skipped.count++;
-                              createInfo->runningInfo.progress.skipped.size += fileInfo.size;
+                              createInfo->runningInfo.progress.total.count++;
+                              createInfo->runningInfo.progress.total.size += fileInfo.size;
                             }
-                          }
+                            break;
                         }
                       }
                       else
@@ -1938,7 +1944,6 @@ LOCAL void collector(CreateInfo     *createInfo,
                         STATUS_INFO_UPDATE(createInfo,NULL,NULL)
                         {
                           createInfo->runningInfo.progress.skipped.count++;
-                          createInfo->runningInfo.progress.skipped.size += fileInfo.size;
                         }
                       }
                     }
@@ -3339,7 +3344,7 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
                              EXPAND_MACRO_MODE_STRING,
                              createInfo->archiveType,
                              createInfo->scheduleTitle,
-                             createInfo->customText,
+                             createInfo->scheduleCustomText,
                              createInfo->createdDateTime,
                              partNumber
                             );
@@ -3655,7 +3660,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                              EXPAND_MACRO_MODE_STRING,
                              createInfo->archiveType,
                              createInfo->scheduleTitle,
-                             createInfo->customText,
+                             createInfo->scheduleCustomText,
                              createInfo->createdDateTime,
                              partNumber
                             );
@@ -4060,6 +4065,8 @@ NULL, // masterIO
 
             // prune empty directories
             (void)Storage_pruneDirectories(&storageInfo,oldestStorageName);
+
+            Storage_done(&storageInfo);
           }
           else
           {
@@ -4073,7 +4080,6 @@ NULL, // masterIO
                        Error_getText(error)
                       );
           }
-          Storage_done(&storageInfo);
         }
 
         // purge index of storage
@@ -4932,7 +4938,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                         EXPAND_MACRO_MODE_PATTERN,
                                         createInfo->archiveType,
                                         createInfo->scheduleTitle,
-                                        createInfo->customText,
+                                        createInfo->scheduleCustomText,
                                         createInfo->createdDateTime,
                                         ARCHIVE_PART_NUMBER_NONE
                                        );
@@ -5458,11 +5464,13 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
       if (isAborted(createInfo))
       {
         printInfo(1,"ABORTED\n");
+
         (void)Archive_closeEntry(&archiveEntryInfo);
         (void)File_close(&fileHandle);
         fragmentDone(createInfo,fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
-        return FALSE;
+
+        return ERROR_ABORTED;
       }
     }
     if (error != ERROR_NONE)
@@ -5603,8 +5611,19 @@ LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
       }
     }
 
-    printInfo(1,"OK (%"PRIu64" bytes, not stored)\n",
-              fragmentSize
+    // get size info
+    char sizeString[32];
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(sizeString,sizeof(sizeString),fragmentSize);
+    }
+    else
+    {
+      stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fragmentSize);
+    }
+
+    printInfo(1,"OK (%s bytes, not stored)\n",
+              sizeString
              );
   }
 
@@ -5969,12 +5988,13 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
     if (isAborted(createInfo))
     {
       printInfo(1,"ABORTED\n");
+
       (void)Archive_closeEntry(&archiveEntryInfo);
       if (isSupportedFileSystem) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
       fragmentDone(createInfo,deviceName);
 
-      return error;
+      return ERROR_ABORTED;
     }
     if (error != ERROR_NONE)
     {
@@ -6133,13 +6153,22 @@ LOCAL Errors storeImageEntry(CreateInfo       *createInfo,
       }
     }
 
-    double d = (globalOptions.fragmentSize > 0LL) ? ceil(log10((double)globalOptions.fragmentSize)) : 1.0;
-    printInfo(1,"OK (%s, %/"PRIu64" bytes, not stored)\n",
+    // get size info
+    char sizeString[32];
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(sizeString,sizeof(sizeString),fragmentSize);
+    }
+    else
+    {
+      stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fragmentSize);
+    }
+
+    printInfo(1,"OK (%s, %s bytes, not stored)\n",
               (!createInfo->jobOptions->rawImagesFlag && isSupportedFileSystem)
                 ? FileSystem_typeToString(fileSystemHandle.type,NULL)
                 : "raw",
-              (int)d,
-              fragmentSize
+              sizeString
              );
   }
 
@@ -6683,8 +6712,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
-        createInfo->runningInfo.progress.error.count++;
-        createInfo->runningInfo.progress.done.count++;
+        createInfo->runningInfo.progress.error.count += (fragmentOffset == 0LL) ? 1 : 0;
+        createInfo->runningInfo.progress.error.size  += fragmentSize;
         createInfo->runningInfo.progress.done.count += (fragmentOffset == 0LL) ? 1 : 0;
         createInfo->runningInfo.progress.done.size += fragmentSize;
       }
@@ -6918,7 +6947,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         fragmentDone(createInfo,StringList_first(fileNameList,NULL));
         File_doneExtendedAttributes(&fileExtendedAttributeList);
 
-        return error;
+        return ERROR_ABORTED;
       }
     }
     if (error != ERROR_NONE)
@@ -7066,8 +7095,19 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       }
     }
 
-    printInfo(1,"OK (%"PRIu64" bytes, not stored)\n",
-              fragmentSize
+    // get size info
+    char sizeString[32];
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(sizeString,sizeof(sizeString),fragmentSize);
+    }
+    else
+    {
+      stringFormat(sizeString,sizeof(sizeString),"%*"PRIu64,stringInt64Length(globalOptions.fragmentSize),fragmentSize);
+    }
+
+    printInfo(1,"OK (%s bytes, not stored)\n",
+              sizeString
              );
   }
 
@@ -7490,7 +7530,7 @@ Errors Command_create(ServerIO                     *masterIO,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
-                      const char                   *customText,
+                      const char                   *scheduleCustomText,
                       JobOptions                   *jobOptions,
                       uint64                       createdDateTime,
                       GetNamePasswordFunction      getNamePasswordFunction,
@@ -7572,7 +7612,7 @@ Errors Command_create(ServerIO                     *masterIO,
                  archiveType,
                  includeEntryList,
                  excludePatternList,
-                 customText,
+                 scheduleCustomText,
                  jobOptions,
                  createdDateTime,
                  CALLBACK_(isPauseCreateFunction,isPauseCreateUserData),
@@ -7714,11 +7754,11 @@ Errors Command_create(ServerIO                     *masterIO,
   }
   AUTOFREE_ADD(&autoFreeList,incrementalListFileName,{ String_delete(incrementalListFileName); });
 
+  IndexId uuidId   = INDEX_ID_NONE;
   IndexId entityId = INDEX_ID_NONE;
   if (Index_isAvailable())
   {
     // get/create index job UUID
-    IndexId uuidId;
     if (!IndexUUID_find(&indexHandle,
                         jobUUID,
                         NULL,  // entityUUID
@@ -7779,7 +7819,6 @@ Errors Command_create(ServerIO                     *masterIO,
   }
 
   // create new archive
-  IndexId uuidId;
   error = Archive_create(&createInfo.archiveHandle,
                          String_cString(hostName),
                          String_cString(userName),

@@ -1912,7 +1912,7 @@ LOCAL uint64 getNextJobSchedule(const JobScheduleNode *jobScheduleNode,
                       );
 
     // search for next schedule
-    uint   i = 0;
+    size_t i = 0;
     while ((i < MAX_NEXT_SCHEDULE) && (nextScheduleDateTime >= MAX_UINT64))
     {
       // check matching schedules
@@ -11923,7 +11923,8 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *            [scheduleUUID=<text>]
-*            [customText=<text>]
+*            [scheduleTitle=<text>]
+*            [scheduleCustomText=<text>]
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
 *            [testCreatedArchives=yes|no]
 *            [noStorage=yes|no]
@@ -11947,13 +11948,16 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   }
   StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
-  String customText = String_new();
-  StringMap_getString(argumentMap,"customText",customText,NULL);
+  String scheduleTitle = String_new();
+  StringMap_getString(argumentMap,"scheduleTitle",scheduleTitle,NULL);
+  String scheduleCustomText = String_new();
+  StringMap_getString(argumentMap,"scheduleCustomText",scheduleCustomText,NULL);
   ArchiveTypes archiveType;
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,CALLBACK_((StringMapParseEnumFunction)Archive_parseType,NULL),ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
-    String_delete(customText);
+    String_delete(scheduleCustomText);
+    String_delete(scheduleTitle);
     return;
   }
   bool testCreatedArchives;
@@ -11970,7 +11974,8 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
-      String_delete(customText);
+      String_delete(scheduleCustomText);
+      String_delete(scheduleTitle);
       Job_listUnlock();
       return;
     }
@@ -11983,7 +11988,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
       Job_trigger(jobNode,
                   scheduleUUID,
                   archiveType,
-                  customText,
+                  scheduleCustomText,
                   testCreatedArchives,
                   noStorage,
                   dryRun,
@@ -11996,7 +12001,8 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
-  String_delete(customText);
+  String_delete(scheduleCustomText);
+  String_delete(scheduleTitle);
 }
 
 /***********************************************************************\
@@ -12249,7 +12255,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get job UUID
+  // get job UUID, new name
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
@@ -12266,7 +12272,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    // check if mew job already exists
+    // check if new job already exists
     if (Job_exists(name))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_ALREADY_EXISTS,"%s",name);
@@ -12316,7 +12322,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     error = Job_write(newJobNode);
     if (error != ERROR_NONE)
     {
-      printWarning(_("cannot update job '%s' (error: %s)"),String_cString(jobNode->fileName),Error_getText(error));
+      printWarning(_("cannot clone job '%s' (error: %s)"),String_cString(jobNode->fileName),Error_getText(error));
     }
 
     // write initial schedule info

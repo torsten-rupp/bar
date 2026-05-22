@@ -93,7 +93,7 @@ typedef struct ArchiveContentNode
   {
     struct
     {
-      ConstString        name;
+      String             name;
       uint64             size;
       uint64             timeModified;
       uint32             userId;
@@ -111,7 +111,7 @@ typedef struct ArchiveContentNode
     } file;
     struct
     {
-      ConstString        name;
+      String             name;
       uint64             size;
       uint64             archiveSize;
       CompressAlgorithms deltaCompressAlgorithm;
@@ -127,7 +127,7 @@ typedef struct ArchiveContentNode
     } image;
     struct
     {
-      ConstString     name;
+      String          name;
       uint64          timeModified;
       uint32          userId;
       uint32          groupId;
@@ -148,7 +148,7 @@ typedef struct ArchiveContentNode
     } link;
     struct
     {
-      ConstString        name;
+      String             name;
       uint64             size;
       uint64             timeModified;
       uint32             userId;
@@ -166,7 +166,7 @@ typedef struct ArchiveContentNode
     } hardLink;
     struct
     {
-      ConstString      name;
+      String           name;
       uint32           userId;
       uint32           groupId;
       FilePermissions  permissions;
@@ -2029,15 +2029,13 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
   {
     case -1:
       return -1;
-      break;
     case  1:
       return 1;
-      break;
     case  0:
       break;
   }
-  if      (modifiedTime1 > modifiedTime2) return -1;
-  else if (modifiedTime1 < modifiedTime2) return  1;
+  if      (modifiedTime1 < modifiedTime2) return -1;
+  else if (modifiedTime1 > modifiedTime2) return  1;
   if      (offset1 < offset2) return -1;
   else if (offset1 > offset2) return  1;
 
@@ -2314,7 +2312,7 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
                           archiveContentNode->hardLink.deltaSourceName,
                           archiveContentNode->hardLink.deltaSourceSize,
                           archiveContentNode->hardLink.fragmentOffset,
-                          archiveContentNode->hardLink.fragmentSize
+                          fragmentSize
                          );
         break;
       case ARCHIVE_ENTRY_TYPE_SPECIAL:
@@ -3196,7 +3194,6 @@ NULL, // masterSocketHandle
                                   comment,
                                   allCryptSignatureState
                                  );
-                    printf("\n");
                     printedMetaInfoFlag = TRUE;
                   }
 
@@ -3204,7 +3201,7 @@ NULL, // masterSocketHandle
                   error = Archive_closeEntry(&archiveEntryInfo);
                   if (error != ERROR_NONE)
                   {
-                    printWarning(_("close 'special' entry fail (error: %s)"),Error_getText(error));
+                    printWarning(_("close 'meta' entry fail (error: %s)"),Error_getText(error));
                   }
 
                   // free resources

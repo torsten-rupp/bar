@@ -154,8 +154,6 @@ LOCAL void initIO(ServerIO *serverIO, ServerIOTypes type)
   serverIO->type              = type;
   Semaphore_init(&serverIO->lock,SEMAPHORE_TYPE_BINARY);
 
-  serverIO->type              = type;
-
   #ifndef NO_SESSION_ID
     Crypt_randomize(serverIO->sessionId,sizeof(SessionId));
   #else /* not NO_SESSION_ID */
@@ -312,7 +310,7 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
   assert(serverIO != NULL);
   assert(line != NULL);
 
-  error = ERROR_NETWORK_TIMEOUT_SEND;
+  error = ERROR_NETWORK_TIMEOUT_SEND;  // Note: report send timeout also if lock fail
   SEMAPHORE_LOCKED_DO(&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // get line length
@@ -389,7 +387,7 @@ LOCAL bool receiveData(ServerIO *serverIO, long timeout)
   assert(serverIO->inputBufferIndex == 0);
 
   // get max. number of bytes to receive
-  uint maxBytes = serverIO->inputBufferSize-serverIO->inputBufferLength;
+  uint maxBytes = serverIO->inputBufferSize - serverIO->inputBufferLength;
   if (maxBytes > 0)
   {
     switch (serverIO->type)
@@ -682,7 +680,7 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
   while (   !resultFlag
          && !Misc_isTimeout(&timeoutInfo)
         );
-  if (!resultFlag && Misc_isTimeout(&timeoutInfo))
+  if (!resultFlag)
   {
     error = ERROR_NETWORK_TIMEOUT_RECEIVE;
   }
@@ -773,6 +771,7 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
       else if (Misc_isTimeout(&timeoutInfo))
       {
         fprintf(stderr,"DEBUG: timeout execute command %u: '%s'\n",id,format);
+        error = ERROR_NETWORK_TIMEOUT_RECEIVE;
       }
     }
   #endif /* not DEBUG */
@@ -1232,7 +1231,7 @@ bool ServerIO_parseAction(const char      *actionText,
   }
   else
   {
-    // format session data with none
+    // format session data with no encrpytion as fallback
     String_format(s,
                   "SESSION id=%S encryptTypes=%s",
                   encodedId,
@@ -1673,7 +1672,7 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
   uint encryptedBufferLength;
   if (!Misc_base64Decode(encryptedBuffer,sizeof(encryptedBuffer),&encryptedBufferLength,encryptedKey,STRING_BEGIN))
   {
-    return FALSE;
+    return ERROR_CORRUPT_KEY;
   }
 
   // decrypt key
@@ -1719,7 +1718,7 @@ Errors ServerIO_decryptKey(const ServerIO       *serverIO,
   }
   for (uint i = 0; i < encodedBufferLength; i++)
   {
-    keyData[i] = encodedBuffer[i]^serverIO->sessionId[i];
+    keyData[i] = encodedBuffer[i]^serverIO->sessionId[i % SESSION_ID_LENGTH];
   }
   error = Crypt_setPublicPrivateKeyData(cryptKey,
                                         keyData,
@@ -1766,7 +1765,7 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
                                 );
     if (error != ERROR_NONE)
     {
-      return error;
+      return FALSE;
     }
     const char *password = (const char*)data;
 //fprintf(stderr,"%s, %d: n=%d s='",__FILE__,__LINE__,encodedBufferLength); for (i = 0; i < encodedBufferLength; i++) { fprintf(stderr,"%c",encodedBuffer[i]^clientInfo->sessionId[i]); } fprintf(stderr,"'\n");
@@ -1820,7 +1819,7 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
                               );
   if (error != ERROR_NONE)
   {
-    return error;
+    return FALSE;
   }
 #ifndef NDEBUG
 fprintf(stderr,"%s, %d: decrypted data: %d\n",__FILE__,__LINE__,dataLength); debugDumpMemory(data,dataLength,FALSE);
@@ -1832,7 +1831,7 @@ fprintf(stderr,"%s, %d: decrypted data: %d\n",__FILE__,__LINE__,dataLength); deb
   if (error != ERROR_NONE)
   {
     ServerIO_decryptDone(data,dataLength);
-    return error;
+    return FALSE;
   }
   Crypt_updateHash(&hash,data,dataLength);
 
@@ -2357,6 +2356,7 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   error = sendData(serverIO,s);
   if (error != ERROR_NONE)
   {
+    String_delete(s);
     return error;
   }
   #ifndef NDEBUG
