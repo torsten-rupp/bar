@@ -3061,7 +3061,7 @@ LOCAL Errors runServer(void)
   error = createPIDFile();
   if (error != ERROR_NONE)
   {
-    printError(_("cannot create PID file '%s'"),Error_getText(error),String_cString(globalOptions.pidFileName));
+    printError(_("cannot create PID file '%s' (error: %s)"),String_cString(globalOptions.pidFileName),Error_getText(error));
     closeLog();
     return error;
   }
