@@ -38,7 +38,7 @@
 /***********************************************************************\
 * Name   : Commands_convert
 * Purpose: convert archive and file system content
-* Input  : archiveFileNameList     - list with archive files
+* Input  : storageNameList         - list with storage names
 *          newJobUUID              - new job UUID or NULL
 *          newEntityUUID           - new entity UUID or NULL
 *          newCreatedDateTime      - new created date/time or 0
@@ -51,7 +51,7 @@
 * Notes  : -
 \***********************************************************************/
 
-Errors Command_convert(const StringList        *archiveFileNameList,
+Errors Command_convert(const StringList        *storageNameList,
                        const char              *newJobUUID,
                        const char              *newEntityUUID,
                        uint64                  newCreatedDateTime,

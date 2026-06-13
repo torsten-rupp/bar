@@ -75,8 +75,6 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
                                     void      *userData
                                    )
 {
-  Errors error;
-
   assert(entryNode != NULL);
 
   UNUSED_VARIABLE(userData);
@@ -87,6 +85,8 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+
+  Errors error;
 
   // create entry
   #ifndef NDEBUG
@@ -311,8 +311,6 @@ Errors EntryList_appendCString(EntryList       *entryList,
                                uint            *id
                               )
 {
-  Errors error;
-
   assert(entryList != NULL);
   assert(string != NULL);
 
@@ -330,6 +328,8 @@ Errors EntryList_appendCString(EntryList       *entryList,
   entryNode->storeType   = entryStoreType;
   entryNode->string      = String_newCString(string);
   entryNode->patternType = patternType;
+
+  Errors error;
 
   // init pattern
   #if   defined(PLATFORM_LINUX)
@@ -387,10 +387,10 @@ Errors EntryList_updateCString(EntryList       *entryList,
                                PatternTypes    patternType
                               )
 {
-  Errors error;
-
   assert(entryList != NULL);
   assert(string != NULL);
+
+  Errors error;
 
   // find pattern node
   EntryNode *entryNode = (EntryNode*)LIST_FIND(entryList,entryNode,entryNode->id == id);

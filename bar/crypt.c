@@ -1841,7 +1841,7 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
     gcry_sexp_release(sexpToken);
     memClear((byte*)keyData+keyDataLength,alignedKeyDataLength-keyDataLength);
     #ifdef DEBUG_ASYMMETRIC_CRYPT
-      fprintf(stderr,"%s, %d: %d raw key\n",__FILE__,__LINE__,keyDataLength); debugDumpMemory(keyData,alignedKeyDataLength,FALSE);
+      fprintf(stderr,"%s, %d: %u raw key\n",__FILE__,__LINE__,keyDataLength); debugDumpMemory(keyData,alignedKeyDataLength,FALSE);
     #endif
 
     // encrypt key data (if password given)
@@ -2056,7 +2056,7 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
       }
       #ifdef DEBUG_ASYMMETRIC_CRYPT
 //fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLength); debugDumpMemory(encryptKey.data,encryptKey.dataLength,FALSE);
-        fprintf(stderr,"%s, %d: derived key %d\n",__FILE__,__LINE__,encryptKey.dataLength); debugDumpMemory(data,encryptKey.dataLength,FALSE);
+        fprintf(stderr,"%s, %d: derived key %u\n",__FILE__,__LINE__,encryptKey.dataLength); debugDumpMemory(data,encryptKey.dataLength,FALSE);
       #endif
       error = Crypt_init(&cryptInfo,
                          SECRET_KEY_CRYPT_ALGORITHM,
@@ -2673,8 +2673,9 @@ Errors Crypt_decryptWithPrivateKey(const CryptKey *privateCryptKey,
         gcry_sexp_release(sexpEncryptData);
         return ERROR_DECRYPT;
       }
-      if (bufferLength != NULL) (*bufferLength) = MIN(dataLength,maxBufferLength);
-      memCopyFast(buffer,*bufferLength,data,*bufferLength);
+      uint n = MIN(dataLength,maxBufferLength);
+      memCopyFast(buffer,*bufferLength,data,n);
+      if (bufferLength != NULL) (*bufferLength) = n;
 
       // free resources
       gcry_sexp_release(sexpData);
@@ -2876,7 +2877,7 @@ Errors Crypt_getDecryptKey(CryptKey       *cryptKey,
 
     // create S-expression with encrypted data
 #ifdef DEBUG_ASYMMETRIC_CRYPT
-fprintf(stderr,"%s, %d: encrypted random key %d\n",__FILE__,__LINE__,encryptedKeyDataLength); debugDumpMemory(encryptedKeyData,encryptedKeyDataLength,0);
+fprintf(stderr,"%s, %d: encrypted random key %u\n",__FILE__,__LINE__,encryptedKeyDataLength); debugDumpMemory(encryptedKeyData,encryptedKeyDataLength,0);
 #endif
     gcryptError = gcry_sexp_build(&sexpEncryptData,NULL,"(enc-val (rsa (a %b)))",encryptedKeyDataLength,encryptedKeyData);
     if (gcryptError != 0)
@@ -2961,7 +2962,7 @@ fprintf(stderr,"%s, %d: pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODE
     }
     memCopy(data,ALIGN(keyLength,8)/8,&pkcs1EncodedMessage[1+1+PKCS1_ENCODED_MESSAGE_PADDING_LENGTH+1],dataLength);
 #ifdef DEBUG_ASYMMETRIC_CRYPT
-fprintf(stderr,"%s, %d: key data %d\n",__FILE__,__LINE__,keyLength); debugDumpMemory(data,ALIGN(keyLength,8)/8,0);
+fprintf(stderr,"%s, %d: key data %u\n",__FILE__,__LINE__,keyLength); debugDumpMemory(data,ALIGN(keyLength,8)/8,0);
 #endif
 
     // set key
