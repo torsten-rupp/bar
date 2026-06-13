@@ -1758,7 +1758,7 @@ LOCAL bool StorageWebDAV_isReadable(const StorageInfo *storageInfo, ConstString 
   UNUSED_VARIABLE(archiveName);
 
 //TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
+return FALSE;
   return File_exists(archiveName);
 }
 
@@ -1771,7 +1771,7 @@ LOCAL bool StorageWebDAV_isWritable(const StorageInfo *storageInfo, ConstString 
   UNUSED_VARIABLE(archiveName);
 
 //TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
+return FALSE;
   return File_exists(archiveName);
 }
 

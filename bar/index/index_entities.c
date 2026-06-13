@@ -882,10 +882,11 @@ Errors IndexEntity_new(IndexHandle  *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                    CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
 
+                                      UNUSED_VARIABLE(completedFlag);
                                       UNUSED_VARIABLE(userData);
 
                                       if (StringMap_getIndexId (resultMap,"entityId",entityId,INDEX_TYPE_ENTITY,INDEX_ID_NONE))
@@ -897,6 +898,7 @@ Errors IndexEntity_new(IndexHandle  *indexHandle,
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
                                     },NULL),
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_NEW_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%"PRIu64" locked=%y",
                                     jobUUID,
                                     (entityUUID != NULL) ? entityUUID : "",
@@ -973,7 +975,8 @@ Errors IndexEntity_update(IndexHandle  *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    CALLBACK_(NULL,NULL),
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_UPDATE_ENTITY jobUUID=%s scheduleUUID=%s hostName=%'s userName=%'s archiveType=%s createdDateTime=%"PRIu64,
                                     jobUUID,
                                     (entityUUID != NULL) ? entityUUID : "",
@@ -1033,6 +1036,7 @@ Errors IndexEntity_lock(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ENTITY_LOCK entityId=%"PRIi64"",
                                     entityId
                                    );
@@ -1083,6 +1087,7 @@ Errors IndexEntity_unlock(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ENTITY_UNLOCK entityId=%"PRIi64"",
                                     entityId
                                    );
@@ -1556,6 +1561,7 @@ Errors IndexEntity_updateInfos(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ENTITY_UPDATE_INFOS entityId=%"PRIi64"",
                                     entityId
                                    );
@@ -2367,6 +2373,7 @@ Errors IndexEntity_delete(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ENTITY_DELETE entityId=%"PRIi64"",
                                     entityId
                                    );
@@ -2558,6 +2565,7 @@ Errors IndexEntity_purge(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ENTITY_DELETE entityId=%"PRIi64"",
                                     entityId
                                    );
@@ -2627,6 +2635,7 @@ Errors IndexEntity_prune(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ENTITY_PRUNE entityId=%"PRIi64"",
                                     entityId
                                    );

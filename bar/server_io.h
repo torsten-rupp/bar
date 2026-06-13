@@ -157,14 +157,27 @@ typedef struct
 /***********************************************************************\
 * Name   : ServerIOCommandResultFunction
 * Purpose: command result function
-* Input  : resultMap - resultMap
-*          userData  - user data
+* Input  : completedFlag - TRUE iff command completed
+*          resultMap     - resultMap
+*          userData      - user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*ServerIOCommandResultFunction)(const StringMap resultMap, void *userData);
+typedef Errors(*ServerIOCommandResultFunction)(bool completedFlag, const StringMap resultMap, void *userData);
+
+/***********************************************************************\
+* Name   : ServerIOCommandErrorFunction
+* Purpose: command error function
+* Input  : error    - error
+*          userData - user data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+typedef Errors(*ServerIOCommandErrorFunction)(Errors error, void *userData);
 
 /***************************** Variables *******************************/
 
@@ -181,7 +194,7 @@ typedef Errors(*ServerIOCommandResultFunction)(const StringMap resultMap, void *
 
 /***************************** Functions *******************************/
 
-#ifdef __cplusplus
+#ifdef __cplusplusServerIOCommandErrorFunction
   extern "C" {
 #endif
 
@@ -725,6 +738,8 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 *          timeout               - timeout [ms] or WAIT_FOREVER/NO_WAIT
 *          commandResultFunction - command result function (can be NULL)
 *          commandResultUserData - user data for command result function
+*          commandErrorFunction  - command error function (can be NULL)
+*          commandErrorUserData  - user data for command error function
 *          format                - format string
 *          .../arguments         - optional arguments
 * Output : -
@@ -737,6 +752,8 @@ Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
                                 long                          timeout,
                                 ServerIOCommandResultFunction commandResultFunction,
                                 void                          *commandResultUserData,
+                                ServerIOCommandErrorFunction  commandErrorFunction,
+                                void                          *commandErrorUserData,
                                 const char                    *format,
                                 va_list                       arguments
                                );
@@ -745,6 +762,8 @@ Errors ServerIO_executeCommand(ServerIO                      *serverIO,
                                long                          timeout,
                                ServerIOCommandResultFunction commandResultFunction,
                                void                          *commandResultUserData,
+                               ServerIOCommandErrorFunction  commandErrorFunction,
+                               void                          *commandErrorUserData,
                                const char *format,
                                ...
                               );

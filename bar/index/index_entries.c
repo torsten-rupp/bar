@@ -814,6 +814,7 @@ Errors IndexEntry_addFile(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ADD_FILE uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIu64" name=%'S size=%"PRIu64" timeLastAccess=%"PRIu64" timeModified=%"PRIu64" timeLastChanged=%"PRIu64" userId=%u groupId=%u permission=%o fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64,
                                     uuidId,
                                     entityId,
@@ -1049,6 +1050,7 @@ Errors IndexEntry_addImage(IndexHandle     *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ADD_IMAGE uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIu64" type=IMAGE name=%'S fileSystemType=%'s size=%"PRIu64" blockSize=%lu blockOffset=%"PRIu64" blockCount=%"PRIu64,
                                     uuidId,
                                     entityId,
@@ -1235,6 +1237,7 @@ Errors IndexEntry_addDirectory(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ADD_DIRECTORY uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIu64" type=DIRECTORY name=%'S timeLastAccess=%"PRIu64" timeModified=%"PRIu64" timeLastChanged=%"PRIu64" userId=%u groupId=%u permission=%o",
                                     uuidId,
                                     entityId,
@@ -1422,6 +1425,7 @@ Errors IndexEntry_addLink(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ADD_LINK uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIi64" type=LINK name=%'S destinationName=%'S timeLastAccess=%"PRIu64" timeModified=%"PRIu64" timeLastChanged=%"PRIu64" userId=%u groupId=%u permission=%o",
                                     uuidId,
                                     entityId,
@@ -1660,6 +1664,7 @@ Errors IndexEntry_addHardlink(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ADD_HARDLINK uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIi64" type=HARDLINK name=%'S size=%"PRIu64" timeLastAccess=%"PRIu64" timeModified=%"PRIu64" timeLastChanged=%"PRIu64" userId=%u groupId=%u permission=%o fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64,
                                     uuidId,
                                     entityId,
@@ -1850,6 +1855,7 @@ Errors IndexEntry_addSpecial(IndexHandle      *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_ADD_SPECIAL uuidId=%"PRIi64" entityId=%"PRIi64" storageId=%"PRIi64" type=SPECIAL name=%'S specialType=%s timeLastAccess=%"PRIu64" timeModified=%"PRIu64" timeLastChanged=%"PRIu64" userId=%u groupId=%u permission=%o major=%u minor=%u",
                                     uuidId,
                                     entityId,

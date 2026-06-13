@@ -608,7 +608,8 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
   String data = String_new();
   do
   {
-//fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
+// TODO: remove
+fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
     while (   !getLine(serverIO)
            && !Misc_isTimeout(&timeoutInfo)
           )
@@ -626,7 +627,7 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
         #ifndef NDEBUG
           if (globalOptions.debug.serverLevel >= 1)
           {
-            fprintf(stderr,"DEBUG: received result #%u completed=%d error=%d: %s\n",*id,*completedFlag,errorCode,String_cString(data));
+            fprintf(stderr,"DEBUG: received result #%u completed=%d error=%u: %s\n",*id,*completedFlag,errorCode,String_cString(data));
           }
         #endif /* not DEBUG */
 
@@ -699,6 +700,8 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
 *          timeout               - timeout [ms] or WAIT_FOREVER
 *          commandResultFunction - command result function (can be NULL)
 *          commandResultUserData - user data for command result function
+*          commandErrorFunction  - command error function (can be NULL)
+*          commandErrorUserData  - user data for command error function
 *          format                - format string
 *          arguments             - arguments
 * Output : -
@@ -711,6 +714,8 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
                                  long                          timeout,
                                  ServerIOCommandResultFunction commandResultFunction,
                                  void                          *commandResultUserData,
+                                 ServerIOCommandErrorFunction  commandErrorFunction,
+                                 void                          *commandErrorUserData,
                                  const char                    *format,
                                  va_list                       arguments
                                 )
@@ -741,6 +746,7 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
 
   // wait for result
   bool      completedFlag;
+  uint      errorCode;
   StringMap resultMap = StringMap_new();
   do
   {
@@ -750,9 +756,19 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
                           &completedFlag,
                           resultMap
                          );
-    if ((error == ERROR_NONE) && (commandResultFunction != NULL))
+    if (error == ERROR_NONE)
     {
-      error = commandResultFunction(resultMap,commandResultUserData);
+      if (commandResultFunction != NULL)
+      {
+        error = commandResultFunction(completedFlag,resultMap,commandResultUserData);
+      }
+    }
+    else
+    {
+      if (commandErrorFunction != NULL)
+      {
+        commandErrorFunction(error,commandErrorUserData);
+      }
     }
   }
   while (   (error == ERROR_NONE)
@@ -790,6 +806,8 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
 *          timeout               - timeout [ms] or WAIT_FOREVER
 *          commandResultFunction - command result function (can be NULL)
 *          commandResultUserData - user data for command result function
+*          commandErrorFunction  - command error function (can be NULL)
+*          commandErrorUserData  - user data for command error function
 *          format                - format string
 *          ...                   - optional arguments
 * Output : -
@@ -802,6 +820,8 @@ LOCAL Errors syncExecuteCommand(ServerIO                      *serverIO,
                                 long                          timeout,
                                 ServerIOCommandResultFunction commandResultFunction,
                                 void                          *commandResultUserData,
+                                ServerIOCommandErrorFunction  commandErrorFunction,
+                                void                          *commandErrorUserData,
                                 const char                    *format,
                                 ...
                                )
@@ -817,8 +837,8 @@ LOCAL Errors syncExecuteCommand(ServerIO                      *serverIO,
   error = vsyncExecuteCommand(serverIO,
                               debugLevel,
                               timeout,
-                              commandResultFunction,
-                              commandResultUserData,
+                              CALLBACK_(commandResultFunction,commandResultUserData),
+                              CALLBACK_(commandErrorFunction,commandErrorUserData),
                               format,
                               arguments
                              );
@@ -1061,6 +1081,7 @@ bool ServerIO_parseAction(const char      *actionText,
                                  1,  // debug level
                                  30*MS_PER_SECOND,
                                  CALLBACK_(NULL,NULL),  // commandResultFunction
+                                 CALLBACK_(NULL,NULL),  // commandErrorFunction
                                  "START_TLS"
                                 );
       if (error == ERROR_NONE)
@@ -1094,6 +1115,7 @@ bool ServerIO_parseAction(const char      *actionText,
                                  1,  // debug level
                                  30*MS_PER_SECOND,
                                  CALLBACK_(NULL,NULL),  // commandResultFunction
+                                 CALLBACK_(NULL,NULL),  // commandErrorFunction
                                  "START_TLS"
                                 );
       if (error != ERROR_NONE)
@@ -1151,7 +1173,7 @@ bool ServerIO_parseAction(const char      *actionText,
   #ifndef NDEBUG
     if (globalOptions.debug.serverLevel >= 1)
     {
-      fprintf(stderr,"DEBUG: connected to %s:%d\n",String_cString(hostName),hostPort);
+      fprintf(stderr,"DEBUG: connected to %s:%u\n",String_cString(hostName),hostPort);
     }
   #endif /* not DEBUG */
 
@@ -1822,7 +1844,7 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
     return FALSE;
   }
 #ifndef NDEBUG
-fprintf(stderr,"%s, %d: decrypted data: %d\n",__FILE__,__LINE__,dataLength); debugDumpMemory(data,dataLength,FALSE);
+fprintf(stderr,"%s, %d: decrypted data: %u\n",__FILE__,__LINE__,dataLength); debugDumpMemory(data,dataLength,FALSE);
 #endif
 
   // get hash
@@ -1873,7 +1895,6 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
          && getLine(serverIO)
         )
   {
-//fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
     // parse
     uint resultId;
     bool completedFlag;
@@ -1884,7 +1905,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
       #ifndef NDEBUG
         if (globalOptions.debug.serverLevel >= 1)
         {
-          fprintf(stderr,"DEBUG: received result #%u completed=%d error=%d: %s\n",resultId,completedFlag,errorCode,String_cString(data));
+          fprintf(stderr,"DEBUG: received result #%u completed=%d error=%u: %s\n",resultId,completedFlag,errorCode,String_cString(data));
         }
       #endif /* not DEBUG */
 
@@ -1921,7 +1942,6 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
       SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         List_append(&serverIO->resultList,resultNode);
-//fprintf(stderr,"%s, %d: appended result: %d %d %d %s\n",__FILE__,__LINE__,resultNode->id,resultNode->error,resultNode->completedFlag,String_cString(resultNode->data));
       }
     }
     else if (String_parse(serverIO->line,STRING_BEGIN,"%u %S % S",NULL,id,name,data))
@@ -1931,7 +1951,6 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
       // parse arguments
       if (argumentMap != NULL)
       {
-//fprintf(stderr,"%s, %d: parse %s\n",__FILE__,__LINE__,String_cString(commandNode->data));
         commandFlag = StringMap_parse(argumentMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL);
         #ifndef NDEBUG
           if (!commandFlag)
@@ -2015,6 +2034,8 @@ Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
                                 long                          timeout,
                                 ServerIOCommandResultFunction commandResultFunction,
                                 void                          *commandResultUserData,
+                                ServerIOCommandErrorFunction  commandErrorFunction,
+                                void                          *commandErrorUserData,
                                 const char                    *format,
                                 va_list                       arguments
                                )
@@ -2051,9 +2072,19 @@ Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
                                 &completedFlag,
                                 resultMap
                                );
-    if ((error == ERROR_NONE) && (commandResultFunction != NULL))
+    if (error == ERROR_NONE)
     {
-      error = commandResultFunction(resultMap,commandResultUserData);
+      if (commandResultFunction != NULL)
+      {
+        error = commandResultFunction(completedFlag,resultMap,commandResultUserData);
+      }
+    }
+    else
+    {
+      if (commandErrorFunction != NULL)
+      {
+        commandErrorFunction(error,commandErrorUserData);
+      }
     }
   }
   while ((error == ERROR_NONE) && !completedFlag);
@@ -2077,6 +2108,8 @@ Errors ServerIO_executeCommand(ServerIO                      *serverIO,
                                long                          timeout,
                                ServerIOCommandResultFunction commandResultFunction,
                                void                          *commandResultUserData,
+                               ServerIOCommandErrorFunction  commandErrorFunction,
+                               void                          *commandErrorUserData,
                                const char                    *format,
                                ...
                               )
@@ -2092,8 +2125,8 @@ Errors ServerIO_executeCommand(ServerIO                      *serverIO,
   error = ServerIO_vexecuteCommand(serverIO,
                                    debugLevel,
                                    timeout,
-                                   commandResultFunction,
-                                   commandResultUserData,
+                                   CALLBACK_(commandResultFunction,commandResultUserData),
+                                   CALLBACK_(commandErrorFunction,commandErrorUserData),
                                    format,
                                    arguments
                                   );

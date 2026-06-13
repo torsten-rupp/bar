@@ -1978,10 +1978,11 @@ Errors IndexStorage_new(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                    CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
 
+                                      UNUSED_VARIABLE(completedFlag);
                                       UNUSED_VARIABLE(userData);
 
                                       if (StringMap_getIndexId(resultMap,"storageId",storageId,INDEX_TYPE_STORAGE,INDEX_ID_NONE))
@@ -1993,6 +1994,7 @@ Errors IndexStorage_new(IndexHandle *indexHandle,
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
                                     },NULL),
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_NEW_STORAGE uuidId=%"PRIi64" entityId=%"PRIi64" hostName=%'S userName=%'S storageName=%'S dateTime=%"PRIu64" size=%"PRIu64" indexState=%s indexMode=%s",
                                     uuidId,
                                     entityId,
@@ -3962,6 +3964,7 @@ Errors IndexStorage_setState(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_SET_STATE indexId=%"PRIi64" indexState=%'s lastCheckedDateTime=%"PRIu64" errorMessage=%'S",
                                     indexId,
                                     Index_stateToString(indexState,NULL),
@@ -4249,6 +4252,7 @@ Errors IndexStorage_update(IndexHandle  *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_STORAGE_UPDATE storageId=%"PRIi64" hostName=%'S userName=%'S storageName=%'S dateTime=%"PRIu64" storageSize=%"PRIu64" comment=%'S updateNewest=%y",
                                     storageId,
                                     hostName,
@@ -4746,6 +4750,7 @@ Errors IndexStorage_updateInfos(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_STORAGE_UPDATE_INFOS storageId=%"PRIi64,
                                     storageId
                                    );
@@ -5600,6 +5605,7 @@ UNUSED_VARIABLE(progressInfo);
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_STORAGE_PURGE storageId=%"PRIi64,
                                     storageId
                                    );
@@ -5703,6 +5709,7 @@ UNUSED_VARIABLE(progressInfo);
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_STORAGE_PURGE_ALL entityId=%"PRIi64" keepStorageId=%"PRIi64,
                                     entityId,
                                     keepStorageId
@@ -5874,6 +5881,7 @@ UNUSED_VARIABLE(progressInfo);
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_STORAGE_PURGE_ALL storageName=%'S keepStorageId=%"PRIi64,
                                     storageName,
                                     keepStorageId

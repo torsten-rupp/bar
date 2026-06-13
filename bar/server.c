@@ -946,6 +946,8 @@ LOCAL Errors endPairingMaster(ConstString name, const CryptHash *uuidHash)
       String_set(globalOptions.masterInfo.name,name);
       if (!Configuration_setHash(&globalOptions.masterInfo.uuidHash,uuidHash))
       {
+        String_clear(globalOptions.masterInfo.name);
+        Configuration_clearHash(&globalOptions.masterInfo.uuidHash);
         Semaphore_unlock(&newMaster.lock);
         return ERROR_INSUFFICIENT_MEMORY;
       }
@@ -954,6 +956,8 @@ LOCAL Errors endPairingMaster(ConstString name, const CryptHash *uuidHash)
         error = Configuration_update();
         if (error != ERROR_NONE)
         {
+          String_clear(globalOptions.masterInfo.name);
+          Configuration_clearHash(&globalOptions.masterInfo.uuidHash);
           Semaphore_unlock(&newMaster.lock);
           return error;
         }
@@ -1127,11 +1131,9 @@ LOCAL const char *getSlaveStateText(SlaveStates slaveState)
     case SLAVE_STATE_PAIRED:
       stateText = "PAIRED";
       break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
+    case SLAVE_STATE_ERROR:
+      stateText = "ERROR";
+      break;
   }
 
   return stateText;
@@ -1249,6 +1251,7 @@ LOCAL void pairingThreadCode(void)
   * Purpose: update slave state in job
   * Input  : slaveNode        - slave node
   *          slaveState       - slave state
+  *          slaveError       - ERROR_NONE or slave error
   *          slaveTLS         - TRUE iff slave TLS connection
   *          slaveInsecureTLS - TRUE iff insecure slave TLS connection
   * Output : -
@@ -1256,23 +1259,24 @@ LOCAL void pairingThreadCode(void)
   * Notes  : -
   \***********************************************************************/
 
-  auto void updateSlaveState(const SlaveNode *slaveNode, SlaveStates slaveState, bool slaveTLS, bool slaveInsecureTLS);
-  void updateSlaveState(const SlaveNode *slaveNode, SlaveStates slaveState, bool slaveTLS, bool slaveInsecureTLS)
+  auto void updateSlaveState(const SlaveNode *slaveNode, SlaveStates slaveState, Errors slaveError, bool slaveTLS, bool slaveInsecureTLS);
+  void updateSlaveState(const SlaveNode *slaveNode, SlaveStates slaveState, Errors slaveError, bool slaveTLS, bool slaveInsecureTLS)
   {
-    JobNode *jobNode;
-
     // update slave state in job
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
+      JobNode *jobNode;
       JOB_LIST_ITERATE(jobNode)
       {
         if (   (jobNode->job.slaveHost.port == slaveNode->port)
             && String_equals(jobNode->job.slaveHost.name,slaveNode->name)
            )
         {
-          jobNode->slaveState       = slaveState;
-          jobNode->slaveTLS         = slaveTLS;
-          jobNode->slaveInsecureTLS = slaveInsecureTLS;
+          jobNode->slaveState                = slaveState;
+          jobNode->slaveTLS                  = slaveTLS;
+          jobNode->slaveInsecureTLS          = slaveInsecureTLS;
+          jobNode->runningInfo.lastErrorCode = Error_getCode(slaveError);
+          String_setCString(jobNode->runningInfo.lastErrorData,Error_getText(slaveError));
         }
       }
     }
@@ -1300,7 +1304,7 @@ LOCAL void pairingThreadCode(void)
                 Connector_disconnect(&slaveNode->connectorInfo);
 
                 // update slave state in job
-                updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE,FALSE,FALSE);
+                updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE,ERROR_NONE,FALSE,FALSE);
 
                 // log info
                 if (slaveNode->authorizedFlag)
@@ -1444,6 +1448,7 @@ LOCAL void pairingThreadCode(void)
                       {
                         updateSlaveState(slaveNode,
                                          SLAVE_STATE_PAIRED,
+                                         ERROR_NONE,
                                          Connector_isTLS(&slaveNode->connectorInfo),
                                          Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                         );
@@ -1452,6 +1457,7 @@ LOCAL void pairingThreadCode(void)
                       {
                         updateSlaveState(slaveNode,
                                          SLAVE_STATE_WRONG_PROTOCOL_VERSION,
+                                         ERROR_NONE,
                                          Connector_isTLS(&slaveNode->connectorInfo),
                                          Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                         );
@@ -1461,16 +1467,27 @@ LOCAL void pairingThreadCode(void)
                     {
                       updateSlaveState(slaveNode,
                                        SLAVE_STATE_WRONG_MODE,
+                                       ERROR_NONE,
                                        Connector_isTLS(&slaveNode->connectorInfo),
                                        Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                       );
                     }
+                  }
+                  else
+                  {
+                    updateSlaveState(slaveNode,
+                                     SLAVE_STATE_ERROR,
+                                     error,
+                                     Connector_isTLS(&slaveNode->connectorInfo),
+                                     Connector_isInsecureTLS(&slaveNode->connectorInfo)
+                                    );
                   }
                 }
                 else if (Connector_isConnected(&slaveNode->connectorInfo))
                 {
                   updateSlaveState(slaveNode,
                                    SLAVE_STATE_ONLINE,
+                                   ERROR_NONE,
                                    Connector_isTLS(&slaveNode->connectorInfo),
                                    Connector_isInsecureTLS(&slaveNode->connectorInfo)
                                   );
@@ -1479,21 +1496,21 @@ LOCAL void pairingThreadCode(void)
                 {
                   updateSlaveState(slaveNode,
                                    SLAVE_STATE_OFFLINE,
+                                   ERROR_NONE,
                                    FALSE,  // slaveTLS
                                    FALSE  // slaveInsecureTLS
                                   );
                 }
 
-  #if 0
-  fprintf(stderr,"%s, %d: checked %s:%d : slavestate=%d slaveNode=%p connectstate=%d Connector_isConnected=%d\n",__FILE__,__LINE__,
+#if 0
+  fprintf(stderr,"%s, %d: checked %s:%d : slaveNode=%p slavestate=%d Connector_isConnected=%d\n",__FILE__,__LINE__,
   String_cString(slaveNode->name),
   slaveNode->port,
-  jobNode->slaveState,
   slaveNode,
   slaveNode->connectorInfo.state,
   Connector_isConnected(&slaveNode->connectorInfo)
   );
-  #endif
+#endif
               }
             }
           }
@@ -2184,7 +2201,8 @@ LOCAL void pauseThreadCode(void)
                   Errors error = Connector_executeCommand(&slaveNode->connectorInfo,
                                                           1,
                                                           10*MS_PER_SECOND,
-                                                          CALLBACK_(NULL,NULL),
+                                                          CALLBACK_(NULL,NULL),  // commandResultFunction
+                                                          CALLBACK_(NULL,NULL),  // commandErrorFunction
                                                           "CONTINUE"
                                                          );
                   if (error != ERROR_NONE)
@@ -7565,41 +7583,42 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
         assert(buffer != NULL);
         assert(bufferLength > 0);
 
-        switch (newMaster.pairingMode)
+        SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          case PAIRING_MODE_NONE:
-            {
-              // not pairing -> verify master UUID
-
-              // calculate hash from UUID
-              CryptHash uuidHash;
-              (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
-              Crypt_updateHash(&uuidHash,Misc_getMachineId(),MISC_MACHINE_ID_LENGTH);
-              Crypt_updateHash(&uuidHash,buffer,bufferLength);
-
-              // verify master UUID (UUID hash)
-              if (!Configuration_equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
+          switch (newMaster.pairingMode)
+          {
+            case PAIRING_MODE_NONE:
               {
-                error = ((globalOptions.serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
-                          ? ERROR_NOT_PAIRED
-                          : ERROR_INVALID_PASSWORD_;
-                char s[256];
-                logMessage(NULL,  // logHandle,
-                           LOG_TYPE_ALWAYS,
-                           "Authorization of master %s failed (error: %s)",
-                           getClientInfoString(clientInfo,s,sizeof(s)),
-                           Error_getText(error)
-                          );
+                // not pairing -> verify master UUID
+
+                // calculate hash from UUID
+                CryptHash uuidHash;
+                (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
+                Crypt_updateHash(&uuidHash,Misc_getMachineId(),MISC_MACHINE_ID_LENGTH);
+                Crypt_updateHash(&uuidHash,buffer,bufferLength);
+
+                // verify master UUID (UUID hash)
+                if (!Configuration_equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
+                {
+                  error = ((globalOptions.serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
+                            ? ERROR_NOT_PAIRED
+                            : ERROR_INVALID_PASSWORD_;
+                  char s[256];
+                  logMessage(NULL,  // logHandle,
+                             LOG_TYPE_ALWAYS,
+                             "Authorization of master %s failed (error: %s)",
+                             getClientInfoString(clientInfo,s,sizeof(s)),
+                             Error_getText(error)
+                            );
+                }
+
+                // free resources
+                Crypt_doneHash(&uuidHash);
               }
+              break;
+            case PAIRING_MODE_AUTO:
+              // auto pairing -> done pairing
 
-              // free resources
-              Crypt_doneHash(&uuidHash);
-            }
-            break;
-          case PAIRING_MODE_AUTO:
-            // auto pairing -> done pairing
-            SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-            {
               // store name
               String_set(newMaster.name,name);
 
@@ -7607,14 +7626,13 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
               (void)Crypt_resetHash(&newMaster.uuidHash);
               Crypt_updateHash(&newMaster.uuidHash,Misc_getMachineId(),MISC_MACHINE_ID_LENGTH);
               Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
-            }
 
-            error = endPairingMaster(newMaster.name,&newMaster.uuidHash);
-            break;
-          case PAIRING_MODE_MANUAL:
-            // manual pairing -> just store new master name+UUID hash
-            SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-            {
+              // Note: keep the new name/hash even end pairing may fail (e. g. due to a write configuraiton file error)
+              error = endPairingMaster(newMaster.name,&newMaster.uuidHash);
+              break;
+            case PAIRING_MODE_MANUAL:
+              // manual pairing -> just store new master name+UUID hash
+
               // store name
               String_set(newMaster.name,name);
 
@@ -7622,11 +7640,11 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
               (void)Crypt_resetHash(&newMaster.uuidHash);
               Crypt_updateHash(&newMaster.uuidHash,Misc_getMachineId(),MISC_MACHINE_ID_LENGTH);
               Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
-            }
 
-            // still not paired: new master must be confirmed
-            error = ERROR_NOT_PAIRED;
-            break;
+              // still not paired: new master must be confirmed
+              error = ERROR_NOT_PAIRED;
+              break;
+          }
         }
 
         // free resources
@@ -7657,6 +7675,14 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     authorizationState = AUTHORIZATION_STATE_MASTER;
+  }
+  if (error != ERROR_NONE)
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Authorization fail (error: %s)",
+               Error_getText(error)
+              );
   }
 
   // set authorization state
@@ -9373,7 +9399,8 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
             error = Connector_executeCommand(&slaveNode->connectorInfo,
                                              1,
                                              10*MS_PER_SECOND,
-                                             CALLBACK_(NULL,NULL),
+                                             CALLBACK_(NULL,NULL),  // commandResultFunction
+                                             CALLBACK_(NULL,NULL),  // commandErrorFunction
                                              "SUSPEND modeMask=%S",
                                              modeMask
                                             );
@@ -9497,7 +9524,8 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
             error = Connector_executeCommand(&slaveNode->connectorInfo,
                                              1,
                                              10*MS_PER_SECOND,
-                                             CALLBACK_(NULL,NULL),
+                                             CALLBACK_(NULL,NULL),  // commandResultFunction
+                                             CALLBACK_(NULL,NULL),  // commandErrorFunction
                                              "SUSPEND modeMask=%S",
                                              modeMask
                                             );
@@ -9575,7 +9603,8 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
             error = Connector_executeCommand(&slaveNode->connectorInfo,
                                              1,
                                              10*MS_PER_SECOND,
-                                             CALLBACK_(NULL,NULL),
+                                             CALLBACK_(NULL,NULL),  // commandResultFunction
+                                             CALLBACK_(NULL,NULL),  // commandErrorFunction
                                              "CONTINUE"
                                             );
           }
@@ -9713,14 +9742,16 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "DEVICE_LIST"
                                           );
         }
@@ -9860,14 +9891,16 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "ROOT_LIST allMounts=%y",
                                            allMountsFlag
                                           );
@@ -10019,14 +10052,16 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "FILE_INFO name=%'S",
                                            name
                                           );
@@ -10247,14 +10282,16 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "FILE_LIST directory=%'S",
                                            directory
                                           );
@@ -10506,14 +10543,16 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "FILE_ATTRIBUTE_GET name=%'S attribute=%S",
                                            name,
                                            attribute
@@ -10641,14 +10680,16 @@ UNUSED_VARIABLE(value);
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "FILE_ATTRIBUTE_SET name=%'S attribute=%S value=%'S",
                                            name,
                                            attribute,
@@ -10813,14 +10854,16 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "FILE_ATTRIBUTE_CLEAR name=%'S attribute=%S",
                                            name,
                                            attribute
@@ -10986,14 +11029,16 @@ LOCAL void serverCommand_fileMkdir(ClientInfo *clientInfo, IndexHandle *indexHan
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "FILE_DELETE name=%'S",
                                            name
                                           );
@@ -11103,14 +11148,16 @@ LOCAL void serverCommand_fileDelete(ClientInfo *clientInfo, IndexHandle *indexHa
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "FILE_DELETE name=%'S",
                                            name
                                           );
@@ -11212,14 +11259,16 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "DIRECTORY_INFO name=%'S timeout=%"PRIi64"",
                                            name,
                                            timeout
@@ -11362,14 +11411,16 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "TEST_SCRIPT name=%'S script=%'S",
                                            name,
                                            script
@@ -11802,6 +11853,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 *          Result:
 *            lastExecutedDateTime=<time stamp>
 *            lastErrorCode=<n>
+*            lastErrorNumber=<n>
 *            lastErrorData=<text>
 *            executionCountNormal=<n>
 *            executionCountFull=<n>
@@ -11858,14 +11910,16 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
           error = Connector_executeCommand(connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
-                                           CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                           CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                            {
                                              assert(resultMap != NULL);
 
+                                             UNUSED_VARIABLE(completedFlag);
                                              UNUSED_VARIABLE(userData);
 
                                              return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                            },NULL),
+                                           CALLBACK_(NULL,NULL),  // commandErrorFunction
                                            "JOB_INFO jobUUID=%S",
                                            jobUUID
                                           );
@@ -11887,9 +11941,10 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     {
       // local job: format and send result
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                          "lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorData=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
+                          "lastExecutedDateTime=%"PRIu64" lastErrorCode=%u lastErrorNumber=%u lastErrorData=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
                           jobNode->runningInfo.lastExecutedDateTime,
                           jobNode->runningInfo.lastErrorCode,
+                          jobNode->runningInfo.lastErrorNumber,
                           jobNode->runningInfo.lastErrorData,
                           jobNode->executionCount.normal,
                           jobNode->executionCount.full,

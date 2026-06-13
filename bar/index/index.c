@@ -65,6 +65,8 @@
   #warning Index delete storages disabled!
 #endif
 
+#define _DEBUG_REFERENCE_DATABASE
+
 /***************************** Constants *******************************/
 const char *DATABASE_SAVE_EXTENSIONS[] =
 {
@@ -467,6 +469,7 @@ LOCAL void busyHandler(void *userData)
                                        error == ERROR_NONE
                                       )
             {
+//fprintf(stderr,"%s:%d: indexDefinition=%s\n",__FILE__,__LINE__,indexDefinition);
               error = Database_execute(&indexHandle->databaseHandle,
                                        NULL,  // changedRowCount
                                        DATABASE_FLAG_NONE,
@@ -3155,7 +3158,7 @@ Errors Index_init(const DatabaseSpecifier *databaseSpecifier,
       switch (indexDatabaseSpecifier->type)
       {
         case DATABASE_TYPE_SQLITE3:
-          #ifndef NDEBUG
+          #ifdef DEBUG_REFERENCE_DATABASE
             String_setCString(indexDatabaseSpecifierReference.sqlite.fileName,"/tmp/reference.db");
           #else
             String_setCString(indexDatabaseSpecifierReference.sqlite.fileName,"");

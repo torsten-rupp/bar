@@ -133,12 +133,13 @@ Errors IndexHistory_new(IndexHandle  *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                    CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                     {
                                       Errors error;
 
                                       assert(resultMap != NULL);
 
+                                      UNUSED_VARIABLE(completedFlag);
                                       UNUSED_VARIABLE(userData);
 
                                       error = ERROR_NONE;
@@ -153,6 +154,7 @@ Errors IndexHistory_new(IndexHandle  *indexHandle,
 
                                       return error;
                                     },NULL),
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s hostName=%'S userName=%'S archiveType=%s createdDateTime=%"PRIu64" errorMessage=%'s duration=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64,
                                     jobUUID,
                                     (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",

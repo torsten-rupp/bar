@@ -183,16 +183,18 @@ LOCAL bool StorageMaster_exists(const StorageInfo *storageInfo, ConstString arch
   Errors error = ServerIO_executeCommand(storageInfo->masterIO,
                                          MASTER_DEBUG_LEVEL,
                                          MASTER_COMMAND_TIMEOUT,
-                                         CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                         CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                          {
                                            assert(resultMap != NULL);
 
+                                           UNUSED_VARIABLE(completedFlag);
                                            UNUSED_VARIABLE(userData);
 
                                            StringMap_getBool(resultMap,"existsFlag",&existsFlag,FALSE);
 
                                            return ERROR_NONE;
                                          },NULL),
+                                         CALLBACK_(NULL,NULL),  // commandErrorFunction
                                          "STORAGE_EXISTS archiveName=%'S",
                                          archiveName
                                         );
@@ -241,6 +243,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
                                   MASTER_DEBUG_LEVEL,
                                   MASTER_COMMAND_TIMEOUT,
                                   CALLBACK_(NULL,NULL),  // commandResultFunction
+                                  CALLBACK_(NULL,NULL),  // commandErrorFunction
                                   "STORAGE_CREATE archiveName=%'S archiveSize=%"PRIu64,
                                   fileName,
                                   fileSize
@@ -282,6 +285,7 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
                                 MASTER_DEBUG_LEVEL,
                                 MASTER_COMMAND_TIMEOUT,
                                 CALLBACK_(NULL,NULL),  // commandResultFunction
+                                CALLBACK_(NULL,NULL),  // commandErrorFunction
                                 "STORAGE_CLOSE"
                                );
 }

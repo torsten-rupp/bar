@@ -360,10 +360,11 @@ bool IndexUUID_find(IndexHandle  *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                    CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
 
+                                      UNUSED_VARIABLE(completedFlag);
                                       UNUSED_VARIABLE(userData);
 
                                       if (uuidId                      != NULL) StringMap_getIndexId(resultMap,"uuidId",                     uuidId,                     INDEX_TYPE_UUID,INDEX_ID_NONE);
@@ -387,6 +388,7 @@ bool IndexUUID_find(IndexHandle  *indexHandle,
 
                                       return ERROR_NONE;
                                     },NULL),
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_FIND_UUID jobUUID=%'s entityUUID=%'s",
                                     findEntityUUID,
                                     (findEntityUUID != NULL) ? findEntityUUID : ""
@@ -1158,6 +1160,7 @@ UNUSED_VARIABLE(uuidId);
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_UUID_UPDATE_INFOS uuidId=%"PRIi64"",
                                     uuidId
                                    );
@@ -1376,10 +1379,11 @@ Errors IndexUUID_new(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    CALLBACK_INLINE(Errors,(const StringMap resultMap, void *userData),
+                                    CALLBACK_INLINE(Errors,(bool completedFlag, const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
 
+                                      UNUSED_VARIABLE(completedFlag);
                                       UNUSED_VARIABLE(userData);
 
                                       if (StringMap_getIndexId(resultMap,"uuidId",uuidId,INDEX_TYPE_UUID,INDEX_ID_NONE))
@@ -1391,6 +1395,7 @@ Errors IndexUUID_new(IndexHandle *indexHandle,
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
                                     },NULL),
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_NEW_UUID jobUUID=%s",
                                     jobUUID
                                    );
@@ -1580,6 +1585,7 @@ Errors IndexUUID_purge(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_UUID_PURGE uuidId=%"PRIi64,
                                     uuidId
                                    );
@@ -1636,6 +1642,7 @@ Errors IndexUUID_prune(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    CALLBACK_(NULL,NULL),  // commandErrorFunction
                                     "INDEX_UUID_PRUNE uuidId=%"PRIi64"",
                                     uuidId
                                    );

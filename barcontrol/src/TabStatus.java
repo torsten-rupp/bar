@@ -102,9 +102,10 @@ class JobData implements Comparable<JobData>
   {
     OFFLINE,
     ONLINE,
+    PAIRED,
     WRONG_MODE,
     WRONG_PROTOCOL_VERSION,
-    PAIRED;
+    ERROR;
   };
 
   /** volume requests
@@ -173,9 +174,10 @@ class JobData implements Comparable<JobData>
         {
           case OFFLINE:                buffer.append("("+BARControl.tr("offline")               +")"); break;
           case ONLINE:                 buffer.append("("+BARControl.tr("wait pairing")          +")"); break;
+          case PAIRED:                                                                                 break;
           case WRONG_MODE:             buffer.append("("+BARControl.tr("wrong mode")            +")"); break;
           case WRONG_PROTOCOL_VERSION: buffer.append("("+BARControl.tr("wrong protocol version")+")"); break;
-          case PAIRED:                                                                                 break;
+          case ERROR:                  buffer.append("("+BARControl.tr("slave error")+")");            break;
         }
       }
       else
@@ -184,9 +186,10 @@ class JobData implements Comparable<JobData>
         {
           case OFFLINE:                buffer.append(BARControl.tr("offline"));                break;
           case ONLINE:                 buffer.append(BARControl.tr("wait pairing"));           break;
+          case PAIRED:                                                                         break;
           case WRONG_MODE:             buffer.append(BARControl.tr("wrong mode"));             break;
           case WRONG_PROTOCOL_VERSION: buffer.append(BARControl.tr("wrong protocol version")); break;
-          case PAIRED:                                                                         break;
+          case ERROR:                  buffer.append(BARControl.tr("slave error"));            break;
         }
       }
     }
@@ -2649,17 +2652,34 @@ public class TabStatus
                 TableItem tableItem = Widgets.getTableItem(widgetJobTable,jobData);
 
                 // update/create table item
+                String stateInfo = "";
+                switch (serverState)
+                {
+                  case RUNNING:
+                    stateInfo = JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState);
+                    break;
+                  case PAUSED:
+                    stateInfo = BARControl.tr("paused");
+                    break;
+                  case SUSPENDED:
+                    stateInfo = BARControl.tr("suspended");
+                    break;
+                }
+                String hostInfo = "";
+                if (!jobData.slaveHostName.isEmpty())
+                {
+                   hostInfo =  jobData.slaveHostName
+                              +((jobData.slaveHostPort != 0)
+                                 ? ":"+Integer.toString(jobData.slaveHostPort)
+                                 : "");
+                }
                 if (tableItem != null)
                 {
                   Widgets.updateTableItem(tableItem,
                                           jobData,
                                           jobData.name,
-                                          (serverState == BARServer.States.RUNNING)
-                                            ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
-                                            : BARControl.tr("suspended"),
-                                          !jobData.slaveHostName.isEmpty()
-                                            ? jobData.slaveHostName+((jobData.slaveHostPort != 0) ? ":"+Integer.toString(jobData.slaveHostPort) : "")
-                                            : "",
+                                          stateInfo,
+                                          hostInfo,
                                           jobData.archiveType.getText(),
                                           (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
                                           jobData.formatCompressAlgorithm(),
@@ -2686,10 +2706,8 @@ public class TabStatus
                                                       findJobTableItemIndex(jobData),
                                                       jobData,
                                                       jobData.name,
-                                                      (serverState == BARServer.States.RUNNING)
-                                                        ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
-                                                        : BARControl.tr("suspended"),
-                                                      !jobData.slaveHostName.isEmpty() ? jobData.slaveHostName+((jobData.slaveHostPort != 0) ? ":"+Integer.toString(jobData.slaveHostPort) : "") : "",
+                                                      stateInfo,
+                                                      hostInfo,
                                                       jobData.archiveType.toString(),
                                                       (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
                                                       jobData.formatCompressAlgorithm(),
@@ -2706,6 +2724,11 @@ public class TabStatus
 
                 switch (jobData.state)
                 {
+                  case NONE:
+                  case WAITING:
+                  case DONE:
+                    tableItem.setBackground(null);
+                    break;
                   case RUNNING:
                   case NO_STORAGE:
                   case DRY_RUNNING:
@@ -2741,8 +2764,8 @@ public class TabStatus
                   case ABORTED:
                     tableItem.setBackground(COLOR_ABORTED);
                     break;
-                  default:
-                    tableItem.setBackground(null);
+                  case DISCONNECTED:
+tableItem.setBackground(COLOR_ABORTED);
                     break;
                 }
               }

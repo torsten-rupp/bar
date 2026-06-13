@@ -50,6 +50,8 @@ typedef enum
 // connector info
 typedef struct
 {
+  String          hostName;
+  uint            hostPort;
 // TODO: remove
 bool            forceSSL;                // force SSL connection to connector hose
   ConnectorStates state;
@@ -64,6 +66,9 @@ bool            forceSSL;                // force SSL connection to connector ho
 
 // command result function callback
 typedef ServerIOCommandResultFunction ConnectorCommandResultFunction;
+
+// command error function callback
+typedef ServerIOCommandErrorFunction ConnectorCommandErrorFunction;
 
 /****************************** Macros *********************************/
 
@@ -357,6 +362,8 @@ Errors Connector_doneStorage(ConnectorInfo *connectorInfo);
 *          timeout               - timeout [ms] or WAIT_FOREVER
 *          commandResultFunction - command result function (can be NULL)
 *          commandResultUserData - user data for command result function
+*          commandErrorFunction  - command error function (can be NULL)
+*          commandErrorUserData  - user data for command error function
 *          format                - command
 *          ...                   - optional command arguments
 * Output : resultMap - result map
@@ -369,6 +376,8 @@ Errors Connector_executeCommand(ConnectorInfo                  *connectorInfo,
                                 long                           timeout,
                                 ConnectorCommandResultFunction commandResultFunction,
                                 void                           *commandResultUserData,
+                                ConnectorCommandErrorFunction  commandErrorFunction,
+                                void                           *commandErrorUserData,
                                 const char                     *format,
                                 ...
                                );
