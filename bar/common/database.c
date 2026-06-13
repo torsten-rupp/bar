@@ -12030,10 +12030,11 @@ bool Database_exists(const DatabaseSpecifier *databaseSpecifier,
                      ConstString             databaseName
                     )
 {
-  bool existsFlag;
+  assert(databaseSpecifier != NULL);
 
   DatabaseHandle databaseHandle;
   Errors error = openDatabase(&databaseHandle,databaseSpecifier,String_cString(databaseName),DATABASE_OPEN_MODE_READ,NO_WAIT);
+  bool existsFlag;
   if (error == ERROR_NONE)
   {
     closeDatabase(&databaseHandle);
@@ -12054,7 +12055,7 @@ bool Database_equalSpecifiers(const DatabaseSpecifier *databaseSpecifier0,
                              )
 {
   assert(databaseSpecifier0 != NULL);
-  assert(databaseSpecifier0 != NULL);
+  assert(databaseSpecifier1 != NULL);
 
   if (databaseSpecifier0->type == databaseSpecifier1->type)
   {

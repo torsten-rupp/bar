@@ -117,7 +117,8 @@ LOCAL ServiceInfo serviceInfo;
 /***********************************************************************\
 * Name   : initMachineId
 * Purpose: init machine id
-* Input  : applicationIdData       - optional application id data
+* Input  : applicationIdData       - optional application id data (can be
+*                                    NULL)
 *          applicationIdDataLength - length of application id data
 * Output : -
 * Return : -
@@ -128,7 +129,7 @@ LOCAL void initMachineId(const byte applicationIdData[], uint applicationIdDataL
 {
   static enum {NONE,BASE,COMPLETE} state = NONE;
 
-  assert(applicationIdDataLength > 0);
+  assert((applicationIdData == NULL) || (applicationIdDataLength > 0));
 
   if (state != COMPLETE)
   {
