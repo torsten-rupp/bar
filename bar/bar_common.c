@@ -73,6 +73,8 @@ struct
   extern "C" {
 #endif
 
+#ifdef HAVE_ICU
+
 /***********************************************************************\
 * Name   : convertToUnicode
 * Purpose: convert to unicode characters
@@ -88,42 +90,35 @@ LOCAL int32_t convertToUnicode(UConverter *converter, ConstString source)
   assert(converter != NULL);
   assert(source != NULL);
 
-  #ifdef HAVE_ICU
-    // extend Unicode buffer if needed
-    if ((2*String_length(source)) > encodingConverter.unicodeCharSize)
-    {
-      size_t newUnicodeCharsSize = ALIGN(2*String_length(source),64);
-      UChar  *newUnicodeChars    = (UChar*)realloc(encodingConverter.unicodeChars,newUnicodeCharsSize);
-      if (newUnicodeChars == NULL)
-      {
-        return -1;
-      }
-      encodingConverter.unicodeChars    = newUnicodeChars;
-      encodingConverter.unicodeCharSize = newUnicodeCharsSize;
-    }
-
-    // convert to Unicode encoding
-    UErrorCode errorCode = U_ZERO_ERROR;
-    int32_t unicodeLength = ucnv_toUChars(converter,
-                                          encodingConverter.unicodeChars,
-                                          encodingConverter.unicodeCharSize,
-                                          String_cString(source),
-                                          String_length(source),
-                                          &errorCode
-                                         );
-    if ((unicodeLength < 0) || !U_SUCCESS(errorCode))
+  // extend Unicode buffer if needed
+  if ((2*String_length(source)) > encodingConverter.unicodeCharSize)
+  {
+    size_t newUnicodeCharsSize = ALIGN(2*String_length(source),64);
+    UChar  *newUnicodeChars    = (UChar*)realloc(encodingConverter.unicodeChars,newUnicodeCharsSize);
+    if (newUnicodeChars == NULL)
     {
       return -1;
     }
-    assert(unicodeLength <= (int32_t)encodingConverter.unicodeCharSize);
+    encodingConverter.unicodeChars    = newUnicodeChars;
+    encodingConverter.unicodeCharSize = newUnicodeCharsSize;
+  }
 
-    return unicodeLength;
-  #else
-    UNUSED_VARIABLE(converter);
-    UNUSED_VARIABLE(source);
-
+  // convert to Unicode encoding
+  UErrorCode errorCode = U_ZERO_ERROR;
+  int32_t unicodeLength = ucnv_toUChars(converter,
+                                        encodingConverter.unicodeChars,
+                                        encodingConverter.unicodeCharSize,
+                                        String_cString(source),
+                                        String_length(source),
+                                        &errorCode
+                                       );
+  if ((unicodeLength < 0) || !U_SUCCESS(errorCode))
+  {
     return -1;
-  #endif
+  }
+  assert(unicodeLength <= (int32_t)encodingConverter.unicodeCharSize);
+
+  return unicodeLength;
 }
 
 /***********************************************************************\
@@ -143,47 +138,40 @@ LOCAL int32_t convertFromUnicode(String destination, UConverter *converter, int3
   assert(destination != NULL);
   assert(converter != NULL);
 
-  #ifdef HAVE_ICU
-    // extend buffer if needed
-    if (encodingConverter.bufferSize < (size_t)UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize))
-    {
-      size_t newBufferSize = ALIGN(UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize),64);
-      char   *newBuffer    = (char*)realloc(encodingConverter.buffer,newBufferSize);
-      if (newBuffer == NULL)
-      {
-        return -1;
-      }
-      encodingConverter.buffer     = newBuffer;
-      encodingConverter.bufferSize = newBufferSize;
-    }
-
-    // convert to destination encoding
-    UErrorCode errorCode = U_ZERO_ERROR;
-    int32_t length = ucnv_fromUChars(converter,
-                                     encodingConverter.buffer,
-                                     encodingConverter.bufferSize,
-                                     encodingConverter.unicodeChars,
-                                     unicodeLength,
-                                     &errorCode
-                                    );
-    if ((length < 0) || !U_SUCCESS(errorCode))
+  // extend buffer if needed
+  if (encodingConverter.bufferSize < (size_t)UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize))
+  {
+    size_t newBufferSize = ALIGN(UCNV_GET_MAX_BYTES_FOR_STRING(unicodeLength,maxCharSize),64);
+    char   *newBuffer    = (char*)realloc(encodingConverter.buffer,newBufferSize);
+    if (newBuffer == NULL)
     {
       return -1;
     }
-    assert(length <= (int32_t)encodingConverter.bufferSize);
+    encodingConverter.buffer     = newBuffer;
+    encodingConverter.bufferSize = newBufferSize;
+  }
 
-    String_appendBuffer(destination,encodingConverter.buffer,(ulong)length);
-
-    return length;
-  #else
-    UNUSED_VARIABLE(destination);
-    UNUSED_VARIABLE(converter);
-    UNUSED_VARIABLE(unicodeLength);
-    UNUSED_VARIABLE(maxCharSize);
-
+  // convert to destination encoding
+  UErrorCode errorCode = U_ZERO_ERROR;
+  int32_t length = ucnv_fromUChars(converter,
+                                   encodingConverter.buffer,
+                                   encodingConverter.bufferSize,
+                                   encodingConverter.unicodeChars,
+                                   unicodeLength,
+                                   &errorCode
+                                  );
+  if ((length < 0) || !U_SUCCESS(errorCode))
+  {
     return -1;
-  #endif
+  }
+  assert(length <= (int32_t)encodingConverter.bufferSize);
+
+  String_appendBuffer(destination,encodingConverter.buffer,(ulong)length);
+
+  return length;
 }
+
+#endif
 
 // ---------------------------------------------------------------------
 
