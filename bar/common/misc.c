@@ -1401,7 +1401,7 @@ String Misc_formatDateTime(String string, uint64 dateTime, TimeTypes timeType, c
   assert(string != NULL);
 
   time_t n  = (time_t)dateTime;
-  #ifdef HAVE_GMTIME_R
+  #if defined(HAVE_GMTIME_R) || defined(HAVE_LOCALTIME_R)
     struct tm tmBuffer;
   #endif /* HAVE_GMTIME_R */
   struct tm * tm = NULL;

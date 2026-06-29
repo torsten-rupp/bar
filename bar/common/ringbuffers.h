@@ -468,7 +468,7 @@ bool RingBuffer_move(RingBuffer *sourceRingBuffer, RingBuffer *destinationRingBu
 * Notes  : -
 \***********************************************************************/
 
-void RingBuffer_discard(RingBuffer *ringBuffer, ulong n, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData);
+void RingBuffer_discard(RingBuffer *ringBuffer, size_t n, RingBufferElementFreeFunction ringBufferElementFreeFunction, void *ringBufferElementFreeUserData);
 
 /***********************************************************************\
 * Name   : RingBuffer_cArrayIn
