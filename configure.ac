@@ -885,7 +885,6 @@ AC_SUBST(HAVE_PTHREADS_W32)                  dnl "1" for pthreads-w32 support, "
 AC_SUBST(HAVE_BFD)                           dnl "1" for BFD support, "" otherwise
 
 AC_SUBST(HAVE_STATIC_ASSERT)                 dnl "1" if static_assert() is supported, "" otherwise
-#AC_SUBST(HAVE_USLEEP)                        dnl "1" if usleep() is avaiulable, "" otherwise
 
 AC_SUBST(INSTALL_DIR)                        dnl installation directory
 AC_SUBST(INSTALL_BIN_DIR)                    dnl installation directory for binaries
@@ -3370,7 +3369,6 @@ fi
 
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
-#  if test \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \) -a "$HAVE_GPG_ERROR" -a "$HAVE_IDN2"; then
   if test \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile c-ares, curl, mxml libraries
@@ -3532,7 +3530,6 @@ if test $ENABLE_CURL = "yes"; then
         (cd mxml; \
          make install-libmxml.a; \
          install -m 644 mxml.h $cwd/extern/include; \
-         install -m 644 mxml.pc $cwd/extern/lib/pkgconfig; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
@@ -3970,7 +3967,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               --prefix=$cwd/extern \
               --with-includes=$cwd/extern/include \
               --with-libraries=$cwd/extern/lib \
-              `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
+              `if test "$HAVE_SSL"; then echo --with-ssl=openssl; fi` \
               --without-readline \
               `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
             ) 1>$tmpFile 2>&1
@@ -3982,7 +3979,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               --prefix=$cwd/extern \
               --with-includes=$cwd/extern/include \
               --with-libraries=$cwd/extern/lib \
-              `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
+              `if test "$HAVE_SSL"; then echo --with-ssl=openssl; fi` \
               --without-readline \
               `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
             ) 1>$tmpFile 2>&1
@@ -5801,7 +5798,6 @@ AC_CHECK_FUNCTION(inotify_rm_watch, AC_DEFINE(HAVE_INOTIFY_RM_WATCH, 1,[inotify_
 AC_CHECK_FUNCTION(gmtime_r,   AC_DEFINE(HAVE_GMTIME_R,   1,[gmtime_r() available]))
 AC_CHECK_FUNCTION(localtime_r,AC_DEFINE(HAVE_LOCALTIME_R,1,[localtime_r() available]))
 AC_CHECK_FUNCTION(getdate_r,  AC_DEFINE(HAVE_GETDATE_R,  1,[getdate_r() available]))
-#AC_CHECK_FUNCTION(usleep,     [HAVE_USLEEP=1; AC_DEFINE(HAVE_USLEEP,1,[usleep() available])])
 AC_CHECK_FUNCTION(usleep,     AC_DEFINE(HAVE_USLEEP,     1,[usleep() available])])
 AC_CHECK_FUNCTION(nanosleep,  AC_DEFINE(HAVE_NANOSLEEP,  1,[nanosleep() available]))
 AC_CHECK_FUNCTION(timegm,     AC_DEFINE(HAVE_TIMEGM,     1,[timegm() available]))

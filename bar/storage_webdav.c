@@ -3202,10 +3202,13 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     }
 
     // parse directory entries
+    mxml_options_t *options = mxmlOptionsNew();
+    assert(options != NULL);
     storageDirectoryListHandle->webdav.rootNode = mxmlLoadString(NULL,
-                                                                 String_cString(directoryData),
-                                                                 MXML_OPAQUE_CALLBACK
+                                                                 options,
+                                                                 String_cString(directoryData)
                                                                 );
+    mxmlOptionsDelete(options);
     if (storageDirectoryListHandle->webdav.rootNode == NULL)
     {
       error = ERROR_READ_DIRECTORY;
@@ -3224,7 +3227,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
                                                                   "D:response",
                                                                   NULL,
                                                                   NULL,
-                                                                  MXML_DESCEND
+                                                                  MXML_DESCEND_ALL
                                                                  );
 
     // free resources
@@ -3290,7 +3293,7 @@ LOCAL bool StorageWebDAV_endOfDirectoryList(StorageDirectoryListHandle *storageD
                                                                        "D:response",
                                                                        NULL,
                                                                        NULL,
-                                                                       MXML_DESCEND
+                                                                       MXML_DESCEND_ALL
                                                                       );
     }
     endOfDirectoryFlag = (storageDirectoryListHandle->webdav.currentNode == NULL);
@@ -3320,13 +3323,13 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
                                                                        "D:response",
                                                                        NULL,
                                                                        NULL,
-                                                                       MXML_DESCEND
+                                                                       MXML_DESCEND_ALL
                                                                       );
     }
     if (   (storageDirectoryListHandle->webdav.currentNode != NULL)
-        && (mxmlGetType(storageDirectoryListHandle->webdav.currentNode) == MXML_ELEMENT)
+        && (mxmlGetType(storageDirectoryListHandle->webdav.currentNode) == MXML_TYPE_ELEMENT)
         && (mxmlGetFirstChild(storageDirectoryListHandle->webdav.currentNode) != NULL)
-        && (mxmlGetType(mxmlGetFirstChild(storageDirectoryListHandle->webdav.currentNode)) == MXML_OPAQUE)
+        && (mxmlGetType(mxmlGetFirstChild(storageDirectoryListHandle->webdav.currentNode)) == MXML_TYPE_OPAQUE)
         && (mxmlGetOpaque(mxmlGetFirstChild(storageDirectoryListHandle->webdav.currentNode)) != NULL)
        )
     {
@@ -3336,12 +3339,12 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
                                           "D:href",
                                           NULL,
                                           NULL,
-                                          MXML_DESCEND
+                                          MXML_DESCEND_ALL
                                          );
       if (   (node != NULL)
-          && (mxmlGetType(node) == MXML_ELEMENT)
+          && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
           && (mxmlGetFirstChild(node) != NULL)
-          && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_OPAQUE)
+          && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_TYPE_OPAQUE)
           && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
          )
       {
@@ -3369,13 +3372,13 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
                                                "D:prop",
                                                NULL,
                                                NULL,
-                                               MXML_DESCEND
+                                               MXML_DESCEND_ALL
                                                );
 
         if (   (propNode != NULL)
-            && (mxmlGetType(propNode) == MXML_ELEMENT)
+            && (mxmlGetType(propNode) == MXML_TYPE_ELEMENT)
             && (mxmlGetFirstChild(propNode) != NULL)
-            && (mxmlGetType(mxmlGetFirstChild(propNode)) == MXML_OPAQUE)
+            && (mxmlGetType(mxmlGetFirstChild(propNode)) == MXML_TYPE_OPAQUE)
             && (mxmlGetOpaque(mxmlGetFirstChild(propNode)) != NULL)
            )
         {
@@ -3386,12 +3389,12 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
                                  "D:getcontenttype",
                                  NULL,
                                  NULL,
-                                 MXML_DESCEND
+                                 MXML_DESCEND_ALL
                                 );
           if (   (node != NULL)
-              && (mxmlGetType(node) == MXML_ELEMENT)
+              && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
               && (mxmlGetFirstChild(node) != NULL)
-              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_OPAQUE)
+              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_TYPE_OPAQUE)
               && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
              )
           {
@@ -3406,12 +3409,12 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
                                  "lp1:getcontentlength",
                                  NULL,
                                  NULL,
-                                 MXML_DESCEND
+                                 MXML_DESCEND_ALL
                                 );
           if (   (node != NULL)
-              && (mxmlGetType(node) == MXML_ELEMENT)
+              && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
               && (mxmlGetFirstChild(node) != NULL)
-              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_OPAQUE)
+              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_TYPE_OPAQUE)
               && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
              )
           {
@@ -3423,12 +3426,12 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
                                  "lp1:getlastmodified",
                                  NULL,
                                  NULL,
-                                 MXML_DESCEND
+                                 MXML_DESCEND_ALL
                                 );
           if (   (node != NULL)
-              && (mxmlGetType(node) == MXML_ELEMENT)
+              && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
               && (mxmlGetFirstChild(node) != NULL)
-              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_OPAQUE)
+              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_TYPE_OPAQUE)
               && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
              )
           {

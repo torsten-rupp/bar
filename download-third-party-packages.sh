@@ -26,34 +26,34 @@ TOUCH="touch"
 UNZIP="unzip"
 XZ="xz"
 
-ZLIB_VERSION=1.3.1
+ZLIB_VERSION=1.3.2
 BZIP2_VERSION=1.0.8
-XZ_VERSION=5.8.1
+XZ_VERSION=5.8.3
 LZO_VERSION=2.10
 LZ4_VERSION=v1.10.0
 ZSTD_VERSION=1.5.7
-XDELTA3_VERSION=3.0.11
+XDELTA3_VERSION=3.1.0
 MXML_VERSION=4.0.4
 GPG_ERROR_VERSION=1.56
 GCRYPT_VERSION=1.11.2
-NETTLE_VERSION=3.9.1
+NETTLE_VERSION=3.10.2
 GMP_VERSION=6.3.0
 IDN2_VERSION=2.3.8
 GNU_TLS_SUB_DIRECTORY=v3.8
-GNU_TLS_VERSION=3.8.10
+GNU_TLS_VERSION=3.8.13
 ICONV_VERSION=1.18
-OPENSSL_VERSION=3.6.0
+OPENSSL_VERSION=4.0.1
 SSH2_VERSION=1.11.1
 # Note: 1.33.0 does not compile on legacy systems; fix is in
 #       main, but not in 1.33. Thus use previous version for
 #       now.
 C_ARES_VERSION=1.34.5
-CURL_VERSION=8.16.0
+CURL_VERSION=8.21.0
 PCRE_VERSION=8.45
-SQLITE_YEAR=2025
-SQLITE_VERSION=3500400
+SQLITE_YEAR=2026
+SQLITE_VERSION=3530300
 MARIADB_CLIENT_VERSION=3.4.7
-POSTGRESQL_VERSION=18.0
+POSTGRESQL_VERSION=18.4
 # Note ICU: * 61.1 seems to be the latest version without C++11
 #           * 58.2 seems to be the latest version which can be
 #              compiled on older 32bit systems, e. g. CentOS 6
@@ -62,7 +62,7 @@ ICU_VERSION=61.1
 MTX_VERSION=1.3.12
 CDIO_VERSION=2.1.0
 KRB5_VERSION=1.22
-KRB5_VERSION_MINOR=1
+KRB5_VERSION_MINOR=2
 # Note: at least 2.6.2 is required
 SMB2_VERSION=2.6.2
 PAR2_VERSION=1.0.0
@@ -899,7 +899,7 @@ if test $cleanFlag -eq 0; then
        # patch to fix warnings:
        #   diff -Naur xdelta3-3.0.11.org xdelta3-3.0.11 > xdelta3-3.0.11.patch
        # Note: ignore exit code 1: patch may already be applied
-       (cd $workingDirectory/xdelta3; $PATCH --batch -N -p1 < $patchDirectory/xdelta3-3.0.11.patch) 1>/dev/null
+       (cd $workingDirectory/xdelta3; $PATCH --batch -N -p1 < $patchDirectory/xdelta3-$XDELTA3_VERSION.patch) 1>/dev/null
        if test $? -gt 1; then
          fatalError "patch"
        fi

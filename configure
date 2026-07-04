@@ -3307,7 +3307,6 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 
-                 #AC_SUBST(HAVE_USLEEP)                        dnl "1" if usleep() is avaiulable, "" otherwise
 
 
 
@@ -17220,7 +17219,6 @@ fi
 
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
-#  if test \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \) -a "$HAVE_GPG_ERROR" -a "$HAVE_IDN2"; then
   if test \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 
@@ -17427,7 +17425,6 @@ printf "%s\n" "fail (make)" >&6; }
         (cd mxml; \
          make install-libmxml.a; \
          install -m 644 mxml.h $cwd/extern/include; \
-         install -m 644 mxml.pc $cwd/extern/lib/pkgconfig; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
@@ -30343,7 +30340,6 @@ then :
 
 fi
 
-#AC_CHECK_FUNCTION(usleep,     [HAVE_USLEEP=1; AC_DEFINE(HAVE_USLEEP,1,[usleep() available])])
 
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for usleep" >&5

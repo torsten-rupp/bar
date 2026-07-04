@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-01 01:49+0100\n"
+"POT-Creation-Date: 2026-07-04 09:16+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,12 +17,12 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: /home/torsten/projects/bar/bar/commands_compare.c:2444
+#: /home/torsten/projects/bar/bar/commands_compare.c:2446
 #, c-format
 msgid "Compare fail: %s\n"
 msgstr ""
 
-#: /home/torsten/projects/bar/bar/commands_convert.c:2667
+#: /home/torsten/projects/bar/bar/commands_convert.c:2676
 #, c-format
 msgid "Convert fail: %s\n"
 msgstr ""
@@ -33,7 +33,8 @@ msgid "Restore fail: %s\n"
 msgstr ""
 
 #: /home/torsten/projects/bar/bar/commands_test.c:2100
-msgid "Test fail: {0}\n"
+#, c-format
+msgid "Test fail: %s\n"
 msgstr ""
 
 #: errors.def:21
