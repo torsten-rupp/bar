@@ -5454,7 +5454,29 @@ public class TabJobs
             {
               String fileName;
 
+/*            Note: need separated calls for File and RemoveFile. The old code does not compile with > Java 7:
+
               fileName = Dialogs.file(shell,
+                                  Dialogs.FileDialogTypes.SAVE,
+                                  BARControl.tr("Select source file"),
+                                  deltaSource.getString(),
+                                  new String[]{BARControl.tr("BAR files"),"*.bar",
+                                               BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                              },
+                                  "*",
+                                  Dialogs.FILE_SHOW_HIDDEN,
+                                  ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                    ? BARServer.remoteListDirectory(selectedJobData.uuid)
+                                    : BARControl.listDirectory
+                                 );
+
+              here the ? either return a File or a RemoteFile for T. Java 8 does not accept this even
+              RemoteFile is a sub-type of file.
+*/
+
+              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+              {
+                  fileName = Dialogs.file(shell,
                                       Dialogs.FileDialogTypes.SAVE,
                                       BARControl.tr("Select source file"),
                                       deltaSource.getString(),
@@ -5463,10 +5485,23 @@ public class TabJobs
                                                   },
                                       "*",
                                       Dialogs.FILE_SHOW_HIDDEN,
-                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                        ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                        : BARControl.listDirectory
+                                      BARServer.remoteListDirectory(selectedJobData.uuid)
                                      );
+              }
+              else
+              {
+                  fileName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.SAVE,
+                                      BARControl.tr("Select source file"),
+                                      deltaSource.getString(),
+                                      new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                   BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      Dialogs.FILE_SHOW_HIDDEN,
+                                      BARControl.listDirectory
+                                     );
+              }
               if (fileName != null)
               {
                 deltaSource.set(fileName);
@@ -6017,20 +6052,34 @@ public class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               String fileName;
-
-              fileName = Dialogs.file(shell,
-                                      Dialogs.FileDialogTypes.OPEN,
-                                      BARControl.tr("Select public key file"),
-                                      cryptPublicKeyFileName.getString(),
-                                      new String[]{BARControl.tr("Public key"),"*.public",
-                                                   BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                  },
-                                      "*",
-                                      Dialogs.FILE_SHOW_HIDDEN,
-                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                        ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                        : BARControl.listDirectory
-                                     );
+              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+              {
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select public key file"),
+                                        cryptPublicKeyFileName.getString(),
+                                        new String[]{BARControl.tr("Public key"),"*.public",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARServer.remoteListDirectory(selectedJobData.uuid)
+                                       );
+              }
+              else
+              {
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select public key file"),
+                                        cryptPublicKeyFileName.getString(),
+                                        new String[]{BARControl.tr("Public key"),"*.public",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARControl.listDirectory
+                                       );
+              }
               if (fileName != null)
               {
                 try
@@ -6667,20 +6716,34 @@ public class TabJobs
               if (selectedJobData != null)
               {
                 String fileName;
-
-                fileName = Dialogs.file(shell,
-                                        Dialogs.FileDialogTypes.SAVE,
-                                        BARControl.tr("Select storage file name"),
-                                        storageFileName.getString(),
-                                        new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                    },
-                                        "*",
-                                        Dialogs.FILE_SHOW_HIDDEN,
-                                        ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                          ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                          : BARControl.listDirectory
-                                       );
+                if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                {
+                  fileName = Dialogs.file(shell,
+                                          Dialogs.FileDialogTypes.SAVE,
+                                          BARControl.tr("Select storage file name"),
+                                          storageFileName.getString(),
+                                          new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                       BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                      },
+                                          "*",
+                                          Dialogs.FILE_SHOW_HIDDEN,
+                                          BARServer.remoteListDirectory(selectedJobData.uuid)
+                                         );
+                }
+                else
+                {
+                  fileName = Dialogs.file(shell,
+                                          Dialogs.FileDialogTypes.SAVE,
+                                          BARControl.tr("Select storage file name"),
+                                          storageFileName.getString(),
+                                          new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                       BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                      },
+                                          "*",
+                                          Dialogs.FILE_SHOW_HIDDEN,
+                                          BARControl.listDirectory
+                                         );
+                }
                 if (fileName != null)
                 {
                   try
@@ -6784,20 +6847,34 @@ public class TabJobs
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               String fileName;
-
-              fileName = Dialogs.file(shell,
-                                      Dialogs.FileDialogTypes.SAVE,
-                                      BARControl.tr("Select incremental file"),
-                                      incrementalListFileName.getString(),
-                                      new String[]{BARControl.tr("BAR incremental data"),"*.bid",
-                                                   BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                  },
-                                      "*",
-                                      Dialogs.FILE_SHOW_HIDDEN,
-                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                        ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                        : BARControl.listDirectory
-                                     );
+              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+              {
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.SAVE,
+                                        BARControl.tr("Select incremental file"),
+                                        incrementalListFileName.getString(),
+                                        new String[]{BARControl.tr("BAR incremental data"),"*.bid",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARServer.remoteListDirectory(selectedJobData.uuid)
+                                       );
+              }
+              else
+              {
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.SAVE,
+                                        BARControl.tr("Select incremental file"),
+                                        incrementalListFileName.getString(),
+                                        new String[]{BARControl.tr("BAR incremental data"),"*.bid",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARControl.listDirectory
+                                       );
+              }
               if (fileName != null)
               {
                 try
@@ -6937,18 +7014,33 @@ public class TabJobs
               {
                 if (selectedJobData != null)
                 {
-                  String fileName = Dialogs.file(shell,
-                                                 Dialogs.FileDialogTypes.DIRECTORY,
-                                                 BARControl.tr("Select PAR2 checksums directory"),
-                                                 storageFileName.getString(),
-                                                 new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                             },
-                                                 "*",
-                                                 Dialogs.FILE_SHOW_HIDDEN,
-                                                 ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                                   ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                                   : BARControl.listDirectory
-                                                );
+                  String fileName;
+                  if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                  {
+                    fileName = Dialogs.file(shell,
+                                            Dialogs.FileDialogTypes.DIRECTORY,
+                                            BARControl.tr("Select PAR2 checksums directory"),
+                                            storageFileName.getString(),
+                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                        },
+                                            "*",
+                                            Dialogs.FILE_SHOW_HIDDEN,
+                                            BARServer.remoteListDirectory(selectedJobData.uuid)
+                                           );
+                  }
+                  else
+                  {
+                    fileName = Dialogs.file(shell,
+                                            Dialogs.FileDialogTypes.DIRECTORY,
+                                            BARControl.tr("Select PAR2 checksums directory"),
+                                            storageFileName.getString(),
+                                            new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                        },
+                                            "*",
+                                            Dialogs.FILE_SHOW_HIDDEN,
+                                            BARControl.listDirectory
+                                           );
+                  }
                   if (fileName != null)
                   {
                     try
@@ -11347,19 +11439,32 @@ throw new Error("NYI");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String pathName;
-
-            pathName = Dialogs.file(shell,
-                                    Dialogs.FileDialogTypes.ENTRY,
-                                    BARControl.tr("Select entry"),
-                                    widgetPattern.getText(),
-                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                },
-                                    "*",
-                                    Dialogs.FILE_SHOW_HIDDEN,
-                                    ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                      ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                      : BARControl.listDirectory
-                                   );
+            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+            {
+              pathName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.ENTRY,
+                                      BARControl.tr("Select entry"),
+                                      widgetPattern.getText(),
+                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      Dialogs.FILE_SHOW_HIDDEN,
+                                      BARServer.remoteListDirectory(selectedJobData.uuid)
+                                     );
+            }
+            else
+            {
+              pathName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.ENTRY,
+                                      BARControl.tr("Select entry"),
+                                      widgetPattern.getText(),
+                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      Dialogs.FILE_SHOW_HIDDEN,
+                                      BARControl.listDirectory
+                                     );
+            }
             if (pathName != null)
             {
               widgetPattern.setText(pathName.trim());
@@ -11815,19 +11920,32 @@ throw new Error("NYI");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           String pathName;
-
-          pathName = Dialogs.file(shell,
-                                  Dialogs.FileDialogTypes.ENTRY,
-                                  BARControl.tr("Select entry"),
-                                  widgetPattern.getText(),
-                                  new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                              },
-                                  "*",
-                                  Dialogs.FILE_SHOW_HIDDEN,
-                                  ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                    ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                    : BARControl.listDirectory
-                                 );
+          if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+          {
+            pathName = Dialogs.file(shell,
+                                    Dialogs.FileDialogTypes.ENTRY,
+                                    BARControl.tr("Select entry"),
+                                    widgetPattern.getText(),
+                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                },
+                                    "*",
+                                    Dialogs.FILE_SHOW_HIDDEN,
+                                    BARServer.remoteListDirectory(selectedJobData.uuid)
+                                   );
+          }
+          else
+          {
+            pathName = Dialogs.file(shell,
+                                    Dialogs.FileDialogTypes.ENTRY,
+                                    BARControl.tr("Select entry"),
+                                    widgetPattern.getText(),
+                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                },
+                                    "*",
+                                    Dialogs.FILE_SHOW_HIDDEN,
+                                    BARControl.listDirectory
+                                   );
+          }
           if (pathName != null)
           {
             widgetPattern.setText(pathName.trim());
@@ -12274,15 +12392,24 @@ throw new Error("NYI");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String pathName;
-
-            pathName = Dialogs.file(shell,
-                                    Dialogs.FileDialogTypes.DIRECTORY,
-                                    BARControl.tr("Select name"),
-                                    widgetName.getText(),
-                                    ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                      ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                      : BARControl.listDirectory
-                                   );
+            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+            {
+              pathName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.DIRECTORY,
+                                      BARControl.tr("Select name"),
+                                      widgetName.getText(),
+                                      BARServer.remoteListDirectory(selectedJobData.uuid)
+                                     );
+            }
+            else
+            {
+              pathName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.DIRECTORY,
+                                      BARControl.tr("Select name"),
+                                      widgetName.getText(),
+                                      BARControl.listDirectory
+                                     );
+            }
             if (pathName != null)
             {
               widgetName.setText(pathName.trim());
@@ -12316,15 +12443,24 @@ throw new Error("NYI");
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String pathName;
-
-            pathName = Dialogs.file(shell,
-                                    Dialogs.FileDialogTypes.OPEN,
-                                    BARControl.tr("Select device"),
-                                    widgetDevice.getText(),
-                                    ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                      ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                      : BARControl.listDirectory
-                                   );
+            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+            {
+              pathName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.OPEN,
+                                      BARControl.tr("Select device"),
+                                      widgetDevice.getText(),
+                                      BARServer.remoteListDirectory(selectedJobData.uuid)
+                                     );
+            }
+            else
+            {
+              pathName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.OPEN,
+                                      BARControl.tr("Select device"),
+                                      widgetDevice.getText(),
+                                      BARControl.listDirectory
+                                     );
+            }
             if (pathName != null)
             {
               widgetDevice.setText(pathName.trim());
@@ -12953,19 +13089,32 @@ throw new Error("NYI");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           String pathName;
-
-          pathName = Dialogs.file(shell,
-                                  Dialogs.FileDialogTypes.OPEN,
-                                  BARControl.tr("Select entry"),
-                                  widgetPattern.getText(),
-                                  new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                              },
-                                  "*",
-                                  Dialogs.FILE_SHOW_HIDDEN,
-                                  ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                    ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                    : BARControl.listDirectory
-                                 );
+          if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+          {
+            pathName = Dialogs.file(shell,
+                                    Dialogs.FileDialogTypes.OPEN,
+                                    BARControl.tr("Select entry"),
+                                    widgetPattern.getText(),
+                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                },
+                                    "*",
+                                    Dialogs.FILE_SHOW_HIDDEN,
+                                    BARServer.remoteListDirectory(selectedJobData.uuid)
+                                   );
+          }
+          else
+          {
+            pathName = Dialogs.file(shell,
+                                    Dialogs.FileDialogTypes.OPEN,
+                                    BARControl.tr("Select entry"),
+                                    widgetPattern.getText(),
+                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                },
+                                    "*",
+                                    Dialogs.FILE_SHOW_HIDDEN,
+                                    BARControl.listDirectory
+                                   );
+          }
           if (pathName != null)
           {
             widgetPattern.setText(pathName);
@@ -13682,20 +13831,34 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               String fileName;
-
-              fileName = Dialogs.file(shell,
-                                      Dialogs.FileDialogTypes.ENTRY,
-                                      BARControl.tr("Select source file"),
-                                      widgetText.getText(),
-                                      new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                   BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                  },
-                                      "*",
-                                      Dialogs.FILE_SHOW_HIDDEN,
-                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                        ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                        : BARControl.listDirectory
-                                     );
+              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+              {
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.ENTRY,
+                                        BARControl.tr("Select source file"),
+                                        widgetText.getText(),
+                                        new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARServer.remoteListDirectory(selectedJobData.uuid)
+                                       );
+              }
+              else
+              {
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.ENTRY,
+                                        BARControl.tr("Select source file"),
+                                        widgetText.getText(),
+                                        new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARControl.listDirectory
+                                       );
+              }
               if (fileName != null)
               {
                 widgetText.setText(fileName);
@@ -15628,14 +15791,25 @@ throw new Error("NYI");
           {
             if (selectedJobData != null)
             {
-              String directory = Dialogs.file(shell,
-                                              Dialogs.FileDialogTypes.DIRECTORY,
-                                              BARControl.tr("Select storage directory"),
-                                              widgetMoveToDirectory.getText(),
-                                              ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                                ? BARServer.remoteListDirectory(selectedJobData.uuid)
-                                                : BARControl.listDirectory
-                                             );
+              String directory;
+              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+              {
+                directory = Dialogs.file(shell,
+                                         Dialogs.FileDialogTypes.DIRECTORY,
+                                         BARControl.tr("Select storage directory"),
+                                         widgetMoveToDirectory.getText(),
+                                         BARServer.remoteListDirectory(selectedJobData.uuid)
+                                        );
+              }
+              else
+              {
+                directory = Dialogs.file(shell,
+                                         Dialogs.FileDialogTypes.DIRECTORY,
+                                         BARControl.tr("Select storage directory"),
+                                         widgetMoveToDirectory.getText(),
+                                         BARControl.listDirectory
+                                        );
+              }
               if (directory != null)
               {
                 widgetMoveToDirectory.setText(directory);

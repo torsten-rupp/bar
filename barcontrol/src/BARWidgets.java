@@ -2947,20 +2947,34 @@ public class BARWidgets
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               String fileName;
-
-              fileName = Dialogs.file(composite.getShell(),
-                                      Dialogs.FileDialogTypes.OPEN,
-                                      BARControl.tr("Select SSH public key file"),
-                                      publicKey.getText(),
-                                      new String[]{BARControl.tr("Public key files"),"*.pub",
-                                                   BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                  },
-                                      "*",
-                                      Dialogs.FILE_SHOW_HIDDEN,
-                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                        ? BARServer.remoteListDirectory
-                                        : BARControl.listDirectory
-                                     );
+              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+              {
+                fileName = Dialogs.file(composite.getShell(),
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select SSH public key file"),
+                                        publicKey.getText(),
+                                        new String[]{BARControl.tr("Public key files"),"*.pub",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARServer.remoteListDirectory
+                                       );
+              }
+              else
+              {
+                fileName = Dialogs.file(composite.getShell(),
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select SSH public key file"),
+                                        publicKey.getText(),
+                                        new String[]{BARControl.tr("Public key files"),"*.pub",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARControl.listDirectory
+                                       );
+              }
               if (fileName != null)
               {
                 publicKey.setText(fileName);
@@ -3063,19 +3077,32 @@ public class BARWidgets
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               String fileName;
-
-              fileName = Dialogs.file(composite.getShell(),
-                                      Dialogs.FileDialogTypes.OPEN,
-                                      BARControl.tr("Select SSH private key file"),
-                                      privateKey.getText(),
-                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                  },
-                                      "*",
-                                      Dialogs.FILE_SHOW_HIDDEN,
-                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                        ? BARServer.remoteListDirectory
-                                        : BARControl.listDirectory
-                                     );
+              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+              {
+                fileName = Dialogs.file(composite.getShell(),
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select SSH private key file"),
+                                        privateKey.getText(),
+                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARServer.remoteListDirectory
+                                       );
+              }
+              else
+              {
+                fileName = Dialogs.file(composite.getShell(),
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select SSH private key file"),
+                                        privateKey.getText(),
+                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARControl.listDirectory
+                                       );
+              }
               if (fileName != null)
               {
                 privateKey.setText(fileName);
@@ -4188,20 +4215,34 @@ public class BARWidgets
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               String fileName;
-
-              fileName = Dialogs.file(composite.getShell(),
-                                      Dialogs.FileDialogTypes.OPEN,
-                                      BARControl.tr("Select WebDAV public key file"),
-                                      publicKey.getText(),
-                                      new String[]{BARControl.tr("Public key files"),"*.pub",
-                                                   BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                  },
-                                      "*",
-                                      Dialogs.FILE_SHOW_HIDDEN,
-                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                        ? BARServer.remoteListDirectory
-                                        : BARControl.listDirectory
-                                     );
+              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+              {
+                fileName = Dialogs.file(composite.getShell(),
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select WebDAV public key file"),
+                                        publicKey.getText(),
+                                        new String[]{BARControl.tr("Public key files"),"*.pub",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARServer.remoteListDirectory
+                                       );
+              }
+              else
+              {
+                fileName = Dialogs.file(composite.getShell(),
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select WebDAV public key file"),
+                                        publicKey.getText(),
+                                        new String[]{BARControl.tr("Public key files"),"*.pub",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARControl.listDirectory
+                                       );
+              }
               if (fileName != null)
               {
                 publicKey.setText(fileName);
@@ -4304,19 +4345,32 @@ public class BARWidgets
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               String fileName;
-
-              fileName = Dialogs.file(composite.getShell(),
-                                      Dialogs.FileDialogTypes.OPEN,
-                                      BARControl.tr("Select WebDAV private key file"),
-                                      privateKey.getText(),
-                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                  },
-                                      "*",
-                                      Dialogs.FILE_SHOW_HIDDEN,
-                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                        ? BARServer.remoteListDirectory
-                                        : BARControl.listDirectory
-                                     );
+              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+              {
+                fileName = Dialogs.file(composite.getShell(),
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select WebDAV private key file"),
+                                        privateKey.getText(),
+                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARServer.remoteListDirectory
+                                       );
+              }
+              else
+              {
+                fileName = Dialogs.file(composite.getShell(),
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select WebDAV private key file"),
+                                        privateKey.getText(),
+                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        Dialogs.FILE_SHOW_HIDDEN,
+                                        BARControl.listDirectory
+                                       );
+              }
               if (fileName != null)
               {
                 privateKey.setText(fileName);
@@ -4649,20 +4703,32 @@ public class BARWidgets
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String fileName;
-
-            fileName = Dialogs.file(composite.getShell(),
-                                    Dialogs.FileDialogTypes.OPEN,
-                                    BARControl.tr("Select device name"),
-                                    deviceName.getText(),
-                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                },
-                                    "*",
-                                    Dialogs.FILE_SHOW_HIDDEN,
-
-                                    ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                      ? BARServer.remoteListDirectory
-                                      : BARControl.listDirectory
-                                   );
+            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+            {
+              fileName = Dialogs.file(composite.getShell(),
+                                      Dialogs.FileDialogTypes.OPEN,
+                                      BARControl.tr("Select device name"),
+                                      deviceName.getText(),
+                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      Dialogs.FILE_SHOW_HIDDEN,
+                                      BARServer.remoteListDirectory
+                                     );
+            }
+            else
+            {
+              fileName = Dialogs.file(composite.getShell(),
+                                      Dialogs.FileDialogTypes.OPEN,
+                                      BARControl.tr("Select device name"),
+                                      deviceName.getText(),
+                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      Dialogs.FILE_SHOW_HIDDEN,
+                                      BARControl.listDirectory
+                                     );
+            }
             if (fileName != null)
             {
               deviceName.setText(fileName);
@@ -5022,19 +5088,32 @@ public class BARWidgets
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             String fileName;
-
-            fileName = Dialogs.file(composite.getShell(),
-                                    Dialogs.FileDialogTypes.OPEN,
-                                    BARControl.tr("Select device name"),
-                                    deviceName.getText(),
-                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                },
-                                    "*",
-                                    Dialogs.FILE_SHOW_HIDDEN,
-                                    ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                      ? BARServer.remoteListDirectory
-                                      : BARControl.listDirectory
-                                   );
+            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
+            {
+              fileName = Dialogs.file(composite.getShell(),
+                                      Dialogs.FileDialogTypes.OPEN,
+                                      BARControl.tr("Select device name"),
+                                      deviceName.getText(),
+                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      Dialogs.FILE_SHOW_HIDDEN,
+                                      BARServer.remoteListDirectory
+                                     );
+            }
+            else
+            {
+              fileName = Dialogs.file(composite.getShell(),
+                                      Dialogs.FileDialogTypes.OPEN,
+                                      BARControl.tr("Select device name"),
+                                      deviceName.getText(),
+                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      Dialogs.FILE_SHOW_HIDDEN,
+                                      BARControl.listDirectory
+                                     );
+            }
             if (fileName != null)
             {
               deviceName.setText(fileName);
