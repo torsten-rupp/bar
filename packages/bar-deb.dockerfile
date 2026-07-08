@@ -1,4 +1,4 @@
-FROM debian:11
+FROM debian:13
 ENV container docker
 
 # variables
@@ -15,13 +15,13 @@ RUN    apt clean \
 # update
 RUN apt-get -y update
 
-RUN apt-get -y install \
+RUN apt-get -y install --no-install-recommends --fix-missing install \
   initscripts \
   openssl \
   default-jre \
   ;
 
-RUN apt-get -y install \
+RUN apt-get -y install --no-install-recommends --fix-missing install \
   bc \
   coreutils \
   joe \
@@ -33,7 +33,8 @@ RUN apt-get -y install \
   ;
 
 # install packages (Note: ignore expired key with --force-yes)
-RUN apt-get -y install \
+RUN apt-get -y install --no-install-recommends --fix-missing install \
+  autoconf \
   autotools-dev \
   bison \
   bzip2 \
@@ -66,25 +67,30 @@ RUN apt-get -y install \
   tar \
   tcl \
   txt2man \
-  unoconv \
   unzip \
   valgrind \
   wget \
   xz-utils \
   ;
 
+RUN apt-get install -y --no-install-recommends --fix-missing install \
+  libreoffice \
+  python3-pip \
+  python3-uno \
+  ;
+
 # install autoconf 2.7x (only available from Debian > 11)
-RUN    cd /tmp \
-    && wget https://ftpmirror.gnu.org/gnu/autoconf/autoconf-2.72.tar.xz \
-         --no-check-certificate \
-         --quiet \
-         --output-document autoconf-2.72.tar.xz \
-    && tar xf autoconf-2.72.tar.xz \
-    && (cd autoconf-2.72; ./configure) \
-    && (cd autoconf-2.72; make) \
-    && (cd autoconf-2.72; make install) \
-    && rm -rf autoconf-2.72 autoconf-2.72.tar.xz
-ENV PATH=/usr/local/bin:$PATH
+#RUN    cd /tmp \
+#    && wget https://ftpmirror.gnu.org/gnu/autoconf/autoconf-2.72.tar.xz \
+#         --no-check-certificate \
+#         --quiet \
+#         --output-document autoconf-2.72.tar.xz \
+#    && tar xf autoconf-2.72.tar.xz \
+#    && (cd autoconf-2.72; ./configure) \
+#    && (cd autoconf-2.72; make) \
+#    && (cd autoconf-2.72; make install) \
+#    && rm -rf autoconf-2.72 autoconf-2.72.tar.xz
+#ENV PATH=/usr/local/bin:$PATH
 
 # add user for build process
 RUN    userdel `id -un $uid 2>/dev/null` 2>/dev/null || true \

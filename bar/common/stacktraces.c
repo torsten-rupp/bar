@@ -687,10 +687,10 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo_,
        sigaction(signalHandlerInfo[i].signalNumber, &signalActionInfo, NULL);
     }
   #elif defined(PLATFORM_WINDOWS)
-    UNUSED_VARIABLE(signalHandlerInfo);
-    UNUSED_VARIABLE(signalHandlerInfoCount);
-    UNUSED_VARIABLE(signalHandlerFunction);
-    UNUSED_VARIABLE(signalHandlerUserData);
+    UNUSED_VARIABLE(signalHandlerInfo_);
+    UNUSED_VARIABLE(signalHandlerInfoCount_);
+    UNUSED_VARIABLE(signalHandlerFunction_);
+    UNUSED_VARIABLE(signalHandlerUserData_);
   #endif /* PLATFORM_... */
 }
 

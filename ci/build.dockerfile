@@ -15,10 +15,10 @@ RUN    apt clean \
     && rm -rf /var/lib/apt/lists/*
 
 # update
-RUN apt-get -y update --fix-missing
+RUN apt-get -y update --no-install-recommends --fix-missing
 
 # install packages
-RUN apt-get -y --fix-missing install \
+RUN apt-get -y --no-install-recommends --fix-missing install \
   attr \
   bc \
   bzip2 \
@@ -60,7 +60,7 @@ RUN apt-get -y --fix-missing install \
   ;
 
 # install packages for building
-RUN apt-get -y --fix-missing install \
+RUN apt-get -y --no-install-recommends --fix-missing install \
   gcc \
   g++ \
   libblkid-dev \
@@ -85,8 +85,8 @@ RUN apt-get -y --fix-missing install \
   ;
 
 # install packages for tests
-RUN apt-get update --fix-missing
-RUN apt-get -y --fix-missing install \
+RUN apt-get update --no-install-recommends --fix-missing
+RUN apt-get -y --no-install-recommends --fix-missing install \
   apache2 \
   openssh-server \
   vsftpd \
